@@ -1,0 +1,80 @@
+.app {
+  display: grid;
+  grid-template-columns: 21em auto;
+  grid-template-rows: auto;
+  height: 100%;
+}
+
+.sider {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: scroll;
+
+  h3 {
+    padding: 0.5em 1em;
+  }
+
+  .ant-menu {
+    border-right: 0;
+    margin-bottom: 0.5em;
+  }
+}
+
+.content {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: 1em auto 1em auto 1em;
+  grid-template-rows: 1em 5.7em 1em 3.7em 1em auto 1em;
+  background-color: #e9e9e9;
+  overflow: hidden;
+}
+
+.content-inner,
+.selected-metrics,
+.selected-dimension-attributes,
+.filters {
+  background-color: white;
+  border-radius: 0.3em;
+  font-size: 1em;
+  color: #314659;
+  & > .anticon {
+    margin-right: 0.5em;
+  }
+}
+
+.selected-metrics {
+  grid-column: 2;
+  grid-row: 2;
+  padding: 1em;
+}
+
+.selected-dimension-attributes {
+  grid-column: 4;
+  grid-row: 2;
+  padding: 1em;
+}
+
+.filters {
+  grid-column: 2 / span 3;
+  grid-row: 4;
+  padding: 1em;
+}
+
+.content-inner {
+  grid-column: 2 / span 3;
+  grid-row: 6;
+  padding: 1em;
+  background-color: white;
+  overflow-y: scroll;
+  position: relative;
+
+  .loading {
+    position: absolute;
+    top: 1em;
+    left: 1em;
+  }
+}

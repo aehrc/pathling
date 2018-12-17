@@ -1,0 +1,45 @@
+{
+  "name": "analytics-ui",
+  "author": "John Grimes",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "antd": "3.9.2",
+    "axios": "^0.18.0",
+    "immutable": "^3.8.2",
+    "lodash.omit": "^4.5.0",
+    "lodash.pick": "^4.4.0",
+    "react": "^16.5.0",
+    "react-dom": "^16.5.0",
+    "react-redux": "^5.0.7",
+    "redux": "^4.0.0",
+    "redux-immutable": "^4.0.0",
+    "redux-logger": "^3.0.6",
+    "redux-thunk": "^2.3.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-eslint": "^9.0.0",
+    "babel-loader": "^7",
+    "babel-plugin-import": "^1.8.0",
+    "babel-preset-react-app": "^3.1.2",
+    "babel-runtime": "^6.26.0",
+    "css-loader": "^1.0.0",
+    "css-module-flow": "^1.0.0",
+    "eslint": "^5.5.0",
+    "eslint-plugin-jest": "^21.22.0",
+    "eslint-plugin-promise": "^4.0.1",
+    "eslint-plugin-react": "^7.11.1",
+    "flow-bin": "^0.80.0",
+    "html-webpack-plugin": "^3.2.0",
+    "less": "^3.8.1",
+    "less-loader": "^4.1.0",
+    "style-loader": "^0.23.0",
+    "webpack": "^4.17.2",
+    "webpack-bundle-analyzer": "^2.13.1",
+    "webpack-cli": "^3.1.0",
+    "webpack-dev-server": "^3.1.8"
+  },
+  "scripts": {
+    "start": "NODE_ENV=development webpack-dev-server --mode=development --watch --hot --port=3000"
+  }
+}
