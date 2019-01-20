@@ -5,58 +5,57 @@
 
 package au.csiro.clinsight.persistence;
 
-import org.hibernate.annotations.Type;
+import static au.csiro.clinsight.persistence.Naming.generateRandomKey;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
-
-import static au.csiro.clinsight.persistence.Naming.generateRandomKey;
+import org.hibernate.annotations.Type;
 
 /**
- * Describes a set of facts which can be aggregated to produce Metrics that describe the data within a FHIR analytics
- * server.
+ * Describes a set of facts which can be aggregated to produce Metrics that describe the data within
+ * a FHIR analytics server.
  *
  * @author John Grimes
  */
 @Entity
 public class FactSet {
 
-    @Id
-    @Type(type = "text")
-    private String key;
+  @Id
+  @Type(type = "text")
+  private String key;
 
-    @Type(type = "text")
-    private String name;
+  @Type(type = "text")
+  private String name;
 
-    @Type(type = "text")
-    private String title;
+  @Type(type = "text")
+  private String title;
 
-    public FactSet() {
-        setKey(generateRandomKey());
-    }
+  public FactSet() {
+    setKey(generateRandomKey());
+  }
 
-    public String getKey() {
-        return key;
-    }
+  public String getKey() {
+    return key;
+  }
 
-    public void setKey(String key) {
-        this.key = key;
-    }
+  public void setKey(String key) {
+    this.key = key;
+  }
 
-    public String getName() {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+  public void setName(String name) {
+    this.name = name;
+  }
 
-    public String getTitle() {
-        return title;
-    }
+  public String getTitle() {
+    return title;
+  }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
+  public void setTitle(String title) {
+    this.title = title;
+  }
 
 }

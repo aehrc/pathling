@@ -10,13 +10,12 @@ import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import java.util.List;
 import org.hibernate.Session;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * @author John Grimes
@@ -24,25 +23,25 @@ import java.util.List;
 @Service
 public class DimensionResourceProvider implements IResourceProvider {
 
-    Session session;
+  Session session;
 
-    @Autowired
-    public DimensionResourceProvider(Session session) {
-        this.session = session;
-    }
+  @Autowired
+  public DimensionResourceProvider(Session session) {
+    this.session = session;
+  }
 
-    @Search()
-    public List<Dimension> getAllDimensions() {
-        return session.createQuery("SELECT d FROM Dimension d", Dimension.class).getResultList();
-    }
+  @Search()
+  public List<Dimension> getAllDimensions() {
+    return session.createQuery("SELECT d FROM Dimension d", Dimension.class).getResultList();
+  }
 
-    public Class<? extends IBaseResource> getResourceType() {
-        return Dimension.class;
-    }
+  public Class<? extends IBaseResource> getResourceType() {
+    return Dimension.class;
+  }
 
-    @Read()
-    public Dimension getDimensionById(@IdParam IdType theId) {
-        return session.byId(Dimension.class).load(theId.getIdPart());
-    }
+  @Read()
+  public Dimension getDimensionById(@IdParam IdType theId) {
+    return session.byId(Dimension.class).load(theId.getIdPart());
+  }
 
 }

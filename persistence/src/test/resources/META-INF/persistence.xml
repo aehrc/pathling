@@ -1,22 +1,23 @@
 <persistence xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xmlns="http://java.sun.com/xml/ns/persistence"
-             xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
-             version="2.0">
+  version="2.0"
+  xmlns="http://java.sun.com/xml/ns/persistence"
+  xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
 
-    <persistence-unit name="au.csiro.clinsight.persistence">
+  <persistence-unit name="au.csiro.clinsight.persistence">
 
-        <class>au.csiro.clinsight.persistence.Dimension</class>
-        <class>au.csiro.clinsight.persistence.Dimension$DescribesComponent</class>
-        <class>au.csiro.clinsight.persistence.DimensionAttribute</class>
-        <class>au.csiro.clinsight.persistence.Metric</class>
-        <class>au.csiro.clinsight.persistence.FactSet</class>
+    <class>au.csiro.clinsight.persistence.Dimension</class>
+    <class>au.csiro.clinsight.persistence.Dimension$DescribesComponent</class>
+    <class>au.csiro.clinsight.persistence.DimensionAttribute</class>
+    <class>au.csiro.clinsight.persistence.Metric</class>
+    <class>au.csiro.clinsight.persistence.FactSet</class>
 
-        <properties>
-            <property name="javax.persistence.jdbc.driver" value="org.h2.Driver"/>
-            <property name="javax.persistence.jdbc.url" value="jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1;MVCC=TRUE"/>
-            <property name="hibernate.hbm2ddl.auto" value="create"/>
-        </properties>
+    <properties>
+      <property name="javax.persistence.jdbc.driver" value="org.h2.Driver"/>
+      <property name="javax.persistence.jdbc.url"
+        value="jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1;MVCC=TRUE"/>
+      <property name="hibernate.hbm2ddl.auto" value="create"/>
+    </properties>
 
-    </persistence-unit>
+  </persistence-unit>
 
 </persistence>

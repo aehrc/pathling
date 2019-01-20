@@ -10,13 +10,12 @@ import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import java.util.List;
 import org.hibernate.Session;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * @author John Grimes
@@ -24,26 +23,26 @@ import java.util.List;
 @Service
 public class MetricResourceProvider implements IResourceProvider {
 
-    Session session;
+  Session session;
 
-    @Autowired
-    public MetricResourceProvider(Session session) {
-        this.session = session;
-    }
+  @Autowired
+  public MetricResourceProvider(Session session) {
+    this.session = session;
+  }
 
-    @Search()
-    public List<Metric> getAllMetrics() {
-        return session.createQuery("SELECT m FROM Metric m", Metric.class).getResultList();
-    }
+  @Search()
+  public List<Metric> getAllMetrics() {
+    return session.createQuery("SELECT m FROM Metric m", Metric.class).getResultList();
+  }
 
-    @Override
-    public Class<? extends IBaseResource> getResourceType() {
-        return Metric.class;
-    }
+  @Override
+  public Class<? extends IBaseResource> getResourceType() {
+    return Metric.class;
+  }
 
-    @Read()
-    public Metric getMetricById(@IdParam IdType theId) {
-        return session.byId(Metric.class).load(theId.getIdPart());
-    }
+  @Read()
+  public Metric getMetricById(@IdParam IdType theId) {
+    return session.byId(Metric.class).load(theId.getIdPart());
+  }
 
 }

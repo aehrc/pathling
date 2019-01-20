@@ -9,34 +9,34 @@ import org.junit.Test;
  */
 public class TerminologyClientTest {
 
-    // TODO: Add tests.
+  // TODO: Add tests.
 
-    @Before
-    public void setUp() throws Exception {
-    }
+  @Before
+  public void setUp() throws Exception {
+  }
 
-    @After
-    public void tearDown() throws Exception {
-    }
+  @After
+  public void tearDown() throws Exception {
+  }
 
-    @Test
-    public void expand() {
-    }
+  @Test
+  public void expand() {
+  }
 
-    @Test
-    public void translate() {
-    }
+  @Test
+  public void translate() {
+  }
 
-    @Test
-    public void batchLookup() {
-    }
+  @Test
+  public void batchLookup() {
+  }
 
-    @Test
-    public void searchStructureDefinitionsByUrl() {
-    }
+  @Test
+  public void searchStructureDefinitionsByUrl() {
+  }
 
-    @Test
-    public void getElementDefinitionForProperty() {
-    }
+  @Test
+  public void getElementDefinitionForProperty() {
+  }
 
 }

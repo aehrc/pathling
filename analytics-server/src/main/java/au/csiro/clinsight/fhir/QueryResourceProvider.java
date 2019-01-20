@@ -8,11 +8,10 @@ package au.csiro.clinsight.fhir;
 import au.csiro.clinsight.persistence.Query;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.springframework.stereotype.Service;
 
 /**
  * @author John Grimes
@@ -20,13 +19,13 @@ import java.util.List;
 @Service
 public class QueryResourceProvider implements IResourceProvider {
 
-    public Class<? extends IBaseResource> getResourceType() {
-        return Query.class;
-    }
+  public Class<? extends IBaseResource> getResourceType() {
+    return Query.class;
+  }
 
-    @Search()
-    public List<Query> getAllQueries() {
-        return new ArrayList<Query>();
-    }
+  @Search()
+  public List<Query> getAllQueries() {
+    return new ArrayList<Query>();
+  }
 
 }
