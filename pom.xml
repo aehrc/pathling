@@ -14,8 +14,6 @@
     <hapiHl7V2Version>2.3</hapiHl7V2Version>
     <hibernateVersion>5.3.7.Final</hibernateVersion>
     <psqlDriverVersion>42.2.5</psqlDriverVersion>
-    <log4jVersion>2.11.1</log4jVersion>
-    <slf4jVersion>1.7.25</slf4jVersion>
 
     <clinsight.terminologyServerUrl/>
     <clinsight.jdbcUrl/>
@@ -33,30 +31,14 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
-      <version>${log4jVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-api</artifactId>
-      <version>${log4jVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-      <version>${log4jVersion}</version>
-      <scope>runtime</scope>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.2.3</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>${slf4jVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-ext</artifactId>
-      <version>${slf4jVersion}</version>
+      <version>1.7.25</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
