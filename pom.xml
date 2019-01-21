@@ -12,12 +12,12 @@
   <properties>
     <hapiFhirVersion>3.6.0</hapiFhirVersion>
     <hapiHl7V2Version>2.3</hapiHl7V2Version>
-    <hibernateVersion>5.3.7.Final</hibernateVersion>
-    <psqlDriverVersion>42.2.5</psqlDriverVersion>
+    <sparkVersion>2.3.0</sparkVersion>
+    <sparkScalaVersion>2.11</sparkScalaVersion>
+    <bunsenVersion>0.4.6-SNAPSHOT</bunsenVersion>
 
+    <clinsight.sparkMasterUrl/>
     <clinsight.terminologyServerUrl/>
-    <clinsight.jdbcUrl/>
-    <clinsight.jdbcDriver>org.postgresql.Driver</clinsight.jdbcDriver>
   </properties>
 
   <modules>
@@ -27,9 +27,15 @@
     <module>loaders/loinc-loader</module>
     <module>loaders/fhir-loader</module>
     <module>analytics-server</module>
+    <module>spark-shaded</module>
   </modules>
 
   <dependencies>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>27.0.1-jre</version>
+    </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
@@ -61,8 +67,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.0</version>
         <configuration>
-          <source>11</source>
-          <target>11</target>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
       <plugin>
@@ -90,9 +96,6 @@
             </goals>
           </execution>
         </executions>
-        <configuration>
-          <additionalOptions>-html5</additionalOptions>
-        </configuration>
       </plugin>
     </plugins>
   </build>

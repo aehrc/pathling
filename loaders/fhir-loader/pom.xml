@@ -15,46 +15,25 @@
   <packaging>maven-plugin</packaging>
 
   <properties>
-    <clinsight.FhirLoader.transactionUrl/>
+    <clinsight.FhirLoader.jsonBundlesDirectory/>
     <clinsight.FhirLoader.ndjsonUrl/>
-    <clinsight.FhirLoader.autoDdl/>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>au.csiro.clinsight</groupId>
-      <artifactId>persistence</artifactId>
+      <artifactId>spark-shaded</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>au.csiro.clinsight</groupId>
-      <artifactId>terminology-client</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <groupId>com.cerner.bunsen</groupId>
+      <artifactId>bunsen-core</artifactId>
+      <version>${bunsenVersion}</version>
     </dependency>
     <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-base</artifactId>
-      <version>${hapiFhirVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-structures-dstu3</artifactId>
-      <version>${hapiFhirVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-validation</artifactId>
-      <version>${hapiFhirVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.hibernate</groupId>
-      <artifactId>hibernate-core</artifactId>
-      <version>${hibernateVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <version>${psqlDriverVersion}</version>
+      <groupId>com.cerner.bunsen</groupId>
+      <artifactId>bunsen-stu3</artifactId>
+      <version>${bunsenVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -103,12 +82,9 @@
         <artifactId>fhir-loader</artifactId>
         <version>1.0-SNAPSHOT</version>
         <configuration>
-          <jdbcUrl>${clinsight.jdbcUrl}</jdbcUrl>
-          <jdbcDriver>${clinsight.jdbcDriver}</jdbcDriver>
-          <terminologyServerUrl>${clinsight.terminologyServerUrl}</terminologyServerUrl>
-          <transactionUrl>${clinsight.FhirLoader.transactionUrl}</transactionUrl>
+          <sparkMasterUrl>${clinsight.sparkMasterUrl}</sparkMasterUrl>
+          <jsonBundlesDirectory>${clinsight.FhirLoader.jsonBundlesDirectory}</jsonBundlesDirectory>
           <ndjsonUrl>${clinsight.FhirLoader.ndjsonUrl}</ndjsonUrl>
-          <autoDdl>${clinsight.FhirLoader.autoDdl}</autoDdl>
         </configuration>
       </plugin>
     </plugins>

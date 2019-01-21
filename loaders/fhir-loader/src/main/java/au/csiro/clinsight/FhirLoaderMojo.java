@@ -5,6 +5,10 @@
 
 package au.csiro.clinsight;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import java.io.File;
+import java.net.URL;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -16,34 +20,25 @@ import org.apache.maven.plugins.annotations.Parameter;
 @Mojo(name = "load")
 public class FhirLoaderMojo extends AbstractMojo {
 
-  @Parameter(property = "jdbcUrl", required = true)
-  private String jdbcUrl;
+  @Parameter(property = "sparkMasterUrl", required = true)
+  private String sparkMasterUrl;
 
-  @Parameter(property = "jdbcDriver", required = true)
-  private String jdbcDriver;
-
-  @Parameter(property = "terminologyServerUrl", required = true)
-  private String terminologyServerUrl;
-
-  @Parameter(property = "transactionUrl")
-  private String transactionUrl;
+  @Parameter(property = "jsonBundlesDirectory")
+  private String jsonBundlesDirectory;
 
   @Parameter(property = "ndjsonUrl")
   private String ndjsonUrl;
 
-  @Parameter(property = "autoDdl", defaultValue = "update")
-  private String autoDdl;
-
   @Override
   public void execute() throws MojoExecutionException {
     try {
-      FhirLoader fhirLoader = new FhirLoader(jdbcUrl, terminologyServerUrl, jdbcDriver, autoDdl);
-      if (transactionUrl != null) {
-        fhirLoader.processTransaction(transactionUrl);
-      } else if (ndjsonUrl != null) {
-        fhirLoader.processNdjsonFile(ndjsonUrl);
+      checkArgument(jsonBundlesDirectory != null || ndjsonUrl != null,
+          "Must supply either jsonBundlesDirectory or ndjsonUrl");
+      FhirLoader fhirLoader = new FhirLoader(sparkMasterUrl);
+      if (jsonBundlesDirectory != null) {
+        fhirLoader.processJsonBundles(new File(jsonBundlesDirectory));
       } else {
-        throw new MojoExecutionException("Must provide either transactionUrl or ndjsonUrl");
+        fhirLoader.processNdjsonFile(new URL(ndjsonUrl));
       }
     } catch (Exception e) {
       throw new MojoExecutionException("Error occurred during execution: ", e);
