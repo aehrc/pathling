@@ -1,6 +1,5 @@
-/**
- * Copyright CSIRO Australian e-Health Research Centre (http://aehrc.com). All rights reserved. Use
- * is subject to license terms and conditions.
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
 package au.csiro.clinsight;
