@@ -1,0 +1,17 @@
+group = 'au.csiro.clinsight.transformers'
+description = ''
+dependencies {
+  compile project(':terminology-client')
+    compile group: 'ca.uhn.hapi', name: 'hapi-base', version:'2.3'
+    compile group: 'ca.uhn.hapi', name: 'hapi-structures-v24', version:'2.3'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-base', version:'3.6.0'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version:'3.6.0'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-validation-resources-dstu3', version:'3.6.0'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-client', version:'3.6.0'
+    compile group: 'commons-io', name: 'commons-io', version:'2.6'
+    compile group: 'org.apache.maven', name: 'maven-plugin-api', version:'3.6.0'
+    compile group: 'org.apache.maven.plugins', name: 'maven-plugin-plugin', version:'3.6.0'
+    testCompile group: 'org.skyscreamer', name: 'jsonassert', version:'1.5.0'
+    testCompile group: 'org.mockito', name: 'mockito-core', version:'2.21.0'
+    compileOnly group: 'org.apache.maven.plugin-tools', name: 'maven-plugin-annotations', version:'3.6.0'
+}

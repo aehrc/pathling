@@ -1,0 +1,7 @@
+
+description = ''
+dependencies {
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-base', version:'3.6.0'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version:'3.6.0'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-client', version:'3.6.0'
+}

@@ -1,0 +1,10 @@
+
+description = ''
+dependencies {
+  compile project(':persistence')
+    compile group: 'org.springframework.boot', name: 'spring-boot-starter-web', version:'2.1.1.RELEASE'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-base', version:'3.6.0'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version:'3.6.0'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-server', version:'3.6.0'
+    testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version:'2.1.1.RELEASE'
+}
