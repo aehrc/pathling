@@ -13,14 +13,38 @@ import java.io.File;
  */
 public class FhirLoaderBootstrap {
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     String sparkMasterUrl = System.getenv("SPARK_MASTER_URL");
     String jsonBundlesDirectory = System.getenv("JSON_BUNDLES_DIRECTORY");
+    String[] resourcesToSave = {"Patient",
+        "Encounter",
+        "Condition",
+        "AllergyIntolerance",
+        "Observation",
+        "DiagnosticReport",
+        "ProcedureRequest",
+        "ImagingStudy",
+        "Immunization",
+        "CarePlan",
+        "MedicationRequest",
+        "Claim",
+        "ExplanationOfBenefit",
+        "Coverage"};
 
     checkArgument(sparkMasterUrl != null, "Must supply sparkMasterUrl property");
     checkArgument(jsonBundlesDirectory != null, "Must supply jsonBundlesDirectory property");
 
-    FhirLoader fhirLoader = new FhirLoader(sparkMasterUrl);
+    FhirLoaderConfiguration configuration = new FhirLoaderConfiguration();
+    configuration.setSparkMasterUrl(sparkMasterUrl);
+    configuration.setWarehouseDirectory("/Users/gri306/Code/clinsight/clinsight/spark-warehouse");
+    configuration.setMetastoreConnectionUrl("jdbc:postgresql://localhost/clinsight_metastore");
+    configuration.setMetastoreUser("gri306");
+    configuration.setMetastorePassword("");
+    configuration.setLoadPartitions(12);
+    configuration.setDatabaseName("clinsight");
+    configuration.setResourcesToSave(resourcesToSave);
+
+    FhirLoader fhirLoader = new FhirLoader(configuration);
     fhirLoader.processJsonBundles(new File(jsonBundlesDirectory));
   }
 

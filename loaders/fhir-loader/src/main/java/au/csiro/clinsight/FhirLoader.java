@@ -11,6 +11,8 @@ import com.cerner.bunsen.Bundles.BundleContainer;
 import java.io.File;
 import java.net.URL;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -21,30 +23,28 @@ import org.apache.spark.sql.SparkSession;
  */
 public class FhirLoader {
 
+  private FhirLoaderConfiguration configuration;
   private SparkSession sparkSession;
-  private int loadPartitions = 12;
-  private String databaseName = "clinsight";
-  private String[] resourcesToSave = {"Patient",
-      "Encounter",
-      "Condition",
-      "AllergyIntolerance",
-      "Observation",
-      "DiagnosticReport",
-      "ProcedureRequest",
-      "ImagingStudy",
-      "Immunization",
-      "CarePlan",
-      "MedicationRequest",
-      "Claim",
-      "ExplanationOfBenefit",
-      "Coverage"};
 
-  public FhirLoader(String sparkMasterUrl) {
+  public FhirLoader(FhirLoaderConfiguration configuration) {
+    checkArgument(configuration.getSparkMasterUrl() != null, "Must supply Spark master URL");
+    checkArgument(configuration.getWarehouseDirectory() != null, "Must supply warehouse directory");
+    checkArgument(configuration.getMetastoreConnectionUrl() != null,
+        "Must supply metastore connection URL");
+    checkArgument(configuration.getMetastoreUser() != null, "Must supply metastore user");
+    checkArgument(configuration.getMetastorePassword() != null, "Must supply metastore password");
+
+    this.configuration = configuration;
+
     sparkSession = SparkSession.builder()
-        .config("spark.master", sparkMasterUrl)
+        .config("spark.master", configuration.getSparkMasterUrl())
         // TODO: Use Maven dependency plugin to copy this into a relative location.
         .config("spark.jars",
             "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-SNAPSHOT.jar")
+        .config("spark.sql.warehouse.dir", configuration.getWarehouseDirectory())
+        .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreConnectionUrl())
+        .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
+        .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
         .enableHiveSupport()
         .getOrCreate();
   }
@@ -56,8 +56,14 @@ public class FhirLoader {
     checkArgument(bundlesDirectory.isDirectory(), "bundlesDirectory must be a directory");
     Bundles bundles = Bundles.forStu3();
     JavaRDD<BundleContainer> rdd = bundles
-        .loadFromDirectory(sparkSession, bundlesDirectory.getAbsolutePath(), loadPartitions);
-    bundles.saveAsDatabase(sparkSession, rdd, databaseName, resourcesToSave);
+        .loadFromDirectory(sparkSession, bundlesDirectory.getAbsolutePath(),
+            configuration.getLoadPartitions());
+    sparkSession.sql("CREATE DATABASE IF NOT EXISTS " + configuration.getDatabaseName());
+    for (String resourceName : configuration.getResourcesToSave()) {
+      Dataset ds = bundles.extractEntry(sparkSession, rdd, resourceName);
+      ds.write().mode(SaveMode.Overwrite)
+          .saveAsTable(configuration.getDatabaseName() + "." + resourceName.toLowerCase());
+    }
   }
 
   /**
@@ -66,29 +72,5 @@ public class FhirLoader {
   public void processNdjsonFile(URL ndjsonFile) throws Exception {
     // TODO: Implement loading of NDJSON files.
     throw new RuntimeException("Not yet implemented");
-  }
-
-  public int getLoadPartitions() {
-    return loadPartitions;
-  }
-
-  public void setLoadPartitions(int loadPartitions) {
-    this.loadPartitions = loadPartitions;
-  }
-
-  public String getDatabaseName() {
-    return databaseName;
-  }
-
-  public void setDatabaseName(String databaseName) {
-    this.databaseName = databaseName;
-  }
-
-  public String[] getResourcesToSave() {
-    return resourcesToSave;
-  }
-
-  public void setResourcesToSave(String[] resourcesToSave) {
-    this.resourcesToSave = resourcesToSave;
   }
 }

@@ -4,10 +4,25 @@ mainClassName = 'au.csiro.clinsight.FhirLoaderBootstrap'
 group 'au.csiro.clinsight.loaders'
 version '1.0-SNAPSHOT'
 
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
 dependencies {
     compile group: 'org.apache.spark', name: 'spark-core_2.11', version: '2.3.0'
     compile group: 'org.apache.spark', name: 'spark-sql_2.11', version: '2.3.0'
     compile group: 'org.apache.spark', name: 'spark-hive_2.11', version: '2.3.0'
     compile group: 'com.cerner.bunsen', name: 'bunsen-core', version: '0.4.6-SNAPSHOT'
     compile group: 'com.cerner.bunsen', name: 'bunsen-stu3', version: '0.4.6-SNAPSHOT'
+    compile group: 'org.postgresql', name: 'postgresql', version: '42.2.5'
+}
+
+configurations.all {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'com.google.guava' && details.requested.name == 'guava') {
+            details.useVersion '16.0.1'
+            details.because 'incompatibility between versions'
+        }
+    }
 }
