@@ -52,7 +52,7 @@ public class FhirLoader {
   /**
    * Loads the content of each JSON Bundle file matched by a supplied glob.
    */
-  public void processJsonBundles(File bundlesDirectory) throws Exception {
+  public void processJsonBundles(File bundlesDirectory) {
     checkArgument(bundlesDirectory.isDirectory(), "bundlesDirectory must be a directory");
     Bundles bundles = Bundles.forStu3();
     JavaRDD<BundleContainer> rdd = bundles
