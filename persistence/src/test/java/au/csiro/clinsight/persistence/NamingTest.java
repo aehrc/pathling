@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.clinsight.persistence;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
