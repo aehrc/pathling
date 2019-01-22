@@ -14,6 +14,8 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Takes either a FHIR transaction or an NDJSON file as input, and updates the target data mart with
@@ -22,6 +24,8 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 public class FhirLoader {
+
+  private static Logger logger = LoggerFactory.getLogger(FhirLoader.class);
 
   private FhirLoaderConfiguration configuration;
   private SparkSession sparkSession;
@@ -34,6 +38,7 @@ public class FhirLoader {
     checkArgument(configuration.getMetastoreUser() != null, "Must supply metastore user");
     checkArgument(configuration.getMetastorePassword() != null, "Must supply metastore password");
 
+    logger.debug("Creating new FhirLoader: " + configuration);
     this.configuration = configuration;
 
     sparkSession = SparkSession.builder()
@@ -54,15 +59,19 @@ public class FhirLoader {
    */
   public void processJsonBundles(File bundlesDirectory) {
     checkArgument(bundlesDirectory.isDirectory(), "bundlesDirectory must be a directory");
+    logger.info("Processing JSON Bundles at: " + bundlesDirectory.getAbsolutePath());
+
     Bundles bundles = Bundles.forStu3();
     JavaRDD<BundleContainer> rdd = bundles
         .loadFromDirectory(sparkSession, bundlesDirectory.getAbsolutePath(),
             configuration.getLoadPartitions());
     sparkSession.sql("CREATE DATABASE IF NOT EXISTS " + configuration.getDatabaseName());
     for (String resourceName : configuration.getResourcesToSave()) {
+      String tableName = configuration.getDatabaseName() + "." + resourceName.toLowerCase();
+      logger.info("Saving table: " + tableName);
+
       Dataset ds = bundles.extractEntry(sparkSession, rdd, resourceName);
-      ds.write().mode(SaveMode.Overwrite)
-          .saveAsTable(configuration.getDatabaseName() + "." + resourceName.toLowerCase());
+      ds.write().mode(SaveMode.Overwrite).saveAsTable(tableName);
     }
   }
 

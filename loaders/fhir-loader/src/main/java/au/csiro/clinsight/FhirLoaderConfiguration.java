@@ -4,6 +4,8 @@
 
 package au.csiro.clinsight;
 
+import java.util.Arrays;
+
 /**
  * @author John Grimes
  */
@@ -80,6 +82,20 @@ public class FhirLoaderConfiguration {
 
   public void setResourcesToSave(String[] resourcesToSave) {
     this.resourcesToSave = resourcesToSave;
+  }
+
+  @Override
+  public String toString() {
+    return "FhirLoaderConfiguration{" +
+        "sparkMasterUrl='" + sparkMasterUrl + '\'' +
+        ", warehouseDirectory='" + warehouseDirectory + '\'' +
+        ", metastoreConnectionUrl='" + metastoreConnectionUrl + '\'' +
+        ", metastoreUser='" + metastoreUser + '\'' +
+        ", metastorePassword='" + metastorePassword + '\'' +
+        ", loadPartitions=" + loadPartitions +
+        ", databaseName='" + databaseName + '\'' +
+        ", resourcesToSave=" + Arrays.toString(resourcesToSave) +
+        '}';
   }
 }
 
