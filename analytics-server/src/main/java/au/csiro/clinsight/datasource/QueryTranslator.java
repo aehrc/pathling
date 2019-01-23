@@ -5,7 +5,7 @@
 
 package au.csiro.clinsight.datasource;
 
-import au.csiro.clinsight.persistence.Query;
+import au.csiro.clinsight.resources.Query;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 
 public interface QueryTranslator<T> {

@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.persistence;
+package au.csiro.clinsight.resources;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -30,7 +30,7 @@ public class MetricPersistenceTest {
   @Before
   public void setUp() {
     jsonParser = FhirContext.forDstu3().newJsonParser();
-    entityManagerFactory = Persistence.createEntityManagerFactory("au.csiro.clinsight.persistence");
+    entityManagerFactory = Persistence.createEntityManagerFactory("au.csiro.clinsight.resources");
     entityManager = entityManagerFactory.createEntityManager();
 
     FactSet factSet = new FactSet();

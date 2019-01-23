@@ -5,11 +5,11 @@
 
 package au.csiro.clinsight.loaders;
 
-import static au.csiro.clinsight.persistence.Naming.tableNameForDimension;
+import static au.csiro.clinsight.resources.Naming.tableNameForDimension;
 
 import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.persistence.Dimension;
-import au.csiro.clinsight.persistence.DimensionAttribute;
+import au.csiro.clinsight.resources.Dimension;
+import au.csiro.clinsight.resources.DimensionAttribute;
 import ca.uhn.fhir.context.FhirContext;
 import java.sql.Connection;
 import java.sql.DriverManager;

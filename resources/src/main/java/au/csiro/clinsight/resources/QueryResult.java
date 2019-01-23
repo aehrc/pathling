@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.persistence;
+package au.csiro.clinsight.resources;
 
 import static ca.uhn.fhir.model.api.annotation.Child.MAX_UNLIMITED;
 

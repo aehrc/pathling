@@ -5,8 +5,8 @@
 
 package au.csiro.clinsight.loaders;
 
-import au.csiro.clinsight.persistence.Dimension;
-import au.csiro.clinsight.persistence.DimensionAttribute;
+import au.csiro.clinsight.resources.Dimension;
+import au.csiro.clinsight.resources.DimensionAttribute;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.util.ArrayList;

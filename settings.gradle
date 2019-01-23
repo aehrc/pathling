@@ -1,6 +1,6 @@
 rootProject.name = 'clinsight'
 include ':fhir-loader'
+include 'resources'
 
 project(':fhir-loader').projectDir = "$rootDir/loaders/fhir-loader" as File
-include 'persistence'
 

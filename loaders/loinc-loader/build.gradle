@@ -1,7 +1,7 @@
 group = 'au.csiro.clinsight.loaders'
 description = ''
 dependencies {
-  compile project(':persistence')
+  compile project(':resources')
   compile project(':terminology-client')
     compile group: 'org.apache.maven', name: 'maven-plugin-api', version:'3.6.0'
     compile group: 'org.apache.maven.plugins', name: 'maven-plugin-plugin', version:'3.6.0'

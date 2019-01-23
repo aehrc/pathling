@@ -7,15 +7,15 @@ package au.csiro.clinsight.datasource;
 
 import static au.csiro.clinsight.datasource.QueryUtilities.quote;
 import static au.csiro.clinsight.fhir.FhirUtilities.getIdFromReference;
-import static au.csiro.clinsight.persistence.Naming.tableNameForDimension;
+import static au.csiro.clinsight.resources.Naming.tableNameForDimension;
 import static java.util.stream.Collectors.joining;
 
 import au.csiro.clinsight.fhir.FhirUtilities;
-import au.csiro.clinsight.persistence.Dimension;
-import au.csiro.clinsight.persistence.DimensionAttribute;
-import au.csiro.clinsight.persistence.Metric;
-import au.csiro.clinsight.persistence.Naming;
-import au.csiro.clinsight.persistence.Query;
+import au.csiro.clinsight.resources.Dimension;
+import au.csiro.clinsight.resources.DimensionAttribute;
+import au.csiro.clinsight.resources.Metric;
+import au.csiro.clinsight.resources.Naming;
+import au.csiro.clinsight.resources.Query;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.parser.IParser;

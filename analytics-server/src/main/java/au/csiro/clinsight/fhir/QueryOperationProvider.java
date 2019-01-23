@@ -7,8 +7,8 @@ package au.csiro.clinsight.fhir;
 
 import au.csiro.clinsight.datasource.HibernateQueryExecutor;
 import au.csiro.clinsight.datasource.QueryExecutor;
-import au.csiro.clinsight.persistence.Query;
-import au.csiro.clinsight.persistence.QueryResult;
+import au.csiro.clinsight.resources.Query;
+import au.csiro.clinsight.resources.QueryResult;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import java.sql.SQLException;

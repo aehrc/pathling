@@ -5,7 +5,7 @@
 
 package au.csiro.clinsight.fhir;
 
-import au.csiro.clinsight.persistence.Dimension;
+import au.csiro.clinsight.resources.Dimension;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.Search;

@@ -2,10 +2,11 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.persistence;
+package au.csiro.clinsight.resources;
 
-import static au.csiro.clinsight.persistence.Naming.generateRandomKey;
+import static au.csiro.clinsight.resources.Naming.generateRandomKey;
 
+import ca.uhn.fhir.model.api.annotation.Binding;
 import ca.uhn.fhir.model.api.annotation.Child;
 import ca.uhn.fhir.model.api.annotation.ResourceDef;
 import ca.uhn.fhir.parser.IParser;
@@ -15,32 +16,30 @@ import java.util.function.Predicate;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
 import javax.persistence.Transient;
-import javax.persistence.UniqueConstraint;
+import org.hibernate.annotations.Type;
 import org.hl7.fhir.dstu3.model.Bundle;
+import org.hl7.fhir.dstu3.model.Coding;
 import org.hl7.fhir.dstu3.model.DomainResource;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.Property;
+import org.hl7.fhir.dstu3.model.Reference;
 import org.hl7.fhir.dstu3.model.ResourceType;
 import org.hl7.fhir.dstu3.model.StringType;
 
 /**
- * Describes a statistical measure over a set of facts. Metrics can be used in conjunction with
- * DimensionAttributes and Filters to request aggregate statistics about data held within a FHIR
- * analytics server.
+ * Describes a data field which is available for grouping and filtering within a FHIR analytics
+ * server.
  *
  * @author John Grimes
  */
 @Entity
-@ResourceDef(name = "Metric",
-    profile = "https://clinsight.csiro.au/fhir/StructureDefinition/metric-0")
-@Table(uniqueConstraints = @UniqueConstraint(name = "factSet_name_uniq", columnNames = {
-    "factSet_key", "name"}))
-public class Metric extends DomainResource {
+@ResourceDef(name = "DimensionAttribute",
+    profile = "https://clinsight.csiro.au/fhir/StructureDefinition/dimension-attribute-0")
+public class DimensionAttribute extends DomainResource {
 
-  public static final String URL = "https://clinsight.csiro.au/fhir/StructureDefinition/metric-0";
+  public static final String URL =
+      "https://clinsight.csiro.au/fhir/StructureDefinition/dimension-attribute-0";
 
   @Child(name = "name", min = 1)
   private StringType name;
@@ -48,19 +47,21 @@ public class Metric extends DomainResource {
   @Child(name = "title", min = 1)
   private StringType title;
 
-  @Child(name = "expression")
-  private StringType expression;
+  @Child(name = "type", min = 1)
+  @Binding(valueSet = "http://hl7.org/fhir/ValueSet/defined-types")
+  private Coding type;
+
+  @Child(name = "dimension", min = 1)
+  private Reference dimension;
 
   @Column(name = "json")
   private String json;
 
-  private FactSet factSet;
-
-  public Metric() {
+  public DimensionAttribute() {
     setKey(generateRandomKey());
   }
 
-  public static Predicate<Bundle.BundleEntryComponent> isEntryMetric() {
+  public static Predicate<Bundle.BundleEntryComponent> isEntryDimensionAttribute() {
     return entry -> entry.getResource()
         .getMeta()
         .getProfile()
@@ -73,11 +74,11 @@ public class Metric extends DomainResource {
     return getIdElement().getIdPart();
   }
 
-  @Transient
   public void setKey(String key) {
     setIdElement(new IdType(key));
   }
 
+  @Transient
   public String getName() {
     if (name == null) {
       return null;
@@ -85,10 +86,12 @@ public class Metric extends DomainResource {
     return name.asStringValue();
   }
 
+  @Transient
   public void setName(String name) {
     this.name = new StringType(name);
   }
 
+  @Transient
   public String getTitle() {
     if (title == null) {
       return null;
@@ -96,39 +99,38 @@ public class Metric extends DomainResource {
     return title.asStringValue();
   }
 
+  @Transient
   public void setTitle(String title) {
     this.title = new StringType(title);
   }
 
   @Transient
-  public String getExpression() {
-    if (expression == null) {
-      return null;
-    }
-    return expression.asStringValue();
+  public Coding getType() {
+    return type;
   }
 
   @Transient
-  public void setExpression(String expression) {
-    this.expression = new StringType(expression);
+  public void setType(Coding type) {
+    this.type = type;
   }
 
-  @org.hibernate.annotations.Type(type = "text")
+  @Transient
+  public Reference getDimension() {
+    return dimension;
+  }
+
+  @Transient
+  public void setDimension(Reference dimension) {
+    this.dimension = dimension;
+  }
+
+  @Type(type = "text")
   public String getJson() {
     return json;
   }
 
   public void setJson(String json) {
     this.json = json;
-  }
-
-  @ManyToOne
-  public FactSet getFactSet() {
-    return factSet;
-  }
-
-  public void setFactSet(FactSet factSet) {
-    this.factSet = factSet;
   }
 
   /**
@@ -152,16 +154,16 @@ public class Metric extends DomainResource {
     if (json == null) {
       return;
     }
-    Metric metric = (Metric) jsonParser.parseResource(json);
-    metric.copyValues(this);
+    DimensionAttribute dimensionAttribute = (DimensionAttribute) jsonParser.parseResource(json);
+    dimensionAttribute.copyValues(this);
   }
 
   @Transient
   @Override
   public DomainResource copy() {
-    Metric metric = new Metric();
-    copyValues(metric);
-    return metric;
+    DimensionAttribute dimensionAttribute = new DimensionAttribute();
+    copyValues(dimensionAttribute);
+    return dimensionAttribute;
   }
 
   @Transient
@@ -169,16 +171,16 @@ public class Metric extends DomainResource {
   public void copyValues(DomainResource dst) {
     super.copyValues(dst);
     if (name != null) {
-      ((Metric) dst).name = name.copy();
+      ((DimensionAttribute) dst).name = name.copy();
     }
     if (title != null) {
-      ((Metric) dst).title = title.copy();
+      ((DimensionAttribute) dst).title = title.copy();
     }
-    if (expression != null) {
-      ((Metric) dst).expression = expression.copy();
+    if (type != null) {
+      ((DimensionAttribute) dst).type = type.copy();
     }
-    if (json != null) {
-      ((Metric) dst).json = json;
+    if (dimension != null) {
+      ((DimensionAttribute) dst).dimension = dimension.copy();
     }
   }
 
@@ -188,26 +190,35 @@ public class Metric extends DomainResource {
     return null;
   }
 
-  @Transient
   @Override
   protected void listChildren(List<Property> children) {
     super.listChildren(children);
-    children.add(new Property("name", "string", "The display name of the Metric.", 1, 1, name));
     children.add(
-        new Property("title", "string", "The machine-friendly name of the Metric.", 1, 1, title));
-    children.add(new Property("expression",
+        new Property("name", "string", "The display name of the DimensionAttribute.", 1, 1, name));
+    children.add(new Property("title",
         "string",
-        "A SQL expression describing an aggregate function over the additive facts that are" +
-            " the subject of this Metric.",
-        0,
+        "The machine-friendly name of the DimensionAttribute.",
         1,
-        expression));
+        1,
+        title));
+    children.add(new Property("type",
+        "Coding",
+        "The data type used for representing values for this DimensionAttribute.",
+        1,
+        1,
+        type));
+    children.add(new Property("dimension",
+        "Reference(Dimension)",
+        "The Dimension that this DimensionAttribute forms a part of.",
+        1,
+        1,
+        dimension));
   }
 
   @Transient
   @Override
   public boolean isEmpty() {
-    return super.isEmpty() && ElementUtil.isEmpty(name, expression);
+    return super.isEmpty() && ElementUtil.isEmpty(name, title, type, dimension);
   }
 
 }

@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.persistence;
+package au.csiro.clinsight.resources;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -22,7 +22,7 @@ import org.junit.Test;
 /**
  * @author John Grimes
  */
-public class ValueSetDimensionSearchTest {
+public class DimensionPersistenceTest {
 
   private IParser jsonParser;
   private EntityManagerFactory entityManagerFactory;
@@ -32,7 +32,7 @@ public class ValueSetDimensionSearchTest {
   @Before
   public void setUp() {
     jsonParser = FhirContext.forDstu3().newJsonParser();
-    entityManagerFactory = Persistence.createEntityManagerFactory("au.csiro.clinsight.persistence");
+    entityManagerFactory = Persistence.createEntityManagerFactory("au.csiro.clinsight.resources");
     entityManager = entityManagerFactory.createEntityManager();
 
     Dimension.DescribesComponent describes = new Dimension.DescribesComponent();
@@ -53,11 +53,21 @@ public class ValueSetDimensionSearchTest {
   }
 
   @Test
-  public void testFindValueSetDimensionByUrl() {
-    TypedQuery<Dimension> query = entityManager.createQuery(
-        "SELECT d FROM Dimension d JOIN d.describes dd WHERE dd.valueSet = :valueSet",
-        Dimension.class);
-    query.setParameter("valueSet", "http://clinsight.csiro.au/fhir/ValueSet/my-value-set");
+  public void testFindDimensionById() {
+    Dimension result = entityManager.find(Dimension.class, "my-dimension");
+    result.populateFromJson(jsonParser);
+    assertThat(result.getName()).isEqualTo("My Dimension");
+    assertThat(result.getAttribute()
+        .get(0)
+        .getReference()).isEqualTo("DimensionAttribute/my-dimension-attribute");
+    assertThat(result.getDescribes().get(0).getValueSet())
+        .isEqualTo("http://clinsight.csiro.au/fhir/ValueSet/my-value-set");
+  }
+
+  @Test
+  public void testFindAllDimensions() {
+    TypedQuery<Dimension> query = entityManager
+        .createQuery("SELECT d FROM Dimension d", Dimension.class);
     List<Dimension> results = query.getResultList();
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0).getKey()).isEqualTo("my-dimension");

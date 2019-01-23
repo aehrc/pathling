@@ -5,8 +5,8 @@
 
 package au.csiro.clinsight.datasource;
 
-import au.csiro.clinsight.persistence.Query;
-import au.csiro.clinsight.persistence.QueryResult;
+import au.csiro.clinsight.resources.Query;
+import au.csiro.clinsight.resources.QueryResult;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;

@@ -6,12 +6,12 @@
 package au.csiro.clinsight;
 
 import au.csiro.clinsight.fhir.FhirServer;
-import au.csiro.clinsight.persistence.Dimension;
-import au.csiro.clinsight.persistence.DimensionAttribute;
-import au.csiro.clinsight.persistence.FactSet;
-import au.csiro.clinsight.persistence.Metric;
-import au.csiro.clinsight.persistence.Query;
-import au.csiro.clinsight.persistence.QueryResult;
+import au.csiro.clinsight.resources.Dimension;
+import au.csiro.clinsight.resources.DimensionAttribute;
+import au.csiro.clinsight.resources.FactSet;
+import au.csiro.clinsight.resources.Metric;
+import au.csiro.clinsight.resources.Query;
+import au.csiro.clinsight.resources.QueryResult;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.List;

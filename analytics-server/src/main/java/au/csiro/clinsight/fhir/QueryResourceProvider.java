@@ -5,7 +5,7 @@
 
 package au.csiro.clinsight.fhir;
 
-import au.csiro.clinsight.persistence.Query;
+import au.csiro.clinsight.resources.Query;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import java.util.ArrayList;

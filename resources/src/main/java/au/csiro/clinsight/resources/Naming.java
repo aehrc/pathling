@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.persistence;
+package au.csiro.clinsight.resources;
 
 import java.util.Random;
 
