@@ -50,6 +50,7 @@ public class FhirLoader {
         .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreConnectionUrl())
         .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
         .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
+        .config("spark.executor.memory", "6g")
         .enableHiveSupport()
         .getOrCreate();
   }

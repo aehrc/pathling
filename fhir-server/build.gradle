@@ -1,3 +1,7 @@
+plugins {
+    id 'java'
+}
+
 
 description = ''
 dependencies {
@@ -7,4 +11,16 @@ dependencies {
     compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version:'3.6.0'
     compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-server', version:'3.6.0'
     testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version:'2.1.1.RELEASE'
+}
+group 'au.csiro.clinsight'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
 }
