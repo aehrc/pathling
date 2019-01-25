@@ -5,8 +5,8 @@
 
 package au.csiro.clinsight.datasource;
 
-import au.csiro.clinsight.resources.Query;
-import au.csiro.clinsight.resources.QueryResult;
+import au.csiro.clinsight.resources.AggregateQuery;
+import au.csiro.clinsight.resources.AggregateQueryResult;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -44,16 +44,16 @@ public class HibernateQueryExecutor implements QueryExecutor {
   }
 
   // TODO: Validate that all metrics are from the same fact, etc.
-  private static void validateQuery(Query query) throws InvalidQueryException {
+  private static void validateQuery(AggregateQuery query) throws InvalidQueryException {
     List<Reference> metricRefs = query.getMetric();
     if (metricRefs == null) {
-      throw new InvalidQueryException("Query must refer to at least one Metric.");
+      throw new InvalidQueryException("AggregateQuery must refer to at least one Metric.");
     }
   }
 
-  private static QueryResult getQueryResult(Query query, ResultSet resultSet)
+  private static AggregateQueryResult getQueryResult(AggregateQuery query, ResultSet resultSet)
       throws SQLException, UnsupportedDataTypeException {
-    QueryResult queryResult = new QueryResult();
+    AggregateQueryResult queryResult = new AggregateQueryResult();
     Reference queryReference = new Reference();
     queryReference.setResource(query);
     queryResult.setQuery(queryReference);
@@ -62,9 +62,10 @@ public class HibernateQueryExecutor implements QueryExecutor {
     int labelCount =
         query.getDimensionAttribute() == null ? 0 : query.getDimensionAttribute().size();
     int dataCount = query.getMetric().size();
-    List<QueryResult.LabelComponent> labelList = processLabelHeadings(query, resultSet, columnCount,
+    List<AggregateQueryResult.LabelComponent> labelList = processLabelHeadings(query, resultSet,
+        columnCount,
         labelCount);
-    List<QueryResult.DataComponent> dataList = processDataHeadings(query,
+    List<AggregateQueryResult.DataComponent> dataList = processDataHeadings(query,
         resultSet,
         columnCount,
         labelCount,
@@ -79,13 +80,14 @@ public class HibernateQueryExecutor implements QueryExecutor {
     return queryResult;
   }
 
-  private static List<QueryResult.LabelComponent> processLabelHeadings(Query query,
+  private static List<AggregateQueryResult.LabelComponent> processLabelHeadings(
+      AggregateQuery query,
       ResultSet resultSet,
       int columnCount,
       int labelCount) throws SQLException {
-    List<QueryResult.LabelComponent> labelList = new ArrayList<>();
+    List<AggregateQueryResult.LabelComponent> labelList = new ArrayList<>();
     for (int i = 1; i <= labelCount && i <= columnCount; i++) {
-      QueryResult.LabelComponent label = new QueryResult.LabelComponent();
+      AggregateQueryResult.LabelComponent label = new AggregateQueryResult.LabelComponent();
       String seriesName = resultSet.getMetaData().getColumnLabel(i);
       label.setName(new StringType(seriesName));
       String reference = query.getDimensionAttribute().get(i - 1).getReference();
@@ -98,14 +100,14 @@ public class HibernateQueryExecutor implements QueryExecutor {
     return labelList;
   }
 
-  private static List<QueryResult.DataComponent> processDataHeadings(Query query,
+  private static List<AggregateQueryResult.DataComponent> processDataHeadings(AggregateQuery query,
       ResultSet resultSet,
       int columnCount,
       int labelCount, int dataCount)
       throws SQLException {
-    List<QueryResult.DataComponent> dataList = new ArrayList<>();
+    List<AggregateQueryResult.DataComponent> dataList = new ArrayList<>();
     for (int i = labelCount + 1; i <= (labelCount + dataCount) && i <= columnCount; i++) {
-      QueryResult.DataComponent data = new QueryResult.DataComponent();
+      AggregateQueryResult.DataComponent data = new AggregateQueryResult.DataComponent();
       String seriesName = resultSet.getMetaData().getColumnLabel(i);
       data.setName(new StringType(seriesName));
       String reference = query.getMetric().get(i - labelCount - 1).getReference();
@@ -118,7 +120,8 @@ public class HibernateQueryExecutor implements QueryExecutor {
     return dataList;
   }
 
-  private static void processLabels(ResultSet resultSet, List<QueryResult.LabelComponent> labelList,
+  private static void processLabels(ResultSet resultSet,
+      List<AggregateQueryResult.LabelComponent> labelList,
       int columnCount,
       int labelCount) throws SQLException, UnsupportedDataTypeException {
     for (int i = 1; i <= labelCount && i <= columnCount; i++) {
@@ -127,7 +130,8 @@ public class HibernateQueryExecutor implements QueryExecutor {
     }
   }
 
-  private static void processData(ResultSet resultSet, List<QueryResult.DataComponent> dataList,
+  private static void processData(ResultSet resultSet,
+      List<AggregateQueryResult.DataComponent> dataList,
       int columnCount,
       int labelCount, int dataCount) throws SQLException, UnsupportedDataTypeException {
     for (int i = labelCount + 1; i <= (labelCount + dataCount) && i <= columnCount; i++) {
@@ -179,7 +183,7 @@ public class HibernateQueryExecutor implements QueryExecutor {
   }
 
   @Override
-  public QueryResult execute(Query query) {
+  public AggregateQueryResult execute(AggregateQuery query) {
     return session.doReturningWork(connection -> {
       Statement statement = connection.createStatement();
       String sql = queryTranslator.translateQuery(query);

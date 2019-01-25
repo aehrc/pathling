@@ -11,11 +11,7 @@ import static au.csiro.clinsight.resources.Naming.tableNameForDimension;
 import static java.util.stream.Collectors.joining;
 
 import au.csiro.clinsight.fhir.FhirUtilities;
-import au.csiro.clinsight.resources.Dimension;
-import au.csiro.clinsight.resources.DimensionAttribute;
-import au.csiro.clinsight.resources.Metric;
-import au.csiro.clinsight.resources.Naming;
-import au.csiro.clinsight.resources.Query;
+import au.csiro.clinsight.resources.AggregateQuery;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.primitive.IdDt;
 import ca.uhn.fhir.parser.IParser;
@@ -62,8 +58,8 @@ public class SqlQueryTranslator implements QueryTranslator<String> {
   private String buildFromClause(List<DimensionAttribute> dimensionAttributes, List<Metric> metrics)
       throws ResourceNotFoundException {
     String clause = " FROM ";
-    // TODO: We assume that all metrics within a Query are from the same FactSet, and that there is at least one
-    // Metric in each Query. These facts will need to be validated somewhere.
+    // TODO: We assume that all metrics within a AggregateQuery are from the same FactSet, and that there is at least one
+    // Metric in each AggregateQuery. These facts will need to be validated somewhere.
     String factName = Naming.tableNameForFactSet(metrics.stream().findFirst().get().getFactSet());
     clause += factName;
     if (!dimensionAttributes.isEmpty()) {
@@ -106,7 +102,7 @@ public class SqlQueryTranslator implements QueryTranslator<String> {
   }
 
   @Override
-  public String translateQuery(Query query) throws ResourceNotFoundException {
+  public String translateQuery(AggregateQuery query) throws ResourceNotFoundException {
     List<String> dimensionAttributeIds = query.getDimensionAttribute()
         .stream()
         .map(FhirUtilities::getIdFromReference)
