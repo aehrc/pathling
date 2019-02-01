@@ -7,7 +7,7 @@ package au.csiro.clinsight.fhir;
 
 import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
 
-import au.csiro.clinsight.datasource.QueryExecutor;
+import au.csiro.clinsight.query.QueryExecutor;
 import au.csiro.clinsight.resources.AggregateQuery;
 import au.csiro.clinsight.resources.AggregateQueryResult;
 import ca.uhn.fhir.rest.annotation.Operation;

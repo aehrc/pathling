@@ -3,7 +3,7 @@
  * is subject to license terms and conditions.
  */
 
-package au.csiro.clinsight.datasource;
+package au.csiro.clinsight.query;
 
 import au.csiro.clinsight.resources.AggregateQuery;
 import au.csiro.clinsight.resources.AggregateQueryResult;

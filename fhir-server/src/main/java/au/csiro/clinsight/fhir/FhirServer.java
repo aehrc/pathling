@@ -6,9 +6,9 @@ package au.csiro.clinsight.fhir;
 
 import static au.csiro.clinsight.utilities.Configuration.copyStringProps;
 
-import au.csiro.clinsight.datasource.QueryExecutor;
-import au.csiro.clinsight.datasource.SparkQueryExecutor;
-import au.csiro.clinsight.datasource.SparkQueryExecutorConfiguration;
+import au.csiro.clinsight.query.QueryExecutor;
+import au.csiro.clinsight.query.SparkQueryExecutor;
+import au.csiro.clinsight.query.SparkQueryExecutorConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;

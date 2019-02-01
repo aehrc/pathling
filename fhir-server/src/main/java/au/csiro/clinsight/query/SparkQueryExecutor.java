@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.datasource;
+package au.csiro.clinsight.query;
 
 import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
 
@@ -11,16 +11,20 @@ import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.TerminologyClientConfiguration;
 import au.csiro.clinsight.resources.AggregateQuery;
 import au.csiro.clinsight.resources.AggregateQuery.AggregationComponent;
+import au.csiro.clinsight.resources.AggregateQuery.GroupingComponent;
 import au.csiro.clinsight.resources.AggregateQueryResult;
 import au.csiro.clinsight.resources.AggregateQueryResult.DataComponent;
 import au.csiro.clinsight.utilities.Configuration;
 import ca.uhn.fhir.context.FhirContext;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -89,31 +93,95 @@ public class SparkQueryExecutor implements QueryExecutor {
 
   private void initialiseTerminologyClient() {
     TerminologyClientConfiguration clientConfiguration = new TerminologyClientConfiguration();
-    Configuration
-        .copyStringProps(configuration, clientConfiguration, Arrays.asList("terminologyServerUrl"));
+    Configuration.copyStringProps(configuration, clientConfiguration,
+        Collections.singletonList("terminologyServerUrl"));
     terminologyClient = new TerminologyClient(clientConfiguration, fhirContext);
   }
 
   @Override
   public AggregateQueryResult execute(AggregateQuery query) throws IllegalArgumentException {
     List<AggregationComponent> aggregations = query.getAggregation();
+    List<GroupingComponent> groupings = query.getGrouping();
     if (aggregations == null || aggregations.isEmpty()) {
       throw new IllegalArgumentException("Missing aggregation component within query");
     }
-    if (aggregations.size() > 1) {
-      throw new AssertionError("More than one aggregation not yet supported");
+
+    List<SparkAggregationParseResult> aggregationParseResults = parseAggregation(aggregations);
+    List<SparkGroupingParseResult> groupingParseResults = parseGroupings(groupings);
+    SparkQueryPlan finalQueryPlan = buildQueryPlan(aggregationParseResults, groupingParseResults);
+
+    String selectClause = "SELECT " + String.join(", ", finalQueryPlan.getAggregationClause());
+    String fromClause = "FROM " + String.join(", ", finalQueryPlan.getFromTables());
+    String groupByClause = "GROUP BY " + String.join(", ", finalQueryPlan.getGroupingClause());
+    Dataset<Row> result = spark.sql(String.join(" ", selectClause, fromClause, groupByClause));
+
+    return queryResultFromDataset(result, query, finalQueryPlan);
+  }
+
+  private List<SparkAggregationParseResult> parseAggregation(
+      List<AggregationComponent> aggregations) {
+    return aggregations.stream()
+        .map(aggregation -> {
+          // TODO: Support references to pre-defined aggregations.
+          String aggExpression = aggregation.getExpression().asStringValue();
+          if (aggExpression == null) {
+            throw new IllegalArgumentException("Aggregation component must have expression");
+          }
+          SparkAggregationParser aggregationParser = new SparkAggregationParser();
+          return aggregationParser.parse(aggExpression);
+        }).collect(Collectors.toList());
+  }
+
+  private List<SparkGroupingParseResult> parseGroupings(List<GroupingComponent> groupings) {
+    List<SparkGroupingParseResult> groupingParseResults = new ArrayList<>();
+    if (groupings != null) {
+      groupingParseResults = groupings.stream()
+          .map(grouping -> {
+            // TODO: Support references to pre-defined dimensions.
+            String groupingExpression = grouping.getExpression().asStringValue();
+            if (groupingExpression == null) {
+              throw new IllegalArgumentException("Grouping component must have expression");
+            }
+            SparkGroupingParser groupingParser = new SparkGroupingParser();
+            return groupingParser.parse(groupingExpression);
+          }).collect(Collectors.toList());
     }
-    AggregationComponent aggregation = aggregations.get(0);
-    String aggExpression = aggregation.getExpression().asStringValue();
-    if (aggExpression == null) {
-      throw new IllegalArgumentException("Aggregation component must have expression");
-    } else {
-      AggregationExpressionParser parser = new AggregationExpressionParser();
-      SparkQueryPlan queryPlan = parser.parse(aggExpression);
-      Dataset<Row> result = spark.sql("SELECT " + queryPlan.getAggregationClause()
-          + " FROM " + queryPlan.getFromTables().stream().collect(Collectors.joining(", ")));
-      return queryResultFromDataset(result, query, queryPlan);
+    return groupingParseResults;
+  }
+
+  private SparkQueryPlan buildQueryPlan(List<SparkAggregationParseResult> aggregationParseResults,
+      List<SparkGroupingParseResult> groupingParseResults) {
+    SparkQueryPlan finalQueryPlan = new SparkQueryPlan();
+    List<String> aggregationClause = aggregationParseResults.stream()
+        .map(SparkAggregationParseResult::getExpression)
+        .collect(Collectors.toList());
+    finalQueryPlan.setAggregationClause(aggregationClause);
+
+    List<DataType> resultTypes = aggregationParseResults.stream()
+        .map(SparkAggregationParseResult::getResultType)
+        .collect(Collectors.toList());
+    finalQueryPlan.setResultTypes(resultTypes);
+
+    List<String> groupingClause = groupingParseResults.stream()
+        .map(SparkGroupingParseResult::getExpression)
+        .collect(Collectors.toList());
+    finalQueryPlan.setGroupingClause(groupingClause);
+
+    Set<String> aggregationFromTables = aggregationParseResults.stream()
+        .map(SparkAggregationParseResult::getFromTable)
+        .collect(Collectors.toSet());
+    Set<String> groupingFromTables = groupingParseResults.stream()
+        .map(SparkGroupingParseResult::getFromTable)
+        .collect(Collectors.toSet());
+    if (!aggregationFromTables.containsAll(groupingFromTables)) {
+      Set<String> difference = new HashSet<>(groupingFromTables);
+      difference.removeAll(aggregationFromTables);
+      throw new IllegalArgumentException(
+          "Groupings contain one or more resources that are not the subject of an aggregation: "
+              + String.join(", ", difference));
     }
+    finalQueryPlan.setFromTables(aggregationFromTables);
+    return finalQueryPlan;
   }
 
   /**
@@ -134,8 +202,8 @@ public class SparkQueryExecutor implements QueryExecutor {
         .map(row -> {
           try {
             @SuppressWarnings("unchecked") Constructor constructor = sparkDataTypeToFhirClass
-                .get(queryPlan.getResultType())
-                .getConstructor(sparkDataTypeToJavaClass.get(queryPlan.getResultType()));
+                .get(queryPlan.getResultTypes())
+                .getConstructor(sparkDataTypeToJavaClass.get(queryPlan.getResultTypes()));
             Object value = row.get(0);
             return constructor.newInstance(value);
           } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
@@ -144,7 +212,7 @@ public class SparkQueryExecutor implements QueryExecutor {
           }
         }).collect(Collectors.toList());
     data.setSeries(series);
-    queryResult.setData(Arrays.asList(data));
+    queryResult.setData(Collections.singletonList(data));
     data.setName(query.getAggregation().get(0).getLabel());
     return queryResult;
   }

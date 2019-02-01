@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.datasource;
+package au.csiro.clinsight.query;
 
 /**
  * @author John Grimes
