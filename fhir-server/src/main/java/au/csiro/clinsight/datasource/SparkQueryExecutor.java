@@ -145,6 +145,7 @@ public class SparkQueryExecutor implements QueryExecutor {
         }).collect(Collectors.toList());
     data.setSeries(series);
     queryResult.setData(Arrays.asList(data));
+    data.setName(query.getAggregation().get(0).getLabel());
     return queryResult;
   }
 
