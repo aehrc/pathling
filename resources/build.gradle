@@ -1,6 +1,4 @@
-plugins {
-    id 'java'
-}
+apply plugin: 'java'
 
 group 'au.csiro.clinsight.loaders'
 version '1.0-SNAPSHOT'

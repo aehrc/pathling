@@ -2,24 +2,31 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight;
-
-import java.util.Arrays;
+package au.csiro.clinsight.datasource;
 
 /**
  * @author John Grimes
  */
-public class FhirLoaderConfiguration {
+public class SparkQueryExecutorConfiguration {
 
   private String sparkMasterUrl;
   private String warehouseDirectory;
   private String metastoreUrl;
   private String metastoreUser;
   private String metastorePassword;
-  private int loadPartitions;
   private String databaseName;
-  private String[] resourcesToSave;
   private String executorMemory;
+  private String terminologyServerUrl;
+
+  public SparkQueryExecutorConfiguration() {
+    sparkMasterUrl = "spark://localhost:7077";
+    warehouseDirectory = ".";
+    metastoreUrl = "jdbc:postgresql://localhost/clinsight_metastore";
+    metastoreUser = "clinsight";
+    metastorePassword = "";
+    databaseName = "clinsight";
+    executorMemory = "1g";
+  }
 
   public String getSparkMasterUrl() {
     return sparkMasterUrl;
@@ -61,28 +68,12 @@ public class FhirLoaderConfiguration {
     this.metastorePassword = metastorePassword;
   }
 
-  public int getLoadPartitions() {
-    return loadPartitions;
-  }
-
-  public void setLoadPartitions(int loadPartitions) {
-    this.loadPartitions = loadPartitions;
-  }
-
   public String getDatabaseName() {
     return databaseName;
   }
 
   public void setDatabaseName(String databaseName) {
     this.databaseName = databaseName;
-  }
-
-  public String[] getResourcesToSave() {
-    return resourcesToSave;
-  }
-
-  public void setResourcesToSave(String[] resourcesToSave) {
-    this.resourcesToSave = resourcesToSave;
   }
 
   public String getExecutorMemory() {
@@ -93,19 +84,25 @@ public class FhirLoaderConfiguration {
     this.executorMemory = executorMemory;
   }
 
+  public String getTerminologyServerUrl() {
+    return terminologyServerUrl;
+  }
+
+  public void setTerminologyServerUrl(String terminologyServerUrl) {
+    this.terminologyServerUrl = terminologyServerUrl;
+  }
+
   @Override
   public String toString() {
-    return "FhirLoaderConfiguration{" +
+    return "SparkQueryExecutorConfiguration{" +
         "sparkMasterUrl='" + sparkMasterUrl + '\'' +
         ", warehouseDirectory='" + warehouseDirectory + '\'' +
         ", metastoreUrl='" + metastoreUrl + '\'' +
         ", metastoreUser='" + metastoreUser + '\'' +
         ", metastorePassword='" + metastorePassword + '\'' +
-        ", loadPartitions=" + loadPartitions +
         ", databaseName='" + databaseName + '\'' +
-        ", resourcesToSave=" + Arrays.toString(resourcesToSave) +
         ", executorMemory='" + executorMemory + '\'' +
+        ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
         '}';
   }
 }
-

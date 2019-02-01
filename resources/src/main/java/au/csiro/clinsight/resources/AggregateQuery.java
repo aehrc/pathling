@@ -13,7 +13,6 @@ import ca.uhn.fhir.model.api.annotation.ResourceDef;
 import ca.uhn.fhir.util.ElementUtil;
 import java.util.List;
 import java.util.stream.Collectors;
-import javax.persistence.Embeddable;
 import org.hl7.fhir.dstu3.model.BackboneElement;
 import org.hl7.fhir.dstu3.model.Basic;
 import org.hl7.fhir.dstu3.model.DomainResource;
@@ -35,6 +34,24 @@ public class AggregateQuery extends Basic {
   @Child(name = "grouping", max = MAX_UNLIMITED)
   @Description(shortDefinition = "A description of how to group additive data into groups or categories within the query result")
   private List<GroupingComponent> grouping;
+
+  public List<AggregationComponent> getAggregation() {
+    return aggregation;
+  }
+
+  public void setAggregation(
+      List<AggregationComponent> aggregation) {
+    this.aggregation = aggregation;
+  }
+
+  public List<GroupingComponent> getGrouping() {
+    return grouping;
+  }
+
+  public void setGrouping(
+      List<GroupingComponent> grouping) {
+    this.grouping = grouping;
+  }
 
   @Override
   public AggregateQuery copy() {
@@ -146,7 +163,6 @@ public class AggregateQuery extends Basic {
     }
   }
 
-  @Embeddable
   @Block
   public static class GroupingComponent extends BackboneElement {
 

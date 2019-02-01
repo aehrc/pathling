@@ -1,6 +1,6 @@
-plugins {
-    id 'java'
-}
+apply plugin: 'application'
+apply plugin: 'antlr'
+mainClassName = 'au.csiro.clinsight.FhirServerContainer'
 
 group 'au.csiro.clinsight'
 version '1.0-SNAPSHOT'
@@ -11,11 +11,44 @@ repositories {
 }
 
 dependencies {
+    antlr "org.antlr:antlr4:4.7.2"
     compile project(':resources')
-    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version: '3.6.0'
-    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-server', version: '3.6.0'
+    compile project(':terminology-client')
+    compile project(':utilities')
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version: '3.7.0-SNAPSHOT'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-server', version: '3.7.0-SNAPSHOT'
     compile group: 'org.springframework', name: 'spring-web', version: '5.0.8.RELEASE'
     compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '9.4.14.v20181114'
     compile group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '9.4.14.v20181114'
+    compile group: 'org.apache.spark', name: 'spark-core_2.11', version: '2.3.0'
+    compile group: 'org.apache.spark', name: 'spark-sql_2.11', version: '2.3.0'
+    compile group: 'org.apache.spark', name: 'spark-hive_2.11', version: '2.3.0'
+    compile group: 'com.cerner.bunsen', name: 'bunsen-core', version: '0.4.6-SNAPSHOT'
+    compile group: 'com.cerner.bunsen', name: 'bunsen-stu3', version: '0.4.6-SNAPSHOT'
+    compile group: 'org.postgresql', name: 'postgresql', version: '42.2.5'
+}
+
+generateGrammarSource {
+    arguments += ["-visitor"]
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath group: 'org.antlr', name: 'antlr4', version: '4.7.2'
+    }
+}
+
+task grun(type: JavaExec) {
+    dependsOn 'classes'
+    main = 'org.antlr.v4.gui.TestRig'
+    args = ['au.csiro.clinsight.fhir.FhirPath', 'expression', '-gui']
+    if (project.hasProperty('expression')) {
+        standardInput = new ByteArrayInputStream(expression.getBytes())
+    }
+    classpath = sourceSets.main.runtimeClasspath
 }
 

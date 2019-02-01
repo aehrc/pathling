@@ -6,10 +6,9 @@
 package au.csiro.clinsight.datasource;
 
 import au.csiro.clinsight.resources.AggregateQuery;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 
 public interface QueryTranslator<T> {
 
-  T translateQuery(AggregateQuery query) throws ResourceNotFoundException;
+  T translateQuery(AggregateQuery query);
 
 }

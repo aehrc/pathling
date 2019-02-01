@@ -1,0 +1,9 @@
+apply plugin: 'java'
+
+group 'au.csiro.clinsight'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}

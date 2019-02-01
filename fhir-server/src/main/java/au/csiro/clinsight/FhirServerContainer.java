@@ -4,11 +4,16 @@
 
 package au.csiro.clinsight;
 
+import static au.csiro.clinsight.utilities.Configuration.setStringPropsUsingEnvVar;
+
 import au.csiro.clinsight.fhir.FhirServer;
+import au.csiro.clinsight.fhir.FhirServerConfiguration;
+import java.util.HashMap;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 /**
@@ -16,11 +21,26 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
  */
 public class FhirServerContainer {
 
+
   public static void main(String[] args) throws Exception {
-    start();
+
+    FhirServerConfiguration config = new FhirServerConfiguration();
+
+    setStringPropsUsingEnvVar(config, new HashMap<String, String>() {{
+      put("CLINSIGHT_SPARK_MASTER_URL", "sparkMasterUrl");
+      put("CLINSIGHT_WAREHOUSE_DIRECTORY", "warehouseDirectory");
+      put("CLINSIGHT_METASTORE_URL", "metastoreUrl");
+      put("CLINSIGHT_METASTORE_USER", "metastoreUser");
+      put("CLINSIGHT_METASTORE_PASSWORD", "metastorePassword");
+      put("CLINSIGHT_DATABASE_NAME", "databaseName");
+      put("CLINSIGHT_EXECUTOR_MEMORY", "executorMemory");
+      put("CLINSIGHT_TERMINOLOGY_SERVER_URL", "terminologyServerUrl");
+    }});
+
+    start(config);
   }
 
-  private static void start() throws Exception {
+  private static void start(FhirServerConfiguration configuration) throws Exception {
     final int maxThreads = 100;
     final int minThreads = 10;
     final int idleTimeout = 120;
@@ -33,7 +53,8 @@ public class FhirServerContainer {
     server.setConnectors(new Connector[]{connector});
 
     ServletHandler servletHandler = new ServletHandler();
-    servletHandler.addServletWithMapping(FhirServer.class, "/fhir/*");
+    ServletHolder servletHolder = new ServletHolder(new FhirServer(configuration));
+    servletHandler.addServletWithMapping(servletHolder, "/fhir/*");
     server.setHandler(servletHandler);
 
     server.start();

@@ -7,11 +7,9 @@ package au.csiro.clinsight.datasource;
 
 import au.csiro.clinsight.resources.AggregateQuery;
 import au.csiro.clinsight.resources.AggregateQueryResult;
-import java.sql.SQLException;
 
 public interface QueryExecutor {
 
-  AggregateQueryResult execute(AggregateQuery query)
-      throws SQLException, HibernateQueryExecutor.UnsupportedDataTypeException;
+  AggregateQueryResult execute(AggregateQuery query);
 
 }

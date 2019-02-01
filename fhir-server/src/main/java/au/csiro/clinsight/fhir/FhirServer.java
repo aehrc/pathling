@@ -1,10 +1,14 @@
 /*
- * Copyright CSIRO Australian e-Health Research Centre (http://aehrc.com). All rights reserved. Use is subject to
- * license terms and conditions.
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
 package au.csiro.clinsight.fhir;
 
+import static au.csiro.clinsight.utilities.Configuration.copyStringProps;
+
+import au.csiro.clinsight.datasource.QueryExecutor;
+import au.csiro.clinsight.datasource.SparkQueryExecutor;
+import au.csiro.clinsight.datasource.SparkQueryExecutorConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
@@ -13,7 +17,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.servlet.ServletException;
-import org.hibernate.SessionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.cors.CorsConfiguration;
 
 /**
@@ -21,12 +26,14 @@ import org.springframework.web.cors.CorsConfiguration;
  */
 public class FhirServer extends RestfulServer {
 
+  private static final Logger logger = LoggerFactory.getLogger(FhirServer.class);
   private FhirServerConfiguration configuration;
-  private SessionFactory sessionFactory;
   private QueryExecutor queryExecutor;
 
   public FhirServer(FhirServerConfiguration configuration) {
     super(FhirContext.forDstu3());
+
+    logger.info("Creating new FhirServer: " + configuration);
     this.configuration = configuration;
   }
 
@@ -37,8 +44,18 @@ public class FhirServer extends RestfulServer {
     // Set default response encoding to JSON.
     setDefaultResponseEncoding(EncodingEnum.JSON);
 
+    initializeQueryExecutor();
     declareProviders();
     defineCorsConfiguration();
+  }
+
+  private void initializeQueryExecutor() {
+    SparkQueryExecutorConfiguration executorConfig = new SparkQueryExecutorConfiguration();
+    copyStringProps(configuration, executorConfig, Arrays
+        .asList("sparkMasterUrl", "warehouseDirectory", "metastoreUrl", "metastoreUser",
+            "metastorePassword", "databaseName", "executorMemory", "terminologyServerUrl"));
+
+    queryExecutor = new SparkQueryExecutor(executorConfig, getFhirContext());
   }
 
   private void declareProviders() {
@@ -48,20 +65,20 @@ public class FhirServer extends RestfulServer {
   }
 
   private void defineCorsConfiguration() {
-    CorsConfiguration config = new CorsConfiguration();
-    config.addAllowedHeader("x-fhir-starter");
-    config.addAllowedHeader("Origin");
-    config.addAllowedHeader("Accept");
-    config.addAllowedHeader("X-Requested-With");
-    config.addAllowedHeader("Content-Type");
+    CorsConfiguration corsConfig = new CorsConfiguration();
+    corsConfig.addAllowedHeader("x-fhir-starter");
+    corsConfig.addAllowedHeader("Origin");
+    corsConfig.addAllowedHeader("Accept");
+    corsConfig.addAllowedHeader("X-Requested-With");
+    corsConfig.addAllowedHeader("Content-Type");
 
-    config.addAllowedOrigin("*");
+    corsConfig.addAllowedOrigin("*");
 
-    config.addExposedHeader("Location");
-    config.addExposedHeader("Content-Location");
-    config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+    corsConfig.addExposedHeader("Location");
+    corsConfig.addExposedHeader("Content-Location");
+    corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
-    CorsInterceptor interceptor = new CorsInterceptor(config);
+    CorsInterceptor interceptor = new CorsInterceptor(corsConfig);
     registerInterceptor(interceptor);
   }
 

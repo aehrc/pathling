@@ -28,29 +28,30 @@ public class FhirLoader {
   private static Logger logger = LoggerFactory.getLogger(FhirLoader.class);
 
   private FhirLoaderConfiguration configuration;
-  private SparkSession sparkSession;
+  private SparkSession spark;
 
   public FhirLoader(FhirLoaderConfiguration configuration) {
     checkArgument(configuration.getSparkMasterUrl() != null, "Must supply Spark master URL");
     checkArgument(configuration.getWarehouseDirectory() != null, "Must supply warehouse directory");
-    checkArgument(configuration.getMetastoreConnectionUrl() != null,
+    checkArgument(configuration.getMetastoreUrl() != null,
         "Must supply metastore connection URL");
     checkArgument(configuration.getMetastoreUser() != null, "Must supply metastore user");
     checkArgument(configuration.getMetastorePassword() != null, "Must supply metastore password");
+    checkArgument(configuration.getExecutorMemory() != null, "Must supply executor memory");
 
     logger.debug("Creating new FhirLoader: " + configuration);
     this.configuration = configuration;
 
-    sparkSession = SparkSession.builder()
+    spark = SparkSession.builder()
         .config("spark.master", configuration.getSparkMasterUrl())
         // TODO: Use Maven dependency plugin to copy this into a relative location.
         .config("spark.jars",
             "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-SNAPSHOT.jar")
         .config("spark.sql.warehouse.dir", configuration.getWarehouseDirectory())
-        .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreConnectionUrl())
+        .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreUrl())
         .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
         .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
-        .config("spark.executor.memory", "6g")
+        .config("spark.executor.memory", configuration.getExecutorMemory())
         .enableHiveSupport()
         .getOrCreate();
   }
@@ -64,14 +65,14 @@ public class FhirLoader {
 
     Bundles bundles = Bundles.forStu3();
     JavaRDD<BundleContainer> rdd = bundles
-        .loadFromDirectory(sparkSession, bundlesDirectory.getAbsolutePath(),
+        .loadFromDirectory(spark, bundlesDirectory.getAbsolutePath(),
             configuration.getLoadPartitions());
-    sparkSession.sql("CREATE DATABASE IF NOT EXISTS " + configuration.getDatabaseName());
+    spark.sql("CREATE DATABASE IF NOT EXISTS " + configuration.getDatabaseName());
     for (String resourceName : configuration.getResourcesToSave()) {
       String tableName = configuration.getDatabaseName() + "." + resourceName.toLowerCase();
       logger.info("Saving table: " + tableName);
 
-      Dataset ds = bundles.extractEntry(sparkSession, rdd, resourceName);
+      Dataset ds = bundles.extractEntry(spark, rdd, resourceName);
       ds.write().mode(SaveMode.Overwrite).saveAsTable(tableName);
     }
   }

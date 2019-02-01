@@ -1,7 +1,16 @@
+apply plugin: 'java'
 
-description = ''
+group 'au.csiro.clinsight'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
 dependencies {
-    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-base', version:'3.6.0'
-    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version:'3.6.0'
-    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-client', version:'3.6.0'
+    compile project(':utilities')
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-base', version: '3.6.0'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version: '3.6.0'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-client', version: '3.6.0'
 }

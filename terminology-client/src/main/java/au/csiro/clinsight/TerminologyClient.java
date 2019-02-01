@@ -4,13 +4,17 @@
 
 package au.csiro.clinsight;
 
+import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
+
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.hl7.fhir.dstu3.model.Bundle;
 import org.hl7.fhir.dstu3.model.CodeType;
 import org.hl7.fhir.dstu3.model.ConceptMap;
@@ -19,13 +23,12 @@ import org.hl7.fhir.dstu3.model.IntegerType;
 import org.hl7.fhir.dstu3.model.Parameters;
 import org.hl7.fhir.dstu3.model.Property;
 import org.hl7.fhir.dstu3.model.Resource;
+import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 import org.hl7.fhir.dstu3.model.UriType;
 import org.hl7.fhir.dstu3.model.ValueSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-// TODO: Add documentation.
 
 /**
  * @author John Grimes
@@ -33,79 +36,156 @@ import org.slf4j.LoggerFactory;
 public class TerminologyClient {
 
   private static final Logger logger = LoggerFactory.getLogger(TerminologyClient.class);
-  private FhirContext fhirContext;
-  private String serverBase;
+  private TerminologyClientConfiguration configuration;
   private IGenericClient client;
   private Map<String, Bundle> searchStructureDefinitionsByUrlCache;
 
-  public TerminologyClient(FhirContext fhirContext, String serverBase) {
-    this.fhirContext = fhirContext;
-    this.serverBase = serverBase;
-    this.client = fhirContext.newRestfulGenericClient(serverBase);
+  public TerminologyClient(TerminologyClientConfiguration configuration, FhirContext fhirContext) {
+    checkNotNull(configuration.getTerminologyServerUrl(), "Must supply terminology server URL");
+    checkNotNull(configuration.getExpansionCount(), "Must supply expansion count");
+
+    logger.info("Creating new TerminologyClient: " + configuration);
+    this.configuration = configuration;
+    this.client = fhirContext.newRestfulGenericClient(configuration.getTerminologyServerUrl());
     searchStructureDefinitionsByUrlCache = new ConcurrentHashMap<>();
   }
 
-  // TODO: Add documentation.
-  public ValueSet expand(UriType url, IntegerType count, IntegerType offset) {
+  /**
+   * Performs a type-level ValueSet$expand operation, returning the entire expansion as a set of
+   * ExpansionResult objects.
+   *
+   * @see <a href="http://hl7.org/fhir/STU3/valueset-operations.html#expand">ValueSet$expand</a> in
+   * the FHIR STU3 specification.
+   */
+  public List<ExpansionResult> expand(String url) {
+    checkNotNull(url, "Must supply url");
+
     long start = System.nanoTime();
+
+    List<ExpansionResult> results = new ArrayList<>();
+    int offset = 0;
+    int numberOfRequests = 0;
+
+    while (true) {
+      Parameters inParams = new Parameters();
+      inParams.addParameter().setName("url").setValue(new UriType(url));
+      inParams.addParameter().setName("count")
+          .setValue(new IntegerType(configuration.getExpansionCount()));
+      if (offset != 0) {
+        inParams.addParameter().setName("offset").setValue(new IntegerType(offset));
+      }
+      Parameters outParams = client.operation()
+          .onType(ValueSet.class)
+          .named("expand")
+          .withParameters(inParams)
+          .execute();
+      numberOfRequests += 1;
+      ValueSet result = (ValueSet) outParams.getParameter().get(0).getResource();
+      results.addAll(getExpansionResults(result));
+      if (result.getExpansion().getTotal() > results.size()) {
+        offset = results.size();
+      } else {
+        break;
+      }
+    }
+
+    double elapsedMs = TimeUnit.MILLISECONDS
+        .convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
+    logger.info("Expanded " + results.size() + " codes from " + url + " ValueSet in " + String
+        .format("%.1f", elapsedMs) + " ms (" + numberOfRequests + " requests)");
+
+    return results;
+  }
+
+  /**
+   * Performs a type-level ValueSet$expand operation, using the supplied `url`, `count` and
+   * `offset`.
+   *
+   * @see <a href="http://hl7.org/fhir/STU3/valueset-operations.html#expand">ValueSet$expand</a> in
+   * the FHIR STU3 specification.
+   */
+  public ValueSet expand(String url, String count, int offset) {
+    checkNotNull(url, "Must supply url");
+    checkNotNull(url, "Must supply count");
+    checkNotNull(url, "Must supply offset");
+
+    long start = System.nanoTime();
+
     Parameters inParams = new Parameters();
-    inParams.addParameter().setName("url").setValue(url);
-    inParams.addParameter().setName("count").setValue(count);
-    inParams.addParameter().setName("offset").setValue(offset);
+    inParams.addParameter().setName("url").setValue(new UriType(url));
+    inParams.addParameter().setName("count").setValue(new StringType(count));
+    inParams.addParameter().setName("offset").setValue(new IntegerType(offset));
     Parameters outParams = client.operation()
         .onType(ValueSet.class)
         .named("expand")
         .withParameters(inParams)
         .execute();
     ValueSet result = (ValueSet) outParams.getParameter().get(0).getResource();
+
     double elapsedMs = TimeUnit.MILLISECONDS
         .convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
     logger.info("Expanded " + result.getExpansion().getContains().size() + " codes from " + url
-        .asStringValue() +
-        " ValueSet in " + String.format("%.1f", elapsedMs) + " ms");
+        + " ValueSet in " + String.format("%.1f", elapsedMs) + " ms");
+
     return result;
   }
 
   /**
-   * Performs a type-level CodeSystem$translate operation against the configured terminology
-   * server.
+   * Performs a type-level CodeSystem$translate operation.
    *
-   * @param code The code that is to be translated
-   * @param system The system for the code that is to be translated
-   * @param source Identifies the value set used when the concept (system/code pair) was chosen
-   * @param target Identifies the value set in which a translation is sought
-   * @throws IllegalArgumentException All arguments must be non-null.
    * @see <a href="http://hl7.org/fhir/STU3/conceptmap-operations.html#translate">ConceptMap$translate</a>
    * in the FHIR STU3 specification.
    */
-  public Parameters translate(CodeType code, UriType system, UriType source, UriType target) {
-    if (code == null || system == null || source == null || target == null) {
-      throw new IllegalArgumentException(
-          "Must provide non-null code, system, source and target arguments.");
-    }
+  public Parameters translate(String code, String system, String source, String target) {
+    checkNotNull(code, "Must supply code");
+    checkNotNull(system, "Must supply system");
+    checkNotNull(source, "Must supply source");
+    checkNotNull(target, "Must supply target");
+
+    long start = System.nanoTime();
+
     Parameters inParams = new Parameters();
-    inParams.addParameter().setName("code").setValue(code);
-    inParams.addParameter().setName("system").setValue(system);
-    inParams.addParameter().setName("source").setValue(source);
-    inParams.addParameter().setName("target").setValue(target);
-    return client.operation()
+    inParams.addParameter().setName("code").setValue(new CodeType(code));
+    inParams.addParameter().setName("system").setValue(new UriType(system));
+    inParams.addParameter().setName("source").setValue(new UriType(source));
+    inParams.addParameter().setName("target").setValue(new UriType(target));
+    Parameters outParams = client.operation()
         .onType(ConceptMap.class)
         .named("translate")
         .withParameters(inParams)
         .execute();
+
+    double elapsedMs = TimeUnit.MILLISECONDS
+        .convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
+    logger.info(
+        "Translated " + system + "|" + code + " (" + source + " > " + target + ") in " + String
+            .format("%.1f", elapsedMs) + " ms");
+
+    return outParams;
   }
 
-  // TODO: Add documentation.
-  public Bundle batchLookup(UriType system, List<CodeType> codes, List<CodeType> properties) {
+  /**
+   * Performs a batch of CodeSystem$lookup operations, using the supplied list of codes and
+   * returning the requested properties for each code.
+   *
+   * @see <a href="http://hl7.org/fhir/STU3/codesystem-operations.html#lookup">CodeSystem$lookup</a>
+   * in the FHIR STU3 specification.
+   */
+  public Bundle batchLookup(String system, List<String> codes, List<String> properties) {
+    checkNotNull(system, "Must supply system");
+    checkNotNull(codes, "Must supply codes");
+    checkNotNull(properties, "Must supply properties");
+
     long start = System.nanoTime();
+
     Bundle bundle = new Bundle();
     bundle.setType(Bundle.BundleType.BATCH);
-    for (CodeType code : codes) {
+    for (String code : codes) {
       Parameters inParams = new Parameters();
-      inParams.addParameter().setName("system").setValue(system);
-      inParams.addParameter().setName("code").setValue(code);
-      for (CodeType property : properties) {
-        inParams.addParameter().setName("property").setValue(property);
+      inParams.addParameter().setName("system").setValue(new UriType(system));
+      inParams.addParameter().setName("code").setValue(new CodeType(code));
+      for (String property : properties) {
+        inParams.addParameter().setName("property").setValue(new CodeType(property));
       }
       bundle.addEntry()
           .setResource(inParams)
@@ -117,11 +197,13 @@ public class TerminologyClient {
         .transaction()
         .withBundle(bundle)
         .execute();
+
     double elapsedMs = TimeUnit.MILLISECONDS
         .convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
     logger.info(
-        "Executed batch lookup of " + codes.size() + " codes from " + system.asStringValue() +
+        "Executed batch lookup of " + codes.size() + " codes from " + system +
             " CodeSystem in " + String.format("%.1f", elapsedMs) + " ms");
+
     return result;
   }
 
@@ -167,6 +249,22 @@ public class TerminologyClient {
     } else {
       return null;
     }
+  }
+
+  /**
+   * Get a list of ExpansionResult objects that contain the information from an expansion result
+   * ValueSet.
+   */
+  private static List<ExpansionResult> getExpansionResults(ValueSet valueSet) {
+    return valueSet.getExpansion().getContains().stream().map(
+        contains -> {
+          ExpansionResult result = new ExpansionResult();
+          result.setSystem(contains.getSystem());
+          result.setVersion(contains.getVersion());
+          result.setCode(contains.getCode());
+          result.setDisplay(contains.getDisplay());
+          return result;
+        }).collect(Collectors.toList());
   }
 
 }

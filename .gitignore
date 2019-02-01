@@ -1,2 +1,3 @@
 build
 spark-warehouse
+**/src/main/gen

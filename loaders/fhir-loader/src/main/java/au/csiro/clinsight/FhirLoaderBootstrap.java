@@ -37,12 +37,13 @@ public class FhirLoaderBootstrap {
     FhirLoaderConfiguration configuration = new FhirLoaderConfiguration();
     configuration.setSparkMasterUrl(sparkMasterUrl);
     configuration.setWarehouseDirectory("/Users/gri306/Code/clinsight/clinsight/spark-warehouse");
-    configuration.setMetastoreConnectionUrl("jdbc:postgresql://localhost/clinsight_metastore");
+    configuration.setMetastoreUrl("jdbc:postgresql://localhost/clinsight_metastore");
     configuration.setMetastoreUser("gri306");
     configuration.setMetastorePassword("");
     configuration.setLoadPartitions(12);
     configuration.setDatabaseName("clinsight");
     configuration.setResourcesToSave(resourcesToSave);
+    configuration.setExecutorMemory("6g");
 
     FhirLoader fhirLoader = new FhirLoader(configuration);
     fhirLoader.processJsonBundles(new File(jsonBundlesDirectory));
