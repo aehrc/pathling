@@ -5,6 +5,7 @@
 package au.csiro.clinsight.query;
 
 import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
+import static au.csiro.clinsight.utilities.Strings.backTicks;
 
 import au.csiro.clinsight.ExpansionResult;
 import au.csiro.clinsight.TerminologyClient;
@@ -14,6 +15,7 @@ import au.csiro.clinsight.resources.AggregateQuery.AggregationComponent;
 import au.csiro.clinsight.resources.AggregateQuery.GroupingComponent;
 import au.csiro.clinsight.resources.AggregateQueryResult;
 import au.csiro.clinsight.resources.AggregateQueryResult.DataComponent;
+import au.csiro.clinsight.resources.AggregateQueryResult.LabelComponent;
 import au.csiro.clinsight.utilities.Configuration;
 import ca.uhn.fhir.context.FhirContext;
 import java.lang.reflect.Constructor;
@@ -108,14 +110,11 @@ public class SparkQueryExecutor implements QueryExecutor {
 
     List<SparkAggregationParseResult> aggregationParseResults = parseAggregation(aggregations);
     List<SparkGroupingParseResult> groupingParseResults = parseGroupings(groupings);
-    SparkQueryPlan finalQueryPlan = buildQueryPlan(aggregationParseResults, groupingParseResults);
+    SparkQueryPlan queryPlan = buildQueryPlan(aggregationParseResults, groupingParseResults);
 
-    String selectClause = "SELECT " + String.join(", ", finalQueryPlan.getAggregationClause());
-    String fromClause = "FROM " + String.join(", ", finalQueryPlan.getFromTables());
-    String groupByClause = "GROUP BY " + String.join(", ", finalQueryPlan.getGroupingClause());
-    Dataset<Row> result = spark.sql(String.join(" ", selectClause, fromClause, groupByClause));
+    Dataset<Row> result = executeQueryPlan(queryPlan, query);
 
-    return queryResultFromDataset(result, query, finalQueryPlan);
+    return queryResultFromDataset(result, query, queryPlan);
   }
 
   private List<SparkAggregationParseResult> parseAggregation(
@@ -151,21 +150,21 @@ public class SparkQueryExecutor implements QueryExecutor {
 
   private SparkQueryPlan buildQueryPlan(List<SparkAggregationParseResult> aggregationParseResults,
       List<SparkGroupingParseResult> groupingParseResults) {
-    SparkQueryPlan finalQueryPlan = new SparkQueryPlan();
-    List<String> aggregationClause = aggregationParseResults.stream()
+    SparkQueryPlan queryPlan = new SparkQueryPlan();
+    List<String> aggregations = aggregationParseResults.stream()
         .map(SparkAggregationParseResult::getExpression)
         .collect(Collectors.toList());
-    finalQueryPlan.setAggregationClause(aggregationClause);
+    queryPlan.setAggregations(aggregations);
 
     List<DataType> resultTypes = aggregationParseResults.stream()
         .map(SparkAggregationParseResult::getResultType)
         .collect(Collectors.toList());
-    finalQueryPlan.setResultTypes(resultTypes);
+    queryPlan.setResultTypes(resultTypes);
 
-    List<String> groupingClause = groupingParseResults.stream()
+    List<String> groupings = groupingParseResults.stream()
         .map(SparkGroupingParseResult::getExpression)
         .collect(Collectors.toList());
-    finalQueryPlan.setGroupingClause(groupingClause);
+    queryPlan.setGroupings(groupings);
 
     Set<String> aggregationFromTables = aggregationParseResults.stream()
         .map(SparkAggregationParseResult::getFromTable)
@@ -180,8 +179,34 @@ public class SparkQueryExecutor implements QueryExecutor {
           "Groupings contain one or more resources that are not the subject of an aggregation: "
               + String.join(", ", difference));
     }
-    finalQueryPlan.setFromTables(aggregationFromTables);
-    return finalQueryPlan;
+    queryPlan.setFromTables(aggregationFromTables);
+    return queryPlan;
+  }
+
+  private Dataset<Row> executeQueryPlan(SparkQueryPlan queryPlan, AggregateQuery query) {
+    List<String> selectExpressions = new ArrayList<>();
+    if (queryPlan.getGroupings() != null && !queryPlan.getGroupings().isEmpty()) {
+      for (int i = 0; i < queryPlan.getGroupings().size(); i++) {
+        String grouping = queryPlan.getGroupings().get(i);
+        String label = backTicks(query.getGrouping().get(i).getLabel().asStringValue());
+        selectExpressions.add(grouping + " AS " + label);
+      }
+    }
+    if (queryPlan.getAggregations() != null && !queryPlan.getAggregations().isEmpty()) {
+      for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
+        String aggregation = queryPlan.getAggregations().get(i);
+        String label = backTicks(query.getAggregation().get(i).getLabel().asStringValue());
+        selectExpressions.add(aggregation + " AS " + label);
+      }
+    }
+    String selectClause = "SELECT " + String.join(", ", selectExpressions);
+    String fromClause = "FROM " + String.join(", ", queryPlan.getFromTables());
+    String groupByClause = "GROUP BY " + String.join(", ", queryPlan.getGroupings());
+    String orderByClause = "ORDER BY " + String.join(", ", queryPlan.getGroupings());
+    String sql = String.join(" ", selectClause, fromClause, groupByClause, orderByClause);
+
+    logger.info("Executing query: " + sql);
+    return spark.sql(sql);
   }
 
   /**
@@ -190,30 +215,53 @@ public class SparkQueryExecutor implements QueryExecutor {
    */
   private static AggregateQueryResult queryResultFromDataset(Dataset<Row> dataset,
       AggregateQuery query, SparkQueryPlan queryPlan) {
+    List<Row> rows = dataset.collectAsList();
+    int numGroupings = query.getGrouping().size();
+    int numAggregations = query.getAggregation().size();
+
     AggregateQueryResult queryResult = new AggregateQueryResult();
     queryResult.setQuery(new Reference(query));
-    DataComponent data = new DataComponent();
-    if (dataset.columns().length > 1) {
-      throw new AssertionError("More than one column in result not yet supported");
+
+    List<LabelComponent> labelComponents = new ArrayList<>();
+    for (int i = 0; i < numGroupings; i++) {
+      LabelComponent labelComponent = new LabelComponent();
+      StringType label = query.getGrouping().get(i).getLabel();
+      labelComponent.setName(label);
+      int columnNumber = i;
+      List<StringType> series = rows.stream()
+          .map(row -> new StringType(row.getString(columnNumber)))
+          .collect(Collectors.toList());
+      labelComponent.setSeries(series);
+      labelComponents.add(labelComponent);
     }
-    data.setName(new StringType(dataset.columns()[0]));
-    @SuppressWarnings("unchecked") List<Type> series = (List<Type>) (Object) dataset.collectAsList()
-        .stream()
-        .map(row -> {
-          try {
-            @SuppressWarnings("unchecked") Constructor constructor = sparkDataTypeToFhirClass
-                .get(queryPlan.getResultTypes())
-                .getConstructor(sparkDataTypeToJavaClass.get(queryPlan.getResultTypes()));
-            Object value = row.get(0);
-            return constructor.newInstance(value);
-          } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
-            logger.error("Failed to access value from row: " + e.getMessage());
-            return null;
-          }
-        }).collect(Collectors.toList());
-    data.setSeries(series);
-    queryResult.setData(Collections.singletonList(data));
-    data.setName(query.getAggregation().get(0).getLabel());
+    queryResult.setLabel(labelComponents);
+
+    List<DataComponent> dataComponents = new ArrayList<>();
+    for (int i = 0; i < numAggregations; i++) {
+      DataComponent dataComponent = new DataComponent();
+      StringType label = query.getAggregation().get(i).getLabel();
+      dataComponent.setName(label);
+      int aggregationNumber = i;
+      int columnNumber = i + numGroupings;
+      @SuppressWarnings("unchecked") List<Type> series = (List<Type>) (Object) rows.stream()
+          .map(row -> {
+            try {
+              @SuppressWarnings("unchecked") Constructor constructor = sparkDataTypeToFhirClass
+                  .get(queryPlan.getResultTypes().get(aggregationNumber))
+                  .getConstructor(sparkDataTypeToJavaClass.get(queryPlan.getResultTypes().get(
+                      aggregationNumber)));
+              Object value = row.get(columnNumber);
+              return constructor.newInstance(value);
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
+              logger.error("Failed to access value from row: " + e.getMessage());
+              return null;
+            }
+          }).collect(Collectors.toList());
+      dataComponent.setSeries(series);
+      dataComponents.add(dataComponent);
+    }
+    queryResult.setData(dataComponents);
+
     return queryResult;
   }
 

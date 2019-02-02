@@ -13,17 +13,17 @@ import org.apache.spark.sql.types.DataType;
  */
 public class SparkQueryPlan {
 
-  private List<String> aggregationClause;
+  private List<String> aggregations;
   private List<DataType> resultTypes;
-  private List<String> groupingClause;
+  private List<String> groupings;
   private Set<String> fromTables;
 
-  public List<String> getAggregationClause() {
-    return aggregationClause;
+  public List<String> getAggregations() {
+    return aggregations;
   }
 
-  public void setAggregationClause(List<String> aggregationClause) {
-    this.aggregationClause = aggregationClause;
+  public void setAggregations(List<String> aggregations) {
+    this.aggregations = aggregations;
   }
 
   public List<DataType> getResultTypes() {
@@ -34,12 +34,12 @@ public class SparkQueryPlan {
     this.resultTypes = resultTypes;
   }
 
-  public List<String> getGroupingClause() {
-    return groupingClause;
+  public List<String> getGroupings() {
+    return groupings;
   }
 
-  public void setGroupingClause(List<String> groupingClause) {
-    this.groupingClause = groupingClause;
+  public void setGroupings(List<String> groupings) {
+    this.groupings = groupings;
   }
 
   public Set<String> getFromTables() {

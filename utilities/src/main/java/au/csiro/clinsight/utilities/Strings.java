@@ -18,4 +18,8 @@ public abstract class Strings {
     return new String(chars);
   }
 
+  public static String backTicks(String value) {
+    return "`" + value + "`";
+  }
+
 }
