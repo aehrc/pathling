@@ -18,6 +18,7 @@ import au.csiro.clinsight.resources.AggregateQueryResult.DataComponent;
 import au.csiro.clinsight.resources.AggregateQueryResult.LabelComponent;
 import au.csiro.clinsight.utilities.Configuration;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -101,11 +102,11 @@ public class SparkQueryExecutor implements QueryExecutor {
   }
 
   @Override
-  public AggregateQueryResult execute(AggregateQuery query) throws IllegalArgumentException {
+  public AggregateQueryResult execute(AggregateQuery query) throws InvalidRequestException {
     List<AggregationComponent> aggregations = query.getAggregation();
     List<GroupingComponent> groupings = query.getGrouping();
     if (aggregations == null || aggregations.isEmpty()) {
-      throw new IllegalArgumentException("Missing aggregation component within query");
+      throw new InvalidRequestException("Missing aggregation component within query");
     }
 
     List<SparkAggregationParseResult> aggregationParseResults = parseAggregation(aggregations);
@@ -124,7 +125,7 @@ public class SparkQueryExecutor implements QueryExecutor {
           // TODO: Support references to pre-defined aggregations.
           String aggExpression = aggregation.getExpression().asStringValue();
           if (aggExpression == null) {
-            throw new IllegalArgumentException("Aggregation component must have expression");
+            throw new InvalidRequestException("Aggregation component must have expression");
           }
           SparkAggregationParser aggregationParser = new SparkAggregationParser();
           return aggregationParser.parse(aggExpression);
@@ -139,7 +140,7 @@ public class SparkQueryExecutor implements QueryExecutor {
             // TODO: Support references to pre-defined dimensions.
             String groupingExpression = grouping.getExpression().asStringValue();
             if (groupingExpression == null) {
-              throw new IllegalArgumentException("Grouping component must have expression");
+              throw new InvalidRequestException("Grouping component must have expression");
             }
             SparkGroupingParser groupingParser = new SparkGroupingParser();
             return groupingParser.parse(groupingExpression);
@@ -175,7 +176,7 @@ public class SparkQueryExecutor implements QueryExecutor {
     if (!aggregationFromTables.containsAll(groupingFromTables)) {
       Set<String> difference = new HashSet<>(groupingFromTables);
       difference.removeAll(aggregationFromTables);
-      throw new IllegalArgumentException(
+      throw new InvalidRequestException(
           "Groupings contain one or more resources that are not the subject of an aggregation: "
               + String.join(", ", difference));
     }
