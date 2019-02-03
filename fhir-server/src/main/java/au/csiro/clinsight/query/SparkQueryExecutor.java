@@ -8,8 +8,10 @@ import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
 import static au.csiro.clinsight.utilities.Strings.backTicks;
 
 import au.csiro.clinsight.ExpansionResult;
+import au.csiro.clinsight.OldTerminologyClient;
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.TerminologyClientConfiguration;
+import au.csiro.clinsight.fhir.ResourceDefinitions;
 import au.csiro.clinsight.resources.AggregateQuery;
 import au.csiro.clinsight.resources.AggregateQuery.AggregationComponent;
 import au.csiro.clinsight.resources.AggregateQuery.GroupingComponent;
@@ -18,6 +20,9 @@ import au.csiro.clinsight.resources.AggregateQueryResult.DataComponent;
 import au.csiro.clinsight.resources.AggregateQueryResult.LabelComponent;
 import au.csiro.clinsight.utilities.Configuration;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.api.SummaryEnum;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -55,10 +60,11 @@ public class SparkQueryExecutor implements QueryExecutor {
     put(DataTypes.LongType, IntegerType.class);
   }};
 
-  private SparkQueryExecutorConfiguration configuration;
-  private FhirContext fhirContext;
+  private final SparkQueryExecutorConfiguration configuration;
+  private final FhirContext fhirContext;
   private SparkSession spark;
-  private TerminologyClient terminologyClient;
+  private OldTerminologyClient oldTerminologyClient;
+  private ResourceDefinitions resourceDefinitions;
 
   public SparkQueryExecutor(SparkQueryExecutorConfiguration configuration,
       FhirContext fhirContext) {
@@ -75,7 +81,82 @@ public class SparkQueryExecutor implements QueryExecutor {
     this.fhirContext = fhirContext;
     initialiseSpark();
     initialiseTerminologyClient();
+    TerminologyClient terminologyClient = fhirContext
+        .newRestfulClient((TerminologyClient.class), configuration.getTerminologyServerUrl());
+    terminologyClient.setSummary(SummaryEnum.TRUE);
+    ResourceDefinitions.ensureInitialized(terminologyClient);
     spark.sql("USE clinsight");
+  }
+
+  /**
+   * Build an AggregateQueryResult resource from the supplied Dataset, embedding the original
+   * AggregateQuery and honouring the hints within the SparkQueryPlan.
+   */
+  private static AggregateQueryResult queryResultFromDataset(Dataset<Row> dataset,
+      AggregateQuery query, SparkQueryPlan queryPlan) {
+    List<Row> rows = dataset.collectAsList();
+    int numGroupings = query.getGrouping().size();
+    int numAggregations = query.getAggregation().size();
+
+    AggregateQueryResult queryResult = new AggregateQueryResult();
+    queryResult.setQuery(new Reference(query));
+
+    List<LabelComponent> labelComponents = new ArrayList<>();
+    for (int i = 0; i < numGroupings; i++) {
+      LabelComponent labelComponent = new LabelComponent();
+      StringType label = query.getGrouping().get(i).getLabel();
+      labelComponent.setName(label);
+      int columnNumber = i;
+      List<StringType> series = rows.stream()
+          .map(row -> new StringType(row.getString(columnNumber)))
+          .collect(Collectors.toList());
+      labelComponent.setSeries(series);
+      labelComponents.add(labelComponent);
+    }
+    queryResult.setLabel(labelComponents);
+
+    List<DataComponent> dataComponents = new ArrayList<>();
+    for (int i = 0; i < numAggregations; i++) {
+      DataComponent dataComponent = new DataComponent();
+      StringType label = query.getAggregation().get(i).getLabel();
+      dataComponent.setName(label);
+      int aggregationNumber = i;
+      int columnNumber = i + numGroupings;
+      @SuppressWarnings("unchecked") List<Type> series = (List<Type>) (Object) rows.stream()
+          .map(row -> {
+            try {
+              @SuppressWarnings("unchecked") Constructor constructor = sparkDataTypeToFhirClass
+                  .get(queryPlan.getResultTypes().get(aggregationNumber))
+                  .getConstructor(sparkDataTypeToJavaClass.get(queryPlan.getResultTypes().get(
+                      aggregationNumber)));
+              Object value = row.get(columnNumber);
+              return constructor.newInstance(value);
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
+              logger.error("Failed to access value from row: " + e.getMessage());
+              return null;
+            }
+          }).collect(Collectors.toList());
+      dataComponent.setSeries(series);
+      dataComponents.add(dataComponent);
+    }
+    queryResult.setData(dataComponents);
+
+    return queryResult;
+  }
+
+  /**
+   * Create a Spark DataSet and temporary view from the results of expanding an ECL query using the
+   * terminology server.
+   */
+  private static void createViewFromEclExpansion(SparkSession spark,
+      OldTerminologyClient oldTerminologyClient, String ecl, String viewName) {
+    List<ExpansionResult> results = oldTerminologyClient
+        .expand("http://snomed.info/sct?fhir_vs=ecl/(" + ecl + ")");
+    Dataset<ExpansionResult> dataset = spark
+        .createDataset(results, Encoders.bean(ExpansionResult.class));
+    dataset.createOrReplaceTempView(viewName);
+    dataset.persist();
+    dataset.show();
   }
 
   private void initialiseSpark() {
@@ -93,29 +174,35 @@ public class SparkQueryExecutor implements QueryExecutor {
         .getOrCreate();
   }
 
-
   private void initialiseTerminologyClient() {
     TerminologyClientConfiguration clientConfiguration = new TerminologyClientConfiguration();
     Configuration.copyStringProps(configuration, clientConfiguration,
         Collections.singletonList("terminologyServerUrl"));
-    terminologyClient = new TerminologyClient(clientConfiguration, fhirContext);
+    oldTerminologyClient = new OldTerminologyClient(clientConfiguration, fhirContext);
   }
 
   @Override
   public AggregateQueryResult execute(AggregateQuery query) throws InvalidRequestException {
-    List<AggregationComponent> aggregations = query.getAggregation();
-    List<GroupingComponent> groupings = query.getGrouping();
-    if (aggregations == null || aggregations.isEmpty()) {
-      throw new InvalidRequestException("Missing aggregation component within query");
+    try {
+      List<AggregationComponent> aggregations = query.getAggregation();
+      List<GroupingComponent> groupings = query.getGrouping();
+      if (aggregations == null || aggregations.isEmpty()) {
+        throw new InvalidRequestException("Missing aggregation component within query");
+      }
+
+      List<SparkAggregationParseResult> aggregationParseResults = parseAggregation(aggregations);
+      List<SparkGroupingParseResult> groupingParseResults = parseGroupings(groupings);
+      SparkQueryPlan queryPlan = buildQueryPlan(aggregationParseResults, groupingParseResults);
+
+      Dataset<Row> result = executeQueryPlan(queryPlan, query);
+
+      return queryResultFromDataset(result, query, queryPlan);
+    } catch (BaseServerResponseException e) {
+      throw e;
+    } catch (Exception e) {
+      logger.error("Exception occurred while executing query", e);
+      throw new InternalErrorException("Unexpected error occurred while executing query");
     }
-
-    List<SparkAggregationParseResult> aggregationParseResults = parseAggregation(aggregations);
-    List<SparkGroupingParseResult> groupingParseResults = parseGroupings(groupings);
-    SparkQueryPlan queryPlan = buildQueryPlan(aggregationParseResults, groupingParseResults);
-
-    Dataset<Row> result = executeQueryPlan(queryPlan, query);
-
-    return queryResultFromDataset(result, query, queryPlan);
   }
 
   private List<SparkAggregationParseResult> parseAggregation(
@@ -208,77 +295,6 @@ public class SparkQueryExecutor implements QueryExecutor {
 
     logger.info("Executing query: " + sql);
     return spark.sql(sql);
-  }
-
-  /**
-   * Build an AggregateQueryResult resource from the supplied Dataset, embedding the original
-   * AggregateQuery and honouring the hints within the SparkQueryPlan.
-   */
-  private static AggregateQueryResult queryResultFromDataset(Dataset<Row> dataset,
-      AggregateQuery query, SparkQueryPlan queryPlan) {
-    List<Row> rows = dataset.collectAsList();
-    int numGroupings = query.getGrouping().size();
-    int numAggregations = query.getAggregation().size();
-
-    AggregateQueryResult queryResult = new AggregateQueryResult();
-    queryResult.setQuery(new Reference(query));
-
-    List<LabelComponent> labelComponents = new ArrayList<>();
-    for (int i = 0; i < numGroupings; i++) {
-      LabelComponent labelComponent = new LabelComponent();
-      StringType label = query.getGrouping().get(i).getLabel();
-      labelComponent.setName(label);
-      int columnNumber = i;
-      List<StringType> series = rows.stream()
-          .map(row -> new StringType(row.getString(columnNumber)))
-          .collect(Collectors.toList());
-      labelComponent.setSeries(series);
-      labelComponents.add(labelComponent);
-    }
-    queryResult.setLabel(labelComponents);
-
-    List<DataComponent> dataComponents = new ArrayList<>();
-    for (int i = 0; i < numAggregations; i++) {
-      DataComponent dataComponent = new DataComponent();
-      StringType label = query.getAggregation().get(i).getLabel();
-      dataComponent.setName(label);
-      int aggregationNumber = i;
-      int columnNumber = i + numGroupings;
-      @SuppressWarnings("unchecked") List<Type> series = (List<Type>) (Object) rows.stream()
-          .map(row -> {
-            try {
-              @SuppressWarnings("unchecked") Constructor constructor = sparkDataTypeToFhirClass
-                  .get(queryPlan.getResultTypes().get(aggregationNumber))
-                  .getConstructor(sparkDataTypeToJavaClass.get(queryPlan.getResultTypes().get(
-                      aggregationNumber)));
-              Object value = row.get(columnNumber);
-              return constructor.newInstance(value);
-            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
-              logger.error("Failed to access value from row: " + e.getMessage());
-              return null;
-            }
-          }).collect(Collectors.toList());
-      dataComponent.setSeries(series);
-      dataComponents.add(dataComponent);
-    }
-    queryResult.setData(dataComponents);
-
-    return queryResult;
-  }
-
-  /**
-   * Create a Spark DataSet and temporary view from the results of expanding an ECL query using the
-   * terminology server.
-   */
-  private static void createViewFromEclExpansion(SparkSession spark,
-      TerminologyClient terminologyClient, String ecl, String viewName) {
-    List<ExpansionResult> results = terminologyClient
-        .expand("http://snomed.info/sct?fhir_vs=ecl/(" + ecl + ")");
-    Dataset<ExpansionResult> dataset = spark
-        .createDataset(results, Encoders.bean(ExpansionResult.class));
-    dataset.createOrReplaceTempView(viewName);
-    dataset.persist();
-    dataset.show();
   }
 
 }

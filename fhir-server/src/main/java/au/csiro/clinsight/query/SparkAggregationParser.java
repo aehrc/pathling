@@ -4,6 +4,8 @@
 
 package au.csiro.clinsight.query;
 
+import static au.csiro.clinsight.fhir.ResourceDefinitions.getBaseResource;
+
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
@@ -14,6 +16,7 @@ import au.csiro.clinsight.fhir.FhirPathParser.MemberInvocationContext;
 import au.csiro.clinsight.fhir.FhirPathParser.ParamListContext;
 import au.csiro.clinsight.fhir.FhirPathParser.TermExpressionContext;
 import au.csiro.clinsight.fhir.FhirPathParser.ThisInvocationContext;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.HashMap;
 import java.util.Map;
 import org.antlr.v4.runtime.CharStreams;
@@ -106,7 +109,11 @@ public class SparkAggregationParser {
 
     @Override
     public ParseResult visitTermExpression(TermExpressionContext ctx) {
-      ParseResult result = new ParseResult(ctx.getText().toLowerCase());
+      String resourceIdentifier = ctx.getText();
+      if (getBaseResource(resourceIdentifier) == null) {
+        throw new InvalidRequestException("Resource identifier not known: " + resourceIdentifier);
+      }
+      ParseResult result = new ParseResult(resourceIdentifier.toLowerCase());
       result.fromTable = result.expression;
       return result;
     }

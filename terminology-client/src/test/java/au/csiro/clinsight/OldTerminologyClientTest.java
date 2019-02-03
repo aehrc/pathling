@@ -7,7 +7,7 @@ import org.junit.Test;
 /**
  * @author John Grimes
  */
-public class TerminologyClientTest {
+public class OldTerminologyClientTest {
 
   // TODO: Add tests.
 
