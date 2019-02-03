@@ -16,18 +16,18 @@ import ca.uhn.fhir.rest.annotation.OperationParam;
 /**
  * @author John Grimes
  */
-public class QueryOperationProvider {
+class QueryOperationProvider {
 
-  private QueryExecutor queryExecutor;
+  private final QueryExecutor queryExecutor;
 
-  public QueryOperationProvider(QueryExecutor queryExecutor) {
+  QueryOperationProvider(QueryExecutor queryExecutor) {
     checkNotNull(queryExecutor, "Must supply query executor");
 
     this.queryExecutor = queryExecutor;
   }
 
   @Operation(name = "$query", idempotent = true)
-  public AggregateQueryResult queryOperation(@OperationParam(name = "query") AggregateQuery query) {
+  AggregateQueryResult queryOperation(@OperationParam(name = "query") AggregateQuery query) {
     return queryExecutor.execute(query);
   }
 

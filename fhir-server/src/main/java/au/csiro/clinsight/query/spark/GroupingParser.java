@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query;
+package au.csiro.clinsight.query.spark;
 
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
@@ -18,16 +18,16 @@ import org.antlr.v4.runtime.CommonTokenStream;
 /**
  * @author John Grimes
  */
-public class SparkGroupingParser {
+class GroupingParser {
 
-  public SparkGroupingParseResult parse(String expression) {
+  GroupingParseResult parse(String expression) {
     FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     FhirPathParser parser = new FhirPathParser(tokens);
 
     ExpressionVisitor expressionVisitor = new ExpressionVisitor();
     ExpressionVisitor.ParseResult parseResult = expressionVisitor.visit(parser.expression());
-    SparkGroupingParseResult result = new SparkGroupingParseResult();
+    GroupingParseResult result = new GroupingParseResult();
     result.setExpression(parseResult.expression);
     result.setFromTable(parseResult.fromTable);
     return result;

@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query;
+package au.csiro.clinsight.query.spark;
 
 import static au.csiro.clinsight.fhir.ResourceDefinitions.getBaseResource;
 
@@ -29,11 +29,11 @@ import org.slf4j.LoggerFactory;
 /**
  * @author John Grimes
  */
-public class SparkAggregationParser {
+class AggregationParser {
 
-  private static final Logger logger = LoggerFactory.getLogger(SparkAggregationParser.class);
+  private static final Logger logger = LoggerFactory.getLogger(AggregationParser.class);
 
-  public SparkAggregationParseResult parse(String expression) {
+  AggregationParseResult parse(String expression) {
     FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     FhirPathParser parser = new FhirPathParser(tokens);
@@ -42,7 +42,7 @@ public class SparkAggregationParser {
     return expressionVisitor.visit(parser.expression());
   }
 
-  private static class ExpressionVisitor extends FhirPathBaseVisitor<SparkAggregationParseResult> {
+  private static class ExpressionVisitor extends FhirPathBaseVisitor<AggregationParseResult> {
 
     private static final Map<String, String> fpFuncToSpark = new HashMap<String, String>() {{
       put("count", "COUNT");
@@ -53,14 +53,14 @@ public class SparkAggregationParser {
     }};
 
     @Override
-    public SparkAggregationParseResult visitFunctionInvocation(FunctionInvocationContext ctx) {
+    public AggregationParseResult visitFunctionInvocation(FunctionInvocationContext ctx) {
       String functionIdentifier = ctx.functn().identifier().getText();
       String translatedIdentifier = fpFuncToSpark.get(functionIdentifier);
       if (translatedIdentifier == null) {
         logger.warn("Unrecognised function identifier encountered: " + functionIdentifier);
         return null;
       } else {
-        SparkAggregationParseResult result = new SparkAggregationParseResult();
+        AggregationParseResult result = new AggregationParseResult();
         ParamListVisitor.ParseResult paramListResult = ctx.functn().paramList()
             .accept(new ParamListVisitor());
         result.setExpression(translatedIdentifier + "(" + paramListResult.expression + ")");
@@ -88,7 +88,8 @@ public class SparkAggregationParser {
         } else {
           parseResult.expression = expressionResult.expression;
         }
-        if (parseResult.fromTable != null && parseResult.fromTable != expressionResult.fromTable) {
+        if (parseResult.fromTable != null &&
+            !parseResult.fromTable.equals(expressionResult.fromTable)) {
           throw new IllegalArgumentException(
               "Arguments to aggregate function are from different resources");
         }

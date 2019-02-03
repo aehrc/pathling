@@ -2,29 +2,30 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query;
+package au.csiro.clinsight.query.spark;
 
 /**
  * @author John Grimes
  */
-public class SparkGroupingParseResult {
+class GroupingParseResult {
 
   private String expression;
   private String fromTable;
 
-  public String getExpression() {
+  String getExpression() {
     return expression;
   }
 
-  public void setExpression(String expression) {
+  void setExpression(String expression) {
     this.expression = expression;
   }
 
-  public String getFromTable() {
+  String getFromTable() {
     return fromTable;
   }
 
-  public void setFromTable(String fromTable) {
+  void setFromTable(String fromTable) {
     this.fromTable = fromTable;
   }
+
 }

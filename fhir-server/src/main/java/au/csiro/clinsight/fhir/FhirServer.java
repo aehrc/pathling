@@ -7,8 +7,8 @@ package au.csiro.clinsight.fhir;
 import static au.csiro.clinsight.utilities.Configuration.copyStringProps;
 
 import au.csiro.clinsight.query.QueryExecutor;
-import au.csiro.clinsight.query.SparkQueryExecutor;
-import au.csiro.clinsight.query.SparkQueryExecutorConfiguration;
+import au.csiro.clinsight.query.spark.SparkQueryExecutor;
+import au.csiro.clinsight.query.spark.SparkQueryExecutorConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
@@ -27,7 +27,7 @@ import org.springframework.web.cors.CorsConfiguration;
 public class FhirServer extends RestfulServer {
 
   private static final Logger logger = LoggerFactory.getLogger(FhirServer.class);
-  private FhirServerConfiguration configuration;
+  private final FhirServerConfiguration configuration;
   private QueryExecutor queryExecutor;
 
   public FhirServer(FhirServerConfiguration configuration) {

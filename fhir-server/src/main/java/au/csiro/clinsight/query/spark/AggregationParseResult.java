@@ -2,40 +2,40 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query;
+package au.csiro.clinsight.query.spark;
 
 import org.apache.spark.sql.types.DataType;
 
 /**
  * @author John Grimes
  */
-public class SparkAggregationParseResult {
+class AggregationParseResult {
 
   private String expression;
   private DataType resultType;
   private String fromTable;
 
-  public String getExpression() {
+  String getExpression() {
     return expression;
   }
 
-  public void setExpression(String expression) {
+  void setExpression(String expression) {
     this.expression = expression;
   }
 
-  public DataType getResultType() {
+  DataType getResultType() {
     return resultType;
   }
 
-  public void setResultType(DataType resultType) {
+  void setResultType(DataType resultType) {
     this.resultType = resultType;
   }
 
-  public String getFromTable() {
+  String getFromTable() {
     return fromTable;
   }
 
-  public void setFromTable(String fromTable) {
+  void setFromTable(String fromTable) {
     this.fromTable = fromTable;
   }
 

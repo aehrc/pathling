@@ -21,7 +21,6 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
  */
 public class FhirServerContainer {
 
-
   public static void main(String[] args) throws Exception {
 
     FhirServerConfiguration config = new FhirServerConfiguration();
