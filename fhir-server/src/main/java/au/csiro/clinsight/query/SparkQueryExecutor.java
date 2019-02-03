@@ -7,8 +7,6 @@ package au.csiro.clinsight.query;
 import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
 import static au.csiro.clinsight.utilities.Strings.backTicks;
 
-import au.csiro.clinsight.ExpansionResult;
-import au.csiro.clinsight.OldTerminologyClient;
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.TerminologyClientConfiguration;
 import au.csiro.clinsight.fhir.ResourceDefinitions;
@@ -35,7 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
@@ -63,7 +60,6 @@ public class SparkQueryExecutor implements QueryExecutor {
   private final SparkQueryExecutorConfiguration configuration;
   private final FhirContext fhirContext;
   private SparkSession spark;
-  private OldTerminologyClient oldTerminologyClient;
   private ResourceDefinitions resourceDefinitions;
 
   public SparkQueryExecutor(SparkQueryExecutorConfiguration configuration,
@@ -144,21 +140,6 @@ public class SparkQueryExecutor implements QueryExecutor {
     return queryResult;
   }
 
-  /**
-   * Create a Spark DataSet and temporary view from the results of expanding an ECL query using the
-   * terminology server.
-   */
-  private static void createViewFromEclExpansion(SparkSession spark,
-      OldTerminologyClient oldTerminologyClient, String ecl, String viewName) {
-    List<ExpansionResult> results = oldTerminologyClient
-        .expand("http://snomed.info/sct?fhir_vs=ecl/(" + ecl + ")");
-    Dataset<ExpansionResult> dataset = spark
-        .createDataset(results, Encoders.bean(ExpansionResult.class));
-    dataset.createOrReplaceTempView(viewName);
-    dataset.persist();
-    dataset.show();
-  }
-
   private void initialiseSpark() {
     spark = SparkSession.builder()
         .config("spark.master", configuration.getSparkMasterUrl())
@@ -178,7 +159,6 @@ public class SparkQueryExecutor implements QueryExecutor {
     TerminologyClientConfiguration clientConfiguration = new TerminologyClientConfiguration();
     Configuration.copyStringProps(configuration, clientConfiguration,
         Collections.singletonList("terminologyServerUrl"));
-    oldTerminologyClient = new OldTerminologyClient(clientConfiguration, fhirContext);
   }
 
   @Override
