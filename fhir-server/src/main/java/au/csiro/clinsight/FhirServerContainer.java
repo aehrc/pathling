@@ -17,6 +17,9 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 /**
+ * Creates an embedded Jetty server and mounts the FhirServer servlet. Also knows how to configure
+ * the FhirServer using a set of environment variables.
+ *
  * @author John Grimes
  */
 public class FhirServerContainer {
@@ -35,6 +38,15 @@ public class FhirServerContainer {
       put("CLINSIGHT_EXECUTOR_MEMORY", "executorMemory");
       put("CLINSIGHT_TERMINOLOGY_SERVER_URL", "terminologyServerUrl");
     }});
+
+    // This is required to force the use of the Woodstox StAX implementation. If you don't use
+    // Woodstox, parsing falls over when reading in resources (e.g. StructureDefinitions) that
+    // contain HTML entities.
+    //
+    // See: http://hapifhir.io/download.html#_toc_stax__woodstox
+    System.setProperty("javax.xml.stream.XMLInputFactory", "com.ctc.wstx.stax.WstxInputFactory");
+    System.setProperty("javax.xml.stream.XMLOutputFactory", "com.ctc.wstx.stax.WstxOutputFactory");
+    System.setProperty("javax.xml.stream.XMLEventFactory", "com.ctc.wstx.stax.WstxEventFactory");
 
     start(config);
   }

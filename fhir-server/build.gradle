@@ -11,27 +11,44 @@ repositories {
 }
 
 dependencies {
-    antlr "org.antlr:antlr4:4.7.2"
     compile project(':resources')
     compile project(':terminology-client')
     compile project(':utilities')
+
+    // HAPI FHIR
     compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version: '3.7.0-SNAPSHOT'
     compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-server', version: '3.7.0-SNAPSHOT'
+    compile group: 'org.codehaus.woodstox', name: 'woodstox-core-asl', version: '4.4.1'
+
+    // This is used for the CorsConfiguration required by the CorsInterceptor.
     compile group: 'org.springframework', name: 'spring-web', version: '5.0.8.RELEASE'
+
+    // Embedded Jetty is used to serve the FhirServer servlet.
     compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '9.4.14.v20181114'
     compile group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '9.4.14.v20181114'
+
+    // Apache Spark, Spark SQL and Hive.
     compile group: 'org.apache.spark', name: 'spark-core_2.11', version: '2.3.0'
     compile group: 'org.apache.spark', name: 'spark-sql_2.11', version: '2.3.0'
     compile group: 'org.apache.spark', name: 'spark-hive_2.11', version: '2.3.0'
+
+    // Bunsen knows how to serialise FHIR resources into Spark datasets.
     compile group: 'com.cerner.bunsen', name: 'bunsen-core', version: '0.4.6-SNAPSHOT'
     compile group: 'com.cerner.bunsen', name: 'bunsen-stu3', version: '0.4.6-SNAPSHOT'
+
+    // The Hive metastore used by the Spark data warehouse is stored in a PostgreSQL server.
     compile group: 'org.postgresql', name: 'postgresql', version: '42.2.5'
+
+    // Antlr is used for the parsing of FHIRPath expressions within queries
+    antlr "org.antlr:antlr4:4.7.2"
 }
 
 generateGrammarSource {
+    // Generate Visitor classes from the Antlr grammar, which are more useful than Listeners.
     arguments += ["-visitor"]
 }
 
+// Dependencies for `grun`.
 buildscript {
     repositories {
         mavenCentral()
@@ -42,6 +59,8 @@ buildscript {
     }
 }
 
+// This task runs the Antlr `grun` utility, which provides a visualisation of the expression passed
+// in to the `expression` project property.
 task grun(type: JavaExec) {
     dependsOn 'classes'
     main = 'org.antlr.v4.gui.TestRig'

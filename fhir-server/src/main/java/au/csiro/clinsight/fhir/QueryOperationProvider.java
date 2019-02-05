@@ -27,7 +27,7 @@ class QueryOperationProvider {
   }
 
   @Operation(name = "$query", idempotent = true)
-  AggregateQueryResult queryOperation(@OperationParam(name = "query") AggregateQuery query) {
+  public AggregateQueryResult queryOperation(@OperationParam(name = "query") AggregateQuery query) {
     return queryExecutor.execute(query);
   }
 

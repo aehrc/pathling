@@ -17,7 +17,6 @@ import au.csiro.clinsight.resources.AggregateQueryResult;
 import au.csiro.clinsight.resources.AggregateQueryResult.DataComponent;
 import au.csiro.clinsight.resources.AggregateQueryResult.LabelComponent;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.rest.api.SummaryEnum;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -43,6 +42,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * This class knows how to take an AggregateQuery and execute it against an Apache Spark data
+ * warehouse, returning the result as an AggregateQueryResult resource.
+ *
  * @author John Grimes
  */
 public class SparkQueryExecutor implements QueryExecutor {
@@ -77,11 +79,148 @@ public class SparkQueryExecutor implements QueryExecutor {
     spark.sql("USE clinsight");
   }
 
+  private void initialiseResourceDefinitions() {
+    TerminologyClient terminologyClient = fhirContext
+        .newRestfulClient((TerminologyClient.class), configuration.getTerminologyServerUrl());
+    ResourceDefinitions.ensureInitialized(terminologyClient);
+  }
+
+  private void initialiseSpark() {
+    spark = SparkSession.builder()
+        .config("spark.master", configuration.getSparkMasterUrl())
+        // TODO: Use Maven dependency plugin to copy this into a relative location.
+        .config("spark.jars",
+            "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-SNAPSHOT.jar")
+        .config("spark.sql.warehouse.dir", configuration.getWarehouseDirectory())
+        .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreUrl())
+        .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
+        .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
+        .config("spark.executor.memory", configuration.getExecutorMemory())
+        .enableHiveSupport()
+        .getOrCreate();
+  }
+
+  @Override
+  public AggregateQueryResult execute(AggregateQuery query) throws InvalidRequestException {
+    try {
+      List<AggregationComponent> aggregations = query.getAggregation();
+      List<GroupingComponent> groupings = query.getGrouping();
+      if (aggregations == null || aggregations.isEmpty()) {
+        throw new InvalidRequestException("Missing aggregation component within query");
+      }
+
+      List<ParseResult> aggregationParseResults = parseAggregation(aggregations);
+      List<ParseResult> groupingParseResults = parseGroupings(groupings);
+      QueryPlan queryPlan = buildQueryPlan(aggregationParseResults, groupingParseResults);
+
+      Dataset<Row> result = executeQueryPlan(queryPlan, query);
+
+      return queryResultFromDataset(result, query, queryPlan);
+    } catch (BaseServerResponseException e) {
+      throw e;
+    } catch (Exception e) {
+      logger.error("Exception occurred while executing query", e);
+      throw new InternalErrorException("Unexpected error occurred while executing query");
+    }
+  }
+
+  private List<ParseResult> parseAggregation(
+      List<AggregationComponent> aggregations) {
+    return aggregations.stream()
+        .map(aggregation -> {
+          // TODO: Support references to pre-defined aggregations.
+          String aggExpression = aggregation.getExpression().asStringValue();
+          if (aggExpression == null) {
+            throw new InvalidRequestException("Aggregation component must have expression");
+          }
+          AggregationParser aggregationParser = new AggregationParser();
+          return aggregationParser.parse(aggExpression);
+        }).collect(Collectors.toList());
+  }
+
+  private List<ParseResult> parseGroupings(List<GroupingComponent> groupings) {
+    List<ParseResult> groupingParseResults = new ArrayList<>();
+    if (groupings != null) {
+      groupingParseResults = groupings.stream()
+          .map(grouping -> {
+            // TODO: Support references to pre-defined dimensions.
+            String groupingExpression = grouping.getExpression().asStringValue();
+            if (groupingExpression == null) {
+              throw new InvalidRequestException("Grouping component must have expression");
+            }
+            GroupingParser groupingParser = new GroupingParser();
+            return groupingParser.parse(groupingExpression);
+          }).collect(Collectors.toList());
+    }
+    return groupingParseResults;
+  }
+
+  private QueryPlan buildQueryPlan(List<ParseResult> aggregationParseResults,
+      List<ParseResult> groupingParseResults) {
+    QueryPlan queryPlan = new QueryPlan();
+    List<String> aggregations = aggregationParseResults.stream()
+        .map(ParseResult::getExpression)
+        .collect(Collectors.toList());
+    queryPlan.setAggregations(aggregations);
+
+    List<DataType> resultTypes = aggregationParseResults.stream()
+        .map(ParseResult::getResultType)
+        .collect(Collectors.toList());
+    queryPlan.setResultTypes(resultTypes);
+
+    List<String> groupings = groupingParseResults.stream()
+        .map(ParseResult::getExpression)
+        .collect(Collectors.toList());
+    queryPlan.setGroupings(groupings);
+
+    Set<String> aggregationFromTables = aggregationParseResults.stream()
+        .map(ParseResult::getFromTable)
+        .collect(Collectors.toSet());
+    Set<String> groupingFromTables = groupingParseResults.stream()
+        .map(ParseResult::getFromTable)
+        .collect(Collectors.toSet());
+    if (!aggregationFromTables.containsAll(groupingFromTables)) {
+      Set<String> difference = new HashSet<>(groupingFromTables);
+      difference.removeAll(aggregationFromTables);
+      throw new InvalidRequestException(
+          "Groupings contain one or more resources that are not the subject of an aggregation: "
+              + String.join(", ", difference));
+    }
+    queryPlan.setFromTables(aggregationFromTables);
+    return queryPlan;
+  }
+
+  private Dataset<Row> executeQueryPlan(QueryPlan queryPlan, AggregateQuery query) {
+    List<String> selectExpressions = new ArrayList<>();
+    if (queryPlan.getGroupings() != null && !queryPlan.getGroupings().isEmpty()) {
+      for (int i = 0; i < queryPlan.getGroupings().size(); i++) {
+        String grouping = queryPlan.getGroupings().get(i);
+        String label = backTicks(query.getGrouping().get(i).getLabel().asStringValue());
+        selectExpressions.add(grouping + " AS " + label);
+      }
+    }
+    if (queryPlan.getAggregations() != null && !queryPlan.getAggregations().isEmpty()) {
+      for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
+        String aggregation = queryPlan.getAggregations().get(i);
+        String label = backTicks(query.getAggregation().get(i).getLabel().asStringValue());
+        selectExpressions.add(aggregation + " AS " + label);
+      }
+    }
+    String selectClause = "SELECT " + String.join(", ", selectExpressions);
+    String fromClause = "FROM " + String.join(", ", queryPlan.getFromTables());
+    String groupByClause = "GROUP BY " + String.join(", ", queryPlan.getGroupings());
+    String orderByClause = "ORDER BY " + String.join(", ", queryPlan.getGroupings());
+    String sql = String.join(" ", selectClause, fromClause, groupByClause, orderByClause);
+
+    logger.info("Executing query: " + sql);
+    return spark.sql(sql);
+  }
+
   /**
    * Build an AggregateQueryResult resource from the supplied Dataset, embedding the original
    * AggregateQuery and honouring the hints within the QueryPlan.
    */
-  private static AggregateQueryResult queryResultFromDataset(Dataset<Row> dataset,
+  private AggregateQueryResult queryResultFromDataset(Dataset<Row> dataset,
       AggregateQuery query, QueryPlan queryPlan) {
     List<Row> rows = dataset.collectAsList();
     int numGroupings = query.getGrouping().size();
@@ -131,144 +270,6 @@ public class SparkQueryExecutor implements QueryExecutor {
     queryResult.setData(dataComponents);
 
     return queryResult;
-  }
-
-  private void initialiseResourceDefinitions() {
-    TerminologyClient terminologyClient = fhirContext
-        .newRestfulClient((TerminologyClient.class), configuration.getTerminologyServerUrl());
-    terminologyClient.setSummary(SummaryEnum.TRUE);
-    ResourceDefinitions.ensureInitialized(terminologyClient);
-  }
-
-  private void initialiseSpark() {
-    spark = SparkSession.builder()
-        .config("spark.master", configuration.getSparkMasterUrl())
-        // TODO: Use Maven dependency plugin to copy this into a relative location.
-        .config("spark.jars",
-            "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-SNAPSHOT.jar")
-        .config("spark.sql.warehouse.dir", configuration.getWarehouseDirectory())
-        .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreUrl())
-        .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
-        .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
-        .config("spark.executor.memory", configuration.getExecutorMemory())
-        .enableHiveSupport()
-        .getOrCreate();
-  }
-
-  @Override
-  public AggregateQueryResult execute(AggregateQuery query) throws InvalidRequestException {
-    try {
-      List<AggregationComponent> aggregations = query.getAggregation();
-      List<GroupingComponent> groupings = query.getGrouping();
-      if (aggregations == null || aggregations.isEmpty()) {
-        throw new InvalidRequestException("Missing aggregation component within query");
-      }
-
-      List<AggregationParseResult> aggregationParseResults = parseAggregation(aggregations);
-      List<GroupingParseResult> groupingParseResults = parseGroupings(groupings);
-      QueryPlan queryPlan = buildQueryPlan(aggregationParseResults, groupingParseResults);
-
-      Dataset<Row> result = executeQueryPlan(queryPlan, query);
-
-      return queryResultFromDataset(result, query, queryPlan);
-    } catch (BaseServerResponseException e) {
-      throw e;
-    } catch (Exception e) {
-      logger.error("Exception occurred while executing query", e);
-      throw new InternalErrorException("Unexpected error occurred while executing query");
-    }
-  }
-
-  private List<AggregationParseResult> parseAggregation(
-      List<AggregationComponent> aggregations) {
-    return aggregations.stream()
-        .map(aggregation -> {
-          // TODO: Support references to pre-defined aggregations.
-          String aggExpression = aggregation.getExpression().asStringValue();
-          if (aggExpression == null) {
-            throw new InvalidRequestException("Aggregation component must have expression");
-          }
-          AggregationParser aggregationParser = new AggregationParser();
-          return aggregationParser.parse(aggExpression);
-        }).collect(Collectors.toList());
-  }
-
-  private List<GroupingParseResult> parseGroupings(List<GroupingComponent> groupings) {
-    List<GroupingParseResult> groupingParseResults = new ArrayList<>();
-    if (groupings != null) {
-      groupingParseResults = groupings.stream()
-          .map(grouping -> {
-            // TODO: Support references to pre-defined dimensions.
-            String groupingExpression = grouping.getExpression().asStringValue();
-            if (groupingExpression == null) {
-              throw new InvalidRequestException("Grouping component must have expression");
-            }
-            GroupingParser groupingParser = new GroupingParser();
-            return groupingParser.parse(groupingExpression);
-          }).collect(Collectors.toList());
-    }
-    return groupingParseResults;
-  }
-
-  private QueryPlan buildQueryPlan(List<AggregationParseResult> aggregationParseResults,
-      List<GroupingParseResult> groupingParseResults) {
-    QueryPlan queryPlan = new QueryPlan();
-    List<String> aggregations = aggregationParseResults.stream()
-        .map(AggregationParseResult::getExpression)
-        .collect(Collectors.toList());
-    queryPlan.setAggregations(aggregations);
-
-    List<DataType> resultTypes = aggregationParseResults.stream()
-        .map(AggregationParseResult::getResultType)
-        .collect(Collectors.toList());
-    queryPlan.setResultTypes(resultTypes);
-
-    List<String> groupings = groupingParseResults.stream()
-        .map(GroupingParseResult::getExpression)
-        .collect(Collectors.toList());
-    queryPlan.setGroupings(groupings);
-
-    Set<String> aggregationFromTables = aggregationParseResults.stream()
-        .map(AggregationParseResult::getFromTable)
-        .collect(Collectors.toSet());
-    Set<String> groupingFromTables = groupingParseResults.stream()
-        .map(GroupingParseResult::getFromTable)
-        .collect(Collectors.toSet());
-    if (!aggregationFromTables.containsAll(groupingFromTables)) {
-      Set<String> difference = new HashSet<>(groupingFromTables);
-      difference.removeAll(aggregationFromTables);
-      throw new InvalidRequestException(
-          "Groupings contain one or more resources that are not the subject of an aggregation: "
-              + String.join(", ", difference));
-    }
-    queryPlan.setFromTables(aggregationFromTables);
-    return queryPlan;
-  }
-
-  private Dataset<Row> executeQueryPlan(QueryPlan queryPlan, AggregateQuery query) {
-    List<String> selectExpressions = new ArrayList<>();
-    if (queryPlan.getGroupings() != null && !queryPlan.getGroupings().isEmpty()) {
-      for (int i = 0; i < queryPlan.getGroupings().size(); i++) {
-        String grouping = queryPlan.getGroupings().get(i);
-        String label = backTicks(query.getGrouping().get(i).getLabel().asStringValue());
-        selectExpressions.add(grouping + " AS " + label);
-      }
-    }
-    if (queryPlan.getAggregations() != null && !queryPlan.getAggregations().isEmpty()) {
-      for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
-        String aggregation = queryPlan.getAggregations().get(i);
-        String label = backTicks(query.getAggregation().get(i).getLabel().asStringValue());
-        selectExpressions.add(aggregation + " AS " + label);
-      }
-    }
-    String selectClause = "SELECT " + String.join(", ", selectExpressions);
-    String fromClause = "FROM " + String.join(", ", queryPlan.getFromTables());
-    String groupByClause = "GROUP BY " + String.join(", ", queryPlan.getGroupings());
-    String orderByClause = "ORDER BY " + String.join(", ", queryPlan.getGroupings());
-    String sql = String.join(" ", selectClause, fromClause, groupByClause, orderByClause);
-
-    logger.info("Executing query: " + sql);
-    return spark.sql(sql);
   }
 
 }
