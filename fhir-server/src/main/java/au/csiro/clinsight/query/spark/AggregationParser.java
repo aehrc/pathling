@@ -4,20 +4,18 @@
 
 package au.csiro.clinsight.query.spark;
 
+import static au.csiro.clinsight.query.spark.Mappings.getFhirTypeForFunction;
+import static au.csiro.clinsight.query.spark.Mappings.translateFunctionToSpark;
+
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
 import au.csiro.clinsight.fhir.FhirPathParser.ExpressionContext;
 import au.csiro.clinsight.fhir.FhirPathParser.FunctionInvocationContext;
 import au.csiro.clinsight.fhir.FhirPathParser.ParamListContext;
-import java.util.HashMap;
-import java.util.Map;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Parses a FHIRPath aggregation expression, and returns an object which contains a Spark SQL SELECT
@@ -27,8 +25,6 @@ import org.slf4j.LoggerFactory;
  * @author John Grimes
  */
 class AggregationParser {
-
-  private static final Logger logger = LoggerFactory.getLogger(AggregationParser.class);
 
   ParseResult parse(String expression) {
     FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
@@ -41,27 +37,19 @@ class AggregationParser {
 
   private static class ExpressionVisitor extends FhirPathBaseVisitor<ParseResult> {
 
-    private static final Map<String, String> fpFuncToSpark = new HashMap<String, String>() {{
-      put("count", "COUNT");
-    }};
-
-    private static final Map<String, DataType> fpFuncToDataType = new HashMap<String, DataType>() {{
-      put("count", DataTypes.LongType);
-    }};
 
     @Override
     public ParseResult visitFunctionInvocation(FunctionInvocationContext ctx) {
       String functionIdentifier = ctx.functn().identifier().getText();
-      String translatedIdentifier = fpFuncToSpark.get(functionIdentifier);
+      String translatedIdentifier = translateFunctionToSpark(functionIdentifier);
       if (translatedIdentifier == null) {
-        logger.warn("Unrecognised function identifier encountered: " + functionIdentifier);
-        return null;
+        throw new InvalidRequestException(
+            "Unrecognised function: " + functionIdentifier);
       } else {
         ParseResult result = new ParseResult();
-        ParseResult paramListResult = ctx.functn().paramList()
-            .accept(new ParamListVisitor());
+        ParseResult paramListResult = ctx.functn().paramList().accept(new ParamListVisitor());
         result.setExpression(translatedIdentifier + "(" + paramListResult.getExpression() + ")");
-        result.setResultType(fpFuncToDataType.get(functionIdentifier));
+        result.setResultType(getFhirTypeForFunction(functionIdentifier));
         if (result.getResultType() == null) {
           throw new AssertionError(
               "Data type not found for FHIRPath aggregation function: " + functionIdentifier);

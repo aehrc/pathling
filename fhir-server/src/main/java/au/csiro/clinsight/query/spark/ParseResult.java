@@ -4,8 +4,6 @@
 
 package au.csiro.clinsight.query.spark;
 
-import org.apache.spark.sql.types.DataType;
-
 /**
  * Used to represent the results from the AggregationParser and GroupingParser, which then gets used
  * to build a QueryPlan.
@@ -15,7 +13,7 @@ import org.apache.spark.sql.types.DataType;
 class ParseResult {
 
   private String expression;
-  private DataType resultType;
+  private String resultType;
   private String fromTable;
 
   ParseResult() {
@@ -33,11 +31,11 @@ class ParseResult {
     this.expression = expression;
   }
 
-  DataType getResultType() {
+  public String getResultType() {
     return resultType;
   }
 
-  void setResultType(DataType resultType) {
+  public void setResultType(String resultType) {
     this.resultType = resultType;
   }
 

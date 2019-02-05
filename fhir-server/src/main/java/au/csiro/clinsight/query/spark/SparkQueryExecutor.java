@@ -4,6 +4,7 @@
 
 package au.csiro.clinsight.query.spark;
 
+import static au.csiro.clinsight.query.spark.Mappings.getFhirClass;
 import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
 import static au.csiro.clinsight.utilities.Strings.backTicks;
 
@@ -23,18 +24,13 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.dstu3.model.IntegerType;
 import org.hl7.fhir.dstu3.model.Reference;
 import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.dstu3.model.Type;
@@ -50,12 +46,6 @@ import org.slf4j.LoggerFactory;
 public class SparkQueryExecutor implements QueryExecutor {
 
   private static final Logger logger = LoggerFactory.getLogger(SparkQueryExecutor.class);
-  private static final Map<DataType, Class> sparkDataTypeToJavaClass = new HashMap<DataType, Class>() {{
-    put(DataTypes.LongType, Long.class);
-  }};
-  private static final Map<DataType, Class> sparkDataTypeToFhirClass = new HashMap<DataType, Class>() {{
-    put(DataTypes.LongType, IntegerType.class);
-  }};
 
   private final SparkQueryExecutorConfiguration configuration;
   private final FhirContext fhirContext;
@@ -118,7 +108,7 @@ public class SparkQueryExecutor implements QueryExecutor {
       return queryResultFromDataset(result, query, queryPlan);
     } catch (BaseServerResponseException e) {
       throw e;
-    } catch (Exception e) {
+    } catch (Exception | AssertionError e) {
       logger.error("Exception occurred while executing query", e);
       throw new InternalErrorException("Unexpected error occurred while executing query");
     }
@@ -163,10 +153,15 @@ public class SparkQueryExecutor implements QueryExecutor {
         .collect(Collectors.toList());
     queryPlan.setAggregations(aggregations);
 
-    List<DataType> resultTypes = aggregationParseResults.stream()
+    List<String> aggregationTypes = aggregationParseResults.stream()
         .map(ParseResult::getResultType)
         .collect(Collectors.toList());
-    queryPlan.setResultTypes(resultTypes);
+    queryPlan.setAggregationTypes(aggregationTypes);
+
+    List<String> groupingTypes = groupingParseResults.stream()
+        .map(ParseResult::getResultType)
+        .collect(Collectors.toList());
+    queryPlan.setGroupingTypes(groupingTypes);
 
     List<String> groupings = groupingParseResults.stream()
         .map(ParseResult::getExpression)
@@ -234,11 +229,11 @@ public class SparkQueryExecutor implements QueryExecutor {
       LabelComponent labelComponent = new LabelComponent();
       StringType label = query.getGrouping().get(i).getLabel();
       labelComponent.setName(label);
-      int columnNumber = i;
-      List<StringType> series = rows.stream()
-          .map(row -> new StringType(row.getString(columnNumber)))
-          .collect(Collectors.toList());
+
+      String fhirType = queryPlan.getGroupingTypes().get(i);
+      List<Type> series = getSeries(rows, i, fhirType);
       labelComponent.setSeries(series);
+
       labelComponents.add(labelComponent);
     }
     queryResult.setLabel(labelComponents);
@@ -248,28 +243,43 @@ public class SparkQueryExecutor implements QueryExecutor {
       DataComponent dataComponent = new DataComponent();
       StringType label = query.getAggregation().get(i).getLabel();
       dataComponent.setName(label);
-      int aggregationNumber = i;
+
       int columnNumber = i + numGroupings;
-      @SuppressWarnings("unchecked") List<Type> series = (List<Type>) (Object) rows.stream()
-          .map(row -> {
-            try {
-              @SuppressWarnings("unchecked") Constructor constructor = sparkDataTypeToFhirClass
-                  .get(queryPlan.getResultTypes().get(aggregationNumber))
-                  .getConstructor(sparkDataTypeToJavaClass.get(queryPlan.getResultTypes().get(
-                      aggregationNumber)));
-              Object value = row.get(columnNumber);
-              return constructor.newInstance(value);
-            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
-              logger.error("Failed to access value from row: " + e.getMessage());
-              return null;
-            }
-          }).collect(Collectors.toList());
+      String fhirType = queryPlan.getAggregationTypes().get(i);
+      List<Type> series = getSeries(rows, columnNumber, fhirType);
       dataComponent.setSeries(series);
+
       dataComponents.add(dataComponent);
     }
     queryResult.setData(dataComponents);
 
     return queryResult;
+  }
+
+  private List<Type> getSeries(List<Row> rows, int columnNumber, String fhirType) {
+    @SuppressWarnings("unchecked") List<Type> series = (List<Type>) (Object) rows.stream()
+        .map(row -> {
+          try {
+            Class fhirClass = getFhirClass(fhirType);
+            checkNotNull(fhirClass, "Unable to map FHIR type to FHIR class: " + fhirType);
+            Class javaClass = Mappings.getJavaClass(fhirType);
+            checkNotNull(javaClass, "Unable to map FHIR type to Java class: " + fhirType);
+            @SuppressWarnings("unchecked") Constructor constructor = fhirClass
+                .getConstructor(javaClass);
+            Object value = row.get(columnNumber);
+
+            // Null values are represented within AggregateQueryResults as "(none)". This is due to
+            // null values being illegal within FHIR.
+            //
+            // Another possible way to deal with this could be to rearrange the structure of the
+            // AggregateQueryResult resource to be row rather than column-oriented.
+            return value == null ? new StringType("(none)") : constructor.newInstance(value);
+          } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
+            logger.error("Failed to access value from row: " + e.getMessage());
+            return null;
+          }
+        }).collect(Collectors.toList());
+    return series;
   }
 
 }

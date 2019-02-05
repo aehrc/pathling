@@ -129,7 +129,7 @@ public class AggregateQueryResult extends Basic {
 
     @Child(name = "series", min = 1, max = MAX_UNLIMITED)
     @Description(shortDefinition = "The values for each label in the set")
-    private List<StringType> series;
+    private List<Type> series;
 
     public StringType getName() {
       return name;
@@ -139,11 +139,11 @@ public class AggregateQueryResult extends Basic {
       this.name = name;
     }
 
-    public List<StringType> getSeries() {
+    public List<Type> getSeries() {
       return series;
     }
 
-    public void setSeries(List<StringType> series) {
+    public void setSeries(List<Type> series) {
       this.series = series;
     }
 
@@ -161,7 +161,7 @@ public class AggregateQueryResult extends Basic {
         ((LabelComponent) dst).name = name.copy();
       }
       if (series != null) {
-        ((LabelComponent) dst).series = series.stream().map(StringType::copy)
+        ((LabelComponent) dst).series = series.stream().map(Type::copy)
             .collect(Collectors.toList());
       }
     }
