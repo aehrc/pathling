@@ -8,7 +8,7 @@ import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.utilities.Strings;
-import ca.uhn.fhir.rest.api.SummaryEnum;
+import com.google.common.collect.Sets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +19,7 @@ import org.hl7.fhir.dstu3.model.ElementDefinition.TypeRefComponent;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 import org.hl7.fhir.dstu3.model.StructureDefinition.StructureDefinitionDifferentialComponent;
+import org.hl7.fhir.dstu3.model.StructureDefinition.StructureDefinitionKind;
 import org.hl7.fhir.dstu3.model.StructureDefinition.StructureDefinitionSnapshotComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,11 +43,17 @@ public abstract class ResourceDefinitions {
    */
   public static void ensureInitialized(TerminologyClient terminologyClient) {
     if (resources.isEmpty()) {
+      // Do a search to get all the StructureDefinitions. Unfortunately the `kind` search parameter
+      // is not supported by Ontoserver, yet.
       List<StructureDefinition> structureDefinitions = terminologyClient
-          .getAllStructureDefinitions(SummaryEnum.TRUE);
+          .getAllStructureDefinitions(Sets.newHashSet("url", "kind"));
+
+      // Fetch each StructureDefinition and create a HashMap keyed on URL. Filter out anything that
+      // is not a resource definition.
       Function<StructureDefinition, StructureDefinition> fetchResourceWithId = entry -> terminologyClient
           .getStructureDefinitionById(new IdType(entry.getId()));
       resources.putAll(structureDefinitions.stream()
+          .filter(sd -> sd.getKind() == StructureDefinitionKind.RESOURCE)
           .peek(sd -> logger
               .info("Retrieving StructureDefinition: " + sd.getUrl()))
           .collect(Collectors.toMap(StructureDefinition::getUrl, fetchResourceWithId)));
