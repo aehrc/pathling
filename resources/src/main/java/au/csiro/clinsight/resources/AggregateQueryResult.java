@@ -18,7 +18,6 @@ import org.hl7.fhir.dstu3.model.Basic;
 import org.hl7.fhir.dstu3.model.DomainResource;
 import org.hl7.fhir.dstu3.model.Property;
 import org.hl7.fhir.dstu3.model.Reference;
-import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.dstu3.model.Type;
 
 /**
@@ -35,13 +34,8 @@ public class AggregateQueryResult extends Basic {
   @Description(shortDefinition = "A reference to the AggregateQuery resource that this resource describes the results for")
   private Reference query;
 
-  @Child(name = "label", max = MAX_UNLIMITED)
-  @Description(shortDefinition = "A set of display descriptions corresponding to the set of data items")
-  private List<LabelComponent> label;
-
-  @Child(name = "data", max = MAX_UNLIMITED)
-  @Description(shortDefinition = "The calculated summary values that form the result of the execution of the query")
-  private List<DataComponent> data;
+  @Child(name = "grouping", max = MAX_UNLIMITED)
+  private List<GroupingComponent> grouping;
 
   public Reference getQuery() {
     return query;
@@ -51,20 +45,13 @@ public class AggregateQueryResult extends Basic {
     this.query = query;
   }
 
-  public List<LabelComponent> getLabel() {
-    return label;
+  public List<GroupingComponent> getGrouping() {
+    return grouping;
   }
 
-  public void setLabel(List<LabelComponent> label) {
-    this.label = label;
-  }
-
-  public List<DataComponent> getData() {
-    return data;
-  }
-
-  public void setData(List<DataComponent> data) {
-    this.data = data;
+  public void setGrouping(
+      List<GroupingComponent> grouping) {
+    this.grouping = grouping;
   }
 
   @Override
@@ -76,26 +63,19 @@ public class AggregateQueryResult extends Basic {
         0,
         1,
         query));
-    children.add(new Property("label",
+    children.add(new Property("grouping",
         "BackboneElement",
-        "A set of display descriptions corresponding to the set of data items.",
+        "The grouped results of the aggregations requested in the query.",
         0,
         MAX_UNLIMITED,
-        label));
-    children.add(new Property("data",
-        "BackboneElement",
-        "The calculated summary values that form the result of the execution of the query.",
-        0,
-        MAX_UNLIMITED,
-        data));
+        grouping));
   }
 
   @Override
   public AggregateQueryResult copy() {
     AggregateQueryResult queryResult = new AggregateQueryResult();
     queryResult.query = query;
-    queryResult.label = label;
-    queryResult.data = data;
+    queryResult.grouping = grouping;
     return queryResult;
   }
 
@@ -105,156 +85,175 @@ public class AggregateQueryResult extends Basic {
     if (query != null) {
       ((AggregateQueryResult) dst).query = query.copy();
     }
-    if (label != null) {
-      ((AggregateQueryResult) dst).label = label.stream().map(LabelComponent::copy)
-          .collect(Collectors.toList());
-    }
-    if (data != null) {
-      ((AggregateQueryResult) dst).data = data.stream().map(DataComponent::copy)
+    if (grouping != null) {
+      ((AggregateQueryResult) dst).grouping = grouping.stream().map(GroupingComponent::copy)
           .collect(Collectors.toList());
     }
   }
 
   @Override
   public boolean isEmpty() {
-    return super.isEmpty() && ElementUtil.isEmpty(query, label, data);
+    return super.isEmpty() && ElementUtil.isEmpty(query, grouping);
   }
 
   @Block
-  public static class LabelComponent extends BackboneElement {
+  public static class GroupingComponent extends BackboneElement {
 
-    @Child(name = "name")
-    @Description(shortDefinition = "A short description for this set of labels, for display purposes")
-    private StringType name;
+    @Child(name = "label", max = MAX_UNLIMITED)
+    private List<LabelComponent> label;
 
-    @Child(name = "series", min = 1, max = MAX_UNLIMITED)
-    @Description(shortDefinition = "The values for each label in the set")
-    private List<Type> series;
+    @Child(name = "result", max = MAX_UNLIMITED)
+    private List<ResultComponent> result;
 
-    public StringType getName() {
-      return name;
+    public List<LabelComponent> getLabel() {
+      return label;
     }
 
-    public void setName(StringType name) {
-      this.name = name;
+    public void setLabel(List<LabelComponent> label) {
+      this.label = label;
     }
 
-    public List<Type> getSeries() {
-      return series;
+    public List<ResultComponent> getResult() {
+      return result;
     }
 
-    public void setSeries(List<Type> series) {
-      this.series = series;
+    public void setResult(List<ResultComponent> result) {
+      this.result = result;
     }
 
     @Override
-    public LabelComponent copy() {
-      LabelComponent labelComponent = new LabelComponent();
-      copyValues(labelComponent);
-      return labelComponent;
+    protected void listChildren(List<Property> children) {
+      super.listChildren(children);
+      children.add(new Property("label",
+          "BackboneElement",
+          "The set of descriptive labels that describe this grouping, and correspond to those requested in the query.",
+          0,
+          MAX_UNLIMITED,
+          label));
+      children.add(new Property("result",
+          "BackboneElement",
+          "The set of values that resulted from the execution of the aggregations that were requested in the query.",
+          0,
+          MAX_UNLIMITED,
+          result));
     }
 
     @Override
     public void copyValues(BackboneElement dst) {
       super.copyValues(dst);
-      if (name != null) {
-        ((LabelComponent) dst).name = name.copy();
+      if (label != null) {
+        ((GroupingComponent) dst).label = label.stream().map(LabelComponent::copy)
+            .collect(Collectors.toList());
       }
-      if (series != null) {
-        ((LabelComponent) dst).series = series.stream().map(Type::copy)
+      if (result != null) {
+        ((GroupingComponent) dst).result = result.stream().map(ResultComponent::copy)
             .collect(Collectors.toList());
       }
     }
 
     @Override
-    protected void listChildren(List<Property> children) {
-      super.listChildren(children);
-      children.add(new Property("name",
-          "string",
-          "A short description for this set of labels, for display purposes",
-          0,
-          1,
-          name));
-      children.add(new Property("series",
-          "Element",
-          "The values for each label in the set",
-          0,
-          MAX_UNLIMITED,
-          series));
+    public boolean isEmpty() {
+      return super.isEmpty() && ElementUtil.isEmpty(label, result);
     }
 
     @Override
-    public boolean isEmpty() {
-      return super.isEmpty() && ElementUtil.isEmpty(name, series);
+    public GroupingComponent copy() {
+      GroupingComponent grouping = new GroupingComponent();
+      copyValues(grouping);
+      return grouping;
     }
-
   }
 
   @Block
-  public static class DataComponent extends BackboneElement {
+  public static class LabelComponent extends BackboneElement {
 
-    @Child(name = "name")
-    @Description(shortDefinition = "A short description for this data series, for display purposes")
-    private StringType name;
+    @Child(name = "value")
+    Type value;
 
-    @Child(name = "series", max = MAX_UNLIMITED)
-    @Description(shortDefinition = "The values in the data series")
-    private List<Type> series;
-
-    public StringType getName() {
-      return name;
+    public Type getValue() {
+      return value;
     }
 
-    public void setName(StringType name) {
-      this.name = name;
-    }
-
-    public List<Type> getSeries() {
-      return series;
-    }
-
-    public void setSeries(List<Type> series) {
-      this.series = series;
+    public void setValue(Type value) {
+      this.value = value;
     }
 
     @Override
     protected void listChildren(List<Property> children) {
       super.listChildren(children);
-      children.add(new Property("name",
-          "string",
-          "A short description for this data series, for display purposes.",
+      children.add(new Property("value",
+          null,
+          "The value for this label.",
           0,
           1,
-          name));
-      children.add(new Property("series",
-          "Element",
-          "The values in the data series",
-          0,
-          MAX_UNLIMITED,
-          series));
-    }
-
-    @Override
-    public DataComponent copy() {
-      DataComponent dataComponent = new DataComponent();
-      copyValues(dataComponent);
-      return dataComponent;
+          value));
     }
 
     @Override
     public void copyValues(BackboneElement dst) {
       super.copyValues(dst);
-      if (name != null) {
-        ((DataComponent) dst).name = name.copy();
-      }
-      if (series != null) {
-        ((DataComponent) dst).series = series.stream().map(Type::copy).collect(Collectors.toList());
+      if (value != null) {
+        ((LabelComponent) dst).value = value.copy();
       }
     }
 
     @Override
     public boolean isEmpty() {
-      return super.isEmpty() && ElementUtil.isEmpty(name, series);
+      return false;
+    }
+
+    @Override
+    public LabelComponent copy() {
+      LabelComponent label = new LabelComponent();
+      copyValues(label);
+      return label;
+    }
+
+  }
+
+  @Block
+  public static class ResultComponent extends BackboneElement {
+
+    @Child(name = "value")
+    Type value;
+
+    public Type getValue() {
+      return value;
+    }
+
+    public void setValue(Type value) {
+      this.value = value;
+    }
+
+    @Override
+    protected void listChildren(List<Property> children) {
+      super.listChildren(children);
+      children.add(new Property("value",
+          null,
+          "The value for this result.",
+          0,
+          1,
+          value));
+    }
+
+    @Override
+    public void copyValues(BackboneElement dst) {
+      super.copyValues(dst);
+      if (value != null) {
+        ((ResultComponent) dst).value = value.copy();
+      }
+    }
+
+    @Override
+    public boolean isEmpty() {
+      return false;
+    }
+
+    @Override
+    public ResultComponent copy() {
+      ResultComponent result = new ResultComponent();
+      copyValues(result);
+      return result;
     }
 
   }
