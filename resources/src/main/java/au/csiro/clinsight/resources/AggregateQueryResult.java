@@ -199,6 +199,7 @@ public class AggregateQueryResult extends Basic {
 
     @Override
     public boolean isEmpty() {
+      // This ensures that an empty element is rendered, even when there is a null value.
       return false;
     }
 
@@ -246,6 +247,7 @@ public class AggregateQueryResult extends Basic {
 
     @Override
     public boolean isEmpty() {
+      // This ensures that an empty element is rendered, even when there is a null value.
       return false;
     }
 
