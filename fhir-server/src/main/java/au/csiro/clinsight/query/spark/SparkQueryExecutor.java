@@ -205,7 +205,7 @@ public class SparkQueryExecutor implements QueryExecutor {
       checkNotNull(javaClass, "Unable to map FHIR type to Java class: " + fhirType);
       @SuppressWarnings("unchecked") Constructor constructor = fhirClass.getConstructor(javaClass);
       Object value = row.get(columnNumber);
-      return (Type) constructor.newInstance(value);
+      return value == null ? null : (Type) constructor.newInstance(value);
     } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
       logger.error("Failed to access value from row: " + e.getMessage());
       return null;

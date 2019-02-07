@@ -49,7 +49,6 @@ class ValidatingInvocationParser extends FhirPathBaseVisitor<ParseResult> {
     ParseResult expressionResult = ctx.expression().accept(new ValidatingInvocationParser());
     ParseResult invocationResult = ctx.invocation().accept(new ValidatingInvocationParser());
     String expression = expressionResult.getExpression() + "." + invocationResult.getExpression();
-    validateElement(expression);
     ParseResult result = new ParseResult(expression);
     result.setFromTable(expressionResult.getFromTable());
     return result;
