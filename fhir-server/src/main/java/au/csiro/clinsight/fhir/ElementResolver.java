@@ -6,9 +6,10 @@ import static au.csiro.clinsight.fhir.ResourceDefinitions.isSupportedComplex;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.supportedPrimitiveTypes;
 
 import au.csiro.clinsight.fhir.ResourceScanner.SummarisedElement;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -81,9 +82,13 @@ public class ElementResolver {
       if (isSupportedComplex(element.getTypeCode())) {
         SummarisedElement complexElement = getElementsForType(element.getTypeCode())
             .get(element.getTypeCode());
-        result.getMultiValueTraversals().put(currentPath, complexElement.getChildElements());
+        MultiValueTraversal traversal = new MultiValueTraversal(currentPath,
+            complexElement.getChildElements());
+        result.getMultiValueTraversals().add(traversal);
       } else {
-        result.getMultiValueTraversals().put(currentPath, element.getChildElements());
+        MultiValueTraversal traversal = new MultiValueTraversal(currentPath,
+            element.getChildElements());
+        result.getMultiValueTraversals().add(traversal);
       }
     }
   }
@@ -109,15 +114,13 @@ public class ElementResolver {
         // Translate the keys within the multi-value traversals of the nested results. This will,
         // for example, translate `CodeableConcept.coding` into
         // `Patient.communication.language.coding` for inclusion in the final result.
-        Map<String, Set<String>> translatedTraversals = nestedResult.getMultiValueTraversals();
-        for (String key : translatedTraversals.keySet()) {
-          translatedTraversals.put(key.replace(typeCode, currentPath),
-              translatedTraversals.get(key));
-          translatedTraversals.remove(key);
+        List<MultiValueTraversal> translatedTraversals = nestedResult.getMultiValueTraversals();
+        for (MultiValueTraversal traversal : translatedTraversals) {
+          traversal.setPath(traversal.getPath().replace(typeCode, currentPath));
         }
 
         // Merge the nested result into the final result and return.
-        result.getMultiValueTraversals().putAll(translatedTraversals);
+        result.getMultiValueTraversals().addAll(translatedTraversals);
         result.setTypeCode(nestedResult.getTypeCode());
         return result;
       }
@@ -128,7 +131,7 @@ public class ElementResolver {
 
   public static class ResolvedElement {
 
-    private final Map<String, Set<String>> multiValueTraversals = new HashMap<>();
+    private final List<MultiValueTraversal> multiValueTraversals = new ArrayList<>();
     private String path;
     private String typeCode;
 
@@ -148,10 +151,36 @@ public class ElementResolver {
       this.typeCode = typeCode;
     }
 
-    Map<String, Set<String>> getMultiValueTraversals() {
+    List<MultiValueTraversal> getMultiValueTraversals() {
       return multiValueTraversals;
     }
+  }
 
+  public static class MultiValueTraversal {
+
+    private String path;
+    private Set<String> children;
+
+    public MultiValueTraversal(String path, Set<String> children) {
+      this.path = path;
+      this.children = children;
+    }
+
+    public String getPath() {
+      return path;
+    }
+
+    public void setPath(String path) {
+      this.path = path;
+    }
+
+    public Set<String> getChildren() {
+      return children;
+    }
+
+    public void setChildren(Set<String> children) {
+      this.children = children;
+    }
   }
 
   public static class ResourceNotKnownException extends RuntimeException {
