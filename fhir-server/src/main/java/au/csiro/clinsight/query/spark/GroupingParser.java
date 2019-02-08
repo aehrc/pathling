@@ -4,14 +4,14 @@
 
 package au.csiro.clinsight.query.spark;
 
+import static au.csiro.clinsight.fhir.ElementResolver.resolveElement;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.isSupportedPrimitive;
-import static au.csiro.clinsight.fhir.ResourceDefinitions.resolveElement;
 
+import au.csiro.clinsight.fhir.ElementResolver.ElementNotKnownException;
+import au.csiro.clinsight.fhir.ElementResolver.ResolvedElement;
+import au.csiro.clinsight.fhir.ElementResolver.ResourceNotKnownException;
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
-import au.csiro.clinsight.fhir.ResourceDefinitions.ElementNotKnownException;
-import au.csiro.clinsight.fhir.ResourceDefinitions.ResolvedElement;
-import au.csiro.clinsight.fhir.ResourceDefinitions.ResourceNotKnownException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;

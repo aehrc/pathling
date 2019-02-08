@@ -4,8 +4,8 @@
 
 package au.csiro.clinsight.query.spark;
 
+import static au.csiro.clinsight.fhir.ElementResolver.resolveElement;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.getBaseResource;
-import static au.csiro.clinsight.fhir.ResourceDefinitions.resolveElement;
 
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathParser.FunctionInvocationContext;
