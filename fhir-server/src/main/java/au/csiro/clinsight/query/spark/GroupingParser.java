@@ -4,12 +4,11 @@
 
 package au.csiro.clinsight.query.spark;
 
-import static au.csiro.clinsight.fhir.ResourceDefinitions.getElementDefinition;
-import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
+import static au.csiro.clinsight.fhir.ResourceDefinitions.isSupportedPrimitive;
+import static au.csiro.clinsight.fhir.ResourceDefinitions.resolveElement;
 
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
-import au.csiro.clinsight.fhir.ResourceDefinitions;
 import au.csiro.clinsight.fhir.ResourceDefinitions.ElementNotKnownException;
 import au.csiro.clinsight.fhir.ResourceDefinitions.ResolvedElement;
 import au.csiro.clinsight.fhir.ResourceDefinitions.ResourceNotKnownException;
@@ -36,17 +35,17 @@ class GroupingParser {
     result.setFromTable(expressionResult.getFromTable());
     ResolvedElement element;
     try {
-      element = getElementDefinition(expression);
+      element = resolveElement(expression);
     } catch (ResourceNotKnownException | ElementNotKnownException e) {
       throw new InvalidRequestException(e.getMessage());
     }
-    checkNotNull(element);
-    if (!ResourceDefinitions.isSupportedPrimitive(element.getTypeCode())) {
+    assert element != null;
+    if (!isSupportedPrimitive(element.getTypeCode())) {
       throw new InvalidRequestException(
           "Grouping expression is not of a supported primitive type: " + expression);
     }
     String resultType = element.getTypeCode();
-    checkNotNull(resultType);
+    assert resultType != null;
     result.setResultType(resultType);
     return result;
   }

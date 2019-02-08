@@ -5,7 +5,7 @@
 package au.csiro.clinsight.query.spark;
 
 import static au.csiro.clinsight.fhir.ResourceDefinitions.getBaseResource;
-import static au.csiro.clinsight.fhir.ResourceDefinitions.getElementDefinition;
+import static au.csiro.clinsight.fhir.ResourceDefinitions.resolveElement;
 
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathParser.FunctionInvocationContext;
@@ -38,7 +38,7 @@ class ValidatingInvocationParser extends FhirPathBaseVisitor<ParseResult> {
     String[] pathComponents = invocationExpression.split("\\.");
     pathComponents[0] = Strings.capitalize(pathComponents[0]);
     String path = String.join(".", pathComponents);
-    if (getElementDefinition(path) == null) {
+    if (resolveElement(path) == null) {
       throw new InvalidRequestException("Element not known: " + path);
     }
   }

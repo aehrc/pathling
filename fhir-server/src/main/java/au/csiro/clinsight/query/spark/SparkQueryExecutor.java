@@ -5,7 +5,6 @@
 package au.csiro.clinsight.query.spark;
 
 import static au.csiro.clinsight.query.spark.Mappings.getFhirClass;
-import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
 import static au.csiro.clinsight.utilities.Strings.backTicks;
 
 import au.csiro.clinsight.TerminologyClient;
@@ -49,13 +48,13 @@ public class SparkQueryExecutor implements QueryExecutor {
 
   public SparkQueryExecutor(SparkQueryExecutorConfiguration configuration,
       FhirContext fhirContext) {
-    checkNotNull(configuration, "Must supply configuration");
-    checkNotNull(configuration.getSparkMasterUrl(), "Must supply Spark master URL");
-    checkNotNull(configuration.getWarehouseDirectory(), "Must supply warehouse directory");
-    checkNotNull(configuration.getMetastoreUrl(), "Must supply metastore connection URL");
-    checkNotNull(configuration.getMetastoreUser(), "Must supply metastore user");
-    checkNotNull(configuration.getMetastorePassword(), "Must supply metastore password");
-    checkNotNull(configuration.getExecutorMemory(), "Must supply executor memory");
+    assert configuration != null : "Must supply configuration";
+    assert configuration.getSparkMasterUrl() != null : "Must supply Spark master URL";
+    assert configuration.getWarehouseDirectory() != null : "Must supply warehouse directory";
+    assert configuration.getMetastoreUrl() != null : "Must supply metastore connection URL";
+    assert configuration.getMetastoreUser() != null : "Must supply metastore user";
+    assert configuration.getMetastorePassword() != null : "Must supply metastore password";
+    assert configuration.getExecutorMemory() != null : "Must supply executor memory";
 
     logger.info("Creating new SparkQueryExecutor: " + configuration);
     this.configuration = configuration;
@@ -76,7 +75,7 @@ public class SparkQueryExecutor implements QueryExecutor {
         .config("spark.master", configuration.getSparkMasterUrl())
         // TODO: Use Maven dependency plugin to copy this into a relative location.
         .config("spark.jars",
-            "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-SNAPSHOT.jar")
+            "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-clinsight-SNAPSHOT.jar")
         .config("spark.sql.warehouse.dir", configuration.getWarehouseDirectory())
         .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreUrl())
         .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
@@ -200,9 +199,9 @@ public class SparkQueryExecutor implements QueryExecutor {
   private Type getValueFromRow(Row row, int columnNumber, String fhirType) {
     try {
       Class fhirClass = getFhirClass(fhirType);
-      checkNotNull(fhirClass, "Unable to map FHIR type to FHIR class: " + fhirType);
+      assert fhirClass != null : "Unable to map FHIR type to FHIR class: " + fhirType;
       Class javaClass = Mappings.getJavaClass(fhirType);
-      checkNotNull(javaClass, "Unable to map FHIR type to Java class: " + fhirType);
+      assert javaClass != null : "Unable to map FHIR type to Java class: " + fhirType;
       @SuppressWarnings("unchecked") Constructor constructor = fhirClass.getConstructor(javaClass);
       Object value = row.get(columnNumber);
       return value == null ? null : (Type) constructor.newInstance(value);

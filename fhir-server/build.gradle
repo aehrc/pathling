@@ -16,8 +16,8 @@ dependencies {
     compile project(':utilities')
 
     // HAPI FHIR
-    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version: '3.7.0-SNAPSHOT'
-    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-server', version: '3.7.0-SNAPSHOT'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-structures-dstu3', version: '3.7.0-clinsight-SNAPSHOT'
+    compile group: 'ca.uhn.hapi.fhir', name: 'hapi-fhir-server', version: '3.7.0-clinsight-SNAPSHOT'
     compile group: 'org.codehaus.woodstox', name: 'woodstox-core-asl', version: '4.4.1'
 
     // This is used for the CorsConfiguration required by the CorsInterceptor.
@@ -41,6 +41,11 @@ dependencies {
 
     // Antlr is used for the parsing of FHIRPath expressions within queries
     antlr "org.antlr:antlr4:4.7.2"
+}
+
+run {
+    // Enable assertions.
+    jvmArgs += ["-ea"]
 }
 
 generateGrammarSource {

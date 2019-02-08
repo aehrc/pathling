@@ -5,8 +5,6 @@
 
 package au.csiro.clinsight.fhir;
 
-import static au.csiro.clinsight.utilities.Preconditions.checkNotNull;
-
 import au.csiro.clinsight.query.QueryExecutor;
 import au.csiro.clinsight.resources.AggregateQuery;
 import au.csiro.clinsight.resources.AggregateQueryResult;
@@ -21,7 +19,7 @@ class QueryOperationProvider {
   private final QueryExecutor queryExecutor;
 
   QueryOperationProvider(QueryExecutor queryExecutor) {
-    checkNotNull(queryExecutor, "Must supply query executor");
+    assert queryExecutor != null : "Must supply query executor";
 
     this.queryExecutor = queryExecutor;
   }
