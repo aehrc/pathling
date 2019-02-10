@@ -4,6 +4,9 @@
 
 package au.csiro.clinsight.query.spark;
 
+import java.util.SortedSet;
+import java.util.TreeSet;
+
 /**
  * Used to represent the results from the AggregationParser and GroupingParser, which then gets used
  * to build a QueryPlan.
@@ -12,12 +15,10 @@ package au.csiro.clinsight.query.spark;
  */
 class ParseResult {
 
+  private final SortedSet<Join> joins = new TreeSet<>();
   private String expression;
   private String resultType;
   private String fromTable;
-
-  ParseResult() {
-  }
 
   ParseResult(String expression) {
     this.expression = expression;
@@ -31,11 +32,11 @@ class ParseResult {
     this.expression = expression;
   }
 
-  public String getResultType() {
+  String getResultType() {
     return resultType;
   }
 
-  public void setResultType(String resultType) {
+  void setResultType(String resultType) {
     this.resultType = resultType;
   }
 
@@ -45,6 +46,10 @@ class ParseResult {
 
   void setFromTable(String fromTable) {
     this.fromTable = fromTable;
+  }
+
+  SortedSet<Join> getJoins() {
+    return joins;
   }
 
 }

@@ -2,11 +2,13 @@ package au.csiro.clinsight.fhir;
 
 import static au.csiro.clinsight.fhir.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.supportedComplexTypes;
+import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
 import au.csiro.clinsight.utilities.Strings;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -102,7 +104,7 @@ class ResourceScanner {
       List<TypeRefComponent> typeRefComponents = element.getType();
       String elementPath = element.getPath();
       assert elementPath != null : "Encountered element with no path";
-      Set<String> elementChildren = findElementChildren(elementPath, elements);
+      List<String> elementChildren = findElementChildren(elementPath, elements);
       assert elementChildren != null;
       String maxCardinality = (typeRefComponents != null && !typeRefComponents.isEmpty())
           ? element.getMax()
@@ -142,20 +144,22 @@ class ResourceScanner {
     return result;
   }
 
-  private static Set<String> findElementChildren(@Nonnull String elementPath,
+  private static List<String> findElementChildren(@Nonnull String elementPath,
       @Nonnull List<ElementDefinition> elements) {
-    Set<String> children = elements.stream()
+    List<String> children = elements.stream()
         .filter(e -> e.getPath().matches(elementPath + "\\.[a-zA-Z\\[\\]]+$"))
         .map(e -> {
-          String[] pathComponents = e.getPath().split("\\.");
-          if (pathComponents.length == 0) {
+          LinkedList<String> pathComponents = tokenizePath(e.getPath());
+          if (pathComponents.size() == 0) {
             throw new AssertionError("Encountered child path with no components");
           }
-          return pathComponents[pathComponents.length - 1];
+          return pathComponents.get(pathComponents.size() - 1);
         })
-        .collect(Collectors.toSet());
+        .collect(Collectors.toList());
     // All instances of BackboneElement have an `id` element.
-    children.add("id");
+    if (!children.contains("id")) {
+      children.add("id");
+    }
     // `extension` and `modifierExtension` are not relevant to the implementation (currently).
     children.remove("extension");
     children.remove("modifierExtension");
@@ -165,7 +169,7 @@ class ResourceScanner {
   static class SummarisedElement {
 
     private String path;
-    private Set<String> childElements;
+    private List<String> childElements;
     @Nullable
     private String typeCode;
     @Nullable
@@ -201,11 +205,11 @@ class ResourceScanner {
       this.maxCardinality = maxCardinality;
     }
 
-    Set<String> getChildElements() {
+    List<String> getChildElements() {
       return childElements;
     }
 
-    void setChildElements(Set<String> childElements) {
+    void setChildElements(List<String> childElements) {
       this.childElements = childElements;
     }
 

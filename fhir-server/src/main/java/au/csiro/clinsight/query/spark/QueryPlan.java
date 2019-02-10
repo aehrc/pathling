@@ -6,6 +6,7 @@ package au.csiro.clinsight.query.spark;
 
 import java.util.List;
 import java.util.Set;
+import java.util.SortedSet;
 
 /**
  * @author John Grimes
@@ -17,45 +18,53 @@ class QueryPlan {
   private List<String> groupingTypes;
   private List<String> groupings;
   private Set<String> fromTables;
+  private SortedSet<Join> joins;
 
-  public List<String> getAggregations() {
+  List<String> getAggregations() {
     return aggregations;
   }
 
-  public void setAggregations(List<String> aggregations) {
+  void setAggregations(List<String> aggregations) {
     this.aggregations = aggregations;
   }
 
-  public List<String> getAggregationTypes() {
+  List<String> getAggregationTypes() {
     return aggregationTypes;
   }
 
-  public void setAggregationTypes(List<String> aggregationTypes) {
+  void setAggregationTypes(List<String> aggregationTypes) {
     this.aggregationTypes = aggregationTypes;
   }
 
-  public List<String> getGroupingTypes() {
+  List<String> getGroupingTypes() {
     return groupingTypes;
   }
 
-  public void setGroupingTypes(List<String> groupingTypes) {
+  void setGroupingTypes(List<String> groupingTypes) {
     this.groupingTypes = groupingTypes;
   }
 
-  public List<String> getGroupings() {
+  List<String> getGroupings() {
     return groupings;
   }
 
-  public void setGroupings(List<String> groupings) {
+  void setGroupings(List<String> groupings) {
     this.groupings = groupings;
   }
 
-  public Set<String> getFromTables() {
+  Set<String> getFromTables() {
     return fromTables;
   }
 
-  public void setFromTables(Set<String> fromTables) {
+  void setFromTables(Set<String> fromTables) {
     this.fromTables = fromTables;
   }
 
+  SortedSet<Join> getJoins() {
+    return joins;
+  }
+
+  void setJoins(SortedSet<Join> joins) {
+    this.joins = joins;
+  }
 }

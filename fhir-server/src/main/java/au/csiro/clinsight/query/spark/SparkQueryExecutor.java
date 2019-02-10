@@ -123,9 +123,11 @@ public class SparkQueryExecutor implements QueryExecutor {
     }
     String selectClause = "SELECT " + String.join(", ", selectExpressions);
     String fromClause = "FROM " + String.join(", ", queryPlan.getFromTables());
+    String joins = queryPlan.getJoins().stream().map(Join::getExpression).collect(
+        Collectors.joining(" "));
     String groupByClause = "GROUP BY " + String.join(", ", queryPlan.getGroupings());
     String orderByClause = "ORDER BY " + String.join(", ", queryPlan.getGroupings());
-    String sql = String.join(" ", selectClause, fromClause, groupByClause, orderByClause);
+    String sql = String.join(" ", selectClause, fromClause, joins, groupByClause, orderByClause);
 
     logger.info("Executing query: " + sql);
     return spark.sql(sql);

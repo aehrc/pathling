@@ -46,9 +46,9 @@ class AggregationParser {
         throw new InvalidRequestException(
             "Unrecognised function: " + functionIdentifier);
       } else {
-        ParseResult result = new ParseResult();
         ParseResult paramListResult = ctx.functn().paramList().accept(new ParamListVisitor());
-        result.setExpression(translatedIdentifier + "(" + paramListResult.getExpression() + ")");
+        String expression = translatedIdentifier + "(" + paramListResult.getExpression() + ")";
+        ParseResult result = new ParseResult(expression);
         result.setResultType(getFhirTypeForFunction(functionIdentifier));
         if (result.getResultType() == null) {
           throw new AssertionError(

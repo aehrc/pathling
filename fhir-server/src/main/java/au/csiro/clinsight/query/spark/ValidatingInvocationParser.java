@@ -4,7 +4,6 @@
 
 package au.csiro.clinsight.query.spark;
 
-import static au.csiro.clinsight.fhir.ElementResolver.resolveElement;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.getBaseResource;
 
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
@@ -13,7 +12,6 @@ import au.csiro.clinsight.fhir.FhirPathParser.InvocationExpressionContext;
 import au.csiro.clinsight.fhir.FhirPathParser.MemberInvocationContext;
 import au.csiro.clinsight.fhir.FhirPathParser.TermExpressionContext;
 import au.csiro.clinsight.fhir.FhirPathParser.ThisInvocationContext;
-import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,15 +29,6 @@ class ValidatingInvocationParser extends FhirPathBaseVisitor<ParseResult> {
   private static void validateResourceIdentifier(String resourceIdentifier) {
     if (getBaseResource(resourceIdentifier) == null) {
       throw new InvalidRequestException("Resource identifier not known: " + resourceIdentifier);
-    }
-  }
-
-  private static void validateElement(String invocationExpression) {
-    String[] pathComponents = invocationExpression.split("\\.");
-    pathComponents[0] = Strings.capitalize(pathComponents[0]);
-    String path = String.join(".", pathComponents);
-    if (resolveElement(path) == null) {
-      throw new InvalidRequestException("Element not known: " + path);
     }
   }
 

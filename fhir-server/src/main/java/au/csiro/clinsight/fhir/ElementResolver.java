@@ -4,14 +4,14 @@ import static au.csiro.clinsight.fhir.ResourceDefinitions.checkInitialised;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.getElementsForType;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.isSupportedComplex;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.supportedPrimitiveTypes;
+import static au.csiro.clinsight.utilities.Strings.tokenizePath;
+import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
 import au.csiro.clinsight.fhir.ResourceScanner.SummarisedElement;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javax.annotation.Nonnull;
 
 public class ElementResolver {
@@ -24,7 +24,7 @@ public class ElementResolver {
       throws ResourceNotKnownException, ElementNotKnownException {
     checkInitialised();
 
-    LinkedList<String> tail = new LinkedList<>(Arrays.asList(path.split("\\.")));
+    LinkedList<String> tail = tokenizePath(path);
     LinkedList<String> head = new LinkedList<>();
     head.push(tail.pop());
     String resourceOrDataType = head.peek();
@@ -40,7 +40,7 @@ public class ElementResolver {
     // with each iteration of the loop. This allows us to pick up multiple cardinalities and
     // transitions into complex types.
     while (true) {
-      String currentPath = String.join(".", head);
+      String currentPath = untokenizePath(head);
       SummarisedElement element = elements.get(currentPath);
 
       // If the path cannot be found in the set of valid elements for this definition, loop back
@@ -151,7 +151,7 @@ public class ElementResolver {
       this.typeCode = typeCode;
     }
 
-    List<MultiValueTraversal> getMultiValueTraversals() {
+    public List<MultiValueTraversal> getMultiValueTraversals() {
       return multiValueTraversals;
     }
   }
@@ -159,9 +159,9 @@ public class ElementResolver {
   public static class MultiValueTraversal {
 
     private String path;
-    private Set<String> children;
+    private List<String> children;
 
-    public MultiValueTraversal(String path, Set<String> children) {
+    public MultiValueTraversal(String path, List<String> children) {
       this.path = path;
       this.children = children;
     }
@@ -174,11 +174,11 @@ public class ElementResolver {
       this.path = path;
     }
 
-    public Set<String> getChildren() {
+    public List<String> getChildren() {
       return children;
     }
 
-    public void setChildren(Set<String> children) {
+    public void setChildren(List<String> children) {
       this.children = children;
     }
   }

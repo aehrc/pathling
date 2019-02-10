@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -111,6 +113,16 @@ class SparkQueryPlanner {
               + String.join(", ", difference));
     }
     queryPlan.setFromTables(aggregationFromTables);
+
+    // Get joins from the results of parsing both aggregations and groupings.
+    SortedSet<Join> joins = new TreeSet<>();
+    for (ParseResult parseResult : aggregationParseResults) {
+      joins.addAll(parseResult.getJoins());
+    }
+    for (ParseResult parseResult : groupingParseResults) {
+      joins.addAll(parseResult.getJoins());
+    }
+    queryPlan.setJoins(joins);
 
     return queryPlan;
   }
