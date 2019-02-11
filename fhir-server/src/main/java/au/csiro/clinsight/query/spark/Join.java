@@ -47,7 +47,7 @@ class Join implements Comparable<Join> {
       String alias = String.join("", aliasComponents.get(0), String.join("", aliasTail));
       String inlineExpression = untokenizePath(pathComponents);
       String joinExpression =
-          "LATERAL VIEW inline(" + inlineExpression + ") " + alias + " AS " + String
+          "LATERAL VIEW OUTER inline(" + inlineExpression + ") " + alias + " AS " + String
               .join(", ", multiValueTraversal.getChildren());
       Join join = new Join(joinExpression, alias);
       if (previousJoin != null) {
