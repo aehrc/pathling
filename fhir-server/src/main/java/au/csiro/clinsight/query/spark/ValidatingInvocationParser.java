@@ -13,8 +13,6 @@ import au.csiro.clinsight.fhir.FhirPathParser.MemberInvocationContext;
 import au.csiro.clinsight.fhir.FhirPathParser.TermExpressionContext;
 import au.csiro.clinsight.fhir.FhirPathParser.ThisInvocationContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class knows how to parse an invocation expression (e.g. Patient.name.firstName), while also
@@ -24,8 +22,6 @@ import org.slf4j.LoggerFactory;
  */
 class ValidatingInvocationParser extends FhirPathBaseVisitor<ParseResult> {
 
-  private static final Logger logger = LoggerFactory.getLogger(ValidatingInvocationParser.class);
-
   private static void validateResourceIdentifier(String resourceIdentifier) {
     if (getBaseResource(resourceIdentifier) == null) {
       throw new InvalidRequestException("Resource identifier not known: " + resourceIdentifier);
@@ -34,7 +30,6 @@ class ValidatingInvocationParser extends FhirPathBaseVisitor<ParseResult> {
 
   @Override
   public ParseResult visitInvocationExpression(InvocationExpressionContext ctx) {
-    logger.debug("Invocation expression: " + ctx.getText());
     ParseResult expressionResult = ctx.expression().accept(new ValidatingInvocationParser());
     ParseResult invocationResult = ctx.invocation().accept(new ValidatingInvocationParser());
     String expression = expressionResult.getExpression() + "." + invocationResult.getExpression();
@@ -45,7 +40,6 @@ class ValidatingInvocationParser extends FhirPathBaseVisitor<ParseResult> {
 
   @Override
   public ParseResult visitTermExpression(TermExpressionContext ctx) {
-    logger.debug("Term expression: " + ctx.getText());
     String resourceIdentifier = ctx.getText();
     validateResourceIdentifier(resourceIdentifier);
     ParseResult result = new ParseResult(resourceIdentifier.toLowerCase());
@@ -55,19 +49,16 @@ class ValidatingInvocationParser extends FhirPathBaseVisitor<ParseResult> {
 
   @Override
   public ParseResult visitMemberInvocation(MemberInvocationContext ctx) {
-    logger.debug("Member invocation: " + ctx.getText());
     return new ParseResult(ctx.getText());
   }
 
   @Override
   public ParseResult visitFunctionInvocation(FunctionInvocationContext ctx) {
-    logger.debug("Function invocation: " + ctx.getText());
     return new ParseResult(ctx.getText());
   }
 
   @Override
   public ParseResult visitThisInvocation(ThisInvocationContext ctx) {
-    logger.debug("$this invocation: " + ctx.getText());
     return new ParseResult(ctx.getText());
   }
 

@@ -32,6 +32,9 @@ public class ElementResolver {
     // Get the StructureDefinition that describes the parent Resource or DataType.
     assert resourceOrDataType != null;
     Map<String, SummarisedElement> elements = getElementsForType(resourceOrDataType);
+    if (elements == null) {
+      throw new ResourceNotKnownException("Resource or data type not known: " + resourceOrDataType);
+    }
 
     // Initialise a new object to hold the result.
     ResolvedElement result = new ResolvedElement(path);

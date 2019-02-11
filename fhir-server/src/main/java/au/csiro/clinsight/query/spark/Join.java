@@ -4,6 +4,16 @@
 
 package au.csiro.clinsight.query.spark;
 
+import static au.csiro.clinsight.utilities.Strings.tokenizePath;
+import static au.csiro.clinsight.utilities.Strings.untokenizePath;
+
+import au.csiro.clinsight.fhir.ElementResolver.MultiValueTraversal;
+import au.csiro.clinsight.fhir.ElementResolver.ResolvedElement;
+import au.csiro.clinsight.utilities.Strings;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -24,6 +34,40 @@ class Join implements Comparable<Join> {
   Join(@Nonnull String expression, @Nonnull String alias) {
     this.expression = expression;
     this.alias = alias;
+  }
+
+  static void populateJoinsFromElement(ParseResult result, ResolvedElement element) {
+    Join previousJoin = null;
+    for (MultiValueTraversal multiValueTraversal : element.getMultiValueTraversals()) {
+      LinkedList<String> pathComponents = tokenizePath(multiValueTraversal.getPath());
+      pathComponents.push(pathComponents.pop().toLowerCase());
+      List<String> aliasComponents = pathComponents.subList(1, pathComponents.size());
+      List<String> aliasTail = aliasComponents.subList(1, aliasComponents.size()).stream()
+          .map(Strings::capitalize).collect(Collectors.toCollection(LinkedList::new));
+      String alias = String.join("", aliasComponents.get(0), String.join("", aliasTail));
+      String inlineExpression = untokenizePath(pathComponents);
+      String joinExpression =
+          "LATERAL VIEW inline(" + inlineExpression + ") " + alias + " AS " + String
+              .join(", ", multiValueTraversal.getChildren());
+      Join join = new Join(joinExpression, alias);
+      if (previousJoin != null) {
+        join.setDependsUpon(previousJoin);
+        assert previousJoin.getInlineExpression() != null;
+        String updatedExpression = join.getExpression()
+            .replace(previousJoin.getInlineExpression(), previousJoin.getAlias());
+        join.setExpression(updatedExpression);
+      }
+      join.setInlineExpression(inlineExpression);
+      result.getJoins().add(join);
+      previousJoin = join;
+    }
+    if (!result.getJoins().isEmpty()) {
+      Join finalJoin = result.getJoins().last();
+      assert finalJoin.getInlineExpression() != null;
+      String updatedExpression = result.getExpression()
+          .replace(finalJoin.getInlineExpression(), finalJoin.getAlias());
+      result.setExpression(updatedExpression);
+    }
   }
 
   @Nonnull
@@ -58,14 +102,37 @@ class Join implements Comparable<Join> {
     this.inlineExpression = inlineExpression;
   }
 
+  /**
+   * A join that is dependent on another join is ordered after that join.
+   */
   @Override
   public int compareTo(@Nonnull Join j) {
-    if (j.getDependsUpon() == this) {
+    if (this.equals(j)) {
+      return 0;
+    } else if (j.getDependsUpon() == this) {
       return -1;
-    } else if (getDependsUpon() == j) {
+    } else if (dependsUpon == j) {
       return 1;
     } else {
-      return 0;
+      return 1;
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Join join = (Join) o;
+    return expression.equals(join.expression) &&
+        Objects.equals(dependsUpon, join.dependsUpon);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(expression, dependsUpon);
   }
 }

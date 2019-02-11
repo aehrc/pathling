@@ -4,9 +4,15 @@
 
 package au.csiro.clinsight.query.spark;
 
+import static au.csiro.clinsight.fhir.ResourceDefinitions.isSupportedPrimitive;
+import static au.csiro.clinsight.query.spark.Join.populateJoinsFromElement;
 import static au.csiro.clinsight.query.spark.Mappings.getFhirTypeForFunction;
 import static au.csiro.clinsight.query.spark.Mappings.translateFunctionToSpark;
 
+import au.csiro.clinsight.fhir.ElementResolver;
+import au.csiro.clinsight.fhir.ElementResolver.ElementNotKnownException;
+import au.csiro.clinsight.fhir.ElementResolver.ResolvedElement;
+import au.csiro.clinsight.fhir.ElementResolver.ResourceNotKnownException;
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
@@ -55,6 +61,7 @@ class AggregationParser {
               "Data type not found for FHIRPath aggregation function: " + functionIdentifier);
         }
         result.setFromTable(paramListResult.getFromTable());
+        result.getJoins().addAll(paramListResult.getJoins());
         return result;
       }
     }
@@ -81,6 +88,18 @@ class AggregationParser {
               "Arguments to aggregate function are from different resources");
         }
         parseResult.setFromTable(expressionResult.getFromTable());
+        ResolvedElement element;
+        try {
+          element = ElementResolver.resolveElement(expression.getText());
+        } catch (ResourceNotKnownException | ElementNotKnownException e) {
+          throw new InvalidRequestException(e.getMessage());
+        }
+        assert element != null;
+        if (!isSupportedPrimitive(element.getTypeCode())) {
+          throw new InvalidRequestException(
+              "Grouping expression is not of a supported primitive type: " + expression);
+        }
+        populateJoinsFromElement(parseResult, element);
       }
       return parseResult;
     }
