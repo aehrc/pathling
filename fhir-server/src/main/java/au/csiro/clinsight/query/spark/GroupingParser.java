@@ -43,7 +43,8 @@ class GroupingParser {
     assert element != null;
     if (!isSupportedPrimitive(element.getTypeCode())) {
       throw new InvalidRequestException(
-          "Grouping expression is not of a supported primitive type: " + expression);
+          "Grouping expression is not a primitive type: " + expression + " (" + element
+              .getTypeCode() + ")");
     }
     String resultType = element.getTypeCode();
     assert resultType != null;

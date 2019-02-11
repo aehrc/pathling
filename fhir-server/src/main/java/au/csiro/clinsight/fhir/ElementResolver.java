@@ -50,6 +50,9 @@ public class ElementResolver {
       // around, add another component and try again. Also skip elements without a type or
       // cardinality, i.e. root elements.
       if (element == null || element.getTypeCode() == null || element.getMaxCardinality() == null) {
+        if (tail.size() == 0) {
+          throw new ElementNotKnownException("Element not known: " + path);
+        }
         head.add(tail.pop());
         continue;
       }
@@ -59,6 +62,7 @@ public class ElementResolver {
 
       // Examine the type of the element.
       String typeCode = element.getTypeCode();
+      result.setTypeCode(typeCode);
 
       // If this is a `BackboneElement`, we neither want to return yet or recurse into a complex
       // type definition.
@@ -100,8 +104,6 @@ public class ElementResolver {
       ResolvedElement result,
       String currentPath, String typeCode) {
     if (supportedPrimitiveTypes.contains(typeCode)) {
-      result.setTypeCode(typeCode);
-
       // If the element is a primitive, stop here and return the result.
       return result;
     } else if (ResourceDefinitions.supportedComplexTypes.contains(typeCode)) {
@@ -112,7 +114,12 @@ public class ElementResolver {
         // If the element is complex and a path within it has been requested, recurse into
         // scanning the definition of that type.
         String newPath = String.join(".", typeCode, String.join(".", tail));
-        ResolvedElement nestedResult = resolveElement(newPath);
+        ResolvedElement nestedResult;
+        try {
+          nestedResult = resolveElement(newPath);
+        } catch (ElementNotKnownException e) {
+          throw new ElementNotKnownException("Element not known: " + result.getPath());
+        }
 
         // Translate the keys within the multi-value traversals of the nested results. This will,
         // for example, translate `CodeableConcept.coding` into
