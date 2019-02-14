@@ -43,7 +43,6 @@ class AggregationParser {
 
   private static class ExpressionVisitor extends FhirPathBaseVisitor<ParseResult> {
 
-
     @Override
     public ParseResult visitFunctionInvocation(FunctionInvocationContext ctx) {
       String functionIdentifier = ctx.functn().identifier().getText();
@@ -97,8 +96,8 @@ class AggregationParser {
         assert element != null;
         if (!isSupportedPrimitive(element.getTypeCode())) {
           throw new InvalidRequestException(
-              "Grouping expression is not a primitive type: " + expression + " (" + element
-                  .getTypeCode() + ")");
+              "Argument to aggregate function is not a primitive type: " + expression.getText()
+                  + " (" + element.getTypeCode() + ")");
         }
         populateJoinsFromElement(parseResult, element);
       }

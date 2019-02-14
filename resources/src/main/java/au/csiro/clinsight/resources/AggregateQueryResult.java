@@ -170,6 +170,13 @@ public class AggregateQueryResult extends Basic {
     @Child(name = "value")
     Type value;
 
+    public LabelComponent() {
+    }
+
+    public LabelComponent(Type value) {
+      this.value = value;
+    }
+
     public Type getValue() {
       return value;
     }
@@ -217,6 +224,13 @@ public class AggregateQueryResult extends Basic {
 
     @Child(name = "value")
     Type value;
+
+    public ResultComponent() {
+    }
+
+    public ResultComponent(Type value) {
+      this.value = value;
+    }
 
     public Type getValue() {
       return value;

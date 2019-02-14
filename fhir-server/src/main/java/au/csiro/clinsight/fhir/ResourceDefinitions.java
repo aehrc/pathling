@@ -85,8 +85,8 @@ public abstract class ResourceDefinitions {
 
       // Create a function that knows how to retrieve a StructureDefinition from the terminology
       // server.
-      Function<StructureDefinition, StructureDefinition> fetchResourceWithId = entry -> terminologyClient
-          .getStructureDefinitionById(new IdType(entry.getId()));
+      Function<StructureDefinition, StructureDefinition> fetchResourceWithId = definition -> terminologyClient
+          .getStructureDefinitionById(new IdType(definition.getId()));
 
       // Fetch each resource StructureDefinition and create a HashMap keyed on URL.
       resources = ResourceScanner

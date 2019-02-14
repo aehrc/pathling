@@ -21,6 +21,8 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -65,24 +67,33 @@ public class SparkQueryExecutor implements QueryExecutor {
   }
 
   private void initialiseResourceDefinitions() {
-    TerminologyClient terminologyClient = fhirContext
-        .newRestfulClient((TerminologyClient.class), configuration.getTerminologyServerUrl());
+    TerminologyClient terminologyClient;
+    if (configuration.getTerminologyClient() != null) {
+      terminologyClient = configuration.getTerminologyClient();
+    } else {
+      terminologyClient = fhirContext
+          .newRestfulClient((TerminologyClient.class), configuration.getTerminologyServerUrl());
+    }
     ResourceDefinitions.ensureInitialized(terminologyClient);
   }
 
   private void initialiseSpark() {
-    spark = SparkSession.builder()
-        .config("spark.master", configuration.getSparkMasterUrl())
-        // TODO: Use Maven dependency plugin to copy this into a relative location.
-        .config("spark.jars",
-            "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-clinsight-SNAPSHOT.jar")
-        .config("spark.sql.warehouse.dir", configuration.getWarehouseDirectory())
-        .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreUrl())
-        .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
-        .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
-        .config("spark.executor.memory", configuration.getExecutorMemory())
-        .enableHiveSupport()
-        .getOrCreate();
+    if (configuration.getSparkSession() != null) {
+      spark = configuration.getSparkSession();
+    } else {
+      spark = SparkSession.builder()
+          .config("spark.master", configuration.getSparkMasterUrl())
+          // TODO: Use Maven dependency plugin to copy this into a relative location.
+          .config("spark.jars",
+              "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-clinsight-SNAPSHOT.jar")
+          .config("spark.sql.warehouse.dir", configuration.getWarehouseDirectory())
+          .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreUrl())
+          .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
+          .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
+          .config("spark.executor.memory", configuration.getExecutorMemory())
+          .enableHiveSupport()
+          .getOrCreate();
+    }
   }
 
   @Override
@@ -127,7 +138,15 @@ public class SparkQueryExecutor implements QueryExecutor {
         Collectors.joining(" "));
     String groupByClause = "GROUP BY " + String.join(", ", queryPlan.getGroupings());
     String orderByClause = "ORDER BY " + String.join(", ", queryPlan.getGroupings());
-    String sql = String.join(" ", selectClause, fromClause, joins, groupByClause, orderByClause);
+    List<String> clauses = new LinkedList<>(Arrays.asList(selectClause, fromClause));
+    if (!joins.isEmpty()) {
+      clauses.add(joins);
+    }
+    if (queryPlan.getGroupings().size() > 0) {
+      clauses.add(groupByClause);
+      clauses.add(orderByClause);
+    }
+    String sql = String.join(" ", clauses);
 
     logger.info("Executing query: " + sql);
     return spark.sql(sql);

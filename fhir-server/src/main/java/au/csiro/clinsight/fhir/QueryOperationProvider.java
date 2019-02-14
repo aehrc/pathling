@@ -24,6 +24,7 @@ class QueryOperationProvider {
     this.queryExecutor = queryExecutor;
   }
 
+  @SuppressWarnings("unused")
   @Operation(name = "$query", idempotent = true)
   public AggregateQueryResult queryOperation(@OperationParam(name = "query") AggregateQuery query) {
     return queryExecutor.execute(query);

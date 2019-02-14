@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 /**
  * @author John Grimes
  */
+@SuppressWarnings("WeakerAccess")
 class Join implements Comparable<Join> {
 
   @Nonnull

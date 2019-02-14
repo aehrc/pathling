@@ -5,10 +5,8 @@
 package au.csiro.clinsight.query.spark;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.hl7.fhir.dstu3.model.BooleanType;
 import org.hl7.fhir.dstu3.model.CodeType;
@@ -32,28 +30,6 @@ import org.hl7.fhir.dstu3.model.UriType;
  * @author John Grimes
  */
 abstract class Mappings {
-
-  // A list of FHIR types that are permitted to be used within queries.
-  //
-  // This should be a subset of com.cerner.bunsen.stu3.Stu3DataTypeMappings within Bunsen, in order
-  // to ensure that we can reliably extract values from Bunsen-encoded Datasets.
-  private static final List<String> supportedFhirTypes = Arrays.asList(
-      "decimal",
-      "markdown",
-      "id",
-      "dateTime",
-      "time",
-      "date",
-      "code",
-      "string",
-      "uri",
-      "oid",
-      "integer",
-      "unsignedInt",
-      "positiveInt",
-      "boolean",
-      "instant"
-  );
 
   // Maps a FHIR type code to the class that can be used to populate a value into a resource using
   // HAPI.
@@ -97,17 +73,13 @@ abstract class Mappings {
 
   // Maps supported aggregate FHIRPath functions to the equivalent functions within Spark SQL.
   private static final Map<String, String> funcToSpark = new HashMap<String, String>() {{
-    put("count", "COUNT");
+    put("count", "count");
   }};
 
   // Maps aggregate FHIRPath functions to the type that they return, as a FHIR type code.
   private static final Map<String, String> funcToDataType = new HashMap<String, String>() {{
     put("count", "unsignedInt");
   }};
-
-  static boolean isFhirTypeSupported(String fhirTypeCode) {
-    return supportedFhirTypes.contains(fhirTypeCode);
-  }
 
   static Class getFhirClass(String fhirTypeCode) {
     return fhirTypeToFhirClass.get(fhirTypeCode);

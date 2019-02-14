@@ -54,6 +54,12 @@ public class FhirServer extends RestfulServer {
     copyStringProps(configuration, executorConfig, Arrays
         .asList("sparkMasterUrl", "warehouseDirectory", "metastoreUrl", "metastoreUser",
             "metastorePassword", "databaseName", "executorMemory", "terminologyServerUrl"));
+    if (configuration.getTerminologyClient() != null) {
+      executorConfig.setTerminologyClient(configuration.getTerminologyClient());
+    }
+    if (configuration.getSparkSession() != null) {
+      executorConfig.setSparkSession(configuration.getSparkSession());
+    }
 
     queryExecutor = new SparkQueryExecutor(executorConfig, getFhirContext());
   }

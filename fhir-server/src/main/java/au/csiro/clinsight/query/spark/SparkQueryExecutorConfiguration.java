@@ -4,9 +4,13 @@
 
 package au.csiro.clinsight.query.spark;
 
+import au.csiro.clinsight.TerminologyClient;
+import org.apache.spark.sql.SparkSession;
+
 /**
  * @author John Grimes
  */
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class SparkQueryExecutorConfiguration {
 
   private String sparkMasterUrl;
@@ -17,6 +21,8 @@ public class SparkQueryExecutorConfiguration {
   private String databaseName;
   private String executorMemory;
   private String terminologyServerUrl;
+  private TerminologyClient terminologyClient;
+  private SparkSession sparkSession;
 
   public SparkQueryExecutorConfiguration() {
     sparkMasterUrl = "spark://localhost:7077";
@@ -26,6 +32,7 @@ public class SparkQueryExecutorConfiguration {
     metastorePassword = "";
     databaseName = "clinsight";
     executorMemory = "1g";
+    terminologyServerUrl = "http://localhost:8080/fhir";
   }
 
   public String getSparkMasterUrl() {
@@ -92,6 +99,22 @@ public class SparkQueryExecutorConfiguration {
     this.terminologyServerUrl = terminologyServerUrl;
   }
 
+  public TerminologyClient getTerminologyClient() {
+    return terminologyClient;
+  }
+
+  public void setTerminologyClient(TerminologyClient terminologyClient) {
+    this.terminologyClient = terminologyClient;
+  }
+
+  public SparkSession getSparkSession() {
+    return sparkSession;
+  }
+
+  public void setSparkSession(SparkSession sparkSession) {
+    this.sparkSession = sparkSession;
+  }
+
   @Override
   public String toString() {
     return "SparkQueryExecutorConfiguration{" +
@@ -103,6 +126,9 @@ public class SparkQueryExecutorConfiguration {
         ", databaseName='" + databaseName + '\'' +
         ", executorMemory='" + executorMemory + '\'' +
         ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
+        ", terminologyClient=" + terminologyClient +
+        ", sparkSession=" + sparkSession +
         '}';
   }
+
 }

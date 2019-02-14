@@ -142,7 +142,7 @@ public class ElementResolver {
   public static class ResolvedElement {
 
     private final List<MultiValueTraversal> multiValueTraversals = new ArrayList<>();
-    private String path;
+    private final String path;
     private String typeCode;
 
     ResolvedElement(String path) {
@@ -166,6 +166,7 @@ public class ElementResolver {
     }
   }
 
+  @SuppressWarnings("WeakerAccess")
   public static class MultiValueTraversal {
 
     private String path;
@@ -193,6 +194,7 @@ public class ElementResolver {
     }
   }
 
+  @SuppressWarnings("WeakerAccess")
   public static class ResourceNotKnownException extends RuntimeException {
 
     public ResourceNotKnownException(String message) {
@@ -200,6 +202,7 @@ public class ElementResolver {
     }
   }
 
+  @SuppressWarnings("WeakerAccess")
   public static class ElementNotKnownException extends RuntimeException {
 
     public ElementNotKnownException(String message) {
