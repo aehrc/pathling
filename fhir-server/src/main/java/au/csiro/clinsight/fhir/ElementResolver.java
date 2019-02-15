@@ -64,9 +64,12 @@ public class ElementResolver {
       String typeCode = element.getTypeCode();
       result.setTypeCode(typeCode);
 
-      // If this is a `BackboneElement`, we neither want to return yet or recurse into a complex
-      // type definition.
+      // If this is a `BackboneElement`, we either keep going along the path, or return it if it is
+      // the last element in the path.
       if (typeCode.equals("BackboneElement")) {
+        if (tail.size() == 0) {
+          return result;
+        }
         head.add(tail.pop());
         continue;
       }
@@ -90,11 +93,11 @@ public class ElementResolver {
         SummarisedElement complexElement = getElementsForType(element.getTypeCode())
             .get(element.getTypeCode());
         MultiValueTraversal traversal = new MultiValueTraversal(currentPath,
-            complexElement.getChildElements());
+            complexElement.getChildElements(), complexElement.getTypeCode());
         result.getMultiValueTraversals().add(traversal);
       } else {
         MultiValueTraversal traversal = new MultiValueTraversal(currentPath,
-            element.getChildElements());
+            element.getChildElements(), element.getTypeCode());
         result.getMultiValueTraversals().add(traversal);
       }
     }
@@ -171,10 +174,12 @@ public class ElementResolver {
 
     private String path;
     private List<String> children;
+    private String typeCode;
 
-    public MultiValueTraversal(String path, List<String> children) {
+    public MultiValueTraversal(String path, List<String> children, String typeCode) {
       this.path = path;
       this.children = children;
+      this.typeCode = typeCode;
     }
 
     public String getPath() {
@@ -192,6 +197,15 @@ public class ElementResolver {
     public void setChildren(List<String> children) {
       this.children = children;
     }
+
+    public String getTypeCode() {
+      return typeCode;
+    }
+
+    public void setTypeCode(String typeCode) {
+      this.typeCode = typeCode;
+    }
+
   }
 
   @SuppressWarnings("WeakerAccess")

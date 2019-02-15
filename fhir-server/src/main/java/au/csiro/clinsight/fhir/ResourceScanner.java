@@ -129,9 +129,17 @@ class ResourceScanner {
           result.put(transformedPath, resolvedElement);
         }
       } else {
-        String typeCode = typeRefComponents == null || typeRefComponents.isEmpty()
-            ? null
-            : typeRefComponents.get(0).getCode();
+        String typeCode;
+        if (typeRefComponents == null || typeRefComponents.isEmpty()) {
+          // If the element is at the root and does not have a type within the StructureDefinition,
+          // give it a type equal to its own name.
+          LinkedList<String> pathTokens = tokenizePath(elementPath);
+          typeCode = pathTokens.size() == 1
+              ? pathTokens.getFirst()
+              : null;
+        } else {
+          typeCode = typeRefComponents.get(0).getCode();
+        }
         SummarisedElement resolvedElement = new SummarisedElement(
             elementPath);
         resolvedElement.setTypeCode(typeCode);
@@ -170,7 +178,7 @@ class ResourceScanner {
 
     private String path;
     private List<String> childElements;
-    @Nullable
+    @Nonnull
     private String typeCode;
     @Nullable
     private String maxCardinality;

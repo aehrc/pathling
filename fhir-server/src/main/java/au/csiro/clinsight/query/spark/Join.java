@@ -4,6 +4,7 @@
 
 package au.csiro.clinsight.query.spark;
 
+import static au.csiro.clinsight.fhir.ResourceDefinitions.isSupportedPrimitive;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
@@ -24,49 +25,92 @@ import javax.annotation.Nullable;
 class Join implements Comparable<Join> {
 
   @Nonnull
-  private final String alias;
+  private final String tableAlias;
+
   @Nonnull
   private String expression;
+
+  @Nullable
+  private String udtfExpression;
+
+  @Nonnull
+  private String columnAlias;
+
+  @Nullable
+  private String typeCode;
+
   @Nullable
   private Join dependsUpon;
-  @Nullable
-  private String inlineExpression;
 
-  Join(@Nonnull String expression, @Nonnull String alias) {
+  Join(@Nonnull String expression, @Nonnull String tableAlias, @Nonnull String columnAlias) {
     this.expression = expression;
-    this.alias = alias;
+    this.tableAlias = tableAlias;
+    this.columnAlias = columnAlias;
   }
 
   static void populateJoinsFromElement(ParseResult result, ResolvedElement element) {
     Join previousJoin = null;
     for (MultiValueTraversal multiValueTraversal : element.getMultiValueTraversals()) {
+      // Get the components of the path within the traversal.
       LinkedList<String> pathComponents = tokenizePath(multiValueTraversal.getPath());
+      // Make the first component all lowercase.
       pathComponents.push(pathComponents.pop().toLowerCase());
+
+      // Construct an alias that can be used to refer to the generated table elsewhere in the query.
       List<String> aliasComponents = pathComponents.subList(1, pathComponents.size());
       List<String> aliasTail = aliasComponents.subList(1, aliasComponents.size()).stream()
           .map(Strings::capitalize).collect(Collectors.toCollection(LinkedList::new));
-      String alias = String.join("", aliasComponents.get(0), String.join("", aliasTail));
-      String inlineExpression = untokenizePath(pathComponents);
-      String joinExpression =
-          "LATERAL VIEW OUTER inline(" + inlineExpression + ") " + alias + " AS " + String
-              .join(", ", multiValueTraversal.getChildren());
-      Join join = new Join(joinExpression, alias);
+      String tableAlias = String.join("", aliasComponents.get(0), String.join("", aliasTail));
+
+      // Construct a join expression.
+      String udtfExpression = untokenizePath(pathComponents);
+      String traversalType = multiValueTraversal.getTypeCode();
+      String joinExpression;
+      String columnAlias;
+      // If the element is primitive, we will need explode. If it is a complex type, we will need
+      // inline.
+      if (isSupportedPrimitive(traversalType)) {
+        columnAlias = pathComponents.getLast();
+        joinExpression =
+            "LATERAL VIEW OUTER explode(" + udtfExpression + ") " + tableAlias + " AS "
+                + columnAlias;
+      } else {
+        columnAlias = String.join(", ", multiValueTraversal.getChildren());
+        joinExpression = "LATERAL VIEW OUTER inline(" + udtfExpression + ") " + tableAlias + " AS "
+            + columnAlias;
+      }
+      Join join = new Join(joinExpression, tableAlias, columnAlias);
+      join.setUdtfExpression(udtfExpression);
+      join.setTypeCode(traversalType);
+
+      // If this is not the first join, record a dependency between this join and the previous one.
+      // The expression needs to be rewritten to refer to the alias of the target join.
       if (previousJoin != null) {
         join.setDependsUpon(previousJoin);
-        assert previousJoin.getInlineExpression() != null;
+        assert previousJoin.getUdtfExpression() != null;
         String updatedExpression = join.getExpression()
-            .replace(previousJoin.getInlineExpression(), previousJoin.getAlias());
+            .replace(previousJoin.getUdtfExpression(), previousJoin.getTableAlias());
         join.setExpression(updatedExpression);
       }
-      join.setInlineExpression(inlineExpression);
+
       result.getJoins().add(join);
       previousJoin = join;
     }
+
+    // Rewrite the main expression (SELECT) of the parse result to make use of the table aliases
+    // that were created when we processed the joins.
     if (!result.getJoins().isEmpty()) {
       Join finalJoin = result.getJoins().last();
-      assert finalJoin.getInlineExpression() != null;
-      String updatedExpression = result.getExpression()
-          .replace(finalJoin.getInlineExpression(), finalJoin.getAlias());
+      String updatedExpression;
+      assert finalJoin.getUdtfExpression() != null;
+      assert finalJoin.getTypeCode() != null;
+      if (isSupportedPrimitive(finalJoin.getTypeCode())) {
+        updatedExpression = result.getExpression().replace(finalJoin.getUdtfExpression(),
+            finalJoin.getTableAlias() + "." + finalJoin.getColumnAlias());
+      } else {
+        updatedExpression = result.getExpression()
+            .replace(finalJoin.getUdtfExpression(), finalJoin.getTableAlias());
+      }
       result.setExpression(updatedExpression);
     }
   }
@@ -81,8 +125,8 @@ class Join implements Comparable<Join> {
   }
 
   @Nonnull
-  String getAlias() {
-    return alias;
+  String getTableAlias() {
+    return tableAlias;
   }
 
   @Nullable
@@ -95,12 +139,30 @@ class Join implements Comparable<Join> {
   }
 
   @Nullable
-  String getInlineExpression() {
-    return inlineExpression;
+  String getUdtfExpression() {
+    return udtfExpression;
   }
 
-  void setInlineExpression(@Nullable String inlineExpression) {
-    this.inlineExpression = inlineExpression;
+  void setUdtfExpression(@Nullable String udtfExpression) {
+    this.udtfExpression = udtfExpression;
+  }
+
+  @Nonnull
+  public String getColumnAlias() {
+    return columnAlias;
+  }
+
+  public void setColumnAlias(@Nonnull String columnAlias) {
+    this.columnAlias = columnAlias;
+  }
+
+  @Nullable
+  public String getTypeCode() {
+    return typeCode;
+  }
+
+  public void setTypeCode(@Nullable String typeCode) {
+    this.typeCode = typeCode;
   }
 
   /**

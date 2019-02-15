@@ -52,7 +52,6 @@ import org.hl7.fhir.dstu3.model.UnsignedIntType;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 
@@ -346,15 +345,12 @@ public class QueryTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void multiValuePrimitive() throws IOException {
-    String expectedSql = "SELECT communicationLanguageCoding.code AS `Language`, "
-        + "count(patient.id) AS `Number of patients` "
-        + "FROM patient "
-        + "LATERAL VIEW OUTER inline(patient.communication) communication AS id, language, preferred "
-        + "LATERAL VIEW OUTER inline(communication.language.coding) communicationLanguageCoding AS id, system, version, code, display, userSelected "
-        + "GROUP BY communicationLanguageCoding.code "
-        + "ORDER BY communicationLanguageCoding.code";
+    String expectedSql = "SELECT category.category AS `Allergy category`, "
+        + "count(allergyintolerance.id) AS `Number of allergies` "
+        + "FROM allergyintolerance LATERAL VIEW OUTER explode(allergyintolerance.category) category AS category "
+        + "GROUP BY category.category "
+        + "ORDER BY category.category";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
@@ -363,13 +359,13 @@ public class QueryTest {
     AggregateQuery query = new AggregateQuery();
 
     AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("count(Patient.id)"));
+    aggregation.setLabel(new StringType("Number of allergies"));
+    aggregation.setExpression(new StringType("count(AllergyIntolerance.id)"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Language"));
-    grouping.setExpression(new StringType("Patient.communication.language.coding.code"));
+    grouping.setLabel(new StringType("Allergy category"));
+    grouping.setExpression(new StringType("AllergyIntolerance.category"));
     query.setGrouping(Collections.singletonList(grouping));
 
     HttpPost httpPost = postFhirResource(query, QUERY_URL);
