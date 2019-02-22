@@ -83,7 +83,7 @@ public class QueryTest {
   @Test
   public void simpleQuery() throws IOException, JSONException {
     String expectedSql =
-        "SELECT patient.gender AS `Gender`, count(patient.id) AS `Number of patients` "
+        "SELECT patient.gender AS `Gender`, count(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
             + "GROUP BY patient.gender "
             + "ORDER BY patient.gender";
@@ -105,7 +105,7 @@ public class QueryTest {
 
     AggregationComponent aggregation = new AggregationComponent();
     aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("count(Patient.id)"));
+    aggregation.setExpression(new StringType("Patient.id.distinct().count()"));
     query.setAggregation(singletonList(aggregation));
 
     GroupingComponent grouping = new GroupingComponent();
@@ -145,7 +145,7 @@ public class QueryTest {
     AggregateQuery query = new AggregateQuery();
 
     AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(new StringType("foo(Patient.id)"));
+    aggregation.setExpression(new StringType("Patient.id.foo()"));
     query.setAggregation(singletonList(aggregation));
 
     HttpPost httpPost = postFhirResource(query, QUERY_URL);
@@ -167,7 +167,7 @@ public class QueryTest {
 
     AggregationComponent aggregation = new AggregationComponent();
     aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("count(Patient.id)"));
+    aggregation.setExpression(new StringType("Patient.id.distinct().count()"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     GroupingComponent grouping = new GroupingComponent();
@@ -193,7 +193,7 @@ public class QueryTest {
     AggregateQuery query = new AggregateQuery();
 
     AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(new StringType("count(Patient.foo)"));
+    aggregation.setExpression(new StringType("Patient.foo.count()"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     HttpPost httpPost = postFhirResource(query, QUERY_URL);
@@ -209,36 +209,12 @@ public class QueryTest {
     }
   }
 
-  @SuppressWarnings("unchecked")
-  @Test
-  public void aggregationFunctionWithMultipleArguments() throws IOException {
-    String expectedSql = "SELECT count(patient.id, patient.gender) AS `Number of patients` "
-        + "FROM patient";
-
-    Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
-    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
-
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("count(Patient.id, Patient.gender)"));
-    query.setAggregation(Collections.singletonList(aggregation));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
-    httpClient.execute(httpPost);
-
-    verify(mockSpark).sql("USE clinsight");
-    verify(mockSpark).sql(expectedSql);
-  }
-
   @Test
   public void nonPrimitiveElementInAggregation() throws IOException {
     AggregateQuery query = new AggregateQuery();
 
     AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(new StringType("count(Patient.identifier)"));
+    aggregation.setExpression(new StringType("Patient.identifier.count()"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     HttpPost httpPost = postFhirResource(query, QUERY_URL);
@@ -261,7 +237,7 @@ public class QueryTest {
 
     AggregationComponent aggregation = new AggregationComponent();
     aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("count(Patient.id)"));
+    aggregation.setExpression(new StringType("Patient.id.count()"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     GroupingComponent grouping = new GroupingComponent();
@@ -286,7 +262,7 @@ public class QueryTest {
   @SuppressWarnings("unchecked")
   @Test
   public void multiValueTraversalInAggregation() throws IOException {
-    String expectedSql = "SELECT count(identifierTypeCoding.code) AS `Number of patients` "
+    String expectedSql = "SELECT count(DISTINCT identifierTypeCoding.code) AS `Number of patients` "
         + "FROM patient "
         + "LATERAL VIEW OUTER inline(patient.identifier) identifier AS id, use, type, system, value, period, assigner "
         + "LATERAL VIEW OUTER inline(identifier.type.coding) identifierTypeCoding AS id, system, version, code, display, userSelected";
@@ -299,7 +275,8 @@ public class QueryTest {
 
     AggregationComponent aggregation = new AggregationComponent();
     aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("count(Patient.identifier.type.coding.code)"));
+    aggregation
+        .setExpression(new StringType("Patient.identifier.type.coding.code.distinct().count()"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     HttpPost httpPost = postFhirResource(query, QUERY_URL);
@@ -313,7 +290,7 @@ public class QueryTest {
   @Test
   public void multiValueTraversalInGrouping() throws IOException {
     String expectedSql = "SELECT communicationLanguageCoding.code AS `Language`, "
-        + "count(patient.id) AS `Number of patients` "
+        + "count(DISTINCT patient.id) AS `Number of patients` "
         + "FROM patient "
         + "LATERAL VIEW OUTER inline(patient.communication) communication AS id, language, preferred "
         + "LATERAL VIEW OUTER inline(communication.language.coding) communicationLanguageCoding AS id, system, version, code, display, userSelected "
@@ -328,7 +305,7 @@ public class QueryTest {
 
     AggregationComponent aggregation = new AggregationComponent();
     aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("count(Patient.id)"));
+    aggregation.setExpression(new StringType("Patient.id.distinct().count()"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     GroupingComponent grouping = new GroupingComponent();
@@ -347,10 +324,10 @@ public class QueryTest {
   @Test
   public void multiValuePrimitive() throws IOException {
     String expectedSql = "SELECT category.category AS `Allergy category`, "
-        + "count(allergyintolerance.id) AS `Number of allergies` "
+        + "count(DISTINCT allergyintolerance.id) AS `Number of allergies` "
         + "FROM allergyintolerance LATERAL VIEW OUTER explode(allergyintolerance.category) category AS category "
-        + "GROUP BY category.category "
-        + "ORDER BY category.category";
+        + "GROUP BY 1 "
+        + "ORDER BY 1";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
@@ -360,12 +337,87 @@ public class QueryTest {
 
     AggregationComponent aggregation = new AggregationComponent();
     aggregation.setLabel(new StringType("Number of allergies"));
-    aggregation.setExpression(new StringType("count(AllergyIntolerance.id)"));
+    aggregation.setExpression(new StringType("AllergyIntolerance.distinct().count()"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     GroupingComponent grouping = new GroupingComponent();
     grouping.setLabel(new StringType("Allergy category"));
     grouping.setExpression(new StringType("AllergyIntolerance.category"));
+    query.setGrouping(Collections.singletonList(grouping));
+
+    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void referenceTraversalInGrouping() throws IOException {
+    String expectedSql =
+        "SELECT observationCodeCoding.display AS `Observation type`, count(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
+            + "FROM ( "
+            + "SELECT id, diagnosticReportResult.reference "
+            + "FROM diagnosticreport "
+            + "LATERAL VIEW OUTER explode(diagnosticreport.result) diagnosticReportResult AS diagnosticReportResult "
+            + ") diagnosticreport "
+            + "INNER JOIN observation ON observation.id = diagnosticreport.reference "
+            + "LATERAL VIEW OUTER explode(observation.code.coding) observationCodeCoding AS observationCodeCoding "
+            + "GROUP BY 1 "
+            + "ORDER BY 2";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    AggregateQuery query = new AggregateQuery();
+
+    AggregationComponent aggregation = new AggregationComponent();
+    aggregation.setLabel(new StringType("Number of patients"));
+    aggregation.setExpression(new StringType("Patient.distinct().count()"));
+    query.setAggregation(Collections.singletonList(aggregation));
+
+    GroupingComponent grouping = new GroupingComponent();
+    grouping.setLabel(new StringType("Reason for encounter"));
+    grouping.setExpression(
+        new StringType("Patient.encounterAsSubject.diagnosis.condition.code.coding.display"));
+    query.setGrouping(Collections.singletonList(grouping));
+
+    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void reverseReferenceTraversalInGrouping() throws IOException {
+    String expectedSql = "SELECT encounterReasonCoding.display AS `Reason for encounter`, "
+        + "count(DISTINCT patient.id) AS `Number of patients` "
+        + "FROM patient "
+        + "INNER JOIN encounter ON encounter.subject.reference = patient.id "
+        + "LATERAL VIEW OUTER inline(encounter.reason) encounterReason AS id, coding, text "
+        + "LATERAL VIEW OUTER inline(encounterReason.coding) encounterReasonCoding AS id, system, version, code, display, userSelected "
+        + "GROUP BY encounterReasonCoding.display "
+        + "ORDER BY encounterReasonCoding.display";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    AggregateQuery query = new AggregateQuery();
+
+    AggregationComponent aggregation = new AggregationComponent();
+    aggregation.setLabel(new StringType("Number of patients"));
+    aggregation.setExpression(new StringType("Patient.distinct().count()"));
+    query.setAggregation(Collections.singletonList(aggregation));
+
+    GroupingComponent grouping = new GroupingComponent();
+    grouping.setLabel(new StringType("Reason for encounter"));
+    grouping.setExpression(
+        new StringType("Patient.encounterAsSubject.diagnosis.condition.code.coding.display"));
     query.setGrouping(Collections.singletonList(grouping));
 
     HttpPost httpPost = postFhirResource(query, QUERY_URL);
