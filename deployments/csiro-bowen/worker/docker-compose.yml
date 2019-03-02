@@ -1,0 +1,13 @@
+version: "3"
+services:
+  worker:
+    image: docker-registry.it.csiro.au/clinsight/spark-worker
+    ports:
+      - "49000:49000"
+      - "8081:8081"
+    command: bash -c "/opt/spark/sbin/start-slave.sh spark://hb-15-cdc001.it.csiro.au:7077" 2>&1
+    environment:
+      SPARK_WORKER_MEMORY: 28g
+      SPARK_WORKER_CORES: 6
+      HIVE_SITE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore"
+    restart: unless-stopped

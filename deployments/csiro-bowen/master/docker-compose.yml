@@ -1,0 +1,46 @@
+version: "3"
+services:
+  master:
+    image: docker-registry.it.csiro.au/clinsight/spark-master
+    depends_on:
+      - metastore
+    ports:
+      - "7077:7077"
+      - "6066:6066"
+      - "8080:8080"
+      - "56000:56000"
+    environment:
+      SPARK_MASTER_HOST: master
+      SPARK_MASTER_OPTS: "-Dspark.ui.reverseProxy=true -Dspark.ui.reverseProxyUrl=http://hb-15-cdc001.it.csiro.au:8080"
+      SPARK_DAEMON_MEMORY: 4g
+    restart: unless-stopped
+  worker:
+    image: docker-registry.it.csiro.au/clinsight/spark-worker
+    depends_on:
+      - master
+    ports:
+      - "8081:8081"
+    environment:
+      SPARK_WORKER_CORES: 5
+      SPARK_WORKER_MEMORY: 24g
+    restart: unless-stopped
+  metastore:
+    image: postgres:10
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: clinsight_metastore
+    volumes:
+      - metastore:/var/lib/postgresql/data
+    restart: unless-stopped
+  notebook:
+    image: docker-registry.it.csiro.au/clinsight/notebook
+    ports:
+      - "8888:8888"
+      - "4040:4040"
+    volumes:
+      - /datasets/work/notebooks:/home/jovyan/work
+    restart: unless-stopped
+volumes:
+  metastore:
+    driver: local
