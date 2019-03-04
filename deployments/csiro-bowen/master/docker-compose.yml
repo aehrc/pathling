@@ -2,45 +2,70 @@ version: "3"
 services:
   master:
     image: docker-registry.it.csiro.au/clinsight/spark-master
-    depends_on:
-      - metastore
-    ports:
-      - "7077:7077"
-      - "6066:6066"
-      - "8080:8080"
-      - "56000:56000"
+    network_mode: host
     environment:
-      SPARK_MASTER_HOST: master
+      SPARK_MASTER_HOST: hb-15-cdc001.it.csiro.au
       SPARK_MASTER_OPTS: "-Dspark.ui.reverseProxy=true -Dspark.ui.reverseProxyUrl=http://hb-15-cdc001.it.csiro.au:8080"
       SPARK_DAEMON_MEMORY: 4g
     restart: unless-stopped
   worker:
     image: docker-registry.it.csiro.au/clinsight/spark-worker
-    depends_on:
-      - master
-    ports:
-      - "8081:8081"
+    network_mode: host
+    command: bash -c "/opt/spark/sbin/start-slave.sh --host hb-15-cdc001.it.csiro.au spark://hb-15-cdc001.it.csiro.au:7077" 2>&1
     environment:
       SPARK_WORKER_CORES: 5
       SPARK_WORKER_MEMORY: 24g
     restart: unless-stopped
   metastore:
     image: postgres:10
-    ports:
-      - "5432:5432"
+    network_mode: host
     environment:
       POSTGRES_DB: clinsight_metastore
     volumes:
+      #      - /datasets/work/CL_DATABASE/metastore:/var/lib/postgresql/data
       - metastore:/var/lib/postgresql/data
     restart: unless-stopped
   notebook:
     image: docker-registry.it.csiro.au/clinsight/notebook
-    ports:
-      - "8888:8888"
-      - "4040:4040"
+    network_mode: host
+    environment:
+      SPARK_DRIVER_HOST: hb-15-cdc001.it.csiro.au
+      SPARK_DRIVER_PORT: 52000
     volumes:
-      - /datasets/work/notebooks:/home/jovyan/work
+      #      - /datasets/work/CL_DATABASE/notebooks:/home/jovyan/work
+      - notebooks:/home/jovyan/work
+    restart: unless-stopped
+  namenode:
+    image: uhopper/hadoop-namenode:2.7.2
+    network_mode: host
+    environment:
+      CLUSTER_NAME: clinsight
+      CORE_CONF_fs_default_name: hdfs://hb-15-cdc001.it.csiro.au:8020
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_client_use_datanode_hostname: "true"
+      HDFS_CONF_dfs_datanode_use_datanode_hostname: "true"
+      HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+    volumes:
+      #      - /datasets/scratch/CL_WAREHOUSE_1/hadoop/name:/hadoop/dfs/name
+      - hdfs_namenode:/hadoop/dfs/name
+    restart: unless-stopped
+  datanode:
+    image: uhopper/hadoop-datanode:2.7.2
+    network_mode: host
+    environment:
+      CORE_CONF_fs_default_name: hdfs://hb-15-cdc001.it.csiro.au:8020
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_datanode_hostname: hb-15-cdc001.it.csiro.au
+    volumes:
+      #      - /datasets/scratch/CL_WAREHOUSE_1/hadoop/data:/hadoop/dfs/data
+      - hdfs_datanode:/hadoop/dfs/data
     restart: unless-stopped
 volumes:
   metastore:
+    driver: local
+  notebooks:
+    driver: local
+  hdfs_namenode:
+    driver: local
+  hdfs_datanode:
     driver: local

@@ -22,7 +22,7 @@ RUN cd /usr/local && ln -s spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} sp
 
 ENV SPARK_HOME /usr/local/spark
 ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip
-ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info
+ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info --driver-port=52000
 
 # Configures the Python executable used on worker instances, must be exactly the same version as PYSPARK_DRIVER_PYTHON
 ENV PYSPARK_PYTHON /usr/local/bin/python3.6
@@ -39,6 +39,9 @@ RUN conda install --quiet -y 'pyarrow' && \
 
 # Application web UI
 EXPOSE 4040/tcp
+
+# Driver port
+EXPOSE 52000/tcp
 
 # Start Jupyter Lab with authentication disabled
 CMD ["start.sh", "jupyter", "lab", "--NotebookApp.token=''"]

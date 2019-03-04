@@ -24,6 +24,6 @@ EXPOSE 8081/tcp
 
 ENV SPARK_WORKER_PORT=49000
 
-CMD bash -c "/opt/spark/sbin/start-slave.sh spark://master:7077" 2>&1
+CMD bash -c "/opt/spark/sbin/start-slave.sh spark://foo:7077" 2>&1
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 CMD jps -lm | grep org.apache.spark.deploy.worker.Worker

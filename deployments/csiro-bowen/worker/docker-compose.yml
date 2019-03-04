@@ -2,12 +2,25 @@ version: "3"
 services:
   worker:
     image: docker-registry.it.csiro.au/clinsight/spark-worker
-    ports:
-      - "49000:49000"
-      - "8081:8081"
-    command: bash -c "/opt/spark/sbin/start-slave.sh spark://hb-15-cdc001.it.csiro.au:7077" 2>&1
+    network_mode: host
+    command: bash -c "/opt/spark/sbin/start-slave.sh --host hb-15-cdc002.it.csiro.au spark://hb-15-cdc001.it.csiro.au:7077" 2>&1
     environment:
       SPARK_WORKER_MEMORY: 28g
       SPARK_WORKER_CORES: 6
       HIVE_SITE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore"
     restart: unless-stopped
+  datanode:
+    image: uhopper/hadoop-datanode:2.7.2
+    network_mode: host
+    environment:
+      CORE_CONF_fs_default_name: hdfs://hb-15-cdc001.it.csiro.au:8020
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_datanode_hostname: hb-15-cdc002.it.csiro.au
+    volumes:
+      #      - /datasets/scratch/CL_WAREHOUSE_2/hadoop/data:/hadoop/dfs/data
+      - hdfs_datanode:/hadoop/dfs/data
+    restart: unless-stopped
+volumes:
+  hdfs_datanode:
+    driver: local
+
