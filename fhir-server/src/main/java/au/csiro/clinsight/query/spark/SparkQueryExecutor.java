@@ -85,9 +85,6 @@ public class SparkQueryExecutor implements QueryExecutor {
       spark = SparkSession.builder()
           .appName("clinsight-server")
           .config("spark.master", configuration.getSparkMasterUrl())
-          // TODO: Use Maven dependency plugin to copy this into a relative location.
-          .config("spark.jars",
-              "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-clinsight-SNAPSHOT.jar")
           .config("spark.sql.warehouse.dir", configuration.getWarehouseDirectory())
           .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreUrl())
           .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
