@@ -2,13 +2,13 @@ package au.csiro.clinsight.fhir;
 
 import static au.csiro.clinsight.fhir.ResourceDefinitions.checkInitialised;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.getElementsForType;
-import static au.csiro.clinsight.fhir.ResourceDefinitions.isSupportedComplex;
+import static au.csiro.clinsight.fhir.ResourceDefinitions.isComplex;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.supportedPrimitiveTypes;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
+import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.fhir.ResourceScanner.SummarisedElement;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -17,8 +17,8 @@ import javax.annotation.Nonnull;
 public class ElementResolver {
 
   /**
-   * Returns the ElementDefinition matching a given path. Returns null if the path is not found.
-   * Only works for base resources currently.
+   * Returns a ResolvedElement matching a given path. Returns null if the path is not found. Only
+   * works for base resources currently.
    */
   public static ResolvedElement resolveElement(@Nonnull String path)
       throws ResourceNotKnownException, ElementNotKnownException {
@@ -51,7 +51,12 @@ public class ElementResolver {
       // cardinality, i.e. root elements.
       if (element == null || element.getTypeCode() == null || element.getMaxCardinality() == null) {
         if (tail.size() == 0) {
-          throw new ElementNotKnownException("Element not known: " + path);
+          if (element == null) {
+            throw new ElementNotKnownException("Element not known: " + path);
+          }
+          result.setTypeCode(element.getTypeCode());
+          result.setType(ResolvedElementType.RESOURCE);
+          return result;
         }
         head.add(tail.pop());
         continue;
@@ -68,6 +73,7 @@ public class ElementResolver {
       // the last element in the path.
       if (typeCode.equals("BackboneElement")) {
         if (tail.size() == 0) {
+          result.setType(ResolvedElementType.BACKBONE);
           return result;
         }
         head.add(tail.pop());
@@ -89,7 +95,7 @@ public class ElementResolver {
     if (!element.getMaxCardinality().equals("1")) {
       // If the current element is complex, we need to look up the children for it from the
       // element map for that type.
-      if (isSupportedComplex(element.getTypeCode())) {
+      if (isComplex(element.getTypeCode())) {
         SummarisedElement complexElement = getElementsForType(element.getTypeCode())
             .get(element.getTypeCode());
         MultiValueTraversal traversal = new MultiValueTraversal(currentPath,
@@ -108,10 +114,12 @@ public class ElementResolver {
       String currentPath, String typeCode) {
     if (supportedPrimitiveTypes.contains(typeCode)) {
       // If the element is a primitive, stop here and return the result.
+      result.setType(ResolvedElementType.PRIMITIVE);
       return result;
     } else if (ResourceDefinitions.supportedComplexTypes.contains(typeCode)) {
       if (tail.isEmpty()) {
         // If the tail is empty, it means that a complex type is the last component of the path.
+        result.setType(ResolvedElementType.COMPLEX);
         return result;
       } else {
         // If the element is complex and a path within it has been requested, recurse into
@@ -135,6 +143,7 @@ public class ElementResolver {
         // Merge the nested result into the final result and return.
         result.getMultiValueTraversals().addAll(translatedTraversals);
         result.setTypeCode(nestedResult.getTypeCode());
+        result.setType(nestedResult.getType());
         return result;
       }
     } else {
@@ -142,85 +151,4 @@ public class ElementResolver {
     }
   }
 
-  public static class ResolvedElement {
-
-    private final List<MultiValueTraversal> multiValueTraversals = new ArrayList<>();
-    private final String path;
-    private String typeCode;
-
-    ResolvedElement(String path) {
-      this.path = path;
-    }
-
-    String getPath() {
-      return path;
-    }
-
-    public String getTypeCode() {
-      return typeCode;
-    }
-
-    void setTypeCode(String typeCode) {
-      this.typeCode = typeCode;
-    }
-
-    public List<MultiValueTraversal> getMultiValueTraversals() {
-      return multiValueTraversals;
-    }
-  }
-
-  @SuppressWarnings("WeakerAccess")
-  public static class MultiValueTraversal {
-
-    private String path;
-    private List<String> children;
-    private String typeCode;
-
-    public MultiValueTraversal(String path, List<String> children, String typeCode) {
-      this.path = path;
-      this.children = children;
-      this.typeCode = typeCode;
-    }
-
-    public String getPath() {
-      return path;
-    }
-
-    public void setPath(String path) {
-      this.path = path;
-    }
-
-    public List<String> getChildren() {
-      return children;
-    }
-
-    public void setChildren(List<String> children) {
-      this.children = children;
-    }
-
-    public String getTypeCode() {
-      return typeCode;
-    }
-
-    public void setTypeCode(String typeCode) {
-      this.typeCode = typeCode;
-    }
-
-  }
-
-  @SuppressWarnings("WeakerAccess")
-  public static class ResourceNotKnownException extends RuntimeException {
-
-    public ResourceNotKnownException(String message) {
-      super(message);
-    }
-  }
-
-  @SuppressWarnings("WeakerAccess")
-  public static class ElementNotKnownException extends RuntimeException {
-
-    public ElementNotKnownException(String message) {
-      super(message);
-    }
-  }
 }

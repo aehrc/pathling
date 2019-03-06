@@ -132,14 +132,23 @@ public abstract class ResourceDefinitions {
     }
   }
 
-  public static boolean isSupportedPrimitive(@Nonnull String fhirType) {
+  public static boolean isPrimitive(@Nonnull String fhirType) {
     checkInitialised();
     return supportedPrimitiveTypes.contains(fhirType);
   }
 
-  static boolean isSupportedComplex(@Nonnull String fhirType) {
+  public static boolean isComplex(@Nonnull String fhirType) {
     checkInitialised();
     return supportedComplexTypes.contains(fhirType);
+  }
+
+  public static boolean isResource(@Nonnull String fhirType) {
+    char firstChar = fhirType.charAt(0);
+    return Character.isUpperCase(firstChar);
+  }
+
+  public static boolean isBackboneElement(@Nonnull String fhirType) {
+    return fhirType.equals("BackboneElement");
   }
 
 }

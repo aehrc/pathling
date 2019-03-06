@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -82,6 +83,7 @@ public class SparkQueryExecutor implements QueryExecutor {
       spark = configuration.getSparkSession();
     } else {
       spark = SparkSession.builder()
+          .appName("clinsight-server")
           .config("spark.master", configuration.getSparkMasterUrl())
           // TODO: Use Maven dependency plugin to copy this into a relative location.
           .config("spark.jars",
@@ -156,8 +158,8 @@ public class SparkQueryExecutor implements QueryExecutor {
    * Build an AggregateQueryResult resource from the supplied Dataset, embedding the original
    * AggregateQuery and honouring the hints within the QueryPlan.
    */
-  private AggregateQueryResult queryResultFromDataset(Dataset<Row> dataset,
-      AggregateQuery query, QueryPlan queryPlan) {
+  private AggregateQueryResult queryResultFromDataset(@Nonnull Dataset<Row> dataset,
+      @Nonnull AggregateQuery query, QueryPlan queryPlan) {
     List<Row> rows = dataset.collectAsList();
     int numGroupings = query.getGrouping().size();
     int numAggregations = query.getAggregation().size();
@@ -178,7 +180,7 @@ public class SparkQueryExecutor implements QueryExecutor {
    * AggregateQueryResult.
    */
   private Function<Row, AggregateQueryResult.GroupingComponent> mapRowToGrouping(
-      QueryPlan queryPlan, int numGroupings,
+      @Nonnull QueryPlan queryPlan, int numGroupings,
       int numAggregations) {
     return row -> {
       AggregateQueryResult.GroupingComponent grouping = new AggregateQueryResult.GroupingComponent();

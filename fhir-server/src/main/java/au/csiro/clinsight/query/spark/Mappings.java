@@ -72,13 +72,9 @@ abstract class Mappings {
   }};
 
   // Maps supported aggregate FHIRPath functions to the equivalent functions within Spark SQL.
-  private static final Map<String, String> funcToSpark = new HashMap<String, String>() {{
-    put("count", "count");
-  }};
-
-  // Maps aggregate FHIRPath functions to the type that they return, as a FHIR type code.
-  private static final Map<String, String> funcToDataType = new HashMap<String, String>() {{
-    put("count", "unsignedInt");
+  private static final Map<String, ExpressionFunction> funcToClass = new HashMap<String, ExpressionFunction>() {{
+    put("count", new CountFunction());
+    put("distinct", new DistinctFunction());
   }};
 
   static Class getFhirClass(String fhirTypeCode) {
@@ -89,12 +85,8 @@ abstract class Mappings {
     return fhirTypeToJavaClass.get(fhirTypeCode);
   }
 
-  static String translateFunctionToSpark(String functionName) {
-    return funcToSpark.get(functionName);
-  }
-
-  static String getFhirTypeForFunction(String functionName) {
-    return funcToDataType.get(functionName);
+  static ExpressionFunction getFunction(String functionName) {
+    return funcToClass.get(functionName);
   }
 
 }

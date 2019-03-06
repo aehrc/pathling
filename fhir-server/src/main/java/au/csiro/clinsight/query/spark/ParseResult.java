@@ -4,6 +4,9 @@
 
 package au.csiro.clinsight.query.spark;
 
+import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -16,36 +19,53 @@ import java.util.TreeSet;
 class ParseResult {
 
   private final SortedSet<Join> joins = new TreeSet<>();
-  private String expression;
-  private String resultType;
-  private String fromTable;
+  private final Set<String> fromTable = new HashSet<>();
+  private String sqlExpression;
+  private String fhirPathExpression;
+  private String resultTypeCode;
+  private ResolvedElementType resultType;
 
-  ParseResult(String expression) {
-    this.expression = expression;
+  ParseResult() {
   }
 
-  String getExpression() {
-    return expression;
+  ParseResult(String sqlExpression) {
+    this.sqlExpression = sqlExpression;
   }
 
-  void setExpression(String expression) {
-    this.expression = expression;
+  String getSqlExpression() {
+    return sqlExpression;
   }
 
-  String getResultType() {
+  void setSqlExpression(String sqlExpression) {
+    this.sqlExpression = sqlExpression;
+  }
+
+  String getFhirPathExpression() {
+    return fhirPathExpression;
+  }
+
+  void setFhirPathExpression(String fhirPathExpression) {
+    this.fhirPathExpression = fhirPathExpression;
+  }
+
+  String getResultTypeCode() {
+    return resultTypeCode;
+  }
+
+  void setResultTypeCode(String resultTypeCode) {
+    this.resultTypeCode = resultTypeCode;
+  }
+
+  ResolvedElementType getResultType() {
     return resultType;
   }
 
-  void setResultType(String resultType) {
+  void setResultType(ResolvedElementType resultType) {
     this.resultType = resultType;
   }
 
-  String getFromTable() {
+  Set<String> getFromTable() {
     return fromTable;
-  }
-
-  void setFromTable(String fromTable) {
-    this.fromTable = fromTable;
   }
 
   SortedSet<Join> getJoins() {
