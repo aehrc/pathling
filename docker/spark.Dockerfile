@@ -17,5 +17,9 @@ RUN cd /tmp && \
   rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
 RUN cd /opt && ln -s spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} spark
 
+# Download PostgreSQL JAR
+RUN cd /opt/spark/jars && \
+  wget -q https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.5/postgresql-42.2.5.jar
+
 # Run all Spark scripts in foreground
 ENV SPARK_NO_DAEMONIZE=true

@@ -15,6 +15,7 @@ services:
     environment:
       SPARK_WORKER_CORES: 5
       SPARK_WORKER_MEMORY: 24g
+      HIVE_SITE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore"
     restart: unless-stopped
   metastore:
     image: postgres:10

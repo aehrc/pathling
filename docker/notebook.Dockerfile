@@ -1,5 +1,6 @@
 FROM jupyter/scipy-notebook:7f1482f5a136
 ARG SPARK_VERSION=2.3.3
+ARG HIVE_VERSION=1.2.2
 ARG HADOOP_VERSION=2.7
 ARG SPARK_MIRROR=http://mirror.intergrid.com.au/apache/spark
 
@@ -20,6 +21,14 @@ RUN cd /tmp && \
   rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
 RUN cd /usr/local && ln -s spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} spark
 
+# Download PostgreSQL JAR
+RUN cd /usr/local/spark/jars && \
+  wget -q https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.5/postgresql-42.2.5.jar
+
+# Download Bunsen JAR
+RUN cd /usr/local/spark/jars && \
+  wget -q http://host.docker.internal:5000/bunsen-shaded-0.4.6-clinsight-SNAPSHOT.jar
+
 ENV SPARK_HOME /usr/local/spark
 ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip
 ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info --driver-port=52000
@@ -32,7 +41,7 @@ ENV PYSPARK_DRIVER_PYTHON /opt/conda/bin/python
 
 USER $NB_UID
 
-RUN conda install --quiet -y 'pyarrow' && \
+RUN conda install --quiet -y pyarrow matplotlib-venn && \
   conda clean -tipsy && \
   fix-permissions $CONDA_DIR && \
   fix-permissions /home/$NB_USER
