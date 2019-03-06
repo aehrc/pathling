@@ -17,8 +17,7 @@ services:
       HDFS_CONF_dfs_permissions_enabled: "false"
       HDFS_CONF_dfs_datanode_hostname: hb-15-cdc002.it.csiro.au
     volumes:
-      #      - /datasets/scratch/CL_WAREHOUSE_2/hadoop/data:/hadoop/dfs/data
-      - hdfs_datanode:/hadoop/dfs/data
+      - /mnt/cl_warehouse_2/hadoop/data:/hadoop/dfs/data
     restart: unless-stopped
 volumes:
   hdfs_datanode:

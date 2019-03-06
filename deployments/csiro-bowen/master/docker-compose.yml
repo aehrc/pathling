@@ -1,5 +1,41 @@
 version: "3"
 services:
+  fhir-server:
+    image: docker-registry.it.csiro.au/clinsight/fhir-server
+    network_mode: host
+    depends_on:
+      - ontoserver
+    environment:
+      CLINSIGHT_SPARK_MASTER_URL: spark://hb-15-cdc001.it.csiro.au:7077
+      CLINSIGHT_WAREHOUSE_DIRECTORY: hdfs://hb-15-cdc001.it.csiro.au:8020/warehouse
+      CLINSIGHT_METASTORE_URL: jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore
+      CLINSIGHT_EXECUTOR_MEMORY: 6g
+      CLINSIGHT_TERMINOLOGY_SERVER_URL: http://hb-15-cdc001.it.csiro.au:4066/fhir
+      CLINSIGHT_DATABASE_NAME: postgres
+    restart: unless-stopped
+  ontoserver:
+    image: docker-registry.it.csiro.au/clinsight/ontoserver:5.4.0-SNAPSHOT
+    network_mode: host
+    depends_on:
+      - ontodb
+    environment:
+      - server.port=4066
+      - spring.datasource.url=jdbc:postgresql://hb-15-cdc001.it.csiro.au:5433/postgres
+      # - atom.syndication.feedLocation=https://ontoserver.csiro.au/synd/syndication.xml
+      - authentication.oauth.endpoint.client_id.0=66611fd3-74cb-49de-97f1-662397094b81
+      - authentication.oauth.endpoint.client_secret.0=ecba0d30-b674-45f8-9661-8fbedc3092c0
+      - JAVA_OPTS=-Xmx24G
+      - ONTOSERVER_INSECURE=true
+    volumes:
+      - ontofiles:/var/onto
+    restart: unless-stopped
+  ontodb:
+    image: postgres:10
+    network_mode: host
+    command: postgres -p 5433
+    volumes:
+      - ontodb:/var/lib/postgresql/data
+    restart: unless-stopped
   master:
     image: docker-registry.it.csiro.au/clinsight/spark-master
     network_mode: host
@@ -23,7 +59,6 @@ services:
     environment:
       POSTGRES_DB: clinsight_metastore
     volumes:
-      #      - /datasets/work/CL_DATABASE/metastore:/var/lib/postgresql/data
       - metastore:/var/lib/postgresql/data
     restart: unless-stopped
   notebook:
@@ -33,7 +68,6 @@ services:
       SPARK_DRIVER_HOST: hb-15-cdc001.it.csiro.au
       SPARK_DRIVER_PORT: 52000
     volumes:
-      #      - /datasets/work/CL_DATABASE/notebooks:/home/jovyan/work
       - notebooks:/home/jovyan/work
     restart: unless-stopped
   namenode:
@@ -47,8 +81,7 @@ services:
       HDFS_CONF_dfs_datanode_use_datanode_hostname: "true"
       HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
     volumes:
-      #      - /datasets/scratch/CL_WAREHOUSE_1/hadoop/name:/hadoop/dfs/name
-      - hdfs_namenode:/hadoop/dfs/name
+      - /mnt/cl_warehouse_1/hadoop/name:/hadoop/dfs/name
     restart: unless-stopped
   datanode:
     image: uhopper/hadoop-datanode:2.7.2
@@ -58,15 +91,14 @@ services:
       HDFS_CONF_dfs_permissions_enabled: "false"
       HDFS_CONF_dfs_datanode_hostname: hb-15-cdc001.it.csiro.au
     volumes:
-      #      - /datasets/scratch/CL_WAREHOUSE_1/hadoop/data:/hadoop/dfs/data
-      - hdfs_datanode:/hadoop/dfs/data
+      - /mnt/cl_warehouse_1/hadoop/data:/hadoop/dfs/data
     restart: unless-stopped
 volumes:
+  ontodb:
+    driver: local
+  ontofiles:
+    driver: local
   metastore:
     driver: local
   notebooks:
-    driver: local
-  hdfs_namenode:
-    driver: local
-  hdfs_datanode:
     driver: local

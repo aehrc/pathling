@@ -1,8 +1,5 @@
 buildscript {
-  repositories {
-    mavenCentral()
-  }
-
+  repositories { mavenCentral() }
   dependencies {
     // Required for `grun`.
     classpath group: 'org.antlr', name: 'antlr4', version: '4.7.2'
@@ -50,7 +47,7 @@ dependencies {
   // The Hive metastore used by the Spark data warehouse is stored in a PostgreSQL server.
   implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.5'
 
-  // Antlr is used for the parsing of FHIRPath expressions within queries
+  // Antlr is used for the parsing of FHIRPath expressions within queries.
   antlr "org.antlr:antlr4:4.7.2"
 
   // Test dependencies
@@ -73,11 +70,29 @@ jar {
   }
 }
 
-task copyDependencyJars(type: Copy) {
+task dependencyJar(type: Copy) {
   from configurations.default
   into "$buildDir/dependencies"
 }
-jar.dependsOn(copyDependencyJars)
+
+def blackHole = new OutputStream() {
+  @Override
+  void write(int b) {}
+}
+
+task dockerBuild(type: Exec) {
+  dependsOn jar
+  dependsOn dependencyJar
+  commandLine 'docker', 'build', '-t', 'docker-registry.it.csiro.au/clinsight/fhir-server', '.'
+  standardOutput blackHole
+}
+build.finalizedBy(dockerBuild)
+
+task dockerPush(type: Exec) {
+  dependsOn dockerBuild
+  commandLine 'docker', 'push', 'docker-registry.it.csiro.au/clinsight/fhir-server'
+  standardOutput blackHole
+}
 
 // This task runs the Antlr `grun` utility, which provides a visualisation of the expression passed
 // in to the `expression` project property.
@@ -91,3 +106,6 @@ task grun(type: JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
 }
 
+startScripts.enabled = false
+distTar.enabled = false
+distZip.enabled = false
