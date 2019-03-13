@@ -75,6 +75,7 @@ abstract class Mappings {
   private static final Map<String, ExpressionFunction> funcToClass = new HashMap<String, ExpressionFunction>() {{
     put("count", new CountFunction());
     put("distinct", new DistinctFunction());
+    put("resolve", new ResolveFunction());
   }};
 
   static Class getFhirClass(String fhirTypeCode) {

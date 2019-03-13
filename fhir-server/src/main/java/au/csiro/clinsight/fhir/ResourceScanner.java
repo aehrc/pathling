@@ -17,7 +17,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.hl7.fhir.dstu3.model.ElementDefinition;
 import org.hl7.fhir.dstu3.model.ElementDefinition.TypeRefComponent;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
@@ -109,24 +108,23 @@ class ResourceScanner {
       String maxCardinality = (typeRefComponents != null && !typeRefComponents.isEmpty())
           ? element.getMax()
           : null;
+      List<String> types = typeRefComponents == null
+          ? new ArrayList<>()
+          : typeRefComponents.stream().map(TypeRefComponent::getCode)
+              .collect(Collectors.toList());
 
       // Check for elements that have multiple types - these will generate multiple entries in the
       // resulting map.
       if (elementPath.matches(".*\\[x]$")) {
-        List<String> types = typeRefComponents == null
-            ? new ArrayList<>()
-            : typeRefComponents.stream().map(TypeRefComponent::getCode)
-                .collect(Collectors.toList());
         for (String type : types) {
           assert type != null : "Encountered element type with no code";
           String transformedPath = elementPath
               .replaceAll("\\[x]", Strings.capitalize(type));
-          SummarisedElement resolvedElement = new SummarisedElement(
-              transformedPath);
-          resolvedElement.setTypeCode(type);
-          resolvedElement.setChildElements(elementChildren);
-          resolvedElement.setMaxCardinality(maxCardinality);
-          result.put(transformedPath, resolvedElement);
+          SummarisedElement summarisedElement = new SummarisedElement(
+              transformedPath, type);
+          summarisedElement.getChildElements().addAll(elementChildren);
+          summarisedElement.setMaxCardinality(maxCardinality);
+          result.put(transformedPath, summarisedElement);
         }
       } else {
         String typeCode;
@@ -140,12 +138,26 @@ class ResourceScanner {
         } else {
           typeCode = typeRefComponents.get(0).getCode();
         }
-        SummarisedElement resolvedElement = new SummarisedElement(
-            elementPath);
-        resolvedElement.setTypeCode(typeCode);
-        resolvedElement.setChildElements(elementChildren);
-        resolvedElement.setMaxCardinality(maxCardinality);
-        result.put(elementPath, resolvedElement);
+
+        if (typeCode == null) {
+          // TODO: Handle element definitions with `contentReference`s. At the moment we just drop
+          //       them.
+          continue;
+        }
+        SummarisedElement summarisedElement = new SummarisedElement(elementPath, typeCode);
+        summarisedElement.getChildElements().addAll(elementChildren);
+        summarisedElement.setMaxCardinality(maxCardinality);
+
+        if (typeCode.equals("Reference")) {
+          // If the element is a Reference, add a list of all the valid types that can be
+          // referenced. This will be used later when resolving references.
+          @SuppressWarnings("ConstantConditions") List<String> referenceTypes = typeRefComponents
+              .stream()
+              .map(TypeRefComponent::getTargetProfile)
+              .collect(Collectors.toList());
+          summarisedElement.getReferenceTypes().addAll(referenceTypes);
+        }
+        result.put(elementPath, summarisedElement);
       }
     }
 
@@ -174,52 +186,4 @@ class ResourceScanner {
     return children;
   }
 
-  static class SummarisedElement {
-
-    private String path;
-    private List<String> childElements;
-    @Nonnull
-    private String typeCode;
-    @Nullable
-    private String maxCardinality;
-
-    SummarisedElement(String path) {
-      this.path = path;
-    }
-
-    String getPath() {
-      return path;
-    }
-
-    void setPath(String path) {
-      this.path = path;
-    }
-
-    @Nullable
-    String getTypeCode() {
-      return typeCode;
-    }
-
-    void setTypeCode(@Nullable String typeCode) {
-      this.typeCode = typeCode;
-    }
-
-    @Nullable
-    String getMaxCardinality() {
-      return maxCardinality;
-    }
-
-    void setMaxCardinality(@Nullable String maxCardinality) {
-      this.maxCardinality = maxCardinality;
-    }
-
-    List<String> getChildElements() {
-      return childElements;
-    }
-
-    void setChildElements(List<String> childElements) {
-      this.childElements = childElements;
-    }
-
-  }
 }

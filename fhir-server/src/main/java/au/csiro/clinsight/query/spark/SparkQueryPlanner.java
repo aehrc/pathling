@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 
 /**
  * This class knows how to take an AggregateQuery and convert it into an object which contains all
@@ -28,7 +29,7 @@ class SparkQueryPlanner {
   private final List<ParseResult> aggregationParseResults;
   private final List<ParseResult> groupingParseResults;
 
-  SparkQueryPlanner(AggregateQuery query) {
+  SparkQueryPlanner(@Nonnull AggregateQuery query) {
     List<AggregationComponent> aggregations = query.getAggregation();
     List<GroupingComponent> groupings = query.getGrouping();
     if (aggregations == null || aggregations.isEmpty()) {
@@ -39,8 +40,8 @@ class SparkQueryPlanner {
     groupingParseResults = parseGroupings(groupings);
   }
 
-  private List<ParseResult> parseAggregation(List<AggregationComponent> aggregations) {
-    List<ParseResult> aggregationParseResults = aggregations.stream()
+  private List<ParseResult> parseAggregation(@Nonnull List<AggregationComponent> aggregations) {
+    return aggregations.stream()
         .map(aggregation -> {
           // TODO: Support references to pre-defined aggregations.
           String aggExpression = aggregation.getExpression().asStringValue();
@@ -50,7 +51,6 @@ class SparkQueryPlanner {
           ExpressionParser aggregationParser = new ExpressionParser();
           return aggregationParser.parse(aggExpression);
         }).collect(Collectors.toList());
-    return aggregationParseResults;
   }
 
   private List<ParseResult> parseGroupings(List<GroupingComponent> groupings) {
@@ -106,10 +106,10 @@ class SparkQueryPlanner {
     // Get from tables from the results of parsing both aggregations and groupings, and compute the
     // union.
     Set<String> aggregationFromTables = new HashSet<>();
-    aggregationParseResults.stream()
+    aggregationParseResults
         .forEach(parseResult -> aggregationFromTables.addAll(parseResult.getFromTable()));
     Set<String> groupingFromTables = new HashSet<>();
-    groupingParseResults.stream()
+    groupingParseResults
         .forEach(parseResult -> groupingFromTables.addAll(parseResult.getFromTable()));
     // Check for from tables within the groupings that were not referenced within at least one
     // aggregation expression.

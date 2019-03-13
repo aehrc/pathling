@@ -5,23 +5,30 @@
 package au.csiro.clinsight.fhir;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import javax.annotation.Nonnull;
 
 /**
  * @author John Grimes
  */
 public class ResolvedElement {
 
-  private final List<MultiValueTraversal> multiValueTraversals = new ArrayList<>();
+  @Nonnull
+  private final LinkedList<MultiValueTraversal> multiValueTraversals = new LinkedList<>();
+  @Nonnull
+  private final List<String> referenceTypes = new ArrayList<>();
+  @Nonnull
   private final String path;
   private String typeCode;
   private ResolvedElementType type;
 
-  ResolvedElement(String path) {
+  ResolvedElement(@Nonnull String path) {
     this.path = path;
   }
 
-  String getPath() {
+  @Nonnull
+  public String getPath() {
     return path;
   }
 
@@ -33,8 +40,14 @@ public class ResolvedElement {
     this.typeCode = typeCode;
   }
 
-  public List<MultiValueTraversal> getMultiValueTraversals() {
+  @Nonnull
+  public LinkedList<MultiValueTraversal> getMultiValueTraversals() {
     return multiValueTraversals;
+  }
+
+  @Nonnull
+  public List<String> getReferenceTypes() {
+    return referenceTypes;
   }
 
   public ResolvedElementType getType() {
@@ -46,6 +59,7 @@ public class ResolvedElement {
   }
 
   public enum ResolvedElementType {
-    RESOURCE, COMPLEX, BACKBONE, PRIMITIVE
+    RESOURCE, COMPLEX, BACKBONE, PRIMITIVE, REFERENCE
   }
+
 }

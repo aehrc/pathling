@@ -4,8 +4,8 @@
 
 package au.csiro.clinsight.query.spark;
 
-import static au.csiro.clinsight.fhir.ResourceDefinitions.isPrimitive;
 import static au.csiro.clinsight.query.spark.Mappings.getFunction;
+import static au.csiro.clinsight.utilities.Strings.pathToLowerSnakeCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
@@ -47,12 +47,15 @@ import au.csiro.clinsight.fhir.MultiValueTraversal;
 import au.csiro.clinsight.fhir.ResolvedElement;
 import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.fhir.ResourceNotKnownException;
-import au.csiro.clinsight.utilities.Strings;
+import au.csiro.clinsight.query.spark.Join.JoinType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
@@ -181,74 +184,66 @@ public class ExpressionParser {
     }
 
     static void populateJoinsFromElement(ParseResult result, ResolvedElement element) {
-      Join previousJoin = null;
-      for (MultiValueTraversal multiValueTraversal : element.getMultiValueTraversals()) {
-        // Get the components of the path within the traversal.
-        LinkedList<String> pathComponents = tokenizePath(multiValueTraversal.getPath());
-        // Make the first component all lowercase.
-        pathComponents.push(pathComponents.pop().toLowerCase());
-
-        // Construct an alias that can be used to refer to the generated table elsewhere in the query.
-        List<String> aliasComponents = pathComponents.subList(1, pathComponents.size());
-        List<String> aliasTail = aliasComponents.subList(1, aliasComponents.size()).stream()
-            .map(Strings::capitalize).collect(Collectors.toCollection(LinkedList::new));
-        String tableAlias = String.join("", aliasComponents.get(0), String.join("", aliasTail));
-
-        // Construct a join expression.
-        String udtfExpression = untokenizePath(pathComponents);
-        String traversalType = multiValueTraversal.getTypeCode();
-        String joinExpression;
-        String columnAlias;
-        // If the element is primitive, we will need explode. If it is a complex type, we will need
-        // inline.
-        if (isPrimitive(traversalType)) {
-          columnAlias = pathComponents.getLast();
-          joinExpression =
-              "LATERAL VIEW OUTER explode(" + udtfExpression + ") " + tableAlias + " AS "
-                  + columnAlias;
-        } else {
-          columnAlias = String.join(", ", multiValueTraversal.getChildren());
-          joinExpression =
-              "LATERAL VIEW OUTER inline(" + udtfExpression + ") " + tableAlias + " AS "
-                  + columnAlias;
-        }
-        Join join = new Join(joinExpression, tableAlias, columnAlias);
-        join.setUdtfExpression(udtfExpression);
-        join.setTypeCode(traversalType);
-
-        // If this is not the first join, record a dependency between this join and the previous one.
-        // The expression needs to be rewritten to refer to the alias of the target join.
-        if (previousJoin != null) {
-          join.setDependsUpon(previousJoin);
-          assert previousJoin.getUdtfExpression() != null;
-          String updatedExpression = join.getExpression()
-              .replace(previousJoin.getUdtfExpression(), previousJoin.getTableAlias());
-          String updatedUdtfExpression = join.getUdtfExpression()
-              .replace(previousJoin.getUdtfExpression(), previousJoin.getTableAlias());
-          join.setExpression(updatedExpression);
-          join.setUdtfExpression(updatedUdtfExpression);
-        }
-
-        result.getJoins().add(join);
-        previousJoin = join;
+      // Process multi-value traversals, adding statements which explode the multiple values into
+      // multiple rows and then join across to those rows.
+      Join previousJoin = result.getJoins().isEmpty()
+          ? null
+          : result.getJoins().last();
+      if (!element.getMultiValueTraversals().isEmpty()) {
+        populateJoinFromMultiValueTraversal(result, previousJoin,
+            element.getMultiValueTraversals().getLast());
       }
 
       // Rewrite the main expression (SELECT) of the parse result to make use of the table aliases
       // that were created when we processed the joins.
       if (!result.getJoins().isEmpty()) {
         Join finalJoin = result.getJoins().last();
-        String updatedExpression;
-        assert finalJoin.getUdtfExpression() != null;
         assert element.getType() != null;
-        if (element.getType() == ResolvedElementType.PRIMITIVE) {
+        String updatedExpression;
+        if (finalJoin.getJoinType() == JoinType.LATERAL_VIEW) {
           updatedExpression = result.getSqlExpression().replace(finalJoin.getUdtfExpression(),
-              finalJoin.getTableAlias() + "." + finalJoin.getColumnAlias());
+              finalJoin.getTableAlias());
         } else {
-          updatedExpression = result.getSqlExpression()
-              .replace(finalJoin.getUdtfExpression(), finalJoin.getTableAlias());
+          updatedExpression = result.getSqlExpression().replace(finalJoin.getRootExpression(),
+              finalJoin.getTableAlias());
         }
         result.setSqlExpression(updatedExpression);
       }
+    }
+
+    @Nonnull
+    private static Join populateJoinFromMultiValueTraversal(ParseResult result, Join previousJoin,
+        MultiValueTraversal multiValueTraversal) {
+      // Construct an alias that can be used to refer to the generated table elsewhere in the query.
+      LinkedList<String> pathComponents = tokenizePath(multiValueTraversal.getPath());
+      String tableAlias = pathToLowerSnakeCase(pathComponents);
+
+      // Construct a join expression.
+      pathComponents.push(pathComponents.pop().toLowerCase());
+      String rootExpression = untokenizePath(pathComponents);
+      String udtfExpression = rootExpression;
+      String traversalType = multiValueTraversal.getTypeCode();
+
+      // If this is not the first join, record a dependency between this join and the previous one.
+      // The expression needs to be rewritten to refer to the alias of the target join.
+      if (previousJoin != null) {
+        udtfExpression = udtfExpression
+            .replace(previousJoin.getRootExpression(), previousJoin.getTableAlias());
+        tableAlias = pathToLowerSnakeCase(tokenizePath(udtfExpression));
+      }
+
+      String joinExpression =
+          "LATERAL VIEW explode(" + udtfExpression + ") " + tableAlias + " AS " + tableAlias;
+      Join join = new Join(joinExpression, rootExpression, JoinType.LATERAL_VIEW, tableAlias);
+      join.setUdtfExpression(udtfExpression);
+      join.setTraversalType(traversalType);
+      if (previousJoin != null) {
+        join.setDependsUpon(previousJoin);
+      }
+
+      result.getJoins().add(join);
+      previousJoin = join;
+      return previousJoin;
     }
 
     @Override
@@ -260,6 +255,9 @@ public class ExpressionParser {
       String fhirPathExpression = invoker == null
           ? ctx.getText()
           : invoker.getFhirPathExpression() + "." + ctx.getText();
+      SortedSet<Join> joins = invoker == null
+          ? new TreeSet<>()
+          : invoker.getJoins();
       try {
         element = ElementResolver.resolveElement(fhirPathExpression);
       } catch (ResourceNotKnownException | ElementNotKnownException e) {
@@ -280,6 +278,7 @@ public class ExpressionParser {
       }
       result.setResultType(element.getType());
       result.setResultTypeCode(element.getTypeCode());
+      result.getJoins().addAll(joins);
       populateJoinsFromElement(result, element);
       assert result.getResultTypeCode() != null;
       return result;

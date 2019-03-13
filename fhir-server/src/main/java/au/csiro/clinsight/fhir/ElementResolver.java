@@ -8,7 +8,6 @@ import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
 import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
-import au.csiro.clinsight.fhir.ResourceScanner.SummarisedElement;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -44,17 +43,17 @@ public class ElementResolver {
     // transitions into complex types.
     while (true) {
       String currentPath = untokenizePath(head);
-      SummarisedElement element = elements.get(currentPath);
+      SummarisedElement summarisedElement = elements.get(currentPath);
 
       // If the path cannot be found in the set of valid elements for this definition, loop back
       // around, add another component and try again. Also skip elements without a type or
       // cardinality, i.e. root elements.
-      if (element == null || element.getTypeCode() == null || element.getMaxCardinality() == null) {
+      if (summarisedElement == null || summarisedElement.getMaxCardinality() == null) {
         if (tail.size() == 0) {
-          if (element == null) {
+          if (summarisedElement == null) {
             throw new ElementNotKnownException("Element not known: " + path);
           }
-          result.setTypeCode(element.getTypeCode());
+          result.setTypeCode(summarisedElement.getTypeCode());
           result.setType(ResolvedElementType.RESOURCE);
           return result;
         }
@@ -63,10 +62,10 @@ public class ElementResolver {
       }
 
       // Save information about a multi-value traversal, if this is one.
-      harvestMultiValueTraversal(result, currentPath, element);
+      harvestMultiValueTraversal(result, currentPath, summarisedElement);
 
       // Examine the type of the element.
-      String typeCode = element.getTypeCode();
+      String typeCode = summarisedElement.getTypeCode();
       result.setTypeCode(typeCode);
 
       // If this is a `BackboneElement`, we either keep going along the path, or return it if it is
@@ -77,9 +76,9 @@ public class ElementResolver {
           return result;
         }
         head.add(tail.pop());
-        continue;
+      } else {
+        return examineLeafElement(tail, summarisedElement, result, currentPath, typeCode);
       }
-      return examineLeafElement(tail, result, currentPath, typeCode);
     }
   }
 
@@ -90,7 +89,6 @@ public class ElementResolver {
     // If this element has a max cardinality of greater than one, record some information about
     // this traversal. This will be packaged up with the final result, and used to do things
     // like constructing joins when it comes time to build a query.
-    assert element.getTypeCode() != null;
     assert element.getMaxCardinality() != null;
     if (!element.getMaxCardinality().equals("1")) {
       // If the current element is complex, we need to look up the children for it from the
@@ -110,7 +108,7 @@ public class ElementResolver {
   }
 
   private static ResolvedElement examineLeafElement(LinkedList<String> tail,
-      ResolvedElement result,
+      SummarisedElement summarisedElement, ResolvedElement result,
       String currentPath, String typeCode) {
     if (supportedPrimitiveTypes.contains(typeCode)) {
       // If the element is a primitive, stop here and return the result.
@@ -118,8 +116,14 @@ public class ElementResolver {
       return result;
     } else if (ResourceDefinitions.supportedComplexTypes.contains(typeCode)) {
       if (tail.isEmpty()) {
-        // If the tail is empty, it means that a complex type is the last component of the path.
-        result.setType(ResolvedElementType.COMPLEX);
+        // If the tail is empty, it means that a complex type is the last component of the path. If
+        // it is a reference we tag it as such.
+        if (typeCode.equals("Reference")) {
+          result.setType(ResolvedElementType.REFERENCE);
+          result.getReferenceTypes().addAll(summarisedElement.getReferenceTypes());
+        } else {
+          result.setType(ResolvedElementType.COMPLEX);
+        }
         return result;
       } else {
         // If the element is complex and a path within it has been requested, recurse into

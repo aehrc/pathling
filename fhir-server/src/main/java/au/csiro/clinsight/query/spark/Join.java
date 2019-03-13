@@ -15,27 +15,32 @@ import javax.annotation.Nullable;
 class Join implements Comparable<Join> {
 
   @Nonnull
-  private final String tableAlias;
+  private String tableAlias;
 
   @Nonnull
   private String expression;
 
+  @Nonnull
+  private String rootExpression;
+
   @Nullable
   private String udtfExpression;
 
-  @Nonnull
-  private String columnAlias;
-
   @Nullable
-  private String typeCode;
+  private String traversalType;
+
+  @Nonnull
+  private JoinType joinType;
 
   @Nullable
   private Join dependsUpon;
 
-  Join(@Nonnull String expression, @Nonnull String tableAlias, @Nonnull String columnAlias) {
+  Join(@Nonnull String expression, @Nonnull String rootExpression, @Nonnull JoinType joinType,
+      @Nonnull String tableAlias) {
     this.expression = expression;
+    this.rootExpression = rootExpression;
+    this.joinType = joinType;
     this.tableAlias = tableAlias;
-    this.columnAlias = columnAlias;
   }
 
   @Nonnull
@@ -52,6 +57,10 @@ class Join implements Comparable<Join> {
     return tableAlias;
   }
 
+  public void setTableAlias(@Nonnull String tableAlias) {
+    this.tableAlias = tableAlias;
+  }
+
   @Nullable
   Join getDependsUpon() {
     return dependsUpon;
@@ -61,31 +70,40 @@ class Join implements Comparable<Join> {
     this.dependsUpon = dependsUpon;
   }
 
+  @Nonnull
+  String getRootExpression() {
+    return rootExpression;
+  }
+
+  void setRootExpression(@Nonnull String rootExpression) {
+    this.rootExpression = rootExpression;
+  }
+
   @Nullable
-  String getUdtfExpression() {
+  public String getUdtfExpression() {
     return udtfExpression;
   }
 
-  void setUdtfExpression(@Nullable String udtfExpression) {
+  public void setUdtfExpression(@Nullable String udtfExpression) {
     this.udtfExpression = udtfExpression;
   }
 
-  @Nonnull
-  public String getColumnAlias() {
-    return columnAlias;
-  }
-
-  public void setColumnAlias(@Nonnull String columnAlias) {
-    this.columnAlias = columnAlias;
-  }
-
   @Nullable
-  public String getTypeCode() {
-    return typeCode;
+  public String getTraversalType() {
+    return traversalType;
   }
 
-  public void setTypeCode(@Nullable String typeCode) {
-    this.typeCode = typeCode;
+  public void setTraversalType(@Nullable String traversalType) {
+    this.traversalType = traversalType;
+  }
+
+  @Nonnull
+  public JoinType getJoinType() {
+    return joinType;
+  }
+
+  public void setJoinType(@Nonnull JoinType joinType) {
+    this.joinType = joinType;
   }
 
   /**
@@ -113,12 +131,16 @@ class Join implements Comparable<Join> {
       return false;
     }
     Join join = (Join) o;
-    return expression.equals(join.expression) &&
-        Objects.equals(dependsUpon, join.dependsUpon);
+    return rootExpression.equals(join.rootExpression);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(expression, dependsUpon);
   }
+
+  public enum JoinType {
+    LATERAL_VIEW, TABLE_JOIN
+  }
+
 }

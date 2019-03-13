@@ -5,7 +5,6 @@
 package au.csiro.clinsight.fhir;
 
 import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.fhir.ResourceScanner.SummarisedElement;
 import com.google.common.collect.Sets;
 import java.util.HashMap;
 import java.util.List;
@@ -47,7 +46,8 @@ public abstract class ResourceDefinitions {
       "CodeableConcept",
       "Signature",
       "Coding",
-      "Timing"
+      "Timing",
+      "Reference"
   );
   static final String BASE_RESOURCE_URL_PREFIX = "http://hl7.org/fhir/StructureDefinition/";
   static final Set<String> supportedPrimitiveTypes = Sets.newHashSet(
@@ -112,10 +112,15 @@ public abstract class ResourceDefinitions {
    * Returns the StructureDefinition for a base resource type. Returns null if the resource is not
    * found.
    */
-  public static @Nullable
-  StructureDefinition getBaseResource(@Nonnull String resourceName) {
+  @Nullable
+  public static StructureDefinition getBaseResource(@Nonnull String resourceName) {
     checkInitialised();
     return resources.get(BASE_RESOURCE_URL_PREFIX + resourceName);
+  }
+
+  public static StructureDefinition getResourceByUrl(@Nonnull String url) {
+    checkInitialised();
+    return resources.get(url);
   }
 
   static Map<String, SummarisedElement> getElementsForType(@Nonnull String typeName) {

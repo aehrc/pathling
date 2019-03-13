@@ -82,6 +82,7 @@ public class SparkQueryExecutor implements QueryExecutor {
     if (configuration.getSparkSession() != null) {
       spark = configuration.getSparkSession();
     } else {
+      // TODO: Re-scope SparkSession to per-request.
       spark = SparkSession.builder()
           .appName("clinsight-server")
           .config("spark.master", configuration.getSparkMasterUrl())
@@ -131,20 +132,28 @@ public class SparkQueryExecutor implements QueryExecutor {
         selectExpressions.add(aggregation + " AS " + label);
       }
     }
+    LinkedList<String> groupByArgs = new LinkedList<>();
+    for (int i = 0; i < queryPlan.getGroupings().size(); i++) {
+      groupByArgs.add(Integer.toString(i + 1));
+    }
+    LinkedList<String> orderByArgs = new LinkedList<>();
+    for (int i = 0; i < queryPlan.getGroupings().size() + queryPlan.getAggregations().size(); i++) {
+      orderByArgs.add(Integer.toString(i + 1));
+    }
     String selectClause = "SELECT " + String.join(", ", selectExpressions);
     String fromClause = "FROM " + String.join(", ", queryPlan.getFromTables());
     String joins = queryPlan.getJoins().stream().map(Join::getExpression).collect(
         Collectors.joining(" "));
-    String groupByClause = "GROUP BY " + String.join(", ", queryPlan.getGroupings());
-    String orderByClause = "ORDER BY " + String.join(", ", queryPlan.getGroupings());
+    String groupByClause = "GROUP BY " + String.join(", ", groupByArgs);
+    String orderByClause = "ORDER BY " + String.join(", ", orderByArgs);
     List<String> clauses = new LinkedList<>(Arrays.asList(selectClause, fromClause));
     if (!joins.isEmpty()) {
       clauses.add(joins);
     }
     if (queryPlan.getGroupings().size() > 0) {
       clauses.add(groupByClause);
-      clauses.add(orderByClause);
     }
+    clauses.add(orderByClause);
     String sql = String.join(" ", clauses);
 
     logger.info("Executing query: " + sql);
