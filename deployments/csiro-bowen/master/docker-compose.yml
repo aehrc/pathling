@@ -9,6 +9,7 @@ services:
       CLINSIGHT_SPARK_MASTER_URL: spark://hb-15-cdc001.it.csiro.au:7077
       CLINSIGHT_WAREHOUSE_DIRECTORY: hdfs://hb-15-cdc001.it.csiro.au:8020/warehouse
       CLINSIGHT_METASTORE_URL: jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore
+      CLINSIGHT_METASTORE_USER: postgres
       CLINSIGHT_EXECUTOR_MEMORY: 6g
       CLINSIGHT_TERMINOLOGY_SERVER_URL: http://hb-15-cdc001.it.csiro.au:4066/fhir
       CLINSIGHT_DATABASE_NAME: postgres
@@ -49,8 +50,8 @@ services:
     network_mode: host
     command: bash -c "/opt/spark/sbin/start-slave.sh --host hb-15-cdc001.it.csiro.au spark://hb-15-cdc001.it.csiro.au:7077" 2>&1
     environment:
-      SPARK_WORKER_CORES: 5
-      SPARK_WORKER_MEMORY: 24g
+      SPARK_WORKER_CORES: 6
+      SPARK_WORKER_MEMORY: 28g
       HIVE_SITE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore"
     restart: unless-stopped
   metastore:
@@ -69,6 +70,7 @@ services:
       SPARK_DRIVER_PORT: 52000
     volumes:
       - notebooks:/home/jovyan/work
+      - ${PWD}/hive-site.xml:/usr/local/spark/conf/hive-site.xml
     restart: unless-stopped
   namenode:
     image: uhopper/hadoop-namenode:2.7.2
