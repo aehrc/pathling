@@ -4,7 +4,11 @@
 
 package au.csiro.clinsight.query.spark;
 
+import static au.csiro.clinsight.utilities.Strings.pathToUpperCamelCase;
+import static au.csiro.clinsight.utilities.Strings.tokenizePath;
+
 import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
+import au.csiro.clinsight.query.spark.Join.JoinType;
 import au.csiro.clinsight.resources.AggregateQuery;
 import au.csiro.clinsight.resources.AggregateQuery.AggregationComponent;
 import au.csiro.clinsight.resources.AggregateQuery.GroupingComponent;
@@ -15,6 +19,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
@@ -130,9 +136,89 @@ class SparkQueryPlanner {
     for (ParseResult parseResult : groupingParseResults) {
       joins.addAll(parseResult.getJoins());
     }
-    queryPlan.setJoins(joins);
+    SortedSet<Join> convertedJoins = convertUpstreamLateralViewsToInlineQueries(joins);
+    queryPlan.setJoins(convertedJoins);
 
     return queryPlan;
+  }
+
+  private SortedSet<Join> convertUpstreamLateralViewsToInlineQueries(SortedSet<Join> joins) {
+    if (joins.isEmpty()) {
+      return joins;
+    }
+    Join cursor = joins.last();
+    Join dependentTableJoin = null;
+    SortedSet<Join> lateralViewsToConvert = new TreeSet<>();
+    while (cursor != null || !lateralViewsToConvert.isEmpty()) {
+      if (cursor == null) {
+        joins = replaceLateralViews(joins, dependentTableJoin, lateralViewsToConvert);
+      } else {
+        if (cursor.getJoinType() == JoinType.TABLE_JOIN) {
+          if (dependentTableJoin == null) {
+            dependentTableJoin = cursor;
+          } else {
+            joins = replaceLateralViews(joins, dependentTableJoin, lateralViewsToConvert);
+          }
+        } else if (cursor.getJoinType() == JoinType.LATERAL_VIEW && dependentTableJoin != null) {
+          lateralViewsToConvert.add(cursor);
+        }
+        cursor = cursor.getDependsUpon();
+      }
+    }
+    return joins;
+  }
+
+  private SortedSet<Join> replaceLateralViews(SortedSet<Join> joins, Join dependentTableJoin,
+      SortedSet<Join> lateralViewsToConvert) {
+    // Package up lateral views into an inline query and replace them within the dependency tree.
+    String finalTableAlias = lateralViewsToConvert.last().getTableAlias();
+    Pattern tableAliasInvocationPattern = Pattern
+        .compile(".*\\s" + finalTableAlias + "\\.(.*?)\\s.*");
+    Matcher tableAliasInvocationMatcher = tableAliasInvocationPattern
+        .matcher(dependentTableJoin.getExpression());
+    boolean found = tableAliasInvocationMatcher.find();
+    assert found;
+    String tableAliasInvocation = tableAliasInvocationMatcher.group(1);
+    String newTableAlias =
+        finalTableAlias + pathToUpperCamelCase(tokenizePath(tableAliasInvocation));
+    String udtfExpression = lateralViewsToConvert.first().getUdtfExpression();
+    assert udtfExpression != null;
+    String table = tokenizePath(udtfExpression).getFirst();
+    String joinExpression =
+        "INNER JOIN (SELECT id, " + finalTableAlias + "." + tableAliasInvocation + " FROM " + table
+            + " ";
+    joinExpression += lateralViewsToConvert.stream().map(Join::getExpression).collect(
+        Collectors.joining(" "));
+    joinExpression +=
+        ") " + newTableAlias + " ON " + table + ".id = " + newTableAlias + ".id";
+    Join inlineQuery = new Join(joinExpression,
+        lateralViewsToConvert.last().getRootExpression(), JoinType.INLINE_QUERY,
+        newTableAlias);
+    inlineQuery.setDependsUpon(lateralViewsToConvert.first().getDependsUpon());
+    dependentTableJoin.setDependsUpon(inlineQuery);
+    String transformedExpression = dependentTableJoin.getExpression()
+        .replace(lateralViewsToConvert.last().getTableAlias() + "." + tableAliasInvocation,
+            inlineQuery.getTableAlias() + "." + tableAliasInvocation);
+    dependentTableJoin.setExpression(transformedExpression);
+    SortedSet<Join> newJoins = new TreeSet<>();
+    for (Join join : joins) {
+      boolean inLateralViewsToConvert = false;
+      for (Join toConvert : lateralViewsToConvert) {
+        if (join.equals(toConvert)) {
+          inLateralViewsToConvert = true;
+        }
+      }
+      if (!inLateralViewsToConvert) {
+        newJoins.add(join);
+      }
+    }
+//    for (Join join : lateralViewsToConvert) {
+//      boolean result = joins.remove(join);
+//      assert result;
+//    }
+    newJoins.add(inlineQuery);
+    lateralViewsToConvert.clear();
+    return newJoins;
   }
 
 }

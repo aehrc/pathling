@@ -5,7 +5,7 @@
 package au.csiro.clinsight.query.spark;
 
 import static au.csiro.clinsight.query.spark.Mappings.getFunction;
-import static au.csiro.clinsight.utilities.Strings.pathToLowerSnakeCase;
+import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
@@ -216,7 +216,7 @@ public class ExpressionParser {
         MultiValueTraversal multiValueTraversal) {
       // Construct an alias that can be used to refer to the generated table elsewhere in the query.
       LinkedList<String> pathComponents = tokenizePath(multiValueTraversal.getPath());
-      String tableAlias = pathToLowerSnakeCase(pathComponents);
+      String tableAlias = pathToLowerCamelCase(pathComponents);
 
       // Construct a join expression.
       pathComponents.push(pathComponents.pop().toLowerCase());
@@ -229,7 +229,7 @@ public class ExpressionParser {
       if (previousJoin != null) {
         udtfExpression = udtfExpression
             .replace(previousJoin.getRootExpression(), previousJoin.getTableAlias());
-        tableAlias = pathToLowerSnakeCase(tokenizePath(udtfExpression));
+        tableAlias = pathToLowerCamelCase(tokenizePath(udtfExpression));
       }
 
       String joinExpression =

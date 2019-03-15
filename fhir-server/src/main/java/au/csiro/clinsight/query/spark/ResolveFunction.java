@@ -37,43 +37,27 @@ public class ResolveFunction implements ExpressionFunction {
     assert element.getType() == ResolvedElementType.REFERENCE;
     String referenceTypeCode;
     if (element.getReferenceTypes().size() > 1) {
-      if (arguments.size() == 1) {
-        String argument = arguments.get(0).getFhirPathExpression();
-        ResolvedElement argumentElement = resolveElement(argument);
-        referenceTypeCode = argumentElement.getTypeCode();
-        if (argumentElement.getType() != ResolvedElementType.RESOURCE
-            || !isResource(referenceTypeCode)) {
-          throw new InvalidRequestException(
-              "Argument to resolve function must be a base resource type: " + argument + " ("
-                  + argumentElement.getTypeCode() + ")");
-        }
-      } else {
-        throw new InvalidRequestException(
-            "Attempt to resolve polymorphic reference without providing an argument: " + input
-                .getFhirPathExpression());
-      }
+      referenceTypeCode = getTypeForPolymorphicReference(input, arguments);
     } else {
       String referenceTypeUrl = element.getReferenceTypes().get(0);
       StructureDefinition referenceTypeDefinition = getResourceByUrl(referenceTypeUrl);
       assert referenceTypeDefinition != null;
       referenceTypeCode = referenceTypeDefinition.getType();
+      if (referenceTypeCode.equals("Resource")) {
+        referenceTypeCode = getTypeForPolymorphicReference(input, arguments);
+      }
     }
-    // If there is a previous join and it is a lateral view, we need to convert it to an inline
-    // query. Spark SQL does not support the direct chaining of a lateral view with a subsequent
-    // table join.
-    if (!input.getJoins().isEmpty()
-        && input.getJoins().last().getJoinType() == JoinType.LATERAL_VIEW) {
-      Join transformedJoin = transformLateralViewToInlineQuery(input.getJoins().last());
-      input.getJoins().remove(input.getJoins().last());
-      input.getJoins().add(transformedJoin);
-    }
+
     List<String> pathComponents = Strings.tokenizePath(element.getPath());
-    String joinAlias = Strings.pathToLowerSnakeCase(pathComponents);
+    String joinAlias = Strings.pathToLowerCamelCase(pathComponents);
     String joinExpression = "INNER JOIN " + referenceTypeCode.toLowerCase() + " " + joinAlias
         + " ON " + input.getSqlExpression() + ".reference = "
         + joinAlias + ".id";
     Join join = new Join(joinExpression, referenceTypeCode.toLowerCase(), JoinType.TABLE_JOIN,
         joinAlias);
+    if (!input.getJoins().isEmpty()) {
+      join.setDependsUpon(input.getJoins().last());
+    }
     input.setResultType(ResolvedElementType.RESOURCE);
     input.setResultTypeCode(referenceTypeCode);
     input.setFhirPathExpression(referenceTypeCode);
@@ -82,8 +66,26 @@ public class ResolveFunction implements ExpressionFunction {
     return input;
   }
 
-  private Join transformLateralViewToInlineQuery(Join last) {
-    return null;
+  @Nonnull
+  private String getTypeForPolymorphicReference(@Nonnull ParseResult input,
+      @Nonnull List<ParseResult> arguments) {
+    String referenceTypeCode;
+    if (arguments.size() == 1) {
+      String argument = arguments.get(0).getFhirPathExpression();
+      ResolvedElement argumentElement = resolveElement(argument);
+      referenceTypeCode = argumentElement.getTypeCode();
+      if (argumentElement.getType() != ResolvedElementType.RESOURCE
+          || !isResource(referenceTypeCode)) {
+        throw new InvalidRequestException(
+            "Argument to resolve function must be a base resource type: " + argument + " ("
+                + argumentElement.getTypeCode() + ")");
+      }
+    } else {
+      throw new InvalidRequestException(
+          "Attempt to resolve polymorphic reference without providing an argument: " + input
+              .getFhirPathExpression());
+    }
+    return referenceTypeCode;
   }
 
 }

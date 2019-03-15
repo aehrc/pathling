@@ -392,15 +392,15 @@ public class QueryTest {
   @Test
   public void referenceWithDependencyOnLateralView() throws IOException {
     String expectedSql =
-        "SELECT observationCodeCoding.display AS `Observation type`, count(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
+        "SELECT diagnosticReportResultCodeCoding.display AS `Observation type`, count(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
             + "FROM diagnosticreport "
             + "INNER JOIN ("
-            + "SELECT id, diagnosticReportResult.* "
+            + "SELECT id, diagnosticReportResult.reference "
             + "FROM diagnosticreport "
             + "LATERAL VIEW explode(diagnosticreport.result) diagnosticReportResult AS diagnosticReportResult"
             + ") diagnosticReportResultReference ON diagnosticreport.id = diagnosticReportResultReference.id "
-            + "INNER JOIN observation diagnosticReportResult ON diagnosticReportResult.id = diagnosticReportResultReference.reference "
-            + "LATERAL VIEW explode(diagnosticReportResult.code.coding) observationCodeCoding AS observationCodeCoding "
+            + "INNER JOIN observation diagnosticReportResult ON diagnosticReportResultReference.reference = diagnosticReportResult.id "
+            + "LATERAL VIEW explode(diagnosticReportResult.code.coding) diagnosticReportResultCodeCoding AS diagnosticReportResultCodeCoding "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -469,11 +469,11 @@ public class QueryTest {
     String expectedSql =
         "SELECT conditionEvidenceDetailCodedDiagnosisCoding.display AS `Associated diagnosis`, count(condition.id) AS `Number of conditions` "
             + "FROM condition "
-            + "INNER JOIN ( "
-            + "  SELECT id, conditionEvidenceDetail.reference "
-            + "  FROM condition "
-            + "  LATERAL VIEW explode(condition.evidence) conditionEvidence AS conditionEvidence "
-            + "  LATERAL VIEW explode(conditionEvidence.detail) conditionEvidenceDetail AS conditionEvidenceDetail "
+            + "INNER JOIN ("
+            + "SELECT id, conditionEvidenceDetail.reference "
+            + "FROM condition "
+            + "LATERAL VIEW explode(condition.evidence) conditionEvidence AS conditionEvidence "
+            + "LATERAL VIEW explode(conditionEvidence.detail) conditionEvidenceDetail AS conditionEvidenceDetail"
             + ") conditionEvidenceDetailReference ON condition.id = conditionEvidenceDetailReference.id "
             + "INNER JOIN diagnosticreport conditionEvidenceDetail ON conditionEvidenceDetailReference.reference = conditionEvidenceDetail.id "
             + "LATERAL VIEW explode(conditionEvidenceDetail.codedDiagnosis) conditionEvidenceDetailCodedDiagnosis AS conditionEvidenceDetailCodedDiagnosis "
@@ -489,14 +489,14 @@ public class QueryTest {
 
     AggregationComponent aggregation = new AggregationComponent();
     aggregation.setLabel(new StringType("Number of conditions"));
-    aggregation.setExpression(new StringType("Condition.count()"));
+    aggregation.setExpression(new StringType("Condition.id.count()"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     GroupingComponent grouping = new GroupingComponent();
     grouping.setLabel(new StringType("Associated diagnosis"));
     grouping.setExpression(
         new StringType(
-            "Condition.evidence.detail.reference.resolve(DiagnosticReport).codedDiagnosis.coding.display"));
+            "Condition.evidence.detail.resolve(DiagnosticReport).codedDiagnosis.coding.display"));
     query.setGrouping(Collections.singletonList(grouping));
 
     HttpPost httpPost = postFhirResource(query, QUERY_URL);

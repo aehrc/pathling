@@ -15,13 +15,14 @@ import javax.annotation.Nullable;
 class Join implements Comparable<Join> {
 
   @Nonnull
-  private String tableAlias;
-
+  private final String rootExpression;
   @Nonnull
   private String expression;
+  @Nonnull
+  private JoinType joinType;
 
   @Nonnull
-  private String rootExpression;
+  private String tableAlias;
 
   @Nullable
   private String udtfExpression;
@@ -29,14 +30,11 @@ class Join implements Comparable<Join> {
   @Nullable
   private String traversalType;
 
-  @Nonnull
-  private JoinType joinType;
-
   @Nullable
   private Join dependsUpon;
 
-  Join(@Nonnull String expression, @Nonnull String rootExpression, @Nonnull JoinType joinType,
-      @Nonnull String tableAlias) {
+  public Join(@Nonnull String expression, @Nonnull String rootExpression,
+      @Nonnull JoinType joinType, @Nonnull String tableAlias) {
     this.expression = expression;
     this.rootExpression = rootExpression;
     this.joinType = joinType;
@@ -44,39 +42,35 @@ class Join implements Comparable<Join> {
   }
 
   @Nonnull
-  String getExpression() {
+  public String getExpression() {
     return expression;
   }
 
-  void setExpression(@Nonnull String expression) {
+  public void setExpression(@Nonnull String expression) {
     this.expression = expression;
   }
 
   @Nonnull
-  String getTableAlias() {
+  public String getRootExpression() {
+    return rootExpression;
+  }
+
+  @Nonnull
+  public JoinType getJoinType() {
+    return joinType;
+  }
+
+  public void setJoinType(@Nonnull JoinType joinType) {
+    this.joinType = joinType;
+  }
+
+  @Nonnull
+  public String getTableAlias() {
     return tableAlias;
   }
 
   public void setTableAlias(@Nonnull String tableAlias) {
     this.tableAlias = tableAlias;
-  }
-
-  @Nullable
-  Join getDependsUpon() {
-    return dependsUpon;
-  }
-
-  void setDependsUpon(@Nullable Join dependsUpon) {
-    this.dependsUpon = dependsUpon;
-  }
-
-  @Nonnull
-  String getRootExpression() {
-    return rootExpression;
-  }
-
-  void setRootExpression(@Nonnull String rootExpression) {
-    this.rootExpression = rootExpression;
   }
 
   @Nullable
@@ -97,13 +91,13 @@ class Join implements Comparable<Join> {
     this.traversalType = traversalType;
   }
 
-  @Nonnull
-  public JoinType getJoinType() {
-    return joinType;
+  @Nullable
+  public Join getDependsUpon() {
+    return dependsUpon;
   }
 
-  public void setJoinType(@Nonnull JoinType joinType) {
-    this.joinType = joinType;
+  public void setDependsUpon(@Nullable Join dependsUpon) {
+    this.dependsUpon = dependsUpon;
   }
 
   /**
@@ -113,11 +107,20 @@ class Join implements Comparable<Join> {
   public int compareTo(@Nonnull Join j) {
     if (this.equals(j)) {
       return 0;
-    } else if (j.getDependsUpon() == this) {
+    } else if (dependsUpon == null && j.getDependsUpon() == null) {
+      return 1;
+    } else if (j.getDependsUpon() != null && j.getDependsUpon().equals(this)) {
       return -1;
-    } else if (dependsUpon == j) {
+    } else if (dependsUpon != null && dependsUpon.equals(j)) {
       return 1;
     } else {
+      Join cursor = j;
+      while (cursor != null && cursor.getDependsUpon() != null) {
+        if (cursor.getDependsUpon().equals(this)) {
+          return -1;
+        }
+        cursor = cursor.getDependsUpon();
+      }
       return 1;
     }
   }
@@ -136,11 +139,11 @@ class Join implements Comparable<Join> {
 
   @Override
   public int hashCode() {
-    return Objects.hash(expression, dependsUpon);
+    return Objects.hash(rootExpression);
   }
 
   public enum JoinType {
-    LATERAL_VIEW, TABLE_JOIN
+    LATERAL_VIEW, TABLE_JOIN, INLINE_QUERY
   }
 
 }

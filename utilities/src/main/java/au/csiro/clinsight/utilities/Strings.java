@@ -44,12 +44,18 @@ public abstract class Strings {
     return String.join(".", tokens);
   }
 
-  public static String pathToLowerSnakeCase(List<String> pathComponents) {
+  public static String pathToLowerCamelCase(List<String> pathComponents) {
     String head = uncapitalize(pathComponents.get(0));
     List<String> tail = pathComponents.subList(1, pathComponents.size()).stream()
         .map(Strings::capitalize)
         .collect(Collectors.toCollection(LinkedList::new));
     return String.join("", head, String.join("", tail));
+  }
+
+  public static String pathToUpperCamelCase(List<String> pathComponents) {
+    return pathComponents.stream()
+        .map(Strings::capitalize)
+        .collect(Collectors.joining(""));
   }
 
 }
