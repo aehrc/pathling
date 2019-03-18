@@ -23,6 +23,7 @@ import org.hl7.fhir.dstu3.model.StructureDefinition;
  */
 public class ResolveFunction implements ExpressionFunction {
 
+  @Nonnull
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
     if (input == null) {

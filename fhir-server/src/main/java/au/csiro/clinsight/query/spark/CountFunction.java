@@ -15,6 +15,7 @@ import javax.annotation.Nullable;
  */
 public class CountFunction implements ExpressionFunction {
 
+  @Nonnull
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
     if (input == null || input.getSqlExpression() == null || input.getSqlExpression().isEmpty()) {

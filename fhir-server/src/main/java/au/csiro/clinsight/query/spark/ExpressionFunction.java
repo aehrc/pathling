@@ -13,6 +13,7 @@ import javax.annotation.Nullable;
  */
 public interface ExpressionFunction {
 
+  @Nonnull
   ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments);
 
 }

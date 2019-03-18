@@ -506,15 +506,84 @@ public class QueryTest {
     verify(mockSpark).sql(expectedSql);
   }
 
+  @Test
+  public void nonReferenceInvokerForResolve() throws IOException {
+    AggregateQuery query = new AggregateQuery();
+
+    AggregationComponent aggregation = new AggregationComponent();
+    aggregation.setExpression(new StringType("Condition.evidence.resolve().something"));
+    query.setAggregation(Collections.singletonList(aggregation));
+
+    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+      assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
+      OperationOutcome opOutcome = (OperationOutcome) jsonParser
+          .parseResource(response.getEntity().getContent());
+      assertThat(opOutcome.getIssue()).hasSize(1);
+      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
+      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
+      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
+      assertThat(issue.getDiagnostics()).isEqualTo(
+          "Input to resolve function must be a Reference: Condition.evidence (BackboneElement)");
+    }
+  }
+
+  @Test
+  public void noArgumentToPolymorphicResolve() throws IOException {
+    AggregateQuery query = new AggregateQuery();
+
+    AggregationComponent aggregation = new AggregationComponent();
+    aggregation.setExpression(
+        new StringType("Condition.evidence.detail.resolve().codedDiagnosis.coding.display"));
+    query.setAggregation(Collections.singletonList(aggregation));
+
+    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+      assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
+      OperationOutcome opOutcome = (OperationOutcome) jsonParser
+          .parseResource(response.getEntity().getContent());
+      assertThat(opOutcome.getIssue()).hasSize(1);
+      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
+      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
+      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
+      assertThat(issue.getDiagnostics()).isEqualTo(
+          "Attempt to resolve polymorphic reference without providing an argument: Condition.evidence.detail");
+    }
+  }
+
+  @Test
+  public void nonResourceArgumentToResolve() throws IOException {
+    AggregateQuery query = new AggregateQuery();
+
+    AggregationComponent aggregation = new AggregationComponent();
+    aggregation.setExpression(
+        new StringType(
+            "Condition.evidence.detail.resolve(DiagnosticReport.id).codedDiagnosis.coding.display"));
+    query.setAggregation(Collections.singletonList(aggregation));
+
+    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+      assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
+      OperationOutcome opOutcome = (OperationOutcome) jsonParser
+          .parseResource(response.getEntity().getContent());
+      assertThat(opOutcome.getIssue()).hasSize(1);
+      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
+      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
+      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
+      assertThat(issue.getDiagnostics()).isEqualTo(
+          "Argument to resolve function must be a base resource type: DiagnosticReport.id (id)");
+    }
+  }
+
   @SuppressWarnings("unchecked")
   @Test
   public void reverseReferenceTraversalInGrouping() throws IOException {
     String expectedSql =
-        "SELECT encounterReasonCoding.display AS `Reason for encounter`, count(DISTINCT patient.id) AS `Number of patients` "
+        "SELECT patientEncounterAsSubjectReasonCoding.display AS `Reason for encounter`, count(patient.id) AS `Number of patients` "
             + "FROM patient "
-            + "INNER JOIN encounter patientEncounterAsSubject ON encounter.subject.reference = patient.id "
-            + "LATERAL VIEW OUTER explode(patientEncounterAsSubject.reason) patientEncounterAsSubjectReason AS patientEncounterAsSubjectReason  "
-            + "LATERAL VIEW OUTER explode(patientEncounterAsSubjectReason.coding) patientEncounterAsSubjectReasonCoding AS patientEncounterAsSubjectReasonCoding  "
+            + "INNER JOIN encounter patientEncounterAsSubject ON patient.id = encounter.subject.reference "
+            + "LATERAL VIEW explode(patientEncounterAsSubject.reason) patientEncounterAsSubjectReason AS patientEncounterAsSubjectReason "
+            + "LATERAL VIEW explode(patientEncounterAsSubjectReason.coding) patientEncounterAsSubjectReasonCoding AS patientEncounterAsSubjectReasonCoding "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -526,14 +595,14 @@ public class QueryTest {
 
     AggregationComponent aggregation = new AggregationComponent();
     aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("Patient.distinct().count()"));
+    aggregation.setExpression(new StringType("Patient.id.count()"));
     query.setAggregation(Collections.singletonList(aggregation));
 
     GroupingComponent grouping = new GroupingComponent();
     grouping.setLabel(new StringType("Reason for encounter"));
     grouping.setExpression(
         new StringType(
-            "Patient.reverseResolve(Encounter.subject).diagnosis.condition.code.coding.display"));
+            "Patient.reverseResolve(Encounter.subject).reason.coding.display"));
     query.setGrouping(Collections.singletonList(grouping));
 
     HttpPost httpPost = postFhirResource(query, QUERY_URL);
@@ -541,6 +610,54 @@ public class QueryTest {
 
     verify(mockSpark).sql("USE clinsight");
     verify(mockSpark).sql(expectedSql);
+  }
+
+  @Test
+  public void nonResourceInvokerForReverseResolve() throws IOException {
+    AggregateQuery query = new AggregateQuery();
+
+    AggregationComponent aggregation = new AggregationComponent();
+    aggregation.setExpression(
+        new StringType(
+            "Patient.id.reverseResolve(Encounter.subject).diagnosis"));
+    query.setAggregation(Collections.singletonList(aggregation));
+
+    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+      assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
+      OperationOutcome opOutcome = (OperationOutcome) jsonParser
+          .parseResource(response.getEntity().getContent());
+      assertThat(opOutcome.getIssue()).hasSize(1);
+      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
+      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
+      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
+      assertThat(issue.getDiagnostics()).isEqualTo(
+          "Input to reverseResolve function must be a Resource: Patient.id (id)");
+    }
+  }
+
+  @Test
+  public void nonReferenceArgumentToReverseResolve() throws IOException {
+    AggregateQuery query = new AggregateQuery();
+
+    AggregationComponent aggregation = new AggregationComponent();
+    aggregation.setExpression(
+        new StringType(
+            "Patient.reverseResolve(Encounter).diagnosis"));
+    query.setAggregation(Collections.singletonList(aggregation));
+
+    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+      assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
+      OperationOutcome opOutcome = (OperationOutcome) jsonParser
+          .parseResource(response.getEntity().getContent());
+      assertThat(opOutcome.getIssue()).hasSize(1);
+      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
+      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
+      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
+      assertThat(issue.getDiagnostics()).isEqualTo(
+          "Argument to reverseResolve function must be a Reference: Encounter (Encounter)");
+    }
   }
 
   @After
