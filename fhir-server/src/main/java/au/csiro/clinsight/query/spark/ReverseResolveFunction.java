@@ -60,11 +60,13 @@ public class ReverseResolveFunction implements ExpressionFunction {
         .subList(1, argumentPathComponents.size());
     String joinAlias = inputElement.getTypeCode().toLowerCase() + argumentPathComponents.getFirst();
     joinAlias += "As" + Strings.pathToUpperCamelCase(argumentPathTail);
+    String targetTable = argumentPathComponents.getFirst().toLowerCase();
+    String targetExpression =
+        arguments.get(0).getSqlExpression().replace(targetTable, joinAlias) + ".reference";
     String joinExpression =
-        "INNER JOIN " + argumentPathComponents.getFirst().toLowerCase() + " " + joinAlias + " ON "
-            + input.getSqlExpression() + ".id = " + arguments.get(0).getSqlExpression()
-            + ".reference";
-    Join join = new Join(joinExpression, argumentPathComponents.getFirst().toLowerCase(),
+        "INNER JOIN " + targetTable + " " + joinAlias + " ON " + input.getSqlExpression() + ".id = "
+            + targetExpression;
+    Join join = new Join(joinExpression, targetTable,
         JoinType.TABLE_JOIN, joinAlias);
     if (!input.getJoins().isEmpty()) {
       join.setDependsUpon(input.getJoins().last());

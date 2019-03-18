@@ -581,7 +581,7 @@ public class QueryTest {
     String expectedSql =
         "SELECT patientEncounterAsSubjectReasonCoding.display AS `Reason for encounter`, count(patient.id) AS `Number of patients` "
             + "FROM patient "
-            + "INNER JOIN encounter patientEncounterAsSubject ON patient.id = encounter.subject.reference "
+            + "INNER JOIN encounter patientEncounterAsSubject ON patient.id = patientEncounterAsSubject.subject.reference "
             + "LATERAL VIEW explode(patientEncounterAsSubject.reason) patientEncounterAsSubjectReason AS patientEncounterAsSubjectReason "
             + "LATERAL VIEW explode(patientEncounterAsSubjectReason.coding) patientEncounterAsSubjectReasonCoding AS patientEncounterAsSubjectReasonCoding "
             + "GROUP BY 1 "
