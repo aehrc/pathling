@@ -60,7 +60,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
  */
 public class QueryTest {
 
-  private static final String QUERY_URL = FHIR_SERVER_URL + "/$query";
+  private static final String QUERY_URL = FHIR_SERVER_URL + "/$aggregateQuery";
   private Server server;
   private SparkSession mockSpark;
   private CloseableHttpClient httpClient;

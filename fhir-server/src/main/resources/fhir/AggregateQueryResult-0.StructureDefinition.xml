@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StructureDefinition xmlns="http://hl7.org/fhir">
+  <url value="https://clinsight.csiro.au/StructureDefinition/AggregateQueryResult-0" />
+  <name value="AggregateQueryResult" />
+  <status value="draft" />
+  <fhirVersion value="3.0.1" />
+  <kind value="resource" />
+  <abstract value="false" />
+  <type value="Basic" />
+  <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Basic" />
+  <derivation value="constraint" />
+  <differential>
+    <element id="Basic.extension">
+      <path value="Basic.extension" />
+      <slicing>
+        <discriminator>
+          <type value="value" />
+          <path value="url" />
+        </discriminator>
+        <rules value="open" />
+      </slicing>
+    </element>
+    <element id="Basic.extension:query">
+      <path value="Basic.extension" />
+      <sliceName value="query" />
+      <max value="1" />
+      <type>
+        <code value="Extension" />
+        <profile value="https://clinsight.csiro.au/fhir/StructureDefinition/aggregateQueryResult-query-0" />
+      </type>
+    </element>
+    <element id="Basic.extension:grouping">
+      <path value="Basic.extension" />
+      <sliceName value="grouping" />
+      <min value="0" />
+      <max value="*" />
+      <type>
+        <code value="Extension" />
+        <profile value="https://clinsight.csiro.au/fhir/StructureDefinition/aggregateQueryResult-grouping-0" />
+      </type>
+    </element>
+  </differential>
+</StructureDefinition>

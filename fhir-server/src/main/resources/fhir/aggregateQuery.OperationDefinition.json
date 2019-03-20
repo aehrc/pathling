@@ -1,0 +1,35 @@
+{
+  "resourceType": "OperationDefinition",
+  "url": "https://clinsight.csiro.au/fhir/OperationDefinition/aggregateQuery-0",
+  "name": "aggregateQuery",
+  "status": "draft",
+  "kind": "operation",
+  "experimental": true,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows a user to perform aggregate queries on data held within the FHIR server by specifying aggregation, grouping and filter expressions.",
+  "useContext": [
+    {
+      "code": {
+        "system": "http://hl7.org/fhir/usage-context-type",
+        "code": "task",
+        "display": "Workflow Task"
+      },
+      "valueCodeableConcept": {
+        "text": "Aggregate data analytics"
+      }
+    }
+  ],
+  "idempotent": true,
+  "code": "aggregateQuery",
+  "system": true,
+  "parameter": [
+    {
+      "name": "query",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "type": "Basic",
+      "profile": "https://clinsight.csiro.au/fhir/StructureDefinition/AggregateQuery-0"
+    }
+  ]
+}

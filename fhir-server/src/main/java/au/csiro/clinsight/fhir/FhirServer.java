@@ -41,6 +41,7 @@ public class FhirServer extends RestfulServer {
   protected void initialize() throws ServletException {
     super.initialize();
 
+    setServerConformanceProvider(new FhirServerCapabilities());
     // Set default response encoding to JSON.
     setDefaultResponseEncoding(EncodingEnum.JSON);
 

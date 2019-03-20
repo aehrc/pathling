@@ -100,9 +100,11 @@ public class AggregateQueryResult extends Basic {
   public static class GroupingComponent extends BackboneElement {
 
     @Child(name = "label", max = MAX_UNLIMITED)
+    @Description(shortDefinition = "The set of descriptive labels that describe this grouping, and correspond to those requested in the query")
     private List<LabelComponent> label;
 
     @Child(name = "result", max = MAX_UNLIMITED)
+    @Description(shortDefinition = "The set of values that resulted from the execution of the aggregations that were requested in the query")
     private List<ResultComponent> result;
 
     public List<LabelComponent> getLabel() {
@@ -168,6 +170,7 @@ public class AggregateQueryResult extends Basic {
   public static class LabelComponent extends BackboneElement {
 
     @Child(name = "value")
+    @Description(shortDefinition = "The value for this label")
     Type value;
 
     public LabelComponent() {

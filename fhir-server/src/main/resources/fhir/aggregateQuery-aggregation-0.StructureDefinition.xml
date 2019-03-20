@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StructureDefinition xmlns="http://hl7.org/fhir">
+  <url value="https://clinsight.csiro.au/fhir/StructureDefinition/aggregateQuery-aggregation-0" />
+  <name value="aggregateQuery-aggregation" />
+  <status value="draft" />
+  <fhirVersion value="3.0.1" />
+  <kind value="complex-type" />
+  <abstract value="false" />
+  <contextType value="resource" />
+  <context value="Basic" />
+  <type value="Extension" />
+  <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Extension" />
+  <derivation value="constraint" />
+  <differential>
+    <element id="Extension.extension">
+      <path value="Extension.extension" />
+      <slicing>
+        <discriminator>
+          <type value="value" />
+          <path value="url" />
+        </discriminator>
+        <rules value="open" />
+      </slicing>
+    </element>
+    <element id="Extension.extension:expression">
+      <path value="Extension.extension" />
+      <sliceName value="expression" />
+      <short value="A FHIRPath expression that defines the aggregation function" />
+      <min value="1" />
+      <max value="1" />
+    </element>
+    <element id="Extension.extension:expression.url">
+      <path value="Extension.extension.url" />
+      <fixedUri value="expression" />
+    </element>
+    <element id="Extension.extension:expression.value[x]:valueString">
+      <path value="Extension.extension.valueString" />
+      <sliceName value="valueString" />
+      <min value="1" />
+      <type>
+        <code value="string" />
+      </type>
+    </element>
+    <element id="Extension.extension:label">
+      <path value="Extension.extension" />
+      <sliceName value="label" />
+      <short value="A short description for the aggregation, for display purposes" />
+      <max value="1" />
+    </element>
+    <element id="Extension.extension:label.url">
+      <path value="Extension.extension.url" />
+      <fixedUri value="label" />
+    </element>
+    <element id="Extension.extension:label.value[x]:valueString">
+      <path value="Extension.extension.valueString" />
+      <sliceName value="valueString" />
+      <min value="1" />
+      <type>
+        <code value="string" />
+      </type>
+    </element>
+    <element id="Extension.url">
+      <path value="Extension.url" />
+      <fixedUri value="https://clinsight.csiro.au/fhir/StructureDefinition/aggregateQuery-aggregation-0" />
+    </element>
+    <element id="Extension.value[x]">
+      <path value="Extension.value[x]" />
+      <max value="0" />
+    </element>
+  </differential>
+</StructureDefinition>
