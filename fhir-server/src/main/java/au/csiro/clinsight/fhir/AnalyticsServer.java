@@ -24,24 +24,24 @@ import org.springframework.web.cors.CorsConfiguration;
 /**
  * @author John Grimes
  */
-public class FhirServer extends RestfulServer {
+public class AnalyticsServer extends RestfulServer {
 
-  private static final Logger logger = LoggerFactory.getLogger(FhirServer.class);
-  private final FhirServerConfiguration configuration;
+  private static final Logger logger = LoggerFactory.getLogger(AnalyticsServer.class);
+  private final AnalyticsServerConfiguration configuration;
   private QueryExecutor queryExecutor;
 
-  public FhirServer(FhirServerConfiguration configuration) {
+  public AnalyticsServer(AnalyticsServerConfiguration configuration) {
     super(FhirContext.forDstu3());
 
-    logger.info("Creating new FhirServer: " + configuration);
+    logger.info("Creating new AnalyticsServer: " + configuration);
     this.configuration = configuration;
+    setServerConformanceProvider(new AnalyticsServerCapabilities());
   }
 
   @Override
   protected void initialize() throws ServletException {
     super.initialize();
 
-    setServerConformanceProvider(new FhirServerCapabilities());
     // Set default response encoding to JSON.
     setDefaultResponseEncoding(EncodingEnum.JSON);
 

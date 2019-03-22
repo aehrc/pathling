@@ -17,7 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import au.csiro.clinsight.fhir.FhirServerConfiguration;
+import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import au.csiro.clinsight.resources.AggregateQuery;
 import au.csiro.clinsight.resources.AggregateQuery.AggregationComponent;
 import au.csiro.clinsight.resources.AggregateQuery.GroupingComponent;
@@ -71,7 +71,7 @@ public class QueryTest {
     mockSpark = mock(SparkSession.class);
     mockDefinitionRetrieval(mockTerminologyClient);
 
-    FhirServerConfiguration configuration = new FhirServerConfiguration();
+    AnalyticsServerConfiguration configuration = new AnalyticsServerConfiguration();
     configuration.setTerminologyClient(mockTerminologyClient);
     configuration.setSparkSession(mockSpark);
 

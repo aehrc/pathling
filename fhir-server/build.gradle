@@ -34,6 +34,7 @@ dependencies {
   // Embedded Jetty is used to serve the FhirServer servlet.
   implementation group: 'org.eclipse.jetty', name: 'jetty-server', version: '9.4.14.v20181114'
   implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '9.4.14.v20181114'
+  implementation group: 'org.mitre.dsmiley.httpproxy', name: 'smiley-http-proxy-servlet', version: '1.11'
 
   // Apache Spark, Spark SQL and Hive.
   implementation group: 'org.apache.spark', name: 'spark-core_2.11', version: '2.3.3'

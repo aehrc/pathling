@@ -11,7 +11,7 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class FhirServerConfiguration {
+public class AnalyticsServerConfiguration {
 
   private String sparkMasterUrl;
   private String warehouseDirectory;
@@ -106,7 +106,7 @@ public class FhirServerConfiguration {
 
   @Override
   public String toString() {
-    return "FhirServerConfiguration{" +
+    return "AnalyticsServerConfiguration{" +
         "sparkMasterUrl='" + sparkMasterUrl + '\'' +
         ", warehouseDirectory='" + warehouseDirectory + '\'' +
         ", metastoreUrl='" + metastoreUrl + '\'' +

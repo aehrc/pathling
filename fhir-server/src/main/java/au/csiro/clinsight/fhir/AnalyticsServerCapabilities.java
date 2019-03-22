@@ -5,9 +5,12 @@
 package au.csiro.clinsight.fhir;
 
 import ca.uhn.fhir.rest.annotation.Metadata;
+import ca.uhn.fhir.rest.server.IServerConformanceProvider;
+import ca.uhn.fhir.rest.server.RestfulServer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 import org.hl7.fhir.dstu3.model.CapabilityStatement;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementKind;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementRestComponent;
@@ -27,10 +30,12 @@ import org.hl7.fhir.dstu3.model.UsageContext;
 /**
  * @author John Grimes
  */
-public class FhirServerCapabilities {
+public class AnalyticsServerCapabilities implements
+    IServerConformanceProvider<CapabilityStatement> {
 
+  @Override
   @Metadata
-  public CapabilityStatement getServerMetadata() {
+  public CapabilityStatement getServerConformance(HttpServletRequest httpServletRequest) {
     CapabilityStatement capabilityStatement = new CapabilityStatement();
     capabilityStatement
         .setUrl("https://clinsight.csiro.au/fhir/CapabilityStatement/clinsight-fhir-api-0");
@@ -78,4 +83,9 @@ public class FhirServerCapabilities {
     capabilityStatement.setRest(rest);
     return capabilityStatement;
   }
+
+  @Override
+  public void setRestfulServer(RestfulServer restfulServer) {
+  }
+
 }

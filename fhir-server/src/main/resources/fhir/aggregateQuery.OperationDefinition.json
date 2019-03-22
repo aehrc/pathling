@@ -1,5 +1,6 @@
 {
   "resourceType": "OperationDefinition",
+  "id": "aggregateQuery-0",
   "url": "https://clinsight.csiro.au/fhir/OperationDefinition/aggregateQuery-0",
   "name": "aggregateQuery",
   "status": "draft",

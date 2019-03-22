@@ -8,8 +8,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.clinsight.fhir.FhirServer;
-import au.csiro.clinsight.fhir.FhirServerConfiguration;
+import au.csiro.clinsight.fhir.AnalyticsServer;
+import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import au.csiro.clinsight.resources.AggregateQuery;
 import au.csiro.clinsight.resources.AggregateQueryResult;
 import ca.uhn.fhir.context.FhirContext;
@@ -75,10 +75,10 @@ abstract class TestConfiguration {
     return fhirContext;
   }
 
-  static Server startFhirServer(FhirServerConfiguration configuration) throws Exception {
+  static Server startFhirServer(AnalyticsServerConfiguration configuration) throws Exception {
     Server server = new Server(FHIR_SERVER_PORT);
     ServletHandler servletHandler = new ServletHandler();
-    ServletHolder servletHolder = new ServletHolder(new FhirServer(configuration));
+    ServletHolder servletHolder = new ServletHolder(new AnalyticsServer(configuration));
     servletHandler.addServletWithMapping(servletHolder, "/fhir/*");
     server.setHandler(servletHandler);
     server.start();

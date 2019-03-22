@@ -10,7 +10,7 @@ import static au.csiro.clinsight.TestConfiguration.startFhirServer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.clinsight.fhir.FhirServerConfiguration;
+import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import java.io.IOException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -25,7 +25,7 @@ import org.junit.Test;
 /**
  * @author John Grimes
  */
-public class FhirServerTest {
+public class AnalyticsServerTest {
 
   private Server server;
 
@@ -35,7 +35,7 @@ public class FhirServerTest {
     SparkSession mockSpark = mock(SparkSession.class);
     mockDefinitionRetrieval(mockTerminologyClient);
 
-    FhirServerConfiguration configuration = new FhirServerConfiguration();
+    AnalyticsServerConfiguration configuration = new AnalyticsServerConfiguration();
     configuration.setTerminologyClient(mockTerminologyClient);
     configuration.setSparkSession(mockSpark);
 
