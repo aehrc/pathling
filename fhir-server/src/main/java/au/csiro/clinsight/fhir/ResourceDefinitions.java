@@ -6,6 +6,7 @@ package au.csiro.clinsight.fhir;
 
 import au.csiro.clinsight.TerminologyClient;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
+import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.google.common.collect.Sets;
 import java.util.HashMap;
 import java.util.List;
@@ -171,7 +172,8 @@ public abstract class ResourceDefinitions {
 
   static void checkInitialised() {
     if (status != ResourceDefinitionsStatus.INITIALISED) {
-      throw new IllegalStateException("Resource definitions have not been initialised");
+      throw new UnclassifiedServerFailureException(503,
+          "Resource definitions have not been initialised");
     }
   }
 
