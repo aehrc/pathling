@@ -82,7 +82,6 @@ public class SparkQueryExecutor implements QueryExecutor {
     if (configuration.getSparkSession() != null) {
       spark = configuration.getSparkSession();
     } else {
-      // TODO: Re-scope SparkSession to per-request.
       spark = SparkSession.builder()
           .appName("clinsight-server")
           .config("spark.master", configuration.getSparkMasterUrl())
@@ -91,6 +90,10 @@ public class SparkQueryExecutor implements QueryExecutor {
           .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
           .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
           .config("spark.executor.memory", configuration.getExecutorMemory())
+          .config("spark.dynamicAllocation.enabled", "true")
+          .config("spark.shuffle.service.enabled", "true")
+          .config("spark.dynamicAllocation.initialExecutors", "1")
+          .config("spark.scheduler.mode", "FAIR")
           .enableHiveSupport()
           .getOrCreate();
     }
