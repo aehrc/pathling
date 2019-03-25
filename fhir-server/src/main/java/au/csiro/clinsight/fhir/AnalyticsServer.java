@@ -41,8 +41,7 @@ public class AnalyticsServer extends RestfulServer {
 
   @Nonnull
   private static FhirContext buildFhirContext() {
-    FhirContext fhirContext = FhirContext.forDstu3();
-    return fhirContext;
+    return FhirContext.forDstu3();
   }
 
   @Override

@@ -66,8 +66,7 @@ abstract class TestConfiguration {
       .collect(Collectors.toMap(StructureDefinition::getUrl, sd -> sd));
 
   private static FhirContext initialiseFhirContext() {
-    FhirContext fhirContext = FhirContext.forDstu3();
-    return fhirContext;
+    return FhirContext.forDstu3();
   }
 
   static Server startFhirServer(AnalyticsServerConfiguration configuration) throws Exception {

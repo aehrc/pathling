@@ -55,7 +55,6 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
@@ -201,6 +200,7 @@ public class ExpressionParser {
         assert element.getType() != null;
         String updatedExpression;
         if (finalJoin.getJoinType() == JoinType.LATERAL_VIEW) {
+          assert finalJoin.getUdtfExpression() != null;
           updatedExpression = result.getSqlExpression().replace(finalJoin.getUdtfExpression(),
               finalJoin.getTableAlias());
         } else {
@@ -211,8 +211,7 @@ public class ExpressionParser {
       }
     }
 
-    @Nonnull
-    private static Join populateJoinFromMultiValueTraversal(ParseResult result, Join previousJoin,
+    private static void populateJoinFromMultiValueTraversal(ParseResult result, Join previousJoin,
         MultiValueTraversal multiValueTraversal) {
       // Construct an alias that can be used to refer to the generated table elsewhere in the query.
       LinkedList<String> pathComponents = tokenizePath(multiValueTraversal.getPath());
@@ -242,8 +241,6 @@ public class ExpressionParser {
       }
 
       result.getJoins().add(join);
-      previousJoin = join;
-      return previousJoin;
     }
 
     @Override
