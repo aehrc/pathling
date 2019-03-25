@@ -15,7 +15,6 @@ import org.hl7.fhir.dstu3.model.CapabilityStatement;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementKind;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementRestComponent;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementRestOperationComponent;
-import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementRestResourceComponent;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementSoftwareComponent;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.RestfulCapabilityMode;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.UnknownContentCode;
@@ -60,19 +59,9 @@ public class AnalyticsServerCapabilities implements
     capabilityStatement.setFhirVersion("3.0.1");
     capabilityStatement.setAcceptUnknown(UnknownContentCode.NO);
     capabilityStatement.setFormat(Arrays.asList(new CodeType("json"), new CodeType("xml")));
-    Reference aggregateQueryReference = new Reference("StructureDefinition/AggregateQuery-0");
-    Reference aggregateQueryResultReference = new Reference(
-        "StructureDefinition/AggregateQueryResult-0");
-    capabilityStatement
-        .setProfile(Arrays.asList(aggregateQueryReference, aggregateQueryResultReference));
     List<CapabilityStatementRestComponent> rest = new ArrayList<>();
     CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
     server.setMode(RestfulCapabilityMode.SERVER);
-    List<CapabilityStatementRestResourceComponent> resources = new ArrayList<>();
-    CapabilityStatementRestResourceComponent queryResource = new CapabilityStatementRestResourceComponent();
-    queryResource.setType("Basic");
-    queryResource.setProfile(aggregateQueryReference);
-    server.setResource(resources);
     List<CapabilityStatementRestOperationComponent> operations = new ArrayList<>();
     Reference queryOperationReference = new Reference("OperationDefinition/aggregateQuery-0");
     CapabilityStatementRestOperationComponent operation = new CapabilityStatementRestOperationComponent(
