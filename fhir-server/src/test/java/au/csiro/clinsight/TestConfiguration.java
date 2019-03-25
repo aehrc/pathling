@@ -10,8 +10,6 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.clinsight.fhir.AnalyticsServer;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
-import au.csiro.clinsight.resources.AggregateQuery;
-import au.csiro.clinsight.resources.AggregateQueryResult;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.google.common.collect.Sets;
@@ -32,7 +30,6 @@ import org.hl7.fhir.dstu3.model.Bundle;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.ResourceType;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.mockito.stubbing.Answer;
 
 /**
@@ -70,8 +67,6 @@ abstract class TestConfiguration {
 
   private static FhirContext initialiseFhirContext() {
     FhirContext fhirContext = FhirContext.forDstu3();
-    fhirContext.registerCustomType(AggregateQuery.class);
-    fhirContext.registerCustomType(AggregateQueryResult.class);
     return fhirContext;
   }
 
@@ -106,11 +101,10 @@ abstract class TestConfiguration {
   }
 
   @Nonnull
-  static HttpPost postFhirResource(IBaseResource resource, String url)
+  static HttpPost postFhirResource(String jsonResource, String url)
       throws UnsupportedEncodingException {
-    String json = jsonParser.encodeResourceToString(resource);
     HttpPost httpPost = new HttpPost(url);
-    httpPost.setEntity(new StringEntity(json));
+    httpPost.setEntity(new StringEntity(jsonResource));
     httpPost.addHeader("Content-Type", "application/fhir+json");
     httpPost.addHeader("Accept", "application/fhir+json");
     return httpPost;

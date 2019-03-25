@@ -8,10 +8,10 @@ import static au.csiro.clinsight.utilities.Strings.pathToUpperCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
 import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
+import au.csiro.clinsight.query.AggregateQuery;
+import au.csiro.clinsight.query.AggregateQuery.Aggregation;
+import au.csiro.clinsight.query.AggregateQuery.Grouping;
 import au.csiro.clinsight.query.spark.Join.JoinType;
-import au.csiro.clinsight.resources.AggregateQuery;
-import au.csiro.clinsight.resources.AggregateQuery.AggregationComponent;
-import au.csiro.clinsight.resources.AggregateQuery.GroupingComponent;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -36,8 +36,8 @@ class SparkQueryPlanner {
   private final List<ParseResult> groupingParseResults;
 
   SparkQueryPlanner(@Nonnull AggregateQuery query) {
-    List<AggregationComponent> aggregations = query.getAggregation();
-    List<GroupingComponent> groupings = query.getGrouping();
+    List<Aggregation> aggregations = query.getAggregations();
+    List<Grouping> groupings = query.getGroupings();
     if (aggregations == null || aggregations.isEmpty()) {
       throw new InvalidRequestException("Missing aggregation component within query");
     }
@@ -46,11 +46,11 @@ class SparkQueryPlanner {
     groupingParseResults = parseGroupings(groupings);
   }
 
-  private List<ParseResult> parseAggregation(@Nonnull List<AggregationComponent> aggregations) {
+  private List<ParseResult> parseAggregation(@Nonnull List<Aggregation> aggregations) {
     return aggregations.stream()
         .map(aggregation -> {
           // TODO: Support references to pre-defined aggregations.
-          String aggExpression = aggregation.getExpression().asStringValue();
+          String aggExpression = aggregation.getExpression();
           if (aggExpression == null) {
             throw new InvalidRequestException("Aggregation component must have expression");
           }
@@ -59,13 +59,13 @@ class SparkQueryPlanner {
         }).collect(Collectors.toList());
   }
 
-  private List<ParseResult> parseGroupings(List<GroupingComponent> groupings) {
+  private List<ParseResult> parseGroupings(List<Grouping> groupings) {
     List<ParseResult> groupingParseResults = new ArrayList<>();
     if (groupings != null) {
       groupingParseResults = groupings.stream()
           .map(grouping -> {
             // TODO: Support references to pre-defined dimensions.
-            String groupingExpression = grouping.getExpression().asStringValue();
+            String groupingExpression = grouping.getExpression();
             if (groupingExpression == null) {
               throw new InvalidRequestException("Grouping component must have expression");
             }
@@ -212,10 +212,6 @@ class SparkQueryPlanner {
         newJoins.add(join);
       }
     }
-//    for (Join join : lateralViewsToConvert) {
-//      boolean result = joins.remove(join);
-//      assert result;
-//    }
     newJoins.add(inlineQuery);
     lateralViewsToConvert.clear();
     return newJoins;

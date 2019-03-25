@@ -16,6 +16,7 @@ import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,11 +32,17 @@ public class AnalyticsServer extends RestfulServer {
   private QueryExecutor queryExecutor;
 
   public AnalyticsServer(AnalyticsServerConfiguration configuration) {
-    super(FhirContext.forDstu3());
+    super(buildFhirContext());
 
     logger.info("Creating new AnalyticsServer: " + configuration);
     this.configuration = configuration;
     setServerConformanceProvider(new AnalyticsServerCapabilities());
+  }
+
+  @Nonnull
+  private static FhirContext buildFhirContext() {
+    FhirContext fhirContext = FhirContext.forDstu3();
+    return fhirContext;
   }
 
   @Override

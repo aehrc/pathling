@@ -6,11 +6,9 @@ package au.csiro.clinsight;
 
 import static au.csiro.clinsight.TestConfiguration.FHIR_SERVER_URL;
 import static au.csiro.clinsight.TestConfiguration.createMockDataset;
-import static au.csiro.clinsight.TestConfiguration.jsonParser;
 import static au.csiro.clinsight.TestConfiguration.mockDefinitionRetrieval;
 import static au.csiro.clinsight.TestConfiguration.postFhirResource;
 import static au.csiro.clinsight.TestConfiguration.startFhirServer;
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -18,17 +16,13 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
-import au.csiro.clinsight.resources.AggregateQuery;
-import au.csiro.clinsight.resources.AggregateQuery.AggregationComponent;
-import au.csiro.clinsight.resources.AggregateQuery.GroupingComponent;
-import au.csiro.clinsight.resources.AggregateQueryResult;
-import au.csiro.clinsight.resources.AggregateQueryResult.LabelComponent;
-import au.csiro.clinsight.resources.AggregateQueryResult.ResultComponent;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -41,14 +35,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.eclipse.jetty.server.Server;
-import org.hl7.fhir.dstu3.model.CodeType;
-import org.hl7.fhir.dstu3.model.OperationOutcome;
-import org.hl7.fhir.dstu3.model.OperationOutcome.IssueSeverity;
-import org.hl7.fhir.dstu3.model.OperationOutcome.IssueType;
-import org.hl7.fhir.dstu3.model.OperationOutcome.OperationOutcomeIssueComponent;
-import org.hl7.fhir.dstu3.model.Reference;
-import org.hl7.fhir.dstu3.model.StringType;
-import org.hl7.fhir.dstu3.model.UnsignedIntType;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
@@ -82,6 +68,70 @@ public class QueryTest {
   @SuppressWarnings("unchecked")
   @Test
   public void simpleQuery() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of patients\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.id.distinct().count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Gender\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.gender\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueCode\": \"female\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"result\",\n"
+        + "          \"valueUnsignedInt\": 70070\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueCode\": \"male\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"result\",\n"
+        + "          \"valueUnsignedInt\": 73646\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
     String expectedSql =
         "SELECT patient.gender AS `Gender`, count(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
@@ -101,38 +151,12 @@ public class QueryTest {
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(fakeResult);
 
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("Patient.id.distinct().count()"));
-    query.setAggregation(singletonList(aggregation));
-
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Gender"));
-    grouping.setExpression(new StringType("Patient.gender"));
-    query.setGrouping(singletonList(grouping));
-
-    AggregateQueryResult expectedResult = new AggregateQueryResult();
-    expectedResult.setQuery(new Reference(query));
-    AggregateQueryResult.GroupingComponent femaleGrouping = new AggregateQueryResult.GroupingComponent();
-    femaleGrouping.setLabel(singletonList(new LabelComponent(new CodeType("female"))));
-    femaleGrouping
-        .setResult(singletonList(new ResultComponent(new UnsignedIntType(70070))));
-    AggregateQueryResult.GroupingComponent maleGrouping = new AggregateQueryResult.GroupingComponent();
-    maleGrouping.setLabel(singletonList(new LabelComponent(new CodeType("male"))));
-    maleGrouping
-        .setResult(singletonList(new ResultComponent(new UnsignedIntType(73646))));
-    expectedResult.setGrouping(Arrays.asList(femaleGrouping, maleGrouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
-      AggregateQueryResult queryResult = (AggregateQueryResult) jsonParser
-          .parseResource(response.getEntity().getContent());
-      String queryResultJson = jsonParser.encodeResourceToString(queryResult);
-      String expectedResultJson = jsonParser.encodeResourceToString(expectedResult);
-      JSONAssert.assertEquals(queryResultJson, expectedResultJson, true);
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
 
     verify(mockSpark).sql("USE clinsight");
@@ -141,127 +165,246 @@ public class QueryTest {
   }
 
   @Test
-  public void invalidAggregationFunction() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void invalidAggregationFunction() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.id.foo()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(new StringType("Patient.id.foo()"));
-    query.setAggregation(singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Unrecognised function: foo\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo("Unrecognised function: foo");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @Test
-  public void invalidResourceNameInGrouping() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void invalidResourceNameInGrouping() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of patients\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.id.distinct().count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Gender\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Foo.gender\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("Patient.id.distinct().count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Resource or data type not known: Foo\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Gender"));
-    grouping.setExpression(new StringType("Foo.gender"));
-    query.setGrouping(Collections.singletonList(grouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo("Resource or data type not known: Foo");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @Test
-  public void invalidElementNameInAggregation() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void invalidElementNameInAggregation() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.foo.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(new StringType("Patient.foo.count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Element not known: Patient.foo\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo("Element not known: Patient.foo");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @Test
-  public void nonPrimitiveElementInAggregation() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void nonPrimitiveElementInAggregation() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.identifier.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(new StringType("Patient.identifier.count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Input to count function must be of primitive type: Patient.identifier (Identifier)\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo(
-          "Input to count function must be of primitive type: Patient.identifier (Identifier)");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @Test
-  public void nonPrimitiveElementInGrouping() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void nonPrimitiveElementInGrouping() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of patients\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.id.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Photo\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.photo\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("Patient.id.count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Grouping expression is not of primitive type: Patient.photo (Attachment)\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Photo"));
-    grouping.setExpression(new StringType("Patient.photo"));
-    query.setGrouping(Collections.singletonList(grouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo(
-          "Grouping expression is not of primitive type: Patient.photo (Attachment)");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @SuppressWarnings("unchecked")
   @Test
   public void multiValueTraversalInAggregation() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of patients\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.identifier.type.coding.code.distinct().count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
     String expectedSql =
         "SELECT count(DISTINCT patientIdentifierTypeCoding.code) AS `Number of patients` "
             + "FROM patient "
@@ -273,15 +416,7 @@ public class QueryTest {
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of patients"));
-    aggregation
-        .setExpression(new StringType("Patient.identifier.type.coding.code.distinct().count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
 
     verify(mockSpark).sql("USE clinsight");
@@ -291,6 +426,38 @@ public class QueryTest {
   @SuppressWarnings("unchecked")
   @Test
   public void multiValueTraversalInGrouping() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of patients\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.id.distinct().count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Language\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.communication.language.coding.code\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
     String expectedSql = "SELECT patientCommunicationLanguageCoding.code AS `Language`, "
         + "count(DISTINCT patient.id) AS `Number of patients` "
         + "FROM patient "
@@ -303,19 +470,7 @@ public class QueryTest {
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("Patient.id.distinct().count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
-
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Language"));
-    grouping.setExpression(new StringType("Patient.communication.language.coding.code"));
-    query.setGrouping(Collections.singletonList(grouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
 
     verify(mockSpark).sql("USE clinsight");
@@ -325,6 +480,38 @@ public class QueryTest {
   @SuppressWarnings("unchecked")
   @Test
   public void multiValuePrimitive() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of allergies\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"AllergyIntolerance.id.distinct().count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Allergy category\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"AllergyIntolerance.category\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
     String expectedSql =
         "SELECT allergyIntoleranceCategory AS `Allergy category`, count(DISTINCT allergyintolerance.id) AS `Number of allergies` "
             + "FROM allergyintolerance "
@@ -336,19 +523,7 @@ public class QueryTest {
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of allergies"));
-    aggregation.setExpression(new StringType("AllergyIntolerance.id.distinct().count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
-
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Allergy category"));
-    grouping.setExpression(new StringType("AllergyIntolerance.category"));
-    query.setGrouping(Collections.singletonList(grouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
 
     verify(mockSpark).sql("USE clinsight");
@@ -358,6 +533,38 @@ public class QueryTest {
   @SuppressWarnings("unchecked")
   @Test
   public void referenceTraversalInGrouping() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of allergies/intolerances\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"AllergyIntolerance.id.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Patient gender\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"AllergyIntolerance.patient.resolve().gender\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
     String expectedSql =
         "SELECT allergyIntolerancePatient.gender AS `Patient gender`, count(allergyintolerance.id) AS `Number of allergies/intolerances` "
             + "FROM allergyintolerance "
@@ -369,19 +576,7 @@ public class QueryTest {
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of allergies/intolerances"));
-    aggregation.setExpression(new StringType("AllergyIntolerance.id.count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
-
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Patient gender"));
-    grouping.setExpression(new StringType("AllergyIntolerance.patient.resolve().gender"));
-    query.setGrouping(Collections.singletonList(grouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
 
     verify(mockSpark).sql("USE clinsight");
@@ -391,6 +586,38 @@ public class QueryTest {
   @SuppressWarnings("unchecked")
   @Test
   public void referenceWithDependencyOnLateralView() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of diagnostic reports\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"DiagnosticReport.id.distinct().count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Observation type\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"DiagnosticReport.result.resolve().code.coding.display\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
     String expectedSql =
         "SELECT diagnosticReportResultCodeCoding.display AS `Observation type`, count(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
             + "FROM diagnosticreport "
@@ -408,19 +635,7 @@ public class QueryTest {
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of diagnostic reports"));
-    aggregation.setExpression(new StringType("DiagnosticReport.id.distinct().count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
-
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Observation type"));
-    grouping.setExpression(new StringType("DiagnosticReport.result.resolve().code.coding.display"));
-    query.setGrouping(Collections.singletonList(grouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
 
     verify(mockSpark).sql("USE clinsight");
@@ -430,6 +645,38 @@ public class QueryTest {
   @SuppressWarnings("unchecked")
   @Test
   public void polymorphicReferenceTraversal() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of conditions\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.id.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Context encounter type\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.context.resolve(Encounter).type.coding.display\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
     String expectedSql =
         "SELECT conditionContextTypeCoding.display AS `Context encounter type`, count(condition.id) AS `Number of conditions` "
             + "FROM condition "
@@ -443,20 +690,7 @@ public class QueryTest {
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of conditions"));
-    aggregation.setExpression(new StringType("Condition.id.count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
-
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Context encounter type"));
-    grouping
-        .setExpression(new StringType("Condition.context.resolve(Encounter).type.coding.display"));
-    query.setGrouping(Collections.singletonList(grouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
 
     verify(mockSpark).sql("USE clinsight");
@@ -466,6 +700,38 @@ public class QueryTest {
   @SuppressWarnings("unchecked")
   @Test
   public void anyReferenceTraversal() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of conditions\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.id.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Associated diagnosis\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.evidence.detail.resolve(DiagnosticReport).codedDiagnosis.coding.display\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
     String expectedSql =
         "SELECT conditionEvidenceDetailCodedDiagnosisCoding.display AS `Associated diagnosis`, count(condition.id) AS `Number of conditions` "
             + "FROM condition "
@@ -485,21 +751,7 @@ public class QueryTest {
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of conditions"));
-    aggregation.setExpression(new StringType("Condition.id.count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
-
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Associated diagnosis"));
-    grouping.setExpression(
-        new StringType(
-            "Condition.evidence.detail.resolve(DiagnosticReport).codedDiagnosis.coding.display"));
-    query.setGrouping(Collections.singletonList(grouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
 
     verify(mockSpark).sql("USE clinsight");
@@ -507,77 +759,151 @@ public class QueryTest {
   }
 
   @Test
-  public void nonReferenceInvokerForResolve() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void nonReferenceInvokerForResolve() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.evidence.resolve().something\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(new StringType("Condition.evidence.resolve().something"));
-    query.setAggregation(Collections.singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Input to resolve function must be a Reference: Condition.evidence (BackboneElement)\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo(
-          "Input to resolve function must be a Reference: Condition.evidence (BackboneElement)");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @Test
-  public void noArgumentToPolymorphicResolve() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void noArgumentToPolymorphicResolve() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.evidence.detail.resolve().codedDiagnosis.coding.display\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(
-        new StringType("Condition.evidence.detail.resolve().codedDiagnosis.coding.display"));
-    query.setAggregation(Collections.singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Attempt to resolve polymorphic reference without providing an argument: Condition.evidence.detail\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo(
-          "Attempt to resolve polymorphic reference without providing an argument: Condition.evidence.detail");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @Test
-  public void nonResourceArgumentToResolve() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void nonResourceArgumentToResolve() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.evidence.detail.resolve(DiagnosticReport.id).codedDiagnosis.coding.display\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(
-        new StringType(
-            "Condition.evidence.detail.resolve(DiagnosticReport.id).codedDiagnosis.coding.display"));
-    query.setAggregation(Collections.singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Argument to resolve function must be a base resource type: DiagnosticReport.id (id)\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo(
-          "Argument to resolve function must be a base resource type: DiagnosticReport.id (id)");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @SuppressWarnings("unchecked")
   @Test
   public void reverseReferenceTraversalInGrouping() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of patients\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.id.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Reason for encounter\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).reason.coding.display\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
     String expectedSql =
         "SELECT patientEncounterAsSubjectReasonCoding.display AS `Reason for encounter`, count(patient.id) AS `Number of patients` "
             + "FROM patient "
@@ -591,21 +917,7 @@ public class QueryTest {
     when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
-    AggregateQuery query = new AggregateQuery();
-
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setLabel(new StringType("Number of patients"));
-    aggregation.setExpression(new StringType("Patient.id.count()"));
-    query.setAggregation(Collections.singletonList(aggregation));
-
-    GroupingComponent grouping = new GroupingComponent();
-    grouping.setLabel(new StringType("Reason for encounter"));
-    grouping.setExpression(
-        new StringType(
-            "Patient.reverseResolve(Encounter.subject).reason.coding.display"));
-    query.setGrouping(Collections.singletonList(grouping));
-
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
 
     verify(mockSpark).sql("USE clinsight");
@@ -613,50 +925,76 @@ public class QueryTest {
   }
 
   @Test
-  public void nonResourceInvokerForReverseResolve() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void nonResourceInvokerForReverseResolve() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.id.reverseResolve(Encounter.subject).diagnosis\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(
-        new StringType(
-            "Patient.id.reverseResolve(Encounter.subject).diagnosis"));
-    query.setAggregation(Collections.singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Input to reverseResolve function must be a Resource: Patient.id (id)\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo(
-          "Input to reverseResolve function must be a Resource: Patient.id (id)");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @Test
-  public void nonReferenceArgumentToReverseResolve() throws IOException {
-    AggregateQuery query = new AggregateQuery();
+  public void nonReferenceArgumentToReverseResolve() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.reverseResolve(Encounter).diagnosis\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    AggregationComponent aggregation = new AggregationComponent();
-    aggregation.setExpression(
-        new StringType(
-            "Patient.reverseResolve(Encounter).diagnosis"));
-    query.setAggregation(Collections.singletonList(aggregation));
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
+        + "    {\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Argument to reverseResolve function must be a Reference: Encounter (Encounter)\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
 
-    HttpPost httpPost = postFhirResource(query, QUERY_URL);
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
-      OperationOutcome opOutcome = (OperationOutcome) jsonParser
-          .parseResource(response.getEntity().getContent());
-      assertThat(opOutcome.getIssue()).hasSize(1);
-      OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
-      assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
-      assertThat(issue.getCode()).isEqualTo(IssueType.PROCESSING);
-      assertThat(issue.getDiagnostics()).isEqualTo(
-          "Argument to reverseResolve function must be a Reference: Encounter (Encounter)");
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 

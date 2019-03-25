@@ -9,11 +9,10 @@ import static au.csiro.clinsight.utilities.Strings.backTicks;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.ResourceDefinitions;
+import au.csiro.clinsight.query.AggregateQuery;
+import au.csiro.clinsight.query.AggregateQueryResult;
+import au.csiro.clinsight.query.AggregateQueryResult.Grouping;
 import au.csiro.clinsight.query.QueryExecutor;
-import au.csiro.clinsight.resources.AggregateQuery;
-import au.csiro.clinsight.resources.AggregateQueryResult;
-import au.csiro.clinsight.resources.AggregateQueryResult.LabelComponent;
-import au.csiro.clinsight.resources.AggregateQueryResult.ResultComponent;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
@@ -30,7 +29,6 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.dstu3.model.Reference;
 import org.hl7.fhir.dstu3.model.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,14 +122,14 @@ public class SparkQueryExecutor implements QueryExecutor {
     if (queryPlan.getGroupings() != null && !queryPlan.getGroupings().isEmpty()) {
       for (int i = 0; i < queryPlan.getGroupings().size(); i++) {
         String grouping = queryPlan.getGroupings().get(i);
-        String label = backTicks(query.getGrouping().get(i).getLabel().asStringValue());
+        String label = backTicks(query.getGroupings().get(i).getLabel());
         selectExpressions.add(grouping + " AS " + label);
       }
     }
     if (queryPlan.getAggregations() != null && !queryPlan.getAggregations().isEmpty()) {
       for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
         String aggregation = queryPlan.getAggregations().get(i);
-        String label = backTicks(query.getAggregation().get(i).getLabel().asStringValue());
+        String label = backTicks(query.getAggregations().get(i).getLabel());
         selectExpressions.add(aggregation + " AS " + label);
       }
     }
@@ -170,16 +168,15 @@ public class SparkQueryExecutor implements QueryExecutor {
   private AggregateQueryResult queryResultFromDataset(@Nonnull Dataset<Row> dataset,
       @Nonnull AggregateQuery query, QueryPlan queryPlan) {
     List<Row> rows = dataset.collectAsList();
-    int numGroupings = query.getGrouping().size();
-    int numAggregations = query.getAggregation().size();
+    int numGroupings = query.getGroupings().size();
+    int numAggregations = query.getAggregations().size();
 
     AggregateQueryResult queryResult = new AggregateQueryResult();
-    queryResult.setQuery(new Reference(query));
 
-    List<AggregateQueryResult.GroupingComponent> groupings = rows.stream()
+    List<Grouping> groupings = rows.stream()
         .map(mapRowToGrouping(queryPlan, numGroupings, numAggregations))
         .collect(Collectors.toList());
-    queryResult.setGrouping(groupings);
+    queryResult.getGroupings().addAll(groupings);
 
     return queryResult;
   }
@@ -188,37 +185,23 @@ public class SparkQueryExecutor implements QueryExecutor {
    * Translate a Dataset Row into a grouping component for inclusion within an
    * AggregateQueryResult.
    */
-  private Function<Row, AggregateQueryResult.GroupingComponent> mapRowToGrouping(
+  private Function<Row, AggregateQueryResult.Grouping> mapRowToGrouping(
       @Nonnull QueryPlan queryPlan, int numGroupings,
       int numAggregations) {
     return row -> {
-      AggregateQueryResult.GroupingComponent grouping = new AggregateQueryResult.GroupingComponent();
+      AggregateQueryResult.Grouping grouping = new AggregateQueryResult.Grouping();
 
-      List<LabelComponent> labels = new ArrayList<>();
       for (int i = 0; i < numGroupings; i++) {
-        LabelComponent label = new LabelComponent();
         String fhirType = queryPlan.getGroupingTypes().get(i);
         Type value = getValueFromRow(row, i, fhirType);
-        // Null values are represented as the absence of a value, as per the FHIR spec.
-        if (value != null) {
-          label.setValue(value);
-        }
-        labels.add(label);
+        grouping.getLabels().add(value);
       }
-      grouping.setLabel(labels);
 
-      List<ResultComponent> results = new ArrayList<>();
       for (int i = 0; i < numAggregations; i++) {
-        ResultComponent result = new ResultComponent();
         String fhirType = queryPlan.getAggregationTypes().get(i);
         Type value = getValueFromRow(row, i + numGroupings, fhirType);
-        // Null values are represented as the absence of a value, as per the FHIR spec.
-        if (value != null) {
-          result.setValue(value);
-        }
-        results.add(result);
+        grouping.getResults().add(value);
       }
-      grouping.setResult(results);
 
       return grouping;
     };

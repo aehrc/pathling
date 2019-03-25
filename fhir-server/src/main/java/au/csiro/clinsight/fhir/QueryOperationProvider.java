@@ -5,11 +5,12 @@
 
 package au.csiro.clinsight.fhir;
 
+import au.csiro.clinsight.query.AggregateQuery;
+import au.csiro.clinsight.query.AggregateQueryResult;
 import au.csiro.clinsight.query.QueryExecutor;
-import au.csiro.clinsight.resources.AggregateQuery;
-import au.csiro.clinsight.resources.AggregateQueryResult;
 import ca.uhn.fhir.rest.annotation.Operation;
-import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.annotation.ResourceParam;
+import org.hl7.fhir.dstu3.model.Parameters;
 
 /**
  * @author John Grimes
@@ -26,8 +27,10 @@ class QueryOperationProvider {
 
   @SuppressWarnings("unused")
   @Operation(name = "$aggregateQuery", idempotent = true)
-  public AggregateQueryResult queryOperation(@OperationParam(name = "query") AggregateQuery query) {
-    return queryExecutor.execute(query);
+  public Parameters queryOperation(@ResourceParam Parameters parameters) {
+    AggregateQuery query = new AggregateQuery(parameters);
+    AggregateQueryResult result = queryExecutor.execute(query);
+    return result.toParameters();
   }
 
 }
