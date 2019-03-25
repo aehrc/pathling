@@ -131,7 +131,7 @@ public abstract class ResourceDefinitions {
       scheduledThreadPoolExecutor.schedule(retryTask, RETRY_DELAY_SECONDS, TimeUnit.SECONDS);
       status = ResourceDefinitionsStatus.WAITING_FOR_RETRY;
       logger.warn("Unable to connect to terminology server, retrying in " + RETRY_DELAY_SECONDS
-          + " seconds: " + terminologyClient.getServerBase(), e);
+          + " seconds: " + terminologyClient.getServerBase());
     } catch (Exception e) {
       // If there is any other sort of error, clear the state and update the status.
       clearDefinitions();
