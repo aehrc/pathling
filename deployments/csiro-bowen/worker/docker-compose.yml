@@ -7,6 +7,7 @@ services:
     environment:
       SPARK_WORKER_MEMORY: 28g
       SPARK_WORKER_CORES: 6
+      SPARK_WORKER_OPTS: "-Dspark.shuffle.service.enabled=true"
       HIVE_SITE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore"
     restart: unless-stopped
   datanode:
