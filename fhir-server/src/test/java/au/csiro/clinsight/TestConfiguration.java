@@ -23,7 +23,6 @@ import javax.annotation.Nonnull;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.SparkSession;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -94,13 +93,6 @@ abstract class TestConfiguration {
               .orElse(null);
         }
     );
-  }
-
-  @SuppressWarnings("unchecked")
-  static void mockTableCaching(SparkSession mockSpark) {
-    Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql("SHOW TABLES")).thenReturn(mockDataset);
-    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
   }
 
   static Dataset createMockDataset() {

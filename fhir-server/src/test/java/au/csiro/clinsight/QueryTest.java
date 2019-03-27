@@ -7,12 +7,12 @@ package au.csiro.clinsight;
 import static au.csiro.clinsight.TestConfiguration.FHIR_SERVER_URL;
 import static au.csiro.clinsight.TestConfiguration.createMockDataset;
 import static au.csiro.clinsight.TestConfiguration.mockDefinitionRetrieval;
-import static au.csiro.clinsight.TestConfiguration.mockTableCaching;
 import static au.csiro.clinsight.TestConfiguration.postFhirResource;
 import static au.csiro.clinsight.TestConfiguration.startFhirServer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
@@ -56,7 +56,6 @@ public class QueryTest {
     TerminologyClient mockTerminologyClient = mock(TerminologyClient.class);
     mockSpark = mock(SparkSession.class);
     mockDefinitionRetrieval(mockTerminologyClient);
-    mockTableCaching(mockSpark);
 
     AnalyticsServerConfiguration configuration = new AnalyticsServerConfiguration();
     configuration.setTerminologyClient(mockTerminologyClient);
@@ -162,6 +161,7 @@ public class QueryTest {
 
     verify(mockSpark).sql("USE clinsight");
     verify(mockSpark).sql(expectedSql);
+    verifyNoMoreInteractions(mockSpark);
   }
 
   @Test

@@ -29,7 +29,6 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.storage.StorageLevel;
 import org.hl7.fhir.dstu3.model.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,7 +63,6 @@ public class SparkQueryExecutor implements QueryExecutor {
     initialiseSpark();
     initialiseResourceDefinitions();
     spark.sql("USE clinsight");
-    cacheTables();
   }
 
   private void initialiseResourceDefinitions() {
@@ -96,16 +94,6 @@ public class SparkQueryExecutor implements QueryExecutor {
           .config("spark.scheduler.mode", "FAIR")
           .enableHiveSupport()
           .getOrCreate();
-    }
-  }
-
-  private void cacheTables() {
-    Dataset<Row> tables = spark.sql("SHOW TABLES");
-    List<Row> rows = tables.collectAsList();
-    for (Row row : rows) {
-      String tableName = row.getString(1);
-      spark.catalog().cacheTable(tableName, StorageLevel.MEMORY_AND_DISK());
-      logger.info("Caching of table \"" + tableName + "\" completed");
     }
   }
 

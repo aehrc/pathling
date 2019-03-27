@@ -6,7 +6,6 @@ package au.csiro.clinsight;
 
 import static au.csiro.clinsight.TestConfiguration.FHIR_SERVER_URL;
 import static au.csiro.clinsight.TestConfiguration.mockDefinitionRetrieval;
-import static au.csiro.clinsight.TestConfiguration.mockTableCaching;
 import static au.csiro.clinsight.TestConfiguration.startFhirServer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -35,7 +34,6 @@ public class AnalyticsServerTest {
     TerminologyClient mockTerminologyClient = mock(TerminologyClient.class);
     SparkSession mockSpark = mock(SparkSession.class);
     mockDefinitionRetrieval(mockTerminologyClient);
-    mockTableCaching(mockSpark);
 
     AnalyticsServerConfiguration configuration = new AnalyticsServerConfiguration();
     configuration.setTerminologyClient(mockTerminologyClient);
