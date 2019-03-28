@@ -7,15 +7,19 @@ package au.csiro.clinsight.query.spark;
 import static au.csiro.clinsight.fhir.ElementResolver.resolveElement;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.getResourceByUrl;
 import static au.csiro.clinsight.fhir.ResourceDefinitions.isResource;
+import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
+import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
+import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.ResolvedElement;
 import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.query.spark.Join.JoinType;
-import au.csiro.clinsight.utilities.Strings;
+import au.csiro.clinsight.query.spark.ParseResult.ParseResultType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 
 /**
@@ -29,12 +33,12 @@ public class ResolveFunction implements ExpressionFunction {
     if (input == null) {
       throw new InvalidRequestException("Missing input expression for resolve function");
     }
-    if (input.getResultType() != ResolvedElementType.REFERENCE) {
+    if (input.getElementType() != ResolvedElementType.REFERENCE) {
       throw new InvalidRequestException(
-          "Input to resolve function must be a Reference: " + input.getFhirPathExpression() + " ("
-              + input.getResultTypeCode() + ")");
+          "Input to resolve function must be a Reference: " + input.getExpression() + " ("
+              + input.getElementTypeCode() + ")");
     }
-    ResolvedElement element = resolveElement(input.getFhirPathExpression());
+    ResolvedElement element = resolveElement(input.getExpression());
     assert element.getType() == ResolvedElementType.REFERENCE;
     String referenceTypeCode;
     if (element.getReferenceTypes().size() > 1) {
@@ -49,8 +53,8 @@ public class ResolveFunction implements ExpressionFunction {
       }
     }
 
-    List<String> pathComponents = Strings.tokenizePath(element.getPath());
-    String joinAlias = Strings.pathToLowerCamelCase(pathComponents);
+    List<String> pathComponents = tokenizePath(element.getPath());
+    String joinAlias = pathToLowerCamelCase(pathComponents);
     String joinExpression = "INNER JOIN " + referenceTypeCode.toLowerCase() + " " + joinAlias
         + " ON " + input.getSqlExpression() + ".reference = "
         + joinAlias + ".id";
@@ -59,9 +63,10 @@ public class ResolveFunction implements ExpressionFunction {
     if (!input.getJoins().isEmpty()) {
       join.setDependsUpon(input.getJoins().last());
     }
-    input.setResultType(ResolvedElementType.RESOURCE);
-    input.setResultTypeCode(referenceTypeCode);
-    input.setFhirPathExpression(referenceTypeCode);
+    input.setResultType(ParseResultType.ELEMENT_PATH);
+    input.setElementType(ResolvedElementType.RESOURCE);
+    input.setElementTypeCode(referenceTypeCode);
+    input.setExpression(referenceTypeCode);
     input.setSqlExpression(joinAlias);
     input.getJoins().add(join);
     return input;
@@ -72,7 +77,7 @@ public class ResolveFunction implements ExpressionFunction {
       @Nonnull List<ParseResult> arguments) {
     String referenceTypeCode;
     if (arguments.size() == 1) {
-      String argument = arguments.get(0).getFhirPathExpression();
+      String argument = arguments.get(0).getExpression();
       ResolvedElement argumentElement = resolveElement(argument);
       referenceTypeCode = argumentElement.getTypeCode();
       if (argumentElement.getType() != ResolvedElementType.RESOURCE
@@ -84,9 +89,17 @@ public class ResolveFunction implements ExpressionFunction {
     } else {
       throw new InvalidRequestException(
           "Attempt to resolve polymorphic reference without providing an argument: " + input
-              .getFhirPathExpression());
+              .getExpression());
     }
     return referenceTypeCode;
+  }
+
+  @Override
+  public void setTerminologyClient(@Nonnull TerminologyClient terminologyClient) {
+  }
+
+  @Override
+  public void setSparkSession(@Nonnull SparkSession spark) {
   }
 
 }

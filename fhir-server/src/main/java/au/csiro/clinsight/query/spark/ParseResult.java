@@ -25,10 +25,11 @@ class ParseResult {
   @Nonnull
   private final Set<String> fromTable = new HashSet<>();
 
+  private String expression;
   private String sqlExpression;
-  private String fhirPathExpression;
-  private String resultTypeCode;
-  private ResolvedElementType resultType;
+  private ParseResultType resultType;
+  private ResolvedElementType elementType;
+  private String elementTypeCode;
 
   ParseResult() {
   }
@@ -41,28 +42,36 @@ class ParseResult {
     this.sqlExpression = sqlExpression;
   }
 
-  String getFhirPathExpression() {
-    return fhirPathExpression;
+  String getExpression() {
+    return expression;
   }
 
-  void setFhirPathExpression(String fhirPathExpression) {
-    this.fhirPathExpression = fhirPathExpression;
+  void setExpression(String expression) {
+    this.expression = expression;
   }
 
-  String getResultTypeCode() {
-    return resultTypeCode;
+  String getElementTypeCode() {
+    return elementTypeCode;
   }
 
-  void setResultTypeCode(String resultTypeCode) {
-    this.resultTypeCode = resultTypeCode;
+  void setElementTypeCode(String elementTypeCode) {
+    this.elementTypeCode = elementTypeCode;
   }
 
-  ResolvedElementType getResultType() {
+  public ParseResultType getResultType() {
     return resultType;
   }
 
-  void setResultType(ResolvedElementType resultType) {
+  public void setResultType(ParseResultType resultType) {
     this.resultType = resultType;
+  }
+
+  ResolvedElementType getElementType() {
+    return elementType;
+  }
+
+  void setElementType(ResolvedElementType elementType) {
+    this.elementType = elementType;
   }
 
   @Nonnull
@@ -73,6 +82,10 @@ class ParseResult {
   @Nonnull
   SortedSet<Join> getJoins() {
     return joins;
+  }
+
+  public enum ParseResultType {
+    ELEMENT_PATH, STRING_LITERAL
   }
 
 }

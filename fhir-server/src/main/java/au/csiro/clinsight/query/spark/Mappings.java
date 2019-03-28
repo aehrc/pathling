@@ -77,6 +77,7 @@ abstract class Mappings {
     put("distinct", new DistinctFunction());
     put("resolve", new ResolveFunction());
     put("reverseResolve", new ReverseResolveFunction());
+    put("inValueSet", new InValueSetFunction());
   }};
 
   static Class getFhirClass(String fhirTypeCode) {

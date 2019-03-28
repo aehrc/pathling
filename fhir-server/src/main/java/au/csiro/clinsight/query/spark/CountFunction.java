@@ -4,11 +4,13 @@
 
 package au.csiro.clinsight.query.spark;
 
+import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.SparkSession;
 
 /**
  * @author John Grimes
@@ -24,14 +26,22 @@ public class CountFunction implements ExpressionFunction {
     if (!arguments.isEmpty()) {
       throw new InvalidRequestException("Count function does not accept arguments");
     }
-    if (input.getResultType() != ResolvedElementType.PRIMITIVE) {
+    if (input.getElementType() != ResolvedElementType.PRIMITIVE) {
       throw new InvalidRequestException(
-          "Input to count function must be of primitive type: " + input.getFhirPathExpression()
-              + " (" + input.getResultTypeCode() + ")");
+          "Input to count function must be of primitive type: " + input.getExpression()
+              + " (" + input.getElementTypeCode() + ")");
     }
     input.setSqlExpression("count(" + input.getSqlExpression() + ")");
-    input.setResultTypeCode("unsignedInt");
+    input.setElementTypeCode("unsignedInt");
     return input;
+  }
+
+  @Override
+  public void setTerminologyClient(@Nonnull TerminologyClient terminologyClient) {
+  }
+
+  @Override
+  public void setSparkSession(@Nonnull SparkSession spark) {
   }
 
 }

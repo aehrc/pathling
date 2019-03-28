@@ -4,9 +4,9 @@
 
 package au.csiro.clinsight.query.spark;
 
-import static au.csiro.clinsight.utilities.Strings.pathToUpperCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
+import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.query.AggregateQuery;
 import au.csiro.clinsight.query.AggregateQuery.Aggregation;
@@ -23,6 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.SparkSession;
 
 /**
  * This class knows how to take an AggregateQuery and convert it into an object which contains all
@@ -32,10 +33,15 @@ import javax.annotation.Nonnull;
  */
 class SparkQueryPlanner {
 
+  private final TerminologyClient terminologyClient;
+  private final SparkSession spark;
   private final List<ParseResult> aggregationParseResults;
   private final List<ParseResult> groupingParseResults;
 
-  SparkQueryPlanner(@Nonnull AggregateQuery query) {
+  SparkQueryPlanner(@Nonnull TerminologyClient terminologyClient,
+      @Nonnull SparkSession spark, @Nonnull AggregateQuery query) {
+    this.terminologyClient = terminologyClient;
+    this.spark = spark;
     List<Aggregation> aggregations = query.getAggregations();
     List<Grouping> groupings = query.getGroupings();
     if (aggregations == null || aggregations.isEmpty()) {
@@ -49,12 +55,11 @@ class SparkQueryPlanner {
   private List<ParseResult> parseAggregation(@Nonnull List<Aggregation> aggregations) {
     return aggregations.stream()
         .map(aggregation -> {
-          // TODO: Support references to pre-defined aggregations.
           String aggExpression = aggregation.getExpression();
           if (aggExpression == null) {
             throw new InvalidRequestException("Aggregation component must have expression");
           }
-          ExpressionParser aggregationParser = new ExpressionParser();
+          ExpressionParser aggregationParser = new ExpressionParser(terminologyClient, spark);
           return aggregationParser.parse(aggExpression);
         }).collect(Collectors.toList());
   }
@@ -64,17 +69,16 @@ class SparkQueryPlanner {
     if (groupings != null) {
       groupingParseResults = groupings.stream()
           .map(grouping -> {
-            // TODO: Support references to pre-defined dimensions.
             String groupingExpression = grouping.getExpression();
             if (groupingExpression == null) {
               throw new InvalidRequestException("Grouping component must have expression");
             }
-            ExpressionParser groupingParser = new ExpressionParser();
+            ExpressionParser groupingParser = new ExpressionParser(terminologyClient, spark);
             ParseResult result = groupingParser.parse(groupingExpression);
-            if (result.getResultType() != ResolvedElementType.PRIMITIVE) {
+            if (result.getElementType() != ResolvedElementType.PRIMITIVE) {
               throw new InvalidRequestException(
                   "Grouping expression is not of primitive type: " + groupingExpression + " ("
-                      + result.getResultTypeCode() + ")");
+                      + result.getElementTypeCode() + ")");
             }
             return result;
           }).collect(Collectors.toList());
@@ -93,7 +97,7 @@ class SparkQueryPlanner {
 
     // Get aggregation data types from the parse results.
     List<String> aggregationTypes = aggregationParseResults.stream()
-        .map(ParseResult::getResultTypeCode)
+        .map(ParseResult::getElementTypeCode)
         .collect(Collectors.toList());
     queryPlan.setAggregationTypes(aggregationTypes);
 
@@ -105,7 +109,7 @@ class SparkQueryPlanner {
 
     // Get grouping data types from the parse results.
     List<String> groupingTypes = groupingParseResults.stream()
-        .map(ParseResult::getResultTypeCode)
+        .map(ParseResult::getElementTypeCode)
         .collect(Collectors.toList());
     queryPlan.setGroupingTypes(groupingTypes);
 
@@ -173,32 +177,43 @@ class SparkQueryPlanner {
     // Package up lateral views into an inline query and replace them within the dependency tree.
     String finalTableAlias = lateralViewsToConvert.last().getTableAlias();
     Pattern tableAliasInvocationPattern = Pattern
-        .compile(".*\\s" + finalTableAlias + "\\.(.*?)\\s.*");
+        .compile("[\\s^]" + finalTableAlias + "\\.(.*?)[\\s$]");
     Matcher tableAliasInvocationMatcher = tableAliasInvocationPattern
         .matcher(dependentTableJoin.getExpression());
     boolean found = tableAliasInvocationMatcher.find();
-    assert found;
-    String tableAliasInvocation = tableAliasInvocationMatcher.group(1);
-    String newTableAlias =
-        finalTableAlias + pathToUpperCamelCase(tokenizePath(tableAliasInvocation));
-    String udtfExpression = lateralViewsToConvert.first().getUdtfExpression();
-    assert udtfExpression != null;
+    List<String> tableAliasInvocations = new ArrayList<>();
+    while (found) {
+      tableAliasInvocations.add(tableAliasInvocationMatcher.group(1));
+      found = tableAliasInvocationMatcher.find();
+    }
+    assert !tableAliasInvocations.isEmpty();
+    String newTableAlias = finalTableAlias + "Exploded";
+    Join firstLateralView = lateralViewsToConvert.first();
+    Join upstreamJoin = firstLateralView.getDependsUpon();
+    assert firstLateralView.getUdtfExpression() != null;
+    String udtfExpression = firstLateralView.getRootExpression();
+    firstLateralView.setExpression(firstLateralView.getExpression()
+        .replace(firstLateralView.getUdtfExpression(), udtfExpression));
+    firstLateralView.setUdtfExpression(udtfExpression);
     String table = tokenizePath(udtfExpression).getFirst();
-    String joinExpression =
-        "INNER JOIN (SELECT id, " + finalTableAlias + "." + tableAliasInvocation + " FROM " + table
-            + " ";
-    joinExpression += lateralViewsToConvert.stream().map(Join::getExpression).collect(
-        Collectors.joining(" "));
+    String joinConditionTarget = upstreamJoin == null ? table : upstreamJoin.getTableAlias();
+    String selectFields = tableAliasInvocations.stream()
+        .map(tai -> finalTableAlias + "." + tai)
+        .collect(Collectors.joining(", "));
+    String joinExpression = "INNER JOIN (SELECT id, " + selectFields + " FROM " + table + " ";
+    joinExpression += lateralViewsToConvert.stream()
+        .map(Join::getExpression)
+        .collect(Collectors.joining(" "));
     joinExpression +=
-        ") " + newTableAlias + " ON " + table + ".id = " + newTableAlias + ".id";
-    Join inlineQuery = new Join(joinExpression,
-        lateralViewsToConvert.last().getRootExpression(), JoinType.INLINE_QUERY,
+        ") " + newTableAlias + " ON " + joinConditionTarget + ".id = " + newTableAlias + ".id";
+    String rootExpression = lateralViewsToConvert.last().getRootExpression();
+    Join inlineQuery = new Join(joinExpression, rootExpression, JoinType.INLINE_QUERY,
         newTableAlias);
-    inlineQuery.setDependsUpon(lateralViewsToConvert.first().getDependsUpon());
+    inlineQuery.setDependsUpon(firstLateralView.getDependsUpon());
     dependentTableJoin.setDependsUpon(inlineQuery);
     String transformedExpression = dependentTableJoin.getExpression()
-        .replace(lateralViewsToConvert.last().getTableAlias() + "." + tableAliasInvocation,
-            inlineQuery.getTableAlias() + "." + tableAliasInvocation);
+        .replaceAll("(?<=(ON|AND)\\s)" + lateralViewsToConvert.last().getTableAlias() + "\\.",
+            inlineQuery.getTableAlias() + ".");
     dependentTableJoin.setExpression(transformedExpression);
     SortedSet<Join> newJoins = new TreeSet<>();
     for (Join join : joins) {

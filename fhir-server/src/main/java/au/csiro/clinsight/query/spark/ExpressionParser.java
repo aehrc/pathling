@@ -9,6 +9,7 @@ import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
+import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.ElementNotKnownException;
 import au.csiro.clinsight.fhir.ElementResolver;
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
@@ -48,6 +49,7 @@ import au.csiro.clinsight.fhir.ResolvedElement;
 import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.fhir.ResourceNotKnownException;
 import au.csiro.clinsight.query.spark.Join.JoinType;
+import au.csiro.clinsight.query.spark.ParseResult.ParseResultType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -57,32 +59,52 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.apache.spark.sql.SparkSession;
 
 /**
  * @author John Grimes
  */
-public class ExpressionParser {
+class ExpressionParser {
+
+  private final TerminologyClient terminologyClient;
+  private final SparkSession spark;
+
+  ExpressionParser(TerminologyClient terminologyClient, SparkSession spark) {
+    this.terminologyClient = terminologyClient;
+    this.spark = spark;
+  }
 
   ParseResult parse(String expression) {
     FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     FhirPathParser parser = new FhirPathParser(tokens);
 
-    ExpressionVisitor expressionVisitor = new ExpressionVisitor();
+    ExpressionVisitor expressionVisitor = new ExpressionVisitor(terminologyClient, spark);
     return expressionVisitor.visit(parser.expression());
   }
 
   private static class ExpressionVisitor extends FhirPathBaseVisitor<ParseResult> {
 
+    private final TerminologyClient terminologyClient;
+    private final SparkSession spark;
+
+    ExpressionVisitor(TerminologyClient terminologyClient,
+        SparkSession spark) {
+      this.terminologyClient = terminologyClient;
+      this.spark = spark;
+    }
+
     @Override
     public ParseResult visitTermExpression(TermExpressionContext ctx) {
-      return ctx.term().accept(new TermVisitor());
+      return ctx.term().accept(new TermVisitor(terminologyClient, spark));
     }
 
     @Override
     public ParseResult visitInvocationExpression(InvocationExpressionContext ctx) {
-      ParseResult expressionResult = new ExpressionVisitor().visit(ctx.expression());
-      return ctx.invocation().accept(new InvocationVisitor(expressionResult));
+      ParseResult expressionResult = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression());
+      return ctx.invocation()
+          .accept(new InvocationVisitor(terminologyClient, spark, expressionResult));
     }
 
     @Override
@@ -149,9 +171,17 @@ public class ExpressionParser {
 
   private static class TermVisitor extends FhirPathBaseVisitor<ParseResult> {
 
+    private final TerminologyClient terminologyClient;
+    private final SparkSession spark;
+
+    TermVisitor(TerminologyClient terminologyClient, SparkSession spark) {
+      this.terminologyClient = terminologyClient;
+      this.spark = spark;
+    }
+
     @Override
     public ParseResult visitInvocationTerm(InvocationTermContext ctx) {
-      return new InvocationVisitor().visit(ctx.invocation());
+      return new InvocationVisitor(terminologyClient, spark).visit(ctx.invocation());
     }
 
     @Override
@@ -166,19 +196,27 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitParenthesizedTerm(ParenthesizedTermContext ctx) {
-      return new ExpressionVisitor().visit(ctx.expression());
+      return new ExpressionVisitor(terminologyClient, spark).visit(ctx.expression());
     }
 
   }
 
   private static class InvocationVisitor extends FhirPathBaseVisitor<ParseResult> {
 
+    TerminologyClient terminologyClient;
+    SparkSession spark;
     ParseResult invoker;
 
-    InvocationVisitor() {
+    InvocationVisitor(TerminologyClient terminologyClient,
+        SparkSession spark) {
+      this.terminologyClient = terminologyClient;
+      this.spark = spark;
     }
 
-    InvocationVisitor(ParseResult invoker) {
+    InvocationVisitor(TerminologyClient terminologyClient,
+        SparkSession spark, ParseResult invoker) {
+      this.terminologyClient = terminologyClient;
+      this.spark = spark;
       this.invoker = invoker;
     }
 
@@ -245,13 +283,13 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitMemberInvocation(MemberInvocationContext ctx) {
-      if (invoker != null && invoker.getResultType() == ResolvedElementType.PRIMITIVE) {
+      if (invoker != null && invoker.getElementType() == ResolvedElementType.PRIMITIVE) {
         throw new InvalidRequestException("Attempt to invoke member on primitive type");
       }
       ResolvedElement element;
       String fhirPathExpression = invoker == null
           ? ctx.getText()
-          : invoker.getFhirPathExpression() + "." + ctx.getText();
+          : invoker.getExpression() + "." + ctx.getText();
       SortedSet<Join> joins = invoker == null
           ? new TreeSet<>()
           : invoker.getJoins();
@@ -264,20 +302,21 @@ public class ExpressionParser {
       if (element.getType() == ResolvedElementType.RESOURCE) {
         String sqlExpression = fhirPathExpression.toLowerCase();
         result.setSqlExpression(sqlExpression);
-        result.setFhirPathExpression(fhirPathExpression);
+        result.setExpression(fhirPathExpression);
         result.getFromTable().add(sqlExpression);
       } else {
         assert invoker != null;
         String sqlExpression = invoker.getSqlExpression() + "." + ctx.getText();
         result.setSqlExpression(sqlExpression);
-        result.setFhirPathExpression(fhirPathExpression);
+        result.setExpression(fhirPathExpression);
         result.getFromTable().addAll(invoker.getFromTable());
       }
-      result.setResultType(element.getType());
-      result.setResultTypeCode(element.getTypeCode());
+      result.setResultType(ParseResultType.ELEMENT_PATH);
+      result.setElementType(element.getType());
+      result.setElementTypeCode(element.getTypeCode());
       result.getJoins().addAll(joins);
       populateJoinsFromElement(result, element);
-      assert result.getResultTypeCode() != null;
+      assert result.getElementTypeCode() != null;
       return result;
     }
 
@@ -296,10 +335,12 @@ public class ExpressionParser {
       arguments = paramList == null
           ? new ArrayList<>()
           : paramList.expression().stream()
-              .map(expression -> new ExpressionVisitor().visit(expression))
+              .map(expression -> new ExpressionVisitor(terminologyClient, spark).visit(expression))
               .collect(Collectors.toList());
 
       // Invoke the function and return the result.
+      function.setTerminologyClient(terminologyClient);
+      function.setSparkSession(spark);
       return function.invoke(invoker, arguments);
     }
 
@@ -324,7 +365,10 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitStringLiteral(StringLiteralContext ctx) {
-      throw new InvalidRequestException("String literals are not supported");
+      ParseResult result = new ParseResult();
+      result.setResultType(ParseResultType.STRING_LITERAL);
+      result.setExpression(ctx.getText());
+      return result;
     }
 
     @Override

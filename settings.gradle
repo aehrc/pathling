@@ -1,8 +1,6 @@
 rootProject.name = 'clinsight'
 include 'utilities'
-include ':fhir-loader'
 include 'fhir-server'
-
-project(':fhir-loader').projectDir = "$rootDir/loaders/fhir-loader" as File
 include 'terminology-client'
+include ':fhir-loader'
 

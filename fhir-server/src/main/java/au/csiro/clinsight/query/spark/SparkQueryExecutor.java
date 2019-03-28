@@ -46,6 +46,7 @@ public class SparkQueryExecutor implements QueryExecutor {
   private final SparkQueryExecutorConfiguration configuration;
   private final FhirContext fhirContext;
   private SparkSession spark;
+  private TerminologyClient terminologyClient;
 
   public SparkQueryExecutor(SparkQueryExecutorConfiguration configuration,
       FhirContext fhirContext) {
@@ -66,7 +67,6 @@ public class SparkQueryExecutor implements QueryExecutor {
   }
 
   private void initialiseResourceDefinitions() {
-    TerminologyClient terminologyClient;
     if (configuration.getTerminologyClient() != null) {
       terminologyClient = configuration.getTerminologyClient();
     } else {
@@ -101,7 +101,7 @@ public class SparkQueryExecutor implements QueryExecutor {
   public AggregateQueryResult execute(AggregateQuery query) throws InvalidRequestException {
     try {
 
-      SparkQueryPlanner queryPlanner = new SparkQueryPlanner(query);
+      SparkQueryPlanner queryPlanner = new SparkQueryPlanner(terminologyClient, spark, query);
       QueryPlan queryPlan = queryPlanner.buildQueryPlan();
 
       Dataset<Row> result = executeQueryPlan(queryPlan, query);

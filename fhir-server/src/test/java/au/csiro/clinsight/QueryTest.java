@@ -625,8 +625,8 @@ public class QueryTest {
             + "SELECT id, diagnosticReportResult.reference "
             + "FROM diagnosticreport "
             + "LATERAL VIEW explode(diagnosticreport.result) diagnosticReportResult AS diagnosticReportResult"
-            + ") diagnosticReportResultReference ON diagnosticreport.id = diagnosticReportResultReference.id "
-            + "INNER JOIN observation diagnosticReportResult ON diagnosticReportResultReference.reference = diagnosticReportResult.id "
+            + ") diagnosticReportResultExploded ON diagnosticreport.id = diagnosticReportResultExploded.id "
+            + "INNER JOIN observation diagnosticReportResult ON diagnosticReportResultExploded.reference = diagnosticReportResult.id "
             + "LATERAL VIEW explode(diagnosticReportResult.code.coding) diagnosticReportResultCodeCoding AS diagnosticReportResultCodeCoding "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
@@ -740,8 +740,8 @@ public class QueryTest {
             + "FROM condition "
             + "LATERAL VIEW explode(condition.evidence) conditionEvidence AS conditionEvidence "
             + "LATERAL VIEW explode(conditionEvidence.detail) conditionEvidenceDetail AS conditionEvidenceDetail"
-            + ") conditionEvidenceDetailReference ON condition.id = conditionEvidenceDetailReference.id "
-            + "INNER JOIN diagnosticreport conditionEvidenceDetail ON conditionEvidenceDetailReference.reference = conditionEvidenceDetail.id "
+            + ") conditionEvidenceDetailExploded ON condition.id = conditionEvidenceDetailExploded.id "
+            + "INNER JOIN diagnosticreport conditionEvidenceDetail ON conditionEvidenceDetailExploded.reference = conditionEvidenceDetail.id "
             + "LATERAL VIEW explode(conditionEvidenceDetail.codedDiagnosis) conditionEvidenceDetailCodedDiagnosis AS conditionEvidenceDetailCodedDiagnosis "
             + "LATERAL VIEW explode(conditionEvidenceDetailCodedDiagnosis.coding) conditionEvidenceDetailCodedDiagnosisCoding AS conditionEvidenceDetailCodedDiagnosisCoding "
             + "GROUP BY 1 "
@@ -1002,4 +1002,5 @@ public class QueryTest {
   public void tearDown() throws Exception {
     server.stop();
   }
+
 }

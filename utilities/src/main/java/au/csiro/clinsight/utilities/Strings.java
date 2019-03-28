@@ -4,10 +4,13 @@
 
 package au.csiro.clinsight.utilities;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
+import javax.xml.bind.DatatypeConverter;
 
 /**
  * @author John Grimes
@@ -56,6 +59,17 @@ public abstract class Strings {
     return pathComponents.stream()
         .map(Strings::capitalize)
         .collect(Collectors.joining(""));
+  }
+
+  public static String md5(String input) {
+    MessageDigest messageDigest = null;
+    try {
+      messageDigest = MessageDigest.getInstance("MD5");
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("Error calculating MD5 hash value", e);
+    }
+    messageDigest.update(input.getBytes());
+    return DatatypeConverter.printHexBinary(messageDigest.digest()).toLowerCase();
   }
 
 }
