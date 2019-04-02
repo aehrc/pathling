@@ -88,10 +88,12 @@ public class SparkQueryExecutor implements QueryExecutor {
           .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
           .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
           .config("spark.executor.memory", configuration.getExecutorMemory())
-          .config("spark.dynamicAllocation.enabled", "true")
+//          .config("spark.dynamicAllocation.enabled", "true")
           .config("spark.shuffle.service.enabled", "true")
-          .config("spark.dynamicAllocation.initialExecutors", "1")
+//          .config("spark.dynamicAllocation.initialExecutors", "1")
           .config("spark.scheduler.mode", "FAIR")
+          .config("spark.sql.autoBroadcastJoinThreshold", "-1")
+          .config("spark.sql.shuffle.partitions", "36")
           .enableHiveSupport()
           .getOrCreate();
     }
@@ -158,6 +160,11 @@ public class SparkQueryExecutor implements QueryExecutor {
     String sql = String.join(" ", clauses);
 
     logger.info("Executing query: " + sql);
+    if (configuration.getExplainQueries()) {
+      Dataset<Row> explain = spark.sql("EXPLAIN " + sql);
+      String queryPlanText = explain.collectAsList().get(0).getString(0);
+      logger.debug("Query plan: " + queryPlanText);
+    }
     return spark.sql(sql);
   }
 

@@ -58,6 +58,7 @@ public class TerminologyQueryTest {
   private Server server;
   private TerminologyClient mockTerminologyClient;
   private SparkSession mockSpark;
+  private Catalog mockCatalog;
   private CloseableHttpClient httpClient;
 
   @Before
@@ -66,13 +67,14 @@ public class TerminologyQueryTest {
     mockSpark = mock(SparkSession.class);
     mockDefinitionRetrieval(mockTerminologyClient);
 
-    Catalog mockCatalog = mock(Catalog.class);
+    mockCatalog = mock(Catalog.class);
     when(mockSpark.catalog()).thenReturn(mockCatalog);
-    when(mockCatalog.tableExists(any(), any())).thenReturn(false);
+    when(mockCatalog.tableExists(any(), any())).thenReturn(true);
 
     AnalyticsServerConfiguration configuration = new AnalyticsServerConfiguration();
     configuration.setTerminologyClient(mockTerminologyClient);
     configuration.setSparkSession(mockSpark);
+    configuration.setExplainQueries(false);
 
     server = startFhirServer(configuration);
     httpClient = HttpClients.createDefault();
@@ -146,7 +148,9 @@ public class TerminologyQueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT CASE WHEN patientEncounterAsSubjectReasonCodingValueSet.code IS NULL THEN FALSE ELSE TRUE END AS `Diagnosis in value set?`, count(patient.id) AS `Number of patients` "
+        "SELECT /* MAPJOIN(patientEncounterAsSubjectReasonCodingValueSet) */ "
+            + "CASE WHEN patientEncounterAsSubjectReasonCodingValueSet.code IS NULL THEN FALSE ELSE TRUE END AS `Diagnosis in value set?`, "
+            + "count(patient.id) AS `Number of patients` "
             + "FROM patient "
             + "INNER JOIN encounter patientEncounterAsSubject ON patient.id = patientEncounterAsSubject.subject.reference "
             + "INNER JOIN ("
@@ -160,6 +164,8 @@ public class TerminologyQueryTest {
             + "AND patientEncounterAsSubjectReasonCodingExploded.code = patientEncounterAsSubjectReasonCodingValueSet.code "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
+
+    when(mockCatalog.tableExists(any(), any())).thenReturn(false);
 
     ValueSet fakeValueSet = new ValueSet();
     ValueSetExpansionComponent expansion = new ValueSetExpansionComponent();
@@ -206,6 +212,74 @@ public class TerminologyQueryTest {
     verify(mockExpansionDataset).createOrReplaceTempView(
         "valueSet_006902c7ba674e2a272362fced9ba9ee");
     verify(mockSpark, atLeastOnce()).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void multipleSetsOfLateralViews() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of diagnostic reports\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"DiagnosticReport.id.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Globulin observation?\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"DiagnosticReport.result.resolve().code.coding.inValueSet('http://loinc.org/vs/LP14885-5')\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedSql =
+        "SELECT /* MAPJOIN(diagnosticReportResultCodeCodingValueSet) */ "
+            + "CASE WHEN diagnosticReportResultCodeCodingValueSet.code IS NULL THEN FALSE ELSE TRUE END AS `Globulin observation?`, "
+            + "count(diagnosticreport.id) AS `Number of diagnostic reports` "
+            + "FROM diagnosticreport "
+            + "INNER JOIN ("
+            + "SELECT id, diagnosticReportResult.reference "
+            + "FROM diagnosticreport "
+            + "LATERAL VIEW explode(diagnosticreport.result) diagnosticReportResult AS diagnosticReportResult"
+            + ") diagnosticReportResultExploded ON diagnosticreport.id = diagnosticReportResultExploded.id "
+            + "INNER JOIN observation diagnosticReportResult ON diagnosticReportResultExploded.reference = diagnosticReportResult.id "
+            + "INNER JOIN ("
+            + "SELECT id, diagnosticReportResultCodeCoding.system, diagnosticReportResultCodeCoding.code "
+            + "FROM observation "
+            + "LATERAL VIEW explode(observation.code.coding) diagnosticReportResultCodeCoding AS diagnosticReportResultCodeCoding"
+            + ") diagnosticReportResultCodeCodingExploded ON diagnosticReportResult.id = diagnosticReportResultCodeCodingExploded.id "
+            + "LEFT OUTER JOIN `valueSet_03775044c1767e1bcba62ef01cf1750d` diagnosticReportResultCodeCodingValueSet "
+            + "ON diagnosticReportResultCodeCodingExploded.system = diagnosticReportResultCodeCodingValueSet.system "
+            + "AND diagnosticReportResultCodeCodingExploded.code = diagnosticReportResultCodeCodingValueSet.code "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
     verify(mockSpark).sql(expectedSql);
   }
 

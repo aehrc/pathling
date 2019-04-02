@@ -34,6 +34,7 @@ ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip
 ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info --driver-port=52000
 
 # Configures the Python executable used on worker instances, must be exactly the same version as PYSPARK_DRIVER_PYTHON
+RUN ln -s /opt/conda/bin/python /usr/local/bin/python3.6
 ENV PYSPARK_PYTHON /usr/local/bin/python3.6
 
 # Configures the Python executable used on the notebook instance, this is 3.6.8

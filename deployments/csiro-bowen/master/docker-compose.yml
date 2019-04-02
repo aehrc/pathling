@@ -25,6 +25,9 @@ services:
       # - atom.syndication.feedLocation=https://ontoserver.csiro.au/synd/syndication.xml
       - authentication.oauth.endpoint.client_id.0=66611fd3-74cb-49de-97f1-662397094b81
       - authentication.oauth.endpoint.client_secret.0=ecba0d30-b674-45f8-9661-8fbedc3092c0
+      - ontoserver.feature.eclFilters=true
+      - ontoserver.feature.msgaEnabled=true
+      - ontoserver.fhir.batch.queueSize=20000
       - JAVA_OPTS=-Xmx24G
       - ONTOSERVER_INSECURE=true
     volumes:
@@ -43,7 +46,7 @@ services:
     environment:
       SPARK_MASTER_HOST: hb-15-cdc001.it.csiro.au
       SPARK_MASTER_OPTS: "-Dspark.ui.reverseProxy=true -Dspark.ui.reverseProxyUrl=http://hb-15-cdc001.it.csiro.au:8080"
-      SPARK_DAEMON_MEMORY: 4g
+      SPARK_DAEMON_MEMORY: 8g
     restart: unless-stopped
   worker:
     image: docker-registry.it.csiro.au/clinsight/spark-worker
@@ -69,6 +72,7 @@ services:
     environment:
       SPARK_DRIVER_HOST: hb-15-cdc001.it.csiro.au
       SPARK_DRIVER_PORT: 52000
+      SPARK_DRIVER_MEMORY: 8g
     volumes:
       - notebooks:/home/jovyan/work
       - ${PWD}/hive-site.xml:/usr/local/spark/conf/hive-site.xml

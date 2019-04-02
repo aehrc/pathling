@@ -162,6 +162,8 @@ class SparkQueryPlanner {
             dependentTableJoin = cursor;
           } else {
             joins = replaceLateralViews(joins, dependentTableJoin, lateralViewsToConvert);
+            dependentTableJoin = null;
+            continue;
           }
         } else if (cursor.getJoinType() == JoinType.LATERAL_VIEW && dependentTableJoin != null) {
           lateralViewsToConvert.add(cursor);
@@ -177,7 +179,7 @@ class SparkQueryPlanner {
     // Package up lateral views into an inline query and replace them within the dependency tree.
     String finalTableAlias = lateralViewsToConvert.last().getTableAlias();
     Pattern tableAliasInvocationPattern = Pattern
-        .compile("[\\s^]" + finalTableAlias + "\\.(.*?)[\\s$]");
+        .compile("(?:ON|AND)\\s+" + finalTableAlias + "\\.(.*?)[\\s$]");
     Matcher tableAliasInvocationMatcher = tableAliasInvocationPattern
         .matcher(dependentTableJoin.getExpression());
     boolean found = tableAliasInvocationMatcher.find();

@@ -21,6 +21,7 @@ public class AnalyticsServerConfiguration {
   private String databaseName;
   private String executorMemory;
   private String terminologyServerUrl;
+  private boolean explainQueries;
   private TerminologyClient terminologyClient;
   private SparkSession sparkSession;
 
@@ -86,6 +87,14 @@ public class AnalyticsServerConfiguration {
 
   public void setTerminologyServerUrl(String terminologyServerUrl) {
     this.terminologyServerUrl = terminologyServerUrl;
+  }
+
+  public boolean getExplainQueries() {
+    return explainQueries;
+  }
+
+  public void setExplainQueries(boolean explainQueries) {
+    this.explainQueries = explainQueries;
   }
 
   public TerminologyClient getTerminologyClient() {

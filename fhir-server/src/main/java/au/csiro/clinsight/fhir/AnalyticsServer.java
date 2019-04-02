@@ -61,6 +61,7 @@ public class AnalyticsServer extends RestfulServer {
     copyStringProps(configuration, executorConfig, Arrays
         .asList("sparkMasterUrl", "warehouseDirectory", "metastoreUrl", "metastoreUser",
             "metastorePassword", "databaseName", "executorMemory", "terminologyServerUrl"));
+    executorConfig.setExplainQueries(configuration.getExplainQueries());
     if (configuration.getTerminologyClient() != null) {
       executorConfig.setTerminologyClient(configuration.getTerminologyClient());
     }

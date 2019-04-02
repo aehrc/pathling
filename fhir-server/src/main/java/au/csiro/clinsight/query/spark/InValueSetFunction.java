@@ -63,8 +63,7 @@ public class InValueSetFunction implements ExpressionFunction {
         : input.getJoins().last().getTableAlias() + "ValueSet";
     String unquotedArgument = argument.getExpression()
         .substring(1, argument.getExpression().length() - 1);
-    String rootExpression = null;
-    rootExpression = "valueSet_" + Strings.md5(unquotedArgument);
+    String rootExpression = "valueSet_" + Strings.md5(unquotedArgument);
     String quotedRootExpression = "`" + rootExpression + "`";
 
     ensureExpansionTableExists(unquotedArgument, rootExpression);
@@ -73,7 +72,8 @@ public class InValueSetFunction implements ExpressionFunction {
     String joinExpression = "LEFT OUTER JOIN " + quotedRootExpression + " " + joinAlias + " ";
     joinExpression += "ON " + lastJoinAlias + ".system = " + joinAlias + ".system ";
     joinExpression += "AND " + lastJoinAlias + ".code = " + joinAlias + ".code";
-    String sqlExpression = "CASE WHEN " + joinAlias + ".code IS NULL THEN FALSE ELSE TRUE END";
+    String sqlExpression = "/* MAPJOIN(" + joinAlias + ") */ CASE WHEN " + joinAlias
+        + ".code IS NULL THEN FALSE ELSE TRUE END";
     Join join = new Join(joinExpression, rootExpression, JoinType.TABLE_JOIN, joinAlias);
     if (!input.getJoins().isEmpty()) {
       join.setDependsUpon(input.getJoins().last());

@@ -60,6 +60,7 @@ public class QueryTest {
     AnalyticsServerConfiguration configuration = new AnalyticsServerConfiguration();
     configuration.setTerminologyClient(mockTerminologyClient);
     configuration.setSparkSession(mockSpark);
+    configuration.setExplainQueries(false);
 
     server = startFhirServer(configuration);
     httpClient = HttpClients.createDefault();

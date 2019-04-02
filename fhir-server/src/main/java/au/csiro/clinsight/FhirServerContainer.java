@@ -39,6 +39,8 @@ public class FhirServerContainer {
       put("CLINSIGHT_EXECUTOR_MEMORY", "executorMemory");
       put("CLINSIGHT_TERMINOLOGY_SERVER_URL", "terminologyServerUrl");
     }});
+    String explainQueries = System.getenv("CLINSIGHT_EXPLAIN_QUERIES");
+    config.setExplainQueries(explainQueries != null && explainQueries.equals("true"));
 
     // This is required to force the use of the Woodstox StAX implementation. If you don't use
     // Woodstox, parsing falls over when reading in resources (e.g. StructureDefinitions) that
