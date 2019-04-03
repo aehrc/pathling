@@ -2,9 +2,9 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query.parsing;
 
-import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
+import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedSet;
@@ -18,7 +18,7 @@ import javax.annotation.Nullable;
  * @author John Grimes
  */
 @SuppressWarnings("WeakerAccess")
-class ParseResult {
+public class ParseResult {
 
   private final SortedSet<Join> joins = new TreeSet<>();
   private final Set<String> fromTable = new HashSet<>();

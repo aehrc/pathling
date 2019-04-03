@@ -1,13 +1,13 @@
-package au.csiro.clinsight.fhir;
+package au.csiro.clinsight.fhir.definitions;
 
-import static au.csiro.clinsight.fhir.ResourceDefinitions.checkInitialised;
-import static au.csiro.clinsight.fhir.ResourceDefinitions.getElementsForType;
-import static au.csiro.clinsight.fhir.ResourceDefinitions.isComplex;
-import static au.csiro.clinsight.fhir.ResourceDefinitions.supportedPrimitiveTypes;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.checkInitialised;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getElementsForType;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isComplex;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.supportedPrimitiveTypes;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
-import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
+import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;

@@ -2,10 +2,11 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query.functions;
 
 import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
+import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
+import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
 import javax.annotation.Nonnull;

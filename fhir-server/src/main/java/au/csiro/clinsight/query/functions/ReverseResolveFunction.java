@@ -2,16 +2,18 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.ElementResolver.resolveElement;
+import static au.csiro.clinsight.fhir.definitions.ElementResolver.resolveElement;
 
 import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.fhir.ResolvedElement;
-import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
-import au.csiro.clinsight.fhir.ResourceDefinitions;
-import au.csiro.clinsight.query.spark.Join.JoinType;
-import au.csiro.clinsight.query.spark.ParseResult.ParseResultType;
+import au.csiro.clinsight.fhir.definitions.ResolvedElement;
+import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
+import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
+import au.csiro.clinsight.query.parsing.Join;
+import au.csiro.clinsight.query.parsing.Join.JoinType;
+import au.csiro.clinsight.query.parsing.ParseResult;
+import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
 import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.LinkedList;

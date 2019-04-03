@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query;
 
 import au.csiro.clinsight.TerminologyClient;
 import org.apache.spark.sql.SparkSession;

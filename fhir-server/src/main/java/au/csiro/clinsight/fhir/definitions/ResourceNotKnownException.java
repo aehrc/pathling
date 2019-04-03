@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.fhir;
+package au.csiro.clinsight.fhir.definitions;
 
 /**
  * This error is thrown when a resource or data type is encountered within a FHIRPath expression

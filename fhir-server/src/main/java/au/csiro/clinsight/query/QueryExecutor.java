@@ -2,16 +2,15 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.query.spark.Mappings.getFhirClass;
+import static au.csiro.clinsight.query.Mappings.getFhirClass;
 import static au.csiro.clinsight.utilities.Strings.backTicks;
 
 import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.fhir.ResourceDefinitions;
-import au.csiro.clinsight.query.AggregateQuery;
-import au.csiro.clinsight.query.AggregateQueryResult;
+import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.AggregateQueryResult.Grouping;
+import au.csiro.clinsight.query.parsing.Join;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;

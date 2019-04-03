@@ -2,23 +2,20 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query;
 
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
 import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
-import au.csiro.clinsight.query.AggregateQuery;
+import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.query.AggregateQuery.Aggregation;
 import au.csiro.clinsight.query.AggregateQuery.Grouping;
-import au.csiro.clinsight.query.spark.Join.JoinType;
+import au.csiro.clinsight.query.parsing.ExpressionParser;
+import au.csiro.clinsight.query.parsing.Join;
+import au.csiro.clinsight.query.parsing.Join.JoinType;
+import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;

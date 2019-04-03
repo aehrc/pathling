@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query.parsing;
 
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -15,7 +15,7 @@ import javax.annotation.Nullable;
  * @author John Grimes
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
-class Join implements Comparable<Join> {
+public class Join implements Comparable<Join> {
 
   @Nonnull
   private final String rootExpression;

@@ -2,9 +2,10 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query.functions;
 
 import au.csiro.clinsight.TerminologyClient;
+import au.csiro.clinsight.query.parsing.ParseResult;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

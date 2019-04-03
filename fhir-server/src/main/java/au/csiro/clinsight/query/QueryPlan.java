@@ -2,8 +2,9 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query;
 
+import au.csiro.clinsight.query.parsing.Join;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;

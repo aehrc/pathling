@@ -2,60 +2,25 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query.parsing;
 
-import static au.csiro.clinsight.query.spark.Mappings.getFunction;
+import static au.csiro.clinsight.query.Mappings.getFunction;
 import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
 import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.fhir.ElementNotKnownException;
-import au.csiro.clinsight.fhir.ElementResolver;
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
-import au.csiro.clinsight.fhir.FhirPathParser.AdditiveExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.AndExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.BooleanLiteralContext;
-import au.csiro.clinsight.fhir.FhirPathParser.DateTimeLiteralContext;
-import au.csiro.clinsight.fhir.FhirPathParser.EqualityExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.ExternalConstantTermContext;
-import au.csiro.clinsight.fhir.FhirPathParser.FunctionInvocationContext;
-import au.csiro.clinsight.fhir.FhirPathParser.ImpliesExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.IndexerExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.InequalityExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.InvocationExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.InvocationTermContext;
-import au.csiro.clinsight.fhir.FhirPathParser.LiteralTermContext;
-import au.csiro.clinsight.fhir.FhirPathParser.MemberInvocationContext;
-import au.csiro.clinsight.fhir.FhirPathParser.MembershipExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.MultiplicativeExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.NullLiteralContext;
-import au.csiro.clinsight.fhir.FhirPathParser.NumberLiteralContext;
-import au.csiro.clinsight.fhir.FhirPathParser.OrExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.ParamListContext;
-import au.csiro.clinsight.fhir.FhirPathParser.ParenthesizedTermContext;
-import au.csiro.clinsight.fhir.FhirPathParser.PolarityExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.QuantityLiteralContext;
-import au.csiro.clinsight.fhir.FhirPathParser.StringLiteralContext;
-import au.csiro.clinsight.fhir.FhirPathParser.TermExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.ThisInvocationContext;
-import au.csiro.clinsight.fhir.FhirPathParser.TimeLiteralContext;
-import au.csiro.clinsight.fhir.FhirPathParser.TypeExpressionContext;
-import au.csiro.clinsight.fhir.FhirPathParser.UnionExpressionContext;
-import au.csiro.clinsight.fhir.MultiValueTraversal;
-import au.csiro.clinsight.fhir.ResolvedElement;
-import au.csiro.clinsight.fhir.ResolvedElement.ResolvedElementType;
-import au.csiro.clinsight.fhir.ResourceNotKnownException;
-import au.csiro.clinsight.query.spark.Join.JoinType;
-import au.csiro.clinsight.query.spark.ParseResult.ParseResultType;
+import au.csiro.clinsight.fhir.FhirPathParser.*;
+import au.csiro.clinsight.fhir.definitions.*;
+import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
+import au.csiro.clinsight.query.functions.ExpressionFunction;
+import au.csiro.clinsight.query.parsing.Join.JoinType;
+import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -67,17 +32,17 @@ import org.apache.spark.sql.SparkSession;
  *
  * @author John Grimes
  */
-class ExpressionParser {
+public class ExpressionParser {
 
   private final TerminologyClient terminologyClient;
   private final SparkSession spark;
 
-  ExpressionParser(TerminologyClient terminologyClient, SparkSession spark) {
+  public ExpressionParser(TerminologyClient terminologyClient, SparkSession spark) {
     this.terminologyClient = terminologyClient;
     this.spark = spark;
   }
 
-  ParseResult parse(String expression) {
+  public ParseResult parse(String expression) {
     FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     FhirPathParser parser = new FhirPathParser(tokens);

@@ -2,34 +2,21 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query.spark;
+package au.csiro.clinsight.query;
 
+import au.csiro.clinsight.query.functions.*;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import org.hl7.fhir.dstu3.model.BooleanType;
-import org.hl7.fhir.dstu3.model.CodeType;
-import org.hl7.fhir.dstu3.model.DateTimeType;
-import org.hl7.fhir.dstu3.model.DateType;
-import org.hl7.fhir.dstu3.model.DecimalType;
-import org.hl7.fhir.dstu3.model.IdType;
-import org.hl7.fhir.dstu3.model.InstantType;
-import org.hl7.fhir.dstu3.model.IntegerType;
-import org.hl7.fhir.dstu3.model.MarkdownType;
-import org.hl7.fhir.dstu3.model.OidType;
-import org.hl7.fhir.dstu3.model.PositiveIntType;
-import org.hl7.fhir.dstu3.model.StringType;
-import org.hl7.fhir.dstu3.model.TimeType;
-import org.hl7.fhir.dstu3.model.UnsignedIntType;
-import org.hl7.fhir.dstu3.model.UriType;
+import org.hl7.fhir.dstu3.model.*;
 
 /**
  * Mappings between data types and functions within FHIR and Apache Spark.
  *
  * @author John Grimes
  */
-abstract class Mappings {
+public abstract class Mappings {
 
   // Maps a FHIR type code to the class that can be used to populate a value into a resource using
   // HAPI.
@@ -88,7 +75,7 @@ abstract class Mappings {
     return fhirTypeToJavaClass.get(fhirTypeCode);
   }
 
-  static ExpressionFunction getFunction(String functionName) {
+  public static ExpressionFunction getFunction(String functionName) {
     return funcToClass.get(functionName);
   }
 

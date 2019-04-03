@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.fhir;
+package au.csiro.clinsight.fhir.definitions;
 
 import java.util.List;
 import javax.annotation.Nonnull;

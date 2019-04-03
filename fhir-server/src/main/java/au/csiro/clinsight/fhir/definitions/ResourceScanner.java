@@ -1,17 +1,11 @@
-package au.csiro.clinsight.fhir;
+package au.csiro.clinsight.fhir.definitions;
 
-import static au.csiro.clinsight.fhir.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
-import static au.csiro.clinsight.fhir.ResourceDefinitions.supportedComplexTypes;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.supportedComplexTypes;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
 import au.csiro.clinsight.utilities.Strings;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
