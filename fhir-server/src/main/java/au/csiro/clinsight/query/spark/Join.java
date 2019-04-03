@@ -9,15 +9,20 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
+ * This class describes the requirements for a join as inferred by the expression parser and
+ * recorded within a ParseResult.
+ *
  * @author John Grimes
  */
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "unused"})
 class Join implements Comparable<Join> {
 
   @Nonnull
   private final String rootExpression;
+
   @Nonnull
   private String expression;
+
   @Nonnull
   private JoinType joinType;
 

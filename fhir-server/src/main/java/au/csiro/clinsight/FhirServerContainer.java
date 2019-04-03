@@ -9,6 +9,7 @@ import static au.csiro.clinsight.utilities.Configuration.setStringPropsUsingEnvV
 import au.csiro.clinsight.fhir.AnalyticsServer;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import java.util.HashMap;
+import javax.annotation.Nonnull;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -54,7 +55,7 @@ public class FhirServerContainer {
     start(config);
   }
 
-  private static void start(AnalyticsServerConfiguration configuration) throws Exception {
+  private static void start(@Nonnull AnalyticsServerConfiguration configuration) throws Exception {
     final int maxThreads = 100;
     final int minThreads = 10;
     final int idleTimeout = 120;

@@ -11,6 +11,13 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.SparkSession;
 
 /**
+ * A function that is supported for use within FHIRPath expressions. The input is the expression
+ * that invoked the function (i.e. on the left hand side of the period), and the arguments are
+ * passed within parentheses.
+ *
+ * A function can optionally accept a terminology server and/or a Spark Session in order to augment
+ * its behaviour. Functions that don't need these should just implement do-nothing methods.
+ *
  * @author John Grimes
  */
 public interface ExpressionFunction {

@@ -11,7 +11,7 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
-public class SparkQueryExecutorConfiguration {
+public class QueryExecutorConfiguration {
 
   private String sparkMasterUrl;
   private String warehouseDirectory;
@@ -25,7 +25,7 @@ public class SparkQueryExecutorConfiguration {
   private TerminologyClient terminologyClient;
   private SparkSession sparkSession;
 
-  public SparkQueryExecutorConfiguration() {
+  public QueryExecutorConfiguration() {
     sparkMasterUrl = "spark://localhost:7077";
     warehouseDirectory = ".";
     metastoreUrl = "jdbc:postgresql://localhost/clinsight_metastore";
@@ -126,7 +126,7 @@ public class SparkQueryExecutorConfiguration {
 
   @Override
   public String toString() {
-    return "SparkQueryExecutorConfiguration{" +
+    return "QueryExecutorConfiguration{" +
         "sparkMasterUrl='" + sparkMasterUrl + '\'' +
         ", warehouseDirectory='" + warehouseDirectory + '\'' +
         ", metastoreUrl='" + metastoreUrl + '\'' +

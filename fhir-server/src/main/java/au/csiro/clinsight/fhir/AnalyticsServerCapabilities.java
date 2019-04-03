@@ -10,6 +10,7 @@ import ca.uhn.fhir.rest.server.RestfulServer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import org.hl7.fhir.dstu3.model.CapabilityStatement;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementKind;
@@ -27,9 +28,15 @@ import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.dstu3.model.UsageContext;
 
 /**
+ * This class provides a customised CapabilityStatement describing the functionality of the
+ * analytics server.
+ *
+ * TODO: Merge advertised capabilities with those of any other servers that we proxy requests to,
+ * such as the terminology server and FHIR REST server.
+ *
  * @author John Grimes
  */
-public class AnalyticsServerCapabilities implements
+class AnalyticsServerCapabilities implements
     IServerConformanceProvider<CapabilityStatement> {
 
   @Override
@@ -44,21 +51,32 @@ public class AnalyticsServerCapabilities implements
     capabilityStatement.setStatus(PublicationStatus.DRAFT);
     capabilityStatement.setExperimental(true);
     capabilityStatement.setPublisher("Australian e-Health Research Centre, CSIRO");
-    List<UsageContext> useContext = new ArrayList<>();
-    CodeableConcept task = new CodeableConcept();
-    task.setText("Aggregate data analytics");
-    Coding usageContextType = new Coding("http://hl7.org/fhir/usage-context-type", "task",
-        "Workflow Task");
-    useContext.add(new UsageContext(usageContextType, task));
-    capabilityStatement.setUseContext(useContext);
     capabilityStatement.setCopyright(
         "Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.");
+    capabilityStatement.setUseContext(buildUseContext());
     capabilityStatement.setKind(CapabilityStatementKind.CAPABILITY);
     capabilityStatement.setSoftware(
         new CapabilityStatementSoftwareComponent(new StringType("Clinsight FHIR Server")));
     capabilityStatement.setFhirVersion("3.0.1");
     capabilityStatement.setAcceptUnknown(UnknownContentCode.NO);
     capabilityStatement.setFormat(Arrays.asList(new CodeType("json"), new CodeType("xml")));
+    capabilityStatement.setRest(buildRestComponent());
+    return capabilityStatement;
+  }
+
+  @Nonnull
+  private List<UsageContext> buildUseContext() {
+    List<UsageContext> useContext = new ArrayList<>();
+    CodeableConcept task = new CodeableConcept();
+    task.setText("Aggregate data analytics");
+    Coding usageContextType = new Coding("http://hl7.org/fhir/usage-context-type", "task",
+        "Workflow Task");
+    useContext.add(new UsageContext(usageContextType, task));
+    return useContext;
+  }
+
+  @Nonnull
+  private List<CapabilityStatementRestComponent> buildRestComponent() {
     List<CapabilityStatementRestComponent> rest = new ArrayList<>();
     CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
     server.setMode(RestfulCapabilityMode.SERVER);
@@ -69,8 +87,7 @@ public class AnalyticsServerCapabilities implements
     operations.add(operation);
     server.setOperation(operations);
     rest.add(server);
-    capabilityStatement.setRest(rest);
-    return capabilityStatement;
+    return rest;
   }
 
   @Override

@@ -31,20 +31,20 @@ import org.apache.spark.sql.SparkSession;
  *
  * @author John Grimes
  */
-class SparkQueryPlanner {
+class QueryPlanner {
 
   private final TerminologyClient terminologyClient;
   private final SparkSession spark;
   private final List<ParseResult> aggregationParseResults;
   private final List<ParseResult> groupingParseResults;
 
-  SparkQueryPlanner(@Nonnull TerminologyClient terminologyClient,
+  QueryPlanner(@Nonnull TerminologyClient terminologyClient,
       @Nonnull SparkSession spark, @Nonnull AggregateQuery query) {
     this.terminologyClient = terminologyClient;
     this.spark = spark;
     List<Aggregation> aggregations = query.getAggregations();
     List<Grouping> groupings = query.getGroupings();
-    if (aggregations == null || aggregations.isEmpty()) {
+    if (aggregations.isEmpty()) {
       throw new InvalidRequestException("Missing aggregation component within query");
     }
 
@@ -52,6 +52,10 @@ class SparkQueryPlanner {
     groupingParseResults = parseGroupings(groupings);
   }
 
+  /**
+   * Executes the ExpressionParser over each of the expressions within a list of aggregations, then
+   * returns a list of ParseResults.
+   */
   private List<ParseResult> parseAggregation(@Nonnull List<Aggregation> aggregations) {
     return aggregations.stream()
         .map(aggregation -> {
@@ -64,6 +68,10 @@ class SparkQueryPlanner {
         }).collect(Collectors.toList());
   }
 
+  /**
+   * Executes the ExpressionParser over each of the expressions within a list of groupings, then
+   * returns a list of ParseResults.
+   */
   private List<ParseResult> parseGroupings(List<Grouping> groupings) {
     List<ParseResult> groupingParseResults = new ArrayList<>();
     if (groupings != null) {
@@ -75,6 +83,8 @@ class SparkQueryPlanner {
             }
             ExpressionParser groupingParser = new ExpressionParser(terminologyClient, spark);
             ParseResult result = groupingParser.parse(groupingExpression);
+            // Validate that the return value of the expression is a primitive element reference,
+            // this is a requirement for a grouping.
             if (result.getElementType() != ResolvedElementType.PRIMITIVE) {
               throw new InvalidRequestException(
                   "Grouping expression is not of primitive type: " + groupingExpression + " ("
@@ -86,6 +96,9 @@ class SparkQueryPlanner {
     return groupingParseResults;
   }
 
+  /**
+   * Builds a QueryPlan object from the results of parsing the query and the expressions within.
+   */
   QueryPlan buildQueryPlan() {
     QueryPlan queryPlan = new QueryPlan();
 
@@ -113,8 +126,18 @@ class SparkQueryPlanner {
         .collect(Collectors.toList());
     queryPlan.setGroupingTypes(groupingTypes);
 
-    // Get from tables from the results of parsing both aggregations and groupings, and compute the
-    // union.
+    computeFromTables(queryPlan);
+
+    computeJoins(queryPlan);
+
+    return queryPlan;
+  }
+
+  /**
+   * Get from tables from the results of parsing both aggregations and groupings, and compute the
+   * union.
+   */
+  private void computeFromTables(QueryPlan queryPlan) {
     Set<String> aggregationFromTables = new HashSet<>();
     aggregationParseResults
         .forEach(parseResult -> aggregationFromTables.addAll(parseResult.getFromTable()));
@@ -131,8 +154,12 @@ class SparkQueryPlanner {
               + String.join(", ", difference));
     }
     queryPlan.setFromTables(aggregationFromTables);
+  }
 
-    // Get joins from the results of parsing both aggregations and groupings.
+  /**
+   * Get joins from the results of parsing both aggregations and groupings.
+   */
+  private void computeJoins(QueryPlan queryPlan) {
     SortedSet<Join> joins = new TreeSet<>();
     for (ParseResult parseResult : aggregationParseResults) {
       joins.addAll(parseResult.getJoins());
@@ -142,41 +169,64 @@ class SparkQueryPlanner {
     }
     SortedSet<Join> convertedJoins = convertUpstreamLateralViewsToInlineQueries(joins);
     queryPlan.setJoins(convertedJoins);
-
-    return queryPlan;
   }
 
+  /**
+   * Spark SQL does not currently allow a table join to follow a LATERAL VIEW join within a query -
+   * the LATERAL VIEW statement must first be wrapped within a subquery. This method takes a set of
+   * joins and wraps each of the LATERAL VIEW joins in a subquery, then returns a new set of joins.
+   */
   private SortedSet<Join> convertUpstreamLateralViewsToInlineQueries(SortedSet<Join> joins) {
     if (joins.isEmpty()) {
       return joins;
     }
+    // We start with the final join and move upwards through the dependencies.
     Join cursor = joins.last();
     Join dependentTableJoin = null;
     SortedSet<Join> lateralViewsToConvert = new TreeSet<>();
+    // We stop when we reach the end of the dependencies and there are no lateral views queued up
+    // for conversion.
     while (cursor != null || !lateralViewsToConvert.isEmpty()) {
       if (cursor == null) {
+        // Upon reaching the end of the dependencies, we bundle up any lateral views queued up for
+        // conversion.
+        assert dependentTableJoin != null;
         joins = replaceLateralViews(joins, dependentTableJoin, lateralViewsToConvert);
       } else {
         if (cursor.getJoinType() == JoinType.TABLE_JOIN) {
           if (dependentTableJoin == null) {
+            // We mark a table join that depends upon a lateral view (or set of lateral views) as
+            // the "dependent table join". It stays marked until we reach the end of the lateral
+            // views that it depends upon and finish converting them.
             dependentTableJoin = cursor;
           } else {
+            // If we reach a new table join that is not the "dependent table join", then that must
+            // mean that we have reached the end of this contiguous set of lateral views. This is
+            // the trigger to take these and convert them into an inline query.
             joins = replaceLateralViews(joins, dependentTableJoin, lateralViewsToConvert);
             dependentTableJoin = null;
             continue;
           }
         } else if (cursor.getJoinType() == JoinType.LATERAL_VIEW && dependentTableJoin != null) {
+          // If we find a new lateral view, we add that to the set of lateral views that are queued
+          // for conversion.
           lateralViewsToConvert.add(cursor);
         }
+        // Each iteration of the loop, we move to a new join based upon the depends upon
+        // relationship.
         cursor = cursor.getDependsUpon();
       }
     }
     return joins;
   }
 
+  /**
+   * This method takes a set of LATERAL VIEW joins and converts them into a single join with an
+   * inline query.
+   */
   private SortedSet<Join> replaceLateralViews(SortedSet<Join> joins, Join dependentTableJoin,
       SortedSet<Join> lateralViewsToConvert) {
-    // Package up lateral views into an inline query and replace them within the dependency tree.
+    // First we search for invocations made against the alias of the last join in the group. This tells us which columns will need to be selected within the subquery.
     String finalTableAlias = lateralViewsToConvert.last().getTableAlias();
     Pattern tableAliasInvocationPattern = Pattern
         .compile("(?:ON|AND)\\s+" + finalTableAlias + "\\.(.*?)[\\s$]");
@@ -189,6 +239,8 @@ class SparkQueryPlanner {
       found = tableAliasInvocationMatcher.find();
     }
     assert !tableAliasInvocations.isEmpty();
+
+    // Build the join expression.
     String newTableAlias = finalTableAlias + "Exploded";
     Join firstLateralView = lateralViewsToConvert.first();
     Join upstreamJoin = firstLateralView.getDependsUpon();
@@ -209,14 +261,22 @@ class SparkQueryPlanner {
     joinExpression +=
         ") " + newTableAlias + " ON " + joinConditionTarget + ".id = " + newTableAlias + ".id";
     String rootExpression = lateralViewsToConvert.last().getRootExpression();
+
+    // Build a new Join object to replace the group of lateral views.
     Join inlineQuery = new Join(joinExpression, rootExpression, JoinType.INLINE_QUERY,
         newTableAlias);
     inlineQuery.setDependsUpon(firstLateralView.getDependsUpon());
     dependentTableJoin.setDependsUpon(inlineQuery);
+    // Change the expression within the dependent table join to point to the alias of the new join.
     String transformedExpression = dependentTableJoin.getExpression()
         .replaceAll("(?<=(ON|AND)\\s)" + lateralViewsToConvert.last().getTableAlias() + "\\.",
             inlineQuery.getTableAlias() + ".");
     dependentTableJoin.setExpression(transformedExpression);
+
+    // This piece of code exists due to some strange behaviour in the removal of items from a set
+    // that is not yet understood. Ideally this would be as simple as
+    // `joins.removeAll(lateralViewsToConvert)`, but this does not seem to remove all of the lateral
+    // views in all cases (see the `anyReferenceTraversal` test case).
     SortedSet<Join> newJoins = new TreeSet<>();
     for (Join join : joins) {
       boolean inLateralViewsToConvert = false;

@@ -22,6 +22,9 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 
 /**
+ * A function for accessing elements of resources which refer to the input resource. The path to the
+ * referring element is supplied as an argument.
+ *
  * @author John Grimes
  */
 public class ReverseResolveFunction implements ExpressionFunction {
@@ -29,23 +32,14 @@ public class ReverseResolveFunction implements ExpressionFunction {
   @Nonnull
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
-    if (input == null) {
-      throw new InvalidRequestException("Missing input expression for resolve function");
-    }
-    if (input.getElementType() != ResolvedElementType.RESOURCE) {
-      throw new InvalidRequestException(
-          "Input to reverseResolve function must be a Resource: " + input.getExpression()
-              + " (" + input.getElementTypeCode() + ")");
-    }
-    if (arguments.size() != 1
-        || arguments.get(0).getElementType() != ResolvedElementType.REFERENCE) {
-      throw new InvalidRequestException(
-          "Argument to reverseResolve function must be a Reference: " + arguments.get(0)
-              .getExpression() + " (" + arguments.get(0).getElementTypeCode() + ")");
-    }
+    validateInput(input);
+    validateArguments(arguments);
+    assert input.getExpression() != null;
     ResolvedElement inputElement = resolveElement(input.getExpression());
     assert inputElement.getType() == ResolvedElementType.RESOURCE;
-    ResolvedElement argumentElement = resolveElement(arguments.get(0).getExpression());
+    ParseResult argument = arguments.get(0);
+    assert argument.getExpression() != null;
+    ResolvedElement argumentElement = resolveElement(argument.getExpression());
     assert argumentElement.getType() == ResolvedElementType.REFERENCE;
     boolean argumentReferencesResource = argumentElement.getReferenceTypes().stream()
         .anyMatch(typeUrl -> {
@@ -55,17 +49,19 @@ public class ReverseResolveFunction implements ExpressionFunction {
         });
     if (!argumentReferencesResource) {
       throw new InvalidRequestException(
-          "Argument to reverseResolve function does not reference input resource type: " + arguments
-              .get(0).getExpression());
+          "Argument to reverseResolve function does not reference input resource type: " + argument
+              .getExpression());
     }
     LinkedList<String> argumentPathComponents = Strings.tokenizePath(argumentElement.getPath());
     List<String> argumentPathTail = argumentPathComponents
         .subList(1, argumentPathComponents.size());
+    assert inputElement.getTypeCode() != null;
     String joinAlias = inputElement.getTypeCode().toLowerCase() + argumentPathComponents.getFirst();
     joinAlias += "As" + Strings.pathToUpperCamelCase(argumentPathTail);
     String targetTable = argumentPathComponents.getFirst().toLowerCase();
+    assert argument.getSqlExpression() != null;
     String targetExpression =
-        arguments.get(0).getSqlExpression().replace(targetTable, joinAlias) + ".reference";
+        argument.getSqlExpression().replace(targetTable, joinAlias) + ".reference";
     String joinExpression =
         "INNER JOIN " + targetTable + " " + joinAlias + " ON " + input.getSqlExpression() + ".id = "
             + targetExpression;
@@ -81,6 +77,26 @@ public class ReverseResolveFunction implements ExpressionFunction {
     input.setSqlExpression(joinAlias);
     input.getJoins().add(join);
     return input;
+  }
+
+  private void validateInput(@Nullable ParseResult input) {
+    if (input == null) {
+      throw new InvalidRequestException("Missing input expression for resolve function");
+    }
+    if (input.getElementType() != ResolvedElementType.RESOURCE) {
+      throw new InvalidRequestException(
+          "Input to reverseResolve function must be a Resource: " + input.getExpression()
+              + " (" + input.getElementTypeCode() + ")");
+    }
+  }
+
+  private void validateArguments(@Nonnull List<ParseResult> arguments) {
+    if (arguments.size() != 1
+        || arguments.get(0).getElementType() != ResolvedElementType.REFERENCE) {
+      throw new InvalidRequestException(
+          "Argument to reverseResolve function must be a Reference: " + arguments.get(0)
+              .getExpression() + " (" + arguments.get(0).getElementTypeCode() + ")");
+    }
   }
 
   @Override

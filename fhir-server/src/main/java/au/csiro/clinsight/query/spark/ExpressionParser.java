@@ -62,6 +62,9 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.spark.sql.SparkSession;
 
 /**
+ * This is an ANTLR-based parser for processing a FHIRPath expression, and aggregating the results
+ * into a ParseResult object.
+ *
  * @author John Grimes
  */
 class ExpressionParser {
@@ -83,6 +86,10 @@ class ExpressionParser {
     return expressionVisitor.visit(parser.expression());
   }
 
+  /**
+   * This class processes all types of expressions, and delegates the special handling of supported
+   * types to the more specific visitor classes.
+   */
   private static class ExpressionVisitor extends FhirPathBaseVisitor<ParseResult> {
 
     private final TerminologyClient terminologyClient;
@@ -94,18 +101,29 @@ class ExpressionParser {
       this.spark = spark;
     }
 
+    /**
+     * A term is typically a standalone literal or function invocation.
+     */
     @Override
     public ParseResult visitTermExpression(TermExpressionContext ctx) {
       return ctx.term().accept(new TermVisitor(terminologyClient, spark));
     }
 
+    /**
+     * An invocation expression is one expression invoking another using the dot notation.
+     */
     @Override
     public ParseResult visitInvocationExpression(InvocationExpressionContext ctx) {
       ParseResult expressionResult = new ExpressionVisitor(terminologyClient, spark)
           .visit(ctx.expression());
+      // The invoking expression is passed through to the invocation visitor's constructor - this
+      // will provide it with extra context required to do things like merging in joins from the
+      // upstream path.
       return ctx.invocation()
           .accept(new InvocationVisitor(terminologyClient, spark, expressionResult));
     }
+
+    // All other FHIRPath constructs are currently unsupported.
 
     @Override
     public ParseResult visitIndexerExpression(IndexerExpressionContext ctx) {
@@ -169,6 +187,9 @@ class ExpressionParser {
 
   }
 
+  /**
+   * A term is typically a standalone literal or function invocation.
+   */
   private static class TermVisitor extends FhirPathBaseVisitor<ParseResult> {
 
     private final TerminologyClient terminologyClient;
@@ -179,11 +200,18 @@ class ExpressionParser {
       this.spark = spark;
     }
 
+    /**
+     * This passes a standalone function invocation along to the invocation visitor. Note that most
+     * functions will require an input, and will fail validation later on in this instance.
+     */
     @Override
     public ParseResult visitInvocationTerm(InvocationTermContext ctx) {
       return new InvocationVisitor(terminologyClient, spark).visit(ctx.invocation());
     }
 
+    /**
+     * We pass literals as is through to the literal visitor.
+     */
     @Override
     public ParseResult visitLiteralTerm(LiteralTermContext ctx) {
       return new LiteralTermVisitor().visit(ctx.literal());
@@ -194,6 +222,9 @@ class ExpressionParser {
       throw new InvalidRequestException("Environment variables are not supported");
     }
 
+    /**
+     * Parentheses are ignored in the standalone term case.
+     */
     @Override
     public ParseResult visitParenthesizedTerm(ParenthesizedTermContext ctx) {
       return new ExpressionVisitor(terminologyClient, spark).visit(ctx.expression());
@@ -201,10 +232,15 @@ class ExpressionParser {
 
   }
 
+  /**
+   * This class is invoked on the right-hand side of the invocation expression, and can optionally
+   * be constructed with an invoker expression to allow it to operate with knowledge of this
+   * context.
+   */
   private static class InvocationVisitor extends FhirPathBaseVisitor<ParseResult> {
 
-    TerminologyClient terminologyClient;
-    SparkSession spark;
+    final TerminologyClient terminologyClient;
+    final SparkSession spark;
     ParseResult invoker;
 
     InvocationVisitor(TerminologyClient terminologyClient,
@@ -220,9 +256,11 @@ class ExpressionParser {
       this.invoker = invoker;
     }
 
+    /**
+     * Processes multi-value traversals within an element definition, adding joins to the
+     * ParseResult along the way.
+     */
     static void populateJoinsFromElement(ParseResult result, ResolvedElement element) {
-      // Process multi-value traversals, adding statements which explode the multiple values into
-      // multiple rows and then join across to those rows.
       Join previousJoin = result.getJoins().isEmpty()
           ? null
           : result.getJoins().last();
@@ -239,9 +277,11 @@ class ExpressionParser {
         String updatedExpression;
         if (finalJoin.getJoinType() == JoinType.LATERAL_VIEW) {
           assert finalJoin.getUdtfExpression() != null;
+          assert result.getSqlExpression() != null;
           updatedExpression = result.getSqlExpression().replace(finalJoin.getUdtfExpression(),
               finalJoin.getTableAlias());
         } else {
+          assert result.getSqlExpression() != null;
           updatedExpression = result.getSqlExpression().replace(finalJoin.getRootExpression(),
               finalJoin.getTableAlias());
         }
@@ -249,6 +289,9 @@ class ExpressionParser {
       }
     }
 
+    /**
+     * Populate an individual join into a ParseResult, based on an individual MultiValueTraversal.
+     */
     private static void populateJoinFromMultiValueTraversal(ParseResult result, Join previousJoin,
         MultiValueTraversal multiValueTraversal) {
       // Construct an alias that can be used to refer to the generated table elsewhere in the query.
@@ -281,6 +324,10 @@ class ExpressionParser {
       result.getJoins().add(join);
     }
 
+    /**
+     * This method gets called when an element is on the right-hand side of the invocation
+     * expression.
+     */
     @Override
     public ParseResult visitMemberInvocation(MemberInvocationContext ctx) {
       if (invoker != null && invoker.getElementType() == ResolvedElementType.PRIMITIVE) {
@@ -320,6 +367,11 @@ class ExpressionParser {
       return result;
     }
 
+    /**
+     * This method gets called when a function call is on the right-hand side of an invocation
+     * expression. It basically just checks that the function is known, and invokes it to get a new
+     * ParseResult.
+     */
     @Override
     public ParseResult visitFunctionInvocation(FunctionInvocationContext ctx) {
       // Get the function that corresponds to the function identifier.
@@ -363,6 +415,10 @@ class ExpressionParser {
       throw new InvalidRequestException("Boolean literals are not supported");
     }
 
+    /**
+     * String literals are supported, so that they can be used in arguments, e.g. the `inValueSet`
+     * function.
+     */
     @Override
     public ParseResult visitStringLiteral(StringLiteralContext ctx) {
       ParseResult result = new ParseResult();

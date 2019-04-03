@@ -9,6 +9,9 @@ import java.util.Set;
 import java.util.SortedSet;
 
 /**
+ * A description of a query, along with the tables and joins required, which can be used by the
+ * QueryExecutor to retrieve the result.
+ *
  * @author John Grimes
  */
 class QueryPlan {

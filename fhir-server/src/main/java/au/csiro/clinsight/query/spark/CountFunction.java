@@ -13,6 +13,8 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.SparkSession;
 
 /**
+ * A function for aggregating data based on counting the number of rows within the result.
+ *
  * @author John Grimes
  */
 public class CountFunction implements ExpressionFunction {
@@ -20,20 +22,32 @@ public class CountFunction implements ExpressionFunction {
   @Nonnull
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
+    validateInput(input);
+    validateArguments(arguments);
+    // The count function maps to the function with the same name within Spark SQL.
+    input.setSqlExpression("count(" + input.getSqlExpression() + ")");
+    // A count operation always results in a non-negative integer.
+    input.setElementTypeCode("unsignedInt");
+    return input;
+  }
+
+  private void validateInput(@Nullable ParseResult input) {
     if (input == null || input.getSqlExpression() == null || input.getSqlExpression().isEmpty()) {
       throw new InvalidRequestException("Missing input expression for count function");
     }
-    if (!arguments.isEmpty()) {
-      throw new InvalidRequestException("Count function does not accept arguments");
-    }
+    // We can't count an element that is not primitive.
+    // TODO: Add support for invoking the count function directly on a resource.
     if (input.getElementType() != ResolvedElementType.PRIMITIVE) {
       throw new InvalidRequestException(
           "Input to count function must be of primitive type: " + input.getExpression()
               + " (" + input.getElementTypeCode() + ")");
     }
-    input.setSqlExpression("count(" + input.getSqlExpression() + ")");
-    input.setElementTypeCode("unsignedInt");
-    return input;
+  }
+
+  private void validateArguments(@Nonnull List<ParseResult> arguments) {
+    if (!arguments.isEmpty()) {
+      throw new InvalidRequestException("Count function does not accept arguments");
+    }
   }
 
   @Override

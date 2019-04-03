@@ -16,8 +16,7 @@ import javax.annotation.Nonnull;
 public class ElementResolver {
 
   /**
-   * Returns a ResolvedElement matching a given path. Returns null if the path is not found. Only
-   * works for base resources currently.
+   * Returns a ResolvedElement matching a given path. Only works for base resources currently.
    */
   public static ResolvedElement resolveElement(@Nonnull String path)
       throws ResourceNotKnownException, ElementNotKnownException {
@@ -82,6 +81,11 @@ public class ElementResolver {
     }
   }
 
+  /**
+   * Checks if a ResolvedElement has a cardinality greater than one, and adds a MultiValueTraversal
+   * object to the ResolvedElement if necessary. The information within this object will be used
+   * within queries to traverse these types of elements within the underlying data structures.
+   */
   private static void harvestMultiValueTraversal(
       @Nonnull ResolvedElement result,
       @Nonnull String currentPath,
@@ -107,9 +111,14 @@ public class ElementResolver {
     }
   }
 
-  private static ResolvedElement examineLeafElement(LinkedList<String> tail,
-      SummarisedElement summarisedElement, ResolvedElement result,
-      String currentPath, String typeCode) {
+  /**
+   * Examines a leaf element within the tree and takes the appropriate action based upon the type,
+   * such as returning a ResolvedElement or further recursing into the structure in order to
+   * retrieve elements that lie beyond resource references.
+   */
+  private static ResolvedElement examineLeafElement(@Nonnull LinkedList<String> tail,
+      @Nonnull SummarisedElement summarisedElement, @Nonnull ResolvedElement result,
+      String currentPath, @Nonnull String typeCode) {
     if (supportedPrimitiveTypes.contains(typeCode)) {
       // If the element is a primitive, stop here and return the result.
       result.setType(ResolvedElementType.PRIMITIVE);
@@ -117,7 +126,7 @@ public class ElementResolver {
     } else if (ResourceDefinitions.supportedComplexTypes.contains(typeCode)) {
       if (tail.isEmpty()) {
         // If the tail is empty, it means that a complex type is the last component of the path. If
-        // it is a reference we tag it as such.
+        // it is a reference, we tag it as such.
         if (typeCode.equals("Reference")) {
           result.setType(ResolvedElementType.REFERENCE);
           result.getReferenceTypes().addAll(summarisedElement.getReferenceTypes());

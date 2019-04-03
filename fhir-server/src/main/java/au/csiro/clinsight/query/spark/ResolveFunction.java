@@ -23,6 +23,10 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 
 /**
+ * A function for resolving a Reference element in order to access the elements of the target
+ * resource. Supports polymorphic references through the use of an argument specifying the target
+ * resource type.
+ *
  * @author John Grimes
  */
 public class ResolveFunction implements ExpressionFunction {
@@ -30,14 +34,8 @@ public class ResolveFunction implements ExpressionFunction {
   @Nonnull
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
-    if (input == null) {
-      throw new InvalidRequestException("Missing input expression for resolve function");
-    }
-    if (input.getElementType() != ResolvedElementType.REFERENCE) {
-      throw new InvalidRequestException(
-          "Input to resolve function must be a Reference: " + input.getExpression() + " ("
-              + input.getElementTypeCode() + ")");
-    }
+    validateInput(input);
+    assert input.getExpression() != null;
     ResolvedElement element = resolveElement(input.getExpression());
     assert element.getType() == ResolvedElementType.REFERENCE;
     String referenceTypeCode;
@@ -72,14 +70,27 @@ public class ResolveFunction implements ExpressionFunction {
     return input;
   }
 
+  private void validateInput(@Nullable ParseResult input) {
+    if (input == null) {
+      throw new InvalidRequestException("Missing input expression for resolve function");
+    }
+    if (input.getElementType() != ResolvedElementType.REFERENCE) {
+      throw new InvalidRequestException(
+          "Input to resolve function must be a Reference: " + input.getExpression() + " ("
+              + input.getElementTypeCode() + ")");
+    }
+  }
+
   @Nonnull
   private String getTypeForPolymorphicReference(@Nonnull ParseResult input,
       @Nonnull List<ParseResult> arguments) {
     String referenceTypeCode;
     if (arguments.size() == 1) {
       String argument = arguments.get(0).getExpression();
+      assert argument != null;
       ResolvedElement argumentElement = resolveElement(argument);
       referenceTypeCode = argumentElement.getTypeCode();
+      assert referenceTypeCode != null;
       if (argumentElement.getType() != ResolvedElementType.RESOURCE
           || !isResource(referenceTypeCode)) {
         throw new InvalidRequestException(

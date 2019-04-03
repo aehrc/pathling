@@ -7,17 +7,30 @@ package au.csiro.clinsight.query;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.dstu3.model.Parameters;
 import org.hl7.fhir.dstu3.model.Parameters.ParametersParameterComponent;
 
 /**
+ * Represents the information provided as part of an invocation of the `aggregateQuery` operation.
+ *
  * @author John Grimes
  */
+@SuppressWarnings("WeakerAccess")
 public class AggregateQuery {
 
+  @Nonnull
   private final List<Aggregation> aggregations = new ArrayList<>();
+
+  @Nonnull
   private final List<Grouping> groupings = new ArrayList<>();
 
+  /**
+   * This constructor takes a Parameters resource (with the parameters defined within the
+   * `aggregateQuery` OperationDefinition) and populates the values into a new AggregateQuery
+   * object.
+   */
   public AggregateQuery(Parameters parameters) {
     parameters.getParameter().stream()
         .filter(param -> param.getName().equals("aggregation"))
@@ -57,32 +70,39 @@ public class AggregateQuery {
         });
   }
 
+  @Nonnull
   public List<Aggregation> getAggregations() {
     return aggregations;
   }
 
+  @Nonnull
   public List<Grouping> getGroupings() {
     return groupings;
   }
 
   public static class Aggregation {
 
+    @Nullable
     private String label;
+
+    @Nullable
     private String expression;
 
+    @Nullable
     public String getLabel() {
       return label;
     }
 
-    public void setLabel(String label) {
+    public void setLabel(@Nullable String label) {
       this.label = label;
     }
 
+    @Nullable
     public String getExpression() {
       return expression;
     }
 
-    public void setExpression(String expression) {
+    public void setExpression(@Nullable String expression) {
       this.expression = expression;
     }
 
@@ -90,22 +110,27 @@ public class AggregateQuery {
 
   public static class Grouping {
 
+    @Nullable
     private String label;
+
+    @Nullable
     private String expression;
 
+    @Nullable
     public String getLabel() {
       return label;
     }
 
-    public void setLabel(String label) {
+    public void setLabel(@Nullable String label) {
       this.label = label;
     }
 
+    @Nullable
     public String getExpression() {
       return expression;
     }
 
-    public void setExpression(String expression) {
+    public void setExpression(@Nullable String expression) {
       this.expression = expression;
     }
 

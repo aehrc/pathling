@@ -12,7 +12,6 @@ import au.csiro.clinsight.fhir.ResourceDefinitions;
 import au.csiro.clinsight.query.AggregateQuery;
 import au.csiro.clinsight.query.AggregateQueryResult;
 import au.csiro.clinsight.query.AggregateQueryResult.Grouping;
-import au.csiro.clinsight.query.QueryExecutor;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
@@ -39,16 +38,16 @@ import org.slf4j.LoggerFactory;
  *
  * @author John Grimes
  */
-public class SparkQueryExecutor implements QueryExecutor {
+public class QueryExecutor {
 
-  private static final Logger logger = LoggerFactory.getLogger(SparkQueryExecutor.class);
+  private static final Logger logger = LoggerFactory.getLogger(QueryExecutor.class);
 
-  private final SparkQueryExecutorConfiguration configuration;
+  private final QueryExecutorConfiguration configuration;
   private final FhirContext fhirContext;
   private SparkSession spark;
   private TerminologyClient terminologyClient;
 
-  public SparkQueryExecutor(SparkQueryExecutorConfiguration configuration,
+  public QueryExecutor(QueryExecutorConfiguration configuration,
       FhirContext fhirContext) {
     assert configuration != null : "Must supply configuration";
     assert configuration.getSparkMasterUrl() != null : "Must supply Spark master URL";
@@ -58,7 +57,7 @@ public class SparkQueryExecutor implements QueryExecutor {
     assert configuration.getMetastorePassword() != null : "Must supply metastore password";
     assert configuration.getExecutorMemory() != null : "Must supply executor memory";
 
-    logger.info("Creating new SparkQueryExecutor: " + configuration);
+    logger.info("Creating new QueryExecutor: " + configuration);
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     initialiseSpark();
@@ -99,11 +98,10 @@ public class SparkQueryExecutor implements QueryExecutor {
     }
   }
 
-  @Override
   public AggregateQueryResult execute(AggregateQuery query) throws InvalidRequestException {
     try {
 
-      SparkQueryPlanner queryPlanner = new SparkQueryPlanner(terminologyClient, spark, query);
+      QueryPlanner queryPlanner = new QueryPlanner(terminologyClient, spark, query);
       QueryPlan queryPlan = queryPlanner.buildQueryPlan();
 
       Dataset<Row> result = executeQueryPlan(queryPlan, query);

@@ -16,7 +16,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 import org.slf4j.Logger;
@@ -24,8 +23,8 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * Central repository of FHIR resource complexTypes which can be looked up efficiently from across
- * the application.
+ * Central repository of definitions for FHIR resources and complex types, which can be looked up
+ * efficiently from across the application.
  *
  * @author John Grimes
  */
@@ -148,20 +147,16 @@ public abstract class ResourceDefinitions {
   }
 
   /**
-   * Returns the StructureDefinition for a base resource type. Returns null if the resource is not
-   * found.
+   * Gets the StructureDefinition for a resource with the supplied URL.
    */
-  @Nullable
-  public static StructureDefinition getBaseResource(@Nonnull String resourceName) {
-    checkInitialised();
-    return resources.get(BASE_RESOURCE_URL_PREFIX + resourceName);
-  }
-
   public static StructureDefinition getResourceByUrl(@Nonnull String url) {
     checkInitialised();
     return resources.get(url);
   }
 
+  /**
+   * Returns a map of SummarisedElements for the resource or complex type with the supplied name.
+   */
   static Map<String, SummarisedElement> getElementsForType(@Nonnull String typeName) {
     Map<String, SummarisedElement> result = resourceElements
         .get(BASE_RESOURCE_URL_PREFIX + typeName);
@@ -177,29 +172,29 @@ public abstract class ResourceDefinitions {
     }
   }
 
-  public static boolean isPrimitive(@Nonnull String fhirType) {
-    checkInitialised();
-    return supportedPrimitiveTypes.contains(fhirType);
-  }
-
-  public static boolean isComplex(@Nonnull String fhirType) {
+  /**
+   * Check if the supplied FHIR type code corresponds to a supported complex type.
+   */
+  static boolean isComplex(@Nonnull String fhirType) {
     checkInitialised();
     return supportedComplexTypes.contains(fhirType);
   }
 
+  /**
+   * Checks if the supplied FHIR type code looks like a resource name.
+   */
   public static boolean isResource(@Nonnull String fhirType) {
     char firstChar = fhirType.charAt(0);
     return Character.isUpperCase(firstChar);
-  }
-
-  public static boolean isBackboneElement(@Nonnull String fhirType) {
-    return fhirType.equals("BackboneElement");
   }
 
   public enum ResourceDefinitionsStatus {
     UNINITIALISED, INITIALISATION_IN_PROGRESS, WAITING_FOR_RETRY, INITIALISATION_ERROR, INITIALISED
   }
 
+  /**
+   * A runnable task that is used for scheduled retry of the requests to the terminology server.
+   */
   private static class RetryInitialisation implements Runnable {
 
     private final TerminologyClient terminologyClient;

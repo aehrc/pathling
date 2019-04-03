@@ -6,9 +6,8 @@ package au.csiro.clinsight.fhir;
 
 import static au.csiro.clinsight.utilities.Configuration.copyStringProps;
 
-import au.csiro.clinsight.query.QueryExecutor;
-import au.csiro.clinsight.query.spark.SparkQueryExecutor;
-import au.csiro.clinsight.query.spark.SparkQueryExecutorConfiguration;
+import au.csiro.clinsight.query.spark.QueryExecutor;
+import au.csiro.clinsight.query.spark.QueryExecutorConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
@@ -23,6 +22,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.cors.CorsConfiguration;
 
 /**
+ * A HAPI RestfulServer that understands how to satisfy aggregate queries over a set of STU3 FHIR
+ * resources.
+ *
  * @author John Grimes
  */
 public class AnalyticsServer extends RestfulServer {
@@ -31,7 +33,7 @@ public class AnalyticsServer extends RestfulServer {
   private final AnalyticsServerConfiguration configuration;
   private QueryExecutor queryExecutor;
 
-  public AnalyticsServer(AnalyticsServerConfiguration configuration) {
+  public AnalyticsServer(@Nonnull AnalyticsServerConfiguration configuration) {
     super(buildFhirContext());
 
     logger.info("Creating new AnalyticsServer: " + configuration);
@@ -56,8 +58,11 @@ public class AnalyticsServer extends RestfulServer {
     defineCorsConfiguration();
   }
 
+  /**
+   * Initialise a new query executor, and pass through the relevant configuration parameters.
+   */
   private void initializeQueryExecutor() {
-    SparkQueryExecutorConfiguration executorConfig = new SparkQueryExecutorConfiguration();
+    QueryExecutorConfiguration executorConfig = new QueryExecutorConfiguration();
     copyStringProps(configuration, executorConfig, Arrays
         .asList("sparkMasterUrl", "warehouseDirectory", "metastoreUrl", "metastoreUser",
             "metastorePassword", "databaseName", "executorMemory", "terminologyServerUrl"));
@@ -69,15 +74,24 @@ public class AnalyticsServer extends RestfulServer {
       executorConfig.setSparkSession(configuration.getSparkSession());
     }
 
-    queryExecutor = new SparkQueryExecutor(executorConfig, getFhirContext());
+    queryExecutor = new QueryExecutor(executorConfig, getFhirContext());
   }
 
+  /**
+   * Declare the providers which will handle requests to this server. This server only knows how to
+   * do one thing - satisfy `aggregateQuery` requests. This is a system-wide operation, so it is
+   * delivered using a plain provider.
+   */
   private void declareProviders() {
     List<Object> plainProviders = new ArrayList<>();
     plainProviders.add(new QueryOperationProvider(queryExecutor));
     setPlainProviders(plainProviders);
   }
 
+  /**
+   * Declare a CORS interceptor, using the CorsConfiguration from Spring. This is required to enable
+   * web-based applications hosted on different domains to communicate with this server.
+   */
   private void defineCorsConfiguration() {
     CorsConfiguration corsConfig = new CorsConfiguration();
     corsConfig.addAllowedHeader("x-fhir-starter");

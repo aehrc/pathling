@@ -9,79 +9,86 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
- * Used to represent the results from the AggregationParser and GroupingParser, which then gets used
- * to build a QueryPlan.
+ * Used to represent the results from the execution of an ExpressionParser, which then gets used to
+ * build a QueryPlan.
  *
  * @author John Grimes
  */
+@SuppressWarnings("WeakerAccess")
 class ParseResult {
 
-  @Nonnull
   private final SortedSet<Join> joins = new TreeSet<>();
-
-  @Nonnull
   private final Set<String> fromTable = new HashSet<>();
 
+  @Nullable
   private String expression;
+
+  @Nullable
   private String sqlExpression;
+
+  @Nullable
   private ParseResultType resultType;
+
+  @Nullable
   private ResolvedElementType elementType;
+
+  @Nullable
   private String elementTypeCode;
 
-  ParseResult() {
+  public SortedSet<Join> getJoins() {
+    return joins;
   }
 
-  String getSqlExpression() {
-    return sqlExpression;
+  public Set<String> getFromTable() {
+    return fromTable;
   }
 
-  void setSqlExpression(String sqlExpression) {
-    this.sqlExpression = sqlExpression;
-  }
-
-  String getExpression() {
+  @Nullable
+  public String getExpression() {
     return expression;
   }
 
-  void setExpression(String expression) {
+  public void setExpression(@Nullable String expression) {
     this.expression = expression;
   }
 
-  String getElementTypeCode() {
-    return elementTypeCode;
+  @Nullable
+  public String getSqlExpression() {
+    return sqlExpression;
   }
 
-  void setElementTypeCode(String elementTypeCode) {
-    this.elementTypeCode = elementTypeCode;
+  public void setSqlExpression(@Nullable String sqlExpression) {
+    this.sqlExpression = sqlExpression;
   }
 
+  @Nullable
   public ParseResultType getResultType() {
     return resultType;
   }
 
-  public void setResultType(ParseResultType resultType) {
+  public void setResultType(@Nullable ParseResultType resultType) {
     this.resultType = resultType;
   }
 
-  ResolvedElementType getElementType() {
+  @Nullable
+  public ResolvedElementType getElementType() {
     return elementType;
   }
 
-  void setElementType(ResolvedElementType elementType) {
+  public void setElementType(@Nullable ResolvedElementType elementType) {
     this.elementType = elementType;
   }
 
-  @Nonnull
-  Set<String> getFromTable() {
-    return fromTable;
+  @Nullable
+  public String getElementTypeCode() {
+    return elementTypeCode;
   }
 
-  @Nonnull
-  SortedSet<Join> getJoins() {
-    return joins;
+  public void setElementTypeCode(@Nullable String elementTypeCode) {
+    this.elementTypeCode = elementTypeCode;
   }
 
   public enum ParseResultType {

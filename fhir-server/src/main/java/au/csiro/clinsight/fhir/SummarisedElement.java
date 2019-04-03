@@ -12,11 +12,10 @@ import javax.annotation.Nullable;
 /**
  * @author John Grimes
  */
+@SuppressWarnings({"WeakerAccess", "unused"})
 class SummarisedElement {
 
-  @Nonnull
   private final List<String> childElements = new ArrayList<>();
-  @Nonnull
   private final List<String> referenceTypes = new ArrayList<>();
   @Nonnull
   private String path;
@@ -30,40 +29,39 @@ class SummarisedElement {
     this.typeCode = typeCode;
   }
 
+  public List<String> getChildElements() {
+    return childElements;
+  }
+
+  public List<String> getReferenceTypes() {
+    return referenceTypes;
+  }
+
   @Nonnull
-  String getPath() {
+  public String getPath() {
     return path;
   }
 
-  void setPath(@Nonnull String path) {
+  public void setPath(@Nonnull String path) {
     this.path = path;
   }
 
   @Nonnull
-  String getTypeCode() {
+  public String getTypeCode() {
     return typeCode;
   }
 
-  void setTypeCode(@Nonnull String typeCode) {
+  public void setTypeCode(@Nonnull String typeCode) {
     this.typeCode = typeCode;
   }
 
   @Nullable
-  String getMaxCardinality() {
+  public String getMaxCardinality() {
     return maxCardinality;
   }
 
-  void setMaxCardinality(@Nullable String maxCardinality) {
+  public void setMaxCardinality(@Nullable String maxCardinality) {
     this.maxCardinality = maxCardinality;
   }
 
-  @Nonnull
-  List<String> getChildElements() {
-    return childElements;
-  }
-
-  @Nonnull
-  public List<String> getReferenceTypes() {
-    return referenceTypes;
-  }
 }

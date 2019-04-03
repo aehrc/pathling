@@ -27,6 +27,9 @@ import org.hl7.fhir.dstu3.model.UriType;
 import org.hl7.fhir.dstu3.model.ValueSet;
 
 /**
+ * A function that takes a set of Codings as inputs and returns a set of boolean values, based upon
+ * whether each Coding is present within the ValueSet identified by the supplied URL.
+ *
  * @author John Grimes
  */
 public class InValueSetFunction implements ExpressionFunction {
@@ -37,30 +40,18 @@ public class InValueSetFunction implements ExpressionFunction {
   @Nonnull
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
-    if (input == null) {
-      throw new InvalidRequestException("Missing input expression for resolve function");
-    }
-    if (!input.getElementTypeCode().equals("Coding")) {
-      throw new InvalidRequestException(
-          "Input to resolve function must be a Coding: " + input.getExpression() + " ("
-              + input.getElementTypeCode() + ")");
-    }
-    if (arguments.size() != 1) {
-      throw new InvalidRequestException("Must pass URL argument to inValueSet function");
-    }
-    ParseResult argument = arguments.get(0);
-    if (argument.getResultType() != ParseResultType.STRING_LITERAL) {
-      throw new InvalidRequestException(
-          "Argument to inValueSet function must be a string: " + argument.getExpression());
-    }
-    ResolvedElement element = resolveElement(input.getExpression());
+    ParseResult argument = validateArguments(input, arguments);
+    @SuppressWarnings("ConstantConditions") ResolvedElement element = resolveElement(
+        input.getExpression());
     assert element.getType() == ResolvedElementType.COMPLEX;
+    assert element.getTypeCode() != null;
     assert element.getTypeCode().equals("Coding");
 
     List<String> pathComponents = tokenizePath(element.getPath());
     String joinAlias = input.getJoins().isEmpty()
         ? pathToLowerCamelCase(pathComponents) + "ValueSet"
         : input.getJoins().last().getTableAlias() + "ValueSet";
+    assert argument.getExpression() != null;
     String unquotedArgument = argument.getExpression()
         .substring(1, argument.getExpression().length() - 1);
     String rootExpression = "valueSet_" + Strings.md5(unquotedArgument);
@@ -86,6 +77,37 @@ public class InValueSetFunction implements ExpressionFunction {
     return input;
   }
 
+  private void validateInput(@Nullable ParseResult input) {
+    if (input == null) {
+      throw new InvalidRequestException("Missing input expression for resolve function");
+    }
+    assert input.getElementTypeCode() != null;
+    if (!input.getElementTypeCode().equals("Coding")) {
+      throw new InvalidRequestException(
+          "Input to resolve function must be a Coding: " + input.getExpression() + " ("
+              + input.getElementTypeCode() + ")");
+    }
+  }
+
+  @Nonnull
+  private ParseResult validateArguments(@Nullable ParseResult input,
+      @Nonnull List<ParseResult> arguments) {
+    validateInput(input);
+    if (arguments.size() != 1) {
+      throw new InvalidRequestException("Must pass URL argument to inValueSet function");
+    }
+    ParseResult argument = arguments.get(0);
+    if (argument.getResultType() != ParseResultType.STRING_LITERAL) {
+      throw new InvalidRequestException(
+          "Argument to inValueSet function must be a string: " + argument.getExpression());
+    }
+    return argument;
+  }
+
+  /**
+   * Expands the specified ValueSet using the terminology server, and saves the result to a
+   * temporary view identified by the specified table name.
+   */
   private void ensureExpansionTableExists(String valueSetUrl, String tableName) {
     if (!spark.catalog().tableExists("clinsight", tableName)) {
       ValueSet expansion = terminologyClient.expandValueSet(new UriType(valueSetUrl));

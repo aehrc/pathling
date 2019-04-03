@@ -24,10 +24,23 @@ import org.hl7.fhir.dstu3.model.StructureDefinition.StructureDefinitionKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class knows how to retrieve, summarise and index a set of StructureDefinitions from a
+ * terminology server.
+ *
+ * @author John Grimes
+ */
 class ResourceScanner {
 
   private static final Logger logger = LoggerFactory.getLogger(ResourceScanner.class);
 
+  /**
+   * Retrieve a map of URLs to full StructureDefinitions, given a list of summarised
+   * StructureDefinitions (for example, from a search result).
+   *
+   * Requires a lambda which describes how to retrieve a StructureDefinition, based on its ID.
+   */
+  @Nonnull
   static Map<String, StructureDefinition> retrieveResourceDefinitions(
       @Nonnull List<StructureDefinition> structureDefinitions,
       @Nonnull Function<StructureDefinition, StructureDefinition> fetchResourceWithId) {
@@ -37,6 +50,13 @@ class ResourceScanner {
         .collect(Collectors.toMap(StructureDefinition::getUrl, fetchResourceWithId));
   }
 
+  /**
+   * Retrieve a map of URLs to full StructureDefinitions, given a list of summarised
+   * StructureDefinitions (for example, from a search result).
+   *
+   * Requires a lambda which describes how to retrieve a StructureDefinition, based on its ID.
+   */
+  @Nonnull
   static Map<String, StructureDefinition> retrieveComplexTypeDefinitions(
       @Nonnull List<StructureDefinition> structureDefinitions,
       @Nonnull Function<StructureDefinition, StructureDefinition> fetchResourceWithId) {
@@ -75,6 +95,11 @@ class ResourceScanner {
     return definitions;
   }
 
+  /**
+   * Check that all StructureDefinitions within a collection have a snapshot component. Accepting
+   * StructureDefinitions without a snapshot is problematic, as we would have to traverse the
+   * inheritance tree to understand the definition of all elements.
+   */
   static void validateDefinitions(@Nonnull Collection<StructureDefinition> definitions) {
     definitions.forEach(definition -> {
       if (definition.getSnapshot() == null || definition.getSnapshot().isEmpty()) {
@@ -84,6 +109,12 @@ class ResourceScanner {
     });
   }
 
+  /**
+   * Returns a map of URLs to maps of element names to summaries of those elements. This provides an
+   * object which is easier and more efficient to interrogate about element information than the
+   * HAPI StructureDefinition class.
+   */
+  @Nonnull
   static Map<String, Map<String, SummarisedElement>> summariseDefinitions(
       @Nonnull Collection<StructureDefinition> definitions) {
     Map<String, Map<String, SummarisedElement>> result = new HashMap<>();
@@ -95,6 +126,11 @@ class ResourceScanner {
     return result;
   }
 
+  /**
+   * Converts a list of ElementDefinitions into a map between element path and a summary of its
+   * definition.
+   */
+  @Nonnull
   private static Map<String, SummarisedElement> summariseElements(
       @Nonnull List<ElementDefinition> elements) {
     Map<String, SummarisedElement> result = new HashMap<>();
@@ -103,11 +139,14 @@ class ResourceScanner {
       List<TypeRefComponent> typeRefComponents = element.getType();
       String elementPath = element.getPath();
       assert elementPath != null : "Encountered element with no path";
+
       List<String> elementChildren = findElementChildren(elementPath, elements);
       assert elementChildren != null;
+
       String maxCardinality = (typeRefComponents != null && !typeRefComponents.isEmpty())
           ? element.getMax()
           : null;
+
       List<String> types = typeRefComponents == null
           ? new ArrayList<>()
           : typeRefComponents.stream().map(TypeRefComponent::getCode)
@@ -164,6 +203,11 @@ class ResourceScanner {
     return result;
   }
 
+  /**
+   * This method knows how to find the children of a given element within a list of
+   * ElementDefinitions. This is needed because StructureDefinitions are not hierarchical in their
+   * structure, they rely on paths to convey the structure.
+   */
   private static List<String> findElementChildren(@Nonnull String elementPath,
       @Nonnull List<ElementDefinition> elements) {
     List<String> children = elements.stream()
