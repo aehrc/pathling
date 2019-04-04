@@ -4,12 +4,13 @@
 
 package au.csiro.clinsight;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.cerner.bunsen.Bundles;
 import com.cerner.bunsen.Bundles.BundleContainer;
 import java.io.File;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
@@ -23,35 +24,40 @@ import org.slf4j.LoggerFactory;
  *
  * @author John Grimes
  */
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class FhirLoader {
 
-  private static Logger logger = LoggerFactory.getLogger(FhirLoader.class);
+  private static final Logger logger = LoggerFactory.getLogger(FhirLoader.class);
 
-  private FhirLoaderConfiguration configuration;
-  private SparkSession spark;
+  private final FhirLoaderConfiguration configuration;
+  private final SparkSession spark;
 
   public FhirLoader(FhirLoaderConfiguration configuration) {
-    checkArgument(configuration.getSparkMasterUrl() != null, "Must supply Spark master URL");
-    checkArgument(configuration.getWarehouseDirectory() != null, "Must supply warehouse directory");
-    checkArgument(configuration.getMetastoreUrl() != null,
-        "Must supply metastore connection URL");
-    checkArgument(configuration.getMetastoreUser() != null, "Must supply metastore user");
-    checkArgument(configuration.getMetastorePassword() != null, "Must supply metastore password");
-    checkArgument(configuration.getExecutorMemory() != null, "Must supply executor memory");
-
     logger.debug("Creating new FhirLoader: " + configuration);
     this.configuration = configuration;
 
+    SparkConf sparkConf = new SparkConf();
+    sparkConf.set("spark.master", configuration.getSparkMasterUrl());
+    sparkConf.set("spark.sql.warehouse.dir", configuration.getWarehouseDirectory());
+    sparkConf.set("javax.jdo.option.ConnectionURL", configuration.getMetastoreUrl());
+    sparkConf.set("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser());
+    sparkConf.set("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword());
+    sparkConf.set("spark.executor.memory", configuration.getExecutorMemory());
+
+    List<String> sparkJars = new ArrayList<>();
+    sparkJars.add("/fhir-loader.jar");
+    File libDirectory = new File("/lib");
+    File[] dependencyJars = libDirectory.listFiles(file -> file.getName().matches(".*\\.jar"));
+    assert dependencyJars != null;
+    for (File dependencyJar : dependencyJars) {
+      sparkJars.add(dependencyJar.getAbsolutePath());
+    }
+    sparkConf.set("spark.jars", String.join(",", sparkJars));
+
+    logger.debug("Spark configuration: " + sparkConf.toDebugString());
     spark = SparkSession.builder()
-        .config("spark.master", configuration.getSparkMasterUrl())
-        // TODO: Use Maven dependency plugin to copy this into a relative location.
-        .config("spark.jars",
-            "/Users/gri306/Code/contrib/bunsen/bunsen-shaded/target/bunsen-shaded-0.4.6-SNAPSHOT.jar")
-        .config("spark.sql.warehouse.dir", configuration.getWarehouseDirectory())
-        .config("javax.jdo.option.ConnectionURL", configuration.getMetastoreUrl())
-        .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
-        .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
-        .config("spark.executor.memory", configuration.getExecutorMemory())
+        .appName("fhir-loader")
+        .config(sparkConf)
         .enableHiveSupport()
         .getOrCreate();
   }
@@ -59,14 +65,12 @@ public class FhirLoader {
   /**
    * Loads the content of each JSON Bundle file matched by a supplied glob.
    */
-  public void processJsonBundles(File bundlesDirectory) {
-    checkArgument(bundlesDirectory.isDirectory(), "bundlesDirectory must be a directory");
-    logger.info("Processing JSON Bundles at: " + bundlesDirectory.getAbsolutePath());
+  public void processJsonBundles(String bundlesPath) {
+    logger.info("Processing JSON Bundles at: " + bundlesPath);
 
     Bundles bundles = Bundles.forStu3();
     JavaRDD<BundleContainer> rdd = bundles
-        .loadFromDirectory(spark, bundlesDirectory.getAbsolutePath(),
-            configuration.getLoadPartitions());
+        .loadFromDirectory(spark, bundlesPath, configuration.getLoadPartitions());
     spark.sql("CREATE DATABASE IF NOT EXISTS " + configuration.getDatabaseName());
     for (String resourceName : configuration.getResourcesToSave()) {
       String tableName = configuration.getDatabaseName() + "." + resourceName.toLowerCase();
@@ -80,7 +84,7 @@ public class FhirLoader {
   /**
    * Loads each transaction (Bundle) within an NDJSON file, accessible from the supplied URL.
    */
-  public void processNdjsonFile(URL ndjsonFile) throws Exception {
+  public void processNdjsonFile(URL ndjsonFile) {
     // TODO: Implement loading of NDJSON files.
     throw new RuntimeException("Not yet implemented");
   }

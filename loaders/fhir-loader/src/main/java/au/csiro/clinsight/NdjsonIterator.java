@@ -15,11 +15,12 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("WeakerAccess")
 public class NdjsonIterator implements Iterator<IBaseResource> {
 
   private static final Logger logger = LoggerFactory.getLogger(NdjsonIterator.class);
-  private IParser parser;
-  private BufferedReader reader;
+  private final IParser parser;
+  private final BufferedReader reader;
   private int currentIndex;
 
   public NdjsonIterator(FhirContext fhirContext, InputStream inputStream) {

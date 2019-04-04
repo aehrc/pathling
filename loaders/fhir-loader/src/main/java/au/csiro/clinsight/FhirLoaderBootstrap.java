@@ -4,9 +4,11 @@
 
 package au.csiro.clinsight;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static au.csiro.clinsight.utilities.Configuration.setStringPropsUsingEnvVar;
 
-import java.io.File;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * @author John Grimes
@@ -14,9 +16,25 @@ import java.io.File;
 public class FhirLoaderBootstrap {
 
   public static void main(String[] args) {
-    String sparkMasterUrl = System.getenv("SPARK_MASTER_URL");
-    String jsonBundlesDirectory = System.getenv("JSON_BUNDLES_DIRECTORY");
-    String[] resourcesToSave = {"Patient",
+    FhirLoaderConfiguration config = new FhirLoaderConfiguration();
+
+    setStringPropsUsingEnvVar(config, new HashMap<String, String>() {{
+      put("CLINSIGHT_SPARK_MASTER_URL", "sparkMasterUrl");
+      put("CLINSIGHT_WAREHOUSE_DIRECTORY", "warehouseDirectory");
+      put("CLINSIGHT_METASTORE_URL", "metastoreUrl");
+      put("CLINSIGHT_METASTORE_USER", "metastoreUser");
+      put("CLINSIGHT_METASTORE_PASSWORD", "metastorePassword");
+      put("CLINSIGHT_DATABASE_NAME", "databaseName");
+      put("CLINSIGHT_EXECUTOR_MEMORY", "executorMemory");
+    }});
+    String loadPartitions = System.getenv("CLINSIGHT_LOAD_PARTITIONS");
+    if (loadPartitions != null) {
+      config.setLoadPartitions(Integer.parseInt(loadPartitions));
+    }
+
+    // This list is based upon the resources produced by Synthea, and will need to be expanded if
+    // loading FHIR data which covers additional resources.
+    List<String> resourcesToSave = Arrays.asList("Patient",
         "Encounter",
         "Condition",
         "AllergyIntolerance",
@@ -29,24 +47,14 @@ public class FhirLoaderBootstrap {
         "MedicationRequest",
         "Claim",
         "ExplanationOfBenefit",
-        "Coverage"};
+        "Coverage");
+    config.getResourcesToSave().addAll(resourcesToSave);
 
-    checkArgument(sparkMasterUrl != null, "Must supply sparkMasterUrl property");
-    checkArgument(jsonBundlesDirectory != null, "Must supply jsonBundlesDirectory property");
+    String jsonBundlesPath = System.getenv("CLINSIGHT_JSON_BUNDLES_PATH");
+    assert jsonBundlesPath != null : "Must supply CLINSIGHT_JSON_BUNDLES_PATH parameter";
 
-    FhirLoaderConfiguration configuration = new FhirLoaderConfiguration();
-    configuration.setSparkMasterUrl(sparkMasterUrl);
-    configuration.setWarehouseDirectory("/Users/gri306/Code/clinsight/clinsight/spark-warehouse");
-    configuration.setMetastoreUrl("jdbc:postgresql://localhost/clinsight_metastore");
-    configuration.setMetastoreUser("gri306");
-    configuration.setMetastorePassword("");
-    configuration.setLoadPartitions(12);
-    configuration.setDatabaseName("clinsight");
-    configuration.setResourcesToSave(resourcesToSave);
-    configuration.setExecutorMemory("6g");
-
-    FhirLoader fhirLoader = new FhirLoader(configuration);
-    fhirLoader.processJsonBundles(new File(jsonBundlesDirectory));
+    FhirLoader fhirLoader = new FhirLoader(config);
+    fhirLoader.processJsonBundles(jsonBundlesPath);
   }
 
 }

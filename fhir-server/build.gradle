@@ -41,8 +41,8 @@ dependencies {
   implementation group: 'org.apache.spark', name: 'spark-hive_2.11', version: '2.3.3'
 
   // Bunsen knows how to serialise FHIR resources into Spark datasets.
-  implementation group: 'com.cerner.bunsen', name: 'bunsen-core', version: '0.4.6-SNAPSHOT'
-  implementation group: 'com.cerner.bunsen', name: 'bunsen-stu3', version: '0.4.6-SNAPSHOT'
+  implementation group: 'com.cerner.bunsen', name: 'bunsen-core', version: '0.4.6-clinsight-SNAPSHOT'
+  implementation group: 'com.cerner.bunsen', name: 'bunsen-stu3', version: '0.4.6-clinsight-SNAPSHOT'
 
   // The Hive metastore used by the Spark data warehouse is stored in a PostgreSQL server.
   implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.5'

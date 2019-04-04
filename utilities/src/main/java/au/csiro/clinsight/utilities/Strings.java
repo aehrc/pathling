@@ -15,6 +15,7 @@ import javax.xml.bind.DatatypeConverter;
 /**
  * @author John Grimes
  */
+@SuppressWarnings("WeakerAccess")
 public abstract class Strings {
 
   public static String capitalize(String name) {
@@ -62,7 +63,7 @@ public abstract class Strings {
   }
 
   public static String md5(String input) {
-    MessageDigest messageDigest = null;
+    MessageDigest messageDigest;
     try {
       messageDigest = MessageDigest.getInstance("MD5");
     } catch (NoSuchAlgorithmException e) {
