@@ -6,8 +6,8 @@ set +e
 echo
 
 echo "Syncing Docker Compose files..."
-rsync -avz master/ hb-15-cdc001.it.csiro.au:/opt/docker/clinsight
-rsync -avz worker/ hb-15-cdc002.it.csiro.au:/opt/docker/clinsight
+rsync -avz --delete master/ hb-15-cdc001.it.csiro.au:/opt/docker/clinsight
+rsync -avz --delete worker/ hb-15-cdc002.it.csiro.au:/opt/docker/clinsight
 echo
 
 echo "Updating stack on hb-15-cdc001.it.csiro.au..."

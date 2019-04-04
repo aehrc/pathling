@@ -12,7 +12,6 @@ services:
       CLINSIGHT_METASTORE_USER: postgres
       CLINSIGHT_EXECUTOR_MEMORY: 6g
       CLINSIGHT_TERMINOLOGY_SERVER_URL: http://hb-15-cdc001.it.csiro.au:4066/fhir
-      CLINSIGHT_DATABASE_NAME: postgres
     restart: unless-stopped
   ontoserver:
     image: docker-registry.it.csiro.au/clinsight/ontoserver:5.4.0-SNAPSHOT
@@ -87,6 +86,7 @@ services:
       HDFS_CONF_dfs_client_use_datanode_hostname: "true"
       HDFS_CONF_dfs_datanode_use_datanode_hostname: "true"
       HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+      HDFS_CONF_dfs_replication: "2"
     volumes:
       - /mnt/cl_warehouse_1/hadoop/name:/hadoop/dfs/name
     restart: unless-stopped
