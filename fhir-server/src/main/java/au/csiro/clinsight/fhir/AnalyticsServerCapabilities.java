@@ -12,20 +12,9 @@ import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
-import org.hl7.fhir.dstu3.model.CapabilityStatement;
-import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementKind;
-import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementRestComponent;
-import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementRestOperationComponent;
-import org.hl7.fhir.dstu3.model.CapabilityStatement.CapabilityStatementSoftwareComponent;
-import org.hl7.fhir.dstu3.model.CapabilityStatement.RestfulCapabilityMode;
-import org.hl7.fhir.dstu3.model.CapabilityStatement.UnknownContentCode;
-import org.hl7.fhir.dstu3.model.CodeType;
-import org.hl7.fhir.dstu3.model.CodeableConcept;
-import org.hl7.fhir.dstu3.model.Coding;
+import org.hl7.fhir.dstu3.model.*;
+import org.hl7.fhir.dstu3.model.CapabilityStatement.*;
 import org.hl7.fhir.dstu3.model.Enumerations.PublicationStatus;
-import org.hl7.fhir.dstu3.model.Reference;
-import org.hl7.fhir.dstu3.model.StringType;
-import org.hl7.fhir.dstu3.model.UsageContext;
 
 /**
  * This class provides a customised CapabilityStatement describing the functionality of the
@@ -81,9 +70,9 @@ class AnalyticsServerCapabilities implements
     CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
     server.setMode(RestfulCapabilityMode.SERVER);
     List<CapabilityStatementRestOperationComponent> operations = new ArrayList<>();
-    Reference queryOperationReference = new Reference("OperationDefinition/aggregateQuery-0");
+    Reference queryOperationReference = new Reference("OperationDefinition/aggregate-query-0");
     CapabilityStatementRestOperationComponent operation = new CapabilityStatementRestOperationComponent(
-        new StringType("aggregateQuery"), queryOperationReference);
+        new StringType("aggregate-query"), queryOperationReference);
     operations.add(operation);
     server.setOperation(operations);
     rest.add(server);

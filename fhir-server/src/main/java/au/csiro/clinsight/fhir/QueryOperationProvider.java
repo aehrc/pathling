@@ -13,7 +13,8 @@ import ca.uhn.fhir.rest.annotation.ResourceParam;
 import org.hl7.fhir.dstu3.model.Parameters;
 
 /**
- * HAPI plain provider that provides an entry point for the `aggregateQuery` system-wide operation.
+ * HAPI plain provider that provides an entry point for the `aggregate-query` system-wide
+ * operation.
  *
  * @author John Grimes
  */
@@ -28,7 +29,7 @@ class QueryOperationProvider {
   }
 
   @SuppressWarnings("unused")
-  @Operation(name = "$aggregateQuery", idempotent = true)
+  @Operation(name = "$aggregate-query", idempotent = true)
   public Parameters queryOperation(@ResourceParam Parameters parameters) {
     AggregateQuery query = new AggregateQuery(parameters);
     AggregateQueryResult result = queryExecutor.execute(query);

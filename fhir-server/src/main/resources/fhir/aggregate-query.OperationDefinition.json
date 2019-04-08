@@ -1,8 +1,8 @@
 {
   "resourceType": "OperationDefinition",
-  "id": "aggregateQuery-0",
-  "url": "https://clinsight.csiro.au/fhir/OperationDefinition/aggregateQuery-0",
-  "name": "aggregateQuery",
+  "id": "aggregate-query-0",
+  "url": "https://clinsight.csiro.au/fhir/OperationDefinition/aggregate-query-0",
+  "name": "aggregate-query",
   "status": "draft",
   "kind": "operation",
   "experimental": true,
@@ -21,7 +21,7 @@
     }
   ],
   "idempotent": true,
-  "code": "aggregateQuery",
+  "code": "aggregate-query",
   "system": true,
   "parameter": [
     {

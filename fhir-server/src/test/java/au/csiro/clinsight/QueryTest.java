@@ -4,11 +4,7 @@
 
 package au.csiro.clinsight;
 
-import static au.csiro.clinsight.TestConfiguration.FHIR_SERVER_URL;
-import static au.csiro.clinsight.TestConfiguration.createMockDataset;
-import static au.csiro.clinsight.TestConfiguration.mockDefinitionRetrieval;
-import static au.csiro.clinsight.TestConfiguration.postFhirResource;
-import static au.csiro.clinsight.TestConfiguration.startFhirServer;
+import static au.csiro.clinsight.TestConfiguration.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -46,7 +42,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
  */
 public class QueryTest {
 
-  private static final String QUERY_URL = FHIR_SERVER_URL + "/$aggregateQuery";
+  private static final String QUERY_URL = FHIR_SERVER_URL + "/$aggregate-query";
   private Server server;
   private SparkSession mockSpark;
   private CloseableHttpClient httpClient;

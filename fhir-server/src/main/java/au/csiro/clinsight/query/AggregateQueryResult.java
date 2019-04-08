@@ -12,8 +12,8 @@ import org.hl7.fhir.dstu3.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.dstu3.model.Type;
 
 /**
- * Represents the information to be provided as the result of the invocation of the `aggregateQuery`
- * operation.
+ * Represents the information to be provided as the result of the invocation of the
+ * `aggregate-query` operation.
  *
  * @author John Grimes
  */
@@ -29,7 +29,7 @@ public class AggregateQueryResult {
 
   /**
    * This constructor populates a Parameters resource with the values from this object, based on the
-   * definition of the result of the `aggregateQuery` operation within the OperationDefinition.
+   * definition of the result of the `aggregate-query` operation within the OperationDefinition.
    */
   public Parameters toParameters() {
     Parameters parameters = new Parameters();

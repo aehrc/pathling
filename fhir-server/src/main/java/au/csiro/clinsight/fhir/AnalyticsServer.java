@@ -79,7 +79,7 @@ public class AnalyticsServer extends RestfulServer {
 
   /**
    * Declare the providers which will handle requests to this server. This server only knows how to
-   * do one thing - satisfy `aggregateQuery` requests. This is a system-wide operation, so it is
+   * do one thing - satisfy `aggregate-query` requests. This is a system-wide operation, so it is
    * delivered using a plain provider.
    */
   private void declareProviders() {
