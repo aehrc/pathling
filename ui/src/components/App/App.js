@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Icon, Spin, message } from 'antd'
 
+import ElementTree from '../ElementTree'
 import DimensionList from '../DimensionList'
 import MetricList from '../MetricList'
 import SelectedMetrics from '../SelectedMetrics'
@@ -26,6 +27,7 @@ class App extends Component {
     return (
       <div className="app">
         <menu className="sider">
+          <ElementTree />
           <MetricList />
           <DimensionList />
         </menu>

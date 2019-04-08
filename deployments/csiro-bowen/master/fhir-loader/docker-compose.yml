@@ -9,4 +9,4 @@ services:
       CLINSIGHT_METASTORE_URL: jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore
       CLINSIGHT_METASTORE_USER: postgres
       CLINSIGHT_EXECUTOR_MEMORY: 6g
-      CLINSIGHT_JSON_BUNDLES_PATH: hdfs://hb-15-cdc001.it.csiro.au:8020/staging/synthea/1k_20190408_2
+      CLINSIGHT_JSON_BUNDLES_PATH: hdfs://hb-15-cdc001.it.csiro.au:8020/staging/synthea/1k_20190408_3
