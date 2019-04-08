@@ -1,0 +1,556 @@
+{
+  "name": "Hypertension upgraded",
+  "remarks": ["A blank module"],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age Guard"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    },
+    "Age Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">",
+        "quantity": 18,
+        "unit": "years"
+      },
+      "direct_transition": "Chance_of_Hypertension"
+    },
+    "Chance_of_Hypertension": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "conditional_transition": [
+        {
+          "transition": "Age_Chance_of_Hypertension_75+",
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 75,
+            "unit": "years",
+            "value": 0
+          }
+        },
+        {
+          "transition": "Age_Chance_of_Hypertension_65-74",
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 65,
+            "unit": "years",
+            "value": 0
+          }
+        },
+        {
+          "transition": "Age_Chance_of_Hypertension_55-64",
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 55,
+            "unit": "years",
+            "value": 0
+          }
+        },
+        {
+          "transition": "Age_Chance_of_Hypertension_45-54",
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 45,
+            "unit": "years",
+            "value": 0
+          }
+        },
+        {
+          "transition": "Age_Chance_of_Hypertension_35-44",
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 35,
+            "unit": "years",
+            "value": 0
+          }
+        },
+        {
+          "transition": "Age_Chance_of_Hypertension_25-34",
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 25,
+            "unit": "years",
+            "value": 0
+          }
+        },
+        {
+          "transition": "Age_Chance_of_Hypertension_18-24",
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 18,
+            "unit": "years",
+            "value": 0
+          }
+        }
+      ]
+    },
+    "Age_Chance_of_Hypertension_18-24": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Hypertension_Onset",
+          "distribution": 0.013
+        },
+        {
+          "transition": "Chance_of_Hypertension",
+          "distribution": 0.987
+        }
+      ]
+    },
+    "Age_Chance_of_Hypertension_25-34": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Hypertension_Onset",
+          "distribution": 0.03
+        },
+        {
+          "transition": "Chance_of_Hypertension",
+          "distribution": 0.97
+        }
+      ]
+    },
+    "Age_Chance_of_Hypertension_35-44": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Hypertension_Onset",
+          "distribution": 0.04
+        },
+        {
+          "transition": "Chance_of_Hypertension",
+          "distribution": 0.96
+        }
+      ]
+    },
+    "Age_Chance_of_Hypertension_45-54": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Hypertension_Onset",
+          "distribution": 0.04
+        },
+        {
+          "transition": "Chance_of_Hypertension",
+          "distribution": 0.96
+        }
+      ]
+    },
+    "Age_Chance_of_Hypertension_55-64": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Hypertension_Onset",
+          "distribution": 0.056
+        },
+        {
+          "transition": "Chance_of_Hypertension",
+          "distribution": 0.944
+        }
+      ]
+    },
+    "Age_Chance_of_Hypertension_65-74": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Hypertension_Onset",
+          "distribution": 0.038
+        },
+        {
+          "transition": "Chance_of_Hypertension",
+          "distribution": 0.962
+        }
+      ]
+    },
+    "Age_Chance_of_Hypertension_75+": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Hypertension_Onset",
+          "distribution": 0.037
+        },
+        {
+          "transition": "Chance_of_Hypertension",
+          "distribution": 0.9630000000000001
+        }
+      ]
+    },
+    "Hypertension_Onset": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Hypertension_condition_start",
+          "distribution": 0.9
+        },
+        {
+          "transition": "Hypertension_and_CCF_condition_start",
+          "distribution": 0.05
+        },
+        {
+          "transition": "HypertensiveHD_and_CKD_condition_start",
+          "distribution": 0.05
+        }
+      ]
+    },
+    "Hypertension_condition_start": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "",
+      "target_encounter": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 38341003,
+          "display": "Hypertension"
+        }
+      ],
+      "direct_transition": "Hypertension_diagnosis"
+    },
+    "Hypertension_diagnosis": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 185347001,
+          "display": "Encounter for problem"
+        }
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Prescribe_ACEi",
+          "distribution": 0.5
+        },
+        {
+          "transition": "Prescribe_CaCh_Blocker",
+          "distribution": 0.25
+        },
+        {
+          "transition": "Prescribe_betablocker",
+          "distribution": 0.25
+        }
+      ]
+    },
+    "Prescribe_CaCh_Blocker": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Prescription_amlodipine5mgMPP",
+          "distribution": 0.35
+        },
+        {
+          "transition": "Prescription_felodipine25MPP",
+          "distribution": 0.2
+        },
+        {
+          "transition": "Prescription_Amlo10CTPP",
+          "distribution": 0.1
+        },
+        {
+          "transition": "Prescription_Norvasc5mgTPP",
+          "distribution": 0.3
+        },
+        {
+          "transition": "Prescription_Plendil5TPP",
+          "distribution": 0.050000000000000044
+        }
+      ]
+    },
+    "Prescribe_betablocker": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Prescription_atenololMPP",
+          "distribution": 0.4
+        },
+        {
+          "transition": "Prescription_MinaxCTPP",
+          "distribution": 0.4
+        },
+        {
+          "transition": "Prescription_BetalocCTPP",
+          "distribution": 0.19999999999999996
+        }
+      ]
+    },
+    "Prescribe_ACEi": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Prescription_Lisodur5CTPP",
+          "distribution": 0.35
+        },
+        {
+          "transition": "Prescription_lisinopril",
+          "distribution": 0.35
+        },
+        {
+          "transition": "Prescription_Monopril10TPP",
+          "distribution": 0.30000000000000004
+        },
+        {
+          "transition": "Prescription_Coversyl2TPP",
+          "distribution": 1
+        },
+        {
+          "transition": "Prescription_perindo2MPP",
+          "distribution": 1
+        }
+      ]
+    },
+    "Prescription_lisinopril": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 28177011000036107,
+          "display": "lisinopril 5 mg tablet, 30"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "End_Hypertension_diagnosis_encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Hypertension_and_CCF_diagnosis": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 185347001,
+          "display": "Encounter for problem"
+        }
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Prescribe_ACEi",
+          "distribution": 0.5
+        },
+        {
+          "transition": "Prescribe_betablocker",
+          "distribution": 0.4
+        },
+        {
+          "transition": "Prescribe_diuretic",
+          "distribution": 0.1
+        }
+      ]
+    },
+    "Hypertension_and_CCF_condition_start": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "",
+      "target_encounter": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 5148006,
+          "display": "Hypertensive heart disease with congestive heart failure"
+        }
+      ],
+      "direct_transition": "Hypertension_and_CCF_diagnosis"
+    },
+    "Prescribe_diuretic": {
+      "type": "Simple",
+      "direct_transition": "Prescription_furosemide"
+    },
+    "Prescription_furosemide": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 18687011000036101,
+          "display": "Lasix 40 mg uncoated tablet, 100, bottle"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "HypertensiveHD_and_CKD_condition_start": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "",
+      "target_encounter": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 8501000119104,
+          "display": "Hypertensive heart and chronic kidney disease"
+        }
+      ],
+      "direct_transition": "HypertensiveHD_and_CKD_diagnosis"
+    },
+    "HypertensiveHD_and_CKD_diagnosis": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 185347001,
+          "display": "Encounter for problem"
+        }
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Prescribe_ACEi",
+          "distribution": 0.5
+        },
+        {
+          "transition": "Prescribe_betablocker",
+          "distribution": 0.29999999999999993
+        },
+        {
+          "transition": "Prescribe_diuretic",
+          "distribution": 0.2
+        }
+      ]
+    },
+    "Prescription_Norvasc5mgTPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 12400011000036108,
+          "display": "Norvasc 5 mg uncoated tablet, 30"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_amlodipine5mgMPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 28205011000036108,
+          "display": "amlodipine 5 mg tablet, 30"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_Amlo10CTPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 105091000036108,
+          "display": "Amlo 10 mg uncoated tablet, 30, blister pack"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_Plendil5TPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 12660011000036105,
+          "display": "Plendil ER 5 mg modified release tablet, 30"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_felodipine25MPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 27474011000036109,
+          "display": "felodipine 2.5 mg modified release tablet, 30"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_perindo2MPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 26556011000036106,
+          "display": "perindopril arginine 2.5 mg tablet, 30"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_BetalocCTPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 18799011000036104,
+          "display": "Betaloc 50 mg uncoated tablet, 100, blister pack"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_Coversyl2TPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 11217011000036107,
+          "display": "Coversyl 2.5 mg film-coated tablet, 30"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_atenololMPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 993681000168108,
+          "display": "atenolol 50 mg tablet, 100"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_MinaxCTPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 19007011000036105,
+          "display": "Minax 50 mg uncoated tablet, 100, bottle"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_Monopril10TPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 12483011000036101,
+          "display": "Monopril 10 mg uncoated tablet, 30"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    },
+    "Prescription_Lisodur5CTPP": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 20310011000036106,
+          "display": "Lisodur 5 mg uncoated tablet, 30, blister pack"
+        }
+      ],
+      "direct_transition": "End_Hypertension_diagnosis_encounter"
+    }
+  }
+}

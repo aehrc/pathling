@@ -1,0 +1,201 @@
+{
+  "name": "Adult_Diabetes",
+  "remarks": ["A blank module"],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Delay_Until_Adulthood"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    },
+    "Delay_Until_Adulthood": {
+      "type": "Delay",
+      "range": {
+        "low": 18,
+        "high": 90,
+        "unit": "years"
+      },
+      "distributed_transition": [
+        {
+          "transition": "Adult_DiabetesType1_Begins",
+          "distribution": 0.02
+        },
+        {
+          "transition": "Adult_DiabetesType2_Begins",
+          "distribution": 0.28
+        },
+        {
+          "transition": "New_State",
+          "distribution": 0.7
+        }
+      ]
+    },
+    "Adult_DiabetesType1_Begins": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "",
+      "target_encounter": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 46635009,
+          "display": "Type 1 diabetes mellitus"
+        }
+      ],
+      "direct_transition": "DiabetesType1_Diagnosis"
+    },
+    "Adult_DiabetesType2_Begins": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "",
+      "target_encounter": "text",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 44054006,
+          "display": "Type 2 diabetes mellitus"
+        }
+      ],
+      "direct_transition": "DiabetesType2_Diagnosis"
+    },
+    "DiabetesType1_Diagnosis": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 185345009,
+          "display": "Encounter for symptom"
+        }
+      ],
+      "direct_transition": "Prescribe_Insulin"
+    },
+    "Prescribe_Insulin": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 67866001,
+          "display": "Insulin"
+        }
+      ],
+      "direct_transition": "End_DiabetesType1_Diagnosis_Encounter"
+    },
+    "Maintaining_DiabetesType1": {
+      "type": "Simple",
+      "direct_transition": "Terminal"
+    },
+    "DiabetesType2_Diagnosis": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 185345009,
+          "display": "SNOMED Code"
+        }
+      ],
+      "direct_transition": "DiabetesType2_CarePlan"
+    },
+    "DiabetesType2_CarePlan": {
+      "type": "CarePlanStart",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 734163000,
+          "display": "Care plan"
+        }
+      ],
+      "direct_transition": "End_DiabetesType2_Diagnosis_Encounter",
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": 284350006,
+          "display": "Diabetes mellitus diet education"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": 386463000,
+          "display": "Prescribed activity/exercise education"
+        }
+      ]
+    },
+    "End_DiabetesType1_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Maintaining_DiabetesType1"
+    },
+    "End_DiabetesType2_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Life_with_DiabetesType2"
+    },
+    "Maintaining_DiabetesType2": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 6,
+        "unit": "months"
+      },
+      "direct_transition": "Uncontrolled_Blood_Glucose_Levels"
+    },
+    "Uncontrolled_Blood_Glucose_Levels": {
+      "type": "Simple",
+      "direct_transition": "Followup_DiabetesType2_Encounter"
+    },
+    "Followup_DiabetesType2_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 394725008,
+          "display": "Diabetes medication review"
+        }
+      ],
+      "distributed_transition": [
+        {
+          "transition": "Prescribe_T2DM_Insulin",
+          "distribution": 0.05
+        },
+        {
+          "transition": "Prescribe_Metformin",
+          "distribution": 0.95
+        }
+      ]
+    },
+    "Prescribe_Metformin": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 372567009,
+          "display": "Metformin"
+        }
+      ],
+      "direct_transition": "Followup_end"
+    },
+    "Followup_end": {
+      "type": "EncounterEnd",
+      "direct_transition": "Life_with_DiabetesType2"
+    },
+    "Life_with_DiabetesType2": {
+      "type": "Simple",
+      "direct_transition": "Maintaining_DiabetesType2"
+    },
+    "Prescribe_T2DM_Insulin": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 67866001,
+          "display": "Insulin"
+        }
+      ],
+      "direct_transition": "Followup_end"
+    },
+    "New_State": {
+      "type": "Simple",
+      "direct_transition": "Terminal"
+    }
+  }
+}

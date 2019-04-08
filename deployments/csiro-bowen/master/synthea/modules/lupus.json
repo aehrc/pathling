@@ -1,0 +1,338 @@
+{
+  "name": "Lupus",
+  "remarks": [
+    "Lupus is a somewhat uncommon autoimmune disease that causes widespread inflammation. ",
+    "It is also categorized as a type of arthritis. Prior to the discovery of corticosteroids ",
+    "in the mid 1900's lupus was treated with quinine and salicylates.",
+    "Information on treatment, prevalence, and incidence of specific arthritis types from the CDC: ",
+    "http://www.cdc.gov/arthritis/basics/types.html",
+    "Overall prevalence of arthritis: ",
+    "http://www.cdc.gov/arthritis/data_statistics/national-statistics.html"
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "remarks": [
+        "======================================================================",
+        " INCIDENCE                                                            ",
+        "======================================================================",
+        " | Arthritis Type | Prevalence | Ratio F:M | ",
+        " ------------------------------------------- ",
+        " | Lupus          |   0.00054  |    6:1    | ",
+        " ------------------------------------------- "
+      ],
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "M"
+          },
+          "distributions": [
+            {
+              "distribution": 0.000077143,
+              "transition": "Delay_Until_Lupus"
+            },
+            {
+              "distribution": 0.999922857,
+              "transition": "Terminal"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Gender",
+            "gender": "F"
+          },
+          "distributions": [
+            {
+              "distribution": 0.0004629,
+              "transition": "Delay_Until_Lupus"
+            },
+            {
+              "distribution": 0.9995371,
+              "transition": "Terminal"
+            }
+          ]
+        }
+      ]
+    },
+    "Delay_Until_Lupus": {
+      "type": "Delay",
+      "range": {
+        "low": 25,
+        "high": 80,
+        "unit": "years"
+      },
+      "direct_transition": "Lupus"
+    },
+    "Lupus": {
+      "type": "ConditionOnset",
+      "remarks": [
+        "======================================================================",
+        " LUPUS                                                                ",
+        "======================================================================",
+        "Source: http://www.cdc.gov/arthritis/basics/lupus.htm"
+      ],
+      "target_encounter": "Lupus_Diagnosis",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "200936003",
+          "display": "Lupus erythematosus"
+        }
+      ],
+      "direct_transition": "Lupus_Diagnosis"
+    },
+    "Lupus_Diagnosis": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Lupus",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem"
+        }
+      ],
+      "direct_transition": "Lupus_Symptom1"
+    },
+    "Lupus_Symptom1": {
+      "type": "Symptom",
+      "symptom": "Joint Pain",
+      "range": {
+        "low": 0,
+        "high": 50
+      },
+      "direct_transition": "Lupus_Symptom2"
+    },
+    "Lupus_Symptom2": {
+      "type": "Symptom",
+      "symptom": "Fatigue",
+      "range": {
+        "low": 0,
+        "high": 50
+      },
+      "direct_transition": "Lupus_Symptom3"
+    },
+    "Lupus_Symptom3": {
+      "type": "Symptom",
+      "symptom": "Rash",
+      "range": {
+        "low": 0,
+        "high": 50
+      },
+      "direct_transition": "Lupus_Symptom4"
+    },
+    "Lupus_Symptom4": {
+      "type": "Symptom",
+      "symptom": "Fever",
+      "range": {
+        "low": 0,
+        "high": 20
+      },
+      "direct_transition": "Lupus_CarePlan"
+    },
+    "Lupus_CarePlan": {
+      "type": "CarePlanStart",
+      "target_encounter": "Lupus_Diagnosis",
+      "assign_to_attribute": "lupus_careplan",
+      "reason": "Lupus",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "872781000000100",
+          "display": "Musculoskeletal care"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "440381005",
+          "display": "Behavior to prevent sun exposure"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "226234005",
+          "display": "Healthy diet"
+        }
+      ],
+      "direct_transition": "Lupus_Nonopioid_Pain_Medication"
+    },
+    "Lupus_Nonopioid_Pain_Medication": {
+      "type": "MedicationOrder",
+      "target_encounter": "Lupus_Diagnosis",
+      "reason": "Lupus",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "849574",
+          "display": "Naproxen sodium 220 MG Oral Tablet"
+        }
+      ],
+      "direct_transition": "Corticosteroid"
+    },
+    "Corticosteroid": {
+      "type": "MedicationOrder",
+      "target_encounter": "Lupus_Diagnosis",
+      "assign_to_attribute": "lupus_corticosteroid",
+      "reason": "Lupus",
+      "remarks": [
+        "When introduced in higher levels than those produced by the body, corticosteroids ",
+        "inhibit inflammation. However, doctors prefer to use these for as short a time period ",
+        "as possible to avoid dangerous side effects."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "567645",
+          "display": "predniSONE 2.5 MG [Deltasone]"
+        }
+      ],
+      "direct_transition": "End_Diagnosis_Encounter"
+    },
+    "End_Diagnosis_Encounter": {
+      "type": "EncounterEnd",
+      "distributed_transition": [
+        {
+          "transition": "Check_Anemia_Exist",
+          "distribution": 0.5
+        },
+        {
+          "transition": "Corticosteroid_Treatment",
+          "distribution": 0.5
+        }
+      ],
+      "remarks": [
+        "The most common blood disorder is anemia, affecting about half of all people with active lupus - https://www.lupus.org/resources/what-you-need-to-know-about-anemia ",
+        ""
+      ]
+    },
+    "Corticosteroid_Treatment": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 4,
+        "unit": "weeks"
+      },
+      "direct_transition": "End_Corticosteroid"
+    },
+    "End_Corticosteroid": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "lupus_corticosteroid",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "PriorState",
+            "name": "Immune_Suppressant"
+          },
+          "transition": "End_Immune_Suppressant"
+        },
+        {
+          "transition": "Wait_For_Lupus_Flareup"
+        }
+      ]
+    },
+    "Wait_For_Lupus_Flareup": {
+      "type": "Delay",
+      "remarks": [
+        "About 60% of patients have a flare-up each year. 84% every 2 years."
+      ],
+      "range": {
+        "low": 1,
+        "high": 3,
+        "unit": "years"
+      },
+      "distributed_transition": [
+        {
+          "distribution": 0.84,
+          "transition": "Lupus_Flareup"
+        },
+        {
+          "distribution": 0.16,
+          "transition": "Wait_For_Lupus_Flareup"
+        }
+      ]
+    },
+    "Lupus_Flareup": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Lupus",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem"
+        }
+      ],
+      "direct_transition": "Immune_Suppressant"
+    },
+    "Immune_Suppressant": {
+      "type": "MedicationOrder",
+      "target_encounter": "Lupus_Flareup",
+      "reason": "Lupus",
+      "remarks": [
+        "More aggressive immune suppressants are used for subsequent flares."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "835900",
+          "display": "cycloSPORINE, modified 100 MG [Neoral]"
+        }
+      ],
+      "direct_transition": "Flareup_Corticosteroid"
+    },
+    "Flareup_Corticosteroid": {
+      "type": "MedicationOrder",
+      "target_encounter": "Lupus_Flareup",
+      "assign_to_attribute": "lupus_corticosteroid",
+      "reason": "Lupus",
+      "remarks": [
+        "When introduced in higher levels than those produced by the body, corticosteroids ",
+        "inhibit inflammation. However, doctors prefer to use these for as short a time period ",
+        "as possible to avoid dangerous side effects."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "567645",
+          "display": "predniSONE 2.5 MG [Deltasone]"
+        }
+      ],
+      "direct_transition": "End_Flareup_Encounter"
+    },
+    "End_Flareup_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Corticosteroid_Treatment"
+    },
+    "End_Immune_Suppressant": {
+      "type": "MedicationEnd",
+      "medication_order": "Immune_Suppressant",
+      "direct_transition": "Wait_For_Lupus_Flareup"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    },
+    "Anemia_Submodule": {
+      "type": "CallSubmodule",
+      "submodule": "anemia/anemia_sub",
+      "direct_transition": "Corticosteroid_Treatment"
+    },
+    "Check_Anemia_Exist": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "transition": "Anemia_Submodule",
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "anemia",
+            "operator": "is nil"
+          }
+        },
+        {
+          "transition": "Corticosteroid_Treatment"
+        }
+      ]
+    }
+  }
+}

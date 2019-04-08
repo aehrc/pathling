@@ -1,0 +1,58 @@
+{
+  "name": "Lung Infection",
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "ChanceOfLungInfection"
+    },
+    "ChanceOfLungInfection": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "distributed_transition": [
+        {
+          "distribution": 0.05,
+          "transition": "Pneumonia"
+        },
+        {
+          "distribution": 0.95,
+          "transition": "ChanceOfLungInfection"
+        }
+      ]
+    },
+    "Pneumonia": {
+      "type": "ConditionOnset",
+      "target_encounter": "DiagnosisEncounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "75570004",
+          "display": "Viral pneumonia"
+        }
+      ],
+      "direct_transition": "DiagnosisEncounter"
+    },
+    "DiagnosisEncounter": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "reason": "Pneumonia",
+      "direct_transition": "ActivePeriod"
+    },
+    "ActivePeriod": {
+      "type": "Delay",
+      "range": {
+        "low": 5,
+        "high": 90,
+        "unit": "days"
+      },
+      "direct_transition": "PneumoniaEnd"
+    },
+    "PneumoniaEnd": {
+      "type": "ConditionEnd",
+      "condition_onset": "Pneumonia",
+      "direct_transition": "ChanceOfLungInfection"
+    }
+  }
+}
