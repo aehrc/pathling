@@ -278,7 +278,7 @@ public class ExpressionParser {
       }
 
       String joinExpression =
-          "LATERAL VIEW explode(" + udtfExpression + ") " + tableAlias + " AS " + tableAlias;
+          "LATERAL VIEW OUTER explode(" + udtfExpression + ") " + tableAlias + " AS " + tableAlias;
       Join join = new Join(joinExpression, rootExpression, JoinType.LATERAL_VIEW, tableAlias);
       join.setUdtfExpression(udtfExpression);
       join.setTraversalType(traversalType);

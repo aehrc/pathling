@@ -62,7 +62,7 @@ public class InValueSetFunction implements ExpressionFunction {
     ensureExpansionTableExists(unquotedArgument, rootExpression);
 
     String lastJoinAlias = input.getJoins().last().getTableAlias();
-    String joinExpression = "LEFT OUTER JOIN " + quotedRootExpression + " " + joinAlias + " ";
+    String joinExpression = "LEFT JOIN " + quotedRootExpression + " " + joinAlias + " ";
     joinExpression += "ON " + lastJoinAlias + ".system = " + joinAlias + ".system ";
     joinExpression += "AND " + lastJoinAlias + ".code = " + joinAlias + ".code";
     String sqlExpression = "/* MAPJOIN(" + joinAlias + ") */ CASE WHEN " + joinAlias

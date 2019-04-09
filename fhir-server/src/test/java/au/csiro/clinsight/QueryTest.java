@@ -405,8 +405,8 @@ public class QueryTest {
     String expectedSql =
         "SELECT count(DISTINCT patientIdentifierTypeCoding.code) AS `Number of patients` "
             + "FROM patient "
-            + "LATERAL VIEW explode(patient.identifier) patientIdentifier AS patientIdentifier "
-            + "LATERAL VIEW explode(patientIdentifier.type.coding) patientIdentifierTypeCoding AS patientIdentifierTypeCoding "
+            + "LATERAL VIEW OUTER explode(patient.identifier) patientIdentifier AS patientIdentifier "
+            + "LATERAL VIEW OUTER explode(patientIdentifier.type.coding) patientIdentifierTypeCoding AS patientIdentifierTypeCoding "
             + "ORDER BY 1";
 
     Dataset mockDataset = createMockDataset();
@@ -458,8 +458,8 @@ public class QueryTest {
     String expectedSql = "SELECT patientCommunicationLanguageCoding.code AS `Language`, "
         + "count(DISTINCT patient.id) AS `Number of patients` "
         + "FROM patient "
-        + "LATERAL VIEW explode(patient.communication) patientCommunication AS patientCommunication "
-        + "LATERAL VIEW explode(patientCommunication.language.coding) patientCommunicationLanguageCoding AS patientCommunicationLanguageCoding "
+        + "LATERAL VIEW OUTER explode(patient.communication) patientCommunication AS patientCommunication "
+        + "LATERAL VIEW OUTER explode(patientCommunication.language.coding) patientCommunicationLanguageCoding AS patientCommunicationLanguageCoding "
         + "GROUP BY 1 "
         + "ORDER BY 1, 2";
 
@@ -512,7 +512,7 @@ public class QueryTest {
     String expectedSql =
         "SELECT allergyIntoleranceCategory AS `Allergy category`, count(DISTINCT allergyintolerance.id) AS `Number of allergies` "
             + "FROM allergyintolerance "
-            + "LATERAL VIEW explode(allergyintolerance.category) allergyIntoleranceCategory AS allergyIntoleranceCategory "
+            + "LATERAL VIEW OUTER explode(allergyintolerance.category) allergyIntoleranceCategory AS allergyIntoleranceCategory "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -565,7 +565,7 @@ public class QueryTest {
     String expectedSql =
         "SELECT allergyIntolerancePatient.gender AS `Patient gender`, count(allergyintolerance.id) AS `Number of allergies/intolerances` "
             + "FROM allergyintolerance "
-            + "INNER JOIN patient allergyIntolerancePatient ON allergyintolerance.patient.reference = allergyIntolerancePatient.id "
+            + "LEFT JOIN patient allergyIntolerancePatient ON allergyintolerance.patient.reference = allergyIntolerancePatient.id "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -618,13 +618,13 @@ public class QueryTest {
     String expectedSql =
         "SELECT diagnosticReportResultCodeCoding.display AS `Observation type`, count(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
             + "FROM diagnosticreport "
-            + "INNER JOIN ("
+            + "LEFT JOIN ("
             + "SELECT id, diagnosticReportResult.reference "
             + "FROM diagnosticreport "
-            + "LATERAL VIEW explode(diagnosticreport.result) diagnosticReportResult AS diagnosticReportResult"
+            + "LATERAL VIEW OUTER explode(diagnosticreport.result) diagnosticReportResult AS diagnosticReportResult"
             + ") diagnosticReportResultExploded ON diagnosticreport.id = diagnosticReportResultExploded.id "
-            + "INNER JOIN observation diagnosticReportResult ON diagnosticReportResultExploded.reference = diagnosticReportResult.id "
-            + "LATERAL VIEW explode(diagnosticReportResult.code.coding) diagnosticReportResultCodeCoding AS diagnosticReportResultCodeCoding "
+            + "LEFT JOIN observation diagnosticReportResult ON diagnosticReportResultExploded.reference = diagnosticReportResult.id "
+            + "LATERAL VIEW OUTER explode(diagnosticReportResult.code.coding) diagnosticReportResultCodeCoding AS diagnosticReportResultCodeCoding "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -677,9 +677,9 @@ public class QueryTest {
     String expectedSql =
         "SELECT conditionContextTypeCoding.display AS `Context encounter type`, count(condition.id) AS `Number of conditions` "
             + "FROM condition "
-            + "INNER JOIN encounter conditionContext ON condition.context.reference = conditionContext.id "
-            + "LATERAL VIEW explode(conditionContext.type) conditionContextType AS conditionContextType "
-            + "LATERAL VIEW explode(conditionContextType.coding) conditionContextTypeCoding AS conditionContextTypeCoding "
+            + "LEFT JOIN encounter conditionContext ON condition.context.reference = conditionContext.id "
+            + "LATERAL VIEW OUTER explode(conditionContext.type) conditionContextType AS conditionContextType "
+            + "LATERAL VIEW OUTER explode(conditionContextType.coding) conditionContextTypeCoding AS conditionContextTypeCoding "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -732,15 +732,15 @@ public class QueryTest {
     String expectedSql =
         "SELECT conditionEvidenceDetailCodedDiagnosisCoding.display AS `Associated diagnosis`, count(condition.id) AS `Number of conditions` "
             + "FROM condition "
-            + "INNER JOIN ("
+            + "LEFT JOIN ("
             + "SELECT id, conditionEvidenceDetail.reference "
             + "FROM condition "
-            + "LATERAL VIEW explode(condition.evidence) conditionEvidence AS conditionEvidence "
-            + "LATERAL VIEW explode(conditionEvidence.detail) conditionEvidenceDetail AS conditionEvidenceDetail"
+            + "LATERAL VIEW OUTER explode(condition.evidence) conditionEvidence AS conditionEvidence "
+            + "LATERAL VIEW OUTER explode(conditionEvidence.detail) conditionEvidenceDetail AS conditionEvidenceDetail"
             + ") conditionEvidenceDetailExploded ON condition.id = conditionEvidenceDetailExploded.id "
-            + "INNER JOIN diagnosticreport conditionEvidenceDetail ON conditionEvidenceDetailExploded.reference = conditionEvidenceDetail.id "
-            + "LATERAL VIEW explode(conditionEvidenceDetail.codedDiagnosis) conditionEvidenceDetailCodedDiagnosis AS conditionEvidenceDetailCodedDiagnosis "
-            + "LATERAL VIEW explode(conditionEvidenceDetailCodedDiagnosis.coding) conditionEvidenceDetailCodedDiagnosisCoding AS conditionEvidenceDetailCodedDiagnosisCoding "
+            + "LEFT JOIN diagnosticreport conditionEvidenceDetail ON conditionEvidenceDetailExploded.reference = conditionEvidenceDetail.id "
+            + "LATERAL VIEW OUTER explode(conditionEvidenceDetail.codedDiagnosis) conditionEvidenceDetailCodedDiagnosis AS conditionEvidenceDetailCodedDiagnosis "
+            + "LATERAL VIEW OUTER explode(conditionEvidenceDetailCodedDiagnosis.coding) conditionEvidenceDetailCodedDiagnosisCoding AS conditionEvidenceDetailCodedDiagnosisCoding "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -904,9 +904,9 @@ public class QueryTest {
     String expectedSql =
         "SELECT patientEncounterAsSubjectReasonCoding.display AS `Reason for encounter`, count(patient.id) AS `Number of patients` "
             + "FROM patient "
-            + "INNER JOIN encounter patientEncounterAsSubject ON patient.id = patientEncounterAsSubject.subject.reference "
-            + "LATERAL VIEW explode(patientEncounterAsSubject.reason) patientEncounterAsSubjectReason AS patientEncounterAsSubjectReason "
-            + "LATERAL VIEW explode(patientEncounterAsSubjectReason.coding) patientEncounterAsSubjectReasonCoding AS patientEncounterAsSubjectReasonCoding "
+            + "LEFT JOIN encounter patientEncounterAsSubject ON patient.id = patientEncounterAsSubject.subject.reference "
+            + "LATERAL VIEW OUTER explode(patientEncounterAsSubject.reason) patientEncounterAsSubjectReason AS patientEncounterAsSubjectReason "
+            + "LATERAL VIEW OUTER explode(patientEncounterAsSubjectReason.coding) patientEncounterAsSubjectReasonCoding AS patientEncounterAsSubjectReasonCoding "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 

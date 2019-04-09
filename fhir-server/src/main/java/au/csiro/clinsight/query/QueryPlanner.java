@@ -251,7 +251,7 @@ class QueryPlanner {
     String selectFields = tableAliasInvocations.stream()
         .map(tai -> finalTableAlias + "." + tai)
         .collect(Collectors.joining(", "));
-    String joinExpression = "INNER JOIN (SELECT id, " + selectFields + " FROM " + table + " ";
+    String joinExpression = "LEFT JOIN (SELECT id, " + selectFields + " FROM " + table + " ";
     joinExpression += lateralViewsToConvert.stream()
         .map(Join::getExpression)
         .collect(Collectors.joining(" "));

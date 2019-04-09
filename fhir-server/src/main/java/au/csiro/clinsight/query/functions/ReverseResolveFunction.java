@@ -65,7 +65,7 @@ public class ReverseResolveFunction implements ExpressionFunction {
     String targetExpression =
         argument.getSqlExpression().replace(targetTable, joinAlias) + ".reference";
     String joinExpression =
-        "INNER JOIN " + targetTable + " " + joinAlias + " ON " + input.getSqlExpression() + ".id = "
+        "LEFT JOIN " + targetTable + " " + joinAlias + " ON " + input.getSqlExpression() + ".id = "
             + targetExpression;
     Join join = new Join(joinExpression, targetTable,
         JoinType.TABLE_JOIN, joinAlias);

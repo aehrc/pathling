@@ -55,7 +55,7 @@ public class ResolveFunction implements ExpressionFunction {
 
     List<String> pathComponents = tokenizePath(element.getPath());
     String joinAlias = pathToLowerCamelCase(pathComponents);
-    String joinExpression = "INNER JOIN " + referenceTypeCode.toLowerCase() + " " + joinAlias
+    String joinExpression = "LEFT JOIN " + referenceTypeCode.toLowerCase() + " " + joinAlias
         + " ON " + input.getSqlExpression() + ".reference = "
         + joinAlias + ".id";
     Join join = new Join(joinExpression, referenceTypeCode.toLowerCase(), JoinType.TABLE_JOIN,
