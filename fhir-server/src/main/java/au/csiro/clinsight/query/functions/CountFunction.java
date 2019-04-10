@@ -4,8 +4,10 @@
 
 package au.csiro.clinsight.query.functions;
 
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.PRIMITIVE;
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.RESOURCE;
+
 import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
@@ -25,9 +27,15 @@ public class CountFunction implements ExpressionFunction {
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
     validateInput(input);
     validateArguments(arguments);
+    // If the input is a resource, we infer the use of its ID as the field for counting.
+    String sqlExpression = input.getElementType() == RESOURCE
+        ? input.getSqlExpression() + ".id"
+        : input.getSqlExpression();
+    // We store away the expression that is the subject of the aggregation, this is used for
+    // subqueries in the case of the `inValueSet` function
+    input.setPreAggregationExpression(sqlExpression);
     // The count function maps to the function with the same name within Spark SQL.
-    input.setPreAggregationExpression(input.getSqlExpression());
-    input.setSqlExpression("COUNT(DISTINCT " + input.getSqlExpression() + ")");
+    input.setSqlExpression("COUNT(DISTINCT " + sqlExpression + ")");
     // A count operation always results in a non-negative integer.
     input.setElementTypeCode("unsignedInt");
     return input;
@@ -38,10 +46,9 @@ public class CountFunction implements ExpressionFunction {
       throw new InvalidRequestException("Missing input expression for count function");
     }
     // We can't count an element that is not primitive.
-    // TODO: Add support for invoking the count function directly on a resource.
-    if (input.getElementType() != ResolvedElementType.PRIMITIVE) {
+    if (input.getElementType() != PRIMITIVE && input.getElementType() != RESOURCE) {
       throw new InvalidRequestException(
-          "Input to count function must be of primitive type: " + input.getExpression()
+          "Input to count function must be of primitive or resource type: " + input.getExpression()
               + " (" + input.getElementTypeCode() + ")");
     }
   }
