@@ -183,6 +183,16 @@ class QueryPlanner {
     Join finalJoin = queryPlan.getJoins().last();
 
     List<String> selectExpressions = new ArrayList<>();
+    int innerGroupingCount = 0;
+    for (int i = 0; i < queryPlan.getGroupings().size(); i++) {
+      ParseResult groupingParseResult = groupingParseResults.get(i);
+      if (groupingParseResult.getSqlExpression().contains(finalJoin.getTableAlias() + ".code")) {
+        continue;
+      }
+      String label = backTicks(query.getGroupings().get(i).getLabel());
+      selectExpressions.add(groupingParseResult.getSqlExpression() + " AS " + label);
+      innerGroupingCount++;
+    }
     for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
       ParseResult aggregationParseResult = aggregationParseResults.get(i);
       String label = backTicks(query.getAggregations().get(i).getLabel());
@@ -193,6 +203,10 @@ class QueryPlanner {
 
     LinkedList<String> groupByArgs = new LinkedList<>();
     for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
+      groupByArgs.add(Integer.toString(i + 1));
+    }
+    for (int i = queryPlan.getAggregations().size();
+        i < queryPlan.getAggregations().size() + innerGroupingCount; i++) {
       groupByArgs.add(Integer.toString(i + 1));
     }
 
@@ -231,6 +245,15 @@ class QueryPlanner {
                 tableAlias + "." + label);
         queryPlan.getAggregations().set(i, transformed);
       }
+    }
+    for (int i = 0; i < queryPlan.getGroupings().size(); i++) {
+      String grouping = queryPlan.getGroupings().get(i);
+      ParseResult groupingParseResult = groupingParseResults.get(i);
+      String label = backTicks(query.getGroupings().get(i).getLabel());
+      String transformed = grouping
+          .replaceAll(groupingParseResult.getSqlExpression(),
+              tableAlias + "." + label);
+      queryPlan.getGroupings().set(i, transformed);
     }
   }
 

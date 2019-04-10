@@ -283,6 +283,172 @@ public class TerminologyQueryTest {
     verify(mockSpark).sql(expectedSql);
   }
 
+  @SuppressWarnings("unchecked")
+  @Test
+  public void inValueSetMultipleAggregations() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of patients\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.id.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Max multiple birth\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.multipleBirthInteger.max()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Prescribed medication containing metoprolol tartrate?\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.reverseResolve(MedicationRequest.subject).medicationCodeableConcept.coding.inValueSet('http://snomed.info/sct?fhir_vs=ecl/((* : << 30364011000036101|has Australian BoSS| = << 2338011000036107|metoprolol tartrate|) OR ((^ 929360041000036105|Trade product pack reference set| OR ^ 929360051000036108|Containered trade product pack reference set|) : 30409011000036107|has TPUU| = (* : << 30364011000036101|has Australian BoSS| = << 2338011000036107|metoprolol tartrate|)) OR (^ 929360081000036101|Medicinal product pack reference set| : 30348011000036104|has MPUU| = (* : << 30364011000036101|has Australian BoSS| = << 2338011000036107|metoprolol tartrate|)))')\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedSql =
+        "SELECT CASE WHEN patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSetAggregated.code IS NULL THEN FALSE ELSE TRUE END AS `Prescribed medication containing metoprolol tartrate?`, "
+            + "COUNT(DISTINCT patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSetAggregated.`Number of patients`) AS `Number of patients`, "
+            + "MAX(patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSetAggregated.`Max multiple birth`) AS `Max multiple birth` "
+            + "FROM ("
+            + "SELECT patient.id AS `Number of patients`, "
+            + "patient.multipleBirthInteger AS `Max multiple birth`, "
+            + "MAX(patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSet.code) AS code "
+            + "FROM patient "
+            + "LEFT JOIN medicationrequest patientMedicationRequestAsSubject "
+            + "ON patient.id = patientMedicationRequestAsSubject.subject.reference "
+            + "LEFT JOIN ("
+            + "SELECT id, patientMedicationRequestAsSubjectMedicationCodeableConceptCoding.system, patientMedicationRequestAsSubjectMedicationCodeableConceptCoding.code "
+            + "FROM medicationrequest "
+            + "LATERAL VIEW OUTER explode(medicationrequest.medicationCodeableConcept.coding) patientMedicationRequestAsSubjectMedicationCodeableConceptCoding AS patientMedicationRequestAsSubjectMedicationCodeableConceptCoding"
+            + ") patientMedicationRequestAsSubjectMedicationCodeableConceptCodingExploded ON patientMedicationRequestAsSubject.id = patientMedicationRequestAsSubjectMedicationCodeableConceptCodingExploded.id "
+            + "LEFT JOIN `valueSet_59eb431a24c87670dc95b1e669477345` patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSet "
+            + "ON patientMedicationRequestAsSubjectMedicationCodeableConceptCodingExploded.system = patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSet.system "
+            + "AND patientMedicationRequestAsSubjectMedicationCodeableConceptCodingExploded.code = patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSet.code "
+            + "GROUP BY 1, 2"
+            + ") patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSetAggregated "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2, 3";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void inValueSetMultipleGroupings() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of patients\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.id.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Gender\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.gender\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Prescribed TNF inhibitor?\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.reverseResolve(MedicationRequest.subject).medicationCodeableConcept.coding.inValueSet('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedSql =
+        "SELECT patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSetAggregated.`Gender` AS `Gender`, "
+            + "CASE WHEN patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSetAggregated.code IS NULL THEN FALSE ELSE TRUE END AS `Prescribed TNF inhibitor?`, "
+            + "COUNT(DISTINCT patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSetAggregated.`Number of patients`) AS `Number of patients` "
+            + "FROM ("
+            + "SELECT patient.gender AS `Gender`, "
+            + "patient.id AS `Number of patients`, "
+            + "MAX(patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSet.code) AS code "
+            + "FROM patient "
+            + "LEFT JOIN medicationrequest patientMedicationRequestAsSubject ON patient.id = patientMedicationRequestAsSubject.subject.reference "
+            + "LEFT JOIN ("
+            + "SELECT id, patientMedicationRequestAsSubjectMedicationCodeableConceptCoding.system, patientMedicationRequestAsSubjectMedicationCodeableConceptCoding.code "
+            + "FROM medicationrequest "
+            + "LATERAL VIEW OUTER explode(medicationrequest.medicationCodeableConcept.coding) patientMedicationRequestAsSubjectMedicationCodeableConceptCoding AS patientMedicationRequestAsSubjectMedicationCodeableConceptCoding"
+            + ") patientMedicationRequestAsSubjectMedicationCodeableConceptCodingExploded "
+            + "ON patientMedicationRequestAsSubject.id = patientMedicationRequestAsSubjectMedicationCodeableConceptCodingExploded.id "
+            + "LEFT JOIN `valueSet_8017b8dad6884547ed255fcfc3e43950` patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSet "
+            + "ON patientMedicationRequestAsSubjectMedicationCodeableConceptCodingExploded.system = patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSet.system "
+            + "AND patientMedicationRequestAsSubjectMedicationCodeableConceptCodingExploded.code = patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSet.code "
+            + "GROUP BY 1, 2"
+            + ") patientMedicationRequestAsSubjectMedicationCodeableConceptCodingValueSetAggregated "
+            + "GROUP BY 1, 2 "
+            + "ORDER BY 1, 2, 3";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+  }
+
   @After
   public void tearDown() throws Exception {
     server.stop();

@@ -61,6 +61,7 @@ public abstract class Mappings {
   // Maps supported aggregate FHIRPath functions to the equivalent functions within Spark SQL.
   private static final Map<String, ExpressionFunction> funcToClass = new HashMap<String, ExpressionFunction>() {{
     put("count", new CountFunction());
+    put("max", new MaxFunction());
     put("resolve", new ResolveFunction());
     put("reverseResolve", new ReverseResolveFunction());
     put("inValueSet", new InValueSetFunction());
