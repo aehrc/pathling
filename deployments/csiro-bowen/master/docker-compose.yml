@@ -27,6 +27,7 @@ services:
       - ontoserver.feature.eclFilters=true
       - ontoserver.feature.msgaEnabled=true
       - ontoserver.fhir.batch.queueSize=20000
+      - ontoserver.fhir.too.costly.threshold=200000
       - JAVA_OPTS=-Xmx24G
       - ONTOSERVER_INSECURE=true
     volumes:
