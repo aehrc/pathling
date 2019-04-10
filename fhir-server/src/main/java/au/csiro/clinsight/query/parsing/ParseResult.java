@@ -30,6 +30,9 @@ public class ParseResult {
   private String sqlExpression;
 
   @Nullable
+  private String preAggregationExpression;
+
+  @Nullable
   private ParseResultType resultType;
 
   @Nullable
@@ -62,6 +65,15 @@ public class ParseResult {
 
   public void setSqlExpression(@Nullable String sqlExpression) {
     this.sqlExpression = sqlExpression;
+  }
+
+  @Nullable
+  public String getPreAggregationExpression() {
+    return preAggregationExpression;
+  }
+
+  public void setPreAggregationExpression(@Nullable String preAggregationExpression) {
+    this.preAggregationExpression = preAggregationExpression;
   }
 
   @Nullable

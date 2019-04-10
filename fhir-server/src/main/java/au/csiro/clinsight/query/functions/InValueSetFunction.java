@@ -65,9 +65,8 @@ public class InValueSetFunction implements ExpressionFunction {
     String joinExpression = "LEFT JOIN " + quotedRootExpression + " " + joinAlias + " ";
     joinExpression += "ON " + lastJoinAlias + ".system = " + joinAlias + ".system ";
     joinExpression += "AND " + lastJoinAlias + ".code = " + joinAlias + ".code";
-    String sqlExpression = "/* MAPJOIN(" + joinAlias + ") */ CASE WHEN " + joinAlias
-        + ".code IS NULL THEN FALSE ELSE TRUE END";
-    Join join = new Join(joinExpression, rootExpression, JoinType.TABLE_JOIN, joinAlias);
+    String sqlExpression = "CASE WHEN " + joinAlias + ".code IS NULL THEN FALSE ELSE TRUE END";
+    Join join = new Join(joinExpression, rootExpression, JoinType.EXISTS_JOIN, joinAlias);
     if (!input.getJoins().isEmpty()) {
       join.setDependsUpon(input.getJoins().last());
     }

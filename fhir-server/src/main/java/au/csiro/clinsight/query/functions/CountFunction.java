@@ -26,7 +26,8 @@ public class CountFunction implements ExpressionFunction {
     validateInput(input);
     validateArguments(arguments);
     // The count function maps to the function with the same name within Spark SQL.
-    input.setSqlExpression("count(" + input.getSqlExpression() + ")");
+    input.setPreAggregationExpression(input.getSqlExpression());
+    input.setSqlExpression("COUNT(DISTINCT " + input.getSqlExpression() + ")");
     // A count operation always results in a non-negative integer.
     input.setElementTypeCode("unsignedInt");
     return input;

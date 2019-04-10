@@ -147,8 +147,27 @@ public class Join implements Comparable<Join> {
     return Objects.hash(rootExpression);
   }
 
+  /**
+   * A gategorisation of the type of join, which is used by the query planner to decide how to
+   * translate this into executable instructions.
+   *
+   * LATERAL_VIEW - used to explode out rows from fields with max cardinalities greater than one.
+   *
+   * TABLE_JOIN - a regular left outer join, used to resolve references between different resource
+   * types.
+   *
+   * INLINE_QUERY - a lateral view that has been wrapped within a subquery, to get around the issue
+   * that Spark SQL cannot join from a lateral view.
+   *
+   * EXISTS_JOIN - a left outer join to a table (e.g. a ValueSet expansion) for which a boolean
+   * value is required based upon whether the code on the left hand side exists within the set of
+   * codes on the right hand side. This will later need to be converted to a subquery within a FROM
+   * clause, as it requires two levels of aggregation (one to reduce the multiple codes into a
+   * single NULL or NOT NULL value, then a second to convert that to boolean and aggregate on the
+   * requested aggregation elements).
+   */
   public enum JoinType {
-    LATERAL_VIEW, TABLE_JOIN, INLINE_QUERY
+    LATERAL_VIEW, TABLE_JOIN, INLINE_QUERY, EXISTS_JOIN
   }
 
 }

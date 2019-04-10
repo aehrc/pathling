@@ -6,6 +6,7 @@ package au.csiro.clinsight;
 
 import static au.csiro.clinsight.TestConfiguration.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -77,7 +78,7 @@ public class QueryTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.id.distinct().count()\"\n"
+        + "          \"valueString\": \"Patient.id.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    },\n"
@@ -130,7 +131,7 @@ public class QueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT patient.gender AS `Gender`, count(DISTINCT patient.id) AS `Number of patients` "
+        "SELECT patient.gender AS `Gender`, COUNT(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
@@ -145,7 +146,7 @@ public class QueryTest {
     ));
 
     Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(fakeResult);
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
@@ -212,7 +213,7 @@ public class QueryTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.id.distinct().count()\"\n"
+        + "          \"valueString\": \"Patient.id.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    },\n"
@@ -395,7 +396,7 @@ public class QueryTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.identifier.type.coding.code.distinct().count()\"\n"
+        + "          \"valueString\": \"Patient.identifier.type.coding.code.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -403,14 +404,14 @@ public class QueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT count(DISTINCT patientIdentifierTypeCoding.code) AS `Number of patients` "
+        "SELECT COUNT(DISTINCT patientIdentifierTypeCoding.code) AS `Number of patients` "
             + "FROM patient "
             + "LATERAL VIEW OUTER explode(patient.identifier) patientIdentifier AS patientIdentifier "
             + "LATERAL VIEW OUTER explode(patientIdentifier.type.coding) patientIdentifierTypeCoding AS patientIdentifierTypeCoding "
             + "ORDER BY 1";
 
     Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
@@ -435,7 +436,7 @@ public class QueryTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.id.distinct().count()\"\n"
+        + "          \"valueString\": \"Patient.id.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    },\n"
@@ -456,7 +457,7 @@ public class QueryTest {
         + "}\n";
 
     String expectedSql = "SELECT patientCommunicationLanguageCoding.code AS `Language`, "
-        + "count(DISTINCT patient.id) AS `Number of patients` "
+        + "COUNT(DISTINCT patient.id) AS `Number of patients` "
         + "FROM patient "
         + "LATERAL VIEW OUTER explode(patient.communication) patientCommunication AS patientCommunication "
         + "LATERAL VIEW OUTER explode(patientCommunication.language.coding) patientCommunicationLanguageCoding AS patientCommunicationLanguageCoding "
@@ -464,7 +465,7 @@ public class QueryTest {
         + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
@@ -489,7 +490,7 @@ public class QueryTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"AllergyIntolerance.id.distinct().count()\"\n"
+        + "          \"valueString\": \"AllergyIntolerance.id.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    },\n"
@@ -510,14 +511,14 @@ public class QueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT allergyIntoleranceCategory AS `Allergy category`, count(DISTINCT allergyintolerance.id) AS `Number of allergies` "
+        "SELECT allergyIntoleranceCategory AS `Allergy category`, COUNT(DISTINCT allergyintolerance.id) AS `Number of allergies` "
             + "FROM allergyintolerance "
             + "LATERAL VIEW OUTER explode(allergyintolerance.category) allergyIntoleranceCategory AS allergyIntoleranceCategory "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
@@ -563,14 +564,14 @@ public class QueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT allergyIntolerancePatient.gender AS `Patient gender`, count(allergyintolerance.id) AS `Number of allergies/intolerances` "
+        "SELECT allergyIntolerancePatient.gender AS `Patient gender`, COUNT(DISTINCT allergyintolerance.id) AS `Number of allergies/intolerances` "
             + "FROM allergyintolerance "
             + "LEFT JOIN patient allergyIntolerancePatient ON allergyintolerance.patient.reference = allergyIntolerancePatient.id "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
@@ -595,7 +596,7 @@ public class QueryTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"DiagnosticReport.id.distinct().count()\"\n"
+        + "          \"valueString\": \"DiagnosticReport.id.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    },\n"
@@ -616,7 +617,7 @@ public class QueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT diagnosticReportResultCodeCoding.display AS `Observation type`, count(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
+        "SELECT diagnosticReportResultCodeCoding.display AS `Observation type`, COUNT(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
             + "FROM diagnosticreport "
             + "LEFT JOIN ("
             + "SELECT id, diagnosticReportResult.reference "
@@ -629,7 +630,7 @@ public class QueryTest {
             + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
@@ -675,7 +676,7 @@ public class QueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT conditionContextTypeCoding.display AS `Context encounter type`, count(condition.id) AS `Number of conditions` "
+        "SELECT conditionContextTypeCoding.display AS `Context encounter type`, COUNT(DISTINCT condition.id) AS `Number of conditions` "
             + "FROM condition "
             + "LEFT JOIN encounter conditionContext ON condition.context.reference = conditionContext.id "
             + "LATERAL VIEW OUTER explode(conditionContext.type) conditionContextType AS conditionContextType "
@@ -684,7 +685,7 @@ public class QueryTest {
             + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
@@ -730,7 +731,7 @@ public class QueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT conditionEvidenceDetailCodedDiagnosisCoding.display AS `Associated diagnosis`, count(condition.id) AS `Number of conditions` "
+        "SELECT conditionEvidenceDetailCodedDiagnosisCoding.display AS `Associated diagnosis`, COUNT(DISTINCT condition.id) AS `Number of conditions` "
             + "FROM condition "
             + "LEFT JOIN ("
             + "SELECT id, conditionEvidenceDetail.reference "
@@ -745,7 +746,7 @@ public class QueryTest {
             + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
@@ -902,7 +903,7 @@ public class QueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT patientEncounterAsSubjectReasonCoding.display AS `Reason for encounter`, count(patient.id) AS `Number of patients` "
+        "SELECT patientEncounterAsSubjectReasonCoding.display AS `Reason for encounter`, COUNT(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
             + "LEFT JOIN encounter patientEncounterAsSubject ON patient.id = patientEncounterAsSubject.subject.reference "
             + "LATERAL VIEW OUTER explode(patientEncounterAsSubject.reason) patientEncounterAsSubjectReason AS patientEncounterAsSubjectReason "
@@ -911,7 +912,7 @@ public class QueryTest {
             + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(expectedSql)).thenReturn(mockDataset);
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
     when(mockDataset.collectAsList()).thenReturn(new ArrayList());
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);

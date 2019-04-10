@@ -4,6 +4,11 @@
 
 package au.csiro.clinsight.query;
 
+import static au.csiro.clinsight.query.parsing.Join.JoinType.EXISTS_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.INLINE_QUERY;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.utilities.Strings.backTicks;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
 import au.csiro.clinsight.TerminologyClient;
@@ -12,7 +17,6 @@ import au.csiro.clinsight.query.AggregateQuery.Aggregation;
 import au.csiro.clinsight.query.AggregateQuery.Grouping;
 import au.csiro.clinsight.query.parsing.ExpressionParser;
 import au.csiro.clinsight.query.parsing.Join;
-import au.csiro.clinsight.query.parsing.Join.JoinType;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
@@ -32,6 +36,7 @@ class QueryPlanner {
 
   private final TerminologyClient terminologyClient;
   private final SparkSession spark;
+  private final AggregateQuery query;
   private final List<ParseResult> aggregationParseResults;
   private final List<ParseResult> groupingParseResults;
 
@@ -39,6 +44,7 @@ class QueryPlanner {
       @Nonnull SparkSession spark, @Nonnull AggregateQuery query) {
     this.terminologyClient = terminologyClient;
     this.spark = spark;
+    this.query = query;
     List<Aggregation> aggregations = query.getAggregations();
     List<Grouping> groupings = query.getGroupings();
     if (aggregations.isEmpty()) {
@@ -166,6 +172,66 @@ class QueryPlanner {
     }
     SortedSet<Join> convertedJoins = convertUpstreamLateralViewsToInlineQueries(joins);
     queryPlan.setJoins(convertedJoins);
+    convertExistsJoin(queryPlan);
+  }
+
+  private void convertExistsJoin(QueryPlan queryPlan) {
+    if (queryPlan.getJoins().isEmpty()
+        || queryPlan.getJoins().last().getJoinType() != EXISTS_JOIN) {
+      return;
+    }
+    Join finalJoin = queryPlan.getJoins().last();
+
+    List<String> selectExpressions = new ArrayList<>();
+    for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
+      ParseResult aggregationParseResult = aggregationParseResults.get(i);
+      String label = backTicks(query.getAggregations().get(i).getLabel());
+      selectExpressions.add(aggregationParseResult.getPreAggregationExpression() + " AS " + label);
+    }
+    String innerAggregation = "MAX(" + finalJoin.getTableAlias() + ".code) AS code";
+    selectExpressions.add(innerAggregation);
+
+    LinkedList<String> groupByArgs = new LinkedList<>();
+    for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
+      groupByArgs.add(Integer.toString(i + 1));
+    }
+
+    String selectClause = "SELECT " + String.join(", ", selectExpressions);
+    String fromClause = "FROM " + String.join(", ", queryPlan.getFromTables());
+    String joins = queryPlan.getJoins().stream().map(Join::getExpression).collect(
+        Collectors.joining(" "));
+    String groupByClause = "GROUP BY " + String.join(", ", groupByArgs);
+    List<String> clauses = new LinkedList<>(Arrays.asList(selectClause, fromClause));
+    if (!joins.isEmpty()) {
+      clauses.add(joins);
+    }
+    if (queryPlan.getGroupings().size() > 0) {
+      clauses.add(groupByClause);
+    }
+    String sql = String.join(" ", clauses);
+    String tableAlias = finalJoin.getTableAlias() + "Aggregated";
+    String fromTable = "(" + sql + ") " + tableAlias;
+
+    queryPlan.getJoins().clear();
+    queryPlan.getFromTables().clear();
+    queryPlan.getFromTables().add(fromTable);
+
+    for (int i = 0; i < queryPlan.getGroupings().size(); i++) {
+      String grouping = queryPlan.getGroupings().get(i);
+      String transformed = grouping.replaceAll(finalJoin.getTableAlias(), tableAlias);
+      queryPlan.getGroupings().set(i, transformed);
+    }
+    for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
+      String aggregation = queryPlan.getAggregations().get(i);
+      ParseResult aggregationParseResult = aggregationParseResults.get(i);
+      if (aggregationParseResult.getPreAggregationExpression() != null) {
+        String label = backTicks(query.getAggregations().get(i).getLabel());
+        String transformed = aggregation
+            .replaceAll(aggregationParseResult.getPreAggregationExpression(),
+                tableAlias + "." + label);
+        queryPlan.getAggregations().set(i, transformed);
+      }
+    }
   }
 
   /**
@@ -190,7 +256,7 @@ class QueryPlanner {
         assert dependentTableJoin != null;
         joins = replaceLateralViews(joins, dependentTableJoin, lateralViewsToConvert);
       } else {
-        if (cursor.getJoinType() == JoinType.TABLE_JOIN) {
+        if (cursor.getJoinType() == TABLE_JOIN || cursor.getJoinType() == EXISTS_JOIN) {
           if (dependentTableJoin == null) {
             // We mark a table join that depends upon a lateral view (or set of lateral views) as
             // the "dependent table join". It stays marked until we reach the end of the lateral
@@ -204,7 +270,7 @@ class QueryPlanner {
             dependentTableJoin = null;
             continue;
           }
-        } else if (cursor.getJoinType() == JoinType.LATERAL_VIEW && dependentTableJoin != null) {
+        } else if (cursor.getJoinType() == LATERAL_VIEW && dependentTableJoin != null) {
           // If we find a new lateral view, we add that to the set of lateral views that are queued
           // for conversion.
           lateralViewsToConvert.add(cursor);
@@ -260,7 +326,7 @@ class QueryPlanner {
     String rootExpression = lateralViewsToConvert.last().getRootExpression();
 
     // Build a new Join object to replace the group of lateral views.
-    Join inlineQuery = new Join(joinExpression, rootExpression, JoinType.INLINE_QUERY,
+    Join inlineQuery = new Join(joinExpression, rootExpression, INLINE_QUERY,
         newTableAlias);
     inlineQuery.setDependsUpon(firstLateralView.getDependsUpon());
     dependentTableJoin.setDependsUpon(inlineQuery);

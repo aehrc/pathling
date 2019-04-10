@@ -25,7 +25,7 @@ import org.hl7.fhir.dstu3.model.Enumerations.PublicationStatus;
  *
  * @author John Grimes
  */
-class AnalyticsServerCapabilities implements
+public class AnalyticsServerCapabilities implements
     IServerConformanceProvider<CapabilityStatement> {
 
   @Override

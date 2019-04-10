@@ -144,9 +144,10 @@ public class TerminologyQueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT /* MAPJOIN(patientEncounterAsSubjectReasonCodingValueSet) */ "
-            + "CASE WHEN patientEncounterAsSubjectReasonCodingValueSet.code IS NULL THEN FALSE ELSE TRUE END AS `Diagnosis in value set?`, "
-            + "count(patient.id) AS `Number of patients` "
+        "SELECT CASE WHEN patientEncounterAsSubjectReasonCodingValueSetAggregated.code IS NULL THEN FALSE ELSE TRUE END AS `Diagnosis in value set?`, "
+            + "COUNT(DISTINCT patientEncounterAsSubjectReasonCodingValueSetAggregated.`Number of patients`) AS `Number of patients` "
+            + "FROM ("
+            + "SELECT patient.id AS `Number of patients`, MAX(patientEncounterAsSubjectReasonCodingValueSet.code) AS code "
             + "FROM patient "
             + "LEFT JOIN encounter patientEncounterAsSubject ON patient.id = patientEncounterAsSubject.subject.reference "
             + "LEFT JOIN ("
@@ -158,6 +159,8 @@ public class TerminologyQueryTest {
             + "LEFT JOIN `valueSet_006902c7ba674e2a272362fced9ba9ee` patientEncounterAsSubjectReasonCodingValueSet "
             + "ON patientEncounterAsSubjectReasonCodingExploded.system = patientEncounterAsSubjectReasonCodingValueSet.system "
             + "AND patientEncounterAsSubjectReasonCodingExploded.code = patientEncounterAsSubjectReasonCodingValueSet.code "
+            + "GROUP BY 1"
+            + ") patientEncounterAsSubjectReasonCodingValueSetAggregated "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -247,9 +250,10 @@ public class TerminologyQueryTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT /* MAPJOIN(diagnosticReportResultCodeCodingValueSet) */ "
-            + "CASE WHEN diagnosticReportResultCodeCodingValueSet.code IS NULL THEN FALSE ELSE TRUE END AS `Globulin observation?`, "
-            + "count(diagnosticreport.id) AS `Number of diagnostic reports` "
+        "SELECT CASE WHEN diagnosticReportResultCodeCodingValueSetAggregated.code IS NULL THEN FALSE ELSE TRUE END AS `Globulin observation?`, "
+            + "COUNT(DISTINCT diagnosticReportResultCodeCodingValueSetAggregated.`Number of diagnostic reports`) AS `Number of diagnostic reports` "
+            + "FROM ("
+            + "SELECT diagnosticreport.id AS `Number of diagnostic reports`, MAX(diagnosticReportResultCodeCodingValueSet.code) AS code "
             + "FROM diagnosticreport "
             + "LEFT JOIN ("
             + "SELECT id, diagnosticReportResult.reference "
@@ -262,9 +266,9 @@ public class TerminologyQueryTest {
             + "FROM observation "
             + "LATERAL VIEW OUTER explode(observation.code.coding) diagnosticReportResultCodeCoding AS diagnosticReportResultCodeCoding"
             + ") diagnosticReportResultCodeCodingExploded ON diagnosticReportResult.id = diagnosticReportResultCodeCodingExploded.id "
-            + "LEFT JOIN `valueSet_03775044c1767e1bcba62ef01cf1750d` diagnosticReportResultCodeCodingValueSet "
-            + "ON diagnosticReportResultCodeCodingExploded.system = diagnosticReportResultCodeCodingValueSet.system "
-            + "AND diagnosticReportResultCodeCodingExploded.code = diagnosticReportResultCodeCodingValueSet.code "
+            + "LEFT JOIN `valueSet_03775044c1767e1bcba62ef01cf1750d` diagnosticReportResultCodeCodingValueSet ON diagnosticReportResultCodeCodingExploded.system = diagnosticReportResultCodeCodingValueSet.system AND diagnosticReportResultCodeCodingExploded.code = diagnosticReportResultCodeCodingValueSet.code "
+            + "GROUP BY 1"
+            + ") diagnosticReportResultCodeCodingValueSetAggregated "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
