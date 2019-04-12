@@ -1,0 +1,2271 @@
+{
+  "AllergyIntolerance": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "clinicalStatus"
+    },
+    {
+      "name": "verificationStatus"
+    },
+    {
+      "name": "type"
+    },
+    {
+      "name": "category"
+    },
+    {
+      "name": "criticality"
+    },
+    {
+      "name": "code"
+    },
+    {
+      "name": "patient"
+    },
+    {
+      "name": "onsetDateTime"
+    },
+    {
+      "name": "onsetAge"
+    },
+    {
+      "name": "onsetPeriod"
+    },
+    {
+      "name": "onsetRange"
+    },
+    {
+      "name": "onsetString"
+    },
+    {
+      "name": "assertedDate"
+    },
+    {
+      "name": "recorder"
+    },
+    {
+      "name": "asserter"
+    },
+    {
+      "name": "lastOccurrence"
+    },
+    {
+      "name": "note"
+    },
+    {
+      "name": "reaction",
+      "children": [
+        {
+          "name": "substance"
+        },
+        {
+          "name": "manifestation"
+        },
+        {
+          "name": "description"
+        },
+        {
+          "name": "onset"
+        },
+        {
+          "name": "severity"
+        },
+        {
+          "name": "exposureRoute"
+        },
+        {
+          "name": "note"
+        }
+      ]
+    }
+  ],
+  "CarePlan": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "definition"
+    },
+    {
+      "name": "basedOn"
+    },
+    {
+      "name": "replaces"
+    },
+    {
+      "name": "partOf"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "intent"
+    },
+    {
+      "name": "category"
+    },
+    {
+      "name": "title"
+    },
+    {
+      "name": "description"
+    },
+    {
+      "name": "subject"
+    },
+    {
+      "name": "context"
+    },
+    {
+      "name": "period"
+    },
+    {
+      "name": "author"
+    },
+    {
+      "name": "careTeam"
+    },
+    {
+      "name": "addresses"
+    },
+    {
+      "name": "supportingInfo"
+    },
+    {
+      "name": "goal"
+    },
+    {
+      "name": "activity",
+      "children": [
+        {
+          "name": "outcomeCodeableConcept"
+        },
+        {
+          "name": "outcomeReference"
+        },
+        {
+          "name": "progress"
+        },
+        {
+          "name": "reference"
+        },
+        {
+          "name": "detail",
+          "children": [
+            {
+              "name": "category"
+            },
+            {
+              "name": "definition"
+            },
+            {
+              "name": "code"
+            },
+            {
+              "name": "reasonCode"
+            },
+            {
+              "name": "reasonReference"
+            },
+            {
+              "name": "goal"
+            },
+            {
+              "name": "status"
+            },
+            {
+              "name": "statusReason"
+            },
+            {
+              "name": "prohibited"
+            },
+            {
+              "name": "scheduledTiming"
+            },
+            {
+              "name": "scheduledPeriod"
+            },
+            {
+              "name": "scheduledString"
+            },
+            {
+              "name": "location"
+            },
+            {
+              "name": "performer"
+            },
+            {
+              "name": "productCodeableConcept"
+            },
+            {
+              "name": "productReference"
+            },
+            {
+              "name": "dailyAmount"
+            },
+            {
+              "name": "quantity"
+            },
+            {
+              "name": "description"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "note"
+    }
+  ],
+  "Claim": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "type"
+    },
+    {
+      "name": "subType"
+    },
+    {
+      "name": "use"
+    },
+    {
+      "name": "patient"
+    },
+    {
+      "name": "billablePeriod"
+    },
+    {
+      "name": "created"
+    },
+    {
+      "name": "enterer"
+    },
+    {
+      "name": "insurer"
+    },
+    {
+      "name": "provider"
+    },
+    {
+      "name": "organization"
+    },
+    {
+      "name": "priority"
+    },
+    {
+      "name": "fundsReserve"
+    },
+    {
+      "name": "related",
+      "children": [
+        {
+          "name": "claim"
+        },
+        {
+          "name": "relationship"
+        },
+        {
+          "name": "reference"
+        }
+      ]
+    },
+    {
+      "name": "prescription"
+    },
+    {
+      "name": "originalPrescription"
+    },
+    {
+      "name": "payee",
+      "children": [
+        {
+          "name": "type"
+        },
+        {
+          "name": "resourceType"
+        },
+        {
+          "name": "party"
+        }
+      ]
+    },
+    {
+      "name": "referral"
+    },
+    {
+      "name": "facility"
+    },
+    {
+      "name": "careTeam",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "provider"
+        },
+        {
+          "name": "responsible"
+        },
+        {
+          "name": "role"
+        },
+        {
+          "name": "qualification"
+        }
+      ]
+    },
+    {
+      "name": "information",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "category"
+        },
+        {
+          "name": "code"
+        },
+        {
+          "name": "timingDate"
+        },
+        {
+          "name": "timingPeriod"
+        },
+        {
+          "name": "valueString"
+        },
+        {
+          "name": "valueQuantity"
+        },
+        {
+          "name": "valueAttachment"
+        },
+        {
+          "name": "valueReference"
+        },
+        {
+          "name": "reason"
+        }
+      ]
+    },
+    {
+      "name": "diagnosis",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "diagnosisCodeableConcept"
+        },
+        {
+          "name": "diagnosisReference"
+        },
+        {
+          "name": "type"
+        },
+        {
+          "name": "packageCode"
+        }
+      ]
+    },
+    {
+      "name": "procedure",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "date"
+        },
+        {
+          "name": "procedureCodeableConcept"
+        },
+        {
+          "name": "procedureReference"
+        }
+      ]
+    },
+    {
+      "name": "insurance",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "focal"
+        },
+        {
+          "name": "coverage"
+        },
+        {
+          "name": "businessArrangement"
+        },
+        {
+          "name": "preAuthRef"
+        },
+        {
+          "name": "claimResponse"
+        }
+      ]
+    },
+    {
+      "name": "accident",
+      "children": [
+        {
+          "name": "date"
+        },
+        {
+          "name": "type"
+        },
+        {
+          "name": "locationAddress"
+        },
+        {
+          "name": "locationReference"
+        }
+      ]
+    },
+    {
+      "name": "employmentImpacted"
+    },
+    {
+      "name": "hospitalization"
+    },
+    {
+      "name": "item",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "careTeamLinkId"
+        },
+        {
+          "name": "diagnosisLinkId"
+        },
+        {
+          "name": "procedureLinkId"
+        },
+        {
+          "name": "informationLinkId"
+        },
+        {
+          "name": "revenue"
+        },
+        {
+          "name": "category"
+        },
+        {
+          "name": "service"
+        },
+        {
+          "name": "modifier"
+        },
+        {
+          "name": "programCode"
+        },
+        {
+          "name": "servicedDate"
+        },
+        {
+          "name": "servicedPeriod"
+        },
+        {
+          "name": "locationCodeableConcept"
+        },
+        {
+          "name": "locationAddress"
+        },
+        {
+          "name": "locationReference"
+        },
+        {
+          "name": "quantity"
+        },
+        {
+          "name": "unitPrice"
+        },
+        {
+          "name": "factor"
+        },
+        {
+          "name": "net"
+        },
+        {
+          "name": "udi"
+        },
+        {
+          "name": "bodySite"
+        },
+        {
+          "name": "subSite"
+        },
+        {
+          "name": "encounter"
+        },
+        {
+          "name": "detail",
+          "children": [
+            {
+              "name": "sequence"
+            },
+            {
+              "name": "revenue"
+            },
+            {
+              "name": "category"
+            },
+            {
+              "name": "service"
+            },
+            {
+              "name": "modifier"
+            },
+            {
+              "name": "programCode"
+            },
+            {
+              "name": "quantity"
+            },
+            {
+              "name": "unitPrice"
+            },
+            {
+              "name": "factor"
+            },
+            {
+              "name": "net"
+            },
+            {
+              "name": "udi"
+            },
+            {
+              "name": "subDetail",
+              "children": [
+                {
+                  "name": "sequence"
+                },
+                {
+                  "name": "revenue"
+                },
+                {
+                  "name": "category"
+                },
+                {
+                  "name": "service"
+                },
+                {
+                  "name": "modifier"
+                },
+                {
+                  "name": "programCode"
+                },
+                {
+                  "name": "quantity"
+                },
+                {
+                  "name": "unitPrice"
+                },
+                {
+                  "name": "factor"
+                },
+                {
+                  "name": "net"
+                },
+                {
+                  "name": "udi"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "total"
+    }
+  ],
+  "Condition": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "clinicalStatus"
+    },
+    {
+      "name": "verificationStatus"
+    },
+    {
+      "name": "category"
+    },
+    {
+      "name": "severity"
+    },
+    {
+      "name": "code"
+    },
+    {
+      "name": "bodySite"
+    },
+    {
+      "name": "subject"
+    },
+    {
+      "name": "context"
+    },
+    {
+      "name": "onsetDateTime"
+    },
+    {
+      "name": "onsetAge"
+    },
+    {
+      "name": "onsetPeriod"
+    },
+    {
+      "name": "onsetRange"
+    },
+    {
+      "name": "onsetString"
+    },
+    {
+      "name": "abatementDateTime"
+    },
+    {
+      "name": "abatementAge"
+    },
+    {
+      "name": "abatementBoolean"
+    },
+    {
+      "name": "abatementPeriod"
+    },
+    {
+      "name": "abatementRange"
+    },
+    {
+      "name": "abatementString"
+    },
+    {
+      "name": "assertedDate"
+    },
+    {
+      "name": "asserter"
+    },
+    {
+      "name": "stage",
+      "children": [
+        {
+          "name": "summary"
+        },
+        {
+          "name": "assessment"
+        }
+      ]
+    },
+    {
+      "name": "evidence",
+      "children": [
+        {
+          "name": "code"
+        },
+        {
+          "name": "detail"
+        }
+      ]
+    },
+    {
+      "name": "note"
+    }
+  ],
+  "Coverage": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "type"
+    },
+    {
+      "name": "policyHolder"
+    },
+    {
+      "name": "subscriber"
+    },
+    {
+      "name": "subscriberId"
+    },
+    {
+      "name": "beneficiary"
+    },
+    {
+      "name": "relationship"
+    },
+    {
+      "name": "period"
+    },
+    {
+      "name": "payor"
+    },
+    {
+      "name": "grouping",
+      "children": [
+        {
+          "name": "group"
+        },
+        {
+          "name": "groupDisplay"
+        },
+        {
+          "name": "subGroup"
+        },
+        {
+          "name": "subGroupDisplay"
+        },
+        {
+          "name": "plan"
+        },
+        {
+          "name": "planDisplay"
+        },
+        {
+          "name": "subPlan"
+        },
+        {
+          "name": "subPlanDisplay"
+        },
+        {
+          "name": "class"
+        },
+        {
+          "name": "classDisplay"
+        },
+        {
+          "name": "subClass"
+        },
+        {
+          "name": "subClassDisplay"
+        }
+      ]
+    },
+    {
+      "name": "dependent"
+    },
+    {
+      "name": "sequence"
+    },
+    {
+      "name": "order"
+    },
+    {
+      "name": "network"
+    },
+    {
+      "name": "contract"
+    }
+  ],
+  "DiagnosticReport": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "basedOn"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "category"
+    },
+    {
+      "name": "code"
+    },
+    {
+      "name": "subject"
+    },
+    {
+      "name": "context"
+    },
+    {
+      "name": "effectiveDateTime"
+    },
+    {
+      "name": "effectivePeriod"
+    },
+    {
+      "name": "issued"
+    },
+    {
+      "name": "performer",
+      "children": [
+        {
+          "name": "role"
+        },
+        {
+          "name": "actor"
+        }
+      ]
+    },
+    {
+      "name": "specimen"
+    },
+    {
+      "name": "result"
+    },
+    {
+      "name": "imagingStudy"
+    },
+    {
+      "name": "image",
+      "children": [
+        {
+          "name": "comment"
+        },
+        {
+          "name": "link"
+        }
+      ]
+    },
+    {
+      "name": "conclusion"
+    },
+    {
+      "name": "codedDiagnosis"
+    },
+    {
+      "name": "presentedForm"
+    }
+  ],
+  "Encounter": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "statusHistory",
+      "children": [
+        {
+          "name": "status"
+        },
+        {
+          "name": "period"
+        }
+      ]
+    },
+    {
+      "name": "class"
+    },
+    {
+      "name": "classHistory",
+      "children": [
+        {
+          "name": "class"
+        },
+        {
+          "name": "period"
+        }
+      ]
+    },
+    {
+      "name": "type"
+    },
+    {
+      "name": "priority"
+    },
+    {
+      "name": "subject"
+    },
+    {
+      "name": "episodeOfCare"
+    },
+    {
+      "name": "incomingReferral"
+    },
+    {
+      "name": "participant",
+      "children": [
+        {
+          "name": "type"
+        },
+        {
+          "name": "period"
+        },
+        {
+          "name": "individual"
+        }
+      ]
+    },
+    {
+      "name": "appointment"
+    },
+    {
+      "name": "period"
+    },
+    {
+      "name": "length"
+    },
+    {
+      "name": "reason"
+    },
+    {
+      "name": "diagnosis",
+      "children": [
+        {
+          "name": "condition"
+        },
+        {
+          "name": "role"
+        },
+        {
+          "name": "rank"
+        }
+      ]
+    },
+    {
+      "name": "account"
+    },
+    {
+      "name": "hospitalization",
+      "children": [
+        {
+          "name": "preAdmissionIdentifier"
+        },
+        {
+          "name": "origin"
+        },
+        {
+          "name": "admitSource"
+        },
+        {
+          "name": "reAdmission"
+        },
+        {
+          "name": "dietPreference"
+        },
+        {
+          "name": "specialCourtesy"
+        },
+        {
+          "name": "specialArrangement"
+        },
+        {
+          "name": "destination"
+        },
+        {
+          "name": "dischargeDisposition"
+        }
+      ]
+    },
+    {
+      "name": "location",
+      "children": [
+        {
+          "name": "location"
+        },
+        {
+          "name": "status"
+        },
+        {
+          "name": "period"
+        }
+      ]
+    },
+    {
+      "name": "serviceProvider"
+    },
+    {
+      "name": "partOf"
+    }
+  ],
+  "ExplanationOfBenefit": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "type"
+    },
+    {
+      "name": "subType"
+    },
+    {
+      "name": "patient"
+    },
+    {
+      "name": "billablePeriod"
+    },
+    {
+      "name": "created"
+    },
+    {
+      "name": "enterer"
+    },
+    {
+      "name": "insurer"
+    },
+    {
+      "name": "provider"
+    },
+    {
+      "name": "organization"
+    },
+    {
+      "name": "referral"
+    },
+    {
+      "name": "facility"
+    },
+    {
+      "name": "claim"
+    },
+    {
+      "name": "claimResponse"
+    },
+    {
+      "name": "outcome"
+    },
+    {
+      "name": "disposition"
+    },
+    {
+      "name": "related",
+      "children": [
+        {
+          "name": "claim"
+        },
+        {
+          "name": "relationship"
+        },
+        {
+          "name": "reference"
+        }
+      ]
+    },
+    {
+      "name": "prescription"
+    },
+    {
+      "name": "originalPrescription"
+    },
+    {
+      "name": "payee",
+      "children": [
+        {
+          "name": "type"
+        },
+        {
+          "name": "resourceType"
+        },
+        {
+          "name": "party"
+        }
+      ]
+    },
+    {
+      "name": "information",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "category"
+        },
+        {
+          "name": "code"
+        },
+        {
+          "name": "timingDate"
+        },
+        {
+          "name": "timingPeriod"
+        },
+        {
+          "name": "valueString"
+        },
+        {
+          "name": "valueQuantity"
+        },
+        {
+          "name": "valueAttachment"
+        },
+        {
+          "name": "valueReference"
+        },
+        {
+          "name": "reason"
+        }
+      ]
+    },
+    {
+      "name": "careTeam",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "provider"
+        },
+        {
+          "name": "responsible"
+        },
+        {
+          "name": "role"
+        },
+        {
+          "name": "qualification"
+        }
+      ]
+    },
+    {
+      "name": "diagnosis",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "diagnosisCodeableConcept"
+        },
+        {
+          "name": "diagnosisReference"
+        },
+        {
+          "name": "type"
+        },
+        {
+          "name": "packageCode"
+        }
+      ]
+    },
+    {
+      "name": "procedure",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "date"
+        },
+        {
+          "name": "procedureCodeableConcept"
+        },
+        {
+          "name": "procedureReference"
+        }
+      ]
+    },
+    {
+      "name": "precedence"
+    },
+    {
+      "name": "insurance",
+      "children": [
+        {
+          "name": "coverage"
+        },
+        {
+          "name": "preAuthRef"
+        }
+      ]
+    },
+    {
+      "name": "accident",
+      "children": [
+        {
+          "name": "date"
+        },
+        {
+          "name": "type"
+        },
+        {
+          "name": "locationAddress"
+        },
+        {
+          "name": "locationReference"
+        }
+      ]
+    },
+    {
+      "name": "employmentImpacted"
+    },
+    {
+      "name": "hospitalization"
+    },
+    {
+      "name": "item",
+      "children": [
+        {
+          "name": "sequence"
+        },
+        {
+          "name": "careTeamLinkId"
+        },
+        {
+          "name": "diagnosisLinkId"
+        },
+        {
+          "name": "procedureLinkId"
+        },
+        {
+          "name": "informationLinkId"
+        },
+        {
+          "name": "revenue"
+        },
+        {
+          "name": "category"
+        },
+        {
+          "name": "service"
+        },
+        {
+          "name": "modifier"
+        },
+        {
+          "name": "programCode"
+        },
+        {
+          "name": "servicedDate"
+        },
+        {
+          "name": "servicedPeriod"
+        },
+        {
+          "name": "locationCodeableConcept"
+        },
+        {
+          "name": "locationAddress"
+        },
+        {
+          "name": "locationReference"
+        },
+        {
+          "name": "quantity"
+        },
+        {
+          "name": "unitPrice"
+        },
+        {
+          "name": "factor"
+        },
+        {
+          "name": "net"
+        },
+        {
+          "name": "udi"
+        },
+        {
+          "name": "bodySite"
+        },
+        {
+          "name": "subSite"
+        },
+        {
+          "name": "encounter"
+        },
+        {
+          "name": "noteNumber"
+        },
+        {
+          "name": "adjudication",
+          "children": [
+            {
+              "name": "category"
+            },
+            {
+              "name": "reason"
+            },
+            {
+              "name": "amount"
+            },
+            {
+              "name": "value"
+            }
+          ]
+        },
+        {
+          "name": "detail",
+          "children": [
+            {
+              "name": "sequence"
+            },
+            {
+              "name": "type"
+            },
+            {
+              "name": "revenue"
+            },
+            {
+              "name": "category"
+            },
+            {
+              "name": "service"
+            },
+            {
+              "name": "modifier"
+            },
+            {
+              "name": "programCode"
+            },
+            {
+              "name": "quantity"
+            },
+            {
+              "name": "unitPrice"
+            },
+            {
+              "name": "factor"
+            },
+            {
+              "name": "net"
+            },
+            {
+              "name": "udi"
+            },
+            {
+              "name": "noteNumber"
+            },
+            {
+              "name": "adjudication"
+            },
+            {
+              "name": "subDetail",
+              "children": [
+                {
+                  "name": "sequence"
+                },
+                {
+                  "name": "type"
+                },
+                {
+                  "name": "revenue"
+                },
+                {
+                  "name": "category"
+                },
+                {
+                  "name": "service"
+                },
+                {
+                  "name": "modifier"
+                },
+                {
+                  "name": "programCode"
+                },
+                {
+                  "name": "quantity"
+                },
+                {
+                  "name": "unitPrice"
+                },
+                {
+                  "name": "factor"
+                },
+                {
+                  "name": "net"
+                },
+                {
+                  "name": "udi"
+                },
+                {
+                  "name": "noteNumber"
+                },
+                {
+                  "name": "adjudication"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "addItem",
+      "children": [
+        {
+          "name": "sequenceLinkId"
+        },
+        {
+          "name": "revenue"
+        },
+        {
+          "name": "category"
+        },
+        {
+          "name": "service"
+        },
+        {
+          "name": "modifier"
+        },
+        {
+          "name": "fee"
+        },
+        {
+          "name": "noteNumber"
+        },
+        {
+          "name": "adjudication"
+        },
+        {
+          "name": "detail",
+          "children": [
+            {
+              "name": "revenue"
+            },
+            {
+              "name": "category"
+            },
+            {
+              "name": "service"
+            },
+            {
+              "name": "modifier"
+            },
+            {
+              "name": "fee"
+            },
+            {
+              "name": "noteNumber"
+            },
+            {
+              "name": "adjudication"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "totalCost"
+    },
+    {
+      "name": "unallocDeductable"
+    },
+    {
+      "name": "totalBenefit"
+    },
+    {
+      "name": "payment",
+      "children": [
+        {
+          "name": "type"
+        },
+        {
+          "name": "adjustment"
+        },
+        {
+          "name": "adjustmentReason"
+        },
+        {
+          "name": "date"
+        },
+        {
+          "name": "amount"
+        },
+        {
+          "name": "identifier"
+        }
+      ]
+    },
+    {
+      "name": "form"
+    },
+    {
+      "name": "processNote",
+      "children": [
+        {
+          "name": "number"
+        },
+        {
+          "name": "type"
+        },
+        {
+          "name": "text"
+        },
+        {
+          "name": "language"
+        }
+      ]
+    },
+    {
+      "name": "benefitBalance",
+      "children": [
+        {
+          "name": "category"
+        },
+        {
+          "name": "subCategory"
+        },
+        {
+          "name": "excluded"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "description"
+        },
+        {
+          "name": "network"
+        },
+        {
+          "name": "unit"
+        },
+        {
+          "name": "term"
+        },
+        {
+          "name": "financial",
+          "children": [
+            {
+              "name": "type"
+            },
+            {
+              "name": "allowedUnsignedInt"
+            },
+            {
+              "name": "allowedString"
+            },
+            {
+              "name": "allowedMoney"
+            },
+            {
+              "name": "usedUnsignedInt"
+            },
+            {
+              "name": "usedMoney"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "ImagingStudy": [
+    {
+      "name": "uid"
+    },
+    {
+      "name": "accession"
+    },
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "availability"
+    },
+    {
+      "name": "modalityList"
+    },
+    {
+      "name": "patient"
+    },
+    {
+      "name": "context"
+    },
+    {
+      "name": "started"
+    },
+    {
+      "name": "basedOn"
+    },
+    {
+      "name": "referrer"
+    },
+    {
+      "name": "interpreter"
+    },
+    {
+      "name": "endpoint"
+    },
+    {
+      "name": "numberOfSeries"
+    },
+    {
+      "name": "numberOfInstances"
+    },
+    {
+      "name": "procedureReference"
+    },
+    {
+      "name": "procedureCode"
+    },
+    {
+      "name": "reason"
+    },
+    {
+      "name": "description"
+    },
+    {
+      "name": "series",
+      "children": [
+        {
+          "name": "uid"
+        },
+        {
+          "name": "number"
+        },
+        {
+          "name": "modality"
+        },
+        {
+          "name": "description"
+        },
+        {
+          "name": "numberOfInstances"
+        },
+        {
+          "name": "availability"
+        },
+        {
+          "name": "endpoint"
+        },
+        {
+          "name": "bodySite"
+        },
+        {
+          "name": "laterality"
+        },
+        {
+          "name": "started"
+        },
+        {
+          "name": "performer"
+        },
+        {
+          "name": "instance",
+          "children": [
+            {
+              "name": "uid"
+            },
+            {
+              "name": "number"
+            },
+            {
+              "name": "sopClass"
+            },
+            {
+              "name": "title"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "Immunization": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "notGiven"
+    },
+    {
+      "name": "vaccineCode"
+    },
+    {
+      "name": "patient"
+    },
+    {
+      "name": "encounter"
+    },
+    {
+      "name": "date"
+    },
+    {
+      "name": "primarySource"
+    },
+    {
+      "name": "reportOrigin"
+    },
+    {
+      "name": "location"
+    },
+    {
+      "name": "manufacturer"
+    },
+    {
+      "name": "lotNumber"
+    },
+    {
+      "name": "expirationDate"
+    },
+    {
+      "name": "site"
+    },
+    {
+      "name": "route"
+    },
+    {
+      "name": "doseQuantity"
+    },
+    {
+      "name": "practitioner",
+      "children": [
+        {
+          "name": "role"
+        },
+        {
+          "name": "actor"
+        }
+      ]
+    },
+    {
+      "name": "note"
+    },
+    {
+      "name": "explanation",
+      "children": [
+        {
+          "name": "reason"
+        },
+        {
+          "name": "reasonNotGiven"
+        }
+      ]
+    },
+    {
+      "name": "reaction",
+      "children": [
+        {
+          "name": "date"
+        },
+        {
+          "name": "detail"
+        },
+        {
+          "name": "reported"
+        }
+      ]
+    },
+    {
+      "name": "vaccinationProtocol",
+      "children": [
+        {
+          "name": "doseSequence"
+        },
+        {
+          "name": "description"
+        },
+        {
+          "name": "authority"
+        },
+        {
+          "name": "series"
+        },
+        {
+          "name": "seriesDoses"
+        },
+        {
+          "name": "targetDisease"
+        },
+        {
+          "name": "doseStatus"
+        },
+        {
+          "name": "doseStatusReason"
+        }
+      ]
+    }
+  ],
+  "MedicationRequest": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "definition"
+    },
+    {
+      "name": "basedOn"
+    },
+    {
+      "name": "groupIdentifier"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "intent"
+    },
+    {
+      "name": "category"
+    },
+    {
+      "name": "priority"
+    },
+    {
+      "name": "medicationCodeableConcept"
+    },
+    {
+      "name": "medicationReference"
+    },
+    {
+      "name": "subject"
+    },
+    {
+      "name": "context"
+    },
+    {
+      "name": "supportingInformation"
+    },
+    {
+      "name": "authoredOn"
+    },
+    {
+      "name": "requester",
+      "children": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "onBehalfOf"
+        }
+      ]
+    },
+    {
+      "name": "recorder"
+    },
+    {
+      "name": "reasonCode"
+    },
+    {
+      "name": "reasonReference"
+    },
+    {
+      "name": "note"
+    },
+    {
+      "name": "dosageInstruction"
+    },
+    {
+      "name": "dispenseRequest",
+      "children": [
+        {
+          "name": "validityPeriod"
+        },
+        {
+          "name": "numberOfRepeatsAllowed"
+        },
+        {
+          "name": "quantity"
+        },
+        {
+          "name": "expectedSupplyDuration"
+        },
+        {
+          "name": "performer"
+        }
+      ]
+    },
+    {
+      "name": "substitution",
+      "children": [
+        {
+          "name": "allowed"
+        },
+        {
+          "name": "reason"
+        }
+      ]
+    },
+    {
+      "name": "priorPrescription"
+    },
+    {
+      "name": "detectedIssue"
+    },
+    {
+      "name": "eventHistory"
+    }
+  ],
+  "Observation": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "basedOn"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "category"
+    },
+    {
+      "name": "code"
+    },
+    {
+      "name": "subject"
+    },
+    {
+      "name": "context"
+    },
+    {
+      "name": "effectiveDateTime"
+    },
+    {
+      "name": "effectivePeriod"
+    },
+    {
+      "name": "issued"
+    },
+    {
+      "name": "performer"
+    },
+    {
+      "name": "valueQuantity"
+    },
+    {
+      "name": "valueCodeableConcept"
+    },
+    {
+      "name": "valueString"
+    },
+    {
+      "name": "valueBoolean"
+    },
+    {
+      "name": "valueRange"
+    },
+    {
+      "name": "valueRatio"
+    },
+    {
+      "name": "valueSampledData"
+    },
+    {
+      "name": "valueAttachment"
+    },
+    {
+      "name": "valueTime"
+    },
+    {
+      "name": "valueDateTime"
+    },
+    {
+      "name": "valuePeriod"
+    },
+    {
+      "name": "dataAbsentReason"
+    },
+    {
+      "name": "interpretation"
+    },
+    {
+      "name": "comment"
+    },
+    {
+      "name": "bodySite"
+    },
+    {
+      "name": "method"
+    },
+    {
+      "name": "specimen"
+    },
+    {
+      "name": "device"
+    },
+    {
+      "name": "referenceRange",
+      "children": [
+        {
+          "name": "low"
+        },
+        {
+          "name": "high"
+        },
+        {
+          "name": "type"
+        },
+        {
+          "name": "appliesTo"
+        },
+        {
+          "name": "age"
+        },
+        {
+          "name": "text"
+        }
+      ]
+    },
+    {
+      "name": "related",
+      "children": [
+        {
+          "name": "type"
+        },
+        {
+          "name": "target"
+        }
+      ]
+    },
+    {
+      "name": "component",
+      "children": [
+        {
+          "name": "code"
+        },
+        {
+          "name": "valueQuantity"
+        },
+        {
+          "name": "valueCodeableConcept"
+        },
+        {
+          "name": "valueString"
+        },
+        {
+          "name": "valueRange"
+        },
+        {
+          "name": "valueRatio"
+        },
+        {
+          "name": "valueSampledData"
+        },
+        {
+          "name": "valueAttachment"
+        },
+        {
+          "name": "valueTime"
+        },
+        {
+          "name": "valueDateTime"
+        },
+        {
+          "name": "valuePeriod"
+        },
+        {
+          "name": "dataAbsentReason"
+        },
+        {
+          "name": "interpretation"
+        },
+        {
+          "name": "referenceRange"
+        }
+      ]
+    }
+  ],
+  "Patient": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "active"
+    },
+    {
+      "name": "name"
+    },
+    {
+      "name": "telecom"
+    },
+    {
+      "name": "gender"
+    },
+    {
+      "name": "birthDate"
+    },
+    {
+      "name": "deceasedBoolean"
+    },
+    {
+      "name": "deceasedDateTime"
+    },
+    {
+      "name": "address"
+    },
+    {
+      "name": "maritalStatus"
+    },
+    {
+      "name": "multipleBirthBoolean"
+    },
+    {
+      "name": "multipleBirthInteger"
+    },
+    {
+      "name": "photo"
+    },
+    {
+      "name": "contact",
+      "children": [
+        {
+          "name": "relationship"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "telecom"
+        },
+        {
+          "name": "address"
+        },
+        {
+          "name": "gender"
+        },
+        {
+          "name": "organization"
+        },
+        {
+          "name": "period"
+        }
+      ]
+    },
+    {
+      "name": "animal",
+      "children": [
+        {
+          "name": "species"
+        },
+        {
+          "name": "breed"
+        },
+        {
+          "name": "genderStatus"
+        }
+      ]
+    },
+    {
+      "name": "communication",
+      "children": [
+        {
+          "name": "language"
+        },
+        {
+          "name": "preferred"
+        }
+      ]
+    },
+    {
+      "name": "generalPractitioner"
+    },
+    {
+      "name": "managingOrganization"
+    },
+    {
+      "name": "link",
+      "children": [
+        {
+          "name": "other"
+        },
+        {
+          "name": "type"
+        }
+      ]
+    }
+  ],
+  "ProcedureRequest": [
+    {
+      "name": "identifier"
+    },
+    {
+      "name": "definition"
+    },
+    {
+      "name": "basedOn"
+    },
+    {
+      "name": "replaces"
+    },
+    {
+      "name": "requisition"
+    },
+    {
+      "name": "status"
+    },
+    {
+      "name": "intent"
+    },
+    {
+      "name": "priority"
+    },
+    {
+      "name": "doNotPerform"
+    },
+    {
+      "name": "category"
+    },
+    {
+      "name": "code"
+    },
+    {
+      "name": "subject"
+    },
+    {
+      "name": "context"
+    },
+    {
+      "name": "occurrenceDateTime"
+    },
+    {
+      "name": "occurrencePeriod"
+    },
+    {
+      "name": "occurrenceTiming"
+    },
+    {
+      "name": "asNeededBoolean"
+    },
+    {
+      "name": "asNeededCodeableConcept"
+    },
+    {
+      "name": "authoredOn"
+    },
+    {
+      "name": "requester",
+      "children": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "onBehalfOf"
+        }
+      ]
+    },
+    {
+      "name": "performerType"
+    },
+    {
+      "name": "performer"
+    },
+    {
+      "name": "reasonCode"
+    },
+    {
+      "name": "reasonReference"
+    },
+    {
+      "name": "supportingInfo"
+    },
+    {
+      "name": "specimen"
+    },
+    {
+      "name": "bodySite"
+    },
+    {
+      "name": "note"
+    },
+    {
+      "name": "relevantHistory"
+    }
+  ]
+}

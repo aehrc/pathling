@@ -10,6 +10,8 @@ import SelectedDimensionAttributes from '../SelectedDimensionAttributes'
 import TableResult from '../TableResult'
 import './App.less'
 
+import resourceTree from '../../../config/element-tree.json'
+
 class App extends Component {
   componentDidCatch(error) {
     message.error(error.message)
@@ -27,9 +29,7 @@ class App extends Component {
     return (
       <div className="app">
         <menu className="sider">
-          <ElementTree />
-          <MetricList />
-          <DimensionList />
+          <ElementTree resourceTree={resourceTree} />
         </menu>
         <main className="content">
           <SelectedMetrics />
