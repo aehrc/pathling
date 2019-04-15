@@ -24,6 +24,8 @@ export default (state = initialState, action) => {
       )
     case 'REMOVE_GROUPING':
       return state.set('groupings', state.get('groupings').delete(action.index))
+    case 'CLEAR_QUERY':
+      return initialState
     default:
       return state
   }

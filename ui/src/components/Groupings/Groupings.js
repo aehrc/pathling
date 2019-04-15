@@ -13,7 +13,7 @@ function Groupings(props) {
   }
 
   function renderBlankCanvas() {
-    return <span className="blank-canvas">Groupings</span>
+    return <div className="blank-canvas">Groupings</div>
   }
 
   function renderGroupings() {

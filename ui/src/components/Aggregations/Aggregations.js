@@ -13,7 +13,7 @@ function Aggregations(props) {
   }
 
   function renderBlankCanvas() {
-    return <span className="blank-canvas">Aggregations</span>
+    return <div className="blank-canvas">Aggregations</div>
   }
 
   function renderAggregations() {

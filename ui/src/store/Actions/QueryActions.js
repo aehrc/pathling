@@ -15,3 +15,7 @@ export const removeGrouping = index => ({
   type: 'REMOVE_GROUPING',
   index,
 })
+
+export const clearQuery = () => ({
+  type: 'CLEAR_QUERY',
+})
