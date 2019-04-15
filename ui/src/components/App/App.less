@@ -1,3 +1,7 @@
+@import '~normalize.css/normalize.css';
+@import '~@blueprintjs/icons/lib/css/blueprint-icons.css';
+@import '~@blueprintjs/core/lib/css/blueprint.css';
+
 .app {
   display: grid;
   grid-template-columns: 21em auto;
@@ -9,18 +13,9 @@
   grid-column: 1;
   grid-row: 1;
   margin: 0;
-  padding: 0;
+  padding: 1em;
   overflow-x: hidden;
   overflow-y: scroll;
-
-  h3 {
-    padding: 0.5em 1em;
-  }
-
-  .ant-menu {
-    border-right: 0;
-    margin-bottom: 0.5em;
-  }
 }
 
 .content {
@@ -34,25 +29,22 @@
 }
 
 .content-inner,
-.selected-metrics,
-.selected-dimension-attributes,
+.aggregations,
+.groupings,
 .filters {
   background-color: white;
   border-radius: 0.3em;
   font-size: 1em;
   color: #314659;
-  & > .anticon {
-    margin-right: 0.5em;
-  }
 }
 
-.selected-metrics {
+.aggregations {
   grid-column: 2;
   grid-row: 2;
   padding: 1em;
 }
 
-.selected-dimension-attributes {
+.groupings {
   grid-column: 4;
   grid-row: 2;
   padding: 1em;
@@ -72,9 +64,9 @@
   overflow-y: scroll;
   position: relative;
 
-  .loading {
-    position: absolute;
-    top: 1em;
-    left: 1em;
-  }
+  //.loading {
+  //  position: absolute;
+  //  top: 1em;
+  //  left: 1em;
+  //}
 }

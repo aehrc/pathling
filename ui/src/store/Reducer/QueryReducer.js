@@ -1,16 +1,29 @@
-import { Map } from 'immutable'
+import { Map, List } from 'immutable'
 
 const initialState = Map({
-  queryResult: null,
-  loading: false,
+  aggregations: List(),
+  groupings: List(),
 })
 
 export default (state = initialState, action) => {
   switch (action.type) {
-    case 'REQUEST_QUERY_RESULT':
-      return state.set('loading', true)
-    case 'RECEIVE_QUERY_RESULT':
-      return state.merge({ queryResult: action.queryResult, loading: false })
+    case 'ADD_AGGREGATION':
+      return state.set(
+        'aggregations',
+        state.get('aggregations').push(Map(action.aggregation)),
+      )
+    case 'REMOVE_AGGREGATION':
+      return state.set(
+        'aggregations',
+        state.get('aggregations').delete(action.index),
+      )
+    case 'ADD_GROUPING':
+      return state.set(
+        'groupings',
+        state.get('groupings').push(Map(action.grouping)),
+      )
+    case 'REMOVE_GROUPING':
+      return state.set('groupings', state.get('groupings').delete(action.index))
     default:
       return state
   }

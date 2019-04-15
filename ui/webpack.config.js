@@ -17,6 +17,15 @@ module.exports = {
         },
       },
       {
+        test: /\.(ttf|eot|woff)$/,
+        use: {
+          loader: 'file-loader',
+          options: {
+            name: 'fonts/[hash].[ext]',
+          },
+        },
+      },
+      {
         test: /\.(css|less)$/,
         use: [
           { loader: 'style-loader', options: { sourceMap: true } },
