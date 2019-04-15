@@ -4,6 +4,8 @@ import ElementTree from '../ElementTree'
 import Aggregations from '../Aggregations'
 import Filters from '../Filters'
 import Groupings from '../Groupings'
+import Actions from '../Actions'
+import Result from '../Result'
 import './App.less'
 
 const App = () => {
@@ -16,7 +18,8 @@ const App = () => {
         <Aggregations />
         <Groupings />
         <Filters />
-        <div className="content-inner" />
+        <Actions />
+        <Result />
       </main>
     </div>
   )

@@ -23,12 +23,12 @@
   grid-row: 1;
   display: grid;
   grid-template-columns: 1em auto 1em auto 1em;
-  grid-template-rows: 1em 5.7em 1em 3.7em 1em auto 1em;
+  grid-template-rows: 1em 5.7em 1em 3.7em 3.7em auto 1em;
   background-color: #e9e9e9;
   overflow: hidden;
 }
 
-.content-inner,
+.result,
 .aggregations,
 .groupings,
 .filters {
@@ -56,17 +56,16 @@
   padding: 1em;
 }
 
-.content-inner {
+.actions {
+  grid-column: 2 / span 3;
+  grid-row: 5;
+}
+
+.result {
   grid-column: 2 / span 3;
   grid-row: 6;
   padding: 1em;
   background-color: white;
   overflow-y: scroll;
   position: relative;
-
-  //.loading {
-  //  position: absolute;
-  //  top: 1em;
-  //  left: 1em;
-  //}
 }
