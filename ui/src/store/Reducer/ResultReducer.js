@@ -3,6 +3,7 @@ import { Map, fromJS } from 'immutable'
 const initialState = Map({
   groupings: null,
   loading: false,
+  error: null,
 })
 
 export default (state = initialState, action) => {
@@ -13,6 +14,7 @@ export default (state = initialState, action) => {
       return state.merge({
         groupings: groupingsFromResult(action.result),
         loading: false,
+        error: null,
       })
     case 'QUERY_ERROR':
       return state.merge({

@@ -17,12 +17,13 @@ const Alerter = Toaster.create({
 class App extends Component {
   componentDidCatch(error) {
     Alerter.show({ message: error.message, intent: 'danger' })
+    // eslint-disable-next-line no-console
     console.error(error)
   }
 
   componentDidUpdate(prevProps) {
     const { error } = this.props
-    if (prevProps.error !== error) {
+    if (error && prevProps.error !== error) {
       Alerter.show({ message: error.get('message'), intent: 'danger' })
       const opOutcome = error.get('opOutcome')
       // eslint-disable-next-line no-console
