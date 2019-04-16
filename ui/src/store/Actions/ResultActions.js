@@ -1,7 +1,6 @@
 import http from 'axios'
 import { Map, fromJS } from 'immutable'
 
-import { catchError } from './AppActions'
 import { opOutcomeFromJsonResponse } from '../../fhir/OperationOutcome'
 
 export const requestQueryResult = () => ({
@@ -11,6 +10,12 @@ export const requestQueryResult = () => ({
 export const receiveQueryResult = queryResult => ({
   type: 'RECEIVE_QUERY_RESULT',
   queryResult,
+})
+
+export const receiveQueryResultError = (message, opOutcome) => ({
+  type: 'RECEIVE_QUERY_RESULT_ERROR',
+  message,
+  opOutcome,
 })
 
 export const fetchQueryResult = () => (dispatch, getState) => {
@@ -73,10 +78,10 @@ export const fetchQueryResult = () => (dispatch, getState) => {
           )
         ) {
           const opOutcome = opOutcomeFromJsonResponse(error.response.data)
-          dispatch(catchError(opOutcome.message, opOutcome))
-        } else dispatch(catchError(error.message))
+          dispatch(receiveQueryResultError(opOutcome.message, opOutcome))
+        } else dispatch(receiveQueryResultError(error.message))
       })
   } catch (error) {
-    dispatch(catchError(error.message))
+    dispatch(receiveQueryResultError(error.message))
   }
 }

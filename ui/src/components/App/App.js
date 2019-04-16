@@ -47,5 +47,5 @@ class App extends Component {
   }
 }
 
-const mapStateToProps = state => ({ error: state.getIn(['app', 'error']) })
+const mapStateToProps = state => ({ error: state.getIn(['result', 'error']) })
 export default connect(mapStateToProps)(App)
