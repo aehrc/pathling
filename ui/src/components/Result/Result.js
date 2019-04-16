@@ -41,11 +41,17 @@ function Result(props) {
   function renderPart(part, i) {
     const key = Object.keys(part).find(key => key.match(/^value/)),
       value = part[key]
-    return value === undefined ? (
-      <td key={i}>(no value)</td>
-    ) : (
-      <td key={i}>{part[key].toString()}</td>
-    )
+    if (value === undefined) {
+      return <td key={i}>(no value)</td>
+    } else if (key === 'valueDate') {
+      const date = new Date(value).toLocaleDateString()
+      return <td key={i}>{date}</td>
+    } else if (key === 'valueDateTime') {
+      const date = new Date(value).toLocaleString()
+      return <td key={i}>{date}</td>
+    } else {
+      return <td key={i}>{part[key].toString()}</td>
+    }
   }
 
   let content = null
