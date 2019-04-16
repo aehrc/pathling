@@ -9,7 +9,7 @@ import { fromJS, Map, List } from 'immutable'
 
 import * as actions from '../../store/Actions'
 import './ElementTree.less'
-import elementTree from '../../../config/element-tree.json'
+import resourceTree from '../../../config/resource-tree.json'
 
 /**
  * Renders a tree showing resources and elements available for use within
@@ -19,7 +19,7 @@ import elementTree from '../../../config/element-tree.json'
  */
 function ElementTree(props) {
   const { addAggregation, addGrouping } = props
-  const treeForConversion = fromJS(elementTree)
+  const treeForConversion = fromJS(resourceTree)
   const [tree, setTree] = useState(convertElementTree(treeForConversion))
 
   function handleNodeExpand(_, nodePath) {

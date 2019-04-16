@@ -1,0 +1,530 @@
+{
+  "Address": [
+    {
+      "name": "use",
+      "path": "Address.use"
+    },
+    {
+      "name": "type",
+      "path": "Address.type"
+    },
+    {
+      "name": "text",
+      "path": "Address.text"
+    },
+    {
+      "name": "line",
+      "path": "Address.line"
+    },
+    {
+      "name": "city",
+      "path": "Address.city"
+    },
+    {
+      "name": "district",
+      "path": "Address.district"
+    },
+    {
+      "name": "state",
+      "path": "Address.state"
+    },
+    {
+      "name": "postalCode",
+      "path": "Address.postalCode"
+    },
+    {
+      "name": "country",
+      "path": "Address.country"
+    },
+    {
+      "name": "period",
+      "path": "Address.period"
+    }
+  ],
+  "Age": [
+    {
+      "name": "value",
+      "path": "Age.value"
+    },
+    {
+      "name": "comparator",
+      "path": "Age.comparator"
+    },
+    {
+      "name": "unit",
+      "path": "Age.unit"
+    },
+    {
+      "name": "system",
+      "path": "Age.system"
+    },
+    {
+      "name": "code",
+      "path": "Age.code"
+    }
+  ],
+  "Annotation": [
+    {
+      "name": "authorReference",
+      "path": "Annotation.authorReference"
+    },
+    {
+      "name": "authorString",
+      "path": "Annotation.authorString"
+    },
+    {
+      "name": "time",
+      "path": "Annotation.time"
+    },
+    {
+      "name": "text",
+      "path": "Annotation.text"
+    }
+  ],
+  "Attachment": [
+    {
+      "name": "contentType",
+      "path": "Attachment.contentType"
+    },
+    {
+      "name": "language",
+      "path": "Attachment.language"
+    },
+    {
+      "name": "data",
+      "path": "Attachment.data"
+    },
+    {
+      "name": "url",
+      "path": "Attachment.url"
+    },
+    {
+      "name": "size",
+      "path": "Attachment.size"
+    },
+    {
+      "name": "hash",
+      "path": "Attachment.hash"
+    },
+    {
+      "name": "title",
+      "path": "Attachment.title"
+    },
+    {
+      "name": "creation",
+      "path": "Attachment.creation"
+    }
+  ],
+  "CodeableConcept": [
+    {
+      "name": "coding",
+      "path": "CodeableConcept.coding"
+    },
+    {
+      "name": "text",
+      "path": "CodeableConcept.text"
+    }
+  ],
+  "Coding": [
+    {
+      "name": "system",
+      "path": "Coding.system"
+    },
+    {
+      "name": "version",
+      "path": "Coding.version"
+    },
+    {
+      "name": "code",
+      "path": "Coding.code"
+    },
+    {
+      "name": "display",
+      "path": "Coding.display"
+    },
+    {
+      "name": "userSelected",
+      "path": "Coding.userSelected"
+    }
+  ],
+  "ContactPoint": [
+    {
+      "name": "system",
+      "path": "ContactPoint.system"
+    },
+    {
+      "name": "value",
+      "path": "ContactPoint.value"
+    },
+    {
+      "name": "use",
+      "path": "ContactPoint.use"
+    },
+    {
+      "name": "rank",
+      "path": "ContactPoint.rank"
+    },
+    {
+      "name": "period",
+      "path": "ContactPoint.period"
+    }
+  ],
+  "Count": [
+    {
+      "name": "value",
+      "path": "Count.value"
+    },
+    {
+      "name": "comparator",
+      "path": "Count.comparator"
+    },
+    {
+      "name": "unit",
+      "path": "Count.unit"
+    },
+    {
+      "name": "system",
+      "path": "Count.system"
+    },
+    {
+      "name": "code",
+      "path": "Count.code"
+    }
+  ],
+  "Distance": [
+    {
+      "name": "value",
+      "path": "Distance.value"
+    },
+    {
+      "name": "comparator",
+      "path": "Distance.comparator"
+    },
+    {
+      "name": "unit",
+      "path": "Distance.unit"
+    },
+    {
+      "name": "system",
+      "path": "Distance.system"
+    },
+    {
+      "name": "code",
+      "path": "Distance.code"
+    }
+  ],
+  "Duration": [
+    {
+      "name": "value",
+      "path": "Duration.value"
+    },
+    {
+      "name": "comparator",
+      "path": "Duration.comparator"
+    },
+    {
+      "name": "unit",
+      "path": "Duration.unit"
+    },
+    {
+      "name": "system",
+      "path": "Duration.system"
+    },
+    {
+      "name": "code",
+      "path": "Duration.code"
+    }
+  ],
+  "HumanName": [
+    {
+      "name": "use",
+      "path": "HumanName.use"
+    },
+    {
+      "name": "text",
+      "path": "HumanName.text"
+    },
+    {
+      "name": "family",
+      "path": "HumanName.family"
+    },
+    {
+      "name": "given",
+      "path": "HumanName.given"
+    },
+    {
+      "name": "prefix",
+      "path": "HumanName.prefix"
+    },
+    {
+      "name": "suffix",
+      "path": "HumanName.suffix"
+    },
+    {
+      "name": "period",
+      "path": "HumanName.period"
+    }
+  ],
+  "Identifier": [
+    {
+      "name": "use",
+      "path": "Identifier.use"
+    },
+    {
+      "name": "type",
+      "path": "Identifier.type"
+    },
+    {
+      "name": "system",
+      "path": "Identifier.system"
+    },
+    {
+      "name": "value",
+      "path": "Identifier.value"
+    },
+    {
+      "name": "period",
+      "path": "Identifier.period"
+    },
+    {
+      "name": "assigner",
+      "path": "Identifier.assigner"
+    }
+  ],
+  "Money": [
+    {
+      "name": "value",
+      "path": "Money.value"
+    },
+    {
+      "name": "comparator",
+      "path": "Money.comparator"
+    },
+    {
+      "name": "unit",
+      "path": "Money.unit"
+    },
+    {
+      "name": "system",
+      "path": "Money.system"
+    },
+    {
+      "name": "code",
+      "path": "Money.code"
+    }
+  ],
+  "Period": [
+    {
+      "name": "start",
+      "path": "Period.start"
+    },
+    {
+      "name": "end",
+      "path": "Period.end"
+    }
+  ],
+  "Quantity": [
+    {
+      "name": "value",
+      "path": "Quantity.value"
+    },
+    {
+      "name": "comparator",
+      "path": "Quantity.comparator"
+    },
+    {
+      "name": "unit",
+      "path": "Quantity.unit"
+    },
+    {
+      "name": "system",
+      "path": "Quantity.system"
+    },
+    {
+      "name": "code",
+      "path": "Quantity.code"
+    }
+  ],
+  "Range": [
+    {
+      "name": "low",
+      "path": "Range.low"
+    },
+    {
+      "name": "high",
+      "path": "Range.high"
+    }
+  ],
+  "Ratio": [
+    {
+      "name": "numerator",
+      "path": "Ratio.numerator"
+    },
+    {
+      "name": "denominator",
+      "path": "Ratio.denominator"
+    }
+  ],
+  "Reference": [
+    {
+      "name": "reference",
+      "path": "Reference.reference"
+    },
+    {
+      "name": "identifier",
+      "path": "Reference.identifier"
+    },
+    {
+      "name": "display",
+      "path": "Reference.display"
+    }
+  ],
+  "SampledData": [
+    {
+      "name": "origin",
+      "path": "SampledData.origin"
+    },
+    {
+      "name": "period",
+      "path": "SampledData.period"
+    },
+    {
+      "name": "factor",
+      "path": "SampledData.factor"
+    },
+    {
+      "name": "lowerLimit",
+      "path": "SampledData.lowerLimit"
+    },
+    {
+      "name": "upperLimit",
+      "path": "SampledData.upperLimit"
+    },
+    {
+      "name": "dimensions",
+      "path": "SampledData.dimensions"
+    },
+    {
+      "name": "data",
+      "path": "SampledData.data"
+    }
+  ],
+  "Signature": [
+    {
+      "name": "type",
+      "path": "Signature.type"
+    },
+    {
+      "name": "when",
+      "path": "Signature.when"
+    },
+    {
+      "name": "whoUri",
+      "path": "Signature.whoUri"
+    },
+    {
+      "name": "whoReference",
+      "path": "Signature.whoReference"
+    },
+    {
+      "name": "onBehalfOfUri",
+      "path": "Signature.onBehalfOfUri"
+    },
+    {
+      "name": "onBehalfOfReference",
+      "path": "Signature.onBehalfOfReference"
+    },
+    {
+      "name": "contentType",
+      "path": "Signature.contentType"
+    },
+    {
+      "name": "blob",
+      "path": "Signature.blob"
+    }
+  ],
+  "Timing": [
+    {
+      "name": "event",
+      "path": "Timing.event"
+    },
+    {
+      "name": "repeat",
+      "path": "Timing.repeat",
+      "children": [
+        {
+          "name": "boundsDuration",
+          "path": "Timing.repeat.boundsDuration"
+        },
+        {
+          "name": "boundsRange",
+          "path": "Timing.repeat.boundsRange"
+        },
+        {
+          "name": "boundsPeriod",
+          "path": "Timing.repeat.boundsPeriod"
+        },
+        {
+          "name": "count",
+          "path": "Timing.repeat.count"
+        },
+        {
+          "name": "countMax",
+          "path": "Timing.repeat.countMax"
+        },
+        {
+          "name": "duration",
+          "path": "Timing.repeat.duration"
+        },
+        {
+          "name": "durationMax",
+          "path": "Timing.repeat.durationMax"
+        },
+        {
+          "name": "durationUnit",
+          "path": "Timing.repeat.durationUnit"
+        },
+        {
+          "name": "frequency",
+          "path": "Timing.repeat.frequency"
+        },
+        {
+          "name": "frequencyMax",
+          "path": "Timing.repeat.frequencyMax"
+        },
+        {
+          "name": "period",
+          "path": "Timing.repeat.period"
+        },
+        {
+          "name": "periodMax",
+          "path": "Timing.repeat.periodMax"
+        },
+        {
+          "name": "periodUnit",
+          "path": "Timing.repeat.periodUnit"
+        },
+        {
+          "name": "dayOfWeek",
+          "path": "Timing.repeat.dayOfWeek"
+        },
+        {
+          "name": "timeOfDay",
+          "path": "Timing.repeat.timeOfDay"
+        },
+        {
+          "name": "when",
+          "path": "Timing.repeat.when"
+        },
+        {
+          "name": "offset",
+          "path": "Timing.repeat.offset"
+        }
+      ]
+    },
+    {
+      "name": "code",
+      "path": "Timing.code"
+    }
+  ]
+}
