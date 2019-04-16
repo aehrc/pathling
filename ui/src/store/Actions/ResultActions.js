@@ -59,12 +59,16 @@ export const fetchQueryResult = () => (dispatch, getState) => {
     }
     dispatch(queryRequest())
     return http
-      .post('http://localhost:8090/fhir/$aggregate-query', query, {
-        headers: {
-          'Content-Type': 'application/fhir+json',
-          Accept: 'application/fhir+json',
+      .post(
+        'http://hb-15-cdc001.it.csiro.au:8090/fhir/$aggregate-query',
+        query,
+        {
+          headers: {
+            'Content-Type': 'application/fhir+json',
+            Accept: 'application/fhir+json',
+          },
         },
-      })
+      )
       .then(response => {
         if (response.data.resourceType !== 'Parameters')
           throw 'Response is not of type Parameters.'

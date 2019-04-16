@@ -38,33 +38,33 @@ function ElementTree(props) {
     if (expandable && node.isExpanded) handleNodeCollapse(node, nodePath)
   }
 
-  function handleAddAggregation(node) {
-    const fhirPath = node.nodeData.fhirPath,
-      expression = `${fhirPath}.count()`
-    addAggregation({
-      expression,
-      label: expression,
-    })
-  }
-
-  function handleAddGrouping(node) {
-    const fhirPath = node.nodeData.fhirPath
-    addGrouping({ expression: fhirPath, label: fhirPath })
-  }
-
   function handleNodeContextMenu(node, path, event) {
-    const aggregationMenuItem = (
+    const aggregationExpression = `${node.nodeData.fhirPath}.count()`,
+      aggregationLabel = aggregationExpression,
+      groupingExpression = node.nodeData.fhirPath,
+      groupingLabel = groupingExpression,
+      aggregationMenuItem = (
         <MenuItem
           icon="trending-up"
-          text="Add to aggregations"
-          onClick={() => handleAddAggregation(node)}
+          text={`Add "${aggregationExpression}" to aggregations`}
+          onClick={() =>
+            addAggregation({
+              expression: aggregationExpression,
+              label: aggregationLabel,
+            })
+          }
         />
       ),
       groupingMenuItem = (
         <MenuItem
           icon="graph"
-          text="Add to groupings"
-          onClick={() => handleAddGrouping(node)}
+          text={`Add "${groupingExpression}" to groupings`}
+          onClick={() =>
+            addGrouping({
+              expression: groupingExpression,
+              label: groupingLabel,
+            })
+          }
         />
       )
     event.preventDefault()
