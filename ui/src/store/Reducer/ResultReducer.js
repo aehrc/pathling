@@ -1,6 +1,7 @@
 import { Map, fromJS } from 'immutable'
 
 const initialState = Map({
+  query: null,
   groupings: null,
   loading: false,
   error: null,
@@ -8,21 +9,21 @@ const initialState = Map({
 
 export default (state = initialState, action) => {
   switch (action.type) {
-    case 'REQUEST_QUERY_RESULT':
-      return state.set('loading', true)
+    case 'QUERY_REQUEST':
+      return initialState.set('loading', true)
     case 'QUERY_RESULT':
       return state.merge({
+        query: action.query,
         groupings: groupingsFromResult(action.result),
         loading: false,
         error: null,
       })
     case 'QUERY_ERROR':
-      return state.merge({
+      return initialState.merge({
         error: Map({
           message: action.message,
           opOutcome: action.opOutcome,
         }),
-        loading: false,
       })
     default:
       return state

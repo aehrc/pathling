@@ -4,19 +4,53 @@
 
 import React from 'react'
 import { connect } from 'react-redux'
-import { Spinner } from '@blueprintjs/core'
+import { Spinner, HTMLTable } from '@blueprintjs/core'
 
 import './Result.less'
 
 function Result(props) {
-  const { loading } = props
-  return (
-    <div className="result">
-      {loading ? (
-        <Spinner className="loading" size={100} intent="primary" />
-      ) : null}
-    </div>
-  )
+  const { loading, groupings, query } = props
+
+  function renderLoading() {
+    return <Spinner className="loading" size={100} intent="primary" />
+  }
+
+  function renderGroupings() {
+    const groupHeadings = query.groupings.map(grouping => (
+        <th key={grouping.label}>{grouping.label}</th>
+      )),
+      aggregationHeadings = query.aggregations.map(aggregation => (
+        <th key={aggregation.label}>{aggregation.label}</th>
+      )),
+      rows = groupings.map((grouping, i) => renderGrouping(grouping, i))
+    return (
+      <HTMLTable interactive={true}>
+        <thead>
+          <tr>{groupHeadings.concat(aggregationHeadings)}</tr>
+        </thead>
+        <tbody>{rows}</tbody>
+      </HTMLTable>
+    )
+  }
+
+  function renderGrouping(grouping, i) {
+    const parts = grouping.part.map((part, i) => renderPart(part, i))
+    return <tr key={i}>{parts}</tr>
+  }
+
+  function renderPart(part, i) {
+    const key = Object.keys(part).find(key => key.match(/^value/)),
+      value = part[key]
+    return value ? <td key={i}>{part[key]}</td> : <td>(no value)</td>
+  }
+
+  let content = null
+  if (loading) {
+    content = renderLoading()
+  } else if (groupings !== null) {
+    content = renderGroupings()
+  }
+  return <div className="result">{content}</div>
 }
 
 const mapStateToProps = state => state.get('result').toJS()

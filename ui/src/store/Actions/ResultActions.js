@@ -3,13 +3,14 @@ import { Map, fromJS } from 'immutable'
 
 import { opOutcomeFromJsonResponse } from '../../fhir/OperationOutcome'
 
-export const requestQueryResult = () => ({
-  type: 'REQUEST_QUERY_RESULT',
+export const queryRequest = () => ({
+  type: 'QUERY_REQUEST',
 })
 
-export const queryResult = result => ({
+export const queryResult = (result, query) => ({
   type: 'QUERY_RESULT',
   result,
+  query,
 })
 
 export const queryError = (message, opOutcome) => ({
@@ -56,7 +57,7 @@ export const fetchQueryResult = () => (dispatch, getState) => {
       // noinspection ExceptionCaughtLocallyJS
       throw new Error('Query must have at least one aggregation.')
     }
-    dispatch(requestQueryResult())
+    dispatch(queryRequest())
     return http
       .post('http://localhost:8090/fhir/$aggregate-query', query, {
         headers: {
@@ -68,7 +69,7 @@ export const fetchQueryResult = () => (dispatch, getState) => {
         if (response.data.resourceType !== 'Parameters')
           throw 'Response is not of type Parameters.'
         const result = Map(fromJS(response.data))
-        dispatch(queryResult(result))
+        dispatch(queryResult(result, getState().get('query')))
         return result
       })
       .catch(error => {
