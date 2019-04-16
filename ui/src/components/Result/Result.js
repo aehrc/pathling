@@ -5,7 +5,6 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import { Spinner, HTMLTable } from '@blueprintjs/core'
-import { Map } from 'immutable'
 
 import './Result.less'
 
@@ -42,7 +41,11 @@ function Result(props) {
   function renderPart(part, i) {
     const key = Object.keys(part).find(key => key.match(/^value/)),
       value = part[key]
-    return value ? <td key={i}>{part[key]}</td> : <td key={i}>(no value)</td>
+    return value === undefined ? (
+      <td key={i}>(no value)</td>
+    ) : (
+      <td key={i}>{part[key].toString()}</td>
+    )
   }
 
   let content = null

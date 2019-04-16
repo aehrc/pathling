@@ -66,6 +66,7 @@ export const fetchQueryResult = () => (dispatch, getState) => {
           headers: {
             'Content-Type': 'application/fhir+json',
             Accept: 'application/fhir+json',
+            'Accept-Encoding': 'gzip',
           },
         },
       )
