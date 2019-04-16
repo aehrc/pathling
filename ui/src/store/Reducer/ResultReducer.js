@@ -9,12 +9,12 @@ export default (state = initialState, action) => {
   switch (action.type) {
     case 'REQUEST_QUERY_RESULT':
       return state.set('loading', true)
-    case 'RECEIVE_QUERY_RESULT':
+    case 'QUERY_RESULT':
       return state.merge({
-        queryResult: fromJS(action.queryResult),
+        groupings: groupingsFromResult(action.result),
         loading: false,
       })
-    case 'RECEIVE_QUERY_RESULT_ERROR':
+    case 'QUERY_ERROR':
       return state.merge({
         error: Map({
           message: action.message,
@@ -25,4 +25,15 @@ export default (state = initialState, action) => {
     default:
       return state
   }
+}
+
+function groupingsFromResult(result) {
+  return result
+    .get('parameter')
+    .filter(p => p.get('name') === 'grouping')
+    .map(p =>
+      Map({
+        part: p.get('part'),
+      }),
+    )
 }

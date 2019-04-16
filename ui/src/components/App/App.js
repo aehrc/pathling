@@ -17,6 +17,7 @@ const Alerter = Toaster.create({
 class App extends Component {
   componentDidCatch(error) {
     Alerter.show({ message: error.message, intent: 'danger' })
+    console.error(error)
   }
 
   componentDidUpdate(prevProps) {

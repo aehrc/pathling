@@ -19,7 +19,6 @@ function Result(props) {
   )
 }
 
-const mapStateToProps = state => ({
-  loading: state.getIn(['result', 'loading']),
-})
+const mapStateToProps = state => state.get('result').toJS()
+
 export default connect(mapStateToProps)(Result)

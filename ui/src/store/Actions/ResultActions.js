@@ -7,13 +7,13 @@ export const requestQueryResult = () => ({
   type: 'REQUEST_QUERY_RESULT',
 })
 
-export const receiveQueryResult = queryResult => ({
-  type: 'RECEIVE_QUERY_RESULT',
-  queryResult,
+export const queryResult = result => ({
+  type: 'QUERY_RESULT',
+  result,
 })
 
-export const receiveQueryResultError = (message, opOutcome) => ({
-  type: 'RECEIVE_QUERY_RESULT_ERROR',
+export const queryError = (message, opOutcome) => ({
+  type: 'QUERY_ERROR',
   message,
   opOutcome,
 })
@@ -67,21 +67,22 @@ export const fetchQueryResult = () => (dispatch, getState) => {
       .then(response => {
         if (response.data.resourceType !== 'Parameters')
           throw 'Response is not of type Parameters.'
-        const queryResult = Map(fromJS(response.data))
-        dispatch(receiveQueryResult(queryResult))
-        return queryResult
+        const result = Map(fromJS(response.data))
+        dispatch(queryResult(result))
+        return result
       })
       .catch(error => {
         if (
+          error.response &&
           error.response.headers['content-type'].includes(
             'application/fhir+json',
           )
         ) {
           const opOutcome = opOutcomeFromJsonResponse(error.response.data)
-          dispatch(receiveQueryResultError(opOutcome.message, opOutcome))
-        } else dispatch(receiveQueryResultError(error.message))
+          dispatch(queryError(opOutcome.message, opOutcome))
+        } else dispatch(queryError(error.message))
       })
   } catch (error) {
-    dispatch(receiveQueryResultError(error.message))
+    dispatch(queryError(error.message))
   }
 }
