@@ -5,11 +5,12 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import { Spinner, HTMLTable } from '@blueprintjs/core'
+import { Map } from 'immutable'
 
 import './Result.less'
 
 function Result(props) {
-  const { loading, groupings, query } = props
+  const { loading, groupings, query, stale } = props
 
   function renderLoading() {
     return <Spinner className="loading" size={100} intent="primary" />
@@ -41,7 +42,7 @@ function Result(props) {
   function renderPart(part, i) {
     const key = Object.keys(part).find(key => key.match(/^value/)),
       value = part[key]
-    return value ? <td key={i}>{part[key]}</td> : <td>(no value)</td>
+    return value ? <td key={i}>{part[key]}</td> : <td key={i}>(no value)</td>
   }
 
   let content = null
@@ -50,9 +51,21 @@ function Result(props) {
   } else if (groupings !== null) {
     content = renderGroupings()
   }
-  return <div className="result">{content}</div>
+  return <div className={stale ? 'result stale' : 'result'}>{content}</div>
 }
 
-const mapStateToProps = state => state.get('result').toJS()
+function checkStale(state) {
+  return !(
+    state.getIn(['result', 'query']) !== null &&
+    state.get('query').hashCode() ===
+      state.getIn(['result', 'query']).hashCode()
+  )
+}
+
+const mapStateToProps = state =>
+  state
+    .get('result')
+    .merge({ stale: checkStale(state) })
+    .toJS()
 
 export default connect(mapStateToProps)(Result)

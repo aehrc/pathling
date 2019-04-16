@@ -11,7 +11,7 @@ import Result from '../Result'
 import './App.less'
 
 const Alerter = Toaster.create({
-  position: Position.TOP,
+  position: Position.BOTTOM_RIGHT,
 })
 
 class App extends Component {
