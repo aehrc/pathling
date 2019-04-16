@@ -1,4 +1,6 @@
-import React from 'react'
+import React, { Component } from 'react'
+import { connect } from 'react-redux'
+import { Toaster, Position } from '@blueprintjs/core'
 
 import ElementTree from '../ElementTree'
 import Aggregations from '../Aggregations'
@@ -8,21 +10,42 @@ import Actions from '../Actions'
 import Result from '../Result'
 import './App.less'
 
-const App = () => {
-  return (
-    <div className="app">
-      <div className="sider">
-        <ElementTree />
+const Alerter = Toaster.create({
+  position: Position.TOP,
+})
+
+class App extends Component {
+  componentDidCatch(error) {
+    Alerter.show({ message: error.message, intent: 'danger' })
+  }
+
+  componentDidUpdate(prevProps) {
+    const { error } = this.props
+    if (prevProps.error !== error) {
+      Alerter.show({ message: error.get('message'), intent: 'danger' })
+      const opOutcome = error.get('opOutcome')
+      // eslint-disable-next-line no-console
+      if (opOutcome) console.error(opOutcome)
+    }
+  }
+
+  render() {
+    return (
+      <div className="app">
+        <div className="sider">
+          <ElementTree />
+        </div>
+        <main className="content">
+          <Aggregations />
+          <Groupings />
+          <Filters />
+          <Actions />
+          <Result />
+        </main>
       </div>
-      <main className="content">
-        <Aggregations />
-        <Groupings />
-        <Filters />
-        <Actions />
-        <Result />
-      </main>
-    </div>
-  )
+    )
+  }
 }
 
-export default App
+const mapStateToProps = state => ({ error: state.getIn(['app', 'error']) })
+export default connect(mapStateToProps)(App)

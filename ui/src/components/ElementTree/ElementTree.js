@@ -31,36 +31,56 @@ function ElementTree(props) {
   }
 
   function handleNodeClick(node, nodePath) {
-    if (!node.fhirPath && !node.isExpanded) handleNodeExpand(node, nodePath)
-    if (!node.fhirPath && node.isExpanded) handleNodeCollapse(node, nodePath)
+    const elementType = node.nodeData.elementType,
+      expandable =
+        elementType === 'Resource' || elementType === 'BackboneElement'
+    if (expandable && !node.isExpanded) handleNodeExpand(node, nodePath)
+    if (expandable && node.isExpanded) handleNodeCollapse(node, nodePath)
   }
 
   function handleAddAggregation(node) {
-    addAggregation({ expression: node.fhirPath, label: node.fhirPath })
+    const fhirPath = node.nodeData.fhirPath,
+      expression = `${fhirPath}.count()`
+    addAggregation({
+      expression,
+      label: expression,
+    })
   }
 
   function handleAddGrouping(node) {
-    addGrouping({ expression: node.fhirPath, label: node.fhirPath })
+    const fhirPath = node.nodeData.fhirPath
+    addGrouping({ expression: fhirPath, label: fhirPath })
   }
 
   function handleNodeContextMenu(node, path, event) {
-    if (node.fhirPath) {
-      event.preventDefault()
+    const aggregationMenuItem = (
+        <MenuItem
+          icon="trending-up"
+          text="Add to aggregations"
+          onClick={() => handleAddAggregation(node)}
+        />
+      ),
+      groupingMenuItem = (
+        <MenuItem
+          icon="graph"
+          text="Add to groupings"
+          onClick={() => handleAddGrouping(node)}
+        />
+      )
+    event.preventDefault()
+    if (node.nodeData.elementType === 'Element') {
       ContextMenu.show(
         <Menu>
-          <MenuItem
-            icon="trending-up"
-            text="Add to aggregations"
-            onClick={() => handleAddAggregation(node)}
-          />
-          <MenuItem
-            icon="graph"
-            text="Add to groupings"
-            onClick={() => handleAddGrouping(node)}
-          />
+          {aggregationMenuItem}
+          {groupingMenuItem}
         </Menu>,
         { left: event.clientX, top: event.clientY },
       )
+    } else {
+      ContextMenu.show(<Menu>{aggregationMenuItem}</Menu>, {
+        left: event.clientX,
+        top: event.clientY,
+      })
     }
   }
 
@@ -85,6 +105,7 @@ function ElementTree(props) {
         depth: 1,
         path: [key],
         icon: 'cube',
+        nodeData: Map({ fhirPath: resourceName, elementType: 'Resource' }),
       }),
     )
   }
@@ -100,6 +121,7 @@ function ElementTree(props) {
         depth: newDepth,
         path: newPath,
         icon: 'property',
+        nodeData: Map({ fhirPath: element.get('path') }),
       })
       if (element.get('children')) {
         converted = converted.set(
@@ -107,8 +129,12 @@ function ElementTree(props) {
           convertElements(element.get('children'), newDepth, newPath),
         )
         converted = converted.set('icon', 'folder-close')
+        converted = converted.setIn(
+          ['nodeData', 'elementType'],
+          'BackboneElement',
+        )
       } else {
-        converted = converted.set('fhirPath', element.get('path'))
+        converted = converted.setIn(['nodeData', 'elementType'], 'Element')
       }
       return converted
     })

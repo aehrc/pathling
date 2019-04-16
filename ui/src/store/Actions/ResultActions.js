@@ -15,45 +15,53 @@ export const receiveQueryResult = queryResult => ({
 
 export const fetchQueryResult = () => (dispatch, getState) => {
   try {
-    const dimensionAttributes = getState().getIn([
-        'dimensions',
-        'selectedDimensionAttributes',
-      ]),
-      metrics = getState().getIn(['metrics', 'selectedMetrics']),
-      query = {
-        resourceType: 'Query',
-        meta: {
-          profile: [
-            'https://clinsight.csiro.au/fhir/StructureDefinition/query-0',
-          ],
-        },
-        dimensionAttribute: dimensionAttributes.toArray(),
-        metric: metrics.toArray(),
-      },
-      parameters = {
-        resourceType: 'Parameters',
-        parameter: [
+    const aggregations = getState().getIn(['query', 'aggregations']),
+      groupings = getState().getIn(['query', 'groupings']),
+      aggregationParams = aggregations.map(aggregation => ({
+        name: 'aggregation',
+        part: [
           {
-            name: 'query',
-            resource: query,
+            name: 'label',
+            valueString: aggregation.get('label'),
+          },
+          {
+            name: 'expression',
+            valueString: aggregation.get('expression'),
           },
         ],
+      })),
+      groupingParams = groupings.map(grouping => ({
+        name: 'grouping',
+        part: [
+          {
+            name: 'label',
+            valueString: grouping.get('label'),
+          },
+          {
+            name: 'expression',
+            valueString: grouping.get('expression'),
+          },
+        ],
+      })),
+      query = {
+        resourceType: 'Parameters',
+        parameter: aggregationParams.concat(groupingParams),
       }
-    if (metrics.size === 0) {
+    if (aggregations.size === 0) {
       // noinspection ExceptionCaughtLocallyJS
-      throw new Error('Query must have at least one metric.')
+      throw new Error('Query must have at least one aggregation.')
     }
     dispatch(requestQueryResult())
     return http
-      .post('http://localhost:8080/fhir/$query', parameters, {
+      .post('http://localhost:8090/fhir/$aggregate-query', query, {
         headers: {
-          'Content-Type': 'application/json+fhir',
-          Accept: 'application/json+fhir',
+          'Content-Type': 'application/fhir+json',
+          Accept: 'application/fhir+json',
         },
       })
       .then(response => {
-        if (response.data.resourceType !== 'QueryResult')
-          throw 'Response is not of type QueryResult.'
+        if (response.data.resourceType !== 'Parameters')
+          throw 'Response is not of type Parameters.'
         const queryResult = Map(fromJS(response.data))
         dispatch(receiveQueryResult(queryResult))
         return queryResult
@@ -61,7 +69,7 @@ export const fetchQueryResult = () => (dispatch, getState) => {
       .catch(error => {
         if (
           error.response.headers['content-type'].includes(
-            'application/json+fhir',
+            'application/fhir+json',
           )
         ) {
           const opOutcome = opOutcomeFromJsonResponse(error.response.data)

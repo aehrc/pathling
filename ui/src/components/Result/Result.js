@@ -3,9 +3,23 @@
  */
 
 import React from 'react'
+import { connect } from 'react-redux'
+import { Spinner } from '@blueprintjs/core'
 
-function Result() {
-  return <div className="result" />
+import './Result.less'
+
+function Result(props) {
+  const { loading } = props
+  return (
+    <div className="result">
+      {loading ? (
+        <Spinner className="loading" size={100} intent="primary" />
+      ) : null}
+    </div>
+  )
 }
 
-export default Result
+const mapStateToProps = state => ({
+  loading: state.getIn(['result', 'loading']),
+})
+export default connect(mapStateToProps)(Result)
