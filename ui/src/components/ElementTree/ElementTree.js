@@ -10,6 +10,33 @@ import { fromJS, Map, List } from 'immutable'
 import * as actions from '../../store/Actions'
 import './ElementTree.less'
 import resourceTree from '../../../config/resource-tree.json'
+import complexTypesTree from '../../../config/complex-type-tree.json'
+
+const maxDepth = 10
+const supportedComplexTypes = [
+  'Ratio',
+  'Period',
+  'Range',
+  'Attachment',
+  'Identifier',
+  'HumanName',
+  'Annotation',
+  'Address',
+  'ContactPoint',
+  'SampledData',
+  'Money',
+  'Count',
+  'Duration',
+  'SimpleQuantity',
+  'Quantity',
+  'Distance',
+  'Age',
+  'CodeableConcept',
+  'Signature',
+  'Coding',
+  'Timing',
+  'Reference',
+]
 
 /**
  * Renders a tree showing resources and elements available for use within
@@ -33,7 +60,9 @@ function ElementTree(props) {
   function handleNodeClick(node, nodePath) {
     const elementType = node.nodeData.elementType,
       expandable =
-        elementType === 'Resource' || elementType === 'BackboneElement'
+        elementType === 'Resource' ||
+        elementType === 'BackboneElement' ||
+        supportedComplexTypes.includes(elementType)
     if (expandable && !node.isExpanded) handleNodeExpand(node, nodePath)
     if (expandable && node.isExpanded) handleNodeCollapse(node, nodePath)
   }
@@ -101,7 +130,12 @@ function ElementTree(props) {
       Map({
         id: resourceName,
         label: resourceName,
-        childNodes: convertElements(tree.get(resourceName), 1, [key]),
+        childNodes: convertElements(
+          tree.get(resourceName),
+          1,
+          [key],
+          resourceName,
+        ),
         depth: 1,
         path: [key],
         icon: 'cube',
@@ -110,29 +144,49 @@ function ElementTree(props) {
     )
   }
 
-  function convertElements(elements, depth, path) {
-    if (!elements) return null
+  function convertElements(elements, depth, path, fhirPath) {
+    if (!elements || depth > maxDepth) return null
     return elements.map((element, key) => {
       const newDepth = depth + 1
       const newPath = path.concat(key)
+      const pathTokens = element.get('path').split('.')
+      const newFhirPath = fhirPath + '.' + pathTokens[pathTokens.length - 1]
       let converted = Map({
         id: element.get('name'),
         label: element.get('name'),
         depth: newDepth,
         path: newPath,
-        icon: 'property',
-        nodeData: Map({ fhirPath: element.get('path') }),
+        icon: 'symbol-square',
+        nodeData: Map({ fhirPath: newFhirPath }),
       })
       if (element.get('children')) {
         converted = converted.set(
           'childNodes',
-          convertElements(element.get('children'), newDepth, newPath),
+          convertElements(
+            element.get('children'),
+            newDepth,
+            newPath,
+            newFhirPath,
+          ),
         )
         converted = converted.set('icon', 'folder-close')
         converted = converted.setIn(
           ['nodeData', 'elementType'],
           'BackboneElement',
         )
+      } else if (supportedComplexTypes.includes(element.get('type'))) {
+        converted = converted
+          .set(
+            'childNodes',
+            convertElements(
+              fromJS(complexTypesTree[element.get('type')]),
+              newDepth,
+              newPath,
+              newFhirPath,
+            ),
+          )
+          .setIn(['nodeData', 'elementType'], element.get('type'))
+          .set('icon', 'grid-view')
       } else {
         converted = converted.setIn(['nodeData', 'elementType'], 'Element')
       }

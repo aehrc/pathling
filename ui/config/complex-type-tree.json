@@ -2,529 +2,650 @@
   "Address": [
     {
       "name": "use",
-      "path": "Address.use"
+      "path": "Address.use",
+      "type": "code"
     },
     {
       "name": "type",
-      "path": "Address.type"
+      "path": "Address.type",
+      "type": "code"
     },
     {
       "name": "text",
-      "path": "Address.text"
+      "path": "Address.text",
+      "type": "string"
     },
     {
       "name": "line",
-      "path": "Address.line"
+      "path": "Address.line",
+      "type": "string"
     },
     {
       "name": "city",
-      "path": "Address.city"
+      "path": "Address.city",
+      "type": "string"
     },
     {
       "name": "district",
-      "path": "Address.district"
+      "path": "Address.district",
+      "type": "string"
     },
     {
       "name": "state",
-      "path": "Address.state"
+      "path": "Address.state",
+      "type": "string"
     },
     {
       "name": "postalCode",
-      "path": "Address.postalCode"
+      "path": "Address.postalCode",
+      "type": "string"
     },
     {
       "name": "country",
-      "path": "Address.country"
+      "path": "Address.country",
+      "type": "string"
     },
     {
       "name": "period",
-      "path": "Address.period"
+      "path": "Address.period",
+      "type": "Period"
     }
   ],
   "Age": [
     {
       "name": "value",
-      "path": "Age.value"
+      "path": "Age.value",
+      "type": "decimal"
     },
     {
       "name": "comparator",
-      "path": "Age.comparator"
+      "path": "Age.comparator",
+      "type": "code"
     },
     {
       "name": "unit",
-      "path": "Age.unit"
+      "path": "Age.unit",
+      "type": "string"
     },
     {
       "name": "system",
-      "path": "Age.system"
+      "path": "Age.system",
+      "type": "uri"
     },
     {
       "name": "code",
-      "path": "Age.code"
+      "path": "Age.code",
+      "type": "code"
     }
   ],
   "Annotation": [
     {
       "name": "authorReference",
-      "path": "Annotation.authorReference"
+      "path": "Annotation.authorReference",
+      "type": "Reference"
     },
     {
       "name": "authorString",
-      "path": "Annotation.authorString"
+      "path": "Annotation.authorString",
+      "type": "string"
     },
     {
       "name": "time",
-      "path": "Annotation.time"
+      "path": "Annotation.time",
+      "type": "dateTime"
     },
     {
       "name": "text",
-      "path": "Annotation.text"
+      "path": "Annotation.text",
+      "type": "string"
     }
   ],
   "Attachment": [
     {
       "name": "contentType",
-      "path": "Attachment.contentType"
+      "path": "Attachment.contentType",
+      "type": "code"
     },
     {
       "name": "language",
-      "path": "Attachment.language"
+      "path": "Attachment.language",
+      "type": "code"
     },
     {
       "name": "data",
-      "path": "Attachment.data"
+      "path": "Attachment.data",
+      "type": "base64Binary"
     },
     {
       "name": "url",
-      "path": "Attachment.url"
+      "path": "Attachment.url",
+      "type": "uri"
     },
     {
       "name": "size",
-      "path": "Attachment.size"
+      "path": "Attachment.size",
+      "type": "unsignedInt"
     },
     {
       "name": "hash",
-      "path": "Attachment.hash"
+      "path": "Attachment.hash",
+      "type": "base64Binary"
     },
     {
       "name": "title",
-      "path": "Attachment.title"
+      "path": "Attachment.title",
+      "type": "string"
     },
     {
       "name": "creation",
-      "path": "Attachment.creation"
+      "path": "Attachment.creation",
+      "type": "dateTime"
     }
   ],
   "CodeableConcept": [
     {
       "name": "coding",
-      "path": "CodeableConcept.coding"
+      "path": "CodeableConcept.coding",
+      "type": "Coding"
     },
     {
       "name": "text",
-      "path": "CodeableConcept.text"
+      "path": "CodeableConcept.text",
+      "type": "string"
     }
   ],
   "Coding": [
     {
       "name": "system",
-      "path": "Coding.system"
+      "path": "Coding.system",
+      "type": "uri"
     },
     {
       "name": "version",
-      "path": "Coding.version"
+      "path": "Coding.version",
+      "type": "string"
     },
     {
       "name": "code",
-      "path": "Coding.code"
+      "path": "Coding.code",
+      "type": "code"
     },
     {
       "name": "display",
-      "path": "Coding.display"
+      "path": "Coding.display",
+      "type": "string"
     },
     {
       "name": "userSelected",
-      "path": "Coding.userSelected"
+      "path": "Coding.userSelected",
+      "type": "boolean"
     }
   ],
   "ContactPoint": [
     {
       "name": "system",
-      "path": "ContactPoint.system"
+      "path": "ContactPoint.system",
+      "type": "code"
     },
     {
       "name": "value",
-      "path": "ContactPoint.value"
+      "path": "ContactPoint.value",
+      "type": "string"
     },
     {
       "name": "use",
-      "path": "ContactPoint.use"
+      "path": "ContactPoint.use",
+      "type": "code"
     },
     {
       "name": "rank",
-      "path": "ContactPoint.rank"
+      "path": "ContactPoint.rank",
+      "type": "positiveInt"
     },
     {
       "name": "period",
-      "path": "ContactPoint.period"
+      "path": "ContactPoint.period",
+      "type": "Period"
     }
   ],
   "Count": [
     {
       "name": "value",
-      "path": "Count.value"
+      "path": "Count.value",
+      "type": "decimal"
     },
     {
       "name": "comparator",
-      "path": "Count.comparator"
+      "path": "Count.comparator",
+      "type": "code"
     },
     {
       "name": "unit",
-      "path": "Count.unit"
+      "path": "Count.unit",
+      "type": "string"
     },
     {
       "name": "system",
-      "path": "Count.system"
+      "path": "Count.system",
+      "type": "uri"
     },
     {
       "name": "code",
-      "path": "Count.code"
+      "path": "Count.code",
+      "type": "code"
     }
   ],
   "Distance": [
     {
       "name": "value",
-      "path": "Distance.value"
+      "path": "Distance.value",
+      "type": "decimal"
     },
     {
       "name": "comparator",
-      "path": "Distance.comparator"
+      "path": "Distance.comparator",
+      "type": "code"
     },
     {
       "name": "unit",
-      "path": "Distance.unit"
+      "path": "Distance.unit",
+      "type": "string"
     },
     {
       "name": "system",
-      "path": "Distance.system"
+      "path": "Distance.system",
+      "type": "uri"
     },
     {
       "name": "code",
-      "path": "Distance.code"
+      "path": "Distance.code",
+      "type": "code"
     }
   ],
   "Duration": [
     {
       "name": "value",
-      "path": "Duration.value"
+      "path": "Duration.value",
+      "type": "decimal"
     },
     {
       "name": "comparator",
-      "path": "Duration.comparator"
+      "path": "Duration.comparator",
+      "type": "code"
     },
     {
       "name": "unit",
-      "path": "Duration.unit"
+      "path": "Duration.unit",
+      "type": "string"
     },
     {
       "name": "system",
-      "path": "Duration.system"
+      "path": "Duration.system",
+      "type": "uri"
     },
     {
       "name": "code",
-      "path": "Duration.code"
+      "path": "Duration.code",
+      "type": "code"
     }
   ],
   "HumanName": [
     {
       "name": "use",
-      "path": "HumanName.use"
+      "path": "HumanName.use",
+      "type": "code"
     },
     {
       "name": "text",
-      "path": "HumanName.text"
+      "path": "HumanName.text",
+      "type": "string"
     },
     {
       "name": "family",
-      "path": "HumanName.family"
+      "path": "HumanName.family",
+      "type": "string"
     },
     {
       "name": "given",
-      "path": "HumanName.given"
+      "path": "HumanName.given",
+      "type": "string"
     },
     {
       "name": "prefix",
-      "path": "HumanName.prefix"
+      "path": "HumanName.prefix",
+      "type": "string"
     },
     {
       "name": "suffix",
-      "path": "HumanName.suffix"
+      "path": "HumanName.suffix",
+      "type": "string"
     },
     {
       "name": "period",
-      "path": "HumanName.period"
+      "path": "HumanName.period",
+      "type": "Period"
     }
   ],
   "Identifier": [
     {
       "name": "use",
-      "path": "Identifier.use"
+      "path": "Identifier.use",
+      "type": "code"
     },
     {
       "name": "type",
-      "path": "Identifier.type"
+      "path": "Identifier.type",
+      "type": "CodeableConcept"
     },
     {
       "name": "system",
-      "path": "Identifier.system"
+      "path": "Identifier.system",
+      "type": "uri"
     },
     {
       "name": "value",
-      "path": "Identifier.value"
+      "path": "Identifier.value",
+      "type": "string"
     },
     {
       "name": "period",
-      "path": "Identifier.period"
+      "path": "Identifier.period",
+      "type": "Period"
     },
     {
       "name": "assigner",
-      "path": "Identifier.assigner"
+      "path": "Identifier.assigner",
+      "type": "Reference"
     }
   ],
   "Money": [
     {
       "name": "value",
-      "path": "Money.value"
+      "path": "Money.value",
+      "type": "decimal"
     },
     {
       "name": "comparator",
-      "path": "Money.comparator"
+      "path": "Money.comparator",
+      "type": "code"
     },
     {
       "name": "unit",
-      "path": "Money.unit"
+      "path": "Money.unit",
+      "type": "string"
     },
     {
       "name": "system",
-      "path": "Money.system"
+      "path": "Money.system",
+      "type": "uri"
     },
     {
       "name": "code",
-      "path": "Money.code"
+      "path": "Money.code",
+      "type": "code"
     }
   ],
   "Period": [
     {
       "name": "start",
-      "path": "Period.start"
+      "path": "Period.start",
+      "type": "dateTime"
     },
     {
       "name": "end",
-      "path": "Period.end"
+      "path": "Period.end",
+      "type": "dateTime"
     }
   ],
   "Quantity": [
     {
       "name": "value",
-      "path": "Quantity.value"
+      "path": "Quantity.value",
+      "type": "decimal"
     },
     {
       "name": "comparator",
-      "path": "Quantity.comparator"
+      "path": "Quantity.comparator",
+      "type": "code"
     },
     {
       "name": "unit",
-      "path": "Quantity.unit"
+      "path": "Quantity.unit",
+      "type": "string"
     },
     {
       "name": "system",
-      "path": "Quantity.system"
+      "path": "Quantity.system",
+      "type": "uri"
     },
     {
       "name": "code",
-      "path": "Quantity.code"
+      "path": "Quantity.code",
+      "type": "code"
     }
   ],
   "Range": [
     {
       "name": "low",
-      "path": "Range.low"
+      "path": "Range.low",
+      "type": "Quantity"
     },
     {
       "name": "high",
-      "path": "Range.high"
+      "path": "Range.high",
+      "type": "Quantity"
     }
   ],
   "Ratio": [
     {
       "name": "numerator",
-      "path": "Ratio.numerator"
+      "path": "Ratio.numerator",
+      "type": "Quantity"
     },
     {
       "name": "denominator",
-      "path": "Ratio.denominator"
+      "path": "Ratio.denominator",
+      "type": "Quantity"
     }
   ],
   "Reference": [
     {
       "name": "reference",
-      "path": "Reference.reference"
+      "path": "Reference.reference",
+      "type": "string"
     },
     {
       "name": "identifier",
-      "path": "Reference.identifier"
+      "path": "Reference.identifier",
+      "type": "Identifier"
     },
     {
       "name": "display",
-      "path": "Reference.display"
+      "path": "Reference.display",
+      "type": "string"
     }
   ],
   "SampledData": [
     {
       "name": "origin",
-      "path": "SampledData.origin"
+      "path": "SampledData.origin",
+      "type": "Quantity"
     },
     {
       "name": "period",
-      "path": "SampledData.period"
+      "path": "SampledData.period",
+      "type": "decimal"
     },
     {
       "name": "factor",
-      "path": "SampledData.factor"
+      "path": "SampledData.factor",
+      "type": "decimal"
     },
     {
       "name": "lowerLimit",
-      "path": "SampledData.lowerLimit"
+      "path": "SampledData.lowerLimit",
+      "type": "decimal"
     },
     {
       "name": "upperLimit",
-      "path": "SampledData.upperLimit"
+      "path": "SampledData.upperLimit",
+      "type": "decimal"
     },
     {
       "name": "dimensions",
-      "path": "SampledData.dimensions"
+      "path": "SampledData.dimensions",
+      "type": "positiveInt"
     },
     {
       "name": "data",
-      "path": "SampledData.data"
+      "path": "SampledData.data",
+      "type": "string"
     }
   ],
   "Signature": [
     {
       "name": "type",
-      "path": "Signature.type"
+      "path": "Signature.type",
+      "type": "Coding"
     },
     {
       "name": "when",
-      "path": "Signature.when"
+      "path": "Signature.when",
+      "type": "instant"
     },
     {
       "name": "whoUri",
-      "path": "Signature.whoUri"
+      "path": "Signature.whoUri",
+      "type": "uri"
     },
     {
       "name": "whoReference",
-      "path": "Signature.whoReference"
+      "path": "Signature.whoReference",
+      "type": "Reference"
     },
     {
       "name": "onBehalfOfUri",
-      "path": "Signature.onBehalfOfUri"
+      "path": "Signature.onBehalfOfUri",
+      "type": "uri"
     },
     {
       "name": "onBehalfOfReference",
-      "path": "Signature.onBehalfOfReference"
+      "path": "Signature.onBehalfOfReference",
+      "type": "Reference"
     },
     {
       "name": "contentType",
-      "path": "Signature.contentType"
+      "path": "Signature.contentType",
+      "type": "code"
     },
     {
       "name": "blob",
-      "path": "Signature.blob"
+      "path": "Signature.blob",
+      "type": "base64Binary"
     }
   ],
   "Timing": [
     {
       "name": "event",
-      "path": "Timing.event"
+      "path": "Timing.event",
+      "type": "dateTime"
     },
     {
       "name": "repeat",
       "path": "Timing.repeat",
+      "type": "Element",
       "children": [
         {
           "name": "boundsDuration",
-          "path": "Timing.repeat.boundsDuration"
+          "path": "Timing.repeat.boundsDuration",
+          "type": "Duration"
         },
         {
           "name": "boundsRange",
-          "path": "Timing.repeat.boundsRange"
+          "path": "Timing.repeat.boundsRange",
+          "type": "Range"
         },
         {
           "name": "boundsPeriod",
-          "path": "Timing.repeat.boundsPeriod"
+          "path": "Timing.repeat.boundsPeriod",
+          "type": "Period"
         },
         {
           "name": "count",
-          "path": "Timing.repeat.count"
+          "path": "Timing.repeat.count",
+          "type": "integer"
         },
         {
           "name": "countMax",
-          "path": "Timing.repeat.countMax"
+          "path": "Timing.repeat.countMax",
+          "type": "integer"
         },
         {
           "name": "duration",
-          "path": "Timing.repeat.duration"
+          "path": "Timing.repeat.duration",
+          "type": "decimal"
         },
         {
           "name": "durationMax",
-          "path": "Timing.repeat.durationMax"
+          "path": "Timing.repeat.durationMax",
+          "type": "decimal"
         },
         {
           "name": "durationUnit",
-          "path": "Timing.repeat.durationUnit"
+          "path": "Timing.repeat.durationUnit",
+          "type": "code"
         },
         {
           "name": "frequency",
-          "path": "Timing.repeat.frequency"
+          "path": "Timing.repeat.frequency",
+          "type": "integer"
         },
         {
           "name": "frequencyMax",
-          "path": "Timing.repeat.frequencyMax"
+          "path": "Timing.repeat.frequencyMax",
+          "type": "integer"
         },
         {
           "name": "period",
-          "path": "Timing.repeat.period"
+          "path": "Timing.repeat.period",
+          "type": "decimal"
         },
         {
           "name": "periodMax",
-          "path": "Timing.repeat.periodMax"
+          "path": "Timing.repeat.periodMax",
+          "type": "decimal"
         },
         {
           "name": "periodUnit",
-          "path": "Timing.repeat.periodUnit"
+          "path": "Timing.repeat.periodUnit",
+          "type": "code"
         },
         {
           "name": "dayOfWeek",
-          "path": "Timing.repeat.dayOfWeek"
+          "path": "Timing.repeat.dayOfWeek",
+          "type": "code"
         },
         {
           "name": "timeOfDay",
-          "path": "Timing.repeat.timeOfDay"
+          "path": "Timing.repeat.timeOfDay",
+          "type": "time"
         },
         {
           "name": "when",
-          "path": "Timing.repeat.when"
+          "path": "Timing.repeat.when",
+          "type": "code"
         },
         {
           "name": "offset",
-          "path": "Timing.repeat.offset"
+          "path": "Timing.repeat.offset",
+          "type": "unsignedInt"
         }
       ]
     },
     {
       "name": "code",
-      "path": "Timing.code"
+      "path": "Timing.code",
+      "type": "CodeableConcept"
     }
   ]
 }

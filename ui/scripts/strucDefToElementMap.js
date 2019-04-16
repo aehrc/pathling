@@ -24,16 +24,22 @@ process.stdin.on('end', () => {
 function transformStrucDefToElementMap(strucDef) {
   const elementMap = {}
   for (const element of strucDef['snapshot']['element']) {
-    const paths = element['path'].match(/\[x\]$/)
-      ? element['type'].map(t =>
+    const paths = element['path'].match(/\[x]$/)
+      ? element['type'].map(t => [
           element['path'].replace(
-            /\[x\]$/,
+            /\[x]$/,
             t['code'].charAt(0).toUpperCase() + t['code'].slice(1),
           ),
-        )
-      : [element['path']]
+          t['code'],
+        ])
+      : [
+          [
+            element['path'],
+            element['type'] ? element['type'][0]['code'] : 'Resource',
+          ],
+        ]
     for (const path of paths) {
-      const components = path.split('.')
+      const components = path[0].split('.')
       const resourceName = components[0]
       const tail = components.slice(1)
       if (components.length > 1) {
@@ -42,7 +48,8 @@ function transformStrucDefToElementMap(strucDef) {
         elementMap[resourceName] = mergePathIntoChildren(
           tail,
           currentChildren,
-          path,
+          path[0],
+          path[1],
         )
       }
     }
@@ -50,7 +57,7 @@ function transformStrucDefToElementMap(strucDef) {
   return elementMap
 }
 
-function mergePathIntoChildren(path, children, fhirPath) {
+function mergePathIntoChildren(path, children, fhirPath, type) {
   if (children === undefined) children = []
   if (path.length < 1) return children
   const elementName = path[0]
@@ -63,11 +70,12 @@ function mergePathIntoChildren(path, children, fhirPath) {
   const existingChild = children.filter(c => c.name === elementName)
   const child = existingChild[0]
     ? existingChild[0]
-    : { name: elementName, path: fhirPath }
+    : { name: elementName, path: fhirPath, type }
   const newChildren = mergePathIntoChildren(
     path.slice(1),
     child.children,
     fhirPath,
+    type,
   )
   if (newChildren.length > 0) child.children = newChildren
   return children.filter(c => c.name !== elementName).concat(child)

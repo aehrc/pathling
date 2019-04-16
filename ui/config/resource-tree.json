@@ -2,107 +2,133 @@
   "AllergyIntolerance": [
     {
       "name": "identifier",
-      "path": "AllergyIntolerance.identifier"
+      "path": "AllergyIntolerance.identifier",
+      "type": "Identifier"
     },
     {
       "name": "clinicalStatus",
-      "path": "AllergyIntolerance.clinicalStatus"
+      "path": "AllergyIntolerance.clinicalStatus",
+      "type": "code"
     },
     {
       "name": "verificationStatus",
-      "path": "AllergyIntolerance.verificationStatus"
+      "path": "AllergyIntolerance.verificationStatus",
+      "type": "code"
     },
     {
       "name": "type",
-      "path": "AllergyIntolerance.type"
+      "path": "AllergyIntolerance.type",
+      "type": "code"
     },
     {
       "name": "category",
-      "path": "AllergyIntolerance.category"
+      "path": "AllergyIntolerance.category",
+      "type": "code"
     },
     {
       "name": "criticality",
-      "path": "AllergyIntolerance.criticality"
+      "path": "AllergyIntolerance.criticality",
+      "type": "code"
     },
     {
       "name": "code",
-      "path": "AllergyIntolerance.code"
+      "path": "AllergyIntolerance.code",
+      "type": "CodeableConcept"
     },
     {
       "name": "patient",
-      "path": "AllergyIntolerance.patient"
+      "path": "AllergyIntolerance.patient",
+      "type": "Reference"
     },
     {
       "name": "onsetDateTime",
-      "path": "AllergyIntolerance.onsetDateTime"
+      "path": "AllergyIntolerance.onsetDateTime",
+      "type": "dateTime"
     },
     {
       "name": "onsetAge",
-      "path": "AllergyIntolerance.onsetAge"
+      "path": "AllergyIntolerance.onsetAge",
+      "type": "Age"
     },
     {
       "name": "onsetPeriod",
-      "path": "AllergyIntolerance.onsetPeriod"
+      "path": "AllergyIntolerance.onsetPeriod",
+      "type": "Period"
     },
     {
       "name": "onsetRange",
-      "path": "AllergyIntolerance.onsetRange"
+      "path": "AllergyIntolerance.onsetRange",
+      "type": "Range"
     },
     {
       "name": "onsetString",
-      "path": "AllergyIntolerance.onsetString"
+      "path": "AllergyIntolerance.onsetString",
+      "type": "string"
     },
     {
       "name": "assertedDate",
-      "path": "AllergyIntolerance.assertedDate"
+      "path": "AllergyIntolerance.assertedDate",
+      "type": "dateTime"
     },
     {
       "name": "recorder",
-      "path": "AllergyIntolerance.recorder"
+      "path": "AllergyIntolerance.recorder",
+      "type": "Reference"
     },
     {
       "name": "asserter",
-      "path": "AllergyIntolerance.asserter"
+      "path": "AllergyIntolerance.asserter",
+      "type": "Reference"
     },
     {
       "name": "lastOccurrence",
-      "path": "AllergyIntolerance.lastOccurrence"
+      "path": "AllergyIntolerance.lastOccurrence",
+      "type": "dateTime"
     },
     {
       "name": "note",
-      "path": "AllergyIntolerance.note"
+      "path": "AllergyIntolerance.note",
+      "type": "Annotation"
     },
     {
       "name": "reaction",
       "path": "AllergyIntolerance.reaction",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "substance",
-          "path": "AllergyIntolerance.reaction.substance"
+          "path": "AllergyIntolerance.reaction.substance",
+          "type": "CodeableConcept"
         },
         {
           "name": "manifestation",
-          "path": "AllergyIntolerance.reaction.manifestation"
+          "path": "AllergyIntolerance.reaction.manifestation",
+          "type": "CodeableConcept"
         },
         {
           "name": "description",
-          "path": "AllergyIntolerance.reaction.description"
+          "path": "AllergyIntolerance.reaction.description",
+          "type": "string"
         },
         {
           "name": "onset",
-          "path": "AllergyIntolerance.reaction.onset"
+          "path": "AllergyIntolerance.reaction.onset",
+          "type": "dateTime"
         },
         {
           "name": "severity",
-          "path": "AllergyIntolerance.reaction.severity"
+          "path": "AllergyIntolerance.reaction.severity",
+          "type": "code"
         },
         {
           "name": "exposureRoute",
-          "path": "AllergyIntolerance.reaction.exposureRoute"
+          "path": "AllergyIntolerance.reaction.exposureRoute",
+          "type": "CodeableConcept"
         },
         {
           "name": "note",
-          "path": "AllergyIntolerance.reaction.note"
+          "path": "AllergyIntolerance.reaction.note",
+          "type": "Annotation"
         }
       ]
     }
@@ -110,175 +136,218 @@
   "CarePlan": [
     {
       "name": "identifier",
-      "path": "CarePlan.identifier"
+      "path": "CarePlan.identifier",
+      "type": "Identifier"
     },
     {
       "name": "definition",
-      "path": "CarePlan.definition"
+      "path": "CarePlan.definition",
+      "type": "Reference"
     },
     {
       "name": "basedOn",
-      "path": "CarePlan.basedOn"
+      "path": "CarePlan.basedOn",
+      "type": "Reference"
     },
     {
       "name": "replaces",
-      "path": "CarePlan.replaces"
+      "path": "CarePlan.replaces",
+      "type": "Reference"
     },
     {
       "name": "partOf",
-      "path": "CarePlan.partOf"
+      "path": "CarePlan.partOf",
+      "type": "Reference"
     },
     {
       "name": "status",
-      "path": "CarePlan.status"
+      "path": "CarePlan.status",
+      "type": "code"
     },
     {
       "name": "intent",
-      "path": "CarePlan.intent"
+      "path": "CarePlan.intent",
+      "type": "code"
     },
     {
       "name": "category",
-      "path": "CarePlan.category"
+      "path": "CarePlan.category",
+      "type": "CodeableConcept"
     },
     {
       "name": "title",
-      "path": "CarePlan.title"
+      "path": "CarePlan.title",
+      "type": "string"
     },
     {
       "name": "description",
-      "path": "CarePlan.description"
+      "path": "CarePlan.description",
+      "type": "string"
     },
     {
       "name": "subject",
-      "path": "CarePlan.subject"
+      "path": "CarePlan.subject",
+      "type": "Reference"
     },
     {
       "name": "context",
-      "path": "CarePlan.context"
+      "path": "CarePlan.context",
+      "type": "Reference"
     },
     {
       "name": "period",
-      "path": "CarePlan.period"
+      "path": "CarePlan.period",
+      "type": "Period"
     },
     {
       "name": "author",
-      "path": "CarePlan.author"
+      "path": "CarePlan.author",
+      "type": "Reference"
     },
     {
       "name": "careTeam",
-      "path": "CarePlan.careTeam"
+      "path": "CarePlan.careTeam",
+      "type": "Reference"
     },
     {
       "name": "addresses",
-      "path": "CarePlan.addresses"
+      "path": "CarePlan.addresses",
+      "type": "Reference"
     },
     {
       "name": "supportingInfo",
-      "path": "CarePlan.supportingInfo"
+      "path": "CarePlan.supportingInfo",
+      "type": "Reference"
     },
     {
       "name": "goal",
-      "path": "CarePlan.goal"
+      "path": "CarePlan.goal",
+      "type": "Reference"
     },
     {
       "name": "activity",
       "path": "CarePlan.activity",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "outcomeCodeableConcept",
-          "path": "CarePlan.activity.outcomeCodeableConcept"
+          "path": "CarePlan.activity.outcomeCodeableConcept",
+          "type": "CodeableConcept"
         },
         {
           "name": "outcomeReference",
-          "path": "CarePlan.activity.outcomeReference"
+          "path": "CarePlan.activity.outcomeReference",
+          "type": "Reference"
         },
         {
           "name": "progress",
-          "path": "CarePlan.activity.progress"
+          "path": "CarePlan.activity.progress",
+          "type": "Annotation"
         },
         {
           "name": "reference",
-          "path": "CarePlan.activity.reference"
+          "path": "CarePlan.activity.reference",
+          "type": "Reference"
         },
         {
           "name": "detail",
           "path": "CarePlan.activity.detail",
+          "type": "BackboneElement",
           "children": [
             {
               "name": "category",
-              "path": "CarePlan.activity.detail.category"
+              "path": "CarePlan.activity.detail.category",
+              "type": "CodeableConcept"
             },
             {
               "name": "definition",
-              "path": "CarePlan.activity.detail.definition"
+              "path": "CarePlan.activity.detail.definition",
+              "type": "Reference"
             },
             {
               "name": "code",
-              "path": "CarePlan.activity.detail.code"
+              "path": "CarePlan.activity.detail.code",
+              "type": "CodeableConcept"
             },
             {
               "name": "reasonCode",
-              "path": "CarePlan.activity.detail.reasonCode"
+              "path": "CarePlan.activity.detail.reasonCode",
+              "type": "CodeableConcept"
             },
             {
               "name": "reasonReference",
-              "path": "CarePlan.activity.detail.reasonReference"
+              "path": "CarePlan.activity.detail.reasonReference",
+              "type": "Reference"
             },
             {
               "name": "goal",
-              "path": "CarePlan.activity.detail.goal"
+              "path": "CarePlan.activity.detail.goal",
+              "type": "Reference"
             },
             {
               "name": "status",
-              "path": "CarePlan.activity.detail.status"
+              "path": "CarePlan.activity.detail.status",
+              "type": "code"
             },
             {
               "name": "statusReason",
-              "path": "CarePlan.activity.detail.statusReason"
+              "path": "CarePlan.activity.detail.statusReason",
+              "type": "string"
             },
             {
               "name": "prohibited",
-              "path": "CarePlan.activity.detail.prohibited"
+              "path": "CarePlan.activity.detail.prohibited",
+              "type": "boolean"
             },
             {
               "name": "scheduledTiming",
-              "path": "CarePlan.activity.detail.scheduledTiming"
+              "path": "CarePlan.activity.detail.scheduledTiming",
+              "type": "Timing"
             },
             {
               "name": "scheduledPeriod",
-              "path": "CarePlan.activity.detail.scheduledPeriod"
+              "path": "CarePlan.activity.detail.scheduledPeriod",
+              "type": "Period"
             },
             {
               "name": "scheduledString",
-              "path": "CarePlan.activity.detail.scheduledString"
+              "path": "CarePlan.activity.detail.scheduledString",
+              "type": "string"
             },
             {
               "name": "location",
-              "path": "CarePlan.activity.detail.location"
+              "path": "CarePlan.activity.detail.location",
+              "type": "Reference"
             },
             {
               "name": "performer",
-              "path": "CarePlan.activity.detail.performer"
+              "path": "CarePlan.activity.detail.performer",
+              "type": "Reference"
             },
             {
               "name": "productCodeableConcept",
-              "path": "CarePlan.activity.detail.productCodeableConcept"
+              "path": "CarePlan.activity.detail.productCodeableConcept",
+              "type": "CodeableConcept"
             },
             {
               "name": "productReference",
-              "path": "CarePlan.activity.detail.productReference"
+              "path": "CarePlan.activity.detail.productReference",
+              "type": "Reference"
             },
             {
               "name": "dailyAmount",
-              "path": "CarePlan.activity.detail.dailyAmount"
+              "path": "CarePlan.activity.detail.dailyAmount",
+              "type": "Quantity"
             },
             {
               "name": "quantity",
-              "path": "CarePlan.activity.detail.quantity"
+              "path": "CarePlan.activity.detail.quantity",
+              "type": "Quantity"
             },
             {
               "name": "description",
-              "path": "CarePlan.activity.detail.description"
+              "path": "CarePlan.activity.detail.description",
+              "type": "string"
             }
           ]
         }
@@ -286,489 +355,606 @@
     },
     {
       "name": "note",
-      "path": "CarePlan.note"
+      "path": "CarePlan.note",
+      "type": "Annotation"
     }
   ],
   "Claim": [
     {
       "name": "identifier",
-      "path": "Claim.identifier"
+      "path": "Claim.identifier",
+      "type": "Identifier"
     },
     {
       "name": "status",
-      "path": "Claim.status"
+      "path": "Claim.status",
+      "type": "code"
     },
     {
       "name": "type",
-      "path": "Claim.type"
+      "path": "Claim.type",
+      "type": "CodeableConcept"
     },
     {
       "name": "subType",
-      "path": "Claim.subType"
+      "path": "Claim.subType",
+      "type": "CodeableConcept"
     },
     {
       "name": "use",
-      "path": "Claim.use"
+      "path": "Claim.use",
+      "type": "code"
     },
     {
       "name": "patient",
-      "path": "Claim.patient"
+      "path": "Claim.patient",
+      "type": "Reference"
     },
     {
       "name": "billablePeriod",
-      "path": "Claim.billablePeriod"
+      "path": "Claim.billablePeriod",
+      "type": "Period"
     },
     {
       "name": "created",
-      "path": "Claim.created"
+      "path": "Claim.created",
+      "type": "dateTime"
     },
     {
       "name": "enterer",
-      "path": "Claim.enterer"
+      "path": "Claim.enterer",
+      "type": "Reference"
     },
     {
       "name": "insurer",
-      "path": "Claim.insurer"
+      "path": "Claim.insurer",
+      "type": "Reference"
     },
     {
       "name": "provider",
-      "path": "Claim.provider"
+      "path": "Claim.provider",
+      "type": "Reference"
     },
     {
       "name": "organization",
-      "path": "Claim.organization"
+      "path": "Claim.organization",
+      "type": "Reference"
     },
     {
       "name": "priority",
-      "path": "Claim.priority"
+      "path": "Claim.priority",
+      "type": "CodeableConcept"
     },
     {
       "name": "fundsReserve",
-      "path": "Claim.fundsReserve"
+      "path": "Claim.fundsReserve",
+      "type": "CodeableConcept"
     },
     {
       "name": "related",
       "path": "Claim.related",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "claim",
-          "path": "Claim.related.claim"
+          "path": "Claim.related.claim",
+          "type": "Reference"
         },
         {
           "name": "relationship",
-          "path": "Claim.related.relationship"
+          "path": "Claim.related.relationship",
+          "type": "CodeableConcept"
         },
         {
           "name": "reference",
-          "path": "Claim.related.reference"
+          "path": "Claim.related.reference",
+          "type": "Identifier"
         }
       ]
     },
     {
       "name": "prescription",
-      "path": "Claim.prescription"
+      "path": "Claim.prescription",
+      "type": "Reference"
     },
     {
       "name": "originalPrescription",
-      "path": "Claim.originalPrescription"
+      "path": "Claim.originalPrescription",
+      "type": "Reference"
     },
     {
       "name": "payee",
       "path": "Claim.payee",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "type",
-          "path": "Claim.payee.type"
+          "path": "Claim.payee.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "resourceType",
-          "path": "Claim.payee.resourceType"
+          "path": "Claim.payee.resourceType",
+          "type": "Coding"
         },
         {
           "name": "party",
-          "path": "Claim.payee.party"
+          "path": "Claim.payee.party",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "referral",
-      "path": "Claim.referral"
+      "path": "Claim.referral",
+      "type": "Reference"
     },
     {
       "name": "facility",
-      "path": "Claim.facility"
+      "path": "Claim.facility",
+      "type": "Reference"
     },
     {
       "name": "careTeam",
       "path": "Claim.careTeam",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "Claim.careTeam.sequence"
+          "path": "Claim.careTeam.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "provider",
-          "path": "Claim.careTeam.provider"
+          "path": "Claim.careTeam.provider",
+          "type": "Reference"
         },
         {
           "name": "responsible",
-          "path": "Claim.careTeam.responsible"
+          "path": "Claim.careTeam.responsible",
+          "type": "boolean"
         },
         {
           "name": "role",
-          "path": "Claim.careTeam.role"
+          "path": "Claim.careTeam.role",
+          "type": "CodeableConcept"
         },
         {
           "name": "qualification",
-          "path": "Claim.careTeam.qualification"
+          "path": "Claim.careTeam.qualification",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "information",
       "path": "Claim.information",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "Claim.information.sequence"
+          "path": "Claim.information.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "category",
-          "path": "Claim.information.category"
+          "path": "Claim.information.category",
+          "type": "CodeableConcept"
         },
         {
           "name": "code",
-          "path": "Claim.information.code"
+          "path": "Claim.information.code",
+          "type": "CodeableConcept"
         },
         {
           "name": "timingDate",
-          "path": "Claim.information.timingDate"
+          "path": "Claim.information.timingDate",
+          "type": "date"
         },
         {
           "name": "timingPeriod",
-          "path": "Claim.information.timingPeriod"
+          "path": "Claim.information.timingPeriod",
+          "type": "Period"
         },
         {
           "name": "valueString",
-          "path": "Claim.information.valueString"
+          "path": "Claim.information.valueString",
+          "type": "string"
         },
         {
           "name": "valueQuantity",
-          "path": "Claim.information.valueQuantity"
+          "path": "Claim.information.valueQuantity",
+          "type": "Quantity"
         },
         {
           "name": "valueAttachment",
-          "path": "Claim.information.valueAttachment"
+          "path": "Claim.information.valueAttachment",
+          "type": "Attachment"
         },
         {
           "name": "valueReference",
-          "path": "Claim.information.valueReference"
+          "path": "Claim.information.valueReference",
+          "type": "Reference"
         },
         {
           "name": "reason",
-          "path": "Claim.information.reason"
+          "path": "Claim.information.reason",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "diagnosis",
       "path": "Claim.diagnosis",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "Claim.diagnosis.sequence"
+          "path": "Claim.diagnosis.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "diagnosisCodeableConcept",
-          "path": "Claim.diagnosis.diagnosisCodeableConcept"
+          "path": "Claim.diagnosis.diagnosisCodeableConcept",
+          "type": "CodeableConcept"
         },
         {
           "name": "diagnosisReference",
-          "path": "Claim.diagnosis.diagnosisReference"
+          "path": "Claim.diagnosis.diagnosisReference",
+          "type": "Reference"
         },
         {
           "name": "type",
-          "path": "Claim.diagnosis.type"
+          "path": "Claim.diagnosis.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "packageCode",
-          "path": "Claim.diagnosis.packageCode"
+          "path": "Claim.diagnosis.packageCode",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "procedure",
       "path": "Claim.procedure",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "Claim.procedure.sequence"
+          "path": "Claim.procedure.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "date",
-          "path": "Claim.procedure.date"
+          "path": "Claim.procedure.date",
+          "type": "dateTime"
         },
         {
           "name": "procedureCodeableConcept",
-          "path": "Claim.procedure.procedureCodeableConcept"
+          "path": "Claim.procedure.procedureCodeableConcept",
+          "type": "CodeableConcept"
         },
         {
           "name": "procedureReference",
-          "path": "Claim.procedure.procedureReference"
+          "path": "Claim.procedure.procedureReference",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "insurance",
       "path": "Claim.insurance",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "Claim.insurance.sequence"
+          "path": "Claim.insurance.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "focal",
-          "path": "Claim.insurance.focal"
+          "path": "Claim.insurance.focal",
+          "type": "boolean"
         },
         {
           "name": "coverage",
-          "path": "Claim.insurance.coverage"
+          "path": "Claim.insurance.coverage",
+          "type": "Reference"
         },
         {
           "name": "businessArrangement",
-          "path": "Claim.insurance.businessArrangement"
+          "path": "Claim.insurance.businessArrangement",
+          "type": "string"
         },
         {
           "name": "preAuthRef",
-          "path": "Claim.insurance.preAuthRef"
+          "path": "Claim.insurance.preAuthRef",
+          "type": "string"
         },
         {
           "name": "claimResponse",
-          "path": "Claim.insurance.claimResponse"
+          "path": "Claim.insurance.claimResponse",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "accident",
       "path": "Claim.accident",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "date",
-          "path": "Claim.accident.date"
+          "path": "Claim.accident.date",
+          "type": "date"
         },
         {
           "name": "type",
-          "path": "Claim.accident.type"
+          "path": "Claim.accident.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "locationAddress",
-          "path": "Claim.accident.locationAddress"
+          "path": "Claim.accident.locationAddress",
+          "type": "Address"
         },
         {
           "name": "locationReference",
-          "path": "Claim.accident.locationReference"
+          "path": "Claim.accident.locationReference",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "employmentImpacted",
-      "path": "Claim.employmentImpacted"
+      "path": "Claim.employmentImpacted",
+      "type": "Period"
     },
     {
       "name": "hospitalization",
-      "path": "Claim.hospitalization"
+      "path": "Claim.hospitalization",
+      "type": "Period"
     },
     {
       "name": "item",
       "path": "Claim.item",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "Claim.item.sequence"
+          "path": "Claim.item.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "careTeamLinkId",
-          "path": "Claim.item.careTeamLinkId"
+          "path": "Claim.item.careTeamLinkId",
+          "type": "positiveInt"
         },
         {
           "name": "diagnosisLinkId",
-          "path": "Claim.item.diagnosisLinkId"
+          "path": "Claim.item.diagnosisLinkId",
+          "type": "positiveInt"
         },
         {
           "name": "procedureLinkId",
-          "path": "Claim.item.procedureLinkId"
+          "path": "Claim.item.procedureLinkId",
+          "type": "positiveInt"
         },
         {
           "name": "informationLinkId",
-          "path": "Claim.item.informationLinkId"
+          "path": "Claim.item.informationLinkId",
+          "type": "positiveInt"
         },
         {
           "name": "revenue",
-          "path": "Claim.item.revenue"
+          "path": "Claim.item.revenue",
+          "type": "CodeableConcept"
         },
         {
           "name": "category",
-          "path": "Claim.item.category"
+          "path": "Claim.item.category",
+          "type": "CodeableConcept"
         },
         {
           "name": "service",
-          "path": "Claim.item.service"
+          "path": "Claim.item.service",
+          "type": "CodeableConcept"
         },
         {
           "name": "modifier",
-          "path": "Claim.item.modifier"
+          "path": "Claim.item.modifier",
+          "type": "CodeableConcept"
         },
         {
           "name": "programCode",
-          "path": "Claim.item.programCode"
+          "path": "Claim.item.programCode",
+          "type": "CodeableConcept"
         },
         {
           "name": "servicedDate",
-          "path": "Claim.item.servicedDate"
+          "path": "Claim.item.servicedDate",
+          "type": "date"
         },
         {
           "name": "servicedPeriod",
-          "path": "Claim.item.servicedPeriod"
+          "path": "Claim.item.servicedPeriod",
+          "type": "Period"
         },
         {
           "name": "locationCodeableConcept",
-          "path": "Claim.item.locationCodeableConcept"
+          "path": "Claim.item.locationCodeableConcept",
+          "type": "CodeableConcept"
         },
         {
           "name": "locationAddress",
-          "path": "Claim.item.locationAddress"
+          "path": "Claim.item.locationAddress",
+          "type": "Address"
         },
         {
           "name": "locationReference",
-          "path": "Claim.item.locationReference"
+          "path": "Claim.item.locationReference",
+          "type": "Reference"
         },
         {
           "name": "quantity",
-          "path": "Claim.item.quantity"
+          "path": "Claim.item.quantity",
+          "type": "Quantity"
         },
         {
           "name": "unitPrice",
-          "path": "Claim.item.unitPrice"
+          "path": "Claim.item.unitPrice",
+          "type": "Money"
         },
         {
           "name": "factor",
-          "path": "Claim.item.factor"
+          "path": "Claim.item.factor",
+          "type": "decimal"
         },
         {
           "name": "net",
-          "path": "Claim.item.net"
+          "path": "Claim.item.net",
+          "type": "Money"
         },
         {
           "name": "udi",
-          "path": "Claim.item.udi"
+          "path": "Claim.item.udi",
+          "type": "Reference"
         },
         {
           "name": "bodySite",
-          "path": "Claim.item.bodySite"
+          "path": "Claim.item.bodySite",
+          "type": "CodeableConcept"
         },
         {
           "name": "subSite",
-          "path": "Claim.item.subSite"
+          "path": "Claim.item.subSite",
+          "type": "CodeableConcept"
         },
         {
           "name": "encounter",
-          "path": "Claim.item.encounter"
+          "path": "Claim.item.encounter",
+          "type": "Reference"
         },
         {
           "name": "detail",
           "path": "Claim.item.detail",
+          "type": "BackboneElement",
           "children": [
             {
               "name": "sequence",
-              "path": "Claim.item.detail.sequence"
+              "path": "Claim.item.detail.sequence",
+              "type": "positiveInt"
             },
             {
               "name": "revenue",
-              "path": "Claim.item.detail.revenue"
+              "path": "Claim.item.detail.revenue",
+              "type": "CodeableConcept"
             },
             {
               "name": "category",
-              "path": "Claim.item.detail.category"
+              "path": "Claim.item.detail.category",
+              "type": "CodeableConcept"
             },
             {
               "name": "service",
-              "path": "Claim.item.detail.service"
+              "path": "Claim.item.detail.service",
+              "type": "CodeableConcept"
             },
             {
               "name": "modifier",
-              "path": "Claim.item.detail.modifier"
+              "path": "Claim.item.detail.modifier",
+              "type": "CodeableConcept"
             },
             {
               "name": "programCode",
-              "path": "Claim.item.detail.programCode"
+              "path": "Claim.item.detail.programCode",
+              "type": "CodeableConcept"
             },
             {
               "name": "quantity",
-              "path": "Claim.item.detail.quantity"
+              "path": "Claim.item.detail.quantity",
+              "type": "Quantity"
             },
             {
               "name": "unitPrice",
-              "path": "Claim.item.detail.unitPrice"
+              "path": "Claim.item.detail.unitPrice",
+              "type": "Money"
             },
             {
               "name": "factor",
-              "path": "Claim.item.detail.factor"
+              "path": "Claim.item.detail.factor",
+              "type": "decimal"
             },
             {
               "name": "net",
-              "path": "Claim.item.detail.net"
+              "path": "Claim.item.detail.net",
+              "type": "Money"
             },
             {
               "name": "udi",
-              "path": "Claim.item.detail.udi"
+              "path": "Claim.item.detail.udi",
+              "type": "Reference"
             },
             {
               "name": "subDetail",
               "path": "Claim.item.detail.subDetail",
+              "type": "BackboneElement",
               "children": [
                 {
                   "name": "sequence",
-                  "path": "Claim.item.detail.subDetail.sequence"
+                  "path": "Claim.item.detail.subDetail.sequence",
+                  "type": "positiveInt"
                 },
                 {
                   "name": "revenue",
-                  "path": "Claim.item.detail.subDetail.revenue"
+                  "path": "Claim.item.detail.subDetail.revenue",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "category",
-                  "path": "Claim.item.detail.subDetail.category"
+                  "path": "Claim.item.detail.subDetail.category",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "service",
-                  "path": "Claim.item.detail.subDetail.service"
+                  "path": "Claim.item.detail.subDetail.service",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "modifier",
-                  "path": "Claim.item.detail.subDetail.modifier"
+                  "path": "Claim.item.detail.subDetail.modifier",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "programCode",
-                  "path": "Claim.item.detail.subDetail.programCode"
+                  "path": "Claim.item.detail.subDetail.programCode",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "quantity",
-                  "path": "Claim.item.detail.subDetail.quantity"
+                  "path": "Claim.item.detail.subDetail.quantity",
+                  "type": "Quantity"
                 },
                 {
                   "name": "unitPrice",
-                  "path": "Claim.item.detail.subDetail.unitPrice"
+                  "path": "Claim.item.detail.subDetail.unitPrice",
+                  "type": "Money"
                 },
                 {
                   "name": "factor",
-                  "path": "Claim.item.detail.subDetail.factor"
+                  "path": "Claim.item.detail.subDetail.factor",
+                  "type": "decimal"
                 },
                 {
                   "name": "net",
-                  "path": "Claim.item.detail.subDetail.net"
+                  "path": "Claim.item.detail.subDetail.net",
+                  "type": "Money"
                 },
                 {
                   "name": "udi",
-                  "path": "Claim.item.detail.subDetail.udi"
+                  "path": "Claim.item.detail.subDetail.udi",
+                  "type": "Reference"
                 }
               ]
             }
@@ -778,1049 +964,1298 @@
     },
     {
       "name": "total",
-      "path": "Claim.total"
+      "path": "Claim.total",
+      "type": "Money"
     }
   ],
   "Condition": [
     {
       "name": "identifier",
-      "path": "Condition.identifier"
+      "path": "Condition.identifier",
+      "type": "Identifier"
     },
     {
       "name": "clinicalStatus",
-      "path": "Condition.clinicalStatus"
+      "path": "Condition.clinicalStatus",
+      "type": "code"
     },
     {
       "name": "verificationStatus",
-      "path": "Condition.verificationStatus"
+      "path": "Condition.verificationStatus",
+      "type": "code"
     },
     {
       "name": "category",
-      "path": "Condition.category"
+      "path": "Condition.category",
+      "type": "CodeableConcept"
     },
     {
       "name": "severity",
-      "path": "Condition.severity"
+      "path": "Condition.severity",
+      "type": "CodeableConcept"
     },
     {
       "name": "code",
-      "path": "Condition.code"
+      "path": "Condition.code",
+      "type": "CodeableConcept"
     },
     {
       "name": "bodySite",
-      "path": "Condition.bodySite"
+      "path": "Condition.bodySite",
+      "type": "CodeableConcept"
     },
     {
       "name": "subject",
-      "path": "Condition.subject"
+      "path": "Condition.subject",
+      "type": "Reference"
     },
     {
       "name": "context",
-      "path": "Condition.context"
+      "path": "Condition.context",
+      "type": "Reference"
     },
     {
       "name": "onsetDateTime",
-      "path": "Condition.onsetDateTime"
+      "path": "Condition.onsetDateTime",
+      "type": "dateTime"
     },
     {
       "name": "onsetAge",
-      "path": "Condition.onsetAge"
+      "path": "Condition.onsetAge",
+      "type": "Age"
     },
     {
       "name": "onsetPeriod",
-      "path": "Condition.onsetPeriod"
+      "path": "Condition.onsetPeriod",
+      "type": "Period"
     },
     {
       "name": "onsetRange",
-      "path": "Condition.onsetRange"
+      "path": "Condition.onsetRange",
+      "type": "Range"
     },
     {
       "name": "onsetString",
-      "path": "Condition.onsetString"
+      "path": "Condition.onsetString",
+      "type": "string"
     },
     {
       "name": "abatementDateTime",
-      "path": "Condition.abatementDateTime"
+      "path": "Condition.abatementDateTime",
+      "type": "dateTime"
     },
     {
       "name": "abatementAge",
-      "path": "Condition.abatementAge"
+      "path": "Condition.abatementAge",
+      "type": "Age"
     },
     {
       "name": "abatementBoolean",
-      "path": "Condition.abatementBoolean"
+      "path": "Condition.abatementBoolean",
+      "type": "boolean"
     },
     {
       "name": "abatementPeriod",
-      "path": "Condition.abatementPeriod"
+      "path": "Condition.abatementPeriod",
+      "type": "Period"
     },
     {
       "name": "abatementRange",
-      "path": "Condition.abatementRange"
+      "path": "Condition.abatementRange",
+      "type": "Range"
     },
     {
       "name": "abatementString",
-      "path": "Condition.abatementString"
+      "path": "Condition.abatementString",
+      "type": "string"
     },
     {
       "name": "assertedDate",
-      "path": "Condition.assertedDate"
+      "path": "Condition.assertedDate",
+      "type": "dateTime"
     },
     {
       "name": "asserter",
-      "path": "Condition.asserter"
+      "path": "Condition.asserter",
+      "type": "Reference"
     },
     {
       "name": "stage",
       "path": "Condition.stage",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "summary",
-          "path": "Condition.stage.summary"
+          "path": "Condition.stage.summary",
+          "type": "CodeableConcept"
         },
         {
           "name": "assessment",
-          "path": "Condition.stage.assessment"
+          "path": "Condition.stage.assessment",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "evidence",
       "path": "Condition.evidence",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "code",
-          "path": "Condition.evidence.code"
+          "path": "Condition.evidence.code",
+          "type": "CodeableConcept"
         },
         {
           "name": "detail",
-          "path": "Condition.evidence.detail"
+          "path": "Condition.evidence.detail",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "note",
-      "path": "Condition.note"
+      "path": "Condition.note",
+      "type": "Annotation"
     }
   ],
   "Coverage": [
     {
       "name": "identifier",
-      "path": "Coverage.identifier"
+      "path": "Coverage.identifier",
+      "type": "Identifier"
     },
     {
       "name": "status",
-      "path": "Coverage.status"
+      "path": "Coverage.status",
+      "type": "code"
     },
     {
       "name": "type",
-      "path": "Coverage.type"
+      "path": "Coverage.type",
+      "type": "CodeableConcept"
     },
     {
       "name": "policyHolder",
-      "path": "Coverage.policyHolder"
+      "path": "Coverage.policyHolder",
+      "type": "Reference"
     },
     {
       "name": "subscriber",
-      "path": "Coverage.subscriber"
+      "path": "Coverage.subscriber",
+      "type": "Reference"
     },
     {
       "name": "subscriberId",
-      "path": "Coverage.subscriberId"
+      "path": "Coverage.subscriberId",
+      "type": "string"
     },
     {
       "name": "beneficiary",
-      "path": "Coverage.beneficiary"
+      "path": "Coverage.beneficiary",
+      "type": "Reference"
     },
     {
       "name": "relationship",
-      "path": "Coverage.relationship"
+      "path": "Coverage.relationship",
+      "type": "CodeableConcept"
     },
     {
       "name": "period",
-      "path": "Coverage.period"
+      "path": "Coverage.period",
+      "type": "Period"
     },
     {
       "name": "payor",
-      "path": "Coverage.payor"
+      "path": "Coverage.payor",
+      "type": "Reference"
     },
     {
       "name": "grouping",
       "path": "Coverage.grouping",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "group",
-          "path": "Coverage.grouping.group"
+          "path": "Coverage.grouping.group",
+          "type": "string"
         },
         {
           "name": "groupDisplay",
-          "path": "Coverage.grouping.groupDisplay"
+          "path": "Coverage.grouping.groupDisplay",
+          "type": "string"
         },
         {
           "name": "subGroup",
-          "path": "Coverage.grouping.subGroup"
+          "path": "Coverage.grouping.subGroup",
+          "type": "string"
         },
         {
           "name": "subGroupDisplay",
-          "path": "Coverage.grouping.subGroupDisplay"
+          "path": "Coverage.grouping.subGroupDisplay",
+          "type": "string"
         },
         {
           "name": "plan",
-          "path": "Coverage.grouping.plan"
+          "path": "Coverage.grouping.plan",
+          "type": "string"
         },
         {
           "name": "planDisplay",
-          "path": "Coverage.grouping.planDisplay"
+          "path": "Coverage.grouping.planDisplay",
+          "type": "string"
         },
         {
           "name": "subPlan",
-          "path": "Coverage.grouping.subPlan"
+          "path": "Coverage.grouping.subPlan",
+          "type": "string"
         },
         {
           "name": "subPlanDisplay",
-          "path": "Coverage.grouping.subPlanDisplay"
+          "path": "Coverage.grouping.subPlanDisplay",
+          "type": "string"
         },
         {
           "name": "class",
-          "path": "Coverage.grouping.class"
+          "path": "Coverage.grouping.class",
+          "type": "string"
         },
         {
           "name": "classDisplay",
-          "path": "Coverage.grouping.classDisplay"
+          "path": "Coverage.grouping.classDisplay",
+          "type": "string"
         },
         {
           "name": "subClass",
-          "path": "Coverage.grouping.subClass"
+          "path": "Coverage.grouping.subClass",
+          "type": "string"
         },
         {
           "name": "subClassDisplay",
-          "path": "Coverage.grouping.subClassDisplay"
+          "path": "Coverage.grouping.subClassDisplay",
+          "type": "string"
         }
       ]
     },
     {
       "name": "dependent",
-      "path": "Coverage.dependent"
+      "path": "Coverage.dependent",
+      "type": "string"
     },
     {
       "name": "sequence",
-      "path": "Coverage.sequence"
+      "path": "Coverage.sequence",
+      "type": "string"
     },
     {
       "name": "order",
-      "path": "Coverage.order"
+      "path": "Coverage.order",
+      "type": "positiveInt"
     },
     {
       "name": "network",
-      "path": "Coverage.network"
+      "path": "Coverage.network",
+      "type": "string"
     },
     {
       "name": "contract",
-      "path": "Coverage.contract"
+      "path": "Coverage.contract",
+      "type": "Reference"
     }
   ],
   "DiagnosticReport": [
     {
       "name": "identifier",
-      "path": "DiagnosticReport.identifier"
+      "path": "DiagnosticReport.identifier",
+      "type": "Identifier"
     },
     {
       "name": "basedOn",
-      "path": "DiagnosticReport.basedOn"
+      "path": "DiagnosticReport.basedOn",
+      "type": "Reference"
     },
     {
       "name": "status",
-      "path": "DiagnosticReport.status"
+      "path": "DiagnosticReport.status",
+      "type": "code"
     },
     {
       "name": "category",
-      "path": "DiagnosticReport.category"
+      "path": "DiagnosticReport.category",
+      "type": "CodeableConcept"
     },
     {
       "name": "code",
-      "path": "DiagnosticReport.code"
+      "path": "DiagnosticReport.code",
+      "type": "CodeableConcept"
     },
     {
       "name": "subject",
-      "path": "DiagnosticReport.subject"
+      "path": "DiagnosticReport.subject",
+      "type": "Reference"
     },
     {
       "name": "context",
-      "path": "DiagnosticReport.context"
+      "path": "DiagnosticReport.context",
+      "type": "Reference"
     },
     {
       "name": "effectiveDateTime",
-      "path": "DiagnosticReport.effectiveDateTime"
+      "path": "DiagnosticReport.effectiveDateTime",
+      "type": "dateTime"
     },
     {
       "name": "effectivePeriod",
-      "path": "DiagnosticReport.effectivePeriod"
+      "path": "DiagnosticReport.effectivePeriod",
+      "type": "Period"
     },
     {
       "name": "issued",
-      "path": "DiagnosticReport.issued"
+      "path": "DiagnosticReport.issued",
+      "type": "instant"
     },
     {
       "name": "performer",
       "path": "DiagnosticReport.performer",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "role",
-          "path": "DiagnosticReport.performer.role"
+          "path": "DiagnosticReport.performer.role",
+          "type": "CodeableConcept"
         },
         {
           "name": "actor",
-          "path": "DiagnosticReport.performer.actor"
+          "path": "DiagnosticReport.performer.actor",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "specimen",
-      "path": "DiagnosticReport.specimen"
+      "path": "DiagnosticReport.specimen",
+      "type": "Reference"
     },
     {
       "name": "result",
-      "path": "DiagnosticReport.result"
+      "path": "DiagnosticReport.result",
+      "type": "Reference"
     },
     {
       "name": "imagingStudy",
-      "path": "DiagnosticReport.imagingStudy"
+      "path": "DiagnosticReport.imagingStudy",
+      "type": "Reference"
     },
     {
       "name": "image",
       "path": "DiagnosticReport.image",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "comment",
-          "path": "DiagnosticReport.image.comment"
+          "path": "DiagnosticReport.image.comment",
+          "type": "string"
         },
         {
           "name": "link",
-          "path": "DiagnosticReport.image.link"
+          "path": "DiagnosticReport.image.link",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "conclusion",
-      "path": "DiagnosticReport.conclusion"
+      "path": "DiagnosticReport.conclusion",
+      "type": "string"
     },
     {
       "name": "codedDiagnosis",
-      "path": "DiagnosticReport.codedDiagnosis"
+      "path": "DiagnosticReport.codedDiagnosis",
+      "type": "CodeableConcept"
     },
     {
       "name": "presentedForm",
-      "path": "DiagnosticReport.presentedForm"
+      "path": "DiagnosticReport.presentedForm",
+      "type": "Attachment"
     }
   ],
   "Encounter": [
     {
       "name": "identifier",
-      "path": "Encounter.identifier"
+      "path": "Encounter.identifier",
+      "type": "Identifier"
     },
     {
       "name": "status",
-      "path": "Encounter.status"
+      "path": "Encounter.status",
+      "type": "code"
     },
     {
       "name": "statusHistory",
       "path": "Encounter.statusHistory",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "status",
-          "path": "Encounter.statusHistory.status"
+          "path": "Encounter.statusHistory.status",
+          "type": "code"
         },
         {
           "name": "period",
-          "path": "Encounter.statusHistory.period"
+          "path": "Encounter.statusHistory.period",
+          "type": "Period"
         }
       ]
     },
     {
       "name": "class",
-      "path": "Encounter.class"
+      "path": "Encounter.class",
+      "type": "Coding"
     },
     {
       "name": "classHistory",
       "path": "Encounter.classHistory",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "class",
-          "path": "Encounter.classHistory.class"
+          "path": "Encounter.classHistory.class",
+          "type": "Coding"
         },
         {
           "name": "period",
-          "path": "Encounter.classHistory.period"
+          "path": "Encounter.classHistory.period",
+          "type": "Period"
         }
       ]
     },
     {
       "name": "type",
-      "path": "Encounter.type"
+      "path": "Encounter.type",
+      "type": "CodeableConcept"
     },
     {
       "name": "priority",
-      "path": "Encounter.priority"
+      "path": "Encounter.priority",
+      "type": "CodeableConcept"
     },
     {
       "name": "subject",
-      "path": "Encounter.subject"
+      "path": "Encounter.subject",
+      "type": "Reference"
     },
     {
       "name": "episodeOfCare",
-      "path": "Encounter.episodeOfCare"
+      "path": "Encounter.episodeOfCare",
+      "type": "Reference"
     },
     {
       "name": "incomingReferral",
-      "path": "Encounter.incomingReferral"
+      "path": "Encounter.incomingReferral",
+      "type": "Reference"
     },
     {
       "name": "participant",
       "path": "Encounter.participant",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "type",
-          "path": "Encounter.participant.type"
+          "path": "Encounter.participant.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "period",
-          "path": "Encounter.participant.period"
+          "path": "Encounter.participant.period",
+          "type": "Period"
         },
         {
           "name": "individual",
-          "path": "Encounter.participant.individual"
+          "path": "Encounter.participant.individual",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "appointment",
-      "path": "Encounter.appointment"
+      "path": "Encounter.appointment",
+      "type": "Reference"
     },
     {
       "name": "period",
-      "path": "Encounter.period"
+      "path": "Encounter.period",
+      "type": "Period"
     },
     {
       "name": "length",
-      "path": "Encounter.length"
+      "path": "Encounter.length",
+      "type": "Duration"
     },
     {
       "name": "reason",
-      "path": "Encounter.reason"
+      "path": "Encounter.reason",
+      "type": "CodeableConcept"
     },
     {
       "name": "diagnosis",
       "path": "Encounter.diagnosis",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "condition",
-          "path": "Encounter.diagnosis.condition"
+          "path": "Encounter.diagnosis.condition",
+          "type": "Reference"
         },
         {
           "name": "role",
-          "path": "Encounter.diagnosis.role"
+          "path": "Encounter.diagnosis.role",
+          "type": "CodeableConcept"
         },
         {
           "name": "rank",
-          "path": "Encounter.diagnosis.rank"
+          "path": "Encounter.diagnosis.rank",
+          "type": "positiveInt"
         }
       ]
     },
     {
       "name": "account",
-      "path": "Encounter.account"
+      "path": "Encounter.account",
+      "type": "Reference"
     },
     {
       "name": "hospitalization",
       "path": "Encounter.hospitalization",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "preAdmissionIdentifier",
-          "path": "Encounter.hospitalization.preAdmissionIdentifier"
+          "path": "Encounter.hospitalization.preAdmissionIdentifier",
+          "type": "Identifier"
         },
         {
           "name": "origin",
-          "path": "Encounter.hospitalization.origin"
+          "path": "Encounter.hospitalization.origin",
+          "type": "Reference"
         },
         {
           "name": "admitSource",
-          "path": "Encounter.hospitalization.admitSource"
+          "path": "Encounter.hospitalization.admitSource",
+          "type": "CodeableConcept"
         },
         {
           "name": "reAdmission",
-          "path": "Encounter.hospitalization.reAdmission"
+          "path": "Encounter.hospitalization.reAdmission",
+          "type": "CodeableConcept"
         },
         {
           "name": "dietPreference",
-          "path": "Encounter.hospitalization.dietPreference"
+          "path": "Encounter.hospitalization.dietPreference",
+          "type": "CodeableConcept"
         },
         {
           "name": "specialCourtesy",
-          "path": "Encounter.hospitalization.specialCourtesy"
+          "path": "Encounter.hospitalization.specialCourtesy",
+          "type": "CodeableConcept"
         },
         {
           "name": "specialArrangement",
-          "path": "Encounter.hospitalization.specialArrangement"
+          "path": "Encounter.hospitalization.specialArrangement",
+          "type": "CodeableConcept"
         },
         {
           "name": "destination",
-          "path": "Encounter.hospitalization.destination"
+          "path": "Encounter.hospitalization.destination",
+          "type": "Reference"
         },
         {
           "name": "dischargeDisposition",
-          "path": "Encounter.hospitalization.dischargeDisposition"
+          "path": "Encounter.hospitalization.dischargeDisposition",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "location",
       "path": "Encounter.location",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "location",
-          "path": "Encounter.location.location"
+          "path": "Encounter.location.location",
+          "type": "Reference"
         },
         {
           "name": "status",
-          "path": "Encounter.location.status"
+          "path": "Encounter.location.status",
+          "type": "code"
         },
         {
           "name": "period",
-          "path": "Encounter.location.period"
+          "path": "Encounter.location.period",
+          "type": "Period"
         }
       ]
     },
     {
       "name": "serviceProvider",
-      "path": "Encounter.serviceProvider"
+      "path": "Encounter.serviceProvider",
+      "type": "Reference"
     },
     {
       "name": "partOf",
-      "path": "Encounter.partOf"
+      "path": "Encounter.partOf",
+      "type": "Reference"
     }
   ],
   "ExplanationOfBenefit": [
     {
       "name": "identifier",
-      "path": "ExplanationOfBenefit.identifier"
+      "path": "ExplanationOfBenefit.identifier",
+      "type": "Identifier"
     },
     {
       "name": "status",
-      "path": "ExplanationOfBenefit.status"
+      "path": "ExplanationOfBenefit.status",
+      "type": "code"
     },
     {
       "name": "type",
-      "path": "ExplanationOfBenefit.type"
+      "path": "ExplanationOfBenefit.type",
+      "type": "CodeableConcept"
     },
     {
       "name": "subType",
-      "path": "ExplanationOfBenefit.subType"
+      "path": "ExplanationOfBenefit.subType",
+      "type": "CodeableConcept"
     },
     {
       "name": "patient",
-      "path": "ExplanationOfBenefit.patient"
+      "path": "ExplanationOfBenefit.patient",
+      "type": "Reference"
     },
     {
       "name": "billablePeriod",
-      "path": "ExplanationOfBenefit.billablePeriod"
+      "path": "ExplanationOfBenefit.billablePeriod",
+      "type": "Period"
     },
     {
       "name": "created",
-      "path": "ExplanationOfBenefit.created"
+      "path": "ExplanationOfBenefit.created",
+      "type": "dateTime"
     },
     {
       "name": "enterer",
-      "path": "ExplanationOfBenefit.enterer"
+      "path": "ExplanationOfBenefit.enterer",
+      "type": "Reference"
     },
     {
       "name": "insurer",
-      "path": "ExplanationOfBenefit.insurer"
+      "path": "ExplanationOfBenefit.insurer",
+      "type": "Reference"
     },
     {
       "name": "provider",
-      "path": "ExplanationOfBenefit.provider"
+      "path": "ExplanationOfBenefit.provider",
+      "type": "Reference"
     },
     {
       "name": "organization",
-      "path": "ExplanationOfBenefit.organization"
+      "path": "ExplanationOfBenefit.organization",
+      "type": "Reference"
     },
     {
       "name": "referral",
-      "path": "ExplanationOfBenefit.referral"
+      "path": "ExplanationOfBenefit.referral",
+      "type": "Reference"
     },
     {
       "name": "facility",
-      "path": "ExplanationOfBenefit.facility"
+      "path": "ExplanationOfBenefit.facility",
+      "type": "Reference"
     },
     {
       "name": "claim",
-      "path": "ExplanationOfBenefit.claim"
+      "path": "ExplanationOfBenefit.claim",
+      "type": "Reference"
     },
     {
       "name": "claimResponse",
-      "path": "ExplanationOfBenefit.claimResponse"
+      "path": "ExplanationOfBenefit.claimResponse",
+      "type": "Reference"
     },
     {
       "name": "outcome",
-      "path": "ExplanationOfBenefit.outcome"
+      "path": "ExplanationOfBenefit.outcome",
+      "type": "CodeableConcept"
     },
     {
       "name": "disposition",
-      "path": "ExplanationOfBenefit.disposition"
+      "path": "ExplanationOfBenefit.disposition",
+      "type": "string"
     },
     {
       "name": "related",
       "path": "ExplanationOfBenefit.related",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "claim",
-          "path": "ExplanationOfBenefit.related.claim"
+          "path": "ExplanationOfBenefit.related.claim",
+          "type": "Reference"
         },
         {
           "name": "relationship",
-          "path": "ExplanationOfBenefit.related.relationship"
+          "path": "ExplanationOfBenefit.related.relationship",
+          "type": "CodeableConcept"
         },
         {
           "name": "reference",
-          "path": "ExplanationOfBenefit.related.reference"
+          "path": "ExplanationOfBenefit.related.reference",
+          "type": "Identifier"
         }
       ]
     },
     {
       "name": "prescription",
-      "path": "ExplanationOfBenefit.prescription"
+      "path": "ExplanationOfBenefit.prescription",
+      "type": "Reference"
     },
     {
       "name": "originalPrescription",
-      "path": "ExplanationOfBenefit.originalPrescription"
+      "path": "ExplanationOfBenefit.originalPrescription",
+      "type": "Reference"
     },
     {
       "name": "payee",
       "path": "ExplanationOfBenefit.payee",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "type",
-          "path": "ExplanationOfBenefit.payee.type"
+          "path": "ExplanationOfBenefit.payee.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "resourceType",
-          "path": "ExplanationOfBenefit.payee.resourceType"
+          "path": "ExplanationOfBenefit.payee.resourceType",
+          "type": "CodeableConcept"
         },
         {
           "name": "party",
-          "path": "ExplanationOfBenefit.payee.party"
+          "path": "ExplanationOfBenefit.payee.party",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "information",
       "path": "ExplanationOfBenefit.information",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "ExplanationOfBenefit.information.sequence"
+          "path": "ExplanationOfBenefit.information.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "category",
-          "path": "ExplanationOfBenefit.information.category"
+          "path": "ExplanationOfBenefit.information.category",
+          "type": "CodeableConcept"
         },
         {
           "name": "code",
-          "path": "ExplanationOfBenefit.information.code"
+          "path": "ExplanationOfBenefit.information.code",
+          "type": "CodeableConcept"
         },
         {
           "name": "timingDate",
-          "path": "ExplanationOfBenefit.information.timingDate"
+          "path": "ExplanationOfBenefit.information.timingDate",
+          "type": "date"
         },
         {
           "name": "timingPeriod",
-          "path": "ExplanationOfBenefit.information.timingPeriod"
+          "path": "ExplanationOfBenefit.information.timingPeriod",
+          "type": "Period"
         },
         {
           "name": "valueString",
-          "path": "ExplanationOfBenefit.information.valueString"
+          "path": "ExplanationOfBenefit.information.valueString",
+          "type": "string"
         },
         {
           "name": "valueQuantity",
-          "path": "ExplanationOfBenefit.information.valueQuantity"
+          "path": "ExplanationOfBenefit.information.valueQuantity",
+          "type": "Quantity"
         },
         {
           "name": "valueAttachment",
-          "path": "ExplanationOfBenefit.information.valueAttachment"
+          "path": "ExplanationOfBenefit.information.valueAttachment",
+          "type": "Attachment"
         },
         {
           "name": "valueReference",
-          "path": "ExplanationOfBenefit.information.valueReference"
+          "path": "ExplanationOfBenefit.information.valueReference",
+          "type": "Reference"
         },
         {
           "name": "reason",
-          "path": "ExplanationOfBenefit.information.reason"
+          "path": "ExplanationOfBenefit.information.reason",
+          "type": "Coding"
         }
       ]
     },
     {
       "name": "careTeam",
       "path": "ExplanationOfBenefit.careTeam",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "ExplanationOfBenefit.careTeam.sequence"
+          "path": "ExplanationOfBenefit.careTeam.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "provider",
-          "path": "ExplanationOfBenefit.careTeam.provider"
+          "path": "ExplanationOfBenefit.careTeam.provider",
+          "type": "Reference"
         },
         {
           "name": "responsible",
-          "path": "ExplanationOfBenefit.careTeam.responsible"
+          "path": "ExplanationOfBenefit.careTeam.responsible",
+          "type": "boolean"
         },
         {
           "name": "role",
-          "path": "ExplanationOfBenefit.careTeam.role"
+          "path": "ExplanationOfBenefit.careTeam.role",
+          "type": "CodeableConcept"
         },
         {
           "name": "qualification",
-          "path": "ExplanationOfBenefit.careTeam.qualification"
+          "path": "ExplanationOfBenefit.careTeam.qualification",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "diagnosis",
       "path": "ExplanationOfBenefit.diagnosis",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "ExplanationOfBenefit.diagnosis.sequence"
+          "path": "ExplanationOfBenefit.diagnosis.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "diagnosisCodeableConcept",
-          "path": "ExplanationOfBenefit.diagnosis.diagnosisCodeableConcept"
+          "path": "ExplanationOfBenefit.diagnosis.diagnosisCodeableConcept",
+          "type": "CodeableConcept"
         },
         {
           "name": "diagnosisReference",
-          "path": "ExplanationOfBenefit.diagnosis.diagnosisReference"
+          "path": "ExplanationOfBenefit.diagnosis.diagnosisReference",
+          "type": "Reference"
         },
         {
           "name": "type",
-          "path": "ExplanationOfBenefit.diagnosis.type"
+          "path": "ExplanationOfBenefit.diagnosis.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "packageCode",
-          "path": "ExplanationOfBenefit.diagnosis.packageCode"
+          "path": "ExplanationOfBenefit.diagnosis.packageCode",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "procedure",
       "path": "ExplanationOfBenefit.procedure",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "ExplanationOfBenefit.procedure.sequence"
+          "path": "ExplanationOfBenefit.procedure.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "date",
-          "path": "ExplanationOfBenefit.procedure.date"
+          "path": "ExplanationOfBenefit.procedure.date",
+          "type": "dateTime"
         },
         {
           "name": "procedureCodeableConcept",
-          "path": "ExplanationOfBenefit.procedure.procedureCodeableConcept"
+          "path": "ExplanationOfBenefit.procedure.procedureCodeableConcept",
+          "type": "CodeableConcept"
         },
         {
           "name": "procedureReference",
-          "path": "ExplanationOfBenefit.procedure.procedureReference"
+          "path": "ExplanationOfBenefit.procedure.procedureReference",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "precedence",
-      "path": "ExplanationOfBenefit.precedence"
+      "path": "ExplanationOfBenefit.precedence",
+      "type": "positiveInt"
     },
     {
       "name": "insurance",
       "path": "ExplanationOfBenefit.insurance",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "coverage",
-          "path": "ExplanationOfBenefit.insurance.coverage"
+          "path": "ExplanationOfBenefit.insurance.coverage",
+          "type": "Reference"
         },
         {
           "name": "preAuthRef",
-          "path": "ExplanationOfBenefit.insurance.preAuthRef"
+          "path": "ExplanationOfBenefit.insurance.preAuthRef",
+          "type": "string"
         }
       ]
     },
     {
       "name": "accident",
       "path": "ExplanationOfBenefit.accident",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "date",
-          "path": "ExplanationOfBenefit.accident.date"
+          "path": "ExplanationOfBenefit.accident.date",
+          "type": "date"
         },
         {
           "name": "type",
-          "path": "ExplanationOfBenefit.accident.type"
+          "path": "ExplanationOfBenefit.accident.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "locationAddress",
-          "path": "ExplanationOfBenefit.accident.locationAddress"
+          "path": "ExplanationOfBenefit.accident.locationAddress",
+          "type": "Address"
         },
         {
           "name": "locationReference",
-          "path": "ExplanationOfBenefit.accident.locationReference"
+          "path": "ExplanationOfBenefit.accident.locationReference",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "employmentImpacted",
-      "path": "ExplanationOfBenefit.employmentImpacted"
+      "path": "ExplanationOfBenefit.employmentImpacted",
+      "type": "Period"
     },
     {
       "name": "hospitalization",
-      "path": "ExplanationOfBenefit.hospitalization"
+      "path": "ExplanationOfBenefit.hospitalization",
+      "type": "Period"
     },
     {
       "name": "item",
       "path": "ExplanationOfBenefit.item",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequence",
-          "path": "ExplanationOfBenefit.item.sequence"
+          "path": "ExplanationOfBenefit.item.sequence",
+          "type": "positiveInt"
         },
         {
           "name": "careTeamLinkId",
-          "path": "ExplanationOfBenefit.item.careTeamLinkId"
+          "path": "ExplanationOfBenefit.item.careTeamLinkId",
+          "type": "positiveInt"
         },
         {
           "name": "diagnosisLinkId",
-          "path": "ExplanationOfBenefit.item.diagnosisLinkId"
+          "path": "ExplanationOfBenefit.item.diagnosisLinkId",
+          "type": "positiveInt"
         },
         {
           "name": "procedureLinkId",
-          "path": "ExplanationOfBenefit.item.procedureLinkId"
+          "path": "ExplanationOfBenefit.item.procedureLinkId",
+          "type": "positiveInt"
         },
         {
           "name": "informationLinkId",
-          "path": "ExplanationOfBenefit.item.informationLinkId"
+          "path": "ExplanationOfBenefit.item.informationLinkId",
+          "type": "positiveInt"
         },
         {
           "name": "revenue",
-          "path": "ExplanationOfBenefit.item.revenue"
+          "path": "ExplanationOfBenefit.item.revenue",
+          "type": "CodeableConcept"
         },
         {
           "name": "category",
-          "path": "ExplanationOfBenefit.item.category"
+          "path": "ExplanationOfBenefit.item.category",
+          "type": "CodeableConcept"
         },
         {
           "name": "service",
-          "path": "ExplanationOfBenefit.item.service"
+          "path": "ExplanationOfBenefit.item.service",
+          "type": "CodeableConcept"
         },
         {
           "name": "modifier",
-          "path": "ExplanationOfBenefit.item.modifier"
+          "path": "ExplanationOfBenefit.item.modifier",
+          "type": "CodeableConcept"
         },
         {
           "name": "programCode",
-          "path": "ExplanationOfBenefit.item.programCode"
+          "path": "ExplanationOfBenefit.item.programCode",
+          "type": "CodeableConcept"
         },
         {
           "name": "servicedDate",
-          "path": "ExplanationOfBenefit.item.servicedDate"
+          "path": "ExplanationOfBenefit.item.servicedDate",
+          "type": "date"
         },
         {
           "name": "servicedPeriod",
-          "path": "ExplanationOfBenefit.item.servicedPeriod"
+          "path": "ExplanationOfBenefit.item.servicedPeriod",
+          "type": "Period"
         },
         {
           "name": "locationCodeableConcept",
-          "path": "ExplanationOfBenefit.item.locationCodeableConcept"
+          "path": "ExplanationOfBenefit.item.locationCodeableConcept",
+          "type": "CodeableConcept"
         },
         {
           "name": "locationAddress",
-          "path": "ExplanationOfBenefit.item.locationAddress"
+          "path": "ExplanationOfBenefit.item.locationAddress",
+          "type": "Address"
         },
         {
           "name": "locationReference",
-          "path": "ExplanationOfBenefit.item.locationReference"
+          "path": "ExplanationOfBenefit.item.locationReference",
+          "type": "Reference"
         },
         {
           "name": "quantity",
-          "path": "ExplanationOfBenefit.item.quantity"
+          "path": "ExplanationOfBenefit.item.quantity",
+          "type": "Quantity"
         },
         {
           "name": "unitPrice",
-          "path": "ExplanationOfBenefit.item.unitPrice"
+          "path": "ExplanationOfBenefit.item.unitPrice",
+          "type": "Money"
         },
         {
           "name": "factor",
-          "path": "ExplanationOfBenefit.item.factor"
+          "path": "ExplanationOfBenefit.item.factor",
+          "type": "decimal"
         },
         {
           "name": "net",
-          "path": "ExplanationOfBenefit.item.net"
+          "path": "ExplanationOfBenefit.item.net",
+          "type": "Money"
         },
         {
           "name": "udi",
-          "path": "ExplanationOfBenefit.item.udi"
+          "path": "ExplanationOfBenefit.item.udi",
+          "type": "Reference"
         },
         {
           "name": "bodySite",
-          "path": "ExplanationOfBenefit.item.bodySite"
+          "path": "ExplanationOfBenefit.item.bodySite",
+          "type": "CodeableConcept"
         },
         {
           "name": "subSite",
-          "path": "ExplanationOfBenefit.item.subSite"
+          "path": "ExplanationOfBenefit.item.subSite",
+          "type": "CodeableConcept"
         },
         {
           "name": "encounter",
-          "path": "ExplanationOfBenefit.item.encounter"
+          "path": "ExplanationOfBenefit.item.encounter",
+          "type": "Reference"
         },
         {
           "name": "noteNumber",
-          "path": "ExplanationOfBenefit.item.noteNumber"
+          "path": "ExplanationOfBenefit.item.noteNumber",
+          "type": "positiveInt"
         },
         {
           "name": "adjudication",
           "path": "ExplanationOfBenefit.item.adjudication",
+          "type": "BackboneElement",
           "children": [
             {
               "name": "category",
-              "path": "ExplanationOfBenefit.item.adjudication.category"
+              "path": "ExplanationOfBenefit.item.adjudication.category",
+              "type": "CodeableConcept"
             },
             {
               "name": "reason",
-              "path": "ExplanationOfBenefit.item.adjudication.reason"
+              "path": "ExplanationOfBenefit.item.adjudication.reason",
+              "type": "CodeableConcept"
             },
             {
               "name": "amount",
-              "path": "ExplanationOfBenefit.item.adjudication.amount"
+              "path": "ExplanationOfBenefit.item.adjudication.amount",
+              "type": "Money"
             },
             {
               "name": "value",
-              "path": "ExplanationOfBenefit.item.adjudication.value"
+              "path": "ExplanationOfBenefit.item.adjudication.value",
+              "type": "decimal"
             }
           ]
         },
         {
           "name": "detail",
           "path": "ExplanationOfBenefit.item.detail",
+          "type": "BackboneElement",
           "children": [
             {
               "name": "sequence",
-              "path": "ExplanationOfBenefit.item.detail.sequence"
+              "path": "ExplanationOfBenefit.item.detail.sequence",
+              "type": "positiveInt"
             },
             {
               "name": "type",
-              "path": "ExplanationOfBenefit.item.detail.type"
+              "path": "ExplanationOfBenefit.item.detail.type",
+              "type": "CodeableConcept"
             },
             {
               "name": "revenue",
-              "path": "ExplanationOfBenefit.item.detail.revenue"
+              "path": "ExplanationOfBenefit.item.detail.revenue",
+              "type": "CodeableConcept"
             },
             {
               "name": "category",
-              "path": "ExplanationOfBenefit.item.detail.category"
+              "path": "ExplanationOfBenefit.item.detail.category",
+              "type": "CodeableConcept"
             },
             {
               "name": "service",
-              "path": "ExplanationOfBenefit.item.detail.service"
+              "path": "ExplanationOfBenefit.item.detail.service",
+              "type": "CodeableConcept"
             },
             {
               "name": "modifier",
-              "path": "ExplanationOfBenefit.item.detail.modifier"
+              "path": "ExplanationOfBenefit.item.detail.modifier",
+              "type": "CodeableConcept"
             },
             {
               "name": "programCode",
-              "path": "ExplanationOfBenefit.item.detail.programCode"
+              "path": "ExplanationOfBenefit.item.detail.programCode",
+              "type": "CodeableConcept"
             },
             {
               "name": "quantity",
-              "path": "ExplanationOfBenefit.item.detail.quantity"
+              "path": "ExplanationOfBenefit.item.detail.quantity",
+              "type": "Quantity"
             },
             {
               "name": "unitPrice",
-              "path": "ExplanationOfBenefit.item.detail.unitPrice"
+              "path": "ExplanationOfBenefit.item.detail.unitPrice",
+              "type": "Money"
             },
             {
               "name": "factor",
-              "path": "ExplanationOfBenefit.item.detail.factor"
+              "path": "ExplanationOfBenefit.item.detail.factor",
+              "type": "decimal"
             },
             {
               "name": "net",
-              "path": "ExplanationOfBenefit.item.detail.net"
+              "path": "ExplanationOfBenefit.item.detail.net",
+              "type": "Money"
             },
             {
               "name": "udi",
-              "path": "ExplanationOfBenefit.item.detail.udi"
+              "path": "ExplanationOfBenefit.item.detail.udi",
+              "type": "Reference"
             },
             {
               "name": "noteNumber",
-              "path": "ExplanationOfBenefit.item.detail.noteNumber"
+              "path": "ExplanationOfBenefit.item.detail.noteNumber",
+              "type": "positiveInt"
             },
             {
               "name": "adjudication",
-              "path": "ExplanationOfBenefit.item.detail.adjudication"
+              "path": "ExplanationOfBenefit.item.detail.adjudication",
+              "type": "Resource"
             },
             {
               "name": "subDetail",
               "path": "ExplanationOfBenefit.item.detail.subDetail",
+              "type": "BackboneElement",
               "children": [
                 {
                   "name": "sequence",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.sequence"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.sequence",
+                  "type": "positiveInt"
                 },
                 {
                   "name": "type",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.type"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.type",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "revenue",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.revenue"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.revenue",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "category",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.category"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.category",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "service",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.service"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.service",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "modifier",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.modifier"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.modifier",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "programCode",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.programCode"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.programCode",
+                  "type": "CodeableConcept"
                 },
                 {
                   "name": "quantity",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.quantity"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.quantity",
+                  "type": "Quantity"
                 },
                 {
                   "name": "unitPrice",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.unitPrice"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.unitPrice",
+                  "type": "Money"
                 },
                 {
                   "name": "factor",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.factor"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.factor",
+                  "type": "decimal"
                 },
                 {
                   "name": "net",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.net"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.net",
+                  "type": "Money"
                 },
                 {
                   "name": "udi",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.udi"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.udi",
+                  "type": "Reference"
                 },
                 {
                   "name": "noteNumber",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.noteNumber"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.noteNumber",
+                  "type": "positiveInt"
                 },
                 {
                   "name": "adjudication",
-                  "path": "ExplanationOfBenefit.item.detail.subDetail.adjudication"
+                  "path": "ExplanationOfBenefit.item.detail.subDetail.adjudication",
+                  "type": "Resource"
                 }
               ]
             }
@@ -1831,70 +2266,87 @@
     {
       "name": "addItem",
       "path": "ExplanationOfBenefit.addItem",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "sequenceLinkId",
-          "path": "ExplanationOfBenefit.addItem.sequenceLinkId"
+          "path": "ExplanationOfBenefit.addItem.sequenceLinkId",
+          "type": "positiveInt"
         },
         {
           "name": "revenue",
-          "path": "ExplanationOfBenefit.addItem.revenue"
+          "path": "ExplanationOfBenefit.addItem.revenue",
+          "type": "CodeableConcept"
         },
         {
           "name": "category",
-          "path": "ExplanationOfBenefit.addItem.category"
+          "path": "ExplanationOfBenefit.addItem.category",
+          "type": "CodeableConcept"
         },
         {
           "name": "service",
-          "path": "ExplanationOfBenefit.addItem.service"
+          "path": "ExplanationOfBenefit.addItem.service",
+          "type": "CodeableConcept"
         },
         {
           "name": "modifier",
-          "path": "ExplanationOfBenefit.addItem.modifier"
+          "path": "ExplanationOfBenefit.addItem.modifier",
+          "type": "CodeableConcept"
         },
         {
           "name": "fee",
-          "path": "ExplanationOfBenefit.addItem.fee"
+          "path": "ExplanationOfBenefit.addItem.fee",
+          "type": "Money"
         },
         {
           "name": "noteNumber",
-          "path": "ExplanationOfBenefit.addItem.noteNumber"
+          "path": "ExplanationOfBenefit.addItem.noteNumber",
+          "type": "positiveInt"
         },
         {
           "name": "adjudication",
-          "path": "ExplanationOfBenefit.addItem.adjudication"
+          "path": "ExplanationOfBenefit.addItem.adjudication",
+          "type": "Resource"
         },
         {
           "name": "detail",
           "path": "ExplanationOfBenefit.addItem.detail",
+          "type": "BackboneElement",
           "children": [
             {
               "name": "revenue",
-              "path": "ExplanationOfBenefit.addItem.detail.revenue"
+              "path": "ExplanationOfBenefit.addItem.detail.revenue",
+              "type": "CodeableConcept"
             },
             {
               "name": "category",
-              "path": "ExplanationOfBenefit.addItem.detail.category"
+              "path": "ExplanationOfBenefit.addItem.detail.category",
+              "type": "CodeableConcept"
             },
             {
               "name": "service",
-              "path": "ExplanationOfBenefit.addItem.detail.service"
+              "path": "ExplanationOfBenefit.addItem.detail.service",
+              "type": "CodeableConcept"
             },
             {
               "name": "modifier",
-              "path": "ExplanationOfBenefit.addItem.detail.modifier"
+              "path": "ExplanationOfBenefit.addItem.detail.modifier",
+              "type": "CodeableConcept"
             },
             {
               "name": "fee",
-              "path": "ExplanationOfBenefit.addItem.detail.fee"
+              "path": "ExplanationOfBenefit.addItem.detail.fee",
+              "type": "Money"
             },
             {
               "name": "noteNumber",
-              "path": "ExplanationOfBenefit.addItem.detail.noteNumber"
+              "path": "ExplanationOfBenefit.addItem.detail.noteNumber",
+              "type": "positiveInt"
             },
             {
               "name": "adjudication",
-              "path": "ExplanationOfBenefit.addItem.detail.adjudication"
+              "path": "ExplanationOfBenefit.addItem.detail.adjudication",
+              "type": "Resource"
             }
           ]
         }
@@ -1902,135 +2354,167 @@
     },
     {
       "name": "totalCost",
-      "path": "ExplanationOfBenefit.totalCost"
+      "path": "ExplanationOfBenefit.totalCost",
+      "type": "Money"
     },
     {
       "name": "unallocDeductable",
-      "path": "ExplanationOfBenefit.unallocDeductable"
+      "path": "ExplanationOfBenefit.unallocDeductable",
+      "type": "Money"
     },
     {
       "name": "totalBenefit",
-      "path": "ExplanationOfBenefit.totalBenefit"
+      "path": "ExplanationOfBenefit.totalBenefit",
+      "type": "Money"
     },
     {
       "name": "payment",
       "path": "ExplanationOfBenefit.payment",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "type",
-          "path": "ExplanationOfBenefit.payment.type"
+          "path": "ExplanationOfBenefit.payment.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "adjustment",
-          "path": "ExplanationOfBenefit.payment.adjustment"
+          "path": "ExplanationOfBenefit.payment.adjustment",
+          "type": "Money"
         },
         {
           "name": "adjustmentReason",
-          "path": "ExplanationOfBenefit.payment.adjustmentReason"
+          "path": "ExplanationOfBenefit.payment.adjustmentReason",
+          "type": "CodeableConcept"
         },
         {
           "name": "date",
-          "path": "ExplanationOfBenefit.payment.date"
+          "path": "ExplanationOfBenefit.payment.date",
+          "type": "date"
         },
         {
           "name": "amount",
-          "path": "ExplanationOfBenefit.payment.amount"
+          "path": "ExplanationOfBenefit.payment.amount",
+          "type": "Money"
         },
         {
           "name": "identifier",
-          "path": "ExplanationOfBenefit.payment.identifier"
+          "path": "ExplanationOfBenefit.payment.identifier",
+          "type": "Identifier"
         }
       ]
     },
     {
       "name": "form",
-      "path": "ExplanationOfBenefit.form"
+      "path": "ExplanationOfBenefit.form",
+      "type": "CodeableConcept"
     },
     {
       "name": "processNote",
       "path": "ExplanationOfBenefit.processNote",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "number",
-          "path": "ExplanationOfBenefit.processNote.number"
+          "path": "ExplanationOfBenefit.processNote.number",
+          "type": "positiveInt"
         },
         {
           "name": "type",
-          "path": "ExplanationOfBenefit.processNote.type"
+          "path": "ExplanationOfBenefit.processNote.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "text",
-          "path": "ExplanationOfBenefit.processNote.text"
+          "path": "ExplanationOfBenefit.processNote.text",
+          "type": "string"
         },
         {
           "name": "language",
-          "path": "ExplanationOfBenefit.processNote.language"
+          "path": "ExplanationOfBenefit.processNote.language",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "benefitBalance",
       "path": "ExplanationOfBenefit.benefitBalance",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "category",
-          "path": "ExplanationOfBenefit.benefitBalance.category"
+          "path": "ExplanationOfBenefit.benefitBalance.category",
+          "type": "CodeableConcept"
         },
         {
           "name": "subCategory",
-          "path": "ExplanationOfBenefit.benefitBalance.subCategory"
+          "path": "ExplanationOfBenefit.benefitBalance.subCategory",
+          "type": "CodeableConcept"
         },
         {
           "name": "excluded",
-          "path": "ExplanationOfBenefit.benefitBalance.excluded"
+          "path": "ExplanationOfBenefit.benefitBalance.excluded",
+          "type": "boolean"
         },
         {
           "name": "name",
-          "path": "ExplanationOfBenefit.benefitBalance.name"
+          "path": "ExplanationOfBenefit.benefitBalance.name",
+          "type": "string"
         },
         {
           "name": "description",
-          "path": "ExplanationOfBenefit.benefitBalance.description"
+          "path": "ExplanationOfBenefit.benefitBalance.description",
+          "type": "string"
         },
         {
           "name": "network",
-          "path": "ExplanationOfBenefit.benefitBalance.network"
+          "path": "ExplanationOfBenefit.benefitBalance.network",
+          "type": "CodeableConcept"
         },
         {
           "name": "unit",
-          "path": "ExplanationOfBenefit.benefitBalance.unit"
+          "path": "ExplanationOfBenefit.benefitBalance.unit",
+          "type": "CodeableConcept"
         },
         {
           "name": "term",
-          "path": "ExplanationOfBenefit.benefitBalance.term"
+          "path": "ExplanationOfBenefit.benefitBalance.term",
+          "type": "CodeableConcept"
         },
         {
           "name": "financial",
           "path": "ExplanationOfBenefit.benefitBalance.financial",
+          "type": "BackboneElement",
           "children": [
             {
               "name": "type",
-              "path": "ExplanationOfBenefit.benefitBalance.financial.type"
+              "path": "ExplanationOfBenefit.benefitBalance.financial.type",
+              "type": "CodeableConcept"
             },
             {
               "name": "allowedUnsignedInt",
-              "path": "ExplanationOfBenefit.benefitBalance.financial.allowedUnsignedInt"
+              "path": "ExplanationOfBenefit.benefitBalance.financial.allowedUnsignedInt",
+              "type": "unsignedInt"
             },
             {
               "name": "allowedString",
-              "path": "ExplanationOfBenefit.benefitBalance.financial.allowedString"
+              "path": "ExplanationOfBenefit.benefitBalance.financial.allowedString",
+              "type": "string"
             },
             {
               "name": "allowedMoney",
-              "path": "ExplanationOfBenefit.benefitBalance.financial.allowedMoney"
+              "path": "ExplanationOfBenefit.benefitBalance.financial.allowedMoney",
+              "type": "Money"
             },
             {
               "name": "usedUnsignedInt",
-              "path": "ExplanationOfBenefit.benefitBalance.financial.usedUnsignedInt"
+              "path": "ExplanationOfBenefit.benefitBalance.financial.usedUnsignedInt",
+              "type": "unsignedInt"
             },
             {
               "name": "usedMoney",
-              "path": "ExplanationOfBenefit.benefitBalance.financial.usedMoney"
+              "path": "ExplanationOfBenefit.benefitBalance.financial.usedMoney",
+              "type": "Money"
             }
           ]
         }
@@ -2040,143 +2524,178 @@
   "ImagingStudy": [
     {
       "name": "uid",
-      "path": "ImagingStudy.uid"
+      "path": "ImagingStudy.uid",
+      "type": "oid"
     },
     {
       "name": "accession",
-      "path": "ImagingStudy.accession"
+      "path": "ImagingStudy.accession",
+      "type": "Identifier"
     },
     {
       "name": "identifier",
-      "path": "ImagingStudy.identifier"
+      "path": "ImagingStudy.identifier",
+      "type": "Identifier"
     },
     {
       "name": "availability",
-      "path": "ImagingStudy.availability"
+      "path": "ImagingStudy.availability",
+      "type": "code"
     },
     {
       "name": "modalityList",
-      "path": "ImagingStudy.modalityList"
+      "path": "ImagingStudy.modalityList",
+      "type": "Coding"
     },
     {
       "name": "patient",
-      "path": "ImagingStudy.patient"
+      "path": "ImagingStudy.patient",
+      "type": "Reference"
     },
     {
       "name": "context",
-      "path": "ImagingStudy.context"
+      "path": "ImagingStudy.context",
+      "type": "Reference"
     },
     {
       "name": "started",
-      "path": "ImagingStudy.started"
+      "path": "ImagingStudy.started",
+      "type": "dateTime"
     },
     {
       "name": "basedOn",
-      "path": "ImagingStudy.basedOn"
+      "path": "ImagingStudy.basedOn",
+      "type": "Reference"
     },
     {
       "name": "referrer",
-      "path": "ImagingStudy.referrer"
+      "path": "ImagingStudy.referrer",
+      "type": "Reference"
     },
     {
       "name": "interpreter",
-      "path": "ImagingStudy.interpreter"
+      "path": "ImagingStudy.interpreter",
+      "type": "Reference"
     },
     {
       "name": "endpoint",
-      "path": "ImagingStudy.endpoint"
+      "path": "ImagingStudy.endpoint",
+      "type": "Reference"
     },
     {
       "name": "numberOfSeries",
-      "path": "ImagingStudy.numberOfSeries"
+      "path": "ImagingStudy.numberOfSeries",
+      "type": "unsignedInt"
     },
     {
       "name": "numberOfInstances",
-      "path": "ImagingStudy.numberOfInstances"
+      "path": "ImagingStudy.numberOfInstances",
+      "type": "unsignedInt"
     },
     {
       "name": "procedureReference",
-      "path": "ImagingStudy.procedureReference"
+      "path": "ImagingStudy.procedureReference",
+      "type": "Reference"
     },
     {
       "name": "procedureCode",
-      "path": "ImagingStudy.procedureCode"
+      "path": "ImagingStudy.procedureCode",
+      "type": "CodeableConcept"
     },
     {
       "name": "reason",
-      "path": "ImagingStudy.reason"
+      "path": "ImagingStudy.reason",
+      "type": "CodeableConcept"
     },
     {
       "name": "description",
-      "path": "ImagingStudy.description"
+      "path": "ImagingStudy.description",
+      "type": "string"
     },
     {
       "name": "series",
       "path": "ImagingStudy.series",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "uid",
-          "path": "ImagingStudy.series.uid"
+          "path": "ImagingStudy.series.uid",
+          "type": "oid"
         },
         {
           "name": "number",
-          "path": "ImagingStudy.series.number"
+          "path": "ImagingStudy.series.number",
+          "type": "unsignedInt"
         },
         {
           "name": "modality",
-          "path": "ImagingStudy.series.modality"
+          "path": "ImagingStudy.series.modality",
+          "type": "Coding"
         },
         {
           "name": "description",
-          "path": "ImagingStudy.series.description"
+          "path": "ImagingStudy.series.description",
+          "type": "string"
         },
         {
           "name": "numberOfInstances",
-          "path": "ImagingStudy.series.numberOfInstances"
+          "path": "ImagingStudy.series.numberOfInstances",
+          "type": "unsignedInt"
         },
         {
           "name": "availability",
-          "path": "ImagingStudy.series.availability"
+          "path": "ImagingStudy.series.availability",
+          "type": "code"
         },
         {
           "name": "endpoint",
-          "path": "ImagingStudy.series.endpoint"
+          "path": "ImagingStudy.series.endpoint",
+          "type": "Reference"
         },
         {
           "name": "bodySite",
-          "path": "ImagingStudy.series.bodySite"
+          "path": "ImagingStudy.series.bodySite",
+          "type": "Coding"
         },
         {
           "name": "laterality",
-          "path": "ImagingStudy.series.laterality"
+          "path": "ImagingStudy.series.laterality",
+          "type": "Coding"
         },
         {
           "name": "started",
-          "path": "ImagingStudy.series.started"
+          "path": "ImagingStudy.series.started",
+          "type": "dateTime"
         },
         {
           "name": "performer",
-          "path": "ImagingStudy.series.performer"
+          "path": "ImagingStudy.series.performer",
+          "type": "Reference"
         },
         {
           "name": "instance",
           "path": "ImagingStudy.series.instance",
+          "type": "BackboneElement",
           "children": [
             {
               "name": "uid",
-              "path": "ImagingStudy.series.instance.uid"
+              "path": "ImagingStudy.series.instance.uid",
+              "type": "oid"
             },
             {
               "name": "number",
-              "path": "ImagingStudy.series.instance.number"
+              "path": "ImagingStudy.series.instance.number",
+              "type": "unsignedInt"
             },
             {
               "name": "sopClass",
-              "path": "ImagingStudy.series.instance.sopClass"
+              "path": "ImagingStudy.series.instance.sopClass",
+              "type": "oid"
             },
             {
               "name": "title",
-              "path": "ImagingStudy.series.instance.title"
+              "path": "ImagingStudy.series.instance.title",
+              "type": "string"
             }
           ]
         }
@@ -2186,153 +2705,189 @@
   "Immunization": [
     {
       "name": "identifier",
-      "path": "Immunization.identifier"
+      "path": "Immunization.identifier",
+      "type": "Identifier"
     },
     {
       "name": "status",
-      "path": "Immunization.status"
+      "path": "Immunization.status",
+      "type": "code"
     },
     {
       "name": "notGiven",
-      "path": "Immunization.notGiven"
+      "path": "Immunization.notGiven",
+      "type": "boolean"
     },
     {
       "name": "vaccineCode",
-      "path": "Immunization.vaccineCode"
+      "path": "Immunization.vaccineCode",
+      "type": "CodeableConcept"
     },
     {
       "name": "patient",
-      "path": "Immunization.patient"
+      "path": "Immunization.patient",
+      "type": "Reference"
     },
     {
       "name": "encounter",
-      "path": "Immunization.encounter"
+      "path": "Immunization.encounter",
+      "type": "Reference"
     },
     {
       "name": "date",
-      "path": "Immunization.date"
+      "path": "Immunization.date",
+      "type": "dateTime"
     },
     {
       "name": "primarySource",
-      "path": "Immunization.primarySource"
+      "path": "Immunization.primarySource",
+      "type": "boolean"
     },
     {
       "name": "reportOrigin",
-      "path": "Immunization.reportOrigin"
+      "path": "Immunization.reportOrigin",
+      "type": "CodeableConcept"
     },
     {
       "name": "location",
-      "path": "Immunization.location"
+      "path": "Immunization.location",
+      "type": "Reference"
     },
     {
       "name": "manufacturer",
-      "path": "Immunization.manufacturer"
+      "path": "Immunization.manufacturer",
+      "type": "Reference"
     },
     {
       "name": "lotNumber",
-      "path": "Immunization.lotNumber"
+      "path": "Immunization.lotNumber",
+      "type": "string"
     },
     {
       "name": "expirationDate",
-      "path": "Immunization.expirationDate"
+      "path": "Immunization.expirationDate",
+      "type": "date"
     },
     {
       "name": "site",
-      "path": "Immunization.site"
+      "path": "Immunization.site",
+      "type": "CodeableConcept"
     },
     {
       "name": "route",
-      "path": "Immunization.route"
+      "path": "Immunization.route",
+      "type": "CodeableConcept"
     },
     {
       "name": "doseQuantity",
-      "path": "Immunization.doseQuantity"
+      "path": "Immunization.doseQuantity",
+      "type": "Quantity"
     },
     {
       "name": "practitioner",
       "path": "Immunization.practitioner",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "role",
-          "path": "Immunization.practitioner.role"
+          "path": "Immunization.practitioner.role",
+          "type": "CodeableConcept"
         },
         {
           "name": "actor",
-          "path": "Immunization.practitioner.actor"
+          "path": "Immunization.practitioner.actor",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "note",
-      "path": "Immunization.note"
+      "path": "Immunization.note",
+      "type": "Annotation"
     },
     {
       "name": "explanation",
       "path": "Immunization.explanation",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "reason",
-          "path": "Immunization.explanation.reason"
+          "path": "Immunization.explanation.reason",
+          "type": "CodeableConcept"
         },
         {
           "name": "reasonNotGiven",
-          "path": "Immunization.explanation.reasonNotGiven"
+          "path": "Immunization.explanation.reasonNotGiven",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "reaction",
       "path": "Immunization.reaction",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "date",
-          "path": "Immunization.reaction.date"
+          "path": "Immunization.reaction.date",
+          "type": "dateTime"
         },
         {
           "name": "detail",
-          "path": "Immunization.reaction.detail"
+          "path": "Immunization.reaction.detail",
+          "type": "Reference"
         },
         {
           "name": "reported",
-          "path": "Immunization.reaction.reported"
+          "path": "Immunization.reaction.reported",
+          "type": "boolean"
         }
       ]
     },
     {
       "name": "vaccinationProtocol",
       "path": "Immunization.vaccinationProtocol",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "doseSequence",
-          "path": "Immunization.vaccinationProtocol.doseSequence"
+          "path": "Immunization.vaccinationProtocol.doseSequence",
+          "type": "positiveInt"
         },
         {
           "name": "description",
-          "path": "Immunization.vaccinationProtocol.description"
+          "path": "Immunization.vaccinationProtocol.description",
+          "type": "string"
         },
         {
           "name": "authority",
-          "path": "Immunization.vaccinationProtocol.authority"
+          "path": "Immunization.vaccinationProtocol.authority",
+          "type": "Reference"
         },
         {
           "name": "series",
-          "path": "Immunization.vaccinationProtocol.series"
+          "path": "Immunization.vaccinationProtocol.series",
+          "type": "string"
         },
         {
           "name": "seriesDoses",
-          "path": "Immunization.vaccinationProtocol.seriesDoses"
+          "path": "Immunization.vaccinationProtocol.seriesDoses",
+          "type": "positiveInt"
         },
         {
           "name": "targetDisease",
-          "path": "Immunization.vaccinationProtocol.targetDisease"
+          "path": "Immunization.vaccinationProtocol.targetDisease",
+          "type": "CodeableConcept"
         },
         {
           "name": "doseStatus",
-          "path": "Immunization.vaccinationProtocol.doseStatus"
+          "path": "Immunization.vaccinationProtocol.doseStatus",
+          "type": "CodeableConcept"
         },
         {
           "name": "doseStatusReason",
-          "path": "Immunization.vaccinationProtocol.doseStatusReason"
+          "path": "Immunization.vaccinationProtocol.doseStatusReason",
+          "type": "CodeableConcept"
         }
       ]
     }
@@ -2340,367 +2895,455 @@
   "MedicationRequest": [
     {
       "name": "identifier",
-      "path": "MedicationRequest.identifier"
+      "path": "MedicationRequest.identifier",
+      "type": "Identifier"
     },
     {
       "name": "definition",
-      "path": "MedicationRequest.definition"
+      "path": "MedicationRequest.definition",
+      "type": "Reference"
     },
     {
       "name": "basedOn",
-      "path": "MedicationRequest.basedOn"
+      "path": "MedicationRequest.basedOn",
+      "type": "Reference"
     },
     {
       "name": "groupIdentifier",
-      "path": "MedicationRequest.groupIdentifier"
+      "path": "MedicationRequest.groupIdentifier",
+      "type": "Identifier"
     },
     {
       "name": "status",
-      "path": "MedicationRequest.status"
+      "path": "MedicationRequest.status",
+      "type": "code"
     },
     {
       "name": "intent",
-      "path": "MedicationRequest.intent"
+      "path": "MedicationRequest.intent",
+      "type": "code"
     },
     {
       "name": "category",
-      "path": "MedicationRequest.category"
+      "path": "MedicationRequest.category",
+      "type": "CodeableConcept"
     },
     {
       "name": "priority",
-      "path": "MedicationRequest.priority"
+      "path": "MedicationRequest.priority",
+      "type": "code"
     },
     {
       "name": "medicationCodeableConcept",
-      "path": "MedicationRequest.medicationCodeableConcept"
+      "path": "MedicationRequest.medicationCodeableConcept",
+      "type": "CodeableConcept"
     },
     {
       "name": "medicationReference",
-      "path": "MedicationRequest.medicationReference"
+      "path": "MedicationRequest.medicationReference",
+      "type": "Reference"
     },
     {
       "name": "subject",
-      "path": "MedicationRequest.subject"
+      "path": "MedicationRequest.subject",
+      "type": "Reference"
     },
     {
       "name": "context",
-      "path": "MedicationRequest.context"
+      "path": "MedicationRequest.context",
+      "type": "Reference"
     },
     {
       "name": "supportingInformation",
-      "path": "MedicationRequest.supportingInformation"
+      "path": "MedicationRequest.supportingInformation",
+      "type": "Reference"
     },
     {
       "name": "authoredOn",
-      "path": "MedicationRequest.authoredOn"
+      "path": "MedicationRequest.authoredOn",
+      "type": "dateTime"
     },
     {
       "name": "requester",
       "path": "MedicationRequest.requester",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "agent",
-          "path": "MedicationRequest.requester.agent"
+          "path": "MedicationRequest.requester.agent",
+          "type": "Reference"
         },
         {
           "name": "onBehalfOf",
-          "path": "MedicationRequest.requester.onBehalfOf"
+          "path": "MedicationRequest.requester.onBehalfOf",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "recorder",
-      "path": "MedicationRequest.recorder"
+      "path": "MedicationRequest.recorder",
+      "type": "Reference"
     },
     {
       "name": "reasonCode",
-      "path": "MedicationRequest.reasonCode"
+      "path": "MedicationRequest.reasonCode",
+      "type": "CodeableConcept"
     },
     {
       "name": "reasonReference",
-      "path": "MedicationRequest.reasonReference"
+      "path": "MedicationRequest.reasonReference",
+      "type": "Reference"
     },
     {
       "name": "note",
-      "path": "MedicationRequest.note"
+      "path": "MedicationRequest.note",
+      "type": "Annotation"
     },
     {
       "name": "dosageInstruction",
-      "path": "MedicationRequest.dosageInstruction"
+      "path": "MedicationRequest.dosageInstruction",
+      "type": "Dosage"
     },
     {
       "name": "dispenseRequest",
       "path": "MedicationRequest.dispenseRequest",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "validityPeriod",
-          "path": "MedicationRequest.dispenseRequest.validityPeriod"
+          "path": "MedicationRequest.dispenseRequest.validityPeriod",
+          "type": "Period"
         },
         {
           "name": "numberOfRepeatsAllowed",
-          "path": "MedicationRequest.dispenseRequest.numberOfRepeatsAllowed"
+          "path": "MedicationRequest.dispenseRequest.numberOfRepeatsAllowed",
+          "type": "positiveInt"
         },
         {
           "name": "quantity",
-          "path": "MedicationRequest.dispenseRequest.quantity"
+          "path": "MedicationRequest.dispenseRequest.quantity",
+          "type": "Quantity"
         },
         {
           "name": "expectedSupplyDuration",
-          "path": "MedicationRequest.dispenseRequest.expectedSupplyDuration"
+          "path": "MedicationRequest.dispenseRequest.expectedSupplyDuration",
+          "type": "Duration"
         },
         {
           "name": "performer",
-          "path": "MedicationRequest.dispenseRequest.performer"
+          "path": "MedicationRequest.dispenseRequest.performer",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "substitution",
       "path": "MedicationRequest.substitution",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "allowed",
-          "path": "MedicationRequest.substitution.allowed"
+          "path": "MedicationRequest.substitution.allowed",
+          "type": "boolean"
         },
         {
           "name": "reason",
-          "path": "MedicationRequest.substitution.reason"
+          "path": "MedicationRequest.substitution.reason",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "priorPrescription",
-      "path": "MedicationRequest.priorPrescription"
+      "path": "MedicationRequest.priorPrescription",
+      "type": "Reference"
     },
     {
       "name": "detectedIssue",
-      "path": "MedicationRequest.detectedIssue"
+      "path": "MedicationRequest.detectedIssue",
+      "type": "Reference"
     },
     {
       "name": "eventHistory",
-      "path": "MedicationRequest.eventHistory"
+      "path": "MedicationRequest.eventHistory",
+      "type": "Reference"
     }
   ],
   "Observation": [
     {
       "name": "identifier",
-      "path": "Observation.identifier"
+      "path": "Observation.identifier",
+      "type": "Identifier"
     },
     {
       "name": "basedOn",
-      "path": "Observation.basedOn"
+      "path": "Observation.basedOn",
+      "type": "Reference"
     },
     {
       "name": "status",
-      "path": "Observation.status"
+      "path": "Observation.status",
+      "type": "code"
     },
     {
       "name": "category",
-      "path": "Observation.category"
+      "path": "Observation.category",
+      "type": "CodeableConcept"
     },
     {
       "name": "code",
-      "path": "Observation.code"
+      "path": "Observation.code",
+      "type": "CodeableConcept"
     },
     {
       "name": "subject",
-      "path": "Observation.subject"
+      "path": "Observation.subject",
+      "type": "Reference"
     },
     {
       "name": "context",
-      "path": "Observation.context"
+      "path": "Observation.context",
+      "type": "Reference"
     },
     {
       "name": "effectiveDateTime",
-      "path": "Observation.effectiveDateTime"
+      "path": "Observation.effectiveDateTime",
+      "type": "dateTime"
     },
     {
       "name": "effectivePeriod",
-      "path": "Observation.effectivePeriod"
+      "path": "Observation.effectivePeriod",
+      "type": "Period"
     },
     {
       "name": "issued",
-      "path": "Observation.issued"
+      "path": "Observation.issued",
+      "type": "instant"
     },
     {
       "name": "performer",
-      "path": "Observation.performer"
+      "path": "Observation.performer",
+      "type": "Reference"
     },
     {
       "name": "valueQuantity",
-      "path": "Observation.valueQuantity"
+      "path": "Observation.valueQuantity",
+      "type": "Quantity"
     },
     {
       "name": "valueCodeableConcept",
-      "path": "Observation.valueCodeableConcept"
+      "path": "Observation.valueCodeableConcept",
+      "type": "CodeableConcept"
     },
     {
       "name": "valueString",
-      "path": "Observation.valueString"
+      "path": "Observation.valueString",
+      "type": "string"
     },
     {
       "name": "valueBoolean",
-      "path": "Observation.valueBoolean"
+      "path": "Observation.valueBoolean",
+      "type": "boolean"
     },
     {
       "name": "valueRange",
-      "path": "Observation.valueRange"
+      "path": "Observation.valueRange",
+      "type": "Range"
     },
     {
       "name": "valueRatio",
-      "path": "Observation.valueRatio"
+      "path": "Observation.valueRatio",
+      "type": "Ratio"
     },
     {
       "name": "valueSampledData",
-      "path": "Observation.valueSampledData"
+      "path": "Observation.valueSampledData",
+      "type": "SampledData"
     },
     {
       "name": "valueAttachment",
-      "path": "Observation.valueAttachment"
+      "path": "Observation.valueAttachment",
+      "type": "Attachment"
     },
     {
       "name": "valueTime",
-      "path": "Observation.valueTime"
+      "path": "Observation.valueTime",
+      "type": "time"
     },
     {
       "name": "valueDateTime",
-      "path": "Observation.valueDateTime"
+      "path": "Observation.valueDateTime",
+      "type": "dateTime"
     },
     {
       "name": "valuePeriod",
-      "path": "Observation.valuePeriod"
+      "path": "Observation.valuePeriod",
+      "type": "Period"
     },
     {
       "name": "dataAbsentReason",
-      "path": "Observation.dataAbsentReason"
+      "path": "Observation.dataAbsentReason",
+      "type": "CodeableConcept"
     },
     {
       "name": "interpretation",
-      "path": "Observation.interpretation"
+      "path": "Observation.interpretation",
+      "type": "CodeableConcept"
     },
     {
       "name": "comment",
-      "path": "Observation.comment"
+      "path": "Observation.comment",
+      "type": "string"
     },
     {
       "name": "bodySite",
-      "path": "Observation.bodySite"
+      "path": "Observation.bodySite",
+      "type": "CodeableConcept"
     },
     {
       "name": "method",
-      "path": "Observation.method"
+      "path": "Observation.method",
+      "type": "CodeableConcept"
     },
     {
       "name": "specimen",
-      "path": "Observation.specimen"
+      "path": "Observation.specimen",
+      "type": "Reference"
     },
     {
       "name": "device",
-      "path": "Observation.device"
+      "path": "Observation.device",
+      "type": "Reference"
     },
     {
       "name": "referenceRange",
       "path": "Observation.referenceRange",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "low",
-          "path": "Observation.referenceRange.low"
+          "path": "Observation.referenceRange.low",
+          "type": "Quantity"
         },
         {
           "name": "high",
-          "path": "Observation.referenceRange.high"
+          "path": "Observation.referenceRange.high",
+          "type": "Quantity"
         },
         {
           "name": "type",
-          "path": "Observation.referenceRange.type"
+          "path": "Observation.referenceRange.type",
+          "type": "CodeableConcept"
         },
         {
           "name": "appliesTo",
-          "path": "Observation.referenceRange.appliesTo"
+          "path": "Observation.referenceRange.appliesTo",
+          "type": "CodeableConcept"
         },
         {
           "name": "age",
-          "path": "Observation.referenceRange.age"
+          "path": "Observation.referenceRange.age",
+          "type": "Range"
         },
         {
           "name": "text",
-          "path": "Observation.referenceRange.text"
+          "path": "Observation.referenceRange.text",
+          "type": "string"
         }
       ]
     },
     {
       "name": "related",
       "path": "Observation.related",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "type",
-          "path": "Observation.related.type"
+          "path": "Observation.related.type",
+          "type": "code"
         },
         {
           "name": "target",
-          "path": "Observation.related.target"
+          "path": "Observation.related.target",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "component",
       "path": "Observation.component",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "code",
-          "path": "Observation.component.code"
+          "path": "Observation.component.code",
+          "type": "CodeableConcept"
         },
         {
           "name": "valueQuantity",
-          "path": "Observation.component.valueQuantity"
+          "path": "Observation.component.valueQuantity",
+          "type": "Quantity"
         },
         {
           "name": "valueCodeableConcept",
-          "path": "Observation.component.valueCodeableConcept"
+          "path": "Observation.component.valueCodeableConcept",
+          "type": "CodeableConcept"
         },
         {
           "name": "valueString",
-          "path": "Observation.component.valueString"
+          "path": "Observation.component.valueString",
+          "type": "string"
         },
         {
           "name": "valueRange",
-          "path": "Observation.component.valueRange"
+          "path": "Observation.component.valueRange",
+          "type": "Range"
         },
         {
           "name": "valueRatio",
-          "path": "Observation.component.valueRatio"
+          "path": "Observation.component.valueRatio",
+          "type": "Ratio"
         },
         {
           "name": "valueSampledData",
-          "path": "Observation.component.valueSampledData"
+          "path": "Observation.component.valueSampledData",
+          "type": "SampledData"
         },
         {
           "name": "valueAttachment",
-          "path": "Observation.component.valueAttachment"
+          "path": "Observation.component.valueAttachment",
+          "type": "Attachment"
         },
         {
           "name": "valueTime",
-          "path": "Observation.component.valueTime"
+          "path": "Observation.component.valueTime",
+          "type": "time"
         },
         {
           "name": "valueDateTime",
-          "path": "Observation.component.valueDateTime"
+          "path": "Observation.component.valueDateTime",
+          "type": "dateTime"
         },
         {
           "name": "valuePeriod",
-          "path": "Observation.component.valuePeriod"
+          "path": "Observation.component.valuePeriod",
+          "type": "Period"
         },
         {
           "name": "dataAbsentReason",
-          "path": "Observation.component.dataAbsentReason"
+          "path": "Observation.component.dataAbsentReason",
+          "type": "CodeableConcept"
         },
         {
           "name": "interpretation",
-          "path": "Observation.component.interpretation"
+          "path": "Observation.component.interpretation",
+          "type": "CodeableConcept"
         },
         {
           "name": "referenceRange",
-          "path": "Observation.component.referenceRange"
+          "path": "Observation.component.referenceRange",
+          "type": "Resource"
         }
       ]
     }
@@ -2708,141 +3351,174 @@
   "Patient": [
     {
       "name": "identifier",
-      "path": "Patient.identifier"
+      "path": "Patient.identifier",
+      "type": "Identifier"
     },
     {
       "name": "active",
-      "path": "Patient.active"
+      "path": "Patient.active",
+      "type": "boolean"
     },
     {
       "name": "name",
-      "path": "Patient.name"
+      "path": "Patient.name",
+      "type": "HumanName"
     },
     {
       "name": "telecom",
-      "path": "Patient.telecom"
+      "path": "Patient.telecom",
+      "type": "ContactPoint"
     },
     {
       "name": "gender",
-      "path": "Patient.gender"
+      "path": "Patient.gender",
+      "type": "code"
     },
     {
       "name": "birthDate",
-      "path": "Patient.birthDate"
+      "path": "Patient.birthDate",
+      "type": "date"
     },
     {
       "name": "deceasedBoolean",
-      "path": "Patient.deceasedBoolean"
+      "path": "Patient.deceasedBoolean",
+      "type": "boolean"
     },
     {
       "name": "deceasedDateTime",
-      "path": "Patient.deceasedDateTime"
+      "path": "Patient.deceasedDateTime",
+      "type": "dateTime"
     },
     {
       "name": "address",
-      "path": "Patient.address"
+      "path": "Patient.address",
+      "type": "Address"
     },
     {
       "name": "maritalStatus",
-      "path": "Patient.maritalStatus"
+      "path": "Patient.maritalStatus",
+      "type": "CodeableConcept"
     },
     {
       "name": "multipleBirthBoolean",
-      "path": "Patient.multipleBirthBoolean"
+      "path": "Patient.multipleBirthBoolean",
+      "type": "boolean"
     },
     {
       "name": "multipleBirthInteger",
-      "path": "Patient.multipleBirthInteger"
+      "path": "Patient.multipleBirthInteger",
+      "type": "integer"
     },
     {
       "name": "photo",
-      "path": "Patient.photo"
+      "path": "Patient.photo",
+      "type": "Attachment"
     },
     {
       "name": "contact",
       "path": "Patient.contact",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "relationship",
-          "path": "Patient.contact.relationship"
+          "path": "Patient.contact.relationship",
+          "type": "CodeableConcept"
         },
         {
           "name": "name",
-          "path": "Patient.contact.name"
+          "path": "Patient.contact.name",
+          "type": "HumanName"
         },
         {
           "name": "telecom",
-          "path": "Patient.contact.telecom"
+          "path": "Patient.contact.telecom",
+          "type": "ContactPoint"
         },
         {
           "name": "address",
-          "path": "Patient.contact.address"
+          "path": "Patient.contact.address",
+          "type": "Address"
         },
         {
           "name": "gender",
-          "path": "Patient.contact.gender"
+          "path": "Patient.contact.gender",
+          "type": "code"
         },
         {
           "name": "organization",
-          "path": "Patient.contact.organization"
+          "path": "Patient.contact.organization",
+          "type": "Reference"
         },
         {
           "name": "period",
-          "path": "Patient.contact.period"
+          "path": "Patient.contact.period",
+          "type": "Period"
         }
       ]
     },
     {
       "name": "animal",
       "path": "Patient.animal",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "species",
-          "path": "Patient.animal.species"
+          "path": "Patient.animal.species",
+          "type": "CodeableConcept"
         },
         {
           "name": "breed",
-          "path": "Patient.animal.breed"
+          "path": "Patient.animal.breed",
+          "type": "CodeableConcept"
         },
         {
           "name": "genderStatus",
-          "path": "Patient.animal.genderStatus"
+          "path": "Patient.animal.genderStatus",
+          "type": "CodeableConcept"
         }
       ]
     },
     {
       "name": "communication",
       "path": "Patient.communication",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "language",
-          "path": "Patient.communication.language"
+          "path": "Patient.communication.language",
+          "type": "CodeableConcept"
         },
         {
           "name": "preferred",
-          "path": "Patient.communication.preferred"
+          "path": "Patient.communication.preferred",
+          "type": "boolean"
         }
       ]
     },
     {
       "name": "generalPractitioner",
-      "path": "Patient.generalPractitioner"
+      "path": "Patient.generalPractitioner",
+      "type": "Reference"
     },
     {
       "name": "managingOrganization",
-      "path": "Patient.managingOrganization"
+      "path": "Patient.managingOrganization",
+      "type": "Reference"
     },
     {
       "name": "link",
       "path": "Patient.link",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "other",
-          "path": "Patient.link.other"
+          "path": "Patient.link.other",
+          "type": "Reference"
         },
         {
           "name": "type",
-          "path": "Patient.link.type"
+          "path": "Patient.link.type",
+          "type": "code"
         }
       ]
     }
@@ -2850,129 +3526,160 @@
   "ProcedureRequest": [
     {
       "name": "identifier",
-      "path": "ProcedureRequest.identifier"
+      "path": "ProcedureRequest.identifier",
+      "type": "Identifier"
     },
     {
       "name": "definition",
-      "path": "ProcedureRequest.definition"
+      "path": "ProcedureRequest.definition",
+      "type": "Reference"
     },
     {
       "name": "basedOn",
-      "path": "ProcedureRequest.basedOn"
+      "path": "ProcedureRequest.basedOn",
+      "type": "Reference"
     },
     {
       "name": "replaces",
-      "path": "ProcedureRequest.replaces"
+      "path": "ProcedureRequest.replaces",
+      "type": "Reference"
     },
     {
       "name": "requisition",
-      "path": "ProcedureRequest.requisition"
+      "path": "ProcedureRequest.requisition",
+      "type": "Identifier"
     },
     {
       "name": "status",
-      "path": "ProcedureRequest.status"
+      "path": "ProcedureRequest.status",
+      "type": "code"
     },
     {
       "name": "intent",
-      "path": "ProcedureRequest.intent"
+      "path": "ProcedureRequest.intent",
+      "type": "code"
     },
     {
       "name": "priority",
-      "path": "ProcedureRequest.priority"
+      "path": "ProcedureRequest.priority",
+      "type": "code"
     },
     {
       "name": "doNotPerform",
-      "path": "ProcedureRequest.doNotPerform"
+      "path": "ProcedureRequest.doNotPerform",
+      "type": "boolean"
     },
     {
       "name": "category",
-      "path": "ProcedureRequest.category"
+      "path": "ProcedureRequest.category",
+      "type": "CodeableConcept"
     },
     {
       "name": "code",
-      "path": "ProcedureRequest.code"
+      "path": "ProcedureRequest.code",
+      "type": "CodeableConcept"
     },
     {
       "name": "subject",
-      "path": "ProcedureRequest.subject"
+      "path": "ProcedureRequest.subject",
+      "type": "Reference"
     },
     {
       "name": "context",
-      "path": "ProcedureRequest.context"
+      "path": "ProcedureRequest.context",
+      "type": "Reference"
     },
     {
       "name": "occurrenceDateTime",
-      "path": "ProcedureRequest.occurrenceDateTime"
+      "path": "ProcedureRequest.occurrenceDateTime",
+      "type": "dateTime"
     },
     {
       "name": "occurrencePeriod",
-      "path": "ProcedureRequest.occurrencePeriod"
+      "path": "ProcedureRequest.occurrencePeriod",
+      "type": "Period"
     },
     {
       "name": "occurrenceTiming",
-      "path": "ProcedureRequest.occurrenceTiming"
+      "path": "ProcedureRequest.occurrenceTiming",
+      "type": "Timing"
     },
     {
       "name": "asNeededBoolean",
-      "path": "ProcedureRequest.asNeededBoolean"
+      "path": "ProcedureRequest.asNeededBoolean",
+      "type": "boolean"
     },
     {
       "name": "asNeededCodeableConcept",
-      "path": "ProcedureRequest.asNeededCodeableConcept"
+      "path": "ProcedureRequest.asNeededCodeableConcept",
+      "type": "CodeableConcept"
     },
     {
       "name": "authoredOn",
-      "path": "ProcedureRequest.authoredOn"
+      "path": "ProcedureRequest.authoredOn",
+      "type": "dateTime"
     },
     {
       "name": "requester",
       "path": "ProcedureRequest.requester",
+      "type": "BackboneElement",
       "children": [
         {
           "name": "agent",
-          "path": "ProcedureRequest.requester.agent"
+          "path": "ProcedureRequest.requester.agent",
+          "type": "Reference"
         },
         {
           "name": "onBehalfOf",
-          "path": "ProcedureRequest.requester.onBehalfOf"
+          "path": "ProcedureRequest.requester.onBehalfOf",
+          "type": "Reference"
         }
       ]
     },
     {
       "name": "performerType",
-      "path": "ProcedureRequest.performerType"
+      "path": "ProcedureRequest.performerType",
+      "type": "CodeableConcept"
     },
     {
       "name": "performer",
-      "path": "ProcedureRequest.performer"
+      "path": "ProcedureRequest.performer",
+      "type": "Reference"
     },
     {
       "name": "reasonCode",
-      "path": "ProcedureRequest.reasonCode"
+      "path": "ProcedureRequest.reasonCode",
+      "type": "CodeableConcept"
     },
     {
       "name": "reasonReference",
-      "path": "ProcedureRequest.reasonReference"
+      "path": "ProcedureRequest.reasonReference",
+      "type": "Reference"
     },
     {
       "name": "supportingInfo",
-      "path": "ProcedureRequest.supportingInfo"
+      "path": "ProcedureRequest.supportingInfo",
+      "type": "Reference"
     },
     {
       "name": "specimen",
-      "path": "ProcedureRequest.specimen"
+      "path": "ProcedureRequest.specimen",
+      "type": "Reference"
     },
     {
       "name": "bodySite",
-      "path": "ProcedureRequest.bodySite"
+      "path": "ProcedureRequest.bodySite",
+      "type": "CodeableConcept"
     },
     {
       "name": "note",
-      "path": "ProcedureRequest.note"
+      "path": "ProcedureRequest.note",
+      "type": "Annotation"
     },
     {
       "name": "relevantHistory",
-      "path": "ProcedureRequest.relevantHistory"
+      "path": "ProcedureRequest.relevantHistory",
+      "type": "Reference"
     }
   ]
 }
