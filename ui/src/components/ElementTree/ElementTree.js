@@ -3,7 +3,6 @@
  */
 
 import React, { useState, useReducer } from 'react'
-import { connect } from 'react-redux'
 import { Tree, ContextMenu, Menu, MenuItem, Icon } from '@blueprintjs/core'
 
 import store from '../../store'
