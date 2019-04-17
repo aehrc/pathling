@@ -1,5 +1,9 @@
 // @flow
 
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 import pick from 'lodash.pick'
 
 type Issue = {
@@ -7,6 +11,10 @@ type Issue = {
   diagnostics?: string,
 }
 
+/**
+ * Custom error class for representing an error returned from a FHIR API as an
+ * OperationOutcome resource.
+ */
 export class OpOutcomeError extends Error {
   issue: Issue
 

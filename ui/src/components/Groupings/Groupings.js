@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 import React from 'react'
 import { connect } from 'react-redux'
 import { Icon, Tag } from '@blueprintjs/core'
@@ -5,6 +9,11 @@ import { Icon, Tag } from '@blueprintjs/core'
 import * as actions from '../../store/Actions'
 import './Groupings.less'
 
+/**
+ * Renders a list of currently selected groupings, used when composing a query.
+ *
+ * @author John Grimes
+ */
 function Groupings(props) {
   const { groupings, removeGrouping } = props
 

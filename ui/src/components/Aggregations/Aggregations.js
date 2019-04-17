@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 import React from 'react'
 import { connect } from 'react-redux'
 import { Icon, Tag } from '@blueprintjs/core'
@@ -5,6 +9,12 @@ import { Icon, Tag } from '@blueprintjs/core'
 import * as actions from '../../store/Actions'
 import './Aggregations.less'
 
+/**
+ * Renders a control which can be used to represent a set of selected
+ * aggregations, when composing a query.
+ *
+ * @author John Grimes
+ */
 function Aggregations(props) {
   const { aggregations, removeAggregation } = props
 

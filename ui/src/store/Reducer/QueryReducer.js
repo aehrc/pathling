@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 import { Map, List } from 'immutable'
 
 const initialState = Map({

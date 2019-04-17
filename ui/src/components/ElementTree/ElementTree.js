@@ -45,7 +45,14 @@ const convertedResourceTree = convertElementTree(resourceTree)
  * @author John Grimes
  */
 function ElementTree() {
+  // eslint-disable-next-line no-unused-vars
   const [tree, setTree] = useState(convertedResourceTree)
+
+  // This is required to allow us to change `isExpanded` values in place, which
+  // is done for performance reasons. See:
+  // https://reactjs.org/docs/hooks-faq.html#is-there-something-like-forceupdate
+  //
+  // eslint-disable-next-line no-unused-vars
   const [update, forceUpdate] = useReducer(x => x + 1, 0)
 
   function handleNodeExpand(node) {
@@ -58,7 +65,6 @@ function ElementTree() {
     forceUpdate()
   }
 
-  console.log('render')
   return (
     <Tree
       className="element-tree"
@@ -69,6 +75,10 @@ function ElementTree() {
   )
 }
 
+/**
+ * Opens a context menu at the supplied mouse event which provides actions for
+ * adding the specified node to the current query.
+ */
 function openContextMenu(event, nodeData) {
   const aggregationExpression = `${nodeData.fhirPath}.count()`,
     aggregationLabel = aggregationExpression,
@@ -118,8 +128,12 @@ function openContextMenu(event, nodeData) {
   }
 }
 
+/**
+ * Converts the element tree from the format in the configuration file to an
+ * array of objects suitable for provision to the Tree component, via its
+ * `contents` prop.
+ */
 function convertElementTree(tree) {
-  console.log('convertElementTree')
   return Object.keys(tree).map((resourceName, key) => {
     const nodeData = { fhirPath: resourceName, elementType: 'Resource' }
     return {
@@ -137,6 +151,10 @@ function convertElementTree(tree) {
   })
 }
 
+/**
+ * Recursively converts elements within the resource tree, down to a maximum
+ * depth defined by the `maxDepth` constant.
+ */
 function convertElements(elements, depth, path, fhirPath) {
   if (!elements || depth > maxDepth) return null
   return elements.map((element, key) => {

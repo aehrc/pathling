@@ -1,4 +1,8 @@
-import { Map, fromJS } from 'immutable'
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+import { Map } from 'immutable'
 
 const initialState = Map({
   query: null,

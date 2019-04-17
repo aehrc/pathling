@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 export const addAggregation = aggregation => ({
   type: 'ADD_AGGREGATION',
   aggregation,

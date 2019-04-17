@@ -8,6 +8,11 @@ import { Spinner, HTMLTable } from '@blueprintjs/core'
 
 import './Result.less'
 
+/**
+ * Renders the result of a query as a table.
+ *
+ * @author John Grimes
+ */
 function Result(props) {
   const { loading, groupings, query, stale } = props
 

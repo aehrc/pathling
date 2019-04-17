@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 import http from 'axios'
 import { Map, fromJS } from 'immutable'
 
@@ -19,6 +23,10 @@ export const queryError = (message, opOutcome) => ({
   opOutcome,
 })
 
+/**
+ * Fetches a result based on the current query within state, then dispatches the
+ * relevant actions to signal either a successful or error response.
+ */
 export const fetchQueryResult = () => (dispatch, getState) => {
   try {
     const aggregations = getState().getIn(['query', 'aggregations']),
@@ -60,6 +68,7 @@ export const fetchQueryResult = () => (dispatch, getState) => {
     dispatch(queryRequest())
     return http
       .post(
+        // TODO: Extract this URL out into configuration.
         'http://hb-15-cdc001.it.csiro.au:8090/fhir/$aggregate-query',
         query,
         {
