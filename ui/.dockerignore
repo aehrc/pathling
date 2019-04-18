@@ -1,0 +1,5 @@
+*
+!docker
+!dist
+!Dockerfile
+dist/report.html

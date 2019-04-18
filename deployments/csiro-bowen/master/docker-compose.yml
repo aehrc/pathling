@@ -13,6 +13,11 @@ services:
       CLINSIGHT_EXECUTOR_MEMORY: 6g
       CLINSIGHT_TERMINOLOGY_SERVER_URL: http://hb-15-cdc001.it.csiro.au:4066/fhir
     restart: unless-stopped
+  ui:
+    image: docker-registry.it.csiro.au/clinsight/ui
+    network_mode: host
+    ports:
+      - 8899:80
   ontoserver:
     image: docker-registry.it.csiro.au/clinsight/ontoserver:5.4.0-SNAPSHOT
     network_mode: host
