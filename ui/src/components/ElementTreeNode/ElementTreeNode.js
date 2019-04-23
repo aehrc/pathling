@@ -15,6 +15,12 @@ import {
 } from '../../fhir/ResourceTree'
 import ResourceTreeNode from '../ResourceTreeNode'
 
+/**
+ * Renders an individual element within the element tree, which may be a
+ * primitive, BackboneElement or complex element.
+ *
+ * @author John Grimes
+ */
 function ElementTreeNode(props) {
   const {
       name,

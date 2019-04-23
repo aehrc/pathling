@@ -10,6 +10,12 @@ import ElementTreeNode from '../ElementTreeNode'
 import { resourceTree } from '../../fhir/ResourceTree'
 import * as actions from '../../store/Actions'
 
+/**
+ * Renders a tree node showing the elements available within a particular
+ * resource type.
+ *
+ * @author John Grimes
+ */
 function ResourceTreeNode(props) {
   const { name, addAggregation } = props,
     [isExpanded, setExpanded] = useState(false)
