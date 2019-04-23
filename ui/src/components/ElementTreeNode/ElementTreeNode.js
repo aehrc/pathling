@@ -29,8 +29,6 @@ function ElementTreeNode(props) {
       type,
       resourceOrComplexType,
       referenceTypes,
-      addAggregation,
-      addGrouping,
     } = props,
     [isExpanded, setExpanded] = useState(false),
     isInResourceTree = !!resourceTree.get(resourceOrComplexType),
@@ -49,7 +47,8 @@ function ElementTreeNode(props) {
    * adding the specified node to the current query.
    */
   const openContextMenu = event => {
-    const aggregationExpression = `${path}.count()`,
+    const { addAggregation, addGrouping } = props,
+      aggregationExpression = `${path}.count()`,
       aggregationLabel = aggregationExpression,
       groupingExpression = path,
       groupingLabel = groupingExpression,
