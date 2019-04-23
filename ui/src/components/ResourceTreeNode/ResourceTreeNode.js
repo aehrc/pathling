@@ -3,16 +3,15 @@
  */
 
 import React, { useState } from 'react'
+import { connect } from 'react-redux'
 import { MenuItem, Menu, ContextMenu } from '@blueprintjs/core'
-
-import store from '../../store'
-import { addAggregation, addGrouping } from '../../store/Actions'
 
 import ElementTreeNode from '../ElementTreeNode'
 import { resourceTree } from '../../fhir/ResourceTree'
+import * as actions from '../../store/Actions'
 
 function ResourceTreeNode(props) {
-  const { name } = props,
+  const { name, addAggregation } = props,
     [isExpanded, setExpanded] = useState(false)
 
   function openContextMenu(event) {
@@ -23,12 +22,10 @@ function ResourceTreeNode(props) {
           icon="trending-up"
           text={`Add "${aggregationExpression}" to aggregations`}
           onClick={() =>
-            store.dispatch(
-              addAggregation({
-                expression: aggregationExpression,
-                label: aggregationLabel,
-              }),
-            )
+            addAggregation({
+              expression: aggregationExpression,
+              label: aggregationLabel,
+            })
           }
         />
       )
@@ -93,4 +90,7 @@ function ResourceTreeNode(props) {
   )
 }
 
-export default ResourceTreeNode
+export default connect(
+  null,
+  actions,
+)(ResourceTreeNode)

@@ -3,10 +3,10 @@
  */
 
 import React, { useState } from 'react'
+import { connect } from 'react-redux'
 import { MenuItem, Menu, ContextMenu } from '@blueprintjs/core'
 
-import store from '../../store'
-import { addAggregation, addGrouping } from '../../store/Actions'
+import * as actions from '../../store/Actions'
 
 import {
   resourceTree,
@@ -23,6 +23,8 @@ function ElementTreeNode(props) {
       type,
       resourceOrComplexType,
       referenceTypes,
+      addAggregation,
+      addGrouping,
     } = props,
     [isExpanded, setExpanded] = useState(false),
     isInResourceTree = !!resourceTree.get(resourceOrComplexType),
@@ -50,12 +52,10 @@ function ElementTreeNode(props) {
           icon="trending-up"
           text={`Add "${aggregationExpression}" to aggregations`}
           onClick={() =>
-            store.dispatch(
-              addAggregation({
-                expression: aggregationExpression,
-                label: aggregationLabel,
-              }),
-            )
+            addAggregation({
+              expression: aggregationExpression,
+              label: aggregationLabel,
+            })
           }
         />
       ),
@@ -64,12 +64,10 @@ function ElementTreeNode(props) {
           icon="graph"
           text={`Add "${groupingExpression}" to groupings`}
           onClick={() =>
-            store.dispatch(
-              addGrouping({
-                expression: groupingExpression,
-                label: groupingLabel,
-              }),
-            )
+            addGrouping({
+              expression: groupingExpression,
+              label: groupingLabel,
+            })
           }
         />
       )
@@ -185,4 +183,7 @@ function ElementTreeNode(props) {
   )
 }
 
-export default ElementTreeNode
+export default connect(
+  null,
+  actions,
+)(ElementTreeNode)
