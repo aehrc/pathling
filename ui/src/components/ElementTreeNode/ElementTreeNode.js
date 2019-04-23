@@ -48,7 +48,7 @@ function ElementTreeNode(props) {
    * Opens a context menu at the supplied mouse event which provides actions for
    * adding the specified node to the current query.
    */
-  function openContextMenu(event) {
+  const openContextMenu = event => {
     const aggregationExpression = `${path}.count()`,
       aggregationLabel = aggregationExpression,
       groupingExpression = path,
@@ -86,7 +86,7 @@ function ElementTreeNode(props) {
     )
   }
 
-  function renderBackboneElementChildren() {
+  const renderBackboneElementChildren = () => {
     const elementTreeNodes = backboneElementChildren.map((node, i) => (
       <ElementTreeNode
         {...node.delete('children').toJS()}
@@ -100,7 +100,7 @@ function ElementTreeNode(props) {
     )
   }
 
-  function renderComplexElementChildren() {
+  const renderComplexElementChildren = () => {
     const elementTreeNodes = complexElementChildren.map((node, i) => (
       <ElementTreeNode
         {...node.delete('children').toJS()}
@@ -115,25 +115,32 @@ function ElementTreeNode(props) {
     )
   }
 
-  function renderReferenceChildren() {
+  const renderReferenceChildren = () => {
     const resourceTreeNodes = referenceChildren.map((type, i) => (
-      <ResourceTreeNode name={type} key={i} />
+      <ResourceTreeNode
+        name={type}
+        key={i}
+        referencePath={
+          referenceTypes.length > 1
+            ? `${path}.resolve(${type})`
+            : `${path}.resolve()`
+        }
+      />
     ))
     return (
       <ol className="child-nodes bp3-tree-node-list">{resourceTreeNodes}</ol>
     )
   }
 
-  function renderActionIcon() {
-    return isComplexType || isReference ? null : (
+  const renderActionIcon = () =>
+    isComplexType || isReference ? null : (
       <span
         className="bp3-tree-node-secondary-label bp3-icon-standard bp3-icon-arrow-right"
         onClick={openContextMenu}
       />
     )
-  }
 
-  function getCaretClasses() {
+  const getCaretClasses = () => {
     if (
       backboneElementChildren ||
       complexElementChildren ||
@@ -147,7 +154,7 @@ function ElementTreeNode(props) {
     }
   }
 
-  function getIconClasses() {
+  const getIconClasses = () => {
     let iconName = null
     if (isComplexType) {
       iconName = 'grid-view'
@@ -161,11 +168,10 @@ function ElementTreeNode(props) {
     return `bp3-tree-node-icon bp3-icon-standard bp3-icon-${iconName}`
   }
 
-  function getNameClasses() {
-    return isComplexType || isReference
+  const getNameClasses = () =>
+    isComplexType || isReference
       ? 'name bp3-tree-node-label'
       : 'name clickable bp3-tree-node-label'
-  }
 
   return (
     <li className="element-tree-node bp3-tree-node">

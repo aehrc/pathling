@@ -23,9 +23,8 @@ function Actions(props) {
     result: { loading },
   } = props
 
-  function queryIsEmpty() {
-    return query.aggregations.length === 0 && query.groupings.length === 0
-  }
+  const queryIsEmpty = () =>
+    query.aggregations.length === 0 && query.groupings.length === 0
 
   return (
     <div className="actions">

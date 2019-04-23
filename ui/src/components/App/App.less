@@ -20,6 +20,16 @@
   padding: 1em;
   overflow-x: hidden;
   overflow-y: scroll;
+  position: relative;
+
+  .react-resizable-handle {
+    position: absolute;
+    width: 1em;
+    height: 100%;
+    top: 0;
+    right: 0;
+    cursor: ew-resize;
+  }
 }
 
 .content {

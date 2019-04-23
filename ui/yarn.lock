@@ -1715,7 +1715,7 @@ class-utils@^0.3.5:
     isobject "^3.0.0"
     static-extend "^0.1.1"
 
-classnames@^2.2:
+classnames@^2.2, classnames@^2.2.5:
   version "2.2.6"
   resolved "https://registry.yarnpkg.com/classnames/-/classnames-2.2.6.tgz#43935bffdd291f326dad0a205309b38d00f650ce"
   integrity sha512-JR/iSQOSt+LQIWwrwEzJ9uk0xfN3mTVYMwt1Ir5mUcSN6pU+V4zQFFaJsclJbPuAUQH+yfWef6tm7l1quW3C8Q==
@@ -4886,7 +4886,7 @@ promise@^7.1.1:
   dependencies:
     asap "~2.0.3"
 
-prop-types@^15.6.1, prop-types@^15.6.2, prop-types@^15.7.2:
+prop-types@15.x, prop-types@^15.6.0, prop-types@^15.6.1, prop-types@^15.6.2, prop-types@^15.7.2:
   version "15.7.2"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.7.2.tgz#52c41e75b8c87e72b9d9360e0206b99dcbffa6c5"
   integrity sha512-8QQikdH7//R2vurIJSutZ1smHYTcLpRWEOlHnzcWHmBYrOGUysKwSsrC89BCiFj3CbrfJ/nXFdJepOVrY1GCHQ==
@@ -5035,6 +5035,14 @@ react-dom@^16.8.6:
     prop-types "^15.6.2"
     scheduler "^0.13.6"
 
+"react-draggable@^2.2.6 || ^3.0.3":
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/react-draggable/-/react-draggable-3.3.0.tgz#2ed7ea3f92e7d742d747f9e6324860606cd4d997"
+  integrity sha512-U7/jD0tAW4T0S7DCPK0kkKLyL0z61sC/eqU+NUfDjnq+JtBKaYKDHpsK2wazctiA4alEzCXUnzkREoxppOySVw==
+  dependencies:
+    classnames "^2.2.5"
+    prop-types "^15.6.0"
+
 react-is@^16.7.0, react-is@^16.8.1, react-is@^16.8.2:
   version "16.8.6"
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.8.6.tgz#5bbc1e2d29141c9fbdfed456343fe2bc430a6a16"
@@ -5068,6 +5076,14 @@ react-redux@^6.0.1:
     loose-envify "^1.4.0"
     prop-types "^15.7.2"
     react-is "^16.8.2"
+
+react-resizable@^1.7.5:
+  version "1.7.5"
+  resolved "https://registry.yarnpkg.com/react-resizable/-/react-resizable-1.7.5.tgz#83eb75bb3684da6989bbbf4f826e1470f0af902e"
+  integrity sha512-lauPcBsLqmxMHXHpTeOBpYenGalbSikYr8hK+lwtNYMQX1pGd2iYE+pDvZEV97nCnzuCtWM9htp7OpsBIY2Sjw==
+  dependencies:
+    prop-types "15.x"
+    react-draggable "^2.2.6 || ^3.0.3"
 
 react-transition-group@^2.2.1:
   version "2.9.0"

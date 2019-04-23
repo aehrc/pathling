@@ -17,10 +17,10 @@ import * as actions from '../../store/Actions'
  * @author John Grimes
  */
 function ResourceTreeNode(props) {
-  const { name, addAggregation } = props,
+  const { name, referencePath, addAggregation } = props,
     [isExpanded, setExpanded] = useState(false)
 
-  function openContextMenu(event) {
+  const openContextMenu = event => {
     const aggregationExpression = `${name}.count()`,
       aggregationLabel = aggregationExpression,
       aggregationMenuItem = (
@@ -42,12 +42,23 @@ function ResourceTreeNode(props) {
     })
   }
 
-  function renderChildren() {
+  const getReferencePath = node => {
+    if (!referencePath) return node.get('path')
+    const pathSuffix = node
+      .get('path')
+      .split('.')
+      .slice(1)
+      .join('.')
+    return `${referencePath}.${pathSuffix}`
+  }
+
+  const renderChildren = () => {
     const childNodes = resourceTree.get(name),
       elementTreeNodes = childNodes.map((node, i) => (
         <ElementTreeNode
           {...node.delete('children').toJS()}
           key={i}
+          path={getReferencePath(node)}
           treePath={[name, i]}
           resourceOrComplexType={name}
         />
@@ -57,26 +68,23 @@ function ResourceTreeNode(props) {
     )
   }
 
-  function renderActionIcon() {
-    return (
+  const renderActionIcon = () =>
+    referencePath ? null : (
       <span
         className="bp3-tree-node-secondary-label bp3-icon-standard bp3-icon-arrow-right"
         onClick={openContextMenu}
       />
     )
-  }
 
-  function getNodeClasses() {
-    return isExpanded
+  const getNodeClasses = () =>
+    isExpanded
       ? 'resource-tree-node bp3-tree-node bp3-tree-node-expanded'
       : 'resource-tree-node bp3-tree-node'
-  }
 
-  function getCaretClasses() {
-    return isExpanded
+  const getCaretClasses = () =>
+    isExpanded
       ? 'bp3-tree-node-caret bp3-tree-node-caret-open bp3-icon-standard'
       : 'bp3-tree-node-caret bp3-tree-node-caret-close bp3-icon-standard'
-  }
 
   return (
     <li className={getNodeClasses()}>

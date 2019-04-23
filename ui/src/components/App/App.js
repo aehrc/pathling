@@ -5,6 +5,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Toaster, Position } from '@blueprintjs/core'
+import { Resizable } from 'react-resizable'
 
 import ElementTree from '../ElementTree'
 import Aggregations from '../Aggregations'
@@ -24,6 +25,12 @@ const Alerter = Toaster.create({
  * @author John Grimes
  */
 class App extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { siderWidth: 300 }
+    this.handleResize = this.handleResize.bind(this)
+  }
+
   /**
    * Catches any uncaught errors that are thrown during the rendering of
    * components.
@@ -48,12 +55,34 @@ class App extends Component {
     }
   }
 
+  handleResize(
+    event,
+    {
+      size: { width },
+    },
+  ) {
+    this.setState(() => ({ siderWidth: width }))
+  }
+
   render() {
+    const { siderWidth } = this.state
+
     return (
-      <div className="app">
-        <div className="sider">
-          <ElementTree />
-        </div>
+      <div
+        className="app"
+        style={{ gridTemplateColumns: `${siderWidth}px auto` }}
+      >
+        <Resizable
+          className="sider"
+          axis="x"
+          onResize={this.handleResize}
+          width={300}
+          height={0}
+        >
+          <div className="sider">
+            <ElementTree />
+          </div>
+        </Resizable>
         <main className="content">
           <Aggregations />
           <Groupings />

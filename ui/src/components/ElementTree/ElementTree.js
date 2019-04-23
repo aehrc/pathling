@@ -21,6 +21,7 @@ function ElementTree() {
       <ResourceTreeNode key={resourceName} name={resourceName} />
     ))
     .toArray()
+
   return (
     <div className="element-tree bp3-tree">
       <ol className="bp3-tree-node-list bp3-tree-root">{resourceNodes}</ol>

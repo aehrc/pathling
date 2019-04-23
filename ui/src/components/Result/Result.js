@@ -16,11 +16,32 @@ import './Result.less'
 function Result(props) {
   const { loading, groupings, query, stale } = props
 
-  function renderLoading() {
-    return <Spinner className="loading" size={100} intent="primary" />
+  const renderLoading = () => (
+    <Spinner className="loading" size={100} intent="primary" />
+  )
+
+  const renderPart = (part, i) => {
+    const key = Object.keys(part).find(key => key.match(/^value/)),
+      value = part[key]
+    if (value === undefined) {
+      return <td key={i}>(no value)</td>
+    } else if (key === 'valueDate') {
+      const date = new Date(value).toLocaleDateString()
+      return <td key={i}>{date}</td>
+    } else if (key === 'valueDateTime') {
+      const date = new Date(value).toLocaleString()
+      return <td key={i}>{date}</td>
+    } else {
+      return <td key={i}>{part[key].toString()}</td>
+    }
   }
 
-  function renderGroupings() {
+  const renderGrouping = (grouping, i) => {
+    const parts = grouping.part.map((part, i) => renderPart(part, i))
+    return <tr key={i}>{parts}</tr>
+  }
+
+  const renderGroupings = () => {
     const groupHeadings = query.groupings.map(grouping => (
         <th key={grouping.label}>{grouping.label}</th>
       )),
@@ -36,27 +57,6 @@ function Result(props) {
         <tbody>{rows}</tbody>
       </HTMLTable>
     )
-  }
-
-  function renderGrouping(grouping, i) {
-    const parts = grouping.part.map((part, i) => renderPart(part, i))
-    return <tr key={i}>{parts}</tr>
-  }
-
-  function renderPart(part, i) {
-    const key = Object.keys(part).find(key => key.match(/^value/)),
-      value = part[key]
-    if (value === undefined) {
-      return <td key={i}>(no value)</td>
-    } else if (key === 'valueDate') {
-      const date = new Date(value).toLocaleDateString()
-      return <td key={i}>{date}</td>
-    } else if (key === 'valueDateTime') {
-      const date = new Date(value).toLocaleString()
-      return <td key={i}>{date}</td>
-    } else {
-      return <td key={i}>{part[key].toString()}</td>
-    }
   }
 
   let content = null

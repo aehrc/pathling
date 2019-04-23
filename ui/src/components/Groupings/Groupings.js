@@ -17,21 +17,18 @@ import './Groupings.less'
 function Groupings(props) {
   const { groupings, removeGrouping } = props
 
-  function handleRemove(index) {
+  const handleRemove = index => {
     removeGrouping(index)
   }
 
-  function renderBlankCanvas() {
-    return <div className="blank-canvas">Groupings</div>
-  }
+  const renderBlankCanvas = () => <div className="blank-canvas">Groupings</div>
 
-  function renderGroupings() {
-    return groupings.map((grouping, i) => (
+  const renderGroupings = () =>
+    groupings.map((grouping, i) => (
       <Tag key={i} round={true} large={true} onRemove={() => handleRemove(i)}>
         {grouping.get('label')}
       </Tag>
     ))
-  }
 
   return (
     <div className="groupings">

@@ -18,21 +18,20 @@ import './Aggregations.less'
 function Aggregations(props) {
   const { aggregations, removeAggregation } = props
 
-  function handleRemove(index) {
+  const handleRemove = index => {
     removeAggregation(index)
   }
 
-  function renderBlankCanvas() {
-    return <div className="blank-canvas">Aggregations</div>
-  }
+  const renderBlankCanvas = () => (
+    <div className="blank-canvas">Aggregations</div>
+  )
 
-  function renderAggregations() {
-    return aggregations.map((aggregation, i) => (
+  const renderAggregations = () =>
+    aggregations.map((aggregation, i) => (
       <Tag key={i} round={true} large={true} onRemove={() => handleRemove(i)}>
         {aggregation.get('label')}
       </Tag>
     ))
-  }
 
   return (
     <div className="aggregations">
