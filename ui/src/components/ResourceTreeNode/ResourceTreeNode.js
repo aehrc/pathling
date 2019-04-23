@@ -3,14 +3,25 @@
  */
 
 import React, { useState } from 'react'
-import { Icon } from '@blueprintjs/core'
 
 import ElementTreeNode from '../ElementTreeNode'
 import { resourceTree } from '../../fhir/ResourceTree'
 
 function ResourceTreeNode(props) {
-  const { name } = props
-  const [isExpanded, setExpanded] = useState(false)
+  const { name } = props,
+    [isExpanded, setExpanded] = useState(false)
+
+  function getNodeClasses() {
+    return isExpanded
+      ? 'resource-tree-node bp3-tree-node bp3-tree-node-expanded'
+      : 'resource-tree-node bp3-tree-node'
+  }
+
+  function getCaretClasses() {
+    return isExpanded
+      ? 'bp3-tree-node-caret bp3-tree-node-caret-open bp3-icon-standard'
+      : 'bp3-tree-node-caret bp3-tree-node-caret-close bp3-icon-standard'
+  }
 
   function renderChildren() {
     const childNodes = resourceTree.get(name),
@@ -22,16 +33,21 @@ function ResourceTreeNode(props) {
           resourceOrComplexType={name}
         />
       ))
-    return <ul className="child-nodes">{elementTreeNodes}</ul>
+    return (
+      <ol className="child-nodes bp3-tree-node-list">{elementTreeNodes}</ol>
+    )
   }
 
   return (
-    <li className="resource-tree-node">
-      <Icon
-        icon={isExpanded ? 'chevron-down' : 'chevron-up'}
-        onClick={() => setExpanded(!isExpanded)}
-      />
-      <div className="name">{name}</div>
+    <li className={getNodeClasses()}>
+      <div className="bp3-tree-node-content">
+        <span
+          className={getCaretClasses()}
+          onClick={() => setExpanded(!isExpanded)}
+        />
+        <span className="bp3-tree-node-icon bp3-icon-standard bp3-icon-cube" />
+        <span className="name bp3-tree-node-label">{name}</span>
+      </div>
       {isExpanded ? renderChildren() : null}
     </li>
   )
