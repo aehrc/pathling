@@ -82,7 +82,12 @@
     {
       "name": "authorReference",
       "path": "Annotation.authorReference",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner",
+        "Patient",
+        "RelatedPerson"
+      ]
     },
     {
       "name": "authorString",
@@ -355,7 +360,10 @@
     {
       "name": "assigner",
       "path": "Identifier.assigner",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization"
+      ]
     }
   ],
   "Money": [
@@ -521,7 +529,14 @@
     {
       "name": "whoReference",
       "path": "Signature.whoReference",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner",
+        "RelatedPerson",
+        "Patient",
+        "Device",
+        "Organization"
+      ]
     },
     {
       "name": "onBehalfOfUri",
@@ -531,7 +546,14 @@
     {
       "name": "onBehalfOfReference",
       "path": "Signature.onBehalfOfReference",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner",
+        "RelatedPerson",
+        "Patient",
+        "Device",
+        "Organization"
+      ]
     },
     {
       "name": "contentType",

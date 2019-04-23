@@ -2,41 +2,12 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import React, { useState, useReducer } from 'react'
-import { Tree, ContextMenu, Menu, MenuItem, Icon } from '@blueprintjs/core'
+import React from 'react'
+import { ContextMenu, Menu, MenuItem, Icon } from '@blueprintjs/core'
 
-import store from '../../store'
-import { addAggregation, addGrouping } from '../../store/Actions'
+import ResourceTreeNode from '../ResourceTreeNode'
+import { resourceTree } from '../../fhir/ResourceTree'
 import './ElementTree.less'
-import resourceTree from '../../../config/resource-tree.json'
-import complexTypesTree from '../../../config/complex-type-tree.json'
-
-const maxDepth = 10
-const supportedComplexTypes = [
-  'Ratio',
-  'Period',
-  'Range',
-  'Attachment',
-  'Identifier',
-  'HumanName',
-  'Annotation',
-  'Address',
-  'ContactPoint',
-  'SampledData',
-  'Money',
-  'Count',
-  'Duration',
-  'SimpleQuantity',
-  'Quantity',
-  'Distance',
-  'Age',
-  'CodeableConcept',
-  'Signature',
-  'Coding',
-  'Timing',
-  'Reference',
-]
-const convertedResourceTree = convertElementTree(resourceTree)
 
 /**
  * Renders a tree showing resources and elements available for use within
@@ -45,34 +16,13 @@ const convertedResourceTree = convertElementTree(resourceTree)
  * @author John Grimes
  */
 function ElementTree() {
-  // eslint-disable-next-line no-unused-vars
-  const [tree, setTree] = useState(convertedResourceTree)
-
-  // This is required to allow us to change `isExpanded` values in place, which
-  // is done for performance reasons. See:
-  // https://reactjs.org/docs/hooks-faq.html#is-there-something-like-forceupdate
-  //
-  // eslint-disable-next-line no-unused-vars
-  const [update, forceUpdate] = useReducer(x => x + 1, 0)
-
-  function handleNodeExpand(node) {
-    node.isExpanded = true
-    forceUpdate()
-  }
-
-  function handleNodeCollapse(node) {
-    node.isExpanded = false
-    forceUpdate()
-  }
-
-  return (
-    <Tree
-      className="element-tree"
-      contents={tree}
-      onNodeExpand={handleNodeExpand}
-      onNodeCollapse={handleNodeCollapse}
-    />
-  )
+  const resourceNodes = resourceTree
+    .keySeq()
+    .map(resourceName => (
+      <ResourceTreeNode key={resourceName} name={resourceName} />
+    ))
+    .toArray()
+  return <ol className="element-tree">{resourceNodes}</ol>
 }
 
 /**
@@ -134,7 +84,7 @@ function openContextMenu(event, nodeData) {
  * `contents` prop.
  */
 function convertElementTree(tree) {
-  return Object.keys(tree).map((resourceName, key) => {
+  const firstPass = Object.keys(tree).map((resourceName, key) => {
     const nodeData = { fhirPath: resourceName, elementType: 'Resource' }
     return {
       id: resourceName,
@@ -149,6 +99,7 @@ function convertElementTree(tree) {
       ),
     }
   })
+  return firstPass.map(node => expandReferences(firstPass, node))
 }
 
 /**
@@ -179,6 +130,10 @@ function convertElements(elements, depth, path, fhirPath) {
       )
       converted.icon = 'folder-close'
       converted.nodeData.elementType = 'BackboneElement'
+    } else if (element['type'] === 'Reference') {
+      converted.nodeData.elementType = 'Reference'
+      converted.nodeData.referenceTypes = element['referenceTypes']
+      converted.icon = 'document-share'
     } else if (supportedComplexTypes.includes(element['type'])) {
       converted.childNodes = convertElements(
         complexTypesTree[element['type']],
@@ -199,6 +154,29 @@ function convertElements(elements, depth, path, fhirPath) {
     }
     return converted
   })
+}
+
+function expandReferences(fullTree, node) {
+  if (node.nodeData.elementType === 'Reference') {
+    const referenceTypes = node.nodeData.referenceTypes
+    if (referenceTypes[0] === 'Resource') {
+      return node
+    } else {
+      return {
+        ...node,
+        childNodes: referenceTypes.reduce((acc, t) => {
+          const resourceTree = fullTree.find(n => n.id === t)
+          return resourceTree ? acc.concat(resourceTree) : acc
+        }, []),
+      }
+    }
+  } else {
+    if (!node.childNodes) return node
+    node.childNodes = node.childNodes.map(childNode =>
+      expandReferences(fullTree, childNode),
+    )
+    return node
+  }
 }
 
 export default ElementTree

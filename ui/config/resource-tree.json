@@ -38,7 +38,10 @@
     {
       "name": "patient",
       "path": "AllergyIntolerance.patient",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient"
+      ]
     },
     {
       "name": "onsetDateTime",
@@ -73,12 +76,21 @@
     {
       "name": "recorder",
       "path": "AllergyIntolerance.recorder",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner",
+        "Patient"
+      ]
     },
     {
       "name": "asserter",
       "path": "AllergyIntolerance.asserter",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "RelatedPerson",
+        "Practitioner"
+      ]
     },
     {
       "name": "lastOccurrence",
@@ -142,22 +154,35 @@
     {
       "name": "definition",
       "path": "CarePlan.definition",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "PlanDefinition",
+        "Questionnaire"
+      ]
     },
     {
       "name": "basedOn",
       "path": "CarePlan.basedOn",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "CarePlan"
+      ]
     },
     {
       "name": "replaces",
       "path": "CarePlan.replaces",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "CarePlan"
+      ]
     },
     {
       "name": "partOf",
       "path": "CarePlan.partOf",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "CarePlan"
+      ]
     },
     {
       "name": "status",
@@ -187,12 +212,20 @@
     {
       "name": "subject",
       "path": "CarePlan.subject",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "Group"
+      ]
     },
     {
       "name": "context",
       "path": "CarePlan.context",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Encounter",
+        "EpisodeOfCare"
+      ]
     },
     {
       "name": "period",
@@ -202,27 +235,46 @@
     {
       "name": "author",
       "path": "CarePlan.author",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "Practitioner",
+        "RelatedPerson",
+        "Organization",
+        "CareTeam"
+      ]
     },
     {
       "name": "careTeam",
       "path": "CarePlan.careTeam",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "CareTeam"
+      ]
     },
     {
       "name": "addresses",
       "path": "CarePlan.addresses",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Condition"
+      ]
     },
     {
       "name": "supportingInfo",
       "path": "CarePlan.supportingInfo",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Resource"
+      ]
     },
     {
       "name": "goal",
       "path": "CarePlan.goal",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Goal"
+      ]
     },
     {
       "name": "activity",
@@ -237,7 +289,10 @@
         {
           "name": "outcomeReference",
           "path": "CarePlan.activity.outcomeReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Resource"
+          ]
         },
         {
           "name": "progress",
@@ -247,7 +302,19 @@
         {
           "name": "reference",
           "path": "CarePlan.activity.reference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Appointment",
+            "CommunicationRequest",
+            "DeviceRequest",
+            "MedicationRequest",
+            "NutritionOrder",
+            "Task",
+            "ProcedureRequest",
+            "ReferralRequest",
+            "VisionPrescription",
+            "RequestGroup"
+          ]
         },
         {
           "name": "detail",
@@ -262,7 +329,12 @@
             {
               "name": "definition",
               "path": "CarePlan.activity.detail.definition",
-              "type": "Reference"
+              "type": "Reference",
+              "referenceTypes": [
+                "PlanDefinition",
+                "ActivityDefinition",
+                "Questionnaire"
+              ]
             },
             {
               "name": "code",
@@ -277,12 +349,18 @@
             {
               "name": "reasonReference",
               "path": "CarePlan.activity.detail.reasonReference",
-              "type": "Reference"
+              "type": "Reference",
+              "referenceTypes": [
+                "Condition"
+              ]
             },
             {
               "name": "goal",
               "path": "CarePlan.activity.detail.goal",
-              "type": "Reference"
+              "type": "Reference",
+              "referenceTypes": [
+                "Goal"
+              ]
             },
             {
               "name": "status",
@@ -317,12 +395,22 @@
             {
               "name": "location",
               "path": "CarePlan.activity.detail.location",
-              "type": "Reference"
+              "type": "Reference",
+              "referenceTypes": [
+                "Location"
+              ]
             },
             {
               "name": "performer",
               "path": "CarePlan.activity.detail.performer",
-              "type": "Reference"
+              "type": "Reference",
+              "referenceTypes": [
+                "Practitioner",
+                "Organization",
+                "RelatedPerson",
+                "Patient",
+                "CareTeam"
+              ]
             },
             {
               "name": "productCodeableConcept",
@@ -332,7 +420,11 @@
             {
               "name": "productReference",
               "path": "CarePlan.activity.detail.productReference",
-              "type": "Reference"
+              "type": "Reference",
+              "referenceTypes": [
+                "Medication",
+                "Substance"
+              ]
             },
             {
               "name": "dailyAmount",
@@ -388,7 +480,10 @@
     {
       "name": "patient",
       "path": "Claim.patient",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient"
+      ]
     },
     {
       "name": "billablePeriod",
@@ -403,22 +498,34 @@
     {
       "name": "enterer",
       "path": "Claim.enterer",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner"
+      ]
     },
     {
       "name": "insurer",
       "path": "Claim.insurer",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization"
+      ]
     },
     {
       "name": "provider",
       "path": "Claim.provider",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner"
+      ]
     },
     {
       "name": "organization",
       "path": "Claim.organization",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization"
+      ]
     },
     {
       "name": "priority",
@@ -438,7 +545,10 @@
         {
           "name": "claim",
           "path": "Claim.related.claim",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Claim"
+          ]
         },
         {
           "name": "relationship",
@@ -455,12 +565,19 @@
     {
       "name": "prescription",
       "path": "Claim.prescription",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "MedicationRequest",
+        "VisionPrescription"
+      ]
     },
     {
       "name": "originalPrescription",
       "path": "Claim.originalPrescription",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "MedicationRequest"
+      ]
     },
     {
       "name": "payee",
@@ -480,19 +597,31 @@
         {
           "name": "party",
           "path": "Claim.payee.party",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Practitioner",
+            "Organization",
+            "Patient",
+            "RelatedPerson"
+          ]
         }
       ]
     },
     {
       "name": "referral",
       "path": "Claim.referral",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "ReferralRequest"
+      ]
     },
     {
       "name": "facility",
       "path": "Claim.facility",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Location"
+      ]
     },
     {
       "name": "careTeam",
@@ -507,7 +636,11 @@
         {
           "name": "provider",
           "path": "Claim.careTeam.provider",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Practitioner",
+            "Organization"
+          ]
         },
         {
           "name": "responsible",
@@ -574,7 +707,10 @@
         {
           "name": "valueReference",
           "path": "Claim.information.valueReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Resource"
+          ]
         },
         {
           "name": "reason",
@@ -601,7 +737,10 @@
         {
           "name": "diagnosisReference",
           "path": "Claim.diagnosis.diagnosisReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Condition"
+          ]
         },
         {
           "name": "type",
@@ -638,7 +777,10 @@
         {
           "name": "procedureReference",
           "path": "Claim.procedure.procedureReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Procedure"
+          ]
         }
       ]
     },
@@ -660,7 +802,10 @@
         {
           "name": "coverage",
           "path": "Claim.insurance.coverage",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Coverage"
+          ]
         },
         {
           "name": "businessArrangement",
@@ -675,7 +820,10 @@
         {
           "name": "claimResponse",
           "path": "Claim.insurance.claimResponse",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "ClaimResponse"
+          ]
         }
       ]
     },
@@ -702,7 +850,10 @@
         {
           "name": "locationReference",
           "path": "Claim.accident.locationReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Location"
+          ]
         }
       ]
     },
@@ -794,7 +945,10 @@
         {
           "name": "locationReference",
           "path": "Claim.item.locationReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Location"
+          ]
         },
         {
           "name": "quantity",
@@ -819,7 +973,10 @@
         {
           "name": "udi",
           "path": "Claim.item.udi",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Device"
+          ]
         },
         {
           "name": "bodySite",
@@ -834,7 +991,10 @@
         {
           "name": "encounter",
           "path": "Claim.item.encounter",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Encounter"
+          ]
         },
         {
           "name": "detail",
@@ -894,7 +1054,10 @@
             {
               "name": "udi",
               "path": "Claim.item.detail.udi",
-              "type": "Reference"
+              "type": "Reference",
+              "referenceTypes": [
+                "Device"
+              ]
             },
             {
               "name": "subDetail",
@@ -954,7 +1117,10 @@
                 {
                   "name": "udi",
                   "path": "Claim.item.detail.subDetail.udi",
-                  "type": "Reference"
+                  "type": "Reference",
+                  "referenceTypes": [
+                    "Device"
+                  ]
                 }
               ]
             }
@@ -1007,12 +1173,20 @@
     {
       "name": "subject",
       "path": "Condition.subject",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "Group"
+      ]
     },
     {
       "name": "context",
       "path": "Condition.context",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Encounter",
+        "EpisodeOfCare"
+      ]
     },
     {
       "name": "onsetDateTime",
@@ -1077,7 +1251,12 @@
     {
       "name": "asserter",
       "path": "Condition.asserter",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner",
+        "Patient",
+        "RelatedPerson"
+      ]
     },
     {
       "name": "stage",
@@ -1092,7 +1271,12 @@
         {
           "name": "assessment",
           "path": "Condition.stage.assessment",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "ClinicalImpression",
+            "DiagnosticReport",
+            "Observation"
+          ]
         }
       ]
     },
@@ -1109,7 +1293,10 @@
         {
           "name": "detail",
           "path": "Condition.evidence.detail",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Resource"
+          ]
         }
       ]
     },
@@ -1138,12 +1325,21 @@
     {
       "name": "policyHolder",
       "path": "Coverage.policyHolder",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "RelatedPerson",
+        "Organization"
+      ]
     },
     {
       "name": "subscriber",
       "path": "Coverage.subscriber",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "RelatedPerson"
+      ]
     },
     {
       "name": "subscriberId",
@@ -1153,7 +1349,10 @@
     {
       "name": "beneficiary",
       "path": "Coverage.beneficiary",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient"
+      ]
     },
     {
       "name": "relationship",
@@ -1168,7 +1367,12 @@
     {
       "name": "payor",
       "path": "Coverage.payor",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization",
+        "Patient",
+        "RelatedPerson"
+      ]
     },
     {
       "name": "grouping",
@@ -1260,7 +1464,10 @@
     {
       "name": "contract",
       "path": "Coverage.contract",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Contract"
+      ]
     }
   ],
   "DiagnosticReport": [
@@ -1272,7 +1479,15 @@
     {
       "name": "basedOn",
       "path": "DiagnosticReport.basedOn",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "CarePlan",
+        "ImmunizationRecommendation",
+        "MedicationRequest",
+        "NutritionOrder",
+        "ProcedureRequest",
+        "ReferralRequest"
+      ]
     },
     {
       "name": "status",
@@ -1292,12 +1507,22 @@
     {
       "name": "subject",
       "path": "DiagnosticReport.subject",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "Group",
+        "Device",
+        "Location"
+      ]
     },
     {
       "name": "context",
       "path": "DiagnosticReport.context",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Encounter",
+        "EpisodeOfCare"
+      ]
     },
     {
       "name": "effectiveDateTime",
@@ -1327,24 +1552,38 @@
         {
           "name": "actor",
           "path": "DiagnosticReport.performer.actor",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Practitioner",
+            "Organization"
+          ]
         }
       ]
     },
     {
       "name": "specimen",
       "path": "DiagnosticReport.specimen",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Specimen"
+      ]
     },
     {
       "name": "result",
       "path": "DiagnosticReport.result",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Observation"
+      ]
     },
     {
       "name": "imagingStudy",
       "path": "DiagnosticReport.imagingStudy",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "ImagingStudy",
+        "ImagingManifest"
+      ]
     },
     {
       "name": "image",
@@ -1359,7 +1598,10 @@
         {
           "name": "link",
           "path": "DiagnosticReport.image.link",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Media"
+          ]
         }
       ]
     },
@@ -1442,17 +1684,27 @@
     {
       "name": "subject",
       "path": "Encounter.subject",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "Group"
+      ]
     },
     {
       "name": "episodeOfCare",
       "path": "Encounter.episodeOfCare",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "EpisodeOfCare"
+      ]
     },
     {
       "name": "incomingReferral",
       "path": "Encounter.incomingReferral",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "ReferralRequest"
+      ]
     },
     {
       "name": "participant",
@@ -1472,14 +1724,21 @@
         {
           "name": "individual",
           "path": "Encounter.participant.individual",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Practitioner",
+            "RelatedPerson"
+          ]
         }
       ]
     },
     {
       "name": "appointment",
       "path": "Encounter.appointment",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Appointment"
+      ]
     },
     {
       "name": "period",
@@ -1504,7 +1763,11 @@
         {
           "name": "condition",
           "path": "Encounter.diagnosis.condition",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Condition",
+            "Procedure"
+          ]
         },
         {
           "name": "role",
@@ -1521,7 +1784,10 @@
     {
       "name": "account",
       "path": "Encounter.account",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Account"
+      ]
     },
     {
       "name": "hospitalization",
@@ -1536,7 +1802,10 @@
         {
           "name": "origin",
           "path": "Encounter.hospitalization.origin",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Location"
+          ]
         },
         {
           "name": "admitSource",
@@ -1566,7 +1835,10 @@
         {
           "name": "destination",
           "path": "Encounter.hospitalization.destination",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Location"
+          ]
         },
         {
           "name": "dischargeDisposition",
@@ -1583,7 +1855,10 @@
         {
           "name": "location",
           "path": "Encounter.location.location",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Location"
+          ]
         },
         {
           "name": "status",
@@ -1600,12 +1875,18 @@
     {
       "name": "serviceProvider",
       "path": "Encounter.serviceProvider",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization"
+      ]
     },
     {
       "name": "partOf",
       "path": "Encounter.partOf",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Encounter"
+      ]
     }
   ],
   "ExplanationOfBenefit": [
@@ -1632,7 +1913,10 @@
     {
       "name": "patient",
       "path": "ExplanationOfBenefit.patient",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient"
+      ]
     },
     {
       "name": "billablePeriod",
@@ -1647,42 +1931,66 @@
     {
       "name": "enterer",
       "path": "ExplanationOfBenefit.enterer",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner"
+      ]
     },
     {
       "name": "insurer",
       "path": "ExplanationOfBenefit.insurer",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization"
+      ]
     },
     {
       "name": "provider",
       "path": "ExplanationOfBenefit.provider",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner"
+      ]
     },
     {
       "name": "organization",
       "path": "ExplanationOfBenefit.organization",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization"
+      ]
     },
     {
       "name": "referral",
       "path": "ExplanationOfBenefit.referral",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "ReferralRequest"
+      ]
     },
     {
       "name": "facility",
       "path": "ExplanationOfBenefit.facility",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Location"
+      ]
     },
     {
       "name": "claim",
       "path": "ExplanationOfBenefit.claim",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Claim"
+      ]
     },
     {
       "name": "claimResponse",
       "path": "ExplanationOfBenefit.claimResponse",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "ClaimResponse"
+      ]
     },
     {
       "name": "outcome",
@@ -1702,7 +2010,10 @@
         {
           "name": "claim",
           "path": "ExplanationOfBenefit.related.claim",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Claim"
+          ]
         },
         {
           "name": "relationship",
@@ -1719,12 +2030,19 @@
     {
       "name": "prescription",
       "path": "ExplanationOfBenefit.prescription",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "MedicationRequest",
+        "VisionPrescription"
+      ]
     },
     {
       "name": "originalPrescription",
       "path": "ExplanationOfBenefit.originalPrescription",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "MedicationRequest"
+      ]
     },
     {
       "name": "payee",
@@ -1744,7 +2062,13 @@
         {
           "name": "party",
           "path": "ExplanationOfBenefit.payee.party",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Practitioner",
+            "Organization",
+            "Patient",
+            "RelatedPerson"
+          ]
         }
       ]
     },
@@ -1796,7 +2120,10 @@
         {
           "name": "valueReference",
           "path": "ExplanationOfBenefit.information.valueReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Resource"
+          ]
         },
         {
           "name": "reason",
@@ -1818,7 +2145,11 @@
         {
           "name": "provider",
           "path": "ExplanationOfBenefit.careTeam.provider",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Practitioner",
+            "Organization"
+          ]
         },
         {
           "name": "responsible",
@@ -1855,7 +2186,10 @@
         {
           "name": "diagnosisReference",
           "path": "ExplanationOfBenefit.diagnosis.diagnosisReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Condition"
+          ]
         },
         {
           "name": "type",
@@ -1892,7 +2226,10 @@
         {
           "name": "procedureReference",
           "path": "ExplanationOfBenefit.procedure.procedureReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Procedure"
+          ]
         }
       ]
     },
@@ -1909,7 +2246,10 @@
         {
           "name": "coverage",
           "path": "ExplanationOfBenefit.insurance.coverage",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Coverage"
+          ]
         },
         {
           "name": "preAuthRef",
@@ -1941,7 +2281,10 @@
         {
           "name": "locationReference",
           "path": "ExplanationOfBenefit.accident.locationReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Location"
+          ]
         }
       ]
     },
@@ -2033,7 +2376,10 @@
         {
           "name": "locationReference",
           "path": "ExplanationOfBenefit.item.locationReference",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Location"
+          ]
         },
         {
           "name": "quantity",
@@ -2058,7 +2404,10 @@
         {
           "name": "udi",
           "path": "ExplanationOfBenefit.item.udi",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Device"
+          ]
         },
         {
           "name": "bodySite",
@@ -2073,7 +2422,10 @@
         {
           "name": "encounter",
           "path": "ExplanationOfBenefit.item.encounter",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Encounter"
+          ]
         },
         {
           "name": "noteNumber",
@@ -2170,7 +2522,10 @@
             {
               "name": "udi",
               "path": "ExplanationOfBenefit.item.detail.udi",
-              "type": "Reference"
+              "type": "Reference",
+              "referenceTypes": [
+                "Device"
+              ]
             },
             {
               "name": "noteNumber",
@@ -2245,7 +2600,10 @@
                 {
                   "name": "udi",
                   "path": "ExplanationOfBenefit.item.detail.subDetail.udi",
-                  "type": "Reference"
+                  "type": "Reference",
+                  "referenceTypes": [
+                    "Device"
+                  ]
                 },
                 {
                   "name": "noteNumber",
@@ -2550,12 +2908,19 @@
     {
       "name": "patient",
       "path": "ImagingStudy.patient",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient"
+      ]
     },
     {
       "name": "context",
       "path": "ImagingStudy.context",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Encounter",
+        "EpisodeOfCare"
+      ]
     },
     {
       "name": "started",
@@ -2565,22 +2930,36 @@
     {
       "name": "basedOn",
       "path": "ImagingStudy.basedOn",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "ReferralRequest",
+        "CarePlan",
+        "ProcedureRequest"
+      ]
     },
     {
       "name": "referrer",
       "path": "ImagingStudy.referrer",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner"
+      ]
     },
     {
       "name": "interpreter",
       "path": "ImagingStudy.interpreter",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner"
+      ]
     },
     {
       "name": "endpoint",
       "path": "ImagingStudy.endpoint",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Endpoint"
+      ]
     },
     {
       "name": "numberOfSeries",
@@ -2595,7 +2974,10 @@
     {
       "name": "procedureReference",
       "path": "ImagingStudy.procedureReference",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Procedure"
+      ]
     },
     {
       "name": "procedureCode",
@@ -2650,7 +3032,10 @@
         {
           "name": "endpoint",
           "path": "ImagingStudy.series.endpoint",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Endpoint"
+          ]
         },
         {
           "name": "bodySite",
@@ -2670,7 +3055,10 @@
         {
           "name": "performer",
           "path": "ImagingStudy.series.performer",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Practitioner"
+          ]
         },
         {
           "name": "instance",
@@ -2726,12 +3114,18 @@
     {
       "name": "patient",
       "path": "Immunization.patient",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient"
+      ]
     },
     {
       "name": "encounter",
       "path": "Immunization.encounter",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Encounter"
+      ]
     },
     {
       "name": "date",
@@ -2751,12 +3145,18 @@
     {
       "name": "location",
       "path": "Immunization.location",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Location"
+      ]
     },
     {
       "name": "manufacturer",
       "path": "Immunization.manufacturer",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization"
+      ]
     },
     {
       "name": "lotNumber",
@@ -2796,7 +3196,10 @@
         {
           "name": "actor",
           "path": "Immunization.practitioner.actor",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Practitioner"
+          ]
         }
       ]
     },
@@ -2835,7 +3238,10 @@
         {
           "name": "detail",
           "path": "Immunization.reaction.detail",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Observation"
+          ]
         },
         {
           "name": "reported",
@@ -2862,7 +3268,10 @@
         {
           "name": "authority",
           "path": "Immunization.vaccinationProtocol.authority",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Organization"
+          ]
         },
         {
           "name": "series",
@@ -2901,12 +3310,22 @@
     {
       "name": "definition",
       "path": "MedicationRequest.definition",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "ActivityDefinition",
+        "PlanDefinition"
+      ]
     },
     {
       "name": "basedOn",
       "path": "MedicationRequest.basedOn",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "CarePlan",
+        "MedicationRequest",
+        "ProcedureRequest",
+        "ReferralRequest"
+      ]
     },
     {
       "name": "groupIdentifier",
@@ -2941,22 +3360,36 @@
     {
       "name": "medicationReference",
       "path": "MedicationRequest.medicationReference",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Medication"
+      ]
     },
     {
       "name": "subject",
       "path": "MedicationRequest.subject",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "Group"
+      ]
     },
     {
       "name": "context",
       "path": "MedicationRequest.context",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Encounter",
+        "EpisodeOfCare"
+      ]
     },
     {
       "name": "supportingInformation",
       "path": "MedicationRequest.supportingInformation",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Resource"
+      ]
     },
     {
       "name": "authoredOn",
@@ -2971,19 +3404,32 @@
         {
           "name": "agent",
           "path": "MedicationRequest.requester.agent",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Practitioner",
+            "Organization",
+            "Patient",
+            "RelatedPerson",
+            "Device"
+          ]
         },
         {
           "name": "onBehalfOf",
           "path": "MedicationRequest.requester.onBehalfOf",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Organization"
+          ]
         }
       ]
     },
     {
       "name": "recorder",
       "path": "MedicationRequest.recorder",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner"
+      ]
     },
     {
       "name": "reasonCode",
@@ -2993,7 +3439,11 @@
     {
       "name": "reasonReference",
       "path": "MedicationRequest.reasonReference",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Condition",
+        "Observation"
+      ]
     },
     {
       "name": "note",
@@ -3033,7 +3483,10 @@
         {
           "name": "performer",
           "path": "MedicationRequest.dispenseRequest.performer",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Organization"
+          ]
         }
       ]
     },
@@ -3057,17 +3510,26 @@
     {
       "name": "priorPrescription",
       "path": "MedicationRequest.priorPrescription",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "MedicationRequest"
+      ]
     },
     {
       "name": "detectedIssue",
       "path": "MedicationRequest.detectedIssue",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "DetectedIssue"
+      ]
     },
     {
       "name": "eventHistory",
       "path": "MedicationRequest.eventHistory",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Provenance"
+      ]
     }
   ],
   "Observation": [
@@ -3079,7 +3541,16 @@
     {
       "name": "basedOn",
       "path": "Observation.basedOn",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "CarePlan",
+        "DeviceRequest",
+        "ImmunizationRecommendation",
+        "MedicationRequest",
+        "NutritionOrder",
+        "ProcedureRequest",
+        "ReferralRequest"
+      ]
     },
     {
       "name": "status",
@@ -3099,12 +3570,22 @@
     {
       "name": "subject",
       "path": "Observation.subject",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "Group",
+        "Device",
+        "Location"
+      ]
     },
     {
       "name": "context",
       "path": "Observation.context",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Encounter",
+        "EpisodeOfCare"
+      ]
     },
     {
       "name": "effectiveDateTime",
@@ -3124,7 +3605,13 @@
     {
       "name": "performer",
       "path": "Observation.performer",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner",
+        "Organization",
+        "Patient",
+        "RelatedPerson"
+      ]
     },
     {
       "name": "valueQuantity",
@@ -3209,12 +3696,19 @@
     {
       "name": "specimen",
       "path": "Observation.specimen",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Specimen"
+      ]
     },
     {
       "name": "device",
       "path": "Observation.device",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Device",
+        "DeviceMetric"
+      ]
     },
     {
       "name": "referenceRange",
@@ -3266,7 +3760,12 @@
         {
           "name": "target",
           "path": "Observation.related.target",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Observation",
+            "QuestionnaireResponse",
+            "Sequence"
+          ]
         }
       ]
     },
@@ -3447,7 +3946,10 @@
         {
           "name": "organization",
           "path": "Patient.contact.organization",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Organization"
+          ]
         },
         {
           "name": "period",
@@ -3498,12 +4000,19 @@
     {
       "name": "generalPractitioner",
       "path": "Patient.generalPractitioner",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization",
+        "Practitioner"
+      ]
     },
     {
       "name": "managingOrganization",
       "path": "Patient.managingOrganization",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Organization"
+      ]
     },
     {
       "name": "link",
@@ -3513,7 +4022,11 @@
         {
           "name": "other",
           "path": "Patient.link.other",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Patient",
+            "RelatedPerson"
+          ]
         },
         {
           "name": "type",
@@ -3532,17 +4045,27 @@
     {
       "name": "definition",
       "path": "ProcedureRequest.definition",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "ActivityDefinition",
+        "PlanDefinition"
+      ]
     },
     {
       "name": "basedOn",
       "path": "ProcedureRequest.basedOn",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Resource"
+      ]
     },
     {
       "name": "replaces",
       "path": "ProcedureRequest.replaces",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Resource"
+      ]
     },
     {
       "name": "requisition",
@@ -3582,12 +4105,22 @@
     {
       "name": "subject",
       "path": "ProcedureRequest.subject",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Patient",
+        "Group",
+        "Location",
+        "Device"
+      ]
     },
     {
       "name": "context",
       "path": "ProcedureRequest.context",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Encounter",
+        "EpisodeOfCare"
+      ]
     },
     {
       "name": "occurrenceDateTime",
@@ -3627,12 +4160,20 @@
         {
           "name": "agent",
           "path": "ProcedureRequest.requester.agent",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Device",
+            "Practitioner",
+            "Organization"
+          ]
         },
         {
           "name": "onBehalfOf",
           "path": "ProcedureRequest.requester.onBehalfOf",
-          "type": "Reference"
+          "type": "Reference",
+          "referenceTypes": [
+            "Organization"
+          ]
         }
       ]
     },
@@ -3644,7 +4185,15 @@
     {
       "name": "performer",
       "path": "ProcedureRequest.performer",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Practitioner",
+        "Organization",
+        "Patient",
+        "Device",
+        "RelatedPerson",
+        "HealthcareService"
+      ]
     },
     {
       "name": "reasonCode",
@@ -3654,17 +4203,27 @@
     {
       "name": "reasonReference",
       "path": "ProcedureRequest.reasonReference",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Condition",
+        "Observation"
+      ]
     },
     {
       "name": "supportingInfo",
       "path": "ProcedureRequest.supportingInfo",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Resource"
+      ]
     },
     {
       "name": "specimen",
       "path": "ProcedureRequest.specimen",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Specimen"
+      ]
     },
     {
       "name": "bodySite",
@@ -3679,7 +4238,10 @@
     {
       "name": "relevantHistory",
       "path": "ProcedureRequest.relevantHistory",
-      "type": "Reference"
+      "type": "Reference",
+      "referenceTypes": [
+        "Provenance"
+      ]
     }
   ]
 }
