@@ -15,6 +15,11 @@ import {
 } from '../../fhir/ResourceTree'
 import ResourceTreeNode from '../ResourceTreeNode'
 
+const ConnectedElementTreeNode = connect(
+  null,
+  actions,
+)(ElementTreeNode)
+
 /**
  * Renders an individual element within the element tree, which may be a
  * primitive, BackboneElement or complex element.
@@ -194,7 +199,4 @@ function ElementTreeNode(props) {
   )
 }
 
-export default connect(
-  null,
-  actions,
-)(ElementTreeNode)
+export default ConnectedElementTreeNode
