@@ -95,6 +95,7 @@ function ElementTreeNode(props) {
       <ConnectedElementTreeNode
         {...node.delete('children').toJS()}
         key={i}
+        path={`${path}.${node.get('name')}`}
         treePath={treePath.concat('children', i)}
         resourceOrComplexType={resourceOrComplexType}
       />
