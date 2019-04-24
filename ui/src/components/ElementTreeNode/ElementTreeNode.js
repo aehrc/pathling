@@ -92,7 +92,7 @@ function ElementTreeNode(props) {
 
   const renderBackboneElementChildren = () => {
     const elementTreeNodes = backboneElementChildren.map((node, i) => (
-      <ElementTreeNode
+      <ConnectedElementTreeNode
         {...node.delete('children').toJS()}
         key={i}
         treePath={treePath.concat('children', i)}
@@ -106,7 +106,7 @@ function ElementTreeNode(props) {
 
   const renderComplexElementChildren = () => {
     const elementTreeNodes = complexElementChildren.map((node, i) => (
-      <ElementTreeNode
+      <ConnectedElementTreeNode
         {...node.delete('children').toJS()}
         key={i}
         path={`${path}.${node.get('name')}`}

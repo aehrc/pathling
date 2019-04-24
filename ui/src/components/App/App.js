@@ -74,25 +74,26 @@ class App extends Component {
         className="app"
         style={{ gridTemplateColumns: `${siderWidth}px auto` }}
       >
-        <Resizable
-          enable={{
-            top: false,
-            right: true,
-            bottom: false,
-            left: false,
-            topRight: false,
-            bottomRight: false,
-            bottomLeft: false,
-            topLeft: false,
-          }}
-          minWidth={200}
-          maxWidth={600}
-          onResize={this.handleResize}
-        >
-          <div className="sider">
+        <div className="sider">
+          <Resizable
+            className="sider-inner"
+            enable={{
+              top: false,
+              right: true,
+              bottom: false,
+              left: false,
+              topRight: false,
+              bottomRight: false,
+              bottomLeft: false,
+              topLeft: false,
+            }}
+            minWidth={200}
+            maxWidth={600}
+            onResize={this.handleResize}
+          >
             <ElementTree />
-          </div>
-        </Resizable>
+          </Resizable>
+        </div>
         <main className="content">
           <Aggregations />
           <Groupings />
