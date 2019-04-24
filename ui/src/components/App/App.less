@@ -8,9 +8,9 @@
 
 .app {
   display: grid;
-  grid-template-columns: 21em auto;
   grid-template-rows: auto;
   height: 100%;
+  position: relative;
 }
 
 .sider {
@@ -20,16 +20,6 @@
   padding: 1em;
   overflow-x: hidden;
   overflow-y: scroll;
-  position: relative;
-
-  .react-resizable-handle {
-    position: absolute;
-    width: 1em;
-    height: 100%;
-    top: 0;
-    right: 0;
-    cursor: ew-resize;
-  }
 }
 
 .content {

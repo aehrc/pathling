@@ -5,7 +5,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Toaster, Position } from '@blueprintjs/core'
-import { Resizable } from 'react-resizable'
+import Resizable from 're-resizable'
 
 import ElementTree from '../ElementTree'
 import Aggregations from '../Aggregations'
@@ -55,13 +55,15 @@ class App extends Component {
     }
   }
 
-  handleResize(
-    event,
-    {
-      size: { width },
-    },
-  ) {
-    this.setState(() => ({ siderWidth: width }))
+  handleResize(event) {
+    const { clientX: siderWidth } = event
+    if (siderWidth < 200) {
+      this.setState(() => ({ siderWidth: 200 }))
+    } else if (siderWidth > 600) {
+      this.setState(() => ({ siderWidth: 600 }))
+    } else {
+      this.setState(() => ({ siderWidth }))
+    }
   }
 
   render() {
@@ -73,11 +75,19 @@ class App extends Component {
         style={{ gridTemplateColumns: `${siderWidth}px auto` }}
       >
         <Resizable
-          className="sider"
-          axis="x"
+          enable={{
+            top: false,
+            right: true,
+            bottom: false,
+            left: false,
+            topRight: false,
+            bottomRight: false,
+            bottomLeft: false,
+            topLeft: false,
+          }}
+          minWidth={200}
+          maxWidth={600}
           onResize={this.handleResize}
-          width={300}
-          height={0}
         >
           <div className="sider">
             <ElementTree />
