@@ -42,6 +42,7 @@ function transformStrucDefToElementMap(strucDef) {
           children: currentChildren,
           fhirPath: path.path,
           type: path.type,
+          definition: path.definition,
           referenceTypes: path.referenceTypes,
         })
       }
@@ -54,6 +55,7 @@ function extractPathsFromElement(element) {
   let path = {
     path: element['path'],
     type: element['type'] ? element['type'][0]['code'] : 'Resource',
+    definition: element['definition'],
   }
   if (path.type === 'Reference')
     path = extractReferenceTypesFromElement(path, element)
@@ -79,6 +81,7 @@ function extractPathsFromPolyElement(element) {
       t['code'].charAt(0).toUpperCase() + t['code'].slice(1),
     ),
     type: t['code'],
+    definition: element['definition'],
   }))
   return paths.map(path =>
     path.type === 'Reference'
@@ -104,6 +107,7 @@ function mergePathIntoChildren(path) {
         name: elementName,
         path: path.fhirPath,
         type: path.type,
+        definition: path.definition,
         referenceTypes: path.referenceTypes,
       }
   const newChildren = mergePathIntoChildren({

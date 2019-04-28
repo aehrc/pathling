@@ -26,7 +26,8 @@ export class OpOutcomeError extends Error {
     super(message)
     this.name = 'OpOutcomeError'
     this.issue = issue
-    Error.captureStackTrace(this, OpOutcomeError)
+    if (Error.captureStackTrace !== undefined)
+      Error.captureStackTrace(this, OpOutcomeError)
   }
 }
 

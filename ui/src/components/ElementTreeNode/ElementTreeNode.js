@@ -4,16 +4,23 @@
 
 import React, { useState } from 'react'
 import { connect } from 'react-redux'
-import { MenuItem, Menu, ContextMenu } from '@blueprintjs/core'
+import {
+  MenuItem,
+  Menu,
+  ContextMenu,
+  Popover,
+  PopoverInteractionKind,
+  Position,
+} from '@blueprintjs/core'
 
 import * as actions from '../../store/Actions'
-
 import {
   resourceTree,
   complexTypesTree,
   supportedComplexTypes,
 } from '../../fhir/ResourceTree'
 import ResourceTreeNode from '../ResourceTreeNode'
+import './ElementTreeNode.less'
 
 const ConnectedElementTreeNode = connect(
   null,
@@ -32,6 +39,7 @@ function ElementTreeNode(props) {
       path,
       treePath,
       type,
+      definition,
       resourceOrComplexType,
       referenceTypes,
     } = props,
@@ -173,29 +181,35 @@ function ElementTreeNode(props) {
     return `bp3-tree-node-icon bp3-icon-standard bp3-icon-${iconName}`
   }
 
-  const getNameClasses = () =>
-    isComplexType || isReference
-      ? 'name bp3-tree-node-label'
-      : 'name clickable bp3-tree-node-label'
-
   return (
     <li className="element-tree-node bp3-tree-node">
-      <div className="bp3-tree-node-content">
-        <span
-          className={getCaretClasses()}
-          onClick={() => setExpanded(!isExpanded)}
-        />
-        <span className={getIconClasses()} />
-        <span className={getNameClasses()}>{name}</span>
-        {renderActionIcon()}
-      </div>
-      {isExpanded && backboneElementChildren
-        ? renderBackboneElementChildren()
-        : null}
-      {isExpanded && complexElementChildren
-        ? renderComplexElementChildren()
-        : null}
-      {isExpanded && referenceChildren ? renderReferenceChildren() : null}
+      <Popover
+        content={<div className="definition">{definition}</div>}
+        position={Position.RIGHT}
+        boundary={document.body}
+        interactionKind={PopoverInteractionKind.HOVER}
+        popoverClassName="bp3-dark"
+        hoverOpenDelay={300}
+      >
+        <div className="inner">
+          <div className="bp3-tree-node-content">
+            <span
+              className={getCaretClasses()}
+              onClick={() => setExpanded(!isExpanded)}
+            />
+            <span className={getIconClasses()} />
+            <span className="name bp3-tree-node-label">{name}</span>
+            {renderActionIcon()}
+          </div>
+          {isExpanded && backboneElementChildren
+            ? renderBackboneElementChildren()
+            : null}
+          {isExpanded && complexElementChildren
+            ? renderComplexElementChildren()
+            : null}
+          {isExpanded && referenceChildren ? renderReferenceChildren() : null}
+        </div>
+      </Popover>
     </li>
   )
 }
