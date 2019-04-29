@@ -33,18 +33,28 @@ function transformStrucDefToElementMap(strucDef) {
       const resourceName = components[0]
       const tail = components.slice(1)
 
-      if (components.length > 1) {
-        const currentChildren =
-          resourceName in elementMap ? elementMap[resourceName] : []
-
-        elementMap[resourceName] = mergePathIntoChildren({
-          path: tail,
-          children: currentChildren,
-          fhirPath: path.path,
-          type: path.type,
+      if (components.length === 1) {
+        elementMap[resourceName] = {
+          ...elementMap[resourceName],
           definition: path.definition,
-          referenceTypes: path.referenceTypes,
-        })
+        }
+      } else if (components.length > 1) {
+        const currentChildren =
+          resourceName in elementMap && elementMap[resourceName].children
+            ? elementMap[resourceName].children
+            : []
+
+        elementMap[resourceName] = {
+          ...elementMap[resourceName],
+          children: mergePathIntoChildren({
+            path: tail,
+            children: currentChildren,
+            fhirPath: path.path,
+            type: path.type,
+            definition: path.definition,
+            referenceTypes: path.referenceTypes,
+          }),
+        }
       }
     }
   }

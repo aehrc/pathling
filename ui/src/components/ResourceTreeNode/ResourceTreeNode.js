@@ -4,11 +4,19 @@
 
 import React, { useState } from 'react'
 import { connect } from 'react-redux'
-import { MenuItem, Menu, ContextMenu } from '@blueprintjs/core'
+import {
+  MenuItem,
+  Menu,
+  ContextMenu,
+  Popover,
+  PopoverInteractionKind,
+  Position,
+} from '@blueprintjs/core'
 
 import ElementTreeNode from '../ElementTreeNode'
 import { resourceTree } from '../../fhir/ResourceTree'
 import * as actions from '../../store/Actions'
+import './ResourceTreeNode.less'
 
 /**
  * Renders a tree node showing the elements available within a particular
@@ -18,6 +26,7 @@ import * as actions from '../../store/Actions'
  */
 function ResourceTreeNode(props) {
   const { name, referencePath, addAggregation } = props,
+    definition = resourceTree.get(name).get('definition'),
     [isExpanded, setExpanded] = useState(false)
 
   const openContextMenu = event => {
@@ -53,13 +62,13 @@ function ResourceTreeNode(props) {
   }
 
   const renderChildren = () => {
-    const childNodes = resourceTree.get(name),
+    const childNodes = resourceTree.get(name).get('children'),
       elementTreeNodes = childNodes.map((node, i) => (
         <ElementTreeNode
           {...node.delete('children').toJS()}
           key={i}
           path={getReferencePath(node)}
-          treePath={[name, i]}
+          treePath={[name, 'children', i]}
           resourceOrComplexType={name}
         />
       ))
@@ -76,18 +85,8 @@ function ResourceTreeNode(props) {
       />
     )
 
-  const getNodeClasses = () =>
-    isExpanded
-      ? 'resource-tree-node bp3-tree-node bp3-tree-node-expanded'
-      : 'resource-tree-node bp3-tree-node'
-
-  const getCaretClasses = () =>
-    isExpanded
-      ? 'bp3-tree-node-caret bp3-tree-node-caret-open bp3-icon-standard'
-      : 'bp3-tree-node-caret bp3-tree-node-caret-close bp3-icon-standard'
-
-  return (
-    <li className={getNodeClasses()}>
+  const renderNodeContent = () => (
+    <div className="inner">
       <div className="bp3-tree-node-content">
         <span
           className={getCaretClasses()}
@@ -100,6 +99,35 @@ function ResourceTreeNode(props) {
         {renderActionIcon()}
       </div>
       {isExpanded ? renderChildren() : null}
+    </div>
+  )
+
+  const getNodeClasses = () =>
+    isExpanded
+      ? 'resource-tree-node bp3-tree-node bp3-tree-node-expanded'
+      : 'resource-tree-node bp3-tree-node'
+
+  const getCaretClasses = () =>
+    isExpanded
+      ? 'bp3-tree-node-caret bp3-tree-node-caret-open bp3-icon-standard'
+      : 'bp3-tree-node-caret bp3-tree-node-caret-close bp3-icon-standard'
+
+  return (
+    <li className={getNodeClasses()}>
+      {isExpanded ? (
+        renderNodeContent()
+      ) : (
+        <Popover
+          content={<div className="definition">{definition}</div>}
+          position={Position.RIGHT}
+          boundary={document.body}
+          interactionKind={PopoverInteractionKind.HOVER}
+          popoverClassName="bp3-dark"
+          hoverOpenDelay={300}
+        >
+          {renderNodeContent()}
+        </Popover>
+      )}
     </li>
   )
 }

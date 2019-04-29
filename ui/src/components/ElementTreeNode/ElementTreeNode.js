@@ -49,7 +49,9 @@ function ElementTreeNode(props) {
       ? resourceTree.getIn(treePath).get('children')
       : null,
     isComplexType = supportedComplexTypes.includes(type),
-    complexElementChildren = isComplexType ? complexTypesTree.get(type) : null,
+    complexElementChildren = isComplexType
+      ? complexTypesTree.get(type).get('children')
+      : null,
     isReference = type === 'Reference',
     referenceChildren = isReference
       ? referenceTypes.filter(t => !!resourceTree.get(t))
@@ -153,6 +155,27 @@ function ElementTreeNode(props) {
       />
     )
 
+  const renderNodeContent = () => (
+    <div className="inner">
+      <div className="bp3-tree-node-content">
+        <span
+          className={getCaretClasses()}
+          onClick={() => setExpanded(!isExpanded)}
+        />
+        <span className={getIconClasses()} />
+        <span className="name bp3-tree-node-label">{name}</span>
+        {renderActionIcon()}
+      </div>
+      {isExpanded && backboneElementChildren
+        ? renderBackboneElementChildren()
+        : null}
+      {isExpanded && complexElementChildren
+        ? renderComplexElementChildren()
+        : null}
+      {isExpanded && referenceChildren ? renderReferenceChildren() : null}
+    </div>
+  )
+
   const getCaretClasses = () => {
     if (
       backboneElementChildren ||
@@ -183,33 +206,20 @@ function ElementTreeNode(props) {
 
   return (
     <li className="element-tree-node bp3-tree-node">
-      <Popover
-        content={<div className="definition">{definition}</div>}
-        position={Position.RIGHT}
-        boundary={document.body}
-        interactionKind={PopoverInteractionKind.HOVER}
-        popoverClassName="bp3-dark"
-        hoverOpenDelay={300}
-      >
-        <div className="inner">
-          <div className="bp3-tree-node-content">
-            <span
-              className={getCaretClasses()}
-              onClick={() => setExpanded(!isExpanded)}
-            />
-            <span className={getIconClasses()} />
-            <span className="name bp3-tree-node-label">{name}</span>
-            {renderActionIcon()}
-          </div>
-          {isExpanded && backboneElementChildren
-            ? renderBackboneElementChildren()
-            : null}
-          {isExpanded && complexElementChildren
-            ? renderComplexElementChildren()
-            : null}
-          {isExpanded && referenceChildren ? renderReferenceChildren() : null}
-        </div>
-      </Popover>
+      {isExpanded ? (
+        renderNodeContent()
+      ) : (
+        <Popover
+          content={<div className="definition">{definition}</div>}
+          position={Position.RIGHT}
+          boundary={document.body}
+          interactionKind={PopoverInteractionKind.HOVER}
+          popoverClassName="bp3-dark"
+          hoverOpenDelay={300}
+        >
+          {renderNodeContent()}
+        </Popover>
+      )}
     </li>
   )
 }
