@@ -101,15 +101,18 @@ function ElementTreeNode(props) {
   }
 
   const renderBackboneElementChildren = () => {
-    const elementTreeNodes = backboneElementChildren.map((node, i) => (
-      <ConnectedElementTreeNode
-        {...node.delete('children').toJS()}
-        key={i}
-        path={`${path}.${node.get('name')}`}
-        treePath={treePath.concat('children', i)}
-        resourceOrComplexType={resourceOrComplexType}
-      />
-    ))
+    const elementTreeNodes = backboneElementChildren.map((node, i) => {
+      const path = `${path}.${node.get('name')}`
+      return (
+        <ConnectedElementTreeNode
+          {...node.delete('children').toJS()}
+          key={path}
+          path={path}
+          treePath={treePath.concat('children', i)}
+          resourceOrComplexType={resourceOrComplexType}
+        />
+      )
+    })
     return (
       <ol className="child-nodes bp3-tree-node-list">{elementTreeNodes}</ol>
     )
@@ -119,7 +122,7 @@ function ElementTreeNode(props) {
     const elementTreeNodes = complexElementChildren.map((node, i) => (
       <ConnectedElementTreeNode
         {...node.delete('children').toJS()}
-        key={i}
+        key={path}
         path={`${path}.${node.get('name')}`}
         treePath={[type, i]}
         resourceOrComplexType={isComplexType ? type : resourceOrComplexType}
@@ -131,17 +134,19 @@ function ElementTreeNode(props) {
   }
 
   const renderReferenceChildren = () => {
-    const resourceTreeNodes = referenceChildren.map((type, i) => (
-      <ResourceTreeNode
-        name={type}
-        key={i}
-        referencePath={
-          referenceTypes.length > 1
-            ? `${path}.resolve(${type})`
-            : `${path}.resolve()`
-        }
-      />
-    ))
+    const resourceTreeNodes = referenceChildren.map(type => {
+      const referencePath =
+        referenceTypes.length > 1
+          ? `${path}.resolve(${type})`
+          : `${path}.resolve()`
+      return (
+        <ResourceTreeNode
+          name={type}
+          key={referencePath}
+          referencePath={referencePath}
+        />
+      )
+    })
     return (
       <ol className="child-nodes bp3-tree-node-list">{resourceTreeNodes}</ol>
     )

@@ -6,9 +6,11 @@ import { Map, fromJS } from 'immutable'
 
 import rawResourceTree from '../../../config/resource-tree.json'
 import rawComplexTypesTree from '../../../config/complex-type-tree.json'
+import rawReverseReferences from '../../../config/reverse-references.json'
 
 export const resourceTree = Map(fromJS(rawResourceTree))
 export const complexTypesTree = Map(fromJS(rawComplexTypesTree))
+export const reverseReferences = Map(fromJS(rawReverseReferences))
 
 // Reference is supported, but is left out of this list as it is treated
 // differently.
