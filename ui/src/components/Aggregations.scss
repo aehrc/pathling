@@ -1,0 +1,32 @@
+/*!
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+.aggregations {
+  overflow-y: scroll;
+  position: relative;
+  padding: 1em 1em 0.5em 2.8em;
+
+  .section-identity {
+    position: absolute;
+    top: 1em;
+    left: 1em;
+  }
+
+  .blank-canvas {
+    color: #666;
+    margin-bottom: 0.5em;
+  }
+
+  //noinspection CssUnusedSymbol
+  .bp3-tag {
+    background-color: #db2c6f;
+    margin: 0 0.5em 0.5em 0;
+    user-select: none;
+  }
+
+  //noinspection CssUnusedSymbol
+  .bp3-tag-remove {
+    outline: none;
+  }
+}

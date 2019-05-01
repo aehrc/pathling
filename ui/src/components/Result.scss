@@ -1,0 +1,16 @@
+/*!
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+.result {
+  &.stale {
+    opacity: 0.5;
+  }
+
+  .loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+  }
+}

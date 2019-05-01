@@ -2,62 +2,54 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-const path = require('path')
-const HtmlWebpackPlugin = require('html-webpack-plugin')
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer')
-  .BundleAnalyzerPlugin
+const path = require("path"),
+  HtmlWebpackPlugin = require("html-webpack-plugin"),
+  BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
+    .BundleAnalyzerPlugin;
 
 module.exports = {
+  entry: "./src/index.tsx",
+  resolve: {
+    extensions: [".ts", ".tsx", ".js"]
+  },
   output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: '[name].[hash:8].js',
+    path: path.resolve(__dirname, "dist"),
+    filename: "[name].[hash:8].js"
   },
   module: {
     rules: [
       {
-        test: /\.js$/,
+        test: /\.(ts|tsx|js)$/,
         use: {
-          loader: 'babel-loader',
+          loader: "ts-loader"
         },
+        exclude: /node_modules/
+      },
+      {
+        test: /\.scss$/,
+        use: ["style-loader", "css-loader", "sass-loader"]
       },
       {
         test: /\.(ttf|eot|woff)$/,
         use: {
-          loader: 'file-loader',
+          loader: "file-loader",
           options: {
-            name: 'fonts/[hash].[ext]',
-          },
-        },
-      },
-      {
-        test: /\.(css|less)$/,
-        use: [
-          { loader: 'style-loader', options: { sourceMap: true } },
-          { loader: 'css-loader', options: { sourceMap: true } },
-          {
-            loader: 'less-loader',
-            options: {
-              sourceMap: true,
-              javascriptEnabled: true,
-              modifyVars: {
-                'primary-color': '#2db7f5',
-              },
-            },
-          },
-        ],
-      },
-    ],
+            name: "fonts/[hash].[ext]"
+          }
+        }
+      }
+    ]
   },
   plugins: [
     new HtmlWebpackPlugin({
       inject: true,
-      template: path.resolve(__dirname, 'src', 'index.html'),
+      template: path.resolve(__dirname, "src", "index.html")
     }),
-    new BundleAnalyzerPlugin({ analyzerMode: 'static', openAnalyzer: false }),
+    new BundleAnalyzerPlugin({ analyzerMode: "static", openAnalyzer: false })
   ],
   devServer: {
-    contentBase: path.resolve(__dirname, 'dist'),
-    compress: true,
+    contentBase: path.resolve(__dirname, "dist"),
+    compress: true
   },
-  devtool: 'source-map',
-}
+  devtool: "source-map"
+};
