@@ -9,13 +9,14 @@ import { ElementNode, getResolvedPath } from "../fhir/ResourceTree";
 import AddAggregation from "./AddAggregation";
 import AddGrouping from "./AddGrouping";
 import "./style/Element.scss";
+import TreeNodeTooltip from "./TreeNodeTooltip";
 
 interface Props extends ElementNode {
   parentPath: string;
 }
 
 function Element(props: Props) {
-  const { name, path, parentPath } = props,
+  const { name, type, definition, path, parentPath } = props,
     resolvedPath = getResolvedPath(parentPath, path);
 
   const openContextMenu = (event: any): void => {
@@ -33,14 +34,12 @@ function Element(props: Props) {
 
   return (
     <li className="element">
-      <div className="inner">
-        <div className="content">
-          <span className="caret-none" />
-          <span className="icon" />
-          <span className="label">{name}</span>
-          <span className="action" onClick={openContextMenu} />
-        </div>
-      </div>
+      <TreeNodeTooltip type={type} definition={definition}>
+        <span className="caret-none" />
+        <span className="icon" />
+        <span className="label">{name}</span>
+        <span className="action" onClick={openContextMenu} />
+      </TreeNodeTooltip>
     </li>
   );
 }

@@ -7,7 +7,7 @@
 .element-tree .complex-element {
   @extend %tree-node;
 
-  & > .inner > .content > .icon {
+  > .tooltip > .content .icon {
     @extend .#{$ns}-icon-grid-view;
     color: #a7b6c2;
   }

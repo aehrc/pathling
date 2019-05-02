@@ -1,0 +1,24 @@
+/*!
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+@import "~@blueprintjs/core/src/blueprint";
+
+.tree-node-tooltip-popover {
+  @extend .#{$ns}-dark;
+
+  .content {
+    padding: 1em;
+    max-width: 600px;
+
+    .type {
+      color: #48aff0;
+      margin-top: 0.5em;
+      font-weight: 500;
+    }
+
+    .definition {
+      @extend .#{$ns}-running-text;
+    }
+  }
+}

@@ -7,7 +7,7 @@
 .element-tree .element {
   @extend %tree-node;
 
-  & > .inner > .content > .icon {
+  > .tooltip > .content .icon {
     @extend .#{$ns}-icon-symbol-square;
     color: #137cbd;
   }

@@ -7,7 +7,7 @@
 .element-tree .reference {
   @extend %tree-node;
 
-  & > .inner > .content > .icon {
+  > .tooltip > .content .icon {
     @extend .#{$ns}-icon-document-share;
     color: #a7b6c2;
   }

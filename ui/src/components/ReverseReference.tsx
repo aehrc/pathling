@@ -14,13 +14,15 @@ import Resource from "./Resource";
 import ContainedElements from "./ContainedElements";
 import UnsupportedReference from "./UnsupportedReference";
 import "./style/ReverseReference.scss";
+import TreeNodeTooltip from "./TreeNodeTooltip";
 
 interface Props extends ElementNode {}
 
 function ReverseReference(props: Props) {
-  const { path, referenceTypes } = props,
-    unsupported =
-      referenceTypes.length === 1 && !(referenceTypes[0] in resourceTree);
+  const { path, type, definition, referenceTypes } = props,
+    pathComponents = path.split("."),
+    sourceType = pathComponents[0],
+    unsupported = !(sourceType in resourceTree);
 
   const openContextMenu = () => {};
 
@@ -47,17 +49,19 @@ function ReverseReference(props: Props) {
   // };
 
   return unsupported ? (
-    <UnsupportedReference {...props} />
+    <UnsupportedReference {...props} reverse />
   ) : (
     <li className="reverse-reference">
-      <div className="inner">
-        <div className="content">
-          <span className="caret" />
-          <span className="icon" />
-          <span className="label">{path}</span>
-        </div>
-        {/*<ol className="contains">{renderContains()}</ol>*/}
-      </div>
+      <TreeNodeTooltip
+        type={type}
+        definition={definition}
+        referenceTypes={referenceTypes}
+      >
+        <span className="caret" />
+        <span className="icon" />
+        <span className="label">{path}</span>
+      </TreeNodeTooltip>
+      {/*<ol className="contains">{renderContains()}</ol>*/}
     </li>
   );
 }

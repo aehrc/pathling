@@ -8,11 +8,16 @@
 %tree-node {
   @extend .#{$ns}-tree-node;
 
-  & > .inner {
-    outline: none;
+  > .tooltip {
+    display: block;
 
-    & > .content > {
-      @extend .#{$ns}-tree-node-content;
+    > .content {
+      display: block;
+
+      > span {
+        @extend .#{$ns}-tree-node-content;
+        outline: none;
+      }
 
       .caret {
         @extend .#{$ns}-tree-node-caret, .#{$ns}-icon-standard;
@@ -56,7 +61,7 @@
 %tree-node-with-contains {
   @extend %tree-node;
 
-  & > .inner > .contains {
+  > .contains {
     @extend .#{$ns}-tree-node-list;
   }
 }

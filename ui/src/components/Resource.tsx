@@ -14,13 +14,14 @@ import ContainedElements from "./ContainedElements";
 import ReverseReference from "./ReverseReference";
 import AddAggregation from "./AddAggregation";
 import "./style/Resource.scss";
+import TreeNodeTooltip from "./TreeNodeTooltip";
 
 interface Props extends ResourceNode {
   name: string;
 }
 
 function Resource(props: Props) {
-  const { name, contains } = props,
+  const { name, definition, contains } = props,
     [isExpanded, setExpanded] = useState(false);
 
   const openContextMenu = (event: any): void => {
@@ -49,18 +50,16 @@ function Resource(props: Props) {
 
   return (
     <li className="resource">
-      <div className="inner">
-        <div className="content">
-          <span
-            className={isExpanded ? "caret-open" : "caret-closed"}
-            onClick={() => setExpanded(!isExpanded)}
-          />
-          <span className="icon" />
-          <span className="label">{name}</span>
-          <span className="action" onClick={openContextMenu} />
-        </div>
-        {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
-      </div>
+      <TreeNodeTooltip type="Resource" definition={definition}>
+        <span
+          className={isExpanded ? "caret-open" : "caret-closed"}
+          onClick={() => setExpanded(!isExpanded)}
+        />
+        <span className="icon" />
+        <span className="label">{name}</span>
+        <span className="action" onClick={openContextMenu} />
+      </TreeNodeTooltip>
+      {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
     </li>
   );
 }

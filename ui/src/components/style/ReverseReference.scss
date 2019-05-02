@@ -7,7 +7,7 @@
 .element-tree .reverse-reference {
   @extend %tree-node;
 
-  & > .inner > .content > .icon {
+  > .tooltip > .content .icon {
     @extend .#{$ns}-icon-document-open;
     color: #a7b6c2;
   }

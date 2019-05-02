@@ -4,25 +4,33 @@
 
 import * as React from "react";
 
-import { ElementNode } from "../fhir/ResourceTree";
+import { ElementNode, reverseReferences } from "../fhir/ResourceTree";
 import "./style/UnsupportedReference.scss";
+import TreeNodeTooltip from "./TreeNodeTooltip";
 
-interface Props extends ElementNode {}
+interface Props extends ElementNode {
+  reverse?: boolean;
+}
 
 function UnsupportedReference(props: Props) {
-  const { name } = props;
+  const { name, type, definition, referenceTypes, path, reverse } = props;
 
-  const openContextMenu = () => {};
+  const tooltipProps: any = { type, definition };
+  if (type === "Reference") {
+    tooltipProps.referenceTypes = referenceTypes;
+  }
 
   return (
-    <li className="unsupported-reference">
-      <div className="inner">
-        <div className="content">
-          <span className="caret-none" />
-          <span className="icon" />
-          <span className="label">{name}</span>
-        </div>
-      </div>
+    <li
+      className={
+        reverse ? "unsupported-reference reverse" : "unsupported-reference"
+      }
+    >
+      <TreeNodeTooltip {...tooltipProps}>
+        <span className="caret-none" />
+        <span className="icon" />
+        <span className="label">{reverse ? path : name}</span>
+      </TreeNodeTooltip>
     </li>
   );
 }

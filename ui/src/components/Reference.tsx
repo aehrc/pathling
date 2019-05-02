@@ -15,11 +15,12 @@ import ContainedElements from "./ContainedElements";
 import ReverseReference from "./ReverseReference";
 import UnsupportedReference from "./UnsupportedReference";
 import "./style/Reference.scss";
+import TreeNodeTooltip from "./TreeNodeTooltip";
 
 interface Props extends ElementNode {}
 
 function Reference(props: Props) {
-  const { name, referenceTypes } = props,
+  const { name, type, definition, referenceTypes } = props,
     unsupported =
       referenceTypes.length === 1 && !(referenceTypes[0] in resourceTree);
 
@@ -52,14 +53,16 @@ function Reference(props: Props) {
     <UnsupportedReference {...props} />
   ) : (
     <li className="reference">
-      <div className="inner">
-        <div className="content">
-          <span className="caret" />
-          <span className="icon" />
-          <span className="label">{name}</span>
-        </div>
-        {/*<ol className="contains">{renderContains()}</ol>*/}
-      </div>
+      <TreeNodeTooltip
+        type={type}
+        definition={definition}
+        referenceTypes={referenceTypes}
+      >
+        <span className="caret" />
+        <span className="icon" />
+        <span className="label">{name}</span>
+      </TreeNodeTooltip>
+      {/*<ol className="contains">{renderContains()}</ol>*/}
     </li>
   );
 }
