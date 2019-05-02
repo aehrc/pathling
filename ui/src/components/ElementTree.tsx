@@ -4,9 +4,9 @@
 
 import * as React from "react";
 
-import ResourceTreeNode from "./ResourceTreeNode";
-import { resourceTree } from "../fhir/ResourceTree";
-import "./ElementTree.scss";
+import { getResource, resourceTree } from "../fhir/ResourceTree";
+import Resource from "./Resource";
+import "./style/ElementTree.scss";
 
 /**
  * Renders a tree showing resources and elements available for use within
@@ -15,13 +15,13 @@ import "./ElementTree.scss";
  * @author John Grimes
  */
 function ElementTree() {
-  const resourceNodes = Object.keys(resourceTree).map(resourceName => (
-    <ResourceTreeNode key={resourceName} name={resourceName} />
+  const resourceNodes = Object.keys(resourceTree).map((resourceName, i) => (
+    <Resource {...getResource(resourceName)} key={i} name={resourceName} />
   ));
 
   return (
-    <div className="element-tree bp3-tree">
-      <ol className="bp3-tree-node-list bp3-tree-root">{resourceNodes}</ol>
+    <div className="element-tree">
+      <ol className="resources">{resourceNodes}</ol>
     </div>
   );
 }

@@ -1,0 +1,62 @@
+/*!
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+@import "~@blueprintjs/core/src/components/tree/tree";
+@import "~@blueprintjs/core/src/components/icon/icon";
+
+%tree-node {
+  @extend .#{$ns}-tree-node;
+
+  & > .inner {
+    outline: none;
+
+    & > .content > {
+      @extend .#{$ns}-tree-node-content;
+
+      .caret {
+        @extend .#{$ns}-tree-node-caret, .#{$ns}-icon-standard;
+
+        &-open {
+          @extend .caret, .#{$ns}-tree-node-caret-open;
+        }
+
+        &-closed {
+          @extend .caret;
+        }
+
+        &-none {
+          @extend .#{$ns}-tree-node-caret-none, .#{$ns}-icon-standard;
+        }
+      }
+
+      .icon {
+        @extend .#{$ns}-tree-node-icon, .#{$ns}-icon-standard;
+      }
+
+      .label {
+        @extend .#{$ns}-tree-node-label;
+      }
+
+      .action {
+        @extend .#{$ns}-tree-node-secondary-label,
+          .#{$ns}-icon-standard,
+          .#{$ns}-icon-arrow-right;
+        color: #8a9ba8;
+        cursor: pointer;
+
+        &:hover {
+          color: #137cbd;
+        }
+      }
+    }
+  }
+}
+
+%tree-node-with-contains {
+  @extend %tree-node;
+
+  & > .inner > .contains {
+    @extend .#{$ns}-tree-node-list;
+  }
+}

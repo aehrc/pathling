@@ -1,0 +1,14 @@
+/*!
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+@import "TreeNode";
+
+.element-tree .backbone-element {
+  @extend %tree-node;
+
+  & > .inner > .content > .icon {
+    @extend .#{$ns}-icon-folder-close;
+    color: #a7b6c2;
+  }
+}

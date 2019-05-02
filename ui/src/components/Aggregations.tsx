@@ -9,7 +9,7 @@ import { Icon, Tag } from "@blueprintjs/core";
 import * as actions from "../store/QueryActions";
 import { Aggregation } from "../store/QueryReducer";
 import { GlobalState } from "../store";
-import "./Aggregations.scss";
+import "./style/Aggregations.scss";
 import { ReactElement } from "react";
 
 interface Props {

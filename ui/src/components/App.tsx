@@ -13,7 +13,7 @@ import Filters from "./Filters";
 import Groupings from "./Groupings";
 import Actions from "./Actions";
 import Result from "./Result";
-import "./App.scss";
+import "./style/App.scss";
 import { GlobalState } from "../store";
 import { Error } from "../store/ResultReducer";
 
@@ -86,7 +86,7 @@ class App extends React.Component<Props, State> {
       >
         <div className="sider">
           <Resizable
-            className="sider-inner"
+            className="inner"
             enable={{
               top: false,
               right: true,

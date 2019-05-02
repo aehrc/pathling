@@ -8,7 +8,7 @@ import { Icon, Tag } from "@blueprintjs/core";
 
 import * as actions from "../store/QueryActions";
 import { Grouping } from "../store/QueryReducer";
-import "./Groupings.scss";
+import "./style/Groupings.scss";
 import { GlobalState } from "../store";
 import { ReactElement } from "react";
 

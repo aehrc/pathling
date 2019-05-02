@@ -1,0 +1,21 @@
+/*!
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+@import "~@blueprintjs/core/src/components/tree/tree";
+
+.element-tree {
+  @extend .#{$ns}-tree;
+
+  & > .resources {
+    @extend .#{$ns}-tree-node-list, .#{$ns}-tree-root;
+
+    & .contains {
+      margin-left: 23px !important;
+    }
+  }
+
+  .contains .contains {
+    margin-left: 23px !important;
+  }
+}

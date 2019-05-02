@@ -30,7 +30,8 @@ export default (state = initialState, action: QueryAction): Query => {
       return {
         ...state,
         aggregations: state.aggregations.concat({
-          expression: action.expression
+          expression: action.expression,
+          label: action.expression
         })
       };
     case "REMOVE_AGGREGATION":
@@ -41,7 +42,10 @@ export default (state = initialState, action: QueryAction): Query => {
     case "ADD_GROUPING":
       return {
         ...state,
-        groupings: state.groupings.concat({ expression: action.expression })
+        groupings: state.groupings.concat({
+          expression: action.expression,
+          label: action.expression
+        })
       };
     case "REMOVE_GROUPING":
       return {

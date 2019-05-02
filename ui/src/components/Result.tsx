@@ -7,7 +7,7 @@ import { connect } from "react-redux";
 import { Spinner, HTMLTable } from "@blueprintjs/core";
 import isEqual from "lodash.isequal";
 
-import "./Result.scss";
+import "./style/Result.scss";
 import { Parameter } from "../fhir/Types";
 import { Query } from "../store/QueryReducer";
 import { ReactElement } from "react";

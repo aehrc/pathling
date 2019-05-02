@@ -4,7 +4,7 @@
 
 import * as React from "react";
 import { Icon } from "@blueprintjs/core";
-import "./Filters.scss";
+import "./style/Filters.scss";
 
 /**
  * Renders a list of currently selected filters, used when composing a query.

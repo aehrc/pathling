@@ -1,7 +1,7 @@
 {
   "AllergyIntolerance": {
     "definition": "Risk of harmful or undesirable, physiological response which is unique to an individual and associated with exposure to a substance.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "AllergyIntolerance.identifier",
@@ -127,7 +127,7 @@
         "path": "AllergyIntolerance.reaction",
         "type": "BackboneElement",
         "definition": "Details about each adverse reaction event linked to exposure to the identified substance.",
-        "children": [
+        "contains": [
           {
             "name": "substance",
             "path": "AllergyIntolerance.reaction.substance",
@@ -176,7 +176,7 @@
   },
   "CarePlan": {
     "definition": "Describes the intention of how one or more practitioners intend to deliver care for a particular patient, group or community for a period of time, possibly limited to care for a specific condition or set of conditions.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "CarePlan.identifier",
@@ -330,7 +330,7 @@
         "path": "CarePlan.activity",
         "type": "BackboneElement",
         "definition": "Identifies a planned action to occur as part of the plan.  For example, a medication to be used, lab tests to perform, self-monitoring, education, etc.",
-        "children": [
+        "contains": [
           {
             "name": "outcomeCodeableConcept",
             "path": "CarePlan.activity.outcomeCodeableConcept",
@@ -375,7 +375,7 @@
             "path": "CarePlan.activity.detail",
             "type": "BackboneElement",
             "definition": "A simple summary of a planned activity suitable for a general care plan system (e.g. form driven) that doesn't know about specific resources such as procedure etc.",
-            "children": [
+            "contains": [
               {
                 "name": "category",
                 "path": "CarePlan.activity.detail.category",
@@ -529,7 +529,7 @@
   },
   "Claim": {
     "definition": "A provider issued list of services and products provided, or to be provided, to a patient which is provided to an insurer for payment recovery.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "Claim.identifier",
@@ -634,7 +634,7 @@
         "path": "Claim.related",
         "type": "BackboneElement",
         "definition": "Other claims which are related to this claim such as prior claim versions or for related services.",
-        "children": [
+        "contains": [
           {
             "name": "claim",
             "path": "Claim.related.claim",
@@ -682,7 +682,7 @@
         "path": "Claim.payee",
         "type": "BackboneElement",
         "definition": "The party to be reimbursed for the services.",
-        "children": [
+        "contains": [
           {
             "name": "type",
             "path": "Claim.payee.type",
@@ -732,7 +732,7 @@
         "path": "Claim.careTeam",
         "type": "BackboneElement",
         "definition": "The members of the team who provided the overall service as well as their role and whether responsible and qualifications.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "Claim.careTeam.sequence",
@@ -774,7 +774,7 @@
         "path": "Claim.information",
         "type": "BackboneElement",
         "definition": "Additional information codes regarding exceptions, special considerations, the condition, situation, prior or concurrent issues. Often there are mutiple jurisdiction specific valuesets which are required.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "Claim.information.sequence",
@@ -845,7 +845,7 @@
         "path": "Claim.diagnosis",
         "type": "BackboneElement",
         "definition": "List of patient diagnosis for which care is sought.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "Claim.diagnosis.sequence",
@@ -886,7 +886,7 @@
         "path": "Claim.procedure",
         "type": "BackboneElement",
         "definition": "Ordered list of patient procedures performed to support the adjudication.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "Claim.procedure.sequence",
@@ -921,7 +921,7 @@
         "path": "Claim.insurance",
         "type": "BackboneElement",
         "definition": "Financial instrument by which payment information for health care.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "Claim.insurance.sequence",
@@ -971,7 +971,7 @@
         "path": "Claim.accident",
         "type": "BackboneElement",
         "definition": "An accident which resulted in the need for healthcare services.",
-        "children": [
+        "contains": [
           {
             "name": "date",
             "path": "Claim.accident.date",
@@ -1018,7 +1018,7 @@
         "path": "Claim.item",
         "type": "BackboneElement",
         "definition": "First tier of goods and services.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "Claim.item.sequence",
@@ -1171,7 +1171,7 @@
             "path": "Claim.item.detail",
             "type": "BackboneElement",
             "definition": "Second tier of goods and services.",
-            "children": [
+            "contains": [
               {
                 "name": "sequence",
                 "path": "Claim.item.detail.sequence",
@@ -1246,7 +1246,7 @@
                 "path": "Claim.item.detail.subDetail",
                 "type": "BackboneElement",
                 "definition": "Third tier of goods and services.",
-                "children": [
+                "contains": [
                   {
                     "name": "sequence",
                     "path": "Claim.item.detail.subDetail.sequence",
@@ -1332,7 +1332,7 @@
   },
   "Condition": {
     "definition": "A clinical condition, problem, diagnosis, or other event, situation, issue, or clinical concept that has risen to a level of concern.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "Condition.identifier",
@@ -1483,7 +1483,7 @@
         "path": "Condition.stage",
         "type": "BackboneElement",
         "definition": "Clinical stage or grade of a condition. May include formal severity assessments.",
-        "children": [
+        "contains": [
           {
             "name": "summary",
             "path": "Condition.stage.summary",
@@ -1508,7 +1508,7 @@
         "path": "Condition.evidence",
         "type": "BackboneElement",
         "definition": "Supporting Evidence / manifestations that are the basis on which this condition is suspected or confirmed.",
-        "children": [
+        "contains": [
           {
             "name": "code",
             "path": "Condition.evidence.code",
@@ -1536,7 +1536,7 @@
   },
   "Coverage": {
     "definition": "Financial instrument which may be used to reimburse or pay for health care products and services.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "Coverage.identifier",
@@ -1619,7 +1619,7 @@
         "path": "Coverage.grouping",
         "type": "BackboneElement",
         "definition": "A suite of underwrite specific classifiers, for example may be used to identify a class of coverage or employer group, Policy, Plan.",
-        "children": [
+        "contains": [
           {
             "name": "group",
             "path": "Coverage.grouping.group",
@@ -1731,7 +1731,7 @@
   },
   "DiagnosticReport": {
     "definition": "The findings and interpretation of diagnostic  tests performed on patients, groups of patients, devices, and locations, and/or specimens derived from these. The report includes clinical context such as requesting and provider information, and some mix of atomic results, images, textual and coded interpretations, and formatted representation of diagnostic reports.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "DiagnosticReport.identifier",
@@ -1815,7 +1815,7 @@
         "path": "DiagnosticReport.performer",
         "type": "BackboneElement",
         "definition": "Indicates who or what participated in producing the report.",
-        "children": [
+        "contains": [
           {
             "name": "role",
             "path": "DiagnosticReport.performer.role",
@@ -1867,7 +1867,7 @@
         "path": "DiagnosticReport.image",
         "type": "BackboneElement",
         "definition": "A list of key images associated with this report. The images are generally created during the diagnostic process, and may be directly of the patient, or of treated specimens (i.e. slides of interest).",
-        "children": [
+        "contains": [
           {
             "name": "comment",
             "path": "DiagnosticReport.image.comment",
@@ -1907,7 +1907,7 @@
   },
   "Encounter": {
     "definition": "An interaction between a patient and healthcare provider(s) for the purpose of providing healthcare service(s) or assessing the health status of a patient.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "Encounter.identifier",
@@ -1925,7 +1925,7 @@
         "path": "Encounter.statusHistory",
         "type": "BackboneElement",
         "definition": "The status history permits the encounter resource to contain the status history without needing to read through the historical versions of the resource, or even have the server store them.",
-        "children": [
+        "contains": [
           {
             "name": "status",
             "path": "Encounter.statusHistory.status",
@@ -1951,7 +1951,7 @@
         "path": "Encounter.classHistory",
         "type": "BackboneElement",
         "definition": "The class history permits the tracking of the encounters transitions without needing to go  through the resource history.\n\nThis would be used for a case where an admission starts of as an emergency encounter, then transisions into an inpatient scenario. Doing this and not restarting a new encounter ensures that any lab/diagnostic results can more easily follow the patient and not require re-processing and not get lost or cancelled during a kindof discharge from emergency to inpatient.",
-        "children": [
+        "contains": [
           {
             "name": "class",
             "path": "Encounter.classHistory.class",
@@ -2011,7 +2011,7 @@
         "path": "Encounter.participant",
         "type": "BackboneElement",
         "definition": "The list of people responsible for providing the service.",
-        "children": [
+        "contains": [
           {
             "name": "type",
             "path": "Encounter.participant.type",
@@ -2068,7 +2068,7 @@
         "path": "Encounter.diagnosis",
         "type": "BackboneElement",
         "definition": "The list of diagnosis relevant to this encounter.",
-        "children": [
+        "contains": [
           {
             "name": "condition",
             "path": "Encounter.diagnosis.condition",
@@ -2107,7 +2107,7 @@
         "path": "Encounter.hospitalization",
         "type": "BackboneElement",
         "definition": "Details about the admission to a healthcare service.",
-        "children": [
+        "contains": [
           {
             "name": "preAdmissionIdentifier",
             "path": "Encounter.hospitalization.preAdmissionIdentifier",
@@ -2175,7 +2175,7 @@
         "path": "Encounter.location",
         "type": "BackboneElement",
         "definition": "List of locations where  the patient has been during this encounter.",
-        "children": [
+        "contains": [
           {
             "name": "location",
             "path": "Encounter.location.location",
@@ -2221,7 +2221,7 @@
   },
   "ExplanationOfBenefit": {
     "definition": "This resource provides: the claim details; adjudication details from the processing of a Claim; and optionally account balance information, for informing the subscriber of the benefits provided.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "ExplanationOfBenefit.identifier",
@@ -2356,7 +2356,7 @@
         "path": "ExplanationOfBenefit.related",
         "type": "BackboneElement",
         "definition": "Other claims which are related to this claim such as prior claim versions or for related services.",
-        "children": [
+        "contains": [
           {
             "name": "claim",
             "path": "ExplanationOfBenefit.related.claim",
@@ -2404,7 +2404,7 @@
         "path": "ExplanationOfBenefit.payee",
         "type": "BackboneElement",
         "definition": "The party to be reimbursed for the services.",
-        "children": [
+        "contains": [
           {
             "name": "type",
             "path": "ExplanationOfBenefit.payee.type",
@@ -2436,7 +2436,7 @@
         "path": "ExplanationOfBenefit.information",
         "type": "BackboneElement",
         "definition": "Additional information codes regarding exceptions, special considerations, the condition, situation, prior or concurrent issues. Often there are mutiple jurisdiction specific valuesets which are required.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "ExplanationOfBenefit.information.sequence",
@@ -2507,7 +2507,7 @@
         "path": "ExplanationOfBenefit.careTeam",
         "type": "BackboneElement",
         "definition": "The members of the team who provided the overall service as well as their role and whether responsible and qualifications.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "ExplanationOfBenefit.careTeam.sequence",
@@ -2549,7 +2549,7 @@
         "path": "ExplanationOfBenefit.diagnosis",
         "type": "BackboneElement",
         "definition": "Ordered list of patient diagnosis for which care is sought.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "ExplanationOfBenefit.diagnosis.sequence",
@@ -2590,7 +2590,7 @@
         "path": "ExplanationOfBenefit.procedure",
         "type": "BackboneElement",
         "definition": "Ordered list of patient procedures performed to support the adjudication.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "ExplanationOfBenefit.procedure.sequence",
@@ -2631,7 +2631,7 @@
         "path": "ExplanationOfBenefit.insurance",
         "type": "BackboneElement",
         "definition": "Financial instrument by which payment information for health care.",
-        "children": [
+        "contains": [
           {
             "name": "coverage",
             "path": "ExplanationOfBenefit.insurance.coverage",
@@ -2654,7 +2654,7 @@
         "path": "ExplanationOfBenefit.accident",
         "type": "BackboneElement",
         "definition": "An accident which resulted in the need for healthcare services.",
-        "children": [
+        "contains": [
           {
             "name": "date",
             "path": "ExplanationOfBenefit.accident.date",
@@ -2701,7 +2701,7 @@
         "path": "ExplanationOfBenefit.item",
         "type": "BackboneElement",
         "definition": "First tier of goods and services.",
-        "children": [
+        "contains": [
           {
             "name": "sequence",
             "path": "ExplanationOfBenefit.item.sequence",
@@ -2860,7 +2860,7 @@
             "path": "ExplanationOfBenefit.item.adjudication",
             "type": "BackboneElement",
             "definition": "The adjudications results.",
-            "children": [
+            "contains": [
               {
                 "name": "category",
                 "path": "ExplanationOfBenefit.item.adjudication.category",
@@ -2892,7 +2892,7 @@
             "path": "ExplanationOfBenefit.item.detail",
             "type": "BackboneElement",
             "definition": "Second tier of goods and services.",
-            "children": [
+            "contains": [
               {
                 "name": "sequence",
                 "path": "ExplanationOfBenefit.item.detail.sequence",
@@ -2985,7 +2985,7 @@
                 "path": "ExplanationOfBenefit.item.detail.subDetail",
                 "type": "BackboneElement",
                 "definition": "Third tier of goods and services.",
-                "children": [
+                "contains": [
                   {
                     "name": "sequence",
                     "path": "ExplanationOfBenefit.item.detail.subDetail.sequence",
@@ -3084,7 +3084,7 @@
         "path": "ExplanationOfBenefit.addItem",
         "type": "BackboneElement",
         "definition": "The first tier service adjudications for payor added services.",
-        "children": [
+        "contains": [
           {
             "name": "sequenceLinkId",
             "path": "ExplanationOfBenefit.addItem.sequenceLinkId",
@@ -3138,7 +3138,7 @@
             "path": "ExplanationOfBenefit.addItem.detail",
             "type": "BackboneElement",
             "definition": "The second tier service adjudications for payor added services.",
-            "children": [
+            "contains": [
               {
                 "name": "revenue",
                 "path": "ExplanationOfBenefit.addItem.detail.revenue",
@@ -3208,7 +3208,7 @@
         "path": "ExplanationOfBenefit.payment",
         "type": "BackboneElement",
         "definition": "Payment details for the claim if the claim has been paid.",
-        "children": [
+        "contains": [
           {
             "name": "type",
             "path": "ExplanationOfBenefit.payment.type",
@@ -3258,7 +3258,7 @@
         "path": "ExplanationOfBenefit.processNote",
         "type": "BackboneElement",
         "definition": "Note text.",
-        "children": [
+        "contains": [
           {
             "name": "number",
             "path": "ExplanationOfBenefit.processNote.number",
@@ -3290,7 +3290,7 @@
         "path": "ExplanationOfBenefit.benefitBalance",
         "type": "BackboneElement",
         "definition": "Balance by Benefit Category.",
-        "children": [
+        "contains": [
           {
             "name": "category",
             "path": "ExplanationOfBenefit.benefitBalance.category",
@@ -3344,7 +3344,7 @@
             "path": "ExplanationOfBenefit.benefitBalance.financial",
             "type": "BackboneElement",
             "definition": "Benefits Used to date.",
-            "children": [
+            "contains": [
               {
                 "name": "type",
                 "path": "ExplanationOfBenefit.benefitBalance.financial.type",
@@ -3389,7 +3389,7 @@
   },
   "ImagingStudy": {
     "definition": "Representation of the content produced in a DICOM imaging study. A study comprises a set of series, each of which includes a set of Service-Object Pair Instances (SOP Instances - images or other data) acquired or produced in a common context.  A series is of only one modality (e.g. X-ray, CT, MR, ultrasound), but a study may have multiple series of different modalities.",
-    "children": [
+    "contains": [
       {
         "name": "uid",
         "path": "ImagingStudy.uid",
@@ -3527,7 +3527,7 @@
         "path": "ImagingStudy.series",
         "type": "BackboneElement",
         "definition": "Each study has one or more series of images or other content.",
-        "children": [
+        "contains": [
           {
             "name": "uid",
             "path": "ImagingStudy.series.uid",
@@ -3605,7 +3605,7 @@
             "path": "ImagingStudy.series.instance",
             "type": "BackboneElement",
             "definition": "A single SOP instance within the series, e.g. an image, or presentation state.",
-            "children": [
+            "contains": [
               {
                 "name": "uid",
                 "path": "ImagingStudy.series.instance.uid",
@@ -3638,7 +3638,7 @@
   },
   "Immunization": {
     "definition": "Describes the event of a patient being administered a vaccination or a record of a vaccination as reported by a patient, a clinician or another party and may include vaccine reaction information and what vaccination protocol was followed.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "Immunization.identifier",
@@ -3752,7 +3752,7 @@
         "path": "Immunization.practitioner",
         "type": "BackboneElement",
         "definition": "Indicates who or what performed the event.",
-        "children": [
+        "contains": [
           {
             "name": "role",
             "path": "Immunization.practitioner.role",
@@ -3781,7 +3781,7 @@
         "path": "Immunization.explanation",
         "type": "BackboneElement",
         "definition": "Reasons why a vaccine was or was not administered.",
-        "children": [
+        "contains": [
           {
             "name": "reason",
             "path": "Immunization.explanation.reason",
@@ -3801,7 +3801,7 @@
         "path": "Immunization.reaction",
         "type": "BackboneElement",
         "definition": "Categorical data indicating that an adverse event is associated in time to an immunization.",
-        "children": [
+        "contains": [
           {
             "name": "date",
             "path": "Immunization.reaction.date",
@@ -3830,7 +3830,7 @@
         "path": "Immunization.vaccinationProtocol",
         "type": "BackboneElement",
         "definition": "Contains information about the protocol(s) under which the vaccine was administered.",
-        "children": [
+        "contains": [
           {
             "name": "doseSequence",
             "path": "Immunization.vaccinationProtocol.doseSequence",
@@ -3888,7 +3888,7 @@
   },
   "MedicationRequest": {
     "definition": "An order or request for both supply of the medication and the instructions for administration of the medication to a patient. The resource is called \"MedicationRequest\" rather than \"MedicationPrescription\" or \"MedicationOrder\" to generalize the use across inpatient and outpatient settings, including care plans, etc., and to harmonize with workflow patterns.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "MedicationRequest.identifier",
@@ -4002,7 +4002,7 @@
         "path": "MedicationRequest.requester",
         "type": "BackboneElement",
         "definition": "The individual, organization or device that initiated the request and has responsibility for its activation.",
-        "children": [
+        "contains": [
           {
             "name": "agent",
             "path": "MedicationRequest.requester.agent",
@@ -4069,7 +4069,7 @@
         "path": "MedicationRequest.dispenseRequest",
         "type": "BackboneElement",
         "definition": "Indicates the specific details for the dispense or medication supply part of a medication request (also known as a Medication Prescription or Medication Order).  Note that this information is not always sent with the order.  There may be in some settings (e.g. hospitals) institutional or system support for completing the dispense details in the pharmacy department.",
-        "children": [
+        "contains": [
           {
             "name": "validityPeriod",
             "path": "MedicationRequest.dispenseRequest.validityPeriod",
@@ -4110,7 +4110,7 @@
         "path": "MedicationRequest.substitution",
         "type": "BackboneElement",
         "definition": "Indicates whether or not substitution can or should be part of the dispense. In some cases substitution must happen, in other cases substitution must not happen. This block explains the prescriber's intent. If nothing is specified substitution may be done.",
-        "children": [
+        "contains": [
           {
             "name": "allowed",
             "path": "MedicationRequest.substitution.allowed",
@@ -4156,7 +4156,7 @@
   },
   "Observation": {
     "definition": "Measurements and simple assertions made about a patient, device or other subject.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "Observation.identifier",
@@ -4368,7 +4368,7 @@
         "path": "Observation.referenceRange",
         "type": "BackboneElement",
         "definition": "Guidance on how to interpret the value by comparison to a normal or recommended range.",
-        "children": [
+        "contains": [
           {
             "name": "low",
             "path": "Observation.referenceRange.low",
@@ -4412,7 +4412,7 @@
         "path": "Observation.related",
         "type": "BackboneElement",
         "definition": "A  reference to another resource (usually another Observation) whose relationship is defined by the relationship type code.",
-        "children": [
+        "contains": [
           {
             "name": "type",
             "path": "Observation.related.type",
@@ -4437,7 +4437,7 @@
         "path": "Observation.component",
         "type": "BackboneElement",
         "definition": "Some observations have multiple component observations.  These component observations are expressed as separate code value pairs that share the same attributes.  Examples include systolic and diastolic component observations for blood pressure measurement and multiple component observations for genetics observations.",
-        "children": [
+        "contains": [
           {
             "name": "code",
             "path": "Observation.component.code",
@@ -4528,7 +4528,7 @@
   },
   "Patient": {
     "definition": "Demographics and other administrative information about an individual or animal receiving care or other health-related services.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "Patient.identifier",
@@ -4612,7 +4612,7 @@
         "path": "Patient.contact",
         "type": "BackboneElement",
         "definition": "A contact party (e.g. guardian, partner, friend) for the patient.",
-        "children": [
+        "contains": [
           {
             "name": "relationship",
             "path": "Patient.contact.relationship",
@@ -4665,7 +4665,7 @@
         "path": "Patient.animal",
         "type": "BackboneElement",
         "definition": "This patient is known to be an animal.",
-        "children": [
+        "contains": [
           {
             "name": "species",
             "path": "Patient.animal.species",
@@ -4691,7 +4691,7 @@
         "path": "Patient.communication",
         "type": "BackboneElement",
         "definition": "Languages which may be used to communicate with the patient about his or her health.",
-        "children": [
+        "contains": [
           {
             "name": "language",
             "path": "Patient.communication.language",
@@ -4730,7 +4730,7 @@
         "path": "Patient.link",
         "type": "BackboneElement",
         "definition": "Link to another patient resource that concerns the same actual patient.",
-        "children": [
+        "contains": [
           {
             "name": "other",
             "path": "Patient.link.other",
@@ -4753,7 +4753,7 @@
   },
   "ProcedureRequest": {
     "definition": "A record of a request for diagnostic investigations, treatments, or operations to be performed.",
-    "children": [
+    "contains": [
       {
         "name": "identifier",
         "path": "ProcedureRequest.identifier",
@@ -4893,7 +4893,7 @@
         "path": "ProcedureRequest.requester",
         "type": "BackboneElement",
         "definition": "The individual who initiated the request and has responsibility for its activation.",
-        "children": [
+        "contains": [
           {
             "name": "agent",
             "path": "ProcedureRequest.requester.agent",

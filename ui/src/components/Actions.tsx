@@ -9,7 +9,7 @@ import { Button, Navbar, Alignment } from "@blueprintjs/core";
 import * as actions from "../store/ResultActions";
 import { Query } from "../store/QueryReducer";
 import { Result } from "../store/ResultReducer";
-import "./Actions.scss";
+import "./style/Actions.scss";
 import { GlobalState } from "../store";
 
 interface Props {
