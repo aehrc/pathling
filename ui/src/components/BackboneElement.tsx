@@ -3,27 +3,39 @@
  */
 
 import * as React from "react";
+import { useState } from "react";
 
-import { ElementNode } from "../fhir/ResourceTree";
+import { ElementNode, getResolvedPath } from "../fhir/ResourceTree";
 import ContainedElements from "./ContainedElements";
-import "./style/BackboneElement.scss";
 import TreeNodeTooltip from "./TreeNodeTooltip";
+import "./style/BackboneElement.scss";
 
-interface Props extends ElementNode {}
+interface Props extends ElementNode {
+  parentPath: string;
+}
 
 function BackboneElement(props: Props) {
-  const { name, type, definition, contains } = props;
+  const { name, type, path, definition, contains, parentPath } = props,
+    resolvedPath = getResolvedPath(parentPath, path),
+    [isExpanded, setExpanded] = useState(false);
 
   const openContextMenu = () => {};
 
   return (
     <li className="backbone-element">
       <TreeNodeTooltip type={type} definition={definition}>
-        <span className="caret" />
+        <span
+          className={isExpanded ? "caret-open" : "caret-closed"}
+          onClick={() => setExpanded(!isExpanded)}
+        />
         <span className="icon" />
         <span className="label">{name}</span>
       </TreeNodeTooltip>
-      <ol className="contains">{/*<ContainedElements nodes={contains} />*/}</ol>
+      {isExpanded ? (
+        <ol className="contains">
+          <ContainedElements nodes={contains} parentPath={resolvedPath} />
+        </ol>
+      ) : null}
     </li>
   );
 }

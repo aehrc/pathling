@@ -5,7 +5,7 @@
 @import "TreeNode";
 
 .element-tree .complex-element {
-  @extend %tree-node;
+  @extend %tree-node-with-contains;
 
   > .tooltip > .content .icon {
     @extend .#{$ns}-icon-grid-view;

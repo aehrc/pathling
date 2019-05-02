@@ -20,5 +20,11 @@
     .definition {
       @extend .#{$ns}-running-text;
     }
+
+    .note {
+      color: #ffb366;
+      margin-top: 1em;
+      font-style: italic;
+    }
   }
 }

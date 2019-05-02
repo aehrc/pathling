@@ -15,7 +15,11 @@ interface Props extends ElementNode {
 function UnsupportedReference(props: Props) {
   const { name, type, definition, referenceTypes, path, reverse } = props;
 
-  const tooltipProps: any = { type, definition };
+  const tooltipProps: any = {
+    type,
+    definition,
+    note: "This server does not support this resource type."
+  };
   if (type === "Reference") {
     tooltipProps.referenceTypes = referenceTypes;
   }

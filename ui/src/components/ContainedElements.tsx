@@ -24,9 +24,9 @@ function ContainedElements(props: Props) {
     if (type === "Reference") {
       return <Reference {...node} key={i} />;
     } else if (supportedComplexTypes.includes(type)) {
-      return <ComplexElement {...node} key={i} />;
+      return <ComplexElement {...node} key={i} parentPath={parentPath} />;
     } else if (contains) {
-      return <BackboneElement {...node} key={i} />;
+      return <BackboneElement {...node} key={i} parentPath={parentPath} />;
     } else {
       return <Element {...node} key={i} parentPath={parentPath} />;
     }

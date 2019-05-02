@@ -5,7 +5,7 @@
 @import "TreeNode";
 
 .element-tree .backbone-element {
-  @extend %tree-node;
+  @extend %tree-node-with-contains;
 
   > .tooltip > .content .icon {
     @extend .#{$ns}-icon-folder-close;
