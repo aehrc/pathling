@@ -55,7 +55,9 @@ function Reference(props: Props) {
       contains = getResource(referenceType).contains,
       newParentPath = `${resolvedPath}.resolve()`,
       reverseReferenceNodes = getReverseReferences(referenceType).map(
-        (node, i) => <ReverseReference {...node} key={i + 1} />
+        (node, i) => (
+          <ReverseReference {...node} key={i + 1} parentPath={newParentPath} />
+        )
       );
     return [
       <ContainedElements nodes={contains} parentPath={newParentPath} key={0} />

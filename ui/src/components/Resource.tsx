@@ -38,18 +38,19 @@ function Resource(props: Props) {
   };
 
   const renderContains = () => {
-    const reverseReferenceNodes =
-      name in reverseReferences
-        ? getReverseReferences(name).map((node, i) => (
-            <ReverseReference {...node} key={i + 1} />
-          ))
-        : [];
+    const newParentPath = parentPath ? parentPath : name,
+      reverseReferenceNodes =
+        name in reverseReferences
+          ? getReverseReferences(name).map((node, i) => (
+              <ReverseReference
+                {...node}
+                key={i + 1}
+                parentPath={newParentPath}
+              />
+            ))
+          : [];
     return [
-      <ContainedElements
-        key={0}
-        nodes={contains}
-        parentPath={parentPath ? parentPath : name}
-      />
+      <ContainedElements key={0} nodes={contains} parentPath={newParentPath} />
     ].concat(reverseReferenceNodes);
   };
 

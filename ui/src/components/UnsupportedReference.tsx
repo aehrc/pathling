@@ -4,7 +4,7 @@
 
 import * as React from "react";
 
-import { ElementNode, reverseReferences } from "../fhir/ResourceTree";
+import { ElementNode } from "../fhir/ResourceTree";
 import "./style/UnsupportedReference.scss";
 import TreeNodeTooltip from "./TreeNodeTooltip";
 

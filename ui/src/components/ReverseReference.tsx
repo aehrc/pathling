@@ -3,50 +3,48 @@
  */
 
 import * as React from "react";
+import { useState } from "react";
 
 import {
   ElementNode,
   getResource,
   getReverseReferences,
-  resourceTree
+  resourceTree,
+  reverseReferences
 } from "../fhir/ResourceTree";
-import Resource from "./Resource";
 import ContainedElements from "./ContainedElements";
 import UnsupportedReference from "./UnsupportedReference";
-import "./style/ReverseReference.scss";
 import TreeNodeTooltip from "./TreeNodeTooltip";
+import "./style/ReverseReference.scss";
 
-interface Props extends ElementNode {}
+interface Props extends ElementNode {
+  parentPath: string;
+}
 
 function ReverseReference(props: Props) {
-  const { path, type, definition, referenceTypes } = props,
+  const { path, type, definition, referenceTypes, parentPath } = props,
     pathComponents = path.split("."),
     sourceType = pathComponents[0],
-    unsupported = !(sourceType in resourceTree);
+    unsupported = !(sourceType in resourceTree),
+    [isExpanded, setExpanded] = useState(false);
 
-  const openContextMenu = () => {};
-
-  // const renderContains = () =>
-  //   referenceTypes.length > 1 ? renderResources() : renderContainsDirectly();
-  //
-  // const renderResources = () =>
-  //   referenceTypes
-  //     .filter(referenceType => referenceType in resourceTree)
-  //     .map(referenceType => {
-  //       const resourceNode = getResource(referenceType);
-  //       return <Resource {...resourceNode} name={referenceType} />;
-  //     });
-  //
-  // const renderContainsDirectly = () => {
-  //   const referenceType = referenceTypes[0],
-  //     contains = getResource(referenceType).contains,
-  //     reverseReferenceNodes = getReverseReferences(referenceType).map(node => (
-  //       <ReverseReference {...node} />
-  //     ));
-  //   return [<ContainedElements nodes={contains} />].concat(
-  //     reverseReferenceNodes
-  //   );
-  // };
+  const renderContains = () => {
+    const contains = getResource(sourceType).contains,
+      newParentPath = `${parentPath}.reverseResolve(${path})`,
+      reverseReferenceNodes =
+        sourceType in reverseReferences
+          ? getReverseReferences(sourceType).map((node, i) => (
+              <ReverseReference
+                {...node}
+                key={i + 1}
+                parentPath={newParentPath}
+              />
+            ))
+          : [];
+    return [
+      <ContainedElements nodes={contains} key={0} parentPath={newParentPath} />
+    ].concat(reverseReferenceNodes);
+  };
 
   return unsupported ? (
     <UnsupportedReference {...props} reverse />
@@ -57,11 +55,14 @@ function ReverseReference(props: Props) {
         definition={definition}
         referenceTypes={referenceTypes}
       >
-        <span className="caret" />
+        <span
+          className={isExpanded ? "caret-open" : "caret-closed"}
+          onClick={() => setExpanded(!isExpanded)}
+        />
         <span className="icon" />
         <span className="label">{path}</span>
       </TreeNodeTooltip>
-      {/*<ol className="contains">{renderContains()}</ol>*/}
+      {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
     </li>
   );
 }
