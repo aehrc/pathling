@@ -22,7 +22,7 @@ function ContainedElements(props: Props) {
   const childNodes = nodes.map((node, i) => {
     const { type, contains } = node;
     if (type === "Reference") {
-      return <Reference {...node} key={i} />;
+      return <Reference {...node} key={i} parentPath={parentPath} />;
     } else if (supportedComplexTypes.includes(type)) {
       return <ComplexElement {...node} key={i} parentPath={parentPath} />;
     } else if (contains) {

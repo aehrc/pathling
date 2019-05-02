@@ -3,9 +3,11 @@
  */
 
 import * as React from "react";
+import { useState } from "react";
 
 import {
   ElementNode,
+  getResolvedPath,
   getResource,
   getReverseReferences,
   resourceTree
@@ -14,40 +16,51 @@ import Resource from "./Resource";
 import ContainedElements from "./ContainedElements";
 import ReverseReference from "./ReverseReference";
 import UnsupportedReference from "./UnsupportedReference";
-import "./style/Reference.scss";
 import TreeNodeTooltip from "./TreeNodeTooltip";
+import "./style/Reference.scss";
 
-interface Props extends ElementNode {}
+interface Props extends ElementNode {
+  parentPath: string;
+}
 
 function Reference(props: Props) {
-  const { name, type, definition, referenceTypes } = props,
+  const { name, type, path, definition, referenceTypes, parentPath } = props,
+    resolvedPath = getResolvedPath(parentPath, path),
     unsupported =
-      referenceTypes.length === 1 && !(referenceTypes[0] in resourceTree);
+      referenceTypes.length === 1 && !(referenceTypes[0] in resourceTree),
+    [isExpanded, setExpanded] = useState(false);
 
   const openContextMenu = () => {};
 
-  // const renderContains = () =>
-  //   referenceTypes.length > 1 ? renderResources() : renderContainsDirectly();
-  //
-  // const renderResources = () =>
-  //   referenceTypes
-  //     .filter(referenceType => referenceType in resourceTree)
-  //     .map(referenceType => {
-  //       return (
-  //         <Resource {...getResource(referenceType)} name={referenceType} />
-  //       );
-  //     });
-  //
-  // const renderContainsDirectly = () => {
-  //   const referenceType = referenceTypes[0],
-  //     contains = getResource(referenceType).contains,
-  //     reverseReferenceNodes = getReverseReferences(referenceType).map(node => (
-  //       <ReverseReference {...node} />
-  //     ));
-  //   return [<ContainedElements nodes={contains} />].concat(
-  //     reverseReferenceNodes
-  //   );
-  // };
+  const renderContains = () =>
+    referenceTypes.length > 1 ? renderResources() : renderContainsDirectly();
+
+  const renderResources = () =>
+    referenceTypes
+      .filter(referenceType => referenceType in resourceTree)
+      .map((referenceType, i) => {
+        const newParentPath = `${resolvedPath}.resolve(${referenceType})`;
+        return (
+          <Resource
+            {...getResource(referenceType)}
+            key={i}
+            name={referenceType}
+            parentPath={newParentPath}
+          />
+        );
+      });
+
+  const renderContainsDirectly = () => {
+    const referenceType = referenceTypes[0],
+      contains = getResource(referenceType).contains,
+      newParentPath = `${resolvedPath}.resolve()`,
+      reverseReferenceNodes = getReverseReferences(referenceType).map(
+        (node, i) => <ReverseReference {...node} key={i + 1} />
+      );
+    return [
+      <ContainedElements nodes={contains} parentPath={newParentPath} key={0} />
+    ].concat(reverseReferenceNodes);
+  };
 
   return unsupported ? (
     <UnsupportedReference {...props} />
@@ -58,11 +71,14 @@ function Reference(props: Props) {
         definition={definition}
         referenceTypes={referenceTypes}
       >
-        <span className="caret" />
+        <span
+          className={isExpanded ? "caret-open" : "caret-closed"}
+          onClick={() => setExpanded(!isExpanded)}
+        />
         <span className="icon" />
         <span className="label">{name}</span>
       </TreeNodeTooltip>
-      {/*<ol className="contains">{renderContains()}</ol>*/}
+      {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
     </li>
   );
 }

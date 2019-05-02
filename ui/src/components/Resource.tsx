@@ -18,10 +18,11 @@ import TreeNodeTooltip from "./TreeNodeTooltip";
 
 interface Props extends ResourceNode {
   name: string;
+  parentPath?: string;
 }
 
 function Resource(props: Props) {
-  const { name, definition, contains } = props,
+  const { name, definition, contains, parentPath } = props,
     [isExpanded, setExpanded] = useState(false);
 
   const openContextMenu = (event: any): void => {
@@ -44,7 +45,11 @@ function Resource(props: Props) {
           ))
         : [];
     return [
-      <ContainedElements key={0} nodes={contains} parentPath={name} />
+      <ContainedElements
+        key={0}
+        nodes={contains}
+        parentPath={parentPath ? parentPath : name}
+      />
     ].concat(reverseReferenceNodes);
   };
 
@@ -57,7 +62,9 @@ function Resource(props: Props) {
         />
         <span className="icon" />
         <span className="label">{name}</span>
-        <span className="action" onClick={openContextMenu} />
+        {parentPath ? null : (
+          <span className="action" onClick={openContextMenu} />
+        )}
       </TreeNodeTooltip>
       {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
     </li>
