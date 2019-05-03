@@ -27,10 +27,8 @@ function Reference(props: Props) {
   const { name, type, path, definition, referenceTypes, parentPath } = props,
     resolvedPath = getResolvedPath(parentPath, path),
     unsupported =
-      referenceTypes.length === 1 && !(referenceTypes[0] in resourceTree),
+      referenceTypes.find(type => type in resourceTree) === undefined,
     [isExpanded, setExpanded] = useState(false);
-
-  const openContextMenu = () => {};
 
   const renderContains = () =>
     referenceTypes.length > 1 ? renderResources() : renderContainsDirectly();
@@ -69,6 +67,7 @@ function Reference(props: Props) {
   ) : (
     <li className="reference">
       <TreeNodeTooltip
+        path={resolvedPath}
         type={type}
         definition={definition}
         referenceTypes={referenceTypes}

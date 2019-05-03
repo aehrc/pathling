@@ -34,7 +34,7 @@ function Element(props: Props) {
 
   return (
     <li className="element">
-      <TreeNodeTooltip type={type} definition={definition}>
+      <TreeNodeTooltip path={resolvedPath} type={type} definition={definition}>
         <span className="caret-none" />
         <span className="icon" />
         <span className="label">{name}</span>

@@ -9,19 +9,27 @@
     padding: 1em;
     max-width: 600px;
 
-    .type {
+    .path {
       color: #137cbd;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .type {
+      color: #0d8050;
       margin-top: 0.5em;
       font-weight: 500;
     }
 
     .definition {
       @extend .#{$ns}-running-text;
+      margin-top: 0.5em;
     }
 
     .note {
       color: #a66321;
-      margin-top: 1em;
+      margin-top: 0.5em;
       font-style: italic;
     }
   }

@@ -19,11 +19,9 @@ function BackboneElement(props: Props) {
     resolvedPath = getResolvedPath(parentPath, path),
     [isExpanded, setExpanded] = useState(false);
 
-  const openContextMenu = () => {};
-
   return (
     <li className="backbone-element">
-      <TreeNodeTooltip type={type} definition={definition}>
+      <TreeNodeTooltip path={resolvedPath} type={type} definition={definition}>
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
           onClick={() => setExpanded(!isExpanded)}

@@ -6,7 +6,7 @@ import * as React from "react";
 
 import { ElementNode } from "../fhir/ResourceTree";
 import "./style/UnsupportedReference.scss";
-import TreeNodeTooltip from "./TreeNodeTooltip";
+import TreeNodeTooltip, { TreeNodeTooltipProps } from "./TreeNodeTooltip";
 
 interface Props extends ElementNode {
   reverse?: boolean;
@@ -15,10 +15,14 @@ interface Props extends ElementNode {
 function UnsupportedReference(props: Props) {
   const { name, type, definition, referenceTypes, path, reverse } = props;
 
-  const tooltipProps: any = {
+  const tooltipProps: TreeNodeTooltipProps = {
+    path,
     type,
     definition,
-    note: "This server does not support this resource type."
+    note:
+      referenceTypes.length > 1
+        ? "This server does not support any of these resource types."
+        : "This server does not support this resource type."
   };
   if (type === "Reference") {
     tooltipProps.referenceTypes = referenceTypes;

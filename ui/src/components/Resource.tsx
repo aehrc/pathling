@@ -46,7 +46,11 @@ function Resource(props: Props) {
 
   return (
     <li className="resource">
-      <TreeNodeTooltip type="Resource" definition={definition}>
+      <TreeNodeTooltip
+        path={parentPath ? parentPath : name}
+        type="Resource"
+        definition={definition}
+      >
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
           onClick={() => setExpanded(!isExpanded)}

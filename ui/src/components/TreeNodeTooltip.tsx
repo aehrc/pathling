@@ -7,14 +7,15 @@ import { Popover, PopoverInteractionKind, Position } from "@blueprintjs/core";
 
 import "./style/TreeNodeTooltip.scss";
 
-type Props = RegularProps | ReferenceProps;
+export type TreeNodeTooltipProps = RegularProps | ReferenceProps;
 
 interface RegularProps {
+  path: string;
   type: string;
   definition: string;
   referenceTypes?: string[];
   note?: string;
-  children: any;
+  children?: any;
 }
 
 interface ReferenceProps extends RegularProps {
@@ -22,13 +23,14 @@ interface ReferenceProps extends RegularProps {
   referenceTypes: string[];
 }
 
-function TreeNodeTooltip(props: Props) {
-  const { type, definition, referenceTypes, note, children } = props,
+function TreeNodeTooltip(props: TreeNodeTooltipProps) {
+  const { path, type, definition, referenceTypes, note, children } = props,
     typeDescription =
       type === "Reference" ? `Reference (${referenceTypes.join(" | ")})` : type;
 
   const renderContent = () => (
     <div className="content">
+      <div className="path">{path}</div>
       <div className="definition">{definition}</div>
       <div className="type">{typeDescription}</div>
       {note ? <div className="note">{note}</div> : null}

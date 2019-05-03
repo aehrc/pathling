@@ -26,7 +26,7 @@ function ComplexElement(props: Props) {
 
   return (
     <li className="complex-element">
-      <TreeNodeTooltip type={type} definition={definition}>
+      <TreeNodeTooltip path={resolvedPath} type={type} definition={definition}>
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
           onClick={() => setExpanded(!isExpanded)}

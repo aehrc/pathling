@@ -25,24 +25,24 @@ function ReverseReference(props: Props) {
   const { path, type, definition, referenceTypes, parentPath } = props,
     pathComponents = path.split("."),
     sourceType = pathComponents[0],
+    resolvedPath = `${parentPath}.reverseResolve(${path})`,
     unsupported = !(sourceType in resourceTree),
     [isExpanded, setExpanded] = useState(false);
 
   const renderContains = () => {
     const contains = getResource(sourceType).contains,
-      newParentPath = `${parentPath}.reverseResolve(${path})`,
       reverseReferenceNodes =
         sourceType in reverseReferences
           ? getReverseReferences(sourceType).map((node, i) => (
               <ReverseReference
                 {...node}
                 key={i + 1}
-                parentPath={newParentPath}
+                parentPath={resolvedPath}
               />
             ))
           : [];
     return [
-      <ContainedElements nodes={contains} key={0} parentPath={newParentPath} />
+      <ContainedElements nodes={contains} key={0} parentPath={resolvedPath} />
     ].concat(reverseReferenceNodes);
   };
 
@@ -51,6 +51,7 @@ function ReverseReference(props: Props) {
   ) : (
     <li className="reverse-reference">
       <TreeNodeTooltip
+        path={resolvedPath}
         type={type}
         definition={definition}
         referenceTypes={referenceTypes}
