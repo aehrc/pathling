@@ -7,14 +7,16 @@ import { connect } from "react-redux";
 import { Icon, Tag } from "@blueprintjs/core";
 
 import * as actions from "../store/QueryActions";
-import { Grouping } from "../store/QueryReducer";
-import "./style/Groupings.scss";
+import { Grouping, PartialGrouping } from "../store/QueryReducer";
 import { GlobalState } from "../store";
 import { ReactElement } from "react";
+import "./style/Groupings.scss";
+import ExpressionEditor from "./ExpressionEditor";
 
 interface Props {
   groupings: Grouping[];
   removeGrouping: (index: number) => void;
+  updateGrouping: (index: number, grouping: PartialGrouping) => void;
 }
 
 /**
@@ -23,10 +25,14 @@ interface Props {
  * @author John Grimes
  */
 function Groupings(props: Props) {
-  const { groupings, removeGrouping } = props;
+  const { groupings, removeGrouping, updateGrouping } = props;
 
   const handleRemove = (index: number): void => {
     removeGrouping(index);
+  };
+
+  const handleChange = (i: number, grouping: PartialGrouping) => {
+    updateGrouping(i, grouping);
   };
 
   const renderBlankCanvas = (): ReactElement => (
@@ -35,9 +41,15 @@ function Groupings(props: Props) {
 
   const renderGroupings = (): ReactElement[] =>
     groupings.map((grouping, i) => (
-      <Tag key={i} round={true} large={true} onRemove={() => handleRemove(i)}>
-        {grouping.label}
-      </Tag>
+      <ExpressionEditor
+        key={i}
+        expression={grouping}
+        onChange={grouping => handleChange(i, grouping)}
+      >
+        <Tag round={true} large={true} onRemove={() => handleRemove(i)}>
+          {grouping.label}
+        </Tag>
+      </ExpressionEditor>
     ));
 
   return (

@@ -1,0 +1,20 @@
+/*!
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+@import "~@blueprintjs/core/src/components/forms/index";
+
+.expression-form {
+  padding: 1em;
+  width: 25em;
+
+  .label-input,
+  .expression-input {
+    @extend .#{$ns}-input;
+    width: 100%;
+  }
+
+  .expression-label {
+    margin-bottom: 0;
+  }
+}

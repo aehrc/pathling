@@ -7,14 +7,16 @@ import { connect } from "react-redux";
 import { Icon, Tag } from "@blueprintjs/core";
 
 import * as actions from "../store/QueryActions";
-import { Aggregation } from "../store/QueryReducer";
+import { Aggregation, PartialAggregation } from "../store/QueryReducer";
 import { GlobalState } from "../store";
 import "./style/Aggregations.scss";
 import { ReactElement } from "react";
+import ExpressionEditor from "./ExpressionEditor";
 
 interface Props {
   aggregations?: Aggregation[];
   removeAggregation: (index: number) => void;
+  updateAggregation: (index: number, aggregation: PartialAggregation) => void;
 }
 
 /**
@@ -24,10 +26,14 @@ interface Props {
  * @author John Grimes
  */
 function Aggregations(props: Props) {
-  const { aggregations, removeAggregation } = props;
+  const { aggregations, removeAggregation, updateAggregation } = props;
 
   const handleRemove = (index: number): void => {
     removeAggregation(index);
+  };
+
+  const handleChange = (i: number, aggregation: PartialAggregation) => {
+    updateAggregation(i, aggregation);
   };
 
   const renderBlankCanvas = (): ReactElement => (
@@ -36,9 +42,15 @@ function Aggregations(props: Props) {
 
   const renderAggregations = (): ReactElement[] =>
     aggregations.map((aggregation, i) => (
-      <Tag key={i} round={true} large={true} onRemove={() => handleRemove(i)}>
-        {aggregation.label}
-      </Tag>
+      <ExpressionEditor
+        key={i}
+        expression={aggregation}
+        onChange={aggregation => handleChange(i, aggregation)}
+      >
+        <Tag round={true} large={true} onRemove={() => handleRemove(i)}>
+          {aggregation.label}
+        </Tag>
+      </ExpressionEditor>
     ));
 
   return (

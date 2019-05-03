@@ -14,9 +14,19 @@ export interface Aggregation {
   expression: string;
 }
 
+export interface PartialAggregation {
+  label?: string;
+  expression?: string;
+}
+
 export interface Grouping {
   label?: string;
   expression: string;
+}
+
+export interface PartialGrouping {
+  label?: string;
+  expression?: string;
 }
 
 const initialState: Query = {
@@ -39,6 +49,15 @@ export default (state = initialState, action: QueryAction): Query => {
         ...state,
         aggregations: state.aggregations.filter((_, i) => i !== action.index)
       };
+    case "UPDATE_AGGREGATION":
+      return {
+        ...state,
+        aggregations: state.aggregations.map((aggregation, i) =>
+          i === action.index
+            ? { ...aggregation, ...action.aggregation }
+            : aggregation
+        )
+      };
     case "ADD_GROUPING":
       return {
         ...state,
@@ -51,6 +70,13 @@ export default (state = initialState, action: QueryAction): Query => {
       return {
         ...state,
         groupings: state.groupings.filter((_, i) => i !== action.index)
+      };
+    case "UPDATE_GROUPING":
+      return {
+        ...state,
+        groupings: state.groupings.map((grouping, i) =>
+          i === action.index ? { ...grouping, ...action.grouping } : grouping
+        )
       };
     case "CLEAR_QUERY":
       return initialState;
