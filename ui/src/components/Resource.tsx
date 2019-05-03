@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from "react";
-import { ContextMenu, Menu } from "@blueprintjs/core";
+import { connect } from "react-redux";
 
 import {
   getReverseReferences,
@@ -12,30 +12,20 @@ import {
 } from "../fhir/ResourceTree";
 import ContainedElements from "./ContainedElements";
 import ReverseReference from "./ReverseReference";
-import AddAggregation from "./AddAggregation";
-import "./style/Resource.scss";
 import TreeNodeTooltip from "./TreeNodeTooltip";
+import * as actions from "../store/QueryActions";
+import "./style/Resource.scss";
 
 interface Props extends ResourceNode {
   name: string;
   parentPath?: string;
+  addAggregation: (expression: string) => void;
 }
 
 function Resource(props: Props) {
-  const { name, definition, contains, parentPath } = props,
+  const { name, definition, contains, parentPath, addAggregation } = props,
+    aggregationExpression = `${name}.count()`,
     [isExpanded, setExpanded] = useState(false);
-
-  const openContextMenu = (event: any): void => {
-    ContextMenu.show(
-      <Menu>
-        <AddAggregation path={name} />
-      </Menu>,
-      {
-        left: event.clientX,
-        top: event.clientY
-      }
-    );
-  };
 
   const renderContains = () => {
     const newParentPath = parentPath ? parentPath : name,
@@ -64,7 +54,10 @@ function Resource(props: Props) {
         <span className="icon" />
         <span className="label">{name}</span>
         {parentPath ? null : (
-          <span className="action" onClick={openContextMenu} />
+          <span
+            className="action"
+            onClick={() => addAggregation(aggregationExpression)}
+          />
         )}
       </TreeNodeTooltip>
       {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
@@ -72,4 +65,7 @@ function Resource(props: Props) {
   );
 }
 
-export default Resource;
+export default connect(
+  null,
+  actions
+)(Resource);
