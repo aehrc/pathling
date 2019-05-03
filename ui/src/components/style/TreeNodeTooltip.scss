@@ -5,14 +5,12 @@
 @import "~@blueprintjs/core/src/blueprint";
 
 .tree-node-tooltip-popover {
-  @extend .#{$ns}-dark;
-
   .content {
     padding: 1em;
     max-width: 600px;
 
     .type {
-      color: #48aff0;
+      color: #137cbd;
       margin-top: 0.5em;
       font-weight: 500;
     }
@@ -22,7 +20,7 @@
     }
 
     .note {
-      color: #ffb366;
+      color: #a66321;
       margin-top: 1em;
       font-style: italic;
     }
