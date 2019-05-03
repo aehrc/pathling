@@ -64,6 +64,7 @@ function ExpressionEditor(props: Props) {
       className="expression-editor"
       targetClassName="target"
       popoverClassName="expression-editor-popover"
+      autoFocus
     >
       <>{children}</>
     </Popover>

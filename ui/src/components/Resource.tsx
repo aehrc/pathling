@@ -46,24 +46,27 @@ function Resource(props: Props) {
 
   return (
     <li className="resource">
-      <TreeNodeTooltip
-        path={parentPath ? parentPath : name}
-        type="Resource"
-        definition={definition}
-      >
+      <div className="content">
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
           onClick={() => setExpanded(!isExpanded)}
         />
         <span className="icon" />
-        <span className="label">{name}</span>
+        <TreeNodeTooltip
+          path={parentPath ? parentPath : name}
+          type="Resource"
+          definition={definition}
+        >
+          <span className="label">{name}</span>
+        </TreeNodeTooltip>
         {parentPath ? null : (
           <span
             className="action"
+            title={`Add ${aggregationExpression} to aggregations`}
             onClick={() => addAggregation(aggregationExpression)}
           />
         )}
-      </TreeNodeTooltip>
+      </div>
       {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
     </li>
   );

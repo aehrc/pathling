@@ -66,19 +66,21 @@ function Reference(props: Props) {
     <UnsupportedReference {...props} />
   ) : (
     <li className="reference">
-      <TreeNodeTooltip
-        path={resolvedPath}
-        type={type}
-        definition={definition}
-        referenceTypes={referenceTypes}
-      >
+      <div className="content">
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
           onClick={() => setExpanded(!isExpanded)}
         />
         <span className="icon" />
-        <span className="label">{name}</span>
-      </TreeNodeTooltip>
+        <TreeNodeTooltip
+          path={resolvedPath}
+          type={type}
+          definition={definition}
+          referenceTypes={referenceTypes}
+        >
+          <span className="label">{name}</span>
+        </TreeNodeTooltip>
+      </div>
       {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
     </li>
   );

@@ -42,7 +42,7 @@ function TreeNodeTooltip(props: TreeNodeTooltipProps) {
       content={renderContent()}
       position={Position.RIGHT}
       boundary="viewport"
-      interactionKind={PopoverInteractionKind.HOVER}
+      interactionKind={PopoverInteractionKind.CLICK}
       className="tooltip"
       targetClassName="content"
       popoverClassName="tree-node-tooltip-popover"

@@ -26,14 +26,20 @@ function ComplexElement(props: Props) {
 
   return (
     <li className="complex-element">
-      <TreeNodeTooltip path={resolvedPath} type={type} definition={definition}>
+      <div className="content">
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
           onClick={() => setExpanded(!isExpanded)}
         />
         <span className="icon" />
-        <span className="label">{name}</span>
-      </TreeNodeTooltip>
+        <TreeNodeTooltip
+          path={resolvedPath}
+          type={type}
+          definition={definition}
+        >
+          <span className="label">{name}</span>
+        </TreeNodeTooltip>
+      </div>
       {isExpanded ? (
         <ol className="contains">
           <ContainedElements nodes={contains} parentPath={resolvedPath} />

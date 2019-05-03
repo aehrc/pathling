@@ -34,12 +34,18 @@ function Element(props: Props) {
 
   return (
     <li className="element">
-      <TreeNodeTooltip path={resolvedPath} type={type} definition={definition}>
+      <div className="content">
         <span className="caret-none" />
         <span className="icon" />
-        <span className="label">{name}</span>
+        <TreeNodeTooltip
+          path={resolvedPath}
+          type={type}
+          definition={definition}
+        >
+          <span className="label">{name}</span>
+        </TreeNodeTooltip>
         <span className="action" onClick={openContextMenu} />
-      </TreeNodeTooltip>
+      </div>
     </li>
   );
 }

@@ -50,19 +50,21 @@ function ReverseReference(props: Props) {
     <UnsupportedReference {...props} reverse />
   ) : (
     <li className="reverse-reference">
-      <TreeNodeTooltip
-        path={resolvedPath}
-        type={type}
-        definition={definition}
-        referenceTypes={referenceTypes}
-      >
+      <div className="content">
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
           onClick={() => setExpanded(!isExpanded)}
         />
         <span className="icon" />
-        <span className="label">{path}</span>
-      </TreeNodeTooltip>
+        <TreeNodeTooltip
+          path={resolvedPath}
+          type={type}
+          definition={definition}
+          referenceTypes={referenceTypes}
+        >
+          <span className="label">{path}</span>
+        </TreeNodeTooltip>
+      </div>
       {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
     </li>
   );

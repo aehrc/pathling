@@ -7,13 +7,13 @@
 .element-tree .unsupported-reference {
   @extend %tree-node;
 
-  > .tooltip > .content .icon {
+  > .content .icon {
     @extend .#{$ns}-icon-document-share;
     color: #a7b6c2;
   }
 
   &.reverse {
-    > .tooltip > .content .icon {
+    > .content .icon {
       @extend .#{$ns}-icon-document-open;
     }
   }

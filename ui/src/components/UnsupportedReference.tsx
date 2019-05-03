@@ -34,11 +34,13 @@ function UnsupportedReference(props: Props) {
         reverse ? "unsupported-reference reverse" : "unsupported-reference"
       }
     >
-      <TreeNodeTooltip {...tooltipProps}>
+      <div className="content">
         <span className="caret-none" />
         <span className="icon" />
-        <span className="label">{reverse ? path : name}</span>
-      </TreeNodeTooltip>
+        <TreeNodeTooltip {...tooltipProps}>
+          <span className="label">{reverse ? path : name}</span>
+        </TreeNodeTooltip>
+      </div>
     </li>
   );
 }
