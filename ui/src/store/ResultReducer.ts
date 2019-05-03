@@ -47,7 +47,8 @@ const ResultReducer = (state = initialState, action: ResultAction): Result => {
         error: {
           message: action.message,
           opOutcome: action.opOutcome
-        }
+        },
+        loading: false
       };
     default:
       return state;

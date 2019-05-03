@@ -6,11 +6,12 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { Button, Navbar, Alignment } from "@blueprintjs/core";
 
-import * as actions from "../store/ResultActions";
+import { fetchQueryResult } from "../store/ResultActions";
+import { clearQuery } from "../store/QueryActions";
 import { Query } from "../store/QueryReducer";
 import { Result } from "../store/ResultReducer";
-import "./style/Actions.scss";
 import { GlobalState } from "../store";
+import "./style/Actions.scss";
 
 interface Props {
   query: Query;
@@ -61,9 +62,10 @@ function Actions(props: Props) {
 }
 
 const mapStateToProps = (state: GlobalState) => ({
-  query: state.query,
-  result: state.result
-});
+    query: state.query,
+    result: state.result
+  }),
+  actions = { fetchQueryResult, clearQuery };
 
 export default connect(
   mapStateToProps,
