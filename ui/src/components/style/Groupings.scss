@@ -16,16 +16,15 @@
   .blank-canvas {
     color: #666;
     margin-bottom: 0.5em;
+    user-select: none;
   }
 
-  //noinspection CssUnusedSymbol
   .bp3-tag {
     background-color: #00b3a4;
     margin: 0 0.5em 0.5em 0;
     user-select: none;
   }
 
-  //noinspection CssUnusedSymbol
   .bp3-tag-remove {
     outline: none;
   }

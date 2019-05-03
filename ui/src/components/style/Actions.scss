@@ -3,23 +3,26 @@
  */
 
 .actions {
-  .bp3-navbar {
-    box-shadow: none;
-    border-radius: 0.3em;
-    color: #314659;
-    padding: 0 0.2em;
-    background-color: transparent;
-  }
+  box-shadow: none !important;
+  border-radius: 0.3em;
+  color: #314659;
+  padding: 0 0.2em !important;
+  background-color: transparent !important;
 
   button {
     outline: none;
+    user-select: none;
   }
 
-  .bp3-icon-play {
-    color: #15b371 !important;
+  .execute {
+    .bp3-icon {
+      color: #15b371 !important;
+    }
   }
 
-  .bp3-icon-delete {
-    color: #db3737 !important;
+  .clear {
+    .bp3-icon {
+      color: #db3737 !important;
+    }
   }
 }

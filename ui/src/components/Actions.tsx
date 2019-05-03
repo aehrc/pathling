@@ -36,27 +36,27 @@ function Actions(props: Props) {
     query.aggregations.length === 0 && query.groupings.length === 0;
 
   return (
-    <div className="actions">
-      <Navbar>
-        <Navbar.Group align={Alignment.LEFT}>
+    <Navbar className="actions">
+      <Navbar.Group align={Alignment.LEFT}>
+        <Button
+          className="execute"
+          icon="play"
+          text={loading ? "Executing..." : "Execute"}
+          minimal={true}
+          onClick={fetchQueryResult}
+          disabled={loading}
+        />
+        {queryIsEmpty() ? null : (
           <Button
-            icon="play"
-            text={loading ? "Executing..." : "Execute"}
+            className="clear"
+            icon="delete"
+            text="Clear query"
             minimal={true}
-            onClick={fetchQueryResult}
-            disabled={loading}
+            onClick={clearQuery}
           />
-          {queryIsEmpty() ? null : (
-            <Button
-              icon="delete"
-              text="Clear query"
-              minimal={true}
-              onClick={clearQuery}
-            />
-          )}
-        </Navbar.Group>
-      </Navbar>
-    </div>
+        )}
+      </Navbar.Group>
+    </Navbar>
   );
 }
 
