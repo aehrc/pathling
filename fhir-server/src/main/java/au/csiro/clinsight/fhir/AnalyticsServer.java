@@ -38,7 +38,7 @@ public class AnalyticsServer extends RestfulServer {
 
     logger.info("Creating new AnalyticsServer: " + configuration);
     this.configuration = configuration;
-    setServerConformanceProvider(new AnalyticsServerCapabilities());
+    setServerConformanceProvider(new AnalyticsServerCapabilities(configuration));
   }
 
   @Nonnull

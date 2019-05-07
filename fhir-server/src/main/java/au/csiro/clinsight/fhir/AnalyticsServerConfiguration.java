@@ -13,6 +13,7 @@ import org.apache.spark.sql.SparkSession;
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class AnalyticsServerConfiguration {
 
+  private String version;
   private String sparkMasterUrl;
   private String warehouseDirectory;
   private String metastoreUrl;
@@ -24,6 +25,14 @@ public class AnalyticsServerConfiguration {
   private boolean explainQueries;
   private TerminologyClient terminologyClient;
   private SparkSession sparkSession;
+
+  public String getVersion() {
+    return version;
+  }
+
+  public void setVersion(String version) {
+    this.version = version;
+  }
 
   public String getSparkMasterUrl() {
     return sparkMasterUrl;
@@ -116,7 +125,8 @@ public class AnalyticsServerConfiguration {
   @Override
   public String toString() {
     return "AnalyticsServerConfiguration{" +
-        "sparkMasterUrl='" + sparkMasterUrl + '\'' +
+        "version='" + version + '\'' +
+        ", sparkMasterUrl='" + sparkMasterUrl + '\'' +
         ", warehouseDirectory='" + warehouseDirectory + '\'' +
         ", metastoreUrl='" + metastoreUrl + '\'' +
         ", metastoreUser='" + metastoreUser + '\'' +
@@ -124,9 +134,9 @@ public class AnalyticsServerConfiguration {
         ", databaseName='" + databaseName + '\'' +
         ", executorMemory='" + executorMemory + '\'' +
         ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
+        ", explainQueries=" + explainQueries +
         ", terminologyClient=" + terminologyClient +
         ", sparkSession=" + sparkSession +
         '}';
   }
-
 }

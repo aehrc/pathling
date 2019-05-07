@@ -31,6 +31,7 @@ public class FhirServerContainer {
     AnalyticsServerConfiguration config = new AnalyticsServerConfiguration();
 
     setStringPropsUsingEnvVar(config, new HashMap<String, String>() {{
+      put("CLINSIGHT_FHIR_SERVER_VERSION", "version");
       put("CLINSIGHT_SPARK_MASTER_URL", "sparkMasterUrl");
       put("CLINSIGHT_WAREHOUSE_DIRECTORY", "warehouseDirectory");
       put("CLINSIGHT_METASTORE_URL", "metastoreUrl");

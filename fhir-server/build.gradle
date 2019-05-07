@@ -80,10 +80,21 @@ def blackHole = new OutputStream() {
   void write(int b) {}
 }
 
+task getGitRevision {
+  new ByteArrayOutputStream().withStream { os ->
+    def result = exec {
+      commandLine 'git', 'rev-parse', 'HEAD'
+      standardOutput = os
+    }
+    getGitRevision.ext.revision = os.toString().replaceAll("\\n", "")
+  }
+}
+
 task dockerBuild(type: Exec) {
   dependsOn jar
   dependsOn dependencyJar
-  commandLine 'docker', 'build', '-t', 'docker-registry.it.csiro.au/clinsight/fhir-server', '.'
+  dependsOn getGitRevision
+  commandLine 'docker', 'build', '-t', 'docker-registry.it.csiro.au/clinsight/fhir-server', '--build-arg', "version=${getGitRevision.revision}", '.'
   standardOutput blackHole
 }
 build.finalizedBy(dockerBuild)

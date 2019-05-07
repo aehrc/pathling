@@ -28,6 +28,13 @@ import org.hl7.fhir.dstu3.model.Enumerations.PublicationStatus;
 public class AnalyticsServerCapabilities implements
     IServerConformanceProvider<CapabilityStatement> {
 
+  AnalyticsServerConfiguration configuration;
+
+  public AnalyticsServerCapabilities(
+      AnalyticsServerConfiguration configuration) {
+    this.configuration = configuration;
+  }
+
   @Override
   @Metadata
   public CapabilityStatement getServerConformance(HttpServletRequest httpServletRequest) {
@@ -44,8 +51,10 @@ public class AnalyticsServerCapabilities implements
         "Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.");
     capabilityStatement.setUseContext(buildUseContext());
     capabilityStatement.setKind(CapabilityStatementKind.CAPABILITY);
-    capabilityStatement.setSoftware(
-        new CapabilityStatementSoftwareComponent(new StringType("Clinsight FHIR Server")));
+    CapabilityStatementSoftwareComponent software = new CapabilityStatementSoftwareComponent(
+        new StringType("Clinsight FHIR Server"));
+    software.setVersion(configuration.getVersion());
+    capabilityStatement.setSoftware(software);
     capabilityStatement.setFhirVersion("3.0.1");
     capabilityStatement.setAcceptUnknown(UnknownContentCode.NO);
     capabilityStatement.setFormat(Arrays.asList(new CodeType("json"), new CodeType("xml")));
