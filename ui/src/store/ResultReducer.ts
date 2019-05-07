@@ -3,51 +3,38 @@
  */
 
 import { Query } from "./QueryReducer";
-import { OpOutcomeError } from "../fhir/OperationOutcome";
 import { ResultAction } from "./ResultActions";
-import { Parameters, Parameter } from "../fhir/Types";
+import { Parameter, Parameters } from "../fhir/Types";
 
 export interface Result {
   query: Query;
   groupings: Parameter[];
   loading: boolean;
-  error: Error | null;
-}
-
-export interface Error {
-  message: string;
-  opOutcome?: OpOutcomeError;
 }
 
 const initialState: Result = {
   query: null,
   groupings: null,
-  loading: false,
-  error: null
+  loading: false
 };
 
 const ResultReducer = (state = initialState, action: ResultAction): Result => {
   switch (action.type) {
-    case "QUERY_REQUEST":
+    case "SEND_QUERY_REQUEST":
       return {
         ...initialState,
         loading: true
       };
-    case "QUERY_RESULT":
+    case "RECEIVE_QUERY_RESULT":
       return {
         ...state,
         query: action.query,
         groupings: groupingsFromResult(action.result),
-        loading: false,
-        error: null
+        loading: false
       };
-    case "QUERY_ERROR":
+    case "CATCH_QUERY_ERROR":
       return {
         ...state,
-        error: {
-          message: action.message,
-          opOutcome: action.opOutcome
-        },
         loading: false
       };
     default:

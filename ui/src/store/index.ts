@@ -8,15 +8,21 @@ import { createLogger } from "redux-logger";
 
 import ResultReducer, { Result } from "./ResultReducer";
 import QueryReducer, { Query } from "./QueryReducer";
+import ConfigReducer, { Config } from "./ConfigReducer";
+import ErrorReducer from "./ErrorReducer";
 
 export interface GlobalState {
   query: Query;
   result: Result;
+  config: Config;
+  error: Error;
 }
 
 const Reducer = combineReducers({
   query: QueryReducer,
-  result: ResultReducer
+  result: ResultReducer,
+  config: ConfigReducer,
+  error: ErrorReducer
 });
 
 // Enable console logging of Redux actions for all environments other than

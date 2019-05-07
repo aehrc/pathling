@@ -2,9 +2,9 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import rawResourceTree from "../../config/resource-tree.json";
-import rawComplexTypesTree from "../../config/complex-type-tree.json";
-import rawReverseReferences from "../../config/reverse-references.json";
+import rawResourceTree from "../../config/resourceTree.json";
+import rawComplexTypesTree from "../../config/complexTypeTree.json";
+import rawReverseReferences from "../../config/reverseReferences.json";
 
 interface ResourceTree {
   [resourceName: string]: ResourceNode;

@@ -3,6 +3,7 @@
  */
 
 const path = require("path"),
+  MiniCssExtractPlugin = require("mini-css-extract-plugin"),
   HtmlWebpackPlugin = require("html-webpack-plugin"),
   BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
     .BundleAnalyzerPlugin;
@@ -14,7 +15,7 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "[name].[hash:8].js"
+    filename: "script/[name].[hash:8].js"
   },
   module: {
     rules: [
@@ -27,20 +28,35 @@ module.exports = {
       },
       {
         test: /\.scss$/,
-        use: ["style-loader", "css-loader", "sass-loader"]
+        use: [
+          {
+            loader: MiniCssExtractPlugin.loader,
+            options: {
+              hmr: process.env.NODE_ENV === "development",
+              reloadAll: true
+            }
+          },
+          "css-loader",
+          "sass-loader"
+        ]
       },
       {
         test: /\.(ttf|eot|woff)$/,
         use: {
           loader: "file-loader",
           options: {
-            name: "fonts/[hash].[ext]"
+            name: "[hash].[ext]",
+            outputPath: "fonts",
+            publicPath: "../fonts"
           }
         }
       }
     ]
   },
   plugins: [
+    new MiniCssExtractPlugin({
+      filename: "style/[name].[hash:8].css"
+    }),
     new HtmlWebpackPlugin({
       inject: true,
       template: path.resolve(__dirname, "src", "index.html")
@@ -48,8 +64,9 @@ module.exports = {
     new BundleAnalyzerPlugin({ analyzerMode: "static", openAnalyzer: false })
   ],
   devServer: {
-    contentBase: path.resolve(__dirname, "dist"),
+    // Put your local `config.json` in the `.local` directory.
+    contentBase: path.resolve(__dirname, ".local"),
     compress: true
   },
-  devtool: "source-map"
+  devtool: process.env.NODE_ENV === "development" ? "source-map" : false
 };

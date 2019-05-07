@@ -13,9 +13,10 @@ import Filters from "./Filters";
 import Groupings from "./Groupings";
 import Actions from "./Actions";
 import Result from "./Result";
-import "./style/App.scss";
 import { GlobalState } from "../store";
-import { Error } from "../store/ResultReducer";
+import { Error } from "../store/ErrorReducer";
+import * as actions from "../store/ConfigActions";
+import "./style/App.scss";
 
 const Alerter = Toaster.create({
   position: Position.BOTTOM_RIGHT
@@ -23,6 +24,7 @@ const Alerter = Toaster.create({
 
 interface Props {
   error?: Error | null;
+  fetchConfig: () => void;
 }
 
 interface State {
@@ -39,6 +41,14 @@ class App extends React.Component<Props, State> {
     super(props);
     this.state = { siderWidth: 300 };
     this.handleResize = this.handleResize.bind(this);
+  }
+
+  /**
+   * Fetches the application configuration file.
+   */
+  componentDidMount(): void {
+    const { fetchConfig } = this.props;
+    fetchConfig();
   }
 
   /**
@@ -117,6 +127,10 @@ class App extends React.Component<Props, State> {
 }
 
 const mapStateToProps = (state: GlobalState) => ({
-  error: state.result.error
+  error: state.error
 });
-export default connect(mapStateToProps)(App);
+
+export default connect(
+  mapStateToProps,
+  actions
+)(App);

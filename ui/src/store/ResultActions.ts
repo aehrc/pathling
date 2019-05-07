@@ -3,12 +3,12 @@
  */
 
 import http, { AxiosPromise } from "axios";
+import { Dispatch } from "redux";
 
 import {
   OpOutcomeError,
   opOutcomeFromJsonResponse
 } from "../fhir/OperationOutcome";
-import { Dispatch } from "redux";
 import { GlobalState } from "./index";
 import { Aggregation, Grouping, Query } from "./QueryReducer";
 import {
@@ -16,40 +16,47 @@ import {
   GroupingRequestParameter,
   Parameters
 } from "../fhir/Types";
+import { catchError, clearError } from "./ErrorActions";
 
-interface QueryRequest {
-  type: "QUERY_REQUEST";
+interface SendQueryRequest {
+  type: "SEND_QUERY_REQUEST";
 }
 
-interface QueryResult {
-  type: "QUERY_RESULT";
+interface ReceiveQueryResult {
+  type: "RECEIVE_QUERY_RESULT";
   result: Parameters;
   query: Query;
 }
 
-interface QueryError {
-  type: "QUERY_ERROR";
+interface CatchQueryError {
+  type: "CATCH_QUERY_ERROR";
   message: string;
   opOutcome?: OpOutcomeError;
 }
 
-export type ResultAction = QueryRequest | QueryResult | QueryError;
+export type ResultAction =
+  | SendQueryRequest
+  | ReceiveQueryResult
+  | CatchQueryError;
 
-export const queryRequest = (): QueryRequest => ({
-  type: "QUERY_REQUEST"
+export const sendQueryRequest = (): SendQueryRequest => ({
+  type: "SEND_QUERY_REQUEST"
 });
 
-export const queryResult = (result: Parameters, query: Query): QueryResult => ({
-  type: "QUERY_RESULT",
+export const receiveQueryResult = (
+  result: Parameters,
+  query: Query
+): ReceiveQueryResult => ({
+  type: "RECEIVE_QUERY_RESULT",
   result,
   query
 });
 
-export const queryError = (
+export const catchQueryError = (
   message: string,
   opOutcome?: OpOutcomeError
-): QueryError => ({
-  type: "QUERY_ERROR",
+): CatchQueryError => ({
+  type: "CATCH_QUERY_ERROR",
   message,
   opOutcome
 });
@@ -98,55 +105,49 @@ const groupingToParam = (grouping: Grouping): GroupingRequestParameter => {
  * Fetches a result based on the current query within state, then dispatches the
  * relevant actions to signal either a successful or error response.
  */
-export const fetchQueryResult = () => (
+export const fetchQueryResult = (fhirServer: string) => (
   dispatch: Dispatch,
   getState: () => GlobalState
 ): AxiosPromise => {
-  try {
-    const aggregations = getState().query.aggregations,
-      groupings = getState().query.groupings,
-      aggregationParams = aggregations.map(aggregationToParam),
-      groupingParams = groupings.map(groupingToParam),
-      query: Parameters = {
-        resourceType: "Parameters",
-        parameter: aggregationParams.concat(groupingParams)
-      };
+  const aggregations = getState().query.aggregations,
+    groupings = getState().query.groupings,
+    aggregationParams = aggregations.map(aggregationToParam),
+    groupingParams = groupings.map(groupingToParam),
+    query: Parameters = {
+      resourceType: "Parameters",
+      parameter: aggregationParams.concat(groupingParams)
+    };
 
-    if (aggregations.length === 0) {
-      throw new Error("Query must have at least one aggregation.");
-    }
-    dispatch(queryRequest());
-    return http
-      .post(
-        // TODO: Extract this URL out into configuration.
-        "http://localhost:8090/fhir/$aggregate-query",
-        query,
-        {
-          headers: {
-            "Content-Type": "application/fhir+json",
-            Accept: "application/fhir+json"
-          }
-        }
-      )
-      .then(response => {
-        if (response.data.resourceType !== "Parameters")
-          throw "Response is not of type Parameters.";
-        const result = response.data;
-        dispatch(queryResult(result, getState().query));
-        return result;
-      })
-      .catch(error => {
-        if (
-          error.response &&
-          error.response.headers["content-type"].includes(
-            "application/fhir+json"
-          )
-        ) {
-          const opOutcome = opOutcomeFromJsonResponse(error.response.data);
-          dispatch(queryError(opOutcome.message, opOutcome));
-        } else dispatch(queryError(error.message));
-      });
-  } catch (error) {
-    dispatch(queryError(error.message));
+  if (aggregations.length === 0) {
+    dispatch(catchQueryError("Query must have at least one aggregation."));
   }
+  if (getState().error) dispatch(clearError());
+  dispatch(sendQueryRequest());
+  return http
+    .post(`${fhirServer}/$aggregate-query`, query, {
+      headers: {
+        "Content-Type": "application/fhir+json",
+        Accept: "application/fhir+json"
+      }
+    })
+    .then(response => {
+      if (response.data.resourceType !== "Parameters")
+        throw "Response is not of type Parameters.";
+      const result = response.data;
+      dispatch(receiveQueryResult(result, getState().query));
+      return result;
+    })
+    .catch(error => {
+      if (
+        error.response &&
+        error.response.headers["content-type"].includes("application/fhir+json")
+      ) {
+        const opOutcome = opOutcomeFromJsonResponse(error.response.data);
+        dispatch(catchQueryError(opOutcome.message, opOutcome));
+        dispatch(catchError(opOutcome.message, opOutcome));
+      } else {
+        dispatch(catchQueryError(error.message));
+        dispatch(catchError(error.message));
+      }
+    });
 };

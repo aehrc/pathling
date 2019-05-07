@@ -8,6 +8,7 @@ import { Button, Navbar, Alignment } from "@blueprintjs/core";
 
 import { fetchQueryResult } from "../store/ResultActions";
 import { clearQuery } from "../store/QueryActions";
+import { catchError, clearError } from "../store/ErrorActions";
 import { Query } from "../store/QueryReducer";
 import { Result } from "../store/ResultReducer";
 import { GlobalState } from "../store";
@@ -16,8 +17,10 @@ import "./style/Actions.scss";
 interface Props {
   query: Query;
   result: Result;
-  fetchQueryResult?: () => void;
+  fhirServer?: string;
+  fetchQueryResult?: (fhirServer: string) => any;
   clearQuery?: () => void;
+  clearError?: () => void;
 }
 
 /**
@@ -29,12 +32,27 @@ function Actions(props: Props) {
   const {
     fetchQueryResult,
     clearQuery,
+    clearError,
     query,
-    result: { loading }
+    result: { loading },
+    fhirServer
   } = props;
 
   const queryIsEmpty = (): boolean =>
     query.aggregations.length === 0 && query.groupings.length === 0;
+
+  const handleClickExecute = () => {
+    if (!fhirServer) {
+      catchError("Missing FHIR server configuration value");
+    } else {
+      fetchQueryResult(fhirServer);
+    }
+  };
+
+  const handleClickClearQuery = () => {
+    clearQuery();
+    clearError();
+  };
 
   return (
     <Navbar className="actions">
@@ -44,7 +62,7 @@ function Actions(props: Props) {
           icon="play"
           text={loading ? "Executing..." : "Execute"}
           minimal={true}
-          onClick={fetchQueryResult}
+          onClick={handleClickExecute}
           disabled={loading}
         />
         {queryIsEmpty() ? null : (
@@ -53,7 +71,7 @@ function Actions(props: Props) {
             icon="delete"
             text="Clear query"
             minimal={true}
-            onClick={clearQuery}
+            onClick={handleClickClearQuery}
           />
         )}
       </Navbar.Group>
@@ -63,9 +81,10 @@ function Actions(props: Props) {
 
 const mapStateToProps = (state: GlobalState) => ({
     query: state.query,
-    result: state.result
+    result: state.result,
+    fhirServer: state.config ? state.config.fhirServer : null
   }),
-  actions = { fetchQueryResult, clearQuery };
+  actions = { fetchQueryResult, clearQuery, catchError, clearError };
 
 export default connect(
   mapStateToProps,
