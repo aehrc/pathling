@@ -15,7 +15,7 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "script/[name].[hash:8].js"
+    filename: "script/[name].[contenthash:8].js"
   },
   module: {
     rules: [
@@ -55,7 +55,7 @@ module.exports = {
   },
   plugins: [
     new MiniCssExtractPlugin({
-      filename: "style/[name].[hash:8].css"
+      filename: "style/[name].[contenthash:8].css"
     }),
     new HtmlWebpackPlugin({
       inject: true,
