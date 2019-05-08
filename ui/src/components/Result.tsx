@@ -61,13 +61,15 @@ function Result(props: Props) {
         <th key={aggregation.label}>{aggregation.label}</th>
       )),
       rows = groupings.map((grouping, i) => renderGrouping(grouping, i));
-    return (
+    return rows.length > 0 ? (
       <HTMLTable interactive={true}>
         <thead>
           <tr>{groupHeadings.concat(aggregationHeadings)}</tr>
         </thead>
         <tbody>{rows}</tbody>
       </HTMLTable>
+    ) : (
+      <p>The result of this query contains zero groupings.</p>
     );
   };
 

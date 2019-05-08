@@ -43,6 +43,7 @@ const ResultReducer = (state = initialState, action: ResultAction): Result => {
 };
 
 function groupingsFromResult(result: Parameters): Parameter[] {
+  if (!result.parameter) return [];
   return result.parameter.filter((p: Parameter) => p.name === "grouping");
 }
 
