@@ -18,6 +18,7 @@ import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.SparkSession;
@@ -54,6 +55,40 @@ public class ReverseResolveFunction implements ExpressionFunction {
           "Argument to reverseResolve function does not reference input resource type: " + argument
               .getExpression());
     }
+    if (argument.getJoins().isEmpty()) {
+      resolveJoinlessArgument(input, inputElement, argument, argumentElement);
+    } else {
+      resolveArgumentWithJoins(input, argument, argumentElement);
+    }
+    return input;
+  }
+
+  private void resolveArgumentWithJoins(ParseResult input, ParseResult argument,
+      ResolvedElement argumentElement) {
+    LinkedList<String> argumentPathComponents = Strings.tokenizePath(argumentElement.getPath());
+    String targetTable = argumentPathComponents.getFirst().toLowerCase();
+    String joinAlias = Strings.pathToLowerCamelCase(argumentPathComponents) + "Resolved";
+    String rootExpression = Strings.uncapitalize(argumentElement.getPath());
+    Join finalJoin = argument.getJoins().last();
+    assert finalJoin.getUdtfExpression() != null;
+    String referenceExpression = joinAlias + "." + rootExpression
+        .replace(finalJoin.getUdtfExpression(), finalJoin.getTableAlias()) + ".reference";
+    String joinExpression = "LEFT JOIN (SELECT * FROM " + targetTable + " ";
+    joinExpression += argument.getJoins().stream().map(Join::getExpression).collect(
+        Collectors.joining(" "));
+    joinExpression +=
+        ") " + joinAlias + " ON " + input.getSqlExpression() + ".id = " + referenceExpression;
+    Join join = new Join(joinExpression, rootExpression, JoinType.TABLE_JOIN, joinAlias);
+    input.setResultType(ParseResultType.ELEMENT_PATH);
+    input.setElementType(ResolvedElementType.RESOURCE);
+    input.setElementTypeCode(argumentPathComponents.getFirst());
+    input.setExpression(argumentPathComponents.getFirst());
+    input.setSqlExpression(joinAlias);
+    input.getJoins().add(join);
+  }
+
+  private void resolveJoinlessArgument(@Nonnull ParseResult input, ResolvedElement inputElement,
+      ParseResult argument, ResolvedElement argumentElement) {
     LinkedList<String> argumentPathComponents = Strings.tokenizePath(argumentElement.getPath());
     List<String> argumentPathTail = argumentPathComponents
         .subList(1, argumentPathComponents.size());
@@ -67,18 +102,13 @@ public class ReverseResolveFunction implements ExpressionFunction {
     String joinExpression =
         "LEFT JOIN " + targetTable + " " + joinAlias + " ON " + input.getSqlExpression() + ".id = "
             + targetExpression;
-    Join join = new Join(joinExpression, targetTable,
-        JoinType.TABLE_JOIN, joinAlias);
-    if (!input.getJoins().isEmpty()) {
-      join.setDependsUpon(input.getJoins().last());
-    }
+    Join join = new Join(joinExpression, targetTable, JoinType.TABLE_JOIN, joinAlias);
     input.setResultType(ParseResultType.ELEMENT_PATH);
     input.setElementType(ResolvedElementType.RESOURCE);
     input.setElementTypeCode(argumentPathComponents.getFirst());
     input.setExpression(argumentPathComponents.getFirst());
     input.setSqlExpression(joinAlias);
     input.getJoins().add(join);
-    return input;
   }
 
   private void validateInput(@Nullable ParseResult input) {

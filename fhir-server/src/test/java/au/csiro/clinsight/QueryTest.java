@@ -35,7 +35,6 @@ import org.eclipse.jetty.server.Server;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 
@@ -999,7 +998,6 @@ public class QueryTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void reverseReferenceWithMultiValueTraversal() throws IOException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
@@ -1039,7 +1037,7 @@ public class QueryTest {
             + "LEFT JOIN ("
             + "SELECT * "
             + "FROM encounter "
-            + "LATERAL VIEW OUTER explode(encounter.diagnosis) encounterDiagnosis AS encounterDiagnosis "
+            + "LATERAL VIEW OUTER explode(encounter.diagnosis) encounterDiagnosis AS encounterDiagnosis"
             + ") encounterDiagnosisConditionResolved ON condition.id = encounterDiagnosisConditionResolved.encounterDiagnosis.condition.reference "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
