@@ -35,6 +35,7 @@ import org.eclipse.jetty.server.Server;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 
@@ -994,6 +995,64 @@ public class QueryTest {
       IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
       JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  @Ignore
+  public void reverseReferenceWithMultiValueTraversal() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.count()\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of conditions\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.reverseResolve(Encounter.diagnosis.condition).class.display\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Encounter class\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedSql =
+        "SELECT encounterDiagnosisConditionResolved.class.display AS `Encounter class`, COUNT(DISTINCT condition.id) AS `Number of conditions` "
+            + "FROM condition "
+            + "LEFT JOIN ("
+            + "SELECT * "
+            + "FROM encounter "
+            + "LATERAL VIEW OUTER explode(encounter.diagnosis) encounterDiagnosis AS encounterDiagnosis "
+            + ") encounterDiagnosisConditionResolved ON condition.id = encounterDiagnosisConditionResolved.encounterDiagnosis.condition.reference "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
   }
 
   @After
