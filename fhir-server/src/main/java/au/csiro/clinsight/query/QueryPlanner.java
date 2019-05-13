@@ -266,41 +266,43 @@ class QueryPlanner {
     if (joins.isEmpty()) {
       return joins;
     }
-    // We start with the final join and move upwards through the dependencies.
-    Join cursor = joins.last();
-    Join dependentTableJoin = null;
+    // We start with the final join and move backwards.
+    int cursorIndex = joins.size() - 1;
+    @SuppressWarnings("ConstantConditions") Join cursor =
+        cursorIndex >= 0 ? (Join) joins.toArray()[cursorIndex] : null;
+    Join downstreamTableJoin = null;
     SortedSet<Join> lateralViewsToConvert = new TreeSet<>();
     // We stop when we reach the end of the dependencies and there are no lateral views queued up
     // for conversion.
     while (cursor != null || !lateralViewsToConvert.isEmpty()) {
       if (cursor == null) {
-        // Upon reaching the end of the dependencies, we bundle up any lateral views queued up for
+        // Upon reaching the start of the joins, we bundle up any lateral views queued up for
         // conversion.
-        assert dependentTableJoin != null;
-        joins = replaceLateralViews(joins, dependentTableJoin, lateralViewsToConvert);
+        assert downstreamTableJoin != null;
+        joins = replaceLateralViews(joins, downstreamTableJoin, lateralViewsToConvert);
       } else {
         if (cursor.getJoinType() == TABLE_JOIN || cursor.getJoinType() == EXISTS_JOIN) {
-          if (dependentTableJoin == null) {
+          if (downstreamTableJoin == null) {
             // We mark a table join that depends upon a lateral view (or set of lateral views) as
             // the "dependent table join". It stays marked until we reach the end of the lateral
             // views that it depends upon and finish converting them.
-            dependentTableJoin = cursor;
+            downstreamTableJoin = cursor;
           } else {
             // If we reach a new table join that is not the "dependent table join", then that must
             // mean that we have reached the end of this contiguous set of lateral views. This is
             // the trigger to take these and convert them into an inline query.
-            joins = replaceLateralViews(joins, dependentTableJoin, lateralViewsToConvert);
-            dependentTableJoin = null;
+            joins = replaceLateralViews(joins, downstreamTableJoin, lateralViewsToConvert);
+            downstreamTableJoin = null;
             continue;
           }
-        } else if (cursor.getJoinType() == LATERAL_VIEW && dependentTableJoin != null) {
+        } else if (cursor.getJoinType() == LATERAL_VIEW && downstreamTableJoin != null) {
           // If we find a new lateral view, we add that to the set of lateral views that are queued
           // for conversion.
           lateralViewsToConvert.add(cursor);
         }
-        // Each iteration of the loop, we move to a new join based upon the depends upon
-        // relationship.
-        cursor = cursor.getDependsUpon();
+        // Each iteration of the loop, we move to the previous join in the sorted set.
+        cursorIndex--;
+        cursor = cursorIndex >= 0 ? (Join) joins.toArray()[cursorIndex] : null;
       }
     }
     return joins;
@@ -319,12 +321,6 @@ class QueryPlanner {
     Matcher tableAliasInvocationMatcher = tableAliasInvocationPattern
         .matcher(dependentTableJoin.getExpression());
     boolean found = tableAliasInvocationMatcher.find();
-    List<String> tableAliasInvocations = new ArrayList<>();
-    while (found) {
-      tableAliasInvocations.add(tableAliasInvocationMatcher.group(1));
-      found = tableAliasInvocationMatcher.find();
-    }
-    assert !tableAliasInvocations.isEmpty();
 
     // Build the join expression.
     String newTableAlias = finalTableAlias + "Exploded";
