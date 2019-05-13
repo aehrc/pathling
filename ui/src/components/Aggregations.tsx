@@ -6,7 +6,8 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { Icon, Tag } from "@blueprintjs/core";
 
-import * as actions from "../store/QueryActions";
+import * as queryActions from "../store/QueryActions";
+import * as elementTreeActions from "../store/ElementTreeActions";
 import { Aggregation, PartialAggregation } from "../store/QueryReducer";
 import { GlobalState } from "../store";
 import "./style/Aggregations.scss";
@@ -15,8 +16,10 @@ import ExpressionEditor from "./ExpressionEditor";
 
 interface Props {
   aggregations?: Aggregation[];
-  removeAggregation: (index: number) => void;
-  updateAggregation: (index: number, aggregation: PartialAggregation) => void;
+  removeAggregation: (index: number) => any;
+  updateAggregation: (index: number, aggregation: PartialAggregation) => any;
+  setElementTreeFocus: (focus: string) => any;
+  clearElementTreeFocus: () => any;
 }
 
 /**
@@ -26,14 +29,34 @@ interface Props {
  * @author John Grimes
  */
 function Aggregations(props: Props) {
-  const { aggregations, removeAggregation, updateAggregation } = props;
+  const {
+    aggregations,
+    removeAggregation,
+    updateAggregation,
+    setElementTreeFocus,
+    clearElementTreeFocus
+  } = props;
+
+  const getSubjectResourceFromExpression = (expression: string): string => {
+    const subjectSearchResult = /^([A-Z][A-Za-z]+)/.exec(expression);
+    return subjectSearchResult !== null ? subjectSearchResult[1] : null;
+  };
 
   const handleRemove = (index: number): void => {
+    if (aggregations.length === 1) {
+      clearElementTreeFocus();
+    }
     removeAggregation(index);
   };
 
   const handleChange = (i: number, aggregation: PartialAggregation) => {
     updateAggregation(i, aggregation);
+    const subjectResource = getSubjectResourceFromExpression(
+      aggregation.expression
+    );
+    if (subjectResource !== null) {
+      setElementTreeFocus(subjectResource);
+    }
   };
 
   const renderBlankCanvas = (): ReactElement => (
@@ -64,6 +87,8 @@ function Aggregations(props: Props) {
 const mapStateToProps = (state: GlobalState) => ({
   aggregations: state.query.aggregations
 });
+
+const actions = { ...queryActions, ...elementTreeActions };
 
 export default connect(
   mapStateToProps,

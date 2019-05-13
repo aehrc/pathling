@@ -11,4 +11,17 @@
     @extend .#{$ns}-icon-cube;
     color: #137cbd;
   }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    .content {
+      .label,
+      .caret-closed,
+      .action {
+        cursor: not-allowed;
+      }
+    }
+  }
 }

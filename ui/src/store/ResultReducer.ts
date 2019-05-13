@@ -2,23 +2,26 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import { Query } from "./QueryReducer";
+import { QueryState } from "./QueryReducer";
 import { ResultAction } from "./ResultActions";
 import { Parameter, Parameters } from "../fhir/Types";
 
-export interface Result {
-  query: Query;
+export interface ResultState {
+  query: QueryState;
   groupings: Parameter[];
   loading: boolean;
 }
 
-const initialState: Result = {
+const initialState: ResultState = {
   query: null,
   groupings: null,
   loading: false
 };
 
-const ResultReducer = (state = initialState, action: ResultAction): Result => {
+const ResultReducer = (
+  state = initialState,
+  action: ResultAction
+): ResultState => {
   switch (action.type) {
     case "SEND_QUERY_REQUEST":
       return {

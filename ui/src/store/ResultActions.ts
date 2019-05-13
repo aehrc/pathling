@@ -10,7 +10,7 @@ import {
   opOutcomeFromJsonResponse
 } from "../fhir/OperationOutcome";
 import { GlobalState } from "./index";
-import { Aggregation, Grouping, Query } from "./QueryReducer";
+import { Aggregation, Grouping, QueryState } from "./QueryReducer";
 import {
   AggregationRequestParameter,
   GroupingRequestParameter,
@@ -25,7 +25,7 @@ interface SendQueryRequest {
 interface ReceiveQueryResult {
   type: "RECEIVE_QUERY_RESULT";
   result: Parameters;
-  query: Query;
+  query: QueryState;
 }
 
 interface CatchQueryError {
@@ -45,7 +45,7 @@ export const sendQueryRequest = (): SendQueryRequest => ({
 
 export const receiveQueryResult = (
   result: Parameters,
-  query: Query
+  query: QueryState
 ): ReceiveQueryResult => ({
   type: "RECEIVE_QUERY_RESULT",
   result,

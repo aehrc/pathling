@@ -2,10 +2,10 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import { Error } from "./ErrorReducer";
+import { ErrorState } from "./ErrorReducer";
 import { OpOutcomeError } from "../fhir/OperationOutcome";
 
-interface CatchError extends Error {
+interface CatchError extends ErrorState {
   type: "CATCH_ERROR";
 }
 

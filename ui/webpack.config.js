@@ -15,7 +15,10 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "script/[name].[contenthash:8].js"
+    filename:
+      process.env.NODE_ENV === "development"
+        ? "script/[name].[hash:8].js"
+        : "script/[name].[contenthash:8].js"
   },
   module: {
     rules: [

@@ -14,7 +14,7 @@ import Groupings from "./Groupings";
 import Actions from "./Actions";
 import Result from "./Result";
 import { GlobalState } from "../store";
-import { Error } from "../store/ErrorReducer";
+import { ErrorState } from "../store/ErrorReducer";
 import * as actions from "../store/ConfigActions";
 import "./style/App.scss";
 
@@ -23,7 +23,7 @@ const Alerter = Toaster.create({
 });
 
 interface Props {
-  error?: Error | null;
+  error?: ErrorState | null;
   fetchConfig: () => void;
 }
 
@@ -55,7 +55,7 @@ class App extends React.Component<Props, State> {
    * Catches any uncaught errors that are thrown during the rendering of
    * components.
    */
-  componentDidCatch(error: Error): void {
+  componentDidCatch(error: ErrorState): void {
     Alerter.show({ message: error.message, intent: "danger" });
     // eslint-disable-next-line no-console
     console.error(error);

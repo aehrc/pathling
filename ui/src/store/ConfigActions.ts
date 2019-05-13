@@ -5,17 +5,17 @@
 import { Dispatch } from "redux";
 import http, { AxiosPromise } from "axios";
 
-import { Config } from "./ConfigReducer";
+import { ConfigState } from "./ConfigReducer";
 import { catchError } from "./ErrorActions";
 
 export interface ReceiveConfig {
   type: "RECEIVE_CONFIG";
-  config: Config;
+  config: ConfigState;
 }
 
 export type ConfigAction = ReceiveConfig;
 
-export const receiveConfig = (config: Config): ReceiveConfig => ({
+export const receiveConfig = (config: ConfigState): ReceiveConfig => ({
   type: "RECEIVE_CONFIG",
   config: config
 });

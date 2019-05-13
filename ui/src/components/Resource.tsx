@@ -13,19 +13,38 @@ import {
 import ContainedElements from "./ContainedElements";
 import ReverseReference from "./ReverseReference";
 import TreeNodeTooltip from "./TreeNodeTooltip";
-import * as actions from "../store/QueryActions";
+import * as queryActions from "../store/QueryActions";
+import * as elementTreeActions from "../store/ElementTreeActions";
 import "./style/Resource.scss";
 
 interface Props extends ResourceNode {
   name: string;
   parentPath?: string;
-  addAggregation: (expression: string) => void;
+  disabled?: boolean;
+  addAggregation: (expression: string) => any;
+  setElementTreeFocus: (focus: string) => any;
 }
 
 function Resource(props: Props) {
-  const { name, definition, contains, parentPath, addAggregation } = props,
+  const {
+      name,
+      definition,
+      contains,
+      parentPath,
+      disabled,
+      addAggregation,
+      setElementTreeFocus
+    } = props,
     aggregationExpression = `${name}.count()`,
     [isExpanded, setExpanded] = useState(false);
+
+  const getExpanded = () => isExpanded && !disabled;
+
+  const handleClickAction = () => {
+    if (disabled) return;
+    addAggregation(aggregationExpression);
+    setElementTreeFocus(name);
+  };
 
   const renderContains = () => {
     const newParentPath = parentPath ? parentPath : name,
@@ -45,11 +64,11 @@ function Resource(props: Props) {
   };
 
   return (
-    <li className="resource">
+    <li className={disabled ? "resource disabled" : "resource"}>
       <div className="content">
         <span
-          className={isExpanded ? "caret-open" : "caret-closed"}
-          onClick={() => setExpanded(!isExpanded)}
+          className={getExpanded() ? "caret-open" : "caret-closed"}
+          onClick={disabled ? null : () => setExpanded(!isExpanded)}
         />
         <span className="icon" />
         <TreeNodeTooltip
@@ -63,14 +82,16 @@ function Resource(props: Props) {
           <span
             className="action"
             title={`Add ${aggregationExpression} to aggregations`}
-            onClick={() => addAggregation(aggregationExpression)}
+            onClick={handleClickAction}
           />
         )}
       </div>
-      {isExpanded ? <ol className="contains">{renderContains()}</ol> : null}
+      {getExpanded() ? <ol className="contains">{renderContains()}</ol> : null}
     </li>
   );
 }
+
+const actions = { ...queryActions, ...elementTreeActions };
 
 export default connect(
   null,

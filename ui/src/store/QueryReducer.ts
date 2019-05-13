@@ -4,7 +4,7 @@
 
 import { QueryAction } from "./QueryActions";
 
-export interface Query {
+export interface QueryState {
   aggregations: Aggregation[];
   groupings: Grouping[];
 }
@@ -29,12 +29,12 @@ export interface PartialGrouping {
   expression?: string;
 }
 
-const initialState: Query = {
+const initialState: QueryState = {
   aggregations: [],
   groupings: []
 };
 
-export default (state = initialState, action: QueryAction): Query => {
+export default (state = initialState, action: QueryAction): QueryState => {
   switch (action.type) {
     case "ADD_AGGREGATION":
       return {

@@ -8,19 +8,22 @@ import { Button, Navbar, Alignment } from "@blueprintjs/core";
 
 import { fetchQueryResult } from "../store/ResultActions";
 import { clearQuery } from "../store/QueryActions";
+import { clearElementTreeFocus } from "../store/ElementTreeActions";
 import { catchError, clearError } from "../store/ErrorActions";
-import { Query } from "../store/QueryReducer";
-import { Result } from "../store/ResultReducer";
+import { QueryState } from "../store/QueryReducer";
+import { ResultState } from "../store/ResultReducer";
 import { GlobalState } from "../store";
 import "./style/Actions.scss";
 
 interface Props {
-  query: Query;
-  result: Result;
+  query: QueryState;
+  result: ResultState;
   fhirServer?: string;
   fetchQueryResult?: (fhirServer: string) => any;
-  clearQuery?: () => void;
-  clearError?: () => void;
+  clearQuery?: () => any;
+  catchError?: (message: string) => any;
+  clearElementTreeFocus?: () => any;
+  clearError?: () => any;
 }
 
 /**
@@ -32,7 +35,9 @@ function Actions(props: Props) {
   const {
     fetchQueryResult,
     clearQuery,
+    clearElementTreeFocus,
     clearError,
+    catchError,
     query,
     result: { loading },
     fhirServer
@@ -51,6 +56,7 @@ function Actions(props: Props) {
 
   const handleClickClearQuery = () => {
     clearQuery();
+    clearElementTreeFocus();
     clearError();
   };
 
@@ -84,7 +90,13 @@ const mapStateToProps = (state: GlobalState) => ({
     result: state.result,
     fhirServer: state.config ? state.config.fhirServer : null
   }),
-  actions = { fetchQueryResult, clearQuery, catchError, clearError };
+  actions = {
+    fetchQueryResult,
+    clearQuery,
+    clearElementTreeFocus,
+    catchError,
+    clearError
+  };
 
 export default connect(
   mapStateToProps,

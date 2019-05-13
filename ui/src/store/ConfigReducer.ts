@@ -4,14 +4,14 @@
 
 import { ConfigAction } from "./ConfigActions";
 
-export interface Config {
+export interface ConfigState {
   fhirServer?: string;
   version?: string;
 }
 
-const initialState: Config = {};
+const initialState: ConfigState = {};
 
-export default (state = initialState, action: ConfigAction): Config => {
+export default (state = initialState, action: ConfigAction): ConfigState => {
   if (action.type === "RECEIVE_CONFIG") {
     return action.config;
   } else {
