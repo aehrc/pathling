@@ -337,10 +337,7 @@ class QueryPlanner {
     firstLateralView.setUdtfExpression(udtfExpression);
     String table = tokenizePath(udtfExpression).getFirst();
     String joinConditionTarget = upstreamJoin == null ? table : upstreamJoin.getTableAlias();
-    String selectFields = tableAliasInvocations.stream()
-        .map(tai -> finalTableAlias + "." + tai)
-        .collect(Collectors.joining(", "));
-    String joinExpression = "LEFT JOIN (SELECT id, " + selectFields + " FROM " + table + " ";
+    String joinExpression = "LEFT JOIN (SELECT * FROM " + table + " ";
     joinExpression += lateralViewsToConvert.stream()
         .map(Join::getExpression)
         .collect(Collectors.joining(" "));
@@ -356,7 +353,7 @@ class QueryPlanner {
     // Change the expression within the dependent table join to point to the alias of the new join.
     String transformedExpression = dependentTableJoin.getExpression()
         .replaceAll("(?<=(ON|AND)\\s)" + lateralViewsToConvert.last().getTableAlias() + "\\.",
-            inlineQuery.getTableAlias() + ".");
+            inlineQuery.getTableAlias() + "." + finalTableAlias + ".");
     dependentTableJoin.setExpression(transformedExpression);
 
     // This piece of code exists due to some strange behaviour in the removal of items from a set
