@@ -16,11 +16,13 @@ import TreeNodeTooltip from "./TreeNodeTooltip";
 import * as queryActions from "../store/QueryActions";
 import * as elementTreeActions from "../store/ElementTreeActions";
 import "./style/Resource.scss";
+import { GlobalState } from "../store";
 
 interface Props extends ResourceNode {
   name: string;
   parentPath?: string;
   disabled?: boolean;
+  focus?: string;
   addAggregation: (expression: string) => any;
   setElementTreeFocus: (focus: string) => any;
 }
@@ -32,6 +34,7 @@ function Resource(props: Props) {
       contains,
       parentPath,
       disabled,
+      focus,
       addAggregation,
       setElementTreeFocus
     } = props,
@@ -43,7 +46,7 @@ function Resource(props: Props) {
   const handleClickAction = () => {
     if (disabled) return;
     addAggregation(aggregationExpression);
-    setElementTreeFocus(name);
+    if (focus === null) setElementTreeFocus(name);
   };
 
   const renderContains = () => {
@@ -91,9 +94,13 @@ function Resource(props: Props) {
   );
 }
 
+const mapStateToProps = (state: GlobalState) => ({
+  focus: state.elementTree.focus
+});
+
 const actions = { ...queryActions, ...elementTreeActions };
 
 export default connect(
-  null,
+  mapStateToProps,
   actions
 )(Resource);

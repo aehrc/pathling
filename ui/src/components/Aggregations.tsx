@@ -8,7 +8,11 @@ import { Icon, Tag } from "@blueprintjs/core";
 
 import * as queryActions from "../store/QueryActions";
 import * as elementTreeActions from "../store/ElementTreeActions";
-import { Aggregation, PartialAggregation } from "../store/QueryReducer";
+import {
+  Aggregation,
+  Grouping,
+  PartialAggregation
+} from "../store/QueryReducer";
 import { GlobalState } from "../store";
 import "./style/Aggregations.scss";
 import { ReactElement } from "react";
@@ -16,9 +20,9 @@ import ExpressionEditor from "./ExpressionEditor";
 
 interface Props {
   aggregations?: Aggregation[];
+  groupings?: Grouping[];
   removeAggregation: (index: number) => any;
   updateAggregation: (index: number, aggregation: PartialAggregation) => any;
-  setElementTreeFocus: (focus: string) => any;
   clearElementTreeFocus: () => any;
 }
 
@@ -31,22 +35,17 @@ interface Props {
 function Aggregations(props: Props) {
   const {
     aggregations,
+    groupings,
     removeAggregation,
     updateAggregation,
-    setElementTreeFocus,
     clearElementTreeFocus
   } = props;
-
-  const getSubjectResourceFromExpression = (expression: string): string => {
-    const subjectSearchResult = /^([A-Z][A-Za-z]+)/.exec(expression);
-    return subjectSearchResult !== null ? subjectSearchResult[1] : null;
-  };
 
   const handleRemove = (event: any, index: number): void => {
     // This is required to stop the click event from opening the expression
     // editor for other aggregations.
     event.stopPropagation();
-    if (aggregations.length === 1) {
+    if (aggregations.length + groupings.length === 1) {
       clearElementTreeFocus();
     }
     removeAggregation(index);
@@ -54,12 +53,6 @@ function Aggregations(props: Props) {
 
   const handleChange = (i: number, aggregation: PartialAggregation) => {
     updateAggregation(i, aggregation);
-    const subjectResource = getSubjectResourceFromExpression(
-      aggregation.expression
-    );
-    if (subjectResource !== null) {
-      setElementTreeFocus(subjectResource);
-    }
   };
 
   const renderBlankCanvas = (): ReactElement => (
@@ -92,7 +85,8 @@ function Aggregations(props: Props) {
 }
 
 const mapStateToProps = (state: GlobalState) => ({
-  aggregations: state.query.aggregations
+  aggregations: state.query.aggregations,
+  groupings: state.query.groupings
 });
 
 const actions = { ...queryActions, ...elementTreeActions };

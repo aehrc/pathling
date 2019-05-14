@@ -60,6 +60,13 @@ export const getResolvedPath = (parentPath: string, path: string): string => {
   return `${parentPath}.${pathComponents[pathComponents.length - 1]}`;
 };
 
+export const getSubjectResourceFromExpression = (
+  expression: string
+): string => {
+  const subjectSearchResult = /^([A-Z][A-Za-z]+)/.exec(expression);
+  return subjectSearchResult !== null ? subjectSearchResult[1] : null;
+};
+
 // Reference is supported, but is left out of this list as it is treated
 // differently.
 export const supportedComplexTypes = [

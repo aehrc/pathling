@@ -6,17 +6,20 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { Icon, Tag } from "@blueprintjs/core";
 
-import * as actions from "../store/QueryActions";
-import { Grouping, PartialGrouping } from "../store/QueryReducer";
+import * as queryActions from "../store/QueryActions";
+import * as elementTreeActions from "../store/ElementTreeActions";
+import { Aggregation, Grouping, PartialGrouping } from "../store/QueryReducer";
 import { GlobalState } from "../store";
 import { ReactElement } from "react";
 import "./style/Groupings.scss";
 import ExpressionEditor from "./ExpressionEditor";
 
 interface Props {
+  aggregations: Aggregation[];
   groupings: Grouping[];
   removeGrouping: (index: number) => void;
   updateGrouping: (index: number, grouping: PartialGrouping) => void;
+  clearElementTreeFocus: () => any;
 }
 
 /**
@@ -25,12 +28,21 @@ interface Props {
  * @author John Grimes
  */
 function Groupings(props: Props) {
-  const { groupings, removeGrouping, updateGrouping } = props;
+  const {
+    aggregations,
+    groupings,
+    removeGrouping,
+    updateGrouping,
+    clearElementTreeFocus
+  } = props;
 
   const handleRemove = (event: any, index: number): void => {
     // This is required to stop the click event from opening the expression
     // editor for other groupings.
     event.stopPropagation();
+    if (aggregations.length + groupings.length === 1) {
+      clearElementTreeFocus();
+    }
     removeGrouping(index);
   };
 
@@ -68,8 +80,12 @@ function Groupings(props: Props) {
 }
 
 const mapStateToProps = (state: GlobalState) => ({
+  aggregations: state.query.aggregations,
   groupings: state.query.groupings
 });
+
+const actions = { ...queryActions, ...elementTreeActions };
+
 export default connect(
   mapStateToProps,
   actions
