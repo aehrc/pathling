@@ -27,7 +27,10 @@ interface Props {
 function Groupings(props: Props) {
   const { groupings, removeGrouping, updateGrouping } = props;
 
-  const handleRemove = (index: number): void => {
+  const handleRemove = (event: any, index: number): void => {
+    // This is required to stop the click event from opening the expression
+    // editor for other groupings.
+    event.stopPropagation();
     removeGrouping(index);
   };
 
@@ -46,7 +49,11 @@ function Groupings(props: Props) {
         expression={grouping}
         onChange={grouping => handleChange(i, grouping)}
       >
-        <Tag round={true} large={true} onRemove={() => handleRemove(i)}>
+        <Tag
+          round={true}
+          large={true}
+          onRemove={event => handleRemove(event, i)}
+        >
           {grouping.label}
         </Tag>
       </ExpressionEditor>

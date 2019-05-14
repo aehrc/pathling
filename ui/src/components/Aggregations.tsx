@@ -42,7 +42,10 @@ function Aggregations(props: Props) {
     return subjectSearchResult !== null ? subjectSearchResult[1] : null;
   };
 
-  const handleRemove = (index: number): void => {
+  const handleRemove = (event: any, index: number): void => {
+    // This is required to stop the click event from opening the expression
+    // editor for other aggregations.
+    event.stopPropagation();
     if (aggregations.length === 1) {
       clearElementTreeFocus();
     }
@@ -70,7 +73,11 @@ function Aggregations(props: Props) {
         expression={aggregation}
         onChange={aggregation => handleChange(i, aggregation)}
       >
-        <Tag round={true} large={true} onRemove={() => handleRemove(i)}>
+        <Tag
+          round={true}
+          large={true}
+          onRemove={event => handleRemove(event, i)}
+        >
           {aggregation.label}
         </Tag>
       </ExpressionEditor>
