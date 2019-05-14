@@ -142,16 +142,20 @@ public class QueryExecutor {
     String fromClause = "FROM " + String.join(", ", queryPlan.getFromTables());
     String joins = queryPlan.getJoins().stream().map(Join::getExpression).collect(
         Collectors.joining(" "));
+    String whereClause = "WHERE " + String.join(" AND ", queryPlan.getFilters());
     String groupByClause = "GROUP BY " + String.join(", ", groupByArgs);
     String orderByClause = "ORDER BY " + String.join(", ", orderByArgs);
     List<String> clauses = new LinkedList<>(Arrays.asList(selectClause, fromClause));
     if (!joins.isEmpty()) {
       clauses.add(joins);
     }
+    if (queryPlan.getFilters().size() > 0) {
+      clauses.add(whereClause);
+    }
     if (queryPlan.getGroupings().size() > 0) {
       clauses.add(groupByClause);
+      clauses.add(orderByClause);
     }
-    clauses.add(orderByClause);
     String sql = String.join(" ", clauses);
 
     logger.info("Executing query: " + sql);

@@ -23,6 +23,7 @@ class QueryPlan {
   private List<String> groupings;
   private Set<String> fromTables;
   private SortedSet<Join> joins;
+  private List<String> filters;
 
   List<String> getAggregations() {
     return aggregations;
@@ -71,4 +72,13 @@ class QueryPlan {
   void setJoins(SortedSet<Join> joins) {
     this.joins = joins;
   }
+
+  public List<String> getFilters() {
+    return filters;
+  }
+
+  public void setFilters(List<String> filters) {
+    this.filters = filters;
+  }
+
 }

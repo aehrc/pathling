@@ -75,6 +75,14 @@
       ]
     },
     {
+      "name": "filter",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine whether it is included within the result",
+      "type": "string"
+    },
+    {
       "name": "grouping",
       "use": "out",
       "min": 0,

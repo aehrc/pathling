@@ -34,25 +34,26 @@ import org.apache.spark.sql.SparkSession;
  */
 class QueryPlanner {
 
-  private final TerminologyClient terminologyClient;
-  private final SparkSession spark;
   private final AggregateQuery query;
   private final List<ParseResult> aggregationParseResults;
   private final List<ParseResult> groupingParseResults;
+  private final List<ParseResult> filterParseResults;
+  private final ExpressionParser expressionParser;
 
   QueryPlanner(@Nonnull TerminologyClient terminologyClient,
       @Nonnull SparkSession spark, @Nonnull AggregateQuery query) {
-    this.terminologyClient = terminologyClient;
-    this.spark = spark;
     this.query = query;
     List<Aggregation> aggregations = query.getAggregations();
     List<Grouping> groupings = query.getGroupings();
+    List<String> filters = query.getFilters();
     if (aggregations.isEmpty()) {
       throw new InvalidRequestException("Missing aggregation component within query");
     }
 
+    expressionParser = new ExpressionParser(terminologyClient, spark);
     aggregationParseResults = parseAggregation(aggregations);
     groupingParseResults = parseGroupings(groupings);
+    filterParseResults = parseFilters(filters);
   }
 
   /**
@@ -66,8 +67,7 @@ class QueryPlanner {
           if (aggExpression == null) {
             throw new InvalidRequestException("Aggregation component must have expression");
           }
-          ExpressionParser aggregationParser = new ExpressionParser(terminologyClient, spark);
-          return aggregationParser.parse(aggExpression);
+          return expressionParser.parse(aggExpression);
         }).collect(Collectors.toList());
   }
 
@@ -84,8 +84,7 @@ class QueryPlanner {
             if (groupingExpression == null) {
               throw new InvalidRequestException("Grouping component must have expression");
             }
-            ExpressionParser groupingParser = new ExpressionParser(terminologyClient, spark);
-            ParseResult result = groupingParser.parse(groupingExpression);
+            ParseResult result = expressionParser.parse(groupingExpression);
             // Validate that the return value of the expression is a primitive element reference,
             // this is a requirement for a grouping.
             if (result.getElementType() != ResolvedElementType.PRIMITIVE) {
@@ -97,6 +96,11 @@ class QueryPlanner {
           }).collect(Collectors.toList());
     }
     return groupingParseResults;
+  }
+
+  private List<ParseResult> parseFilters(List<String> filters) {
+    return filters.stream().map(expressionParser::parse)
+        .collect(Collectors.toList());
   }
 
   /**
@@ -129,6 +133,12 @@ class QueryPlanner {
         .collect(Collectors.toList());
     queryPlan.setGroupingTypes(groupingTypes);
 
+    // Get filter expressions from the parse results.
+    List<String> filters = filterParseResults.stream()
+        .map(ParseResult::getSqlExpression)
+        .collect(Collectors.toList());
+    queryPlan.setFilters(filters);
+
     computeFromTables(queryPlan);
 
     computeJoins(queryPlan);
@@ -143,10 +153,13 @@ class QueryPlanner {
   private void computeFromTables(QueryPlan queryPlan) {
     Set<String> aggregationFromTables = new HashSet<>();
     aggregationParseResults
-        .forEach(parseResult -> aggregationFromTables.addAll(parseResult.getFromTable()));
+        .forEach(parseResult -> aggregationFromTables.addAll(parseResult.getFromTables()));
     Set<String> groupingFromTables = new HashSet<>();
     groupingParseResults
-        .forEach(parseResult -> groupingFromTables.addAll(parseResult.getFromTable()));
+        .forEach(parseResult -> groupingFromTables.addAll(parseResult.getFromTables()));
+    Set<String> filterFromTables = new HashSet<>();
+    filterParseResults
+        .forEach(parseResult -> filterFromTables.addAll(parseResult.getFromTables()));
     // Check for from tables within the groupings that were not referenced within at least one
     // aggregation expression.
     if (!aggregationFromTables.containsAll(groupingFromTables)) {
@@ -154,6 +167,15 @@ class QueryPlanner {
       difference.removeAll(aggregationFromTables);
       throw new InvalidRequestException(
           "Groupings contain one or more resources that are not the subject of an aggregation: "
+              + String.join(", ", difference));
+    }
+    // Check for from tables within the filters that were not referenced within at least one
+    // aggregation expression.
+    if (!aggregationFromTables.containsAll(filterFromTables)) {
+      Set<String> difference = new HashSet<>(filterFromTables);
+      difference.removeAll(aggregationFromTables);
+      throw new InvalidRequestException(
+          "Filters contain one or more resources that are not the subject of an aggregation: "
               + String.join(", ", difference));
     }
     queryPlan.setFromTables(aggregationFromTables);
@@ -168,6 +190,9 @@ class QueryPlanner {
       joins.addAll(parseResult.getJoins());
     }
     for (ParseResult parseResult : groupingParseResults) {
+      joins.addAll(parseResult.getJoins());
+    }
+    for (ParseResult parseResult : filterParseResults) {
       joins.addAll(parseResult.getJoins());
     }
     SortedSet<Join> convertedJoins = convertUpstreamLateralViewsToInlineQueries(joins);
@@ -250,6 +275,7 @@ class QueryPlanner {
       String grouping = queryPlan.getGroupings().get(i);
       ParseResult groupingParseResult = groupingParseResults.get(i);
       String label = backTicks(query.getGroupings().get(i).getLabel());
+      assert groupingParseResult.getSqlExpression() != null;
       String transformed = grouping
           .replaceAll(groupingParseResult.getSqlExpression(),
               tableAlias + "." + label);

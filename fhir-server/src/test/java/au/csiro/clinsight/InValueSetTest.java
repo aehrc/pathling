@@ -48,7 +48,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 /**
  * @author John Grimes
  */
-public class TerminologyQueryTest {
+public class InValueSetTest {
 
   private static final String QUERY_URL = FHIR_SERVER_URL + "/$aggregate-query";
   private Server server;

@@ -41,7 +41,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 /**
  * @author John Grimes
  */
-public class QueryTest {
+public class GroupingTest {
 
   private static final String QUERY_URL = FHIR_SERVER_URL + "/$aggregate-query";
   private Server server;
@@ -407,8 +407,7 @@ public class QueryTest {
         "SELECT COUNT(DISTINCT patientIdentifierTypeCoding.code) AS `Number of patients` "
             + "FROM patient "
             + "LATERAL VIEW OUTER explode(patient.identifier) patientIdentifier AS patientIdentifier "
-            + "LATERAL VIEW OUTER explode(patientIdentifier.type.coding) patientIdentifierTypeCoding AS patientIdentifierTypeCoding "
-            + "ORDER BY 1";
+            + "LATERAL VIEW OUTER explode(patientIdentifier.type.coding) patientIdentifierTypeCoding AS patientIdentifierTypeCoding";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);

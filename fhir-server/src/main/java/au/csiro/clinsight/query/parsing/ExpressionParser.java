@@ -127,7 +127,17 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitEqualityExpression(EqualityExpressionContext ctx) {
-      throw new InvalidRequestException("Equality expressions are not supported");
+      ParseResult leftExpression = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(0));
+      ParseResult rightExpression = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(1));
+      leftExpression.setExpression(ctx.getText());
+      leftExpression.setSqlExpression(
+          leftExpression.getSqlExpression() + " = " + rightExpression.getSqlExpression());
+      leftExpression.setResultType(ParseResultType.BOOLEAN);
+      leftExpression.getJoins().addAll(rightExpression.getJoins());
+      leftExpression.getFromTables().addAll(rightExpression.getFromTables());
+      return leftExpression;
     }
 
     @Override
@@ -315,13 +325,13 @@ public class ExpressionParser {
         String sqlExpression = fhirPathExpression.toLowerCase();
         result.setSqlExpression(sqlExpression);
         result.setExpression(fhirPathExpression);
-        result.getFromTable().add(sqlExpression);
+        result.getFromTables().add(sqlExpression);
       } else {
         assert invoker != null;
         String sqlExpression = invoker.getSqlExpression() + "." + ctx.getText();
         result.setSqlExpression(sqlExpression);
         result.setExpression(fhirPathExpression);
-        result.getFromTable().addAll(invoker.getFromTable());
+        result.getFromTables().addAll(invoker.getFromTables());
       }
       result.setResultType(ParseResultType.ELEMENT_PATH);
       result.setElementType(element.getType());
@@ -389,6 +399,7 @@ public class ExpressionParser {
       ParseResult result = new ParseResult();
       result.setResultType(ParseResultType.STRING_LITERAL);
       result.setExpression(ctx.getText());
+      result.setSqlExpression(ctx.getText());
       return result;
     }
 

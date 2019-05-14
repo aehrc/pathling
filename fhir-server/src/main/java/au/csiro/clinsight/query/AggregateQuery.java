@@ -7,6 +7,7 @@ package au.csiro.clinsight.query;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.dstu3.model.Parameters;
@@ -25,6 +26,9 @@ public class AggregateQuery {
 
   @Nonnull
   private final List<Grouping> groupings = new ArrayList<>();
+
+  @Nonnull
+  private final List<String> filters = new ArrayList<>();
 
   /**
    * This constructor takes a Parameters resource (with the parameters defined within the
@@ -68,6 +72,10 @@ public class AggregateQuery {
               .setExpression(parametersParameterComponent.getValue().toString()));
           groupings.add(grouping);
         });
+    filters.addAll(parameters.getParameter().stream()
+        .filter(param -> param.getName().equals("filter"))
+        .map(param -> param.getValue().toString())
+        .collect(Collectors.toList()));
   }
 
   @Nonnull
@@ -78,6 +86,11 @@ public class AggregateQuery {
   @Nonnull
   public List<Grouping> getGroupings() {
     return groupings;
+  }
+
+  @Nonnull
+  public List<String> getFilters() {
+    return filters;
   }
 
   public static class Aggregation {

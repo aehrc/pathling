@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
 public class ParseResult {
 
   private final SortedSet<Join> joins = new TreeSet<>();
-  private final Set<String> fromTable = new HashSet<>();
+  private final Set<String> fromTables = new HashSet<>();
 
   @Nullable
   private String expression;
@@ -45,8 +45,8 @@ public class ParseResult {
     return joins;
   }
 
-  public Set<String> getFromTable() {
-    return fromTable;
+  public Set<String> getFromTables() {
+    return fromTables;
   }
 
   @Nullable
@@ -104,7 +104,7 @@ public class ParseResult {
   }
 
   public enum ParseResultType {
-    ELEMENT_PATH, STRING_LITERAL
+    ELEMENT_PATH, STRING_LITERAL, BOOLEAN
   }
 
 }
