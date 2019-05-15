@@ -17,6 +17,7 @@ import ExpressionEditor from "./ExpressionEditor";
 interface Props {
   aggregations: Aggregation[];
   groupings: Grouping[];
+  filters: Grouping[];
   removeGrouping: (index: number) => void;
   updateGrouping: (index: number, grouping: PartialGrouping) => void;
   clearElementTreeFocus: () => any;
@@ -31,6 +32,7 @@ function Groupings(props: Props) {
   const {
     aggregations,
     groupings,
+    filters,
     removeGrouping,
     updateGrouping,
     clearElementTreeFocus
@@ -40,7 +42,7 @@ function Groupings(props: Props) {
     // This is required to stop the click event from opening the expression
     // editor for other groupings.
     event.stopPropagation();
-    if (aggregations.length + groupings.length === 1) {
+    if (aggregations.length + groupings.length + filters.length === 1) {
       clearElementTreeFocus();
     }
     removeGrouping(index);
@@ -81,7 +83,8 @@ function Groupings(props: Props) {
 
 const mapStateToProps = (state: GlobalState) => ({
   aggregations: state.query.aggregations,
-  groupings: state.query.groupings
+  groupings: state.query.groupings,
+  filters: state.query.filters
 });
 
 const actions = { ...queryActions, ...elementTreeActions };

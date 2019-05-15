@@ -89,7 +89,8 @@ function Aggregations(props: Props) {
 
 const mapStateToProps = (state: GlobalState) => ({
   aggregations: state.query.aggregations,
-  groupings: state.query.groupings
+  groupings: state.query.groupings,
+  filters: state.query.filters
 });
 
 const actions = { ...queryActions, ...elementTreeActions };

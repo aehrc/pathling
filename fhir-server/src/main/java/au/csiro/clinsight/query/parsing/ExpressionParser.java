@@ -147,7 +147,17 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitAndExpression(AndExpressionContext ctx) {
-      throw new InvalidRequestException("And expressions are not supported");
+      ParseResult leftExpression = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(0));
+      ParseResult rightExpression = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(1));
+      leftExpression.setExpression(ctx.getText());
+      leftExpression.setSqlExpression(
+          leftExpression.getSqlExpression() + " AND " + rightExpression.getSqlExpression());
+      leftExpression.setResultType(ParseResultType.BOOLEAN);
+      leftExpression.getJoins().addAll(rightExpression.getJoins());
+      leftExpression.getFromTables().addAll(rightExpression.getFromTables());
+      return leftExpression;
     }
 
     @Override

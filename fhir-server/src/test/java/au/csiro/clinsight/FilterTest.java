@@ -97,7 +97,7 @@ public class FilterTest {
   }
 
   @Test
-  public void invalidAggregationFunction() throws IOException, JSONException {
+  public void filterNotBoolean() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
@@ -140,6 +140,43 @@ public class FilterTest {
       IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
       JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void andOperator() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        { \"name\": \"expression\", \"valueString\": \"Encounter.count()\" },\n"
+        + "        { \"name\": \"label\", \"valueString\": \"Number of encounters\" }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"filter\",\n"
+        + "      \"valueString\": \"Encounter.class.code = 'emergency' and Encounter.type.coding.code = '183478001'\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedSql = "SELECT COUNT(DISTINCT encounter.id) AS `Number of encounters` "
+        + "FROM encounter "
+        + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
+        + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
+        + "WHERE encounter.class.code = 'emergency' AND encounterTypeCoding.code = '183478001'";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
   }
 
   @After
