@@ -10,6 +10,7 @@ import AddAggregation from "./AddAggregation";
 import AddGrouping from "./AddGrouping";
 import "./style/Element.scss";
 import TreeNodeTooltip from "./TreeNodeTooltip";
+import AddFilter from "./AddFilter";
 
 interface Props extends ElementNode {
   parentPath: string;
@@ -24,6 +25,7 @@ function Element(props: Props) {
       <Menu>
         <AddAggregation path={resolvedPath} />
         <AddGrouping path={resolvedPath} />
+        <AddFilter path={resolvedPath} />
       </Menu>,
       {
         left: event.clientX,

@@ -10,10 +10,12 @@ import {
   opOutcomeFromJsonResponse
 } from "../fhir/OperationOutcome";
 import { GlobalState } from "./index";
-import { Aggregation, Grouping, QueryState } from "./QueryReducer";
+import { Aggregation, Filter, Grouping, QueryState } from "./QueryReducer";
 import {
   AggregationRequestParameter,
+  FilterRequestParameter,
   GroupingRequestParameter,
+  Parameter,
   Parameters
 } from "../fhir/Types";
 import { catchError, clearError } from "./ErrorActions";
@@ -101,6 +103,11 @@ const groupingToParam = (grouping: Grouping): GroupingRequestParameter => {
   return param;
 };
 
+const filterToParam = (filter: Filter): FilterRequestParameter => ({
+  name: "filter",
+  valueString: filter.expression
+});
+
 /**
  * Fetches a result based on the current query within state, then dispatches the
  * relevant actions to signal either a successful or error response.
@@ -111,11 +118,13 @@ export const fetchQueryResult = (fhirServer: string) => (
 ): AxiosPromise => {
   const aggregations = getState().query.aggregations,
     groupings = getState().query.groupings,
-    aggregationParams = aggregations.map(aggregationToParam),
-    groupingParams = groupings.map(groupingToParam),
+    filters = getState().query.filters,
+    aggregationParams: Parameter[] = aggregations.map(aggregationToParam),
+    groupingParams: Parameter[] = groupings.map(groupingToParam),
+    filterParams: Parameter[] = filters.map(filterToParam),
     query: Parameters = {
       resourceType: "Parameters",
-      parameter: aggregationParams.concat(groupingParams)
+      parameter: aggregationParams.concat(groupingParams).concat(filterParams)
     };
 
   if (aggregations.length === 0) {

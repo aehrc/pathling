@@ -3,18 +3,29 @@
  */
 
 .filters {
+  overflow-y: scroll;
+  position: relative;
+  padding: 1em 1em 0.5em 2.8em;
+
+  .section-identity {
+    position: absolute;
+    top: 1em;
+    left: 1em;
+  }
+
   .blank-canvas {
     color: #666;
+    margin-bottom: 0.5em;
     user-select: none;
-
-    .bp3-icon {
-      margin-right: 0.5em;
-    }
   }
 
   .bp3-tag {
-    background-color: #6c71c4;
-    margin-right: 0.5em;
+    background-color: #8f398f;
+    margin: 0 0.5em 0.5em 0;
     user-select: none;
+  }
+
+  .bp3-tag-remove {
+    outline: none;
   }
 }

@@ -10,6 +10,7 @@ import * as queryActions from "../store/QueryActions";
 import * as elementTreeActions from "../store/ElementTreeActions";
 import {
   Aggregation,
+  Filter,
   Grouping,
   PartialAggregation
 } from "../store/QueryReducer";
@@ -21,6 +22,7 @@ import ExpressionEditor from "./ExpressionEditor";
 interface Props {
   aggregations?: Aggregation[];
   groupings?: Grouping[];
+  filters?: Filter[];
   removeAggregation: (index: number) => any;
   updateAggregation: (index: number, aggregation: PartialAggregation) => any;
   clearElementTreeFocus: () => any;
@@ -36,6 +38,7 @@ function Aggregations(props: Props) {
   const {
     aggregations,
     groupings,
+    filters,
     removeAggregation,
     updateAggregation,
     clearElementTreeFocus
@@ -45,7 +48,7 @@ function Aggregations(props: Props) {
     // This is required to stop the click event from opening the expression
     // editor for other aggregations.
     event.stopPropagation();
-    if (aggregations.length + groupings.length === 1) {
+    if (aggregations.length + groupings.length + filters.length === 1) {
       clearElementTreeFocus();
     }
     removeAggregation(index);

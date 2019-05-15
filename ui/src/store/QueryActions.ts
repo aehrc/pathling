@@ -2,7 +2,11 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import { PartialAggregation, PartialGrouping } from "./QueryReducer";
+import {
+  PartialAggregation,
+  PartialFilter,
+  PartialGrouping
+} from "./QueryReducer";
 
 export interface AddAggregation {
   type: "ADD_AGGREGATION";
@@ -36,6 +40,22 @@ export interface UpdateGrouping {
   grouping: PartialGrouping;
 }
 
+export interface AddFilter {
+  type: "ADD_FILTER";
+  expression: string;
+}
+
+export interface RemoveFilter {
+  type: "REMOVE_FILTER";
+  index: number;
+}
+
+export interface UpdateFilter {
+  type: "UPDATE_FILTER";
+  index: number;
+  filter: PartialFilter;
+}
+
 export interface ClearQuery {
   type: "CLEAR_QUERY";
 }
@@ -47,6 +67,9 @@ export type QueryAction =
   | AddGrouping
   | RemoveGrouping
   | UpdateGrouping
+  | AddFilter
+  | RemoveFilter
+  | UpdateFilter
   | ClearQuery;
 
 export const addAggregation = (expression: string): AddAggregation => ({
@@ -82,6 +105,22 @@ export const updateGrouping = (index: number, grouping: PartialGrouping) => ({
   type: "UPDATE_GROUPING",
   index,
   grouping
+});
+
+export const addFilter = (expression: string): AddFilter => ({
+  type: "ADD_FILTER",
+  expression
+});
+
+export const removeFilter = (index: number): RemoveFilter => ({
+  type: "REMOVE_FILTER",
+  index
+});
+
+export const updateFilter = (index: number, filter: PartialFilter) => ({
+  type: "UPDATE_FILTER",
+  index,
+  filter
 });
 
 export const clearQuery = (): ClearQuery => ({

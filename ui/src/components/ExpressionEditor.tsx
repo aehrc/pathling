@@ -14,14 +14,18 @@ import {
 import "./style/ExpressionEditor.scss";
 import {
   Aggregation,
+  Filter,
   Grouping,
   PartialAggregation,
+  PartialFilter,
   PartialGrouping
 } from "../store/QueryReducer";
 
 interface Props {
-  expression: Aggregation | Grouping;
-  onChange: (expression: PartialAggregation | PartialGrouping) => void;
+  expression: Aggregation | Grouping | Filter;
+  onChange: (
+    expression: PartialAggregation | PartialGrouping | PartialFilter
+  ) => void;
   children: any;
 }
 

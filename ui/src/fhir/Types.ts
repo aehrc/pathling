@@ -59,6 +59,11 @@ export interface GroupingRequestParameter extends Parameter {
   part: StringParameter[];
 }
 
+export interface FilterRequestParameter extends Parameter {
+  name: string;
+  valueString: string;
+}
+
 export interface StringParameter {
   name: string;
   valueString: string;
