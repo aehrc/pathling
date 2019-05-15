@@ -18,6 +18,7 @@ import au.csiro.clinsight.query.AggregateQuery.Grouping;
 import au.csiro.clinsight.query.parsing.ExpressionParser;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
+import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -99,7 +100,14 @@ class QueryPlanner {
   }
 
   private List<ParseResult> parseFilters(List<String> filters) {
-    return filters.stream().map(expressionParser::parse)
+    return filters.stream().map(expression -> {
+      ParseResult result = expressionParser.parse(expression);
+      if (result.getResultType() != ParseResultType.BOOLEAN) {
+        throw new InvalidRequestException(
+            "Filter expression is not of boolean type: " + expression);
+      }
+      return result;
+    })
         .collect(Collectors.toList());
   }
 
