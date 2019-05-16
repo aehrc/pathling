@@ -5,18 +5,19 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.ElementResolver.resolveElement;
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.REFERENCE;
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getResourceByUrl;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isResource;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
 import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.definitions.ResolvedElement;
-import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.query.parsing.Join;
-import au.csiro.clinsight.query.parsing.Join.JoinType;
 import au.csiro.clinsight.query.parsing.ParseResult;
-import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -39,7 +40,7 @@ public class ResolveFunction implements ExpressionFunction {
     validateInput(input);
     assert input.getExpression() != null;
     ResolvedElement element = resolveElement(input.getExpression());
-    assert element.getType() == ResolvedElementType.REFERENCE;
+    assert element.getType() == REFERENCE;
     String referenceTypeCode;
     if (element.getReferenceTypes().size() > 1) {
       referenceTypeCode = getTypeForPolymorphicReference(input, arguments);
@@ -58,13 +59,12 @@ public class ResolveFunction implements ExpressionFunction {
     String joinExpression = "LEFT JOIN " + referenceTypeCode.toLowerCase() + " " + joinAlias
         + " ON " + input.getSqlExpression() + ".reference = "
         + joinAlias + ".id";
-    Join join = new Join(joinExpression, referenceTypeCode.toLowerCase(), JoinType.TABLE_JOIN,
-        joinAlias);
+    Join join = new Join(joinExpression, referenceTypeCode.toLowerCase(), TABLE_JOIN, joinAlias);
     if (!input.getJoins().isEmpty()) {
       join.setDependsUpon(input.getJoins().last());
     }
-    input.setResultType(ParseResultType.ELEMENT_PATH);
-    input.setElementType(ResolvedElementType.RESOURCE);
+    input.setResultType(COLLECTION);
+    input.setElementType(RESOURCE);
     input.setElementTypeCode(referenceTypeCode);
     input.setExpression(referenceTypeCode);
     input.setSqlExpression(joinAlias);
@@ -76,7 +76,7 @@ public class ResolveFunction implements ExpressionFunction {
     if (input == null) {
       throw new InvalidRequestException("Missing input expression for resolve function");
     }
-    if (input.getElementType() != ResolvedElementType.REFERENCE) {
+    if (input.getElementType() != REFERENCE) {
       throw new InvalidRequestException(
           "Input to resolve function must be a Reference: " + input.getExpression() + " ("
               + input.getElementTypeCode() + ")");
@@ -93,7 +93,7 @@ public class ResolveFunction implements ExpressionFunction {
       ResolvedElement argumentElement = resolveElement(argument);
       referenceTypeCode = argumentElement.getTypeCode();
       assert referenceTypeCode != null;
-      if (argumentElement.getType() != ResolvedElementType.RESOURCE
+      if (argumentElement.getType() != RESOURCE
           || !isResource(referenceTypeCode)) {
         throw new InvalidRequestException(
             "Argument to resolve function must be a base resource type: " + argument + " ("

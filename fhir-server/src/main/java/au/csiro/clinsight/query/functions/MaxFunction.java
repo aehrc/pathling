@@ -4,8 +4,9 @@
 
 package au.csiro.clinsight.query.functions;
 
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.PRIMITIVE;
+
 import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
@@ -38,8 +39,7 @@ public class MaxFunction implements ExpressionFunction {
       throw new InvalidRequestException("Missing input expression for max function");
     }
     // We can't max an element that is not primitive.
-    // TODO: Add support for invoking the count function directly on a resource.
-    if (input.getElementType() != ResolvedElementType.PRIMITIVE) {
+    if (input.getElementType() != PRIMITIVE) {
       throw new InvalidRequestException(
           "Input to max function must be of primitive type: " + input.getExpression()
               + " (" + input.getElementTypeCode() + ")");

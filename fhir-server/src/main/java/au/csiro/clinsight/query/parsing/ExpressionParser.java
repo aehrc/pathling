@@ -4,7 +4,13 @@
 
 package au.csiro.clinsight.query.parsing;
 
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.PRIMITIVE;
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.query.Mappings.getFunction;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
@@ -15,10 +21,7 @@ import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
 import au.csiro.clinsight.fhir.FhirPathParser.*;
 import au.csiro.clinsight.fhir.definitions.*;
-import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.query.functions.ExpressionFunction;
-import au.csiro.clinsight.query.parsing.Join.JoinType;
-import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -134,7 +137,7 @@ public class ExpressionParser {
       leftExpression.setExpression(ctx.getText());
       leftExpression.setSqlExpression(
           leftExpression.getSqlExpression() + " = " + rightExpression.getSqlExpression());
-      leftExpression.setResultType(ParseResultType.BOOLEAN);
+      leftExpression.setResultType(BOOLEAN);
       leftExpression.getJoins().addAll(rightExpression.getJoins());
       leftExpression.getFromTables().addAll(rightExpression.getFromTables());
       return leftExpression;
@@ -154,7 +157,7 @@ public class ExpressionParser {
       leftExpression.setExpression(ctx.getText());
       leftExpression.setSqlExpression(
           leftExpression.getSqlExpression() + " AND " + rightExpression.getSqlExpression());
-      leftExpression.setResultType(ParseResultType.BOOLEAN);
+      leftExpression.setResultType(BOOLEAN);
       leftExpression.getJoins().addAll(rightExpression.getJoins());
       leftExpression.getFromTables().addAll(rightExpression.getFromTables());
       return leftExpression;
@@ -260,7 +263,7 @@ public class ExpressionParser {
         Join finalJoin = result.getJoins().last();
         assert element.getType() != null;
         String updatedExpression;
-        if (finalJoin.getJoinType() == JoinType.LATERAL_VIEW) {
+        if (finalJoin.getJoinType() == LATERAL_VIEW) {
           assert finalJoin.getUdtfExpression() != null;
           assert result.getSqlExpression() != null;
           updatedExpression = result.getSqlExpression().replace(finalJoin.getUdtfExpression(),
@@ -299,7 +302,7 @@ public class ExpressionParser {
 
       String joinExpression =
           "LATERAL VIEW OUTER explode(" + udtfExpression + ") " + tableAlias + " AS " + tableAlias;
-      Join join = new Join(joinExpression, rootExpression, JoinType.LATERAL_VIEW, tableAlias);
+      Join join = new Join(joinExpression, rootExpression, LATERAL_VIEW, tableAlias);
       join.setUdtfExpression(udtfExpression);
       join.setTraversalType(traversalType);
       if (previousJoin != null) {
@@ -315,7 +318,7 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitMemberInvocation(MemberInvocationContext ctx) {
-      if (invoker != null && invoker.getElementType() == ResolvedElementType.PRIMITIVE) {
+      if (invoker != null && invoker.getElementType() == PRIMITIVE) {
         throw new InvalidRequestException("Attempt to invoke member on primitive type");
       }
       ResolvedElement element;
@@ -331,7 +334,7 @@ public class ExpressionParser {
         throw new InvalidRequestException(e.getMessage());
       }
       ParseResult result = new ParseResult();
-      if (element.getType() == ResolvedElementType.RESOURCE) {
+      if (element.getType() == RESOURCE) {
         String sqlExpression = fhirPathExpression.toLowerCase();
         result.setSqlExpression(sqlExpression);
         result.setExpression(fhirPathExpression);
@@ -343,7 +346,7 @@ public class ExpressionParser {
         result.setExpression(fhirPathExpression);
         result.getFromTables().addAll(invoker.getFromTables());
       }
-      result.setResultType(ParseResultType.ELEMENT_PATH);
+      result.setResultType(COLLECTION);
       result.setElementType(element.getType());
       result.setElementTypeCode(element.getTypeCode());
       result.getJoins().addAll(joins);
@@ -407,7 +410,7 @@ public class ExpressionParser {
     @Override
     public ParseResult visitStringLiteral(StringLiteralContext ctx) {
       ParseResult result = new ParseResult();
-      result.setResultType(ParseResultType.STRING_LITERAL);
+      result.setResultType(STRING);
       result.setExpression(ctx.getText());
       result.setSqlExpression(ctx.getText());
       return result;

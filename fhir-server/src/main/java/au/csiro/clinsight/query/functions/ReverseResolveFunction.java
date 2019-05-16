@@ -5,15 +5,16 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.ElementResolver.resolveElement;
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.REFERENCE;
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.RESOURCE;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.definitions.ResolvedElement;
-import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.parsing.Join;
-import au.csiro.clinsight.query.parsing.Join.JoinType;
 import au.csiro.clinsight.query.parsing.ParseResult;
-import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
 import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.LinkedList;
@@ -39,11 +40,11 @@ public class ReverseResolveFunction implements ExpressionFunction {
     validateArguments(arguments);
     assert input.getExpression() != null;
     ResolvedElement inputElement = resolveElement(input.getExpression());
-    assert inputElement.getType() == ResolvedElementType.RESOURCE;
+    assert inputElement.getType() == RESOURCE;
     ParseResult argument = arguments.get(0);
     assert argument.getExpression() != null;
     ResolvedElement argumentElement = resolveElement(argument.getExpression());
-    assert argumentElement.getType() == ResolvedElementType.REFERENCE;
+    assert argumentElement.getType() == REFERENCE;
     boolean argumentReferencesResource = argumentElement.getReferenceTypes().stream()
         .anyMatch(typeUrl -> {
           StructureDefinition typeDefinition = ResourceDefinitions.getResourceByUrl(typeUrl);
@@ -78,9 +79,9 @@ public class ReverseResolveFunction implements ExpressionFunction {
         Collectors.joining(" "));
     joinExpression +=
         ") " + joinAlias + " ON " + input.getSqlExpression() + ".id = " + referenceExpression;
-    Join join = new Join(joinExpression, rootExpression, JoinType.TABLE_JOIN, joinAlias);
-    input.setResultType(ParseResultType.ELEMENT_PATH);
-    input.setElementType(ResolvedElementType.RESOURCE);
+    Join join = new Join(joinExpression, rootExpression, TABLE_JOIN, joinAlias);
+    input.setResultType(COLLECTION);
+    input.setElementType(RESOURCE);
     input.setElementTypeCode(argumentPathComponents.getFirst());
     input.setExpression(argumentPathComponents.getFirst());
     input.setSqlExpression(joinAlias);
@@ -102,9 +103,9 @@ public class ReverseResolveFunction implements ExpressionFunction {
     String joinExpression =
         "LEFT JOIN " + targetTable + " " + joinAlias + " ON " + input.getSqlExpression() + ".id = "
             + targetExpression;
-    Join join = new Join(joinExpression, targetTable, JoinType.TABLE_JOIN, joinAlias);
-    input.setResultType(ParseResultType.ELEMENT_PATH);
-    input.setElementType(ResolvedElementType.RESOURCE);
+    Join join = new Join(joinExpression, targetTable, TABLE_JOIN, joinAlias);
+    input.setResultType(COLLECTION);
+    input.setElementType(RESOURCE);
     input.setElementTypeCode(argumentPathComponents.getFirst());
     input.setExpression(argumentPathComponents.getFirst());
     input.setSqlExpression(joinAlias);
@@ -115,7 +116,7 @@ public class ReverseResolveFunction implements ExpressionFunction {
     if (input == null) {
       throw new InvalidRequestException("Missing input expression for resolve function");
     }
-    if (input.getElementType() != ResolvedElementType.RESOURCE) {
+    if (input.getElementType() != RESOURCE) {
       throw new InvalidRequestException(
           "Input to reverseResolve function must be a Resource: " + input.getExpression()
               + " (" + input.getElementTypeCode() + ")");
@@ -124,7 +125,7 @@ public class ReverseResolveFunction implements ExpressionFunction {
 
   private void validateArguments(@Nonnull List<ParseResult> arguments) {
     if (arguments.size() != 1
-        || arguments.get(0).getElementType() != ResolvedElementType.REFERENCE) {
+        || arguments.get(0).getElementType() != REFERENCE) {
       throw new InvalidRequestException(
           "Argument to reverseResolve function must be a Reference: " + arguments.get(0)
               .getExpression() + " (" + arguments.get(0).getElementTypeCode() + ")");

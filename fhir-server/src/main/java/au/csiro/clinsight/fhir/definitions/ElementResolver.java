@@ -1,5 +1,6 @@
 package au.csiro.clinsight.fhir.definitions;
 
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.*;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.checkInitialised;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getElementsForType;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isComplex;
@@ -7,7 +8,6 @@ import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.supportedP
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
-import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +53,7 @@ public class ElementResolver {
             throw new ElementNotKnownException("Element not known: " + path);
           }
           result.setTypeCode(summarisedElement.getTypeCode());
-          result.setType(ResolvedElementType.RESOURCE);
+          result.setType(RESOURCE);
           return result;
         }
         head.add(tail.pop());
@@ -71,7 +71,7 @@ public class ElementResolver {
       // the last element in the path.
       if (typeCode.equals("BackboneElement")) {
         if (tail.size() == 0) {
-          result.setType(ResolvedElementType.BACKBONE);
+          result.setType(BACKBONE);
           return result;
         }
         head.add(tail.pop());
@@ -121,17 +121,17 @@ public class ElementResolver {
       String currentPath, @Nonnull String typeCode) {
     if (supportedPrimitiveTypes.contains(typeCode)) {
       // If the element is a primitive, stop here and return the result.
-      result.setType(ResolvedElementType.PRIMITIVE);
+      result.setType(PRIMITIVE);
       return result;
     } else if (ResourceDefinitions.supportedComplexTypes.contains(typeCode)) {
       if (tail.isEmpty()) {
         // If the tail is empty, it means that a complex type is the last component of the path. If
         // it is a reference, we tag it as such.
         if (typeCode.equals("Reference")) {
-          result.setType(ResolvedElementType.REFERENCE);
+          result.setType(REFERENCE);
           result.getReferenceTypes().addAll(summarisedElement.getReferenceTypes());
         } else {
-          result.setType(ResolvedElementType.COMPLEX);
+          result.setType(COMPLEX);
         }
         return result;
       } else {

@@ -5,20 +5,26 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.ElementResolver.resolveElement;
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.COMPLEX;
+import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.PRIMITIVE;
+import static au.csiro.clinsight.query.QueryWrangling.convertUpstreamLateralViewsToInlineQueries;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.EXISTS_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.definitions.ResolvedElement;
-import au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType;
 import au.csiro.clinsight.query.Code;
 import au.csiro.clinsight.query.parsing.Join;
-import au.csiro.clinsight.query.parsing.Join.JoinType;
 import au.csiro.clinsight.query.parsing.ParseResult;
-import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
 import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -45,36 +51,69 @@ public class InValueSetFunction implements ExpressionFunction {
     ParseResult argument = validateArguments(input, arguments);
     @SuppressWarnings("ConstantConditions") ResolvedElement element = resolveElement(
         input.getExpression());
-    assert element.getType() == ResolvedElementType.COMPLEX;
+    assert element.getType() == COMPLEX;
     assert element.getTypeCode() != null;
     assert element.getTypeCode().equals("Coding");
 
     List<String> pathComponents = tokenizePath(element.getPath());
-    String joinAlias = input.getJoins().isEmpty()
-        ? pathToLowerCamelCase(pathComponents) + "ValueSet"
-        : input.getJoins().last().getTableAlias() + "ValueSet";
     assert argument.getExpression() != null;
     String unquotedArgument = argument.getExpression()
         .substring(1, argument.getExpression().length() - 1);
-    String rootExpression = "valueSet_" + Strings.md5(unquotedArgument);
+    // Get a shortened hash of the ValueSet URL for use as part of the temporary view name, and also
+    // within the alias in the query. This helps us ensure uniqueness of the names we use.
+    String argumentHash = Strings.md5(unquotedArgument).substring(0, 7);
+    String joinAlias = input.getJoins().isEmpty()
+        ? pathToLowerCamelCase(pathComponents) + "ValueSet" + argumentHash
+        : input.getJoins().last().getTableAlias() + "ValueSet" + argumentHash;
+    String rootExpression = "valueSet_" + argumentHash;
     String quotedRootExpression = "`" + rootExpression + "`";
 
+    // Create a table containing the results of the expanded ValueSet, if it doesn't already exist.
     ensureExpansionTableExists(unquotedArgument, rootExpression);
 
+    // Build an expression which joins to the new ValueSet expansion table.
     String lastJoinAlias = input.getJoins().last().getTableAlias();
-    String joinExpression = "LEFT JOIN " + quotedRootExpression + " " + joinAlias + " ";
-    joinExpression += "ON " + lastJoinAlias + ".system = " + joinAlias + ".system ";
-    joinExpression += "AND " + lastJoinAlias + ".code = " + joinAlias + ".code";
-    String sqlExpression = "CASE WHEN " + joinAlias + ".code IS NULL THEN FALSE ELSE TRUE END";
-    Join join = new Join(joinExpression, rootExpression, JoinType.EXISTS_JOIN, joinAlias);
+    String valueSetJoinExpression = "LEFT JOIN " + quotedRootExpression + " " + joinAlias + " ";
+    valueSetJoinExpression += "ON " + lastJoinAlias + ".system = " + joinAlias + ".system ";
+    valueSetJoinExpression += "AND " + lastJoinAlias + ".code = " + joinAlias + ".code";
+    Join valueSetJoin = new Join(valueSetJoinExpression, rootExpression, TABLE_JOIN, joinAlias);
     if (!input.getJoins().isEmpty()) {
-      join.setDependsUpon(input.getJoins().last());
+      valueSetJoin.setDependsUpon(input.getJoins().last());
     }
-    input.setResultType(ParseResultType.ELEMENT_PATH);
-    input.setElementType(ResolvedElementType.PRIMITIVE);
+
+    // Build a select expression which tests whether there is a code on the right-hand side of the
+    // left join, returning a boolean.
+    String resourceTable = (String) input.getFromTables().toArray()[0];
+    String selectExpression = "SELECT " + resourceTable + ".id, CASE WHEN MAX(" + joinAlias
+        + ".code) IS NULL THEN FALSE ELSE TRUE END AS codeExists";
+
+    // Add the new join to the joins from the input, and convert any lateral views to inline
+    // queries.
+    SortedSet<Join> subqueryJoins = new TreeSet<>(input.getJoins());
+    subqueryJoins.add(valueSetJoin);
+    subqueryJoins = convertUpstreamLateralViewsToInlineQueries(subqueryJoins);
+
+    // Convert the set of views into an inline query. This is necessary due to the fact that we have
+    // two levels of aggregation, one to aggregate possible multiple codes into a single exists or
+    // not boolean expression, and the second to perform the requested aggregations across any
+    // groupings (e.g. counting).
+    String joinExpressions = subqueryJoins.stream().map(Join::getExpression)
+        .collect(Collectors.joining(" "));
+    String existsJoinAlias = joinAlias + "Aggregated";
+    String existsJoinExpression =
+        "LEFT JOIN (" + selectExpression + " FROM " + resourceTable + " " + joinExpressions
+            + " GROUP BY 1) " + existsJoinAlias + " ON " + resourceTable + ".id = "
+            + existsJoinAlias + ".id";
+    String existsSelect = existsJoinAlias + ".codeExists";
+
+    // Clear the old joins out of the input and replace them with the new join to the inline query.
+    Join existsJoin = new Join(existsJoinExpression, rootExpression, EXISTS_JOIN, existsJoinAlias);
+    input.getJoins().clear();
+    input.getJoins().add(existsJoin);
+    input.setResultType(COLLECTION);
+    input.setElementType(PRIMITIVE);
     input.setElementTypeCode("boolean");
-    input.setSqlExpression(sqlExpression);
-    input.getJoins().add(join);
+    input.setSqlExpression(existsSelect);
     return input;
   }
 
@@ -98,7 +137,7 @@ public class InValueSetFunction implements ExpressionFunction {
       throw new InvalidRequestException("Must pass URL argument to inValueSet function");
     }
     ParseResult argument = arguments.get(0);
-    if (argument.getResultType() != ParseResultType.STRING_LITERAL) {
+    if (argument.getResultType() != STRING) {
       throw new InvalidRequestException(
           "Argument to inValueSet function must be a string: " + argument.getExpression());
     }

@@ -4,6 +4,8 @@
 
 package au.csiro.clinsight.fhir.definitions;
 
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.ResourceDefinitionsStatus.*;
+
 import au.csiro.clinsight.TerminologyClient;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
@@ -80,14 +82,14 @@ public abstract class ResourceDefinitions {
   private static Map<String, Map<String, SummarisedElement>> complexTypeElements = new HashMap<>();
   private static Map<String, StructureDefinition> resources = new HashMap<>();
   private static Map<String, StructureDefinition> complexTypes = new HashMap<>();
-  private static ResourceDefinitionsStatus status = ResourceDefinitionsStatus.UNINITIALISED;
+  private static ResourceDefinitionsStatus status = UNINITIALISED;
 
   /**
    * Fetches all StructureDefinitions known to the supplied terminology server, and loads them into
    * memory for later querying through the `getBaseResource` and `resolveElement` methods.
    */
   public static void ensureInitialized(@Nonnull TerminologyClient terminologyClient) {
-    status = ResourceDefinitionsStatus.INITIALISATION_IN_PROGRESS;
+    status = INITIALISATION_IN_PROGRESS;
     logger.info("Initialising resource definitions...");
     try {
       // Do a search to get all the StructureDefinitions. Unfortunately the `kind` search parameter
@@ -119,7 +121,7 @@ public abstract class ResourceDefinitions {
       complexTypeElements = ResourceScanner.summariseDefinitions(complexTypes.values());
 
       // Success! The status can be updated to INITIALISED.
-      status = ResourceDefinitionsStatus.INITIALISED;
+      status = INITIALISED;
       logger.info(resources.size() + " resource definitions and " + complexTypes.size()
           + " complex type definitions scanned");
     } catch (FhirClientConnectionException e) {
@@ -128,13 +130,13 @@ public abstract class ResourceDefinitions {
       clearDefinitions();
       RetryInitialisation retryTask = new RetryInitialisation(terminologyClient);
       scheduledThreadPoolExecutor.schedule(retryTask, RETRY_DELAY_SECONDS, TimeUnit.SECONDS);
-      status = ResourceDefinitionsStatus.WAITING_FOR_RETRY;
+      status = WAITING_FOR_RETRY;
       logger.warn("Unable to connect to terminology server, retrying in " + RETRY_DELAY_SECONDS
           + " seconds: " + terminologyClient.getServerBase());
     } catch (Exception e) {
       // If there is any other sort of error, clear the state and update the status.
       clearDefinitions();
-      status = ResourceDefinitionsStatus.INITIALISATION_ERROR;
+      status = INITIALISATION_ERROR;
       logger.error("Error initialising resource definitions", e);
     }
   }
@@ -166,7 +168,7 @@ public abstract class ResourceDefinitions {
   }
 
   static void checkInitialised() {
-    if (status != ResourceDefinitionsStatus.INITIALISED) {
+    if (status != INITIALISED) {
       throw new UnclassifiedServerFailureException(503,
           "Resource definitions have not been initialised");
     }

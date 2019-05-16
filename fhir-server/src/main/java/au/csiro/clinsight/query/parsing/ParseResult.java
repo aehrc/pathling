@@ -104,7 +104,7 @@ public class ParseResult {
   }
 
   public enum ParseResultType {
-    ELEMENT_PATH, STRING_LITERAL, BOOLEAN
+    COLLECTION, STRING, BOOLEAN
   }
 
 }
