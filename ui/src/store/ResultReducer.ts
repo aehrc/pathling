@@ -11,6 +11,8 @@ export interface ResultState {
   query: QueryState;
   groupings: Parameter[];
   loading: boolean;
+  startTime: number;
+  executionTime: number;
   cancel: CancelTokenSource;
 }
 
@@ -18,6 +20,8 @@ const initialState: ResultState = {
   query: null,
   groupings: null,
   loading: false,
+  startTime: null,
+  executionTime: null,
   cancel: null
 };
 
@@ -30,6 +34,7 @@ const ResultReducer = (
       return {
         ...initialState,
         loading: true,
+        startTime: action.startTime,
         cancel: action.cancel
       };
     case "RECEIVE_QUERY_RESULT":
@@ -37,12 +42,16 @@ const ResultReducer = (
         ...state,
         query: action.query,
         groupings: groupingsFromResult(action.result),
-        loading: false
+        loading: false,
+        startTime: null,
+        executionTime: action.executionTime
       };
     case "CATCH_QUERY_ERROR":
       return {
         ...state,
-        loading: false
+        loading: false,
+        startTime: null,
+        executionTime: null
       };
     case "CLEAR_RESULT":
       return initialState;

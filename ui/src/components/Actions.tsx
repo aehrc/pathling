@@ -47,7 +47,7 @@ function Actions(props: Props) {
     clearError,
     catchError,
     query,
-    result: { loading },
+    result: { loading, executionTime },
     fhirServer
   } = props;
 
@@ -95,6 +95,14 @@ function Actions(props: Props) {
           />
         )}
       </Navbar.Group>
+      {executionTime ? (
+        <Navbar.Group align={Alignment.RIGHT}>
+          <span>
+            Query completed in{" "}
+            {executionTime.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ms.
+          </span>
+        </Navbar.Group>
+      ) : null}
     </Navbar>
   );
 }

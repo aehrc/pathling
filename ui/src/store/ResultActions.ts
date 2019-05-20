@@ -22,6 +22,7 @@ import { catchError, clearError } from "./ErrorActions";
 
 interface SendQueryRequest {
   type: "SEND_QUERY_REQUEST";
+  startTime: number;
   cancel: CancelTokenSource;
 }
 
@@ -29,6 +30,7 @@ interface ReceiveQueryResult {
   type: "RECEIVE_QUERY_RESULT";
   result: Parameters;
   query: QueryState;
+  executionTime: number;
 }
 
 interface CatchQueryError {
@@ -48,19 +50,23 @@ export type ResultAction =
   | ClearResult;
 
 export const sendQueryRequest = (
+  startTime: number,
   cancel: CancelTokenSource
 ): SendQueryRequest => ({
   type: "SEND_QUERY_REQUEST",
+  startTime,
   cancel
 });
 
 export const receiveQueryResult = (
   result: Parameters,
-  query: QueryState
+  query: QueryState,
+  executionTime: number
 ): ReceiveQueryResult => ({
   type: "RECEIVE_QUERY_RESULT",
   result,
-  query
+  query,
+  executionTime
 });
 
 export const catchQueryError = (
@@ -154,8 +160,10 @@ export const fetchQueryResult = (fhirServer: string) => (
     .then(response => {
       if (response.data.resourceType !== "Parameters")
         throw "Response is not of type Parameters.";
-      const result = response.data;
-      dispatch(receiveQueryResult(result, getState().query));
+      const result = response.data,
+        startTime = getState().result.startTime,
+        executionTime = startTime ? performance.now() - startTime : null;
+      dispatch(receiveQueryResult(result, getState().query, executionTime));
       return result;
     })
     .catch(error => {
@@ -173,7 +181,7 @@ export const fetchQueryResult = (fhirServer: string) => (
         dispatch(catchError(error.message));
       }
     });
-  dispatch(sendQueryRequest(cancel));
+  dispatch(sendQueryRequest(performance.now(), cancel));
   return result;
 };
 
