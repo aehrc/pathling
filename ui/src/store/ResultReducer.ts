@@ -5,17 +5,20 @@
 import { QueryState } from "./QueryReducer";
 import { ResultAction } from "./ResultActions";
 import { Parameter, Parameters } from "../fhir/Types";
+import { CancelTokenSource } from "axios";
 
 export interface ResultState {
   query: QueryState;
   groupings: Parameter[];
   loading: boolean;
+  cancel: CancelTokenSource;
 }
 
 const initialState: ResultState = {
   query: null,
   groupings: null,
-  loading: false
+  loading: false,
+  cancel: null
 };
 
 const ResultReducer = (
@@ -26,7 +29,8 @@ const ResultReducer = (
     case "SEND_QUERY_REQUEST":
       return {
         ...initialState,
-        loading: true
+        loading: true,
+        cancel: action.cancel
       };
     case "RECEIVE_QUERY_RESULT":
       return {
@@ -40,6 +44,8 @@ const ResultReducer = (
         ...state,
         loading: false
       };
+    case "CLEAR_RESULT":
+      return initialState;
     default:
       return state;
   }

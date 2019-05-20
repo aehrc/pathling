@@ -6,7 +6,11 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { Button, Navbar, Alignment } from "@blueprintjs/core";
 
-import { fetchQueryResult } from "../store/ResultActions";
+import {
+  cancelAndClearResult,
+  clearResult,
+  fetchQueryResult
+} from "../store/ResultActions";
 import { clearQuery } from "../store/QueryActions";
 import { clearElementTreeFocus } from "../store/ElementTreeActions";
 import { catchError, clearError } from "../store/ErrorActions";
@@ -21,6 +25,8 @@ interface Props {
   fhirServer?: string;
   fetchQueryResult?: (fhirServer: string) => any;
   clearQuery?: () => any;
+  clearResult?: () => any;
+  cancelAndClearResult?: () => any;
   catchError?: (message: string) => any;
   clearElementTreeFocus?: () => any;
   clearError?: () => any;
@@ -35,6 +41,8 @@ function Actions(props: Props) {
   const {
     fetchQueryResult,
     clearQuery,
+    clearResult,
+    cancelAndClearResult,
     clearElementTreeFocus,
     clearError,
     catchError,
@@ -56,7 +64,13 @@ function Actions(props: Props) {
 
   const handleClickClearQuery = () => {
     clearQuery();
+    clearResult();
     clearElementTreeFocus();
+    clearError();
+  };
+
+  const handleCancelQuery = () => {
+    cancelAndClearResult();
     clearError();
   };
 
@@ -75,9 +89,9 @@ function Actions(props: Props) {
           <Button
             className="clear"
             icon="delete"
-            text="Clear query"
+            text={loading ? "Cancel" : "Clear query"}
             minimal={true}
-            onClick={handleClickClearQuery}
+            onClick={loading ? handleCancelQuery : handleClickClearQuery}
           />
         )}
       </Navbar.Group>
@@ -93,6 +107,8 @@ const mapStateToProps = (state: GlobalState) => ({
   actions = {
     fetchQueryResult,
     clearQuery,
+    clearResult,
+    cancelAndClearResult,
     clearElementTreeFocus,
     catchError,
     clearError

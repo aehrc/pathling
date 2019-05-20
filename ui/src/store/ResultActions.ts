@@ -2,7 +2,7 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import http, { AxiosPromise } from "axios";
+import http, { AxiosPromise, CancelTokenSource } from "axios";
 import { Dispatch } from "redux";
 
 import {
@@ -22,6 +22,7 @@ import { catchError, clearError } from "./ErrorActions";
 
 interface SendQueryRequest {
   type: "SEND_QUERY_REQUEST";
+  cancel: CancelTokenSource;
 }
 
 interface ReceiveQueryResult {
@@ -36,13 +37,21 @@ interface CatchQueryError {
   opOutcome?: OpOutcomeError;
 }
 
+interface ClearResult {
+  type: "CLEAR_RESULT";
+}
+
 export type ResultAction =
   | SendQueryRequest
   | ReceiveQueryResult
-  | CatchQueryError;
+  | CatchQueryError
+  | ClearResult;
 
-export const sendQueryRequest = (): SendQueryRequest => ({
-  type: "SEND_QUERY_REQUEST"
+export const sendQueryRequest = (
+  cancel: CancelTokenSource
+): SendQueryRequest => ({
+  type: "SEND_QUERY_REQUEST",
+  cancel
 });
 
 export const receiveQueryResult = (
@@ -62,6 +71,8 @@ export const catchQueryError = (
   message,
   opOutcome
 });
+
+export const clearResult = () => ({ type: "CLEAR_RESULT" });
 
 const aggregationToParam = (
   aggregation: Aggregation
@@ -131,13 +142,14 @@ export const fetchQueryResult = (fhirServer: string) => (
     dispatch(catchQueryError("Query must have at least one aggregation."));
   }
   if (getState().error) dispatch(clearError());
-  dispatch(sendQueryRequest());
-  return http
+  let cancel = http.CancelToken.source();
+  const result = http
     .post(`${fhirServer}/$aggregate-query`, query, {
       headers: {
         "Content-Type": "application/fhir+json",
         Accept: "application/fhir+json"
-      }
+      },
+      cancelToken: cancel.token
     })
     .then(response => {
       if (response.data.resourceType !== "Parameters")
@@ -147,6 +159,8 @@ export const fetchQueryResult = (fhirServer: string) => (
       return result;
     })
     .catch(error => {
+      // Don't report an error if this is a request cancellation.
+      if (http.isCancel(error)) return;
       if (
         error.response &&
         error.response.headers["content-type"].includes("application/fhir+json")
@@ -159,4 +173,18 @@ export const fetchQueryResult = (fhirServer: string) => (
         dispatch(catchError(error.message));
       }
     });
+  dispatch(sendQueryRequest(cancel));
+  return result;
+};
+
+/**
+ * Cancels any outstanding request and clears the result state.
+ */
+export const cancelAndClearResult = () => (
+  dispatch: Dispatch,
+  getState: () => GlobalState
+): void => {
+  const cancel = getState().result.cancel;
+  if (cancel) cancel.cancel();
+  dispatch(clearResult());
 };
