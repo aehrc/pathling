@@ -41,7 +41,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 /**
  * @author John Grimes
  */
-public class GroupingTest {
+public class AggregationTest {
 
   private static final String QUERY_URL = FHIR_SERVER_URL + "/$aggregate-query";
   private Server server;
@@ -81,19 +81,6 @@ public class GroupingTest {
         + "          \"valueString\": \"Patient.count()\"\n"
         + "        }\n"
         + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Gender\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.gender\"\n"
-        + "        }\n"
-        + "      ]\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -106,24 +93,11 @@ public class GroupingTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
-        + "          \"valueCode\": \"female\"\n"
+        + "          \"valueString\": \"Number of patients\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"result\",\n"
-        + "          \"valueUnsignedInt\": 70070\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueCode\": \"male\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"result\",\n"
-        + "          \"valueUnsignedInt\": 73646\n"
+        + "          \"valueUnsignedInt\": 143716\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -131,18 +105,14 @@ public class GroupingTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT patient.gender AS `Gender`, COUNT(DISTINCT patient.id) AS `Number of patients` "
-            + "FROM patient "
-            + "GROUP BY 1 "
-            + "ORDER BY 1, 2";
+        "SELECT COUNT(DISTINCT patient.id) AS `Number of patients` "
+            + "FROM patient";
     StructField[] fields = {
-        new StructField("Gender", DataTypes.StringType, true, null),
         new StructField("Number of patients", DataTypes.LongType, true, null)
     };
     StructType structType = new StructType(fields);
     List<Row> fakeResult = new ArrayList<>(Arrays.asList(
-        new GenericRowWithSchema(new Object[]{"female", 70070L}, structType),
-        new GenericRowWithSchema(new Object[]{"male", 73646L}, structType)
+        new GenericRowWithSchema(new Object[]{143716L}, structType)
     ));
 
     Dataset mockDataset = createMockDataset();
@@ -163,7 +133,7 @@ public class GroupingTest {
   }
 
   @Test
-  public void invalidResourceNameInGrouping() throws IOException, JSONException {
+  public void invalidAggregationFunction() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
@@ -171,25 +141,8 @@ public class GroupingTest {
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Number of patients\"\n"
-        + "        },\n"
-        + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Gender\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Foo.gender\"\n"
+        + "          \"valueString\": \"Patient.id.foo()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -202,7 +155,7 @@ public class GroupingTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Resource or data type not known: Foo\"\n"
+        + "      \"diagnostics\": \"Unrecognised function: foo\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -217,7 +170,7 @@ public class GroupingTest {
   }
 
   @Test
-  public void nonPrimitiveElementInGrouping() throws IOException, JSONException {
+  public void invalidElementNameInAggregation() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
@@ -225,25 +178,8 @@ public class GroupingTest {
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Number of patients\"\n"
-        + "        },\n"
-        + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Photo\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.photo\"\n"
+        + "          \"valueString\": \"Patient.foo.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -256,7 +192,7 @@ public class GroupingTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Grouping expression is not of primitive type: Patient.photo (Attachment)\"\n"
+        + "      \"diagnostics\": \"Element not known: Patient.foo\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -271,7 +207,7 @@ public class GroupingTest {
   }
 
   @Test
-  public void groupingLabelMissingValue() throws IOException, JSONException {
+  public void nonPrimitiveElementInAggregation() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
@@ -279,24 +215,48 @@ public class GroupingTest {
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Number of patients\"\n"
-        + "        },\n"
-        + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
+        + "          \"valueString\": \"Patient.identifier.count()\"\n"
         + "        }\n"
         + "      ]\n"
-        + "    },\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"OperationOutcome\",\n"
+        + "  \"issue\": [\n"
         + "    {\n"
-        + "      \"name\": \"grouping\",\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"code\": \"processing\",\n"
+        + "      \"diagnostics\": \"Input to count function must be of primitive or resource type: Patient.identifier (Identifier)\"\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+      assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
+    }
+  }
+
+  @Test
+  public void aggregationLabelMissingValue() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"label\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.gender\"\n"
+        + "          \"valueString\": \"Patient.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -309,7 +269,7 @@ public class GroupingTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Grouping label must have value\"\n"
+        + "      \"diagnostics\": \"Aggregation label must have value\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -324,7 +284,7 @@ public class GroupingTest {
   }
 
   @Test
-  public void groupingExpressionMissingValue() throws IOException, JSONException {
+  public void aggregationExpressionMissingValue() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
@@ -334,19 +294,6 @@ public class GroupingTest {
         + "        {\n"
         + "          \"name\": \"label\",\n"
         + "          \"valueString\": \"Number of patients\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Gender\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\"\n"
@@ -362,7 +309,7 @@ public class GroupingTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Grouping expression must have value\"\n"
+        + "      \"diagnostics\": \"Aggregation expression must have value\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -374,6 +321,45 @@ public class GroupingTest {
       IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
       JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void multiValueTraversalInAggregation() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of patients\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.identifier.type.coding.code.count()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedSql =
+        "SELECT COUNT(DISTINCT patientIdentifierTypeCoding.code) AS `Number of patients` "
+            + "FROM patient "
+            + "LATERAL VIEW OUTER explode(patient.identifier) patientIdentifier AS patientIdentifier "
+            + "LATERAL VIEW OUTER explode(patientIdentifier.type.coding) patientIdentifierTypeCoding AS patientIdentifierTypeCoding";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
   }
 
   @SuppressWarnings("unchecked")
@@ -418,59 +404,6 @@ public class GroupingTest {
         + "LATERAL VIEW OUTER explode(patientCommunication.language.coding) patientCommunicationLanguageCoding AS patientCommunicationLanguageCoding "
         + "GROUP BY 1 "
         + "ORDER BY 1, 2";
-
-    Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(any())).thenReturn(mockDataset);
-    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
-
-    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
-    httpClient.execute(httpPost);
-
-    verify(mockSpark).sql("USE clinsight");
-    verify(mockSpark).sql(expectedSql);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Test
-  public void multiValuePrimitive() throws IOException {
-    String inParams = "{\n"
-        + "  \"resourceType\": \"Parameters\",\n"
-        + "  \"parameter\": [\n"
-        + "    {\n"
-        + "      \"name\": \"aggregation\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Number of allergies\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"AllergyIntolerance.count()\"\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Allergy category\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"AllergyIntolerance.category\"\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    }\n"
-        + "  ]\n"
-        + "}\n";
-
-    String expectedSql =
-        "SELECT allergyIntoleranceCategory AS `Allergy category`, COUNT(DISTINCT allergyintolerance.id) AS `Number of allergies` "
-            + "FROM allergyintolerance "
-            + "LATERAL VIEW OUTER explode(allergyintolerance.category) allergyIntoleranceCategory AS allergyIntoleranceCategory "
-            + "GROUP BY 1 "
-            + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);

@@ -4,6 +4,7 @@
 
 package au.csiro.clinsight.query;
 
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -48,10 +49,20 @@ public class AggregateQuery {
               .filter(part -> part.getName().equals("expression"))
               .findFirst();
           Aggregation aggregation = new Aggregation();
-          label.ifPresent(parametersParameterComponent -> aggregation
-              .setLabel(parametersParameterComponent.getValue().toString()));
-          expression.ifPresent(parametersParameterComponent -> aggregation
-              .setExpression(parametersParameterComponent.getValue().toString()));
+          label.ifPresent(parametersParameterComponent -> {
+            // Check for missing value.
+            if (parametersParameterComponent.getValue() == null) {
+              throw new InvalidRequestException("Aggregation label must have value");
+            }
+            aggregation.setLabel(parametersParameterComponent.getValue().toString());
+          });
+          expression.ifPresent(parametersParameterComponent -> {
+            // Check for missing value.
+            if (parametersParameterComponent.getValue() == null) {
+              throw new InvalidRequestException("Aggregation expression must have value");
+            }
+            aggregation.setExpression(parametersParameterComponent.getValue().toString());
+          });
           aggregations.add(aggregation);
         });
     parameters.getParameter().stream()
@@ -66,15 +77,31 @@ public class AggregateQuery {
               .filter(part -> part.getName().equals("expression"))
               .findFirst();
           Grouping grouping = new Grouping();
-          label.ifPresent(parametersParameterComponent -> grouping
-              .setLabel(parametersParameterComponent.getValue().toString()));
-          expression.ifPresent(parametersParameterComponent -> grouping
-              .setExpression(parametersParameterComponent.getValue().toString()));
+          label.ifPresent(parametersParameterComponent -> {
+            // Check for missing value.
+            if (parametersParameterComponent.getValue() == null) {
+              throw new InvalidRequestException("Grouping label must have value");
+            }
+            grouping.setLabel(parametersParameterComponent.getValue().toString());
+          });
+          expression.ifPresent(parametersParameterComponent -> {
+            // Check for missing value.
+            if (parametersParameterComponent.getValue() == null) {
+              throw new InvalidRequestException("Grouping expression must have value");
+            }
+            grouping.setExpression(parametersParameterComponent.getValue().toString());
+          });
           groupings.add(grouping);
         });
     filters.addAll(parameters.getParameter().stream()
         .filter(param -> param.getName().equals("filter"))
-        .map(param -> param.getValue().toString())
+        .map(param -> {
+          // Check for missing value.
+          if (param.getValue() == null) {
+            throw new InvalidRequestException("Filter parameter must have value");
+          }
+          return param.getValue().toString();
+        })
         .collect(Collectors.toList()));
   }
 

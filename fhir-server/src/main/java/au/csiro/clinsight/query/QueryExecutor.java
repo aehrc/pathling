@@ -27,6 +27,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.dstu3.model.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -180,7 +181,7 @@ public class QueryExecutor {
     AggregateQueryResult queryResult = new AggregateQueryResult();
 
     List<Grouping> groupings = rows.stream()
-        .map(mapRowToGrouping(queryPlan, numGroupings, numAggregations))
+        .map(mapRowToGrouping(queryPlan, query, numGroupings, numAggregations))
         .collect(Collectors.toList());
     queryResult.getGroupings().addAll(groupings);
 
@@ -192,7 +193,7 @@ public class QueryExecutor {
    * AggregateQueryResult.
    */
   private Function<Row, AggregateQueryResult.Grouping> mapRowToGrouping(
-      @Nonnull QueryPlan queryPlan, int numGroupings,
+      @Nonnull QueryPlan queryPlan, AggregateQuery query, int numGroupings,
       int numAggregations) {
     return row -> {
       AggregateQueryResult.Grouping grouping = new AggregateQueryResult.Grouping();
@@ -207,6 +208,12 @@ public class QueryExecutor {
         String fhirType = queryPlan.getAggregationTypes().get(i);
         Type value = getValueFromRow(row, i + numGroupings, fhirType);
         grouping.getResults().add(value);
+        // If there are no groupings in the query, add the requested label for the aggregation as a
+        // label within the result.
+        String aggregationLabel = query.getAggregations().get(i).getLabel();
+        if (query.getGroupings().isEmpty() && aggregationLabel != null) {
+          grouping.getLabels().add(new StringType(aggregationLabel));
+        }
       }
 
       return grouping;

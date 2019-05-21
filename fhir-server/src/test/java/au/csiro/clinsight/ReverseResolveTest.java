@@ -33,7 +33,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 /**
  * @author John Grimes
  */
-public class FilterTest {
+public class ReverseResolveTest {
 
   private static final String QUERY_URL = FHIR_SERVER_URL + "/$aggregate-query";
   private Server server;
@@ -57,7 +57,7 @@ public class FilterTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void simpleCodeFilter() throws IOException {
+  public void reverseReferenceTraversalInGrouping() throws IOException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
@@ -66,24 +66,38 @@ public class FilterTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Number of encounters\"\n"
+        + "          \"valueString\": \"Number of patients\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Encounter.count()\"\n"
+        + "          \"valueString\": \"Patient.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    },\n"
         + "    {\n"
-        + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"Encounter.class.code = 'emergency'\"\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Reason for encounter\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).reason.coding.display\"\n"
+        + "        }\n"
+        + "      ]\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
 
-    String expectedSql = "SELECT COUNT(DISTINCT encounter.id) AS `Number of encounters` "
-        + "FROM encounter "
-        + "WHERE encounter.class.code = 'emergency'";
+    String expectedSql =
+        "SELECT patientEncounterAsSubjectReasonCoding.display AS `Reason for encounter`, COUNT(DISTINCT patient.id) AS `Number of patients` "
+            + "FROM patient "
+            + "LEFT JOIN encounter patientEncounterAsSubject ON patient.id = patientEncounterAsSubject.subject.reference "
+            + "LATERAL VIEW OUTER explode(patientEncounterAsSubject.reason) patientEncounterAsSubjectReason AS patientEncounterAsSubjectReason "
+            + "LATERAL VIEW OUTER explode(patientEncounterAsSubjectReason.coding) patientEncounterAsSubjectReasonCoding AS patientEncounterAsSubjectReasonCoding "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);
@@ -97,28 +111,19 @@ public class FilterTest {
   }
 
   @Test
-  public void filterMissingValue() throws IOException, JSONException {
+  public void nonResourceInvokerForReverseResolve() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
-        + "        { \"name\": \"expression\", \"valueString\": \"AllergyIntolerance.count()\" },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"AllergyIntolerance.count()\" }\n"
-        + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"AllergyIntolerance.clinicalStatus\"\n"
-        + "        },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"AllergyIntolerance.clinicalStatus\" }\n"
+        + "          \"valueString\": \"Patient.id.reverseResolve(Encounter.subject).diagnosis\"\n"
+        + "        }\n"
         + "      ]\n"
-        + "    },\n"
-        + "    { \"name\": \"filter\" }\n"
+        + "    }\n"
         + "  ]\n"
         + "}\n";
 
@@ -128,7 +133,7 @@ public class FilterTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Filter parameter must have value\"\n"
+        + "      \"diagnostics\": \"Input to reverseResolve function must be a Resource: Patient.id (id)\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -143,28 +148,19 @@ public class FilterTest {
   }
 
   @Test
-  public void filterNotBoolean() throws IOException, JSONException {
+  public void nonReferenceArgumentToReverseResolve() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
-        + "        { \"name\": \"expression\", \"valueString\": \"AllergyIntolerance.count()\" },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"AllergyIntolerance.count()\" }\n"
-        + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"AllergyIntolerance.clinicalStatus\"\n"
-        + "        },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"AllergyIntolerance.clinicalStatus\" }\n"
+        + "          \"valueString\": \"Patient.reverseResolve(Encounter).diagnosis\"\n"
+        + "        }\n"
         + "      ]\n"
-        + "    },\n"
-        + "    { \"name\": \"filter\", \"valueString\": \"AllergyIntolerance.clinicalStatus\" }\n"
+        + "    }\n"
         + "  ]\n"
         + "}\n";
 
@@ -174,7 +170,7 @@ public class FilterTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Filter expression is not of boolean type: AllergyIntolerance.clinicalStatus\"\n"
+        + "      \"diagnostics\": \"Argument to reverseResolve function must be a Reference: Encounter (Encounter)\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -190,29 +186,49 @@ public class FilterTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void andOperator() throws IOException {
+  public void reverseReferenceWithMultiValueTraversal() throws IOException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
-        + "        { \"name\": \"expression\", \"valueString\": \"Encounter.count()\" },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"Number of encounters\" }\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.count()\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of conditions\"\n"
+        + "        }\n"
         + "      ]\n"
         + "    },\n"
         + "    {\n"
-        + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"Encounter.class.code = 'emergency' and Encounter.type.coding.code = '183478001'\"\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Condition.reverseResolve(Encounter.diagnosis.condition).class.display\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Encounter class\"\n"
+        + "        }\n"
+        + "      ]\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
 
-    String expectedSql = "SELECT COUNT(DISTINCT encounter.id) AS `Number of encounters` "
-        + "FROM encounter "
-        + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
-        + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
-        + "WHERE encounter.class.code = 'emergency' AND encounterTypeCoding.code = '183478001'";
+    String expectedSql =
+        "SELECT encounterDiagnosisConditionResolved.class.display AS `Encounter class`, COUNT(DISTINCT condition.id) AS `Number of conditions` "
+            + "FROM condition "
+            + "LEFT JOIN ("
+            + "SELECT * "
+            + "FROM encounter "
+            + "LATERAL VIEW OUTER explode(encounter.diagnosis) encounterDiagnosis AS encounterDiagnosis"
+            + ") encounterDiagnosisConditionResolved ON condition.id = encounterDiagnosisConditionResolved.encounterDiagnosis.condition.reference "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);
