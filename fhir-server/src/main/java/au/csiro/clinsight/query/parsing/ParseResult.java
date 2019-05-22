@@ -104,7 +104,7 @@ public class ParseResult {
   }
 
   public enum ParseResultType {
-    COLLECTION, STRING, BOOLEAN
+    COLLECTION, STRING, BOOLEAN, DATETIME
   }
 
 }

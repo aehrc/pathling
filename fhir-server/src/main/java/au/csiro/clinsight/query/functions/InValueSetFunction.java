@@ -48,7 +48,7 @@ public class InValueSetFunction implements ExpressionFunction {
   @Nonnull
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
-    ParseResult argument = validateArguments(input, arguments);
+    ParseResult argument = validateArgument(input, arguments);
     @SuppressWarnings("ConstantConditions") ResolvedElement element = resolveElement(
         input.getExpression());
     assert element.getType() == COMPLEX;
@@ -130,7 +130,7 @@ public class InValueSetFunction implements ExpressionFunction {
   }
 
   @Nonnull
-  private ParseResult validateArguments(@Nullable ParseResult input,
+  private ParseResult validateArgument(@Nullable ParseResult input,
       @Nonnull List<ParseResult> arguments) {
     validateInput(input);
     if (arguments.size() != 1) {

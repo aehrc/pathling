@@ -8,6 +8,8 @@ import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElemen
 import static au.csiro.clinsight.query.QueryWrangling.convertUpstreamLateralViewsToInlineQueries;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATETIME;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.query.AggregateQuery.Aggregation;
@@ -15,6 +17,7 @@ import au.csiro.clinsight.query.AggregateQuery.Grouping;
 import au.csiro.clinsight.query.parsing.ExpressionParser;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
+import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +36,11 @@ class QueryPlanner {
   private final List<ParseResult> groupingParseResults;
   private final List<ParseResult> filterParseResults;
   private final ExpressionParser expressionParser;
+  private final Map<ParseResultType, String> parseResultToFhirType = new HashMap<ParseResultType, String>() {{
+    put(STRING, "string");
+    put(BOOLEAN, "boolean");
+    put(DATETIME, "instant");
+  }};
 
   QueryPlanner(@Nonnull TerminologyClient terminologyClient,
       @Nonnull SparkSession spark, @Nonnull AggregateQuery query) {
@@ -80,13 +88,12 @@ class QueryPlanner {
             ParseResult result = expressionParser.parse(groupingExpression);
             // Validate that the return value of the expression is a collection of primitive types,
             // this is a requirement for a grouping.
-            if (result.getResultType() == COLLECTION && result.getElementType() == PRIMITIVE) {
-              return result;
-            } else {
+            if (result.getResultType() == COLLECTION && result.getElementType() != PRIMITIVE) {
               throw new InvalidRequestException(
-                  "Grouping expression is not of primitive type: " + groupingExpression + " ("
-                      + result.getElementTypeCode() + ")");
+                  "Grouping expression returns collection of elements not of primitive type: "
+                      + groupingExpression + " (" + result.getElementTypeCode() + ")");
             }
+            return result;
           }).collect(Collectors.toList());
     }
     return groupingParseResults;
@@ -118,7 +125,13 @@ class QueryPlanner {
 
     // Get aggregation data types from the parse results.
     List<String> aggregationTypes = aggregationParseResults.stream()
-        .map(ParseResult::getElementTypeCode)
+        .map(parseResult -> {
+          if (parseResult.getResultType() == COLLECTION) {
+            return parseResult.getElementTypeCode();
+          } else {
+            return parseResultToFhirType.get(parseResult.getResultType());
+          }
+        })
         .collect(Collectors.toList());
     queryPlan.setAggregationTypes(aggregationTypes);
 
@@ -130,7 +143,13 @@ class QueryPlanner {
 
     // Get grouping data types from the parse results.
     List<String> groupingTypes = groupingParseResults.stream()
-        .map(ParseResult::getElementTypeCode)
+        .map(parseResult -> {
+          if (parseResult.getResultType() == COLLECTION) {
+            return parseResult.getElementTypeCode();
+          } else {
+            return parseResultToFhirType.get(parseResult.getResultType());
+          }
+        })
         .collect(Collectors.toList());
     queryPlan.setGroupingTypes(groupingTypes);
 

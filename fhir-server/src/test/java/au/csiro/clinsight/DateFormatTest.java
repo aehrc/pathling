@@ -58,7 +58,6 @@ public class DateFormatTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void standardDateComponent() throws IOException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
@@ -97,7 +96,7 @@ public class DateFormatTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT date_format(diagnosticreport.issued, 'd') AS `Day of month`,  count(diagnosticreport.id) AS `Number of diagnostic reports` "
+        "SELECT date_format(diagnosticreport.issued, 'd') AS `Day of month`, COUNT(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
             + "FROM diagnosticreport "
             + "WHERE diagnosticreport.issued >= '2016-09-01' "
             + "AND diagnosticreport.issued <= '2016-09-30' "

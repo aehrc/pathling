@@ -256,7 +256,7 @@ public class GroupingTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Grouping expression is not of primitive type: Patient.photo (Attachment)\"\n"
+        + "      \"diagnostics\": \"Grouping expression returns collection of elements not of primitive type: Patient.photo (Attachment)\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";

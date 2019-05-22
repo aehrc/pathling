@@ -10,6 +10,7 @@ import static au.csiro.clinsight.query.Mappings.getFunction;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATETIME;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
@@ -25,6 +26,7 @@ import au.csiro.clinsight.query.functions.ExpressionFunction;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.spark.sql.SparkSession;
@@ -91,34 +93,38 @@ public class ExpressionParser {
           .accept(new InvocationVisitor(terminologyClient, spark, expressionResult));
     }
 
+    @Nonnull
+    private ParseResult parseBooleanExpression(ExpressionContext ctx,
+        ExpressionContext leftExpression, ExpressionContext rightExpression,
+        String operatorString) {
+      ParseResult leftResult = new ExpressionVisitor(terminologyClient, spark)
+          .visit(leftExpression);
+      ParseResult rightResult = new ExpressionVisitor(terminologyClient, spark)
+          .visit(rightExpression);
+      leftResult.setExpression(ctx.getText());
+      leftResult.setSqlExpression(
+          leftResult.getSqlExpression() + " " + operatorString + " " + rightResult
+              .getSqlExpression());
+      leftResult.setResultType(BOOLEAN);
+      leftResult.getJoins().addAll(rightResult.getJoins());
+      leftResult.getFromTables().addAll(rightResult.getFromTables());
+      return leftResult;
+    }
+
     @Override
     public ParseResult visitEqualityExpression(EqualityExpressionContext ctx) {
-      ParseResult leftExpression = new ExpressionVisitor(terminologyClient, spark)
-          .visit(ctx.expression(0));
-      ParseResult rightExpression = new ExpressionVisitor(terminologyClient, spark)
-          .visit(ctx.expression(1));
-      leftExpression.setExpression(ctx.getText());
-      leftExpression.setSqlExpression(
-          leftExpression.getSqlExpression() + " = " + rightExpression.getSqlExpression());
-      leftExpression.setResultType(BOOLEAN);
-      leftExpression.getJoins().addAll(rightExpression.getJoins());
-      leftExpression.getFromTables().addAll(rightExpression.getFromTables());
-      return leftExpression;
+      return parseBooleanExpression(ctx, ctx.expression(0), ctx.expression(1), "=");
+    }
+
+    @Override
+    public ParseResult visitInequalityExpression(InequalityExpressionContext ctx) {
+      return parseBooleanExpression(ctx, ctx.expression(0), ctx.expression(1),
+          ctx.children.get(1).toString());
     }
 
     @Override
     public ParseResult visitAndExpression(AndExpressionContext ctx) {
-      ParseResult leftExpression = new ExpressionVisitor(terminologyClient, spark)
-          .visit(ctx.expression(0));
-      ParseResult rightExpression = new ExpressionVisitor(terminologyClient, spark)
-          .visit(ctx.expression(1));
-      leftExpression.setExpression(ctx.getText());
-      leftExpression.setSqlExpression(
-          leftExpression.getSqlExpression() + " AND " + rightExpression.getSqlExpression());
-      leftExpression.setResultType(BOOLEAN);
-      leftExpression.getJoins().addAll(rightExpression.getJoins());
-      leftExpression.getFromTables().addAll(rightExpression.getFromTables());
-      return leftExpression;
+      return parseBooleanExpression(ctx, ctx.expression(0), ctx.expression(1), "AND");
     }
 
     // All other FHIRPath constructs are currently unsupported.
@@ -146,11 +152,6 @@ public class ExpressionParser {
     @Override
     public ParseResult visitUnionExpression(UnionExpressionContext ctx) {
       throw new InvalidRequestException("Union expressions are not supported");
-    }
-
-    @Override
-    public ParseResult visitInequalityExpression(InequalityExpressionContext ctx) {
-      throw new InvalidRequestException("Inequality expressions are not supported");
     }
 
     @Override
@@ -394,20 +395,6 @@ public class ExpressionParser {
   private static class LiteralTermVisitor extends FhirPathBaseVisitor<ParseResult> {
 
     @Override
-    public ParseResult visitNullLiteral(NullLiteralContext ctx) {
-      throw new InvalidRequestException("Null literals are not supported");
-    }
-
-    @Override
-    public ParseResult visitBooleanLiteral(BooleanLiteralContext ctx) {
-      throw new InvalidRequestException("Boolean literals are not supported");
-    }
-
-    /**
-     * String literals are supported, so that they can be used in arguments, e.g. the `inValueSet`
-     * function.
-     */
-    @Override
     public ParseResult visitStringLiteral(StringLiteralContext ctx) {
       ParseResult result = new ParseResult();
       result.setResultType(STRING);
@@ -417,13 +404,27 @@ public class ExpressionParser {
     }
 
     @Override
-    public ParseResult visitNumberLiteral(NumberLiteralContext ctx) {
-      throw new InvalidRequestException("Numeric literals are not supported");
+    public ParseResult visitDateTimeLiteral(DateTimeLiteralContext ctx) {
+      ParseResult result = new ParseResult();
+      result.setResultType(DATETIME);
+      result.setExpression(ctx.getText());
+      result.setSqlExpression("'" + ctx.getText().replace("@", "") + "'");
+      return result;
     }
 
     @Override
-    public ParseResult visitDateTimeLiteral(DateTimeLiteralContext ctx) {
-      throw new InvalidRequestException("Date/time literals are not supported");
+    public ParseResult visitNullLiteral(NullLiteralContext ctx) {
+      throw new InvalidRequestException("Null literals are not supported");
+    }
+
+    @Override
+    public ParseResult visitBooleanLiteral(BooleanLiteralContext ctx) {
+      throw new InvalidRequestException("Boolean literals are not supported");
+    }
+
+    @Override
+    public ParseResult visitNumberLiteral(NumberLiteralContext ctx) {
+      throw new InvalidRequestException("Numeric literals are not supported");
     }
 
     @Override

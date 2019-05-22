@@ -65,6 +65,7 @@ public abstract class Mappings {
     put("resolve", new ResolveFunction());
     put("reverseResolve", new ReverseResolveFunction());
     put("inValueSet", new InValueSetFunction());
+    put("dateFormat", new DateFormatFunction());
   }};
 
   static Class getFhirClass(String fhirTypeCode) {
