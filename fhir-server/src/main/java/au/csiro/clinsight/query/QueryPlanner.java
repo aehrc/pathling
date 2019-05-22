@@ -6,10 +6,7 @@ package au.csiro.clinsight.query;
 
 import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.PRIMITIVE;
 import static au.csiro.clinsight.query.QueryWrangling.convertUpstreamLateralViewsToInlineQueries;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATETIME;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.*;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.query.AggregateQuery.Aggregation;
@@ -40,6 +37,7 @@ class QueryPlanner {
     put(STRING, "string");
     put(BOOLEAN, "boolean");
     put(DATETIME, "instant");
+    put(INTEGER, "integer");
   }};
 
   QueryPlanner(@Nonnull TerminologyClient terminologyClient,

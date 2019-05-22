@@ -305,6 +305,7 @@ public class ReverseResolveTest {
   @After
   public void tearDown() throws Exception {
     server.stop();
+    httpClient.close();
   }
 
 }

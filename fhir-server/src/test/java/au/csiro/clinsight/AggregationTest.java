@@ -415,6 +415,7 @@ public class AggregationTest {
   @After
   public void tearDown() throws Exception {
     server.stop();
+    httpClient.close();
   }
 
 }

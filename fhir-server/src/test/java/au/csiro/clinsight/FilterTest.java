@@ -228,6 +228,7 @@ public class FilterTest {
   @After
   public void tearDown() throws Exception {
     server.stop();
+    httpClient.close();
   }
 
 }

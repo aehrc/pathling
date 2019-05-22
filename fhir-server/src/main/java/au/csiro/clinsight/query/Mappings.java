@@ -66,6 +66,15 @@ public abstract class Mappings {
     put("reverseResolve", new ReverseResolveFunction());
     put("inValueSet", new InValueSetFunction());
     put("dateFormat", new DateFormatFunction());
+    put("toSeconds", new DateComponentFunction("toSeconds"));
+    put("toMinutes", new DateComponentFunction("toMinutes"));
+    put("toHours", new DateComponentFunction("toHours"));
+    put("dayOfMonth", new DateComponentFunction("dayOfMonth"));
+    put("dayOfWeek", new DateComponentFunction("dayOfWeek"));
+    put("weekOfYear", new DateComponentFunction("weekOfYear"));
+    put("toMonthNumber", new DateComponentFunction("toMonthNumber"));
+    put("toQuarter", new DateComponentFunction("toQuarter"));
+    put("toYear", new DateComponentFunction("toYear"));
   }};
 
   static Class getFhirClass(String fhirTypeCode) {

@@ -486,6 +486,7 @@ public class GroupingTest {
   @After
   public void tearDown() throws Exception {
     server.stop();
+    httpClient.close();
   }
 
 }
