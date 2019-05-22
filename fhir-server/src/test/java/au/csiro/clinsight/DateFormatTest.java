@@ -85,7 +85,7 @@ public class DateFormatTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"DiagnosticReport.issued\"\n"
+        + "          \"valueString\": \"DiagnosticReport.issued.dateFormat('d')\"\n"
         + "        }\n"
         + "      ]\n"
         + "    },\n"

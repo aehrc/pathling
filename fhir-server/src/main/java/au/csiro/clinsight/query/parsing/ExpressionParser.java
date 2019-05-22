@@ -91,6 +91,36 @@ public class ExpressionParser {
           .accept(new InvocationVisitor(terminologyClient, spark, expressionResult));
     }
 
+    @Override
+    public ParseResult visitEqualityExpression(EqualityExpressionContext ctx) {
+      ParseResult leftExpression = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(0));
+      ParseResult rightExpression = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(1));
+      leftExpression.setExpression(ctx.getText());
+      leftExpression.setSqlExpression(
+          leftExpression.getSqlExpression() + " = " + rightExpression.getSqlExpression());
+      leftExpression.setResultType(BOOLEAN);
+      leftExpression.getJoins().addAll(rightExpression.getJoins());
+      leftExpression.getFromTables().addAll(rightExpression.getFromTables());
+      return leftExpression;
+    }
+
+    @Override
+    public ParseResult visitAndExpression(AndExpressionContext ctx) {
+      ParseResult leftExpression = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(0));
+      ParseResult rightExpression = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(1));
+      leftExpression.setExpression(ctx.getText());
+      leftExpression.setSqlExpression(
+          leftExpression.getSqlExpression() + " AND " + rightExpression.getSqlExpression());
+      leftExpression.setResultType(BOOLEAN);
+      leftExpression.getJoins().addAll(rightExpression.getJoins());
+      leftExpression.getFromTables().addAll(rightExpression.getFromTables());
+      return leftExpression;
+    }
+
     // All other FHIRPath constructs are currently unsupported.
 
     @Override
@@ -129,38 +159,8 @@ public class ExpressionParser {
     }
 
     @Override
-    public ParseResult visitEqualityExpression(EqualityExpressionContext ctx) {
-      ParseResult leftExpression = new ExpressionVisitor(terminologyClient, spark)
-          .visit(ctx.expression(0));
-      ParseResult rightExpression = new ExpressionVisitor(terminologyClient, spark)
-          .visit(ctx.expression(1));
-      leftExpression.setExpression(ctx.getText());
-      leftExpression.setSqlExpression(
-          leftExpression.getSqlExpression() + " = " + rightExpression.getSqlExpression());
-      leftExpression.setResultType(BOOLEAN);
-      leftExpression.getJoins().addAll(rightExpression.getJoins());
-      leftExpression.getFromTables().addAll(rightExpression.getFromTables());
-      return leftExpression;
-    }
-
-    @Override
     public ParseResult visitMembershipExpression(MembershipExpressionContext ctx) {
       throw new InvalidRequestException("Membership expressions are not supported");
-    }
-
-    @Override
-    public ParseResult visitAndExpression(AndExpressionContext ctx) {
-      ParseResult leftExpression = new ExpressionVisitor(terminologyClient, spark)
-          .visit(ctx.expression(0));
-      ParseResult rightExpression = new ExpressionVisitor(terminologyClient, spark)
-          .visit(ctx.expression(1));
-      leftExpression.setExpression(ctx.getText());
-      leftExpression.setSqlExpression(
-          leftExpression.getSqlExpression() + " AND " + rightExpression.getSqlExpression());
-      leftExpression.setResultType(BOOLEAN);
-      leftExpression.getJoins().addAll(rightExpression.getJoins());
-      leftExpression.getFromTables().addAll(rightExpression.getFromTables());
-      return leftExpression;
     }
 
     @Override
@@ -266,12 +266,12 @@ public class ExpressionParser {
         if (finalJoin.getJoinType() == LATERAL_VIEW) {
           assert finalJoin.getUdtfExpression() != null;
           assert result.getSqlExpression() != null;
-          updatedExpression = result.getSqlExpression().replace(finalJoin.getUdtfExpression(),
-              finalJoin.getTableAlias());
+          updatedExpression = result.getSqlExpression()
+              .replaceAll(finalJoin.getUdtfExpression() + "(?:\\.|$)", finalJoin.getTableAlias());
         } else {
           assert result.getSqlExpression() != null;
-          updatedExpression = result.getSqlExpression().replace(finalJoin.getRootExpression(),
-              finalJoin.getTableAlias());
+          updatedExpression = result.getSqlExpression()
+              .replaceAll(finalJoin.getRootExpression() + "(?:\\.|$)", finalJoin.getTableAlias());
         }
         result.setSqlExpression(updatedExpression);
       }

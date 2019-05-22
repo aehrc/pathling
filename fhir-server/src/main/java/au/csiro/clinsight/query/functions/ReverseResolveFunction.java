@@ -67,23 +67,24 @@ public class ReverseResolveFunction implements ExpressionFunction {
   private void resolveArgumentWithJoins(ParseResult input, ParseResult argument,
       ResolvedElement argumentElement) {
     LinkedList<String> argumentPathComponents = Strings.tokenizePath(argumentElement.getPath());
-    String targetTable = argumentPathComponents.getFirst().toLowerCase();
+    final String targetResource = argumentPathComponents.getFirst();
+    String targetTable = targetResource.toLowerCase();
     String joinAlias = Strings.pathToLowerCamelCase(argumentPathComponents) + "Resolved";
-    String rootExpression = Strings.uncapitalize(argumentElement.getPath());
     Join finalJoin = argument.getJoins().last();
     assert finalJoin.getUdtfExpression() != null;
-    String referenceExpression = joinAlias + "." + rootExpression
-        .replace(finalJoin.getUdtfExpression(), finalJoin.getTableAlias()) + ".reference";
+    String referenceExpression = joinAlias + "." + argument.getSqlExpression() + ".reference";
+    referenceExpression = referenceExpression
+        .replace(finalJoin.getUdtfExpression(), finalJoin.getTableAlias());
     String joinExpression = "LEFT JOIN (SELECT * FROM " + targetTable + " ";
     joinExpression += argument.getJoins().stream().map(Join::getExpression).collect(
         Collectors.joining(" "));
     joinExpression +=
         ") " + joinAlias + " ON " + input.getSqlExpression() + ".id = " + referenceExpression;
-    Join join = new Join(joinExpression, rootExpression, TABLE_JOIN, joinAlias);
+    Join join = new Join(joinExpression, targetTable, TABLE_JOIN, joinAlias);
     input.setResultType(COLLECTION);
     input.setElementType(RESOURCE);
-    input.setElementTypeCode(argumentPathComponents.getFirst());
-    input.setExpression(argumentPathComponents.getFirst());
+    input.setElementTypeCode(targetResource);
+    input.setExpression(targetResource);
     input.setSqlExpression(joinAlias);
     input.getJoins().add(join);
   }

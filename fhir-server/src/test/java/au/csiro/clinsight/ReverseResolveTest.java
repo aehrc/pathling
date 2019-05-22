@@ -241,6 +241,67 @@ public class ReverseResolveTest {
     verify(mockSpark).sql(expectedSql);
   }
 
+  @SuppressWarnings("unchecked")
+  @Test
+  public void multiValueTraversalFollowingReverseResolve() throws IOException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"DiagnosticReport.count()\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of diagnostic reports\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"DiagnosticReport.reverseResolve(Condition.stage.assessment).category.coding.display\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Condition stage assessment category\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedSql =
+        "SELECT conditionStageAssessmentResolvedCategoryCoding.display AS `Condition stage assessment category`, "
+            + "COUNT(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
+            + "FROM diagnosticreport "
+            + "LEFT JOIN ("
+            + "SELECT * "
+            + "FROM condition "
+            + "LATERAL VIEW OUTER explode(condition.stage.assessment) conditionStageAssessment AS conditionStageAssessment"
+            + ") conditionStageAssessmentResolved "
+            + "ON diagnosticreport.id = conditionStageAssessmentResolved.conditionStageAssessment.reference "
+            + "LATERAL VIEW OUTER explode(conditionStageAssessmentResolved.category) conditionStageAssessmentResolvedCategory AS conditionStageAssessmentResolvedCategory "
+            + "LATERAL VIEW OUTER explode(conditionStageAssessmentResolvedCategory.coding) conditionStageAssessmentResolvedCategoryCoding AS conditionStageAssessmentResolvedCategoryCoding "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+  }
+
   @After
   public void tearDown() throws Exception {
     server.stop();
