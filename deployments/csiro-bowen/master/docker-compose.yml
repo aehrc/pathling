@@ -19,7 +19,7 @@ services:
     ports:
       - 8899:80
     environment:
-      CLINSIGHT_FHIR_SERVER: http://hb-15-cdc001.it.csiro.au:8090/fhir
+      CLINSIGHT_FHIR_SERVER: http://clinsight.it.csiro.au:8090/fhir
   ontoserver:
     image: docker-registry.it.csiro.au/clinsight/ontoserver:5.4.0-SNAPSHOT
     network_mode: host
