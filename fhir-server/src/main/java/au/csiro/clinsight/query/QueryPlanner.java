@@ -100,7 +100,8 @@ class QueryPlanner {
   private List<ParseResult> parseFilters(List<String> filters) {
     return filters.stream().map(expression -> {
       ParseResult result = expressionParser.parse(expression);
-      if (result.getResultType() != BOOLEAN) {
+      if (result.getResultType() != COLLECTION || result.getElementType() != PRIMITIVE
+          || !result.getElementTypeCode().equals("boolean")) {
         throw new InvalidRequestException(
             "Filter expression is not of boolean type: " + expression);
       }

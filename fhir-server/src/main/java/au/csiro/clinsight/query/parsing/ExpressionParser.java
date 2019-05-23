@@ -8,7 +8,6 @@ import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElemen
 import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.query.Mappings.getFunction;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATETIME;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
@@ -105,7 +104,9 @@ public class ExpressionParser {
       leftResult.setSqlExpression(
           leftResult.getSqlExpression() + " " + operatorString + " " + rightResult
               .getSqlExpression());
-      leftResult.setResultType(BOOLEAN);
+      leftResult.setResultType(COLLECTION);
+      leftResult.setElementType(PRIMITIVE);
+      leftResult.setElementTypeCode("boolean");
       leftResult.getJoins().addAll(rightResult.getJoins());
       leftResult.getFromTables().addAll(rightResult.getFromTables());
       return leftResult;
