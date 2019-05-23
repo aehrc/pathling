@@ -109,6 +109,7 @@ class App extends React.Component<Props, State> {
             }}
             minWidth={200}
             maxWidth={600}
+            handleWrapperClass="handle"
             onResize={this.handleResize}
           >
             <ElementTree />
