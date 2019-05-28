@@ -483,6 +483,98 @@ public class GroupingTest {
     verify(mockSpark).sql(expectedSql);
   }
 
+  @SuppressWarnings("unchecked")
+  @Test
+  public void andOperator() throws IOException {
+    String inParams = "{\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        { \"name\": \"expression\", \"valueString\": \"Encounter.count()\" },\n"
+        + "        { \"name\": \"label\", \"valueString\": \"Number of encounters\" }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Encounter.class.code = 'emergency' and Encounter.type.coding.code = '183478001'\"\n"
+        + "        },\n"
+        + "        { \"name\": \"label\", \"valueString\": \"Encounter.class.code\" }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ],\n"
+        + "  \"resourceType\": \"Parameters\"\n"
+        + "}\n";
+
+    String expectedSql =
+        "SELECT encounter.class.code = 'emergency' AND encounterTypeCoding.code = '183478001' AS `Encounter.class.code`, "
+            + "COUNT(DISTINCT encounter.id) AS `Number of encounters` "
+            + "FROM encounter "
+            + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
+            + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void orOperator() throws IOException {
+    String inParams = "{\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        { \"name\": \"expression\", \"valueString\": \"Encounter.count()\" },\n"
+        + "        { \"name\": \"label\", \"valueString\": \"Number of encounters\" }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Encounter.class.code = 'emergency' or Encounter.type.coding.code = '183478001'\"\n"
+        + "        },\n"
+        + "        { \"name\": \"label\", \"valueString\": \"Encounter.class.code\" }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ],\n"
+        + "  \"resourceType\": \"Parameters\"\n"
+        + "}\n";
+
+    String expectedSql =
+        "SELECT encounter.class.code = 'emergency' OR encounterTypeCoding.code = '183478001' AS `Encounter.class.code`, "
+            + "COUNT(DISTINCT encounter.id) AS `Number of encounters` "
+            + "FROM encounter "
+            + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
+            + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+  }
+
   @After
   public void tearDown() throws Exception {
     server.stop();
