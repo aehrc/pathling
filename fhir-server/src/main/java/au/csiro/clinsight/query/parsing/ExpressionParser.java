@@ -10,6 +10,7 @@ import static au.csiro.clinsight.query.Mappings.getFunction;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATETIME;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.INTEGER;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
@@ -219,6 +220,7 @@ public class ExpressionParser {
     public ParseResult visitParenthesizedTerm(ParenthesizedTermContext ctx) {
       final ParseResult result = new ExpressionVisitor(terminologyClient, spark)
           .visit(ctx.expression());
+      result.setExpression("(" + result.getSqlExpression() + ")");
       result.setSqlExpression("(" + result.getSqlExpression() + ")");
       return result;
     }
@@ -417,6 +419,15 @@ public class ExpressionParser {
     }
 
     @Override
+    public ParseResult visitNumberLiteral(NumberLiteralContext ctx) {
+      ParseResult result = new ParseResult();
+      result.setResultType(INTEGER);
+      result.setExpression(ctx.getText());
+      result.setSqlExpression(ctx.getText());
+      return result;
+    }
+
+    @Override
     public ParseResult visitNullLiteral(NullLiteralContext ctx) {
       throw new InvalidRequestException("Null literals are not supported");
     }
@@ -424,11 +435,6 @@ public class ExpressionParser {
     @Override
     public ParseResult visitBooleanLiteral(BooleanLiteralContext ctx) {
       throw new InvalidRequestException("Boolean literals are not supported");
-    }
-
-    @Override
-    public ParseResult visitNumberLiteral(NumberLiteralContext ctx) {
-      throw new InvalidRequestException("Numeric literals are not supported");
     }
 
     @Override
