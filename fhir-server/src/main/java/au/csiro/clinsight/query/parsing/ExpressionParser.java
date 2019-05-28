@@ -8,10 +8,9 @@ import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElemen
 import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.query.Mappings.getFunction;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATETIME;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.INTEGER;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.*;
 import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
@@ -428,13 +427,17 @@ public class ExpressionParser {
     }
 
     @Override
-    public ParseResult visitNullLiteral(NullLiteralContext ctx) {
-      throw new InvalidRequestException("Null literals are not supported");
+    public ParseResult visitBooleanLiteral(BooleanLiteralContext ctx) {
+      ParseResult result = new ParseResult();
+      result.setResultType(BOOLEAN);
+      result.setExpression(ctx.getText().toUpperCase());
+      result.setSqlExpression(ctx.getText().toUpperCase());
+      return result;
     }
 
     @Override
-    public ParseResult visitBooleanLiteral(BooleanLiteralContext ctx) {
-      throw new InvalidRequestException("Boolean literals are not supported");
+    public ParseResult visitNullLiteral(NullLiteralContext ctx) {
+      throw new InvalidRequestException("Null literals are not supported");
     }
 
     @Override
