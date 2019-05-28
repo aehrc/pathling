@@ -217,7 +217,10 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitParenthesizedTerm(ParenthesizedTermContext ctx) {
-      return new ExpressionVisitor(terminologyClient, spark).visit(ctx.expression());
+      final ParseResult result = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression());
+      result.setSqlExpression("(" + result.getSqlExpression() + ")");
+      return result;
     }
 
   }
