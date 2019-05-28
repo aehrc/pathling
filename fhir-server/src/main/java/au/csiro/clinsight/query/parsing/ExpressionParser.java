@@ -128,6 +128,11 @@ public class ExpressionParser {
       return parseBooleanExpression(ctx, ctx.expression(0), ctx.expression(1), "AND");
     }
 
+    @Override
+    public ParseResult visitOrExpression(OrExpressionContext ctx) {
+      return parseBooleanExpression(ctx, ctx.expression(0), ctx.expression(1), "OR");
+    }
+
     // All other FHIRPath constructs are currently unsupported.
 
     @Override
@@ -163,11 +168,6 @@ public class ExpressionParser {
     @Override
     public ParseResult visitMembershipExpression(MembershipExpressionContext ctx) {
       throw new InvalidRequestException("Membership expressions are not supported");
-    }
-
-    @Override
-    public ParseResult visitOrExpression(OrExpressionContext ctx) {
-      throw new InvalidRequestException("Or expressions are not supported");
     }
 
     @Override
