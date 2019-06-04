@@ -7,8 +7,7 @@ import {
   Label,
   Popover,
   PopoverInteractionKind,
-  Position,
-  TextArea
+  Position
 } from "@blueprintjs/core";
 
 import "./style/ExpressionEditor.scss";
@@ -20,6 +19,7 @@ import {
   PartialFilter,
   PartialGrouping
 } from "../store/QueryReducer";
+import MonacoEditor from "react-monaco-editor";
 
 interface Props {
   expression: Aggregation | Grouping | Filter;
@@ -31,6 +31,46 @@ interface Props {
 
 function ExpressionEditor(props: Props) {
   const { expression, onChange, children } = props;
+
+  const editorWillMount = (monaco: any) => {
+    monaco.languages.register({
+      id: "fhirPath"
+    });
+
+    monaco.languages.setLanguageConfiguration("fhirPath", {
+      brackets: [["(", ")", "delimiter.parenthesis"]]
+    });
+
+    monaco.languages.setMonarchTokensProvider("fhirPath", {
+      keywords: ["and", "or", "true", "false"],
+      operators: ["<", ">", "<=", ">=", "=", "!="],
+      resource: /[A-Z][a-z]+/,
+      element: /[a-z][a-zA-Z0-9]+/,
+      functionInvocation: /@element\((.*)\)/,
+      tokenizer: {
+        expression: [
+          { include: "@whitespace" },
+          [/[()]/, "@brackets"],
+          [/'.*'/, "string"],
+          [/@[0-9\-]+/, "variable.value"],
+          [/and|or|true|false/, "keyword"],
+          [/<|>|<=|>=|=|!=/, "operators"],
+          [/@element/, "variable.name"],
+          [/@resource/, "constant"]
+        ],
+        whitespace: [
+          [/[ \t\r\n]+/, ""],
+          [/\/\*/, "comment", "@comment"],
+          [/\/\/.*$/, "comment"]
+        ],
+        comment: [
+          [/[^\/*]+/, "comment"],
+          [/\*\//, "comment", "@pop"],
+          [/[\/*]/, "comment"]
+        ]
+      }
+    });
+  };
 
   const renderContent = () => {
     return (
@@ -47,13 +87,21 @@ function ExpressionEditor(props: Props) {
         </Label>
         <Label className="expression-label">
           Expression
-          <TextArea
-            className="expression-input"
-            value={expression.expression}
-            onChange={event => onChange({ expression: event.target.value })}
-            onFocus={event => event.target.select()}
-            growVertically
-          />
+          <div className="expression-input">
+            <MonacoEditor
+              language="fhirPath"
+              value={expression.expression}
+              onChange={expression => onChange({ expression })}
+              editorWillMount={editorWillMount}
+              options={{
+                minimap: { enabled: false },
+                codeLens: false,
+                wordWrap: "on",
+                autoClosingBrackets: "always",
+                fontSize: 13
+              }}
+            />
+          </div>
         </Label>
       </div>
     );

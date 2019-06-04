@@ -5,8 +5,10 @@
 const path = require("path"),
   MiniCssExtractPlugin = require("mini-css-extract-plugin"),
   HtmlWebpackPlugin = require("html-webpack-plugin"),
+  MonacoEditorWebpackPlugin = require("monaco-editor-webpack-plugin"),
   BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
-    .BundleAnalyzerPlugin;
+    .BundleAnalyzerPlugin,
+  MONACO_DIR = path.resolve(__dirname, "./node_modules/monaco-editor");
 
 module.exports = {
   entry: "./src/index.tsx",
@@ -45,6 +47,11 @@ module.exports = {
         ]
       },
       {
+        test: /\.css$/,
+        include: MONACO_DIR,
+        use: ["style-loader", "css-loader"]
+      },
+      {
         test: /\.(ttf|eot|woff)$/,
         use: {
           loader: "file-loader",
@@ -65,6 +72,7 @@ module.exports = {
       inject: true,
       template: path.resolve(__dirname, "src", "index.html")
     }),
+    new MonacoEditorWebpackPlugin(),
     new BundleAnalyzerPlugin({ analyzerMode: "static", openAnalyzer: false })
   ],
   devServer: {
