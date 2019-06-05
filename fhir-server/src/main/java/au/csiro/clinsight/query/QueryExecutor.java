@@ -61,7 +61,7 @@ public class QueryExecutor {
     this.fhirContext = fhirContext;
     initialiseSpark();
     initialiseResourceDefinitions();
-    spark.sql("USE clinsight");
+    spark.sql("USE " + configuration.getDatabaseName());
   }
 
   private void initialiseResourceDefinitions() {
@@ -86,6 +86,7 @@ public class QueryExecutor {
           .config("javax.jdo.option.ConnectionUserName", configuration.getMetastoreUser())
           .config("javax.jdo.option.ConnectionPassword", configuration.getMetastorePassword())
           .config("spark.executor.memory", configuration.getExecutorMemory())
+          .config("spark.dynamicAllocation.enabled", "true")
           .config("spark.shuffle.service.enabled", "true")
           .config("spark.scheduler.mode", "FAIR")
           .config("spark.sql.autoBroadcastJoinThreshold", "-1")
