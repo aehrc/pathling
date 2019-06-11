@@ -17,4 +17,7 @@ RUN cd /usr/local && ln -s spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} sp
 RUN cd /usr/local/spark/jars && \
   wget -q https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.5/postgresql-42.2.5.jar
 
+# Install Python packages
+RUN pip install matplotlib-venn
+
 ENV SPARK_HOME /usr/local/spark
