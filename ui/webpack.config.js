@@ -49,7 +49,16 @@ module.exports = {
       {
         test: /\.css$/,
         include: MONACO_DIR,
-        use: ["style-loader", "css-loader"]
+        use: [
+          {
+            loader: MiniCssExtractPlugin.loader,
+            options: {
+              hmr: process.env.NODE_ENV === "development",
+              reloadAll: true
+            }
+          },
+          "css-loader"
+        ]
       },
       {
         test: /\.(ttf|eot|woff)$/,
