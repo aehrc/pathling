@@ -3,8 +3,9 @@
  */
 
 import * as React from "react";
+import { useState } from "react";
 import { connect } from "react-redux";
-import { Button, Navbar, Alignment } from "@blueprintjs/core";
+import { Alignment, Button, Navbar } from "@blueprintjs/core";
 
 import {
   cancelAndClearResult,
@@ -18,6 +19,9 @@ import { QueryState } from "../store/QueryReducer";
 import { ResultState } from "../store/ResultReducer";
 import { GlobalState } from "../store";
 import "./style/Actions.scss";
+import SaveDialog from "./SaveDialog";
+import { SavedQuery } from "../store/SavedQueriesReducer";
+import { saveQuery } from "../store/SavedQueriesActions";
 
 interface Props {
   query: QueryState;
@@ -30,6 +34,7 @@ interface Props {
   catchError?: (message: string) => any;
   clearElementTreeFocus?: () => any;
   clearError?: () => any;
+  saveQuery?: (name: string, query: SavedQuery) => any;
 }
 
 /**
@@ -39,17 +44,19 @@ interface Props {
  */
 function Actions(props: Props) {
   const {
-    fetchQueryResult,
-    clearQuery,
-    clearResult,
-    cancelAndClearResult,
-    clearElementTreeFocus,
-    clearError,
-    catchError,
-    query,
-    result: { loading, executionTime },
-    fhirServer
-  } = props;
+      fetchQueryResult,
+      clearQuery,
+      clearResult,
+      cancelAndClearResult,
+      clearElementTreeFocus,
+      clearError,
+      catchError,
+      saveQuery,
+      query,
+      result: { loading, executionTime },
+      fhirServer
+    } = props,
+    [saveDialogIsOpen, setSaveDialogOpen] = useState(false);
 
   const queryIsEmpty = (): boolean =>
     query.aggregations.length === 0 && query.groupings.length === 0;
@@ -74,6 +81,19 @@ function Actions(props: Props) {
     clearError();
   };
 
+  const handleClickSave = () => {
+    setSaveDialogOpen(true);
+  };
+
+  const handleCloseSaveDialog = () => {
+    setSaveDialogOpen(false);
+  };
+
+  const handleSave = (name: string) => {
+    saveQuery(name, query);
+    setSaveDialogOpen(false);
+  };
+
   return (
     <Navbar className="actions">
       <Navbar.Group align={Alignment.LEFT}>
@@ -89,9 +109,18 @@ function Actions(props: Props) {
           <Button
             className="clear"
             icon="delete"
-            text={loading ? "Cancel" : "Clear query"}
+            text={loading ? "Cancel" : "Clear"}
             minimal={true}
             onClick={loading ? handleCancelQuery : handleClickClearQuery}
+          />
+        )}
+        {queryIsEmpty() ? null : (
+          <Button
+            className="save"
+            icon="floppy-disk"
+            text="Save"
+            minimal={true}
+            onClick={handleClickSave}
           />
         )}
       </Navbar.Group>
@@ -103,6 +132,11 @@ function Actions(props: Props) {
           </span>
         </Navbar.Group>
       ) : null}
+      <SaveDialog
+        isOpen={saveDialogIsOpen}
+        onClose={handleCloseSaveDialog}
+        onSave={handleSave}
+      />
     </Navbar>
   );
 }
@@ -119,7 +153,8 @@ const mapStateToProps = (state: GlobalState) => ({
     cancelAndClearResult,
     clearElementTreeFocus,
     catchError,
-    clearError
+    clearError,
+    saveQuery
   };
 
 export default connect(

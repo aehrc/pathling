@@ -1,0 +1,25 @@
+/*!
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+@import "~@blueprintjs/core/src/components/dialog/dialog";
+@import "~@blueprintjs/core/src/components/forms/index";
+
+.save-dialog {
+  .body {
+    @extend .#{$ns}-dialog-body;
+  }
+
+  .name-input {
+    @extend .#{$ns}-input;
+    width: 100%;
+  }
+
+  .footer {
+    @extend .#{$ns}-dialog-footer;
+  }
+
+  .footer-actions {
+    @extend .#{$ns}-dialog-footer-actions;
+  }
+}
