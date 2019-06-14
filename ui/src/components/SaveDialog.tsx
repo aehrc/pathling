@@ -29,19 +29,19 @@ function SaveDialog(props: Props) {
       title="Save query"
       onClose={onClose}
     >
-      <div className="body">
-        <Label className="name-label">
+      <div className="save-dialog__body">
+        <Label className="save-dialog__name-label">
           Name
           <input
-            className="name-input"
+            className="save-dialog__name-input"
             value={name}
             onChange={handleChange}
             autoFocus
           />
         </Label>
       </div>
-      <div className="footer">
-        <div className="footer-actions">
+      <div className="save-dialog__footer">
+        <div className="save-dialog__footer-actions">
           <Button
             intent={Intent.PRIMARY}
             text="Save"

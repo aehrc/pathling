@@ -9,18 +9,20 @@
   padding: 0 0.2em !important;
   background-color: transparent !important;
 
-  button {
+  &__execute,
+  &__clear,
+  &__save {
     outline: none;
     user-select: none;
   }
 
-  .execute {
+  &__execute {
     .bp3-icon {
       color: #15b371 !important;
     }
   }
 
-  .clear {
+  &__clear {
     .bp3-icon {
       color: #db3737 !important;
     }

@@ -58,7 +58,7 @@ function Filters(props: Props) {
   };
 
   const renderBlankCanvas = (): ReactElement => (
-    <div className="blank-canvas">Filters</div>
+    <div className="filters__blank">Filters</div>
   );
 
   const renderFilters = (): ReactElement[] =>
@@ -69,6 +69,7 @@ function Filters(props: Props) {
         onChange={filter => handleChange(i, filter)}
       >
         <Tag
+          className="filters__expression"
           round={true}
           large={true}
           onRemove={event => handleRemove(event, i)}
@@ -80,7 +81,7 @@ function Filters(props: Props) {
 
   return (
     <div className="filters">
-      <Icon className="section-identity" icon="filter" />
+      <Icon className="filters__identity" icon="filter" />
       {filters.length === 0 ? renderBlankCanvas() : renderFilters()}
     </div>
   );

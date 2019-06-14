@@ -59,7 +59,7 @@ function Aggregations(props: Props) {
   };
 
   const renderBlankCanvas = (): ReactElement => (
-    <div className="blank-canvas">Aggregations</div>
+    <div className="aggregations__blank">Aggregations</div>
   );
 
   const renderAggregations = (): ReactElement[] =>
@@ -70,6 +70,7 @@ function Aggregations(props: Props) {
         onChange={aggregation => handleChange(i, aggregation)}
       >
         <Tag
+          className="aggregations__expression"
           round={true}
           large={true}
           onRemove={event => handleRemove(event, i)}
@@ -81,7 +82,7 @@ function Aggregations(props: Props) {
 
   return (
     <div className="aggregations">
-      <Icon className="section-identity" icon="trending-up" />
+      <Icon className="aggregations__identity" icon="trending-up" />
       {aggregations.length === 0 ? renderBlankCanvas() : renderAggregations()}
     </div>
   );

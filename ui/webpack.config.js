@@ -19,7 +19,7 @@ module.exports = {
     path: path.resolve(__dirname, "dist"),
     filename:
       process.env.NODE_ENV === "development"
-        ? "script/[name].[hash:8].js"
+        ? "script/[name].js"
         : "script/[name].[contenthash:8].js"
   },
   module: {
@@ -37,8 +37,7 @@ module.exports = {
           {
             loader: MiniCssExtractPlugin.loader,
             options: {
-              hmr: process.env.NODE_ENV === "development",
-              reloadAll: true
+              hmr: process.env.NODE_ENV === "development"
             }
           },
           "css-loader",
@@ -53,8 +52,7 @@ module.exports = {
           {
             loader: MiniCssExtractPlugin.loader,
             options: {
-              hmr: process.env.NODE_ENV === "development",
-              reloadAll: true
+              hmr: process.env.NODE_ENV === "development"
             }
           },
           "css-loader"
@@ -75,10 +73,12 @@ module.exports = {
   },
   plugins: [
     new MiniCssExtractPlugin({
-      filename: "style/[name].[contenthash:8].css"
+      filename:
+        process.env.NODE_ENV === "development"
+          ? "style/[name].css"
+          : "style/[name].[contenthash:8].css"
     }),
     new HtmlWebpackPlugin({
-      inject: true,
       template: path.resolve(__dirname, "src", "index.html")
     }),
     new MonacoEditorWebpackPlugin(),

@@ -98,7 +98,7 @@ function Actions(props: Props) {
     <Navbar className="actions">
       <Navbar.Group align={Alignment.LEFT}>
         <Button
-          className="execute"
+          className="actions__execute"
           icon="play"
           text={loading ? "Executing..." : "Execute"}
           minimal={true}
@@ -107,7 +107,7 @@ function Actions(props: Props) {
         />
         {queryIsEmpty() ? null : (
           <Button
-            className="clear"
+            className="actions__clear"
             icon="delete"
             text={loading ? "Cancel" : "Clear"}
             minimal={true}
@@ -116,7 +116,7 @@ function Actions(props: Props) {
         )}
         {queryIsEmpty() ? null : (
           <Button
-            className="save"
+            className="actions__save"
             icon="floppy-disk"
             text="Save"
             minimal={true}

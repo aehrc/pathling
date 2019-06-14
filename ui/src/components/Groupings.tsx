@@ -53,7 +53,7 @@ function Groupings(props: Props) {
   };
 
   const renderBlankCanvas = (): ReactElement => (
-    <div className="blank-canvas">Groupings</div>
+    <div className="groupings__blank">Groupings</div>
   );
 
   const renderGroupings = (): ReactElement[] =>
@@ -64,6 +64,7 @@ function Groupings(props: Props) {
         onChange={grouping => handleChange(i, grouping)}
       >
         <Tag
+          className="groupings__expression"
           round={true}
           large={true}
           onRemove={event => handleRemove(event, i)}
@@ -75,7 +76,7 @@ function Groupings(props: Props) {
 
   return (
     <div className="groupings">
-      <Icon className="section-identity" icon="graph" />
+      <Icon className="groupings__identity" icon="graph" />
       {groupings.length === 0 ? renderBlankCanvas() : renderGroupings()}
     </div>
   );

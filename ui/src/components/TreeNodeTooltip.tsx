@@ -29,11 +29,11 @@ function TreeNodeTooltip(props: TreeNodeTooltipProps) {
       type === "Reference" ? `Reference (${referenceTypes.join(" | ")})` : type;
 
   const renderContent = () => (
-    <div className="content">
-      <div className="path">{path}</div>
-      <div className="definition">{definition}</div>
-      <div className="type">{typeDescription}</div>
-      {note ? <div className="note">{note}</div> : null}
+    <div className="tree-node-tooltip__content">
+      <div className="tree-node-tooltip__path">{path}</div>
+      <div className="tree-node-tooltip__definition">{definition}</div>
+      <div className="tree-node-tooltip__type">{typeDescription}</div>
+      {note ? <div className="tree-node-tooltip__note">{note}</div> : null}
     </div>
   );
 
@@ -43,9 +43,9 @@ function TreeNodeTooltip(props: TreeNodeTooltipProps) {
       position={Position.RIGHT}
       boundary="viewport"
       interactionKind={PopoverInteractionKind.CLICK}
-      className="tooltip"
-      targetClassName="content"
-      popoverClassName="tree-node-tooltip-popover"
+      className="tree-node-tooltip"
+      targetClassName="tree-node-tooltip__target"
+      popoverClassName="tree-node-tooltip__popover"
       hoverOpenDelay={300}
       lazy
     >

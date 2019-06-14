@@ -4,21 +4,23 @@
 
 @import "~@blueprintjs/core/src/components/forms/index";
 
-.expression-form {
-  padding: 1em;
-  width: 35em;
+.expression-editor {
+  &__form {
+    padding: 1em;
+    width: 35em;
+  }
 
-  .label-input,
-  .expression-input {
+  &__label-input,
+  &__expression-input {
     @extend .#{$ns}-input;
     width: 100%;
   }
 
-  .expression-label {
-    margin-bottom: 0;
+  &__expression-label {
+    margin-bottom: 0 !important;
   }
 
-  .expression-input {
+  &__expression-input {
     height: 15em;
     padding: 0;
     box-shadow: none;

@@ -6,20 +6,20 @@
 @import "~@blueprintjs/core/src/components/forms/index";
 
 .save-dialog {
-  .body {
+  &__body {
     @extend .#{$ns}-dialog-body;
   }
 
-  .name-input {
+  &__name-input {
     @extend .#{$ns}-input;
     width: 100%;
   }
 
-  .footer {
+  &__footer {
     @extend .#{$ns}-dialog-footer;
   }
 
-  .footer-actions {
+  &__footer-actions {
     @extend .#{$ns}-dialog-footer-actions;
   }
 }

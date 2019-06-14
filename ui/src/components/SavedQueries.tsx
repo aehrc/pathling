@@ -1,0 +1,38 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+import React, { ReactElement } from "react";
+import { connect } from "react-redux";
+
+import { SavedQueriesWithStatuses } from "../store/SavedQueriesReducer";
+import { GlobalState } from "../store";
+import "./style/SavedQueries.scss";
+
+interface Props {
+  queries: SavedQueriesWithStatuses;
+}
+
+function SavedQueries(props: Props) {
+  const { queries } = props;
+
+  const renderQuery = (query: string, i: number): ReactElement => {
+    return (
+      <li key={i} className="query">
+        <div className="name">{query}</div>
+      </li>
+    );
+  };
+
+  return (
+    <ol className="saved-queries">
+      {Object.keys(queries).map((query, i) => renderQuery(query, i))}
+    </ol>
+  );
+}
+
+const mapStateToProps = (state: GlobalState) => ({
+  queries: state.savedQueries.queries
+});
+
+export default connect(mapStateToProps)(SavedQueries);

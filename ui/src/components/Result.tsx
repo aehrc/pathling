@@ -29,7 +29,7 @@ function Result(props: Props) {
   const { loading, groupings, query, stale } = props;
 
   const renderLoading = () => (
-    <Spinner className="loading" size={100} intent="primary" />
+    <Spinner className="result__loading" size={100} intent="primary" />
   );
 
   const renderPart = (part: Parameter, i: number): ReactElement => {
@@ -79,7 +79,9 @@ function Result(props: Props) {
   } else if (groupings !== null) {
     content = renderGroupings();
   }
-  return <div className={stale ? "result stale" : "result"}>{content}</div>;
+  return (
+    <div className={stale ? "result result--stale" : "result"}>{content}</div>
+  );
 }
 
 function checkStale(state: GlobalState): boolean {

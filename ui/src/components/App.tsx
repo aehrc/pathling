@@ -17,6 +17,7 @@ import { GlobalState } from "../store";
 import { ErrorState } from "../store/ErrorReducer";
 import * as actions from "../store/ConfigActions";
 import "./style/App.scss";
+import SavedQueries from "./SavedQueries";
 
 const Alerter = Toaster.create({
   position: Position.BOTTOM_RIGHT
@@ -92,11 +93,11 @@ class App extends React.Component<Props, State> {
     return (
       <div
         className="app"
-        style={{ gridTemplateColumns: `${siderWidth}px auto` }}
+        style={{ gridTemplateColumns: `${siderWidth}px auto 300px` }}
       >
-        <div className="sider">
+        <div className="app__left-sider">
           <Resizable
-            className="inner"
+            className="app__left-sider-inner"
             enable={{
               top: false,
               right: true,
@@ -109,19 +110,22 @@ class App extends React.Component<Props, State> {
             }}
             minWidth={200}
             maxWidth={600}
-            handleWrapperClass="handle"
+            handleWrapperClass="app__left-sider-handle"
             onResize={this.handleResize}
           >
             <ElementTree />
           </Resizable>
         </div>
-        <main className="content">
+        <main className="app__content">
           <Aggregations />
           <Groupings />
           <Filters />
           <Actions />
           <Result />
         </main>
+        <div className="app__right-sider">
+          <SavedQueries />
+        </div>
       </div>
     );
   }

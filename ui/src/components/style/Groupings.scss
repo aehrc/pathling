@@ -3,29 +3,33 @@
  */
 
 .groupings {
-  overflow-y: scroll;
+  overflow-y: auto;
   position: relative;
   padding: 1em 1em 0.5em 2.8em;
+  background-color: white;
+  border-radius: 0.3em;
+  font-size: 1em;
+  color: #314659;
 
-  .section-identity {
+  &__identity {
     position: absolute;
     top: 1em;
     left: 1em;
   }
 
-  .blank-canvas {
+  &__blank {
     color: #666;
     margin-bottom: 0.5em;
     user-select: none;
   }
 
-  .bp3-tag {
-    background-color: #00998c;
+  &__expression {
+    background-color: #00998c !important;
     margin: 0 0.5em 0.5em 0;
     user-select: none;
-  }
 
-  .bp3-tag-remove {
-    outline: none;
+    .bp3-tag-remove {
+      outline: none;
+    }
   }
 }

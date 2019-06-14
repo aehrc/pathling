@@ -4,33 +4,33 @@
 
 @import "~@blueprintjs/core/src/blueprint";
 
-.tree-node-tooltip-popover {
-  .content {
+.tree-node-tooltip {
+  &__content {
     padding: 1em;
     max-width: 600px;
+  }
 
-    .path {
-      color: #137cbd;
-      font-weight: 500;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+  &__path {
+    color: #137cbd;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-    .type {
-      color: #0d8050;
-      margin-top: 0.5em;
-      font-weight: 500;
-    }
+  &__type {
+    color: #0d8050;
+    margin-top: 0.5em;
+    font-weight: 500;
+  }
 
-    .definition {
-      @extend .#{$ns}-running-text;
-      margin-top: 0.5em;
-    }
+  &__definition {
+    @extend .#{$ns}-running-text;
+    margin-top: 0.5em;
+  }
 
-    .note {
-      color: #a66321;
-      margin-top: 0.5em;
-      font-style: italic;
-    }
+  &__note {
+    color: #a66321;
+    margin-top: 0.5em;
+    font-style: italic;
   }
 }

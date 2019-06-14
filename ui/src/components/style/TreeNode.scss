@@ -31,7 +31,7 @@
       @extend .#{$ns}-tree-node-icon, .#{$ns}-icon-standard;
     }
 
-    .tooltip,
+    .tree-node-tooltip,
     .label {
       @extend .#{$ns}-tree-node-label;
     }

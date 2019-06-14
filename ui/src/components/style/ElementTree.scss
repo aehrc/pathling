@@ -6,6 +6,10 @@
 
 .element-tree {
   @extend .#{$ns}-tree;
+  padding: 1em;
+  background-color: white;
+  box-sizing: border-box;
+  overflow-y: auto;
 
   & > .resources {
     @extend .#{$ns}-tree-node-list, .#{$ns}-tree-root;

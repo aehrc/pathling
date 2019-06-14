@@ -74,20 +74,20 @@ function ExpressionEditor(props: Props) {
 
   const renderContent = () => {
     return (
-      <div className="expression-form">
-        <Label className="label-label">
+      <div className="expression-editor__form">
+        <Label className="expression-editor__label-label">
           Label
           <input
-            className="label-input"
+            className="expression-editor__label-input"
             value={expression.label}
             onChange={event => onChange({ label: event.target.value })}
             onFocus={event => event.target.select()}
             autoFocus
           />
         </Label>
-        <Label className="expression-label">
+        <Label className="expression-editor__expression-label">
           Expression
-          <div className="expression-input">
+          <div className="expression-editor__expression-input">
             <MonacoEditor
               language="fhirPath"
               value={expression.expression}
@@ -114,8 +114,8 @@ function ExpressionEditor(props: Props) {
       boundary="viewport"
       interactionKind={PopoverInteractionKind.CLICK}
       className="expression-editor"
-      targetClassName="target"
-      popoverClassName="expression-editor-popover"
+      targetClassName="expression-editor__target"
+      popoverClassName="expression-editor__popover"
       autoFocus
     >
       <>{children}</>
