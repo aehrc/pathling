@@ -27,11 +27,19 @@ function AddFilter(props: Props) {
       );
   };
 
+  const handleTabIndexedKeyDown = (event: any) => {
+    if (event.key === "Enter") {
+      event.target.click();
+    }
+  };
+
   return (
     <MenuItem
       icon="filter"
       text={`Add "${expression}" to filters`}
       onClick={handleClick}
+      onKeyDown={handleTabIndexedKeyDown}
+      tabIndex={0}
     />
   );
 }

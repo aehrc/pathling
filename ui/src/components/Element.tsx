@@ -28,10 +28,16 @@ function Element(props: Props) {
         <AddFilter path={resolvedPath} />
       </Menu>,
       {
-        left: event.clientX,
-        top: event.clientY
+        left: event.target.getBoundingClientRect().right,
+        top: event.target.getBoundingClientRect().top
       }
     );
+  };
+
+  const handleTabIndexedKeyDown = (event: any) => {
+    if (event.key === "Enter") {
+      event.target.click();
+    }
   };
 
   return (
@@ -46,7 +52,13 @@ function Element(props: Props) {
         >
           <span className="label">{name}</span>
         </TreeNodeTooltip>
-        <span className="action" onClick={openContextMenu} />
+        <span
+          className="action"
+          title={`Show actions relating to ${resolvedPath}`}
+          onClick={openContextMenu}
+          onKeyDown={handleTabIndexedKeyDown}
+          tabIndex={0}
+        />
       </div>
     </li>
   );

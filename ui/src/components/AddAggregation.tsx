@@ -27,11 +27,19 @@ function AddAggregation(props: Props) {
       );
   };
 
+  const handleTabIndexedKeyDown = (event: any) => {
+    if (event.key === "Enter") {
+      event.target.click();
+    }
+  };
+
   return (
     <MenuItem
       icon="trending-up"
       text={`Add "${expression}" to aggregations`}
       onClick={handleClick}
+      onKeyDown={handleTabIndexedKeyDown}
+      tabIndex={0}
     />
   );
 }

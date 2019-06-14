@@ -29,6 +29,12 @@ function ReverseReference(props: Props) {
     unsupported = !(sourceType in resourceTree),
     [isExpanded, setExpanded] = useState(false);
 
+  const handleTabIndexedKeyDown = (event: any) => {
+    if (event.key === "Enter") {
+      event.target.click();
+    }
+  };
+
   const renderContains = () => {
     const contains = getResource(sourceType).contains,
       reverseReferenceNodes =
@@ -53,7 +59,10 @@ function ReverseReference(props: Props) {
       <div className="content">
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
+          title={`Show children of ${resolvedPath}`}
           onClick={() => setExpanded(!isExpanded)}
+          onKeyDown={handleTabIndexedKeyDown}
+          tabIndex={0}
         />
         <span className="icon" />
         <TreeNodeTooltip

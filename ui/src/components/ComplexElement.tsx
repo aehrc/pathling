@@ -24,12 +24,21 @@ function ComplexElement(props: Props) {
     resolvedPath = getResolvedPath(parentPath, path),
     [isExpanded, setExpanded] = useState(false);
 
+  const handleTabIndexedKeyDown = (event: any) => {
+    if (event.key === "Enter") {
+      event.target.click();
+    }
+  };
+
   return (
     <li className="complex-element">
       <div className="content">
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
+          title={`Show children of ${resolvedPath}`}
           onClick={() => setExpanded(!isExpanded)}
+          onKeyDown={handleTabIndexedKeyDown}
+          tabIndex={0}
         />
         <span className="icon" />
         <TreeNodeTooltip

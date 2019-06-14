@@ -49,6 +49,12 @@ function Resource(props: Props) {
     if (focus === null) setElementTreeFocus(name);
   };
 
+  const handleTabIndexedKeyDown = (event: any) => {
+    if (event.key === "Enter") {
+      event.target.click();
+    }
+  };
+
   const renderContains = () => {
     const newParentPath = parentPath ? parentPath : name,
       reverseReferenceNodes =
@@ -71,7 +77,10 @@ function Resource(props: Props) {
       <div className="content">
         <span
           className={getExpanded() ? "caret-open" : "caret-closed"}
+          title={`Show children of ${name}`}
           onClick={disabled ? null : () => setExpanded(!isExpanded)}
+          onKeyDown={handleTabIndexedKeyDown}
+          tabIndex={disabled ? -1 : 0}
         />
         <span className="icon" />
         <TreeNodeTooltip
@@ -86,6 +95,8 @@ function Resource(props: Props) {
             className="action"
             title={`Add ${aggregationExpression} to aggregations`}
             onClick={handleClickAction}
+            onKeyDown={handleTabIndexedKeyDown}
+            tabIndex={disabled ? -1 : 0}
           />
         )}
       </div>

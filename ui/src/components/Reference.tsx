@@ -30,6 +30,12 @@ function Reference(props: Props) {
       referenceTypes.find(type => type in resourceTree) === undefined,
     [isExpanded, setExpanded] = useState(false);
 
+  const handleTabIndexedKeyDown = (event: any) => {
+    if (event.key === "Enter") {
+      event.target.click();
+    }
+  };
+
   const renderContains = () =>
     referenceTypes.length > 1 ? renderResources() : renderContainsDirectly();
 
@@ -69,7 +75,10 @@ function Reference(props: Props) {
       <div className="content">
         <span
           className={isExpanded ? "caret-open" : "caret-closed"}
+          title={`Show children of ${resolvedPath}`}
           onClick={() => setExpanded(!isExpanded)}
+          onKeyDown={handleTabIndexedKeyDown}
+          tabIndex={0}
         />
         <span className="icon" />
         <TreeNodeTooltip
