@@ -4,7 +4,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
-import { Position, Toaster } from "@blueprintjs/core";
+import { FocusStyleManager, Position, Toaster } from "@blueprintjs/core";
 import Resizable from "re-resizable";
 
 import ElementTree from "./ElementTree";
@@ -20,7 +20,7 @@ import "./style/App.scss";
 import SavedQueries from "./SavedQueries";
 
 const Alerter = Toaster.create({
-  position: Position.BOTTOM_RIGHT
+  position: Position.BOTTOM
 });
 
 interface Props {
@@ -31,6 +31,12 @@ interface Props {
 interface State {
   siderWidth: number;
 }
+
+// Causes focus styles to be hidden while the user interacts using the mouse
+// and to appear when the tab key is pressed to begin keyboard navigation.
+//
+// See https://blueprintjs.com/docs/#core/accessibility
+FocusStyleManager.onlyShowFocusOnTabs();
 
 /**
  * Main application component.
@@ -96,6 +102,7 @@ class App extends React.Component<Props, State> {
         style={{ gridTemplateColumns: `${siderWidth}px auto 300px` }}
       >
         <div className="app__left-sider">
+          <h2>Data elements</h2>
           <Resizable
             className="app__left-sider-inner"
             enable={{
@@ -117,13 +124,17 @@ class App extends React.Component<Props, State> {
           </Resizable>
         </div>
         <main className="app__content">
-          <Aggregations />
-          <Groupings />
-          <Filters />
+          <h2>Query</h2>
+          <div className="app__query">
+            <Aggregations />
+            <Groupings />
+            <Filters />
+          </div>
           <Actions />
           <Result />
         </main>
         <div className="app__right-sider">
+          <h2>Saved queries</h2>
           <SavedQueries />
         </div>
       </div>

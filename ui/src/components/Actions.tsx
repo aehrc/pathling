@@ -5,7 +5,7 @@
 import * as React from "react";
 import { useState } from "react";
 import { connect } from "react-redux";
-import { Alignment, Button, Navbar } from "@blueprintjs/core";
+import { Alignment, Button, Intent, Navbar } from "@blueprintjs/core";
 
 import {
   cancelAndClearResult,
@@ -100,8 +100,8 @@ function Actions(props: Props) {
         <Button
           className="actions__execute"
           icon="play"
+          intent={Intent.PRIMARY}
           text={loading ? "Executing..." : "Execute"}
-          minimal={true}
           onClick={handleClickExecute}
           disabled={loading}
         />
@@ -110,7 +110,6 @@ function Actions(props: Props) {
             className="actions__clear"
             icon="delete"
             text={loading ? "Cancel" : "Clear"}
-            minimal={true}
             onClick={loading ? handleCancelQuery : handleClickClearQuery}
           />
         )}
@@ -119,7 +118,6 @@ function Actions(props: Props) {
             className="actions__save"
             icon="floppy-disk"
             text="Save"
-            minimal={true}
             onClick={handleClickSave}
           />
         )}

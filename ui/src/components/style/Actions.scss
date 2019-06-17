@@ -4,26 +4,22 @@
 
 .actions {
   box-shadow: none !important;
-  border-radius: 0.3em;
+  background-color: white;
   color: #314659;
-  padding: 0 0.2em !important;
-  background-color: transparent !important;
 
   &__execute,
   &__clear,
   &__save {
+    margin-right: 0.5em;
     user-select: none;
+    border-radius: 0.3em !important;
   }
 
   &__execute {
+    margin-right: 1em;
+
     .bp3-icon {
       color: #15b371 !important;
-    }
-  }
-
-  &__clear {
-    .bp3-icon {
-      color: #db3737 !important;
     }
   }
 }
