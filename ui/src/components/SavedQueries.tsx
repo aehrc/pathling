@@ -20,6 +20,7 @@ import Alerter from "./Alerter";
 
 interface Props {
   queries: SavedQueriesWithStatuses;
+  loadedQueryName: string;
   loadQuery: (name: string, query: SavedQuery) => any;
   setElementTreeFocus: (focus: string) => any;
   deleteQuery: (name: string) => any;
@@ -29,6 +30,7 @@ interface Props {
 function SavedQueries(props: Props) {
   const {
     queries,
+    loadedQueryName,
     loadQuery,
     setElementTreeFocus,
     deleteQuery,
@@ -76,7 +78,11 @@ function SavedQueries(props: Props) {
     return (
       <li
         key={i}
-        className="saved-queries__query"
+        className={
+          query === loadedQueryName
+            ? "saved-queries__query saved-queries__query--loaded"
+            : "saved-queries__query"
+        }
         onClick={() => handleQueryClick(query)}
       >
         <ButtonGroup className="saved-queries__query-actions" minimal>
@@ -101,7 +107,8 @@ function SavedQueries(props: Props) {
 }
 
 const mapStateToProps = (state: GlobalState) => ({
-    queries: state.savedQueries.queries
+    queries: state.savedQueries.queries,
+    loadedQueryName: state.query.name
   }),
   actions = { loadQuery, setElementTreeFocus, deleteQuery, saveQuery };
 
