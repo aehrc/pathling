@@ -7,6 +7,7 @@ import {
   PartialFilter,
   PartialGrouping
 } from "./QueryReducer";
+import { SavedQuery } from "./SavedQueriesReducer";
 
 export interface AddAggregation {
   type: "ADD_AGGREGATION";
@@ -60,6 +61,12 @@ export interface ClearQuery {
   type: "CLEAR_QUERY";
 }
 
+export interface LoadQuery {
+  type: "LOAD_QUERY";
+  name: string;
+  query: SavedQuery;
+}
+
 export type QueryAction =
   | AddAggregation
   | RemoveAggregation
@@ -70,7 +77,8 @@ export type QueryAction =
   | AddFilter
   | RemoveFilter
   | UpdateFilter
-  | ClearQuery;
+  | ClearQuery
+  | LoadQuery;
 
 export const addAggregation = (expression: string): AddAggregation => ({
   type: "ADD_AGGREGATION",
@@ -125,4 +133,10 @@ export const updateFilter = (index: number, filter: PartialFilter) => ({
 
 export const clearQuery = (): ClearQuery => ({
   type: "CLEAR_QUERY"
+});
+
+export const loadQuery = (name: string, query: SavedQuery) => ({
+  type: "LOAD_QUERY",
+  name,
+  query
 });

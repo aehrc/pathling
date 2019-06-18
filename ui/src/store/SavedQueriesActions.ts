@@ -178,5 +178,5 @@ export const deleteQuery = (name: string) => (dispatch: Dispatch): any => {
       catchSaveQueryError("Error saving query to local storage: " + e.message)
     );
   }
-  dispatch(receiveSaveQueryResponse(name));
+  dispatch(receiveDeleteQueryResponse(name));
 };

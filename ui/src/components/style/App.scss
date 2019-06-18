@@ -67,6 +67,14 @@ $border-color: $query-bg;
     & > h2 {
       grid-column: 1 / span 3;
       grid-row: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-transform: unset;
+    }
+
+    &-title {
+      text-transform: uppercase;
     }
 
     & > {

@@ -10,6 +10,10 @@ export interface QueryState {
   filters: Filter[];
 }
 
+export interface QueryStateWithName extends QueryState {
+  name?: string;
+}
+
 export interface Aggregation {
   label?: string;
   expression: string;
@@ -40,13 +44,16 @@ export interface PartialFilter {
   expression?: string;
 }
 
-const initialState: QueryState = {
+const initialState: QueryStateWithName = {
   aggregations: [],
   groupings: [],
   filters: []
 };
 
-export default (state = initialState, action: QueryAction): QueryState => {
+export default (
+  state = initialState,
+  action: QueryAction
+): QueryStateWithName => {
   switch (action.type) {
     case "ADD_AGGREGATION":
       return {
@@ -112,6 +119,12 @@ export default (state = initialState, action: QueryAction): QueryState => {
       };
     case "CLEAR_QUERY":
       return initialState;
+    case "LOAD_QUERY":
+      return {
+        ...state,
+        ...action.query,
+        name: action.name
+      };
     default:
       return state;
   }

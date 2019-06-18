@@ -2,29 +2,25 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
+import { FocusStyleManager } from "@blueprintjs/core";
+import Resizable from "re-resizable";
 import * as React from "react";
 import { connect } from "react-redux";
-import { FocusStyleManager, Position, Toaster } from "@blueprintjs/core";
-import Resizable from "re-resizable";
+import { GlobalState } from "../store";
 
 import ElementTree from "./ElementTree";
-import Aggregations from "./Aggregations";
 import Filters from "./Filters";
 import Groupings from "./Groupings";
-import Actions from "./Actions";
 import Result from "./Result";
-import { GlobalState } from "../store";
-import { ErrorState } from "../store/ErrorReducer";
-import * as actions from "../store/ConfigActions";
-import "./style/App.scss";
 import SavedQueries from "./SavedQueries";
-
-const Alerter = Toaster.create({
-  position: Position.BOTTOM
-});
+import * as actions from "../store/ConfigActions";
+import Actions from "./Actions";
+import Aggregations from "./Aggregations";
+import Alerter from "./Alerter";
+import "./style/App.scss";
 
 interface Props {
-  error?: ErrorState | null;
+  queryName?: string;
   fetchConfig: () => void;
 }
 
@@ -62,24 +58,10 @@ class App extends React.Component<Props, State> {
    * Catches any uncaught errors that are thrown during the rendering of
    * components.
    */
-  componentDidCatch(error: ErrorState): void {
+  componentDidCatch(error: Error): void {
     Alerter.show({ message: error.message, intent: "danger" });
     // eslint-disable-next-line no-console
     console.error(error);
-  }
-
-  /**
-   * Responds to the update of error details into global state by showing an
-   * alert and logging the error to the console.
-   */
-  componentDidUpdate(prevProps: any): void {
-    const { error } = this.props;
-    if (error && prevProps.error !== error) {
-      Alerter.show({ message: error.message, intent: "danger" });
-      const opOutcome = error.opOutcome;
-      // eslint-disable-next-line no-console
-      if (opOutcome) console.error(opOutcome);
-    }
   }
 
   handleResize(event: any): void {
@@ -94,7 +76,8 @@ class App extends React.Component<Props, State> {
   }
 
   render() {
-    const { siderWidth } = this.state;
+    const { queryName } = this.props,
+      { siderWidth } = this.state;
 
     return (
       <div
@@ -124,7 +107,10 @@ class App extends React.Component<Props, State> {
           </Resizable>
         </div>
         <main className="app__content">
-          <h2>Query</h2>
+          <h2>
+            <span className="app__content-title">Query</span>
+            {queryName ? ` \u2014 \u201c${queryName}\u201d` : null}
+          </h2>
           <div className="app__query">
             <Aggregations />
             <Groupings />
@@ -143,7 +129,7 @@ class App extends React.Component<Props, State> {
 }
 
 const mapStateToProps = (state: GlobalState) => ({
-  error: state.error
+  queryName: state.query.name
 });
 
 export default connect(

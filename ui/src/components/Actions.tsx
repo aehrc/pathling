@@ -2,38 +2,36 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
+import { Alignment, Button, Intent, Navbar } from "@blueprintjs/core";
 import * as React from "react";
 import { useState } from "react";
 import { connect } from "react-redux";
-import { Alignment, Button, Intent, Navbar } from "@blueprintjs/core";
+import { GlobalState } from "../store";
+import { clearElementTreeFocus } from "../store/ElementTreeActions";
+import { clearQuery } from "../store/QueryActions";
+import { QueryStateWithName } from "../store/QueryReducer";
 
 import {
   cancelAndClearResult,
   clearResult,
   fetchQueryResult
 } from "../store/ResultActions";
-import { clearQuery } from "../store/QueryActions";
-import { clearElementTreeFocus } from "../store/ElementTreeActions";
-import { catchError, clearError } from "../store/ErrorActions";
-import { QueryState } from "../store/QueryReducer";
 import { ResultState } from "../store/ResultReducer";
-import { GlobalState } from "../store";
-import "./style/Actions.scss";
-import SaveDialog from "./SaveDialog";
-import { SavedQuery } from "../store/SavedQueriesReducer";
 import { saveQuery } from "../store/SavedQueriesActions";
+import { SavedQuery } from "../store/SavedQueriesReducer";
+import Alerter from "./Alerter";
+import SaveDialog from "./SaveDialog";
+import "./style/Actions.scss";
 
 interface Props {
-  query: QueryState;
+  query: QueryStateWithName;
   result: ResultState;
   fhirServer?: string;
   fetchQueryResult?: (fhirServer: string) => any;
   clearQuery?: () => any;
   clearResult?: () => any;
   cancelAndClearResult?: () => any;
-  catchError?: (message: string) => any;
   clearElementTreeFocus?: () => any;
-  clearError?: () => any;
   saveQuery?: (name: string, query: SavedQuery) => any;
 }
 
@@ -49,8 +47,6 @@ function Actions(props: Props) {
       clearResult,
       cancelAndClearResult,
       clearElementTreeFocus,
-      clearError,
-      catchError,
       saveQuery,
       query,
       result: { loading, executionTime },
@@ -63,7 +59,10 @@ function Actions(props: Props) {
 
   const handleClickExecute = () => {
     if (!fhirServer) {
-      catchError("Missing FHIR server configuration value");
+      Alerter.show({
+        message: "Missing FHIR server configuration value",
+        intent: "danger"
+      });
     } else {
       fetchQueryResult(fhirServer);
     }
@@ -73,16 +72,22 @@ function Actions(props: Props) {
     clearQuery();
     clearResult();
     clearElementTreeFocus();
-    clearError();
   };
 
   const handleCancelQuery = () => {
     cancelAndClearResult();
-    clearError();
   };
 
   const handleClickSave = () => {
-    setSaveDialogOpen(true);
+    if (query.name) {
+      saveQuery(query.name, query);
+      Alerter.show({
+        message: `Query saved as \u201c${query.name}\u201d`,
+        intent: "success"
+      });
+    } else {
+      setSaveDialogOpen(true);
+    }
   };
 
   const handleCloseSaveDialog = () => {
@@ -150,8 +155,6 @@ const mapStateToProps = (state: GlobalState) => ({
     clearResult,
     cancelAndClearResult,
     clearElementTreeFocus,
-    catchError,
-    clearError,
     saveQuery
   };
 

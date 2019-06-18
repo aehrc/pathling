@@ -4,13 +4,12 @@
 
 import http, { AxiosPromise, CancelTokenSource } from "axios";
 import { Dispatch } from "redux";
+import Alerter from "../components/Alerter";
 
 import {
   OpOutcomeError,
   opOutcomeFromJsonResponse
 } from "../fhir/OperationOutcome";
-import { GlobalState } from "./index";
-import { Aggregation, Filter, Grouping, QueryState } from "./QueryReducer";
 import {
   AggregationRequestParameter,
   FilterRequestParameter,
@@ -18,7 +17,8 @@ import {
   Parameter,
   Parameters
 } from "../fhir/Types";
-import { catchError, clearError } from "./ErrorActions";
+import { GlobalState } from "./index";
+import { Aggregation, Filter, Grouping, QueryState } from "./QueryReducer";
 
 interface SendQueryRequest {
   type: "SEND_QUERY_REQUEST";
@@ -147,7 +147,6 @@ export const fetchQueryResult = (fhirServer: string) => (
   if (aggregations.length === 0) {
     dispatch(catchQueryError("Query must have at least one aggregation."));
   }
-  if (getState().error) dispatch(clearError());
   let cancel = http.CancelToken.source();
   const result = http
     .post(`${fhirServer}/$aggregate-query`, query, {
@@ -175,10 +174,10 @@ export const fetchQueryResult = (fhirServer: string) => (
       ) {
         const opOutcome = opOutcomeFromJsonResponse(error.response.data);
         dispatch(catchQueryError(opOutcome.message, opOutcome));
-        dispatch(catchError(opOutcome.message, opOutcome));
+        Alerter.show({ message: opOutcome.message, intent: "danger" });
       } else {
         dispatch(catchQueryError(error.message));
-        dispatch(catchError(error.message));
+        Alerter.show({ message: error.message, intent: "danger" });
       }
     });
   dispatch(sendQueryRequest(performance.now(), cancel));

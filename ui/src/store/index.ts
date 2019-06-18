@@ -8,24 +8,22 @@ import {
   combineReducers,
   createStore
 } from "redux";
-import thunk, { ThunkDispatch } from "redux-thunk";
 import { createLogger } from "redux-logger";
+import thunk, { ThunkDispatch } from "redux-thunk";
+import ConfigReducer, { ConfigState } from "./ConfigReducer";
+import ElementTreeReducer, { ElementTreeState } from "./ElementTreeReducer";
+import QueryReducer, { QueryStateWithName } from "./QueryReducer";
 
 import ResultReducer, { ResultState } from "./ResultReducer";
-import QueryReducer, { QueryState } from "./QueryReducer";
-import ElementTreeReducer, { ElementTreeState } from "./ElementTreeReducer";
-import ConfigReducer, { ConfigState } from "./ConfigReducer";
-import ErrorReducer, { ErrorState } from "./ErrorReducer";
 import { loadQueries } from "./SavedQueriesActions";
 import SavedQueriesReducer, { SavedQueriesState } from "./SavedQueriesReducer";
 
 export interface GlobalState {
-  query: QueryState;
+  query: QueryStateWithName;
   result: ResultState;
   elementTree: ElementTreeState;
   savedQueries: SavedQueriesState;
   config: ConfigState;
-  error: ErrorState;
 }
 
 const Reducer = combineReducers({
@@ -33,8 +31,7 @@ const Reducer = combineReducers({
   result: ResultReducer,
   elementTree: ElementTreeReducer,
   savedQueries: SavedQueriesReducer,
-  config: ConfigReducer,
-  error: ErrorReducer
+  config: ConfigReducer
 });
 
 // Enable console logging of Redux actions for all environments other than
