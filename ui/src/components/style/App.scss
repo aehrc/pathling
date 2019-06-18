@@ -91,6 +91,14 @@ $border-color: $query-bg;
         grid-column: 1 / span 3;
         grid-row: 4;
         position: relative;
+
+        // This fixes a quirk in Firefox around treatment of padding and overflow,
+        // see: https://www.brunildo.org/test/overscrollback.html
+        &:after {
+          content: "";
+          display: block;
+          height: 1em;
+        }
       }
     }
   }
