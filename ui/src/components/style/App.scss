@@ -43,11 +43,6 @@ $border-color: $query-bg;
       overflow-y: auto;
       width: unset !important;
     }
-
-    &-handle div {
-      width: 1em !important;
-      right: 0 !important;
-    }
   }
 
   .saved-queries {
@@ -57,49 +52,53 @@ $border-color: $query-bg;
   &__content {
     grid-column: 2;
     grid-row: 1;
-    display: grid;
-    grid-template-columns: 1em auto 1em;
-    grid-template-rows: 23.7667px auto 5em 1fr;
-    background-color: $query-bg;
-    overflow: hidden;
-    min-width: 500px;
 
-    & > h2 {
-      grid-column: 1 / span 3;
-      grid-row: 1;
+    &-inner {
+      height: 100vh !important;
+      width: unset !important;
+      display: grid;
+      grid-template-columns: 1em auto 1em;
+      grid-template-rows: 23.7667px auto 5em 1fr;
+      background-color: $query-bg;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      text-transform: unset;
+
+      & > h2 {
+        grid-column: 1 / span 3;
+        grid-row: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-transform: unset;
+      }
+
+      & > {
+        .actions {
+          grid-column: 1 / span 3;
+          grid-row: 3;
+          padding: 0.2em 1em;
+          background-color: $query-bg;
+          position: relative;
+          top: 0.5em;
+        }
+
+        .result {
+          grid-column: 1 / span 3;
+          grid-row: 4;
+          position: relative;
+
+          // This fixes a quirk in Firefox around treatment of padding and overflow,
+          // see: https://www.brunildo.org/test/overscrollback.html
+          &:after {
+            content: "";
+            display: block;
+            height: 1em;
+          }
+        }
+      }
     }
 
     &-title {
       text-transform: uppercase;
-    }
-
-    & > {
-      .actions {
-        grid-column: 1 / span 3;
-        grid-row: 3;
-        padding: 0.2em 1em;
-        background-color: $query-bg;
-        position: relative;
-        top: 0.5em;
-      }
-
-      .result {
-        grid-column: 1 / span 3;
-        grid-row: 4;
-        position: relative;
-
-        // This fixes a quirk in Firefox around treatment of padding and overflow,
-        // see: https://www.brunildo.org/test/overscrollback.html
-        &:after {
-          content: "";
-          display: block;
-          height: 1em;
-        }
-      }
     }
   }
 

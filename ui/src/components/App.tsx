@@ -25,7 +25,8 @@ interface Props {
 }
 
 interface State {
-  siderWidth: number;
+  leftSiderWidth: number;
+  rightSiderWidth: number;
 }
 
 // Causes focus styles to be hidden while the user interacts using the mouse
@@ -42,7 +43,7 @@ FocusStyleManager.onlyShowFocusOnTabs();
 class App extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { siderWidth: 300 };
+    this.state = { leftSiderWidth: 300, rightSiderWidth: 300 };
     this.handleResize = this.handleResize.bind(this);
   }
 
@@ -64,60 +65,69 @@ class App extends React.Component<Props, State> {
     console.error(error);
   }
 
-  handleResize(event: any): void {
-    const { clientX: siderWidth } = event;
+  handleResize(event: any, direction: any): void {
+    const siderWidthKey =
+        direction === "left" ? "leftSiderWidth" : "rightSiderWidth",
+      siderWidth =
+        direction === "left"
+          ? event.clientX
+          : window.innerWidth - event.clientX;
     if (siderWidth < 200) {
-      this.setState(() => ({ siderWidth: 200 }));
+      this.setState(() => ({ ...this.state, [siderWidthKey]: 200 }));
     } else if (siderWidth > 600) {
-      this.setState(() => ({ siderWidth: 600 }));
+      this.setState(() => ({ ...this.state, [siderWidthKey]: 600 }));
     } else {
-      this.setState(() => ({ siderWidth }));
+      this.setState(() => ({ ...this.state, [siderWidthKey]: siderWidth }));
     }
   }
 
   render() {
     const { queryName } = this.props,
-      { siderWidth } = this.state;
+      { leftSiderWidth, rightSiderWidth } = this.state;
 
     return (
       <div
         className="app"
-        style={{ gridTemplateColumns: `${siderWidth}px auto 300px` }}
+        style={{
+          gridTemplateColumns: `${leftSiderWidth}px auto ${rightSiderWidth}px`
+        }}
       >
         <div className="app__left-sider">
           <h2>Data elements</h2>
+          <ElementTree />
+        </div>
+        <main className="app__content">
           <Resizable
-            className="app__left-sider-inner"
+            className="app__content-inner"
             enable={{
               top: false,
               right: true,
               bottom: false,
-              left: false,
+              left: true,
               topRight: false,
               bottomRight: false,
               bottomLeft: false,
               topLeft: false
             }}
-            minWidth={200}
-            maxWidth={600}
-            handleWrapperClass="app__left-sider-handle"
+            handleWrapperClass="app__content-handle"
+            handleStyles={{
+              right: { width: "1em", right: "0" },
+              left: { width: "1em", left: "0" }
+            }}
             onResize={this.handleResize}
           >
-            <ElementTree />
+            <h2>
+              <span className="app__content-title">Query</span>
+              {queryName ? ` \u2014 \u201c${queryName}\u201d` : null}
+            </h2>
+            <div className="app__query">
+              <Aggregations />
+              <Groupings />
+              <Filters />
+            </div>
+            <Actions />
+            <Result />
           </Resizable>
-        </div>
-        <main className="app__content">
-          <h2>
-            <span className="app__content-title">Query</span>
-            {queryName ? ` \u2014 \u201c${queryName}\u201d` : null}
-          </h2>
-          <div className="app__query">
-            <Aggregations />
-            <Groupings />
-            <Filters />
-          </div>
-          <Actions />
-          <Result />
         </main>
         <div className="app__right-sider">
           <h2>Saved queries</h2>
