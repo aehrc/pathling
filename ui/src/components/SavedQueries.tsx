@@ -83,7 +83,10 @@ function SavedQueries(props: Props) {
             ? "saved-queries__query saved-queries__query--loaded"
             : "saved-queries__query"
         }
-        onClick={() => handleQueryClick(query)}
+        onClick={
+          query === loadedQueryName ? null : () => handleQueryClick(query)
+        }
+        title="Load this query"
       >
         <ButtonGroup className="saved-queries__query-actions" minimal>
           <Button icon="edit" title="Edit query name" small />

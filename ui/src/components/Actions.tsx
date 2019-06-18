@@ -109,6 +109,7 @@ function Actions(props: Props) {
           text={loading ? "Executing..." : "Execute"}
           onClick={handleClickExecute}
           disabled={loading}
+          title="Execute the current query"
         />
         {queryIsEmpty() ? null : (
           <Button
@@ -116,6 +117,7 @@ function Actions(props: Props) {
             icon="delete"
             text={loading ? "Cancel" : "Clear"}
             onClick={loading ? handleCancelQuery : handleClickClearQuery}
+            title="Clear the current query"
           />
         )}
         {queryIsEmpty() ? null : (
@@ -124,6 +126,7 @@ function Actions(props: Props) {
             icon="floppy-disk"
             text="Save"
             onClick={handleClickSave}
+            title="Save the query"
           />
         )}
       </Navbar.Group>
