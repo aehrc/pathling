@@ -3,7 +3,17 @@
  */
 
 import { Button, ButtonGroup } from "@blueprintjs/core";
-import React, { ChangeEvent, MouseEvent, KeyboardEvent, useState } from "react";
+import React, {
+  ChangeEvent,
+  KeyboardEvent,
+  MouseEvent,
+  useEffect,
+  useRef,
+  useState
+} from "react";
+import { connect } from "react-redux";
+import { GlobalState } from "../store";
+import { receiveSavedQueryFocus } from "../store/SavedQueriesActions";
 import { SavedQuery, SavedQueryWithStatus } from "../store/SavedQueriesReducer";
 import "./style/EditableQueryItem.scss";
 
@@ -11,11 +21,20 @@ interface Props {
   query: SavedQueryWithStatus;
   onClickAccept?: (query: SavedQuery) => any;
   onClickCancel?: (query: SavedQuery) => any;
+  focusedQuery?: string;
+  receiveSavedQueryFocus?: () => any;
 }
 
 function EditableQueryItem(props: Props) {
-  const { query, onClickAccept, onClickCancel } = props,
-    [updatedQuery, updateQuery] = useState(query);
+  const {
+      query,
+      onClickAccept,
+      onClickCancel,
+      focusedQuery,
+      receiveSavedQueryFocus
+    } = props,
+    [updatedQuery, updateQuery] = useState(query),
+    textareaRef = useRef(null);
 
   const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     updateQuery({ ...updatedQuery, name: event.target.value });
@@ -35,6 +54,14 @@ function EditableQueryItem(props: Props) {
     if (onClickCancel) onClickCancel(updatedQuery);
   };
 
+  useEffect(() => {
+    if (query.id === focusedQuery) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+      receiveSavedQueryFocus();
+    }
+  });
+
   return (
     <li className="editable-query-item">
       <textarea
@@ -42,6 +69,7 @@ function EditableQueryItem(props: Props) {
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         value={updatedQuery.name}
+        ref={textareaRef}
       />
       <ButtonGroup className="editable-query-item__actions" minimal>
         <Button
@@ -63,4 +91,14 @@ function EditableQueryItem(props: Props) {
   );
 }
 
-export default EditableQueryItem;
+const mapStateToProps = (state: GlobalState) => ({
+    focusedQuery: state.savedQueries.focusedQuery
+  }),
+  actions = {
+    receiveSavedQueryFocus
+  };
+
+export default connect(
+  mapStateToProps,
+  actions
+)(EditableQueryItem);

@@ -21,11 +21,13 @@ export type SavedQueriesWithStatuses = SavedQueryWithStatus[];
 export type SavedQueriesState = {
   queries: SavedQueriesWithStatuses;
   status: "not-initialised" | "loading" | "loaded" | "error";
+  focusedQuery?: string;
 };
 
 const initialState: SavedQueriesState = {
   queries: [],
-  status: "not-initialised"
+  status: "not-initialised",
+  focusedQuery: null
 };
 
 export default (
@@ -57,7 +59,8 @@ export default (
         ...state,
         queries: state.queries.map(query =>
           query.id === action.id ? { ...query, status: "editing" } : query
-        )
+        ),
+        focusedQuery: action.id
       };
     case "CANCEL_EDITING_SAVED_QUERY":
       return {
@@ -76,7 +79,8 @@ export default (
         ...state,
         queries: state.queries.map(query =>
           query.id === action.id ? { ...query, status: "editing" } : query
-        )
+        ),
+        focusedQuery: action.id
       };
     case "CATCH_SAVE_QUERY_ERROR":
       return {
@@ -129,6 +133,11 @@ export default (
           },
           []
         )
+      };
+    case "RECEIVE_SAVED_QUERY_FOCUS":
+      return {
+        ...state,
+        focusedQuery: null
       };
     default:
       return state;

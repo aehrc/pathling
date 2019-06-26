@@ -78,6 +78,10 @@ export interface CatchDeleteQueryError {
   id: string;
 }
 
+export interface ReceiveSavedQueryFocus {
+  type: "RECEIVE_SAVED_QUERY_FOCUS";
+}
+
 export type SavedQueriesAction =
   | SendLoadQueriesRequest
   | ReceiveLoadQueriesResponse
@@ -92,7 +96,8 @@ export type SavedQueriesAction =
   | CatchUpdateQueryError
   | SendDeleteQueryRequest
   | ReceiveDeleteQueryResponse
-  | CatchDeleteQueryError;
+  | CatchDeleteQueryError
+  | ReceiveSavedQueryFocus;
 
 export const sendLoadQueriesRequest = (): SendLoadQueriesRequest => ({
   type: "SEND_LOAD_QUERIES_REQUEST"
@@ -171,6 +176,10 @@ export const receiveDeleteQueryResponse = (
 export const catchDeleteQueryError = (id: string): CatchDeleteQueryError => ({
   type: "CATCH_DELETE_QUERY_ERROR",
   id
+});
+
+export const receiveSavedQueryFocus = (): ReceiveSavedQueryFocus => ({
+  type: "RECEIVE_SAVED_QUERY_FOCUS"
 });
 
 const localStorageKey = "savedQueries";
