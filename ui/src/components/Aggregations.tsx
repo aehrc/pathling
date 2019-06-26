@@ -74,6 +74,7 @@ function Aggregations(props: Props) {
           round={true}
           large={true}
           onRemove={event => handleRemove(event, i)}
+          title="Edit this expression"
         >
           {aggregation.label}
         </Tag>

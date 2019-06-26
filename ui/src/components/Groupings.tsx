@@ -68,6 +68,7 @@ function Groupings(props: Props) {
           round={true}
           large={true}
           onRemove={event => handleRemove(event, i)}
+          title="Edit this expression"
         >
           {grouping.label}
         </Tag>
