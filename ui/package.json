@@ -24,6 +24,7 @@
     "@types/react-dom": "^16.8.4",
     "@types/react-redux": "^7.0.8",
     "@types/redux-logger": "^3.0.7",
+    "@types/uuid": "^3.4.4",
     "autoprefixer": "^9.5.1",
     "css-loader": "^2.1.1",
     "file-loader": "^3.0.1",

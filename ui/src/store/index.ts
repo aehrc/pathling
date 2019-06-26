@@ -12,14 +12,14 @@ import { createLogger } from "redux-logger";
 import thunk, { ThunkDispatch } from "redux-thunk";
 import ConfigReducer, { ConfigState } from "./ConfigReducer";
 import ElementTreeReducer, { ElementTreeState } from "./ElementTreeReducer";
-import QueryReducer, { QueryStateWithName } from "./QueryReducer";
+import QueryReducer, { QueryState } from "./QueryReducer";
 
 import ResultReducer, { ResultState } from "./ResultReducer";
 import { loadQueries } from "./SavedQueriesActions";
 import SavedQueriesReducer, { SavedQueriesState } from "./SavedQueriesReducer";
 
 export interface GlobalState {
-  query: QueryStateWithName;
+  query: QueryState;
   result: ResultState;
   elementTree: ElementTreeState;
   savedQueries: SavedQueriesState;

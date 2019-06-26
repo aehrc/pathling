@@ -9,14 +9,14 @@ import isEqual from "lodash.isequal";
 
 import "./style/Result.scss";
 import { Parameter } from "../fhir/Types";
-import { QueryState } from "../store/QueryReducer";
+import { Query } from "../store/QueryReducer";
 import { ReactElement } from "react";
 import { GlobalState } from "../store";
 
 interface Props {
   loading: boolean;
   groupings: Parameter[];
-  query: QueryState;
+  query: Query;
   stale: boolean;
 }
 

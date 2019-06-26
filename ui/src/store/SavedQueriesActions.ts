@@ -2,8 +2,11 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import { SavedQueries, SavedQuery } from "./SavedQueriesReducer";
 import { Dispatch } from "redux";
+import Alerter from "../components/Alerter";
+import { Query } from "./QueryReducer";
+import { SavedQueries, SavedQuery } from "./SavedQueriesReducer";
+import uuidv4 from "uuid/v4";
 
 export interface SendLoadQueriesRequest {
   type: "SEND_LOAD_QUERIES_REQUEST";
@@ -16,38 +19,51 @@ export interface ReceiveLoadQueriesResponse {
 
 export interface CatchLoadQueriesError {
   type: "CATCH_LOAD_QUERIES_ERROR";
-  message: string;
 }
 
 export interface SendSaveQueryRequest {
   type: "SEND_SAVE_QUERY_REQUEST";
-  name: string;
   query: SavedQuery;
 }
 
 export interface ReceiveSaveQueryResponse {
   type: "RECEIVE_SAVE_QUERY_RESPONSE";
-  name: string;
+  id: string;
 }
 
 export interface CatchSaveQueryError {
   type: "CATCH_SAVE_QUERY_ERROR";
-  message: string;
+  id: string;
+}
+
+export interface SendUpdateQueryRequest {
+  type: "SEND_UPDATE_QUERY_REQUEST";
+  query: SavedQuery;
+}
+
+export interface ReceiveUpdateQueryResponse {
+  type: "RECEIVE_UPDATE_QUERY_RESPONSE";
+  id: string;
+}
+
+export interface CatchUpdateQueryError {
+  type: "CATCH_UPDATE_QUERY_ERROR";
+  id: string;
 }
 
 export interface SendDeleteQueryRequest {
   type: "SEND_DELETE_QUERY_REQUEST";
-  name: string;
+  id: string;
 }
 
 export interface ReceiveDeleteQueryResponse {
   type: "RECEIVE_DELETE_QUERY_RESPONSE";
-  name: string;
+  id: string;
 }
 
 export interface CatchDeleteQueryError {
   type: "CATCH_DELETE_QUERY_ERROR";
-  message: string;
+  id: string;
 }
 
 export type SavedQueriesAction =
@@ -56,7 +72,10 @@ export type SavedQueriesAction =
   | CatchLoadQueriesError
   | SendSaveQueryRequest
   | ReceiveSaveQueryResponse
-  | CatchLoadQueriesError
+  | CatchSaveQueryError
+  | SendUpdateQueryRequest
+  | ReceiveUpdateQueryResponse
+  | CatchUpdateQueryError
   | SendDeleteQueryRequest
   | ReceiveDeleteQueryResponse
   | CatchDeleteQueryError;
@@ -72,111 +91,223 @@ export const receiveLoadQueriesResponse = (
   queries
 });
 
-export const catchLoadQueriesError = (
-  message: string
-): CatchLoadQueriesError => ({ type: "CATCH_LOAD_QUERIES_ERROR", message });
+export const catchLoadQueriesError = (): CatchLoadQueriesError => ({
+  type: "CATCH_LOAD_QUERIES_ERROR"
+});
 
 export const sendSaveQueryRequest = (
-  name: string,
   query: SavedQuery
-): SendSaveQueryRequest => ({ type: "SEND_SAVE_QUERY_REQUEST", name, query });
+): SendSaveQueryRequest => ({
+  type: "SEND_SAVE_QUERY_REQUEST",
+  query
+});
 
 export const receiveSaveQueryResponse = (
-  name: string
-): ReceiveSaveQueryResponse => ({ type: "RECEIVE_SAVE_QUERY_RESPONSE", name });
-
-export const catchSaveQueryError = (message: string): CatchSaveQueryError => ({
-  type: "CATCH_SAVE_QUERY_ERROR",
-  message
+  id: string
+): ReceiveSaveQueryResponse => ({
+  type: "RECEIVE_SAVE_QUERY_RESPONSE",
+  id
 });
 
-export const sendDeleteQueryRequest = (
-  name: string
-): SendDeleteQueryRequest => ({ type: "SEND_DELETE_QUERY_REQUEST", name });
+export const catchSaveQueryError = (id: string): CatchSaveQueryError => ({
+  type: "CATCH_SAVE_QUERY_ERROR",
+  id
+});
+
+export const sendUpdateQueryRequest = (
+  query: SavedQuery
+): SendUpdateQueryRequest => ({
+  type: "SEND_UPDATE_QUERY_REQUEST",
+  query
+});
+
+export const receiveUpdateQueryResponse = (
+  id: string
+): ReceiveUpdateQueryResponse => ({
+  type: "RECEIVE_UPDATE_QUERY_RESPONSE",
+  id
+});
+
+export const catchUpdateQueryError = (id: string): CatchUpdateQueryError => ({
+  type: "CATCH_UPDATE_QUERY_ERROR",
+  id
+});
+
+export const sendDeleteQueryRequest = (id: string): SendDeleteQueryRequest => ({
+  type: "SEND_DELETE_QUERY_REQUEST",
+  id
+});
 
 export const receiveDeleteQueryResponse = (
-  name: string
+  id: string
 ): ReceiveDeleteQueryResponse => ({
   type: "RECEIVE_DELETE_QUERY_RESPONSE",
-  name
+  id
 });
 
-export const catchDeleteQueryError = (
-  message: string
-): CatchDeleteQueryError => ({
+export const catchDeleteQueryError = (id: string): CatchDeleteQueryError => ({
   type: "CATCH_DELETE_QUERY_ERROR",
-  message
+  id
 });
 
 const localStorageKey = "savedQueries";
+
+const getLocalStorage = (
+  dispatch: Dispatch,
+  action: SavedQueriesAction
+): Storage => {
+  const storage = window.localStorage;
+  if (!storage) {
+    dispatch(action);
+    Alerter.show({ message: "Local storage not available", intent: "danger" });
+    return null;
+  } else {
+    return storage;
+  }
+};
 
 /**
  * Load all queries. The current implementation uses local storage.
  */
 export const loadQueries = () => (dispatch: Dispatch): any => {
-  const storage = window.localStorage;
-  if (!storage) dispatch(catchLoadQueriesError("Local storage not available"));
+  const storage = getLocalStorage(dispatch, catchLoadQueriesError());
+  if (!storage) return;
   dispatch(sendLoadQueriesRequest());
   try {
     const existingQueriesJSON = storage.getItem(localStorageKey),
       existingQueries =
-        existingQueriesJSON === null ? {} : JSON.parse(existingQueriesJSON);
+        existingQueriesJSON === null ? [] : JSON.parse(existingQueriesJSON);
     dispatch(receiveLoadQueriesResponse(existingQueries));
   } catch (e) {
-    dispatch(
-      catchLoadQueriesError(
-        "Error loading queries from local storage: " + e.message
-      )
-    );
+    dispatch(catchLoadQueriesError());
+    Alerter.show({
+      message: "Error loading queries from local storage: " + e.message,
+      intent: "danger"
+    });
   }
 };
 
 /**
  * Saves a query. The current implementation uses local storage.
  */
-export const saveQuery = (name: string, query: SavedQuery) => (
-  dispatch: Dispatch
-): any => {
-  const storage = window.localStorage;
-  if (!storage) dispatch(catchSaveQueryError("Local storage not available"));
-  dispatch(sendSaveQueryRequest(name, query));
+export const saveQuery = (query: Query) => (dispatch: Dispatch): any => {
+  const identifiedQuery: SavedQuery = {
+      id: uuidv4(),
+      name: "Untitled query",
+      query
+    },
+    storage = getLocalStorage(
+      dispatch,
+      catchSaveQueryError(identifiedQuery.id)
+    );
+  if (!storage) return;
+  dispatch(sendSaveQueryRequest(identifiedQuery));
   try {
     const existingQueriesJSON = storage.getItem(localStorageKey),
       existingQueries =
-        existingQueriesJSON === null ? {} : JSON.parse(existingQueriesJSON),
-      newQueries = { ...existingQueries, [name]: query };
+        existingQueriesJSON === null ? [] : JSON.parse(existingQueriesJSON);
+    if (
+      existingQueries.find(
+        (existingQuery: SavedQuery) => existingQuery.id === identifiedQuery.id
+      )
+    ) {
+      dispatch(catchSaveQueryError(identifiedQuery.id));
+      Alerter.show({
+        message: "An unexpected error occurred",
+        intent: "danger"
+      });
+      console.debug(
+        `Attempted to save with existing query ID: ${identifiedQuery.id}`
+      );
+    }
+    const newQueries = existingQueries.concat(identifiedQuery);
     storage.setItem(localStorageKey, JSON.stringify(newQueries));
   } catch (e) {
-    dispatch(
-      catchSaveQueryError("Error saving query to local storage: " + e.message)
-    );
+    dispatch(catchSaveQueryError(identifiedQuery.id));
+    Alerter.show({
+      message: "Error saving query to local storage: " + e.message,
+      intent: "danger"
+    });
   }
-  dispatch(receiveSaveQueryResponse(name));
+  dispatch(receiveSaveQueryResponse(identifiedQuery.id));
+};
+
+/**
+ * Updates an existing query. The current implementation uses local storage.
+ */
+export const updateQuery = (query: SavedQuery) => (dispatch: Dispatch): any => {
+  const storage = getLocalStorage(dispatch, catchUpdateQueryError(query.id));
+  if (!storage) return;
+  dispatch(sendUpdateQueryRequest(query));
+  try {
+    const existingQueriesJSON = storage.getItem(localStorageKey),
+      existingQueries =
+        existingQueriesJSON === null ? [] : JSON.parse(existingQueriesJSON);
+    if (
+      !existingQueries.find(
+        (existingQuery: SavedQuery) => existingQuery.id === query.id
+      )
+    ) {
+      dispatch(catchUpdateQueryError(query.id));
+      Alerter.show({
+        message: "An unexpected error occurred",
+        intent: "danger"
+      });
+      console.debug(`Attempted to update non-existent query ID: ${query.id}`);
+      return;
+    }
+    const newQueries = existingQueries.map((existingQuery: SavedQuery) =>
+      existingQuery.id === query.id ? query : existingQuery
+    );
+    storage.setItem(localStorageKey, JSON.stringify(newQueries));
+  } catch (e) {
+    dispatch(catchUpdateQueryError(query.id));
+    Alerter.show({
+      message: "Error saving query to local storage: " + e.message,
+      intent: "danger"
+    });
+  }
+  dispatch(receiveUpdateQueryResponse(query.id));
 };
 
 /**
  * Deletes a query. The current implementation uses local storage.
  */
-export const deleteQuery = (name: string) => (dispatch: Dispatch): any => {
-  const storage = window.localStorage;
-  if (!storage) dispatch(catchDeleteQueryError("Local storage not available"));
-  dispatch(sendDeleteQueryRequest(name));
+export const deleteQuery = (id: string) => (dispatch: Dispatch): any => {
+  const storage = getLocalStorage(dispatch, catchDeleteQueryError(id));
+  if (!storage) return;
+  dispatch(sendDeleteQueryRequest(id));
   try {
     const existingQueriesJSON = storage.getItem(localStorageKey),
       existingQueries =
-        existingQueriesJSON === null ? {} : JSON.parse(existingQueriesJSON),
-      newQueries = Object.keys(existingQueries).reduce(
-        (result: SavedQueries, key) => {
-          if (key !== name) result[key] = existingQueries[key];
-          return result;
-        },
-        {}
-      );
+        existingQueriesJSON === null ? [] : JSON.parse(existingQueriesJSON);
+    if (
+      !existingQueries.find(
+        (existingQuery: SavedQuery) => existingQuery.id === id
+      )
+    ) {
+      dispatch(catchDeleteQueryError(id));
+      Alerter.show({
+        message: "An unexpected error occurred",
+        intent: "danger"
+      });
+      console.debug(`Attempted to delete non-existent query ID: ${id}`);
+      return;
+    }
+    const newQueries = existingQueries.reduce(
+      (result: SavedQueries, existingQuery: SavedQuery) => {
+        if (existingQuery.id !== id) result = result.concat(existingQuery);
+        return result;
+      },
+      []
+    );
     storage.setItem(localStorageKey, JSON.stringify(newQueries));
   } catch (e) {
-    dispatch(
-      catchSaveQueryError("Error saving query to local storage: " + e.message)
-    );
+    dispatch(catchDeleteQueryError(id));
+    Alerter.show({
+      message: "Error saving query to local storage: " + e.message,
+      intent: "danger"
+    });
   }
-  dispatch(receiveDeleteQueryResponse(name));
+  dispatch(receiveDeleteQueryResponse(id));
 };

@@ -2,13 +2,13 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import { QueryState } from "./QueryReducer";
+import { Query } from "./QueryReducer";
 import { ResultAction } from "./ResultActions";
 import { Parameter, Parameters } from "../fhir/Types";
 import { CancelTokenSource } from "axios";
 
 export interface ResultState {
-  query: QueryState;
+  query: Query;
   groupings: Parameter[];
   loading: boolean;
   startTime: number;

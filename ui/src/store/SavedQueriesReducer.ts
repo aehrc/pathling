@@ -2,18 +2,21 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import { QueryState } from "./QueryReducer";
+import { Query } from "./QueryReducer";
 import { SavedQueriesAction } from "./SavedQueriesActions";
 
-export interface SavedQuery extends QueryState {}
-
-export interface SavedQueryWithStatus {
-  query: SavedQuery;
-  status: "saving" | "loaded" | "deleting" | "error";
+export interface SavedQuery {
+  id: string;
+  name: string;
+  query: Query;
 }
 
-export type SavedQueries = { [name: string]: SavedQuery };
-export type SavedQueriesWithStatuses = { [name: string]: SavedQueryWithStatus };
+export interface SavedQueryWithStatus extends SavedQuery {
+  status: "saving" | "unnamed" | "saved" | "deleting" | "error";
+}
+
+export type SavedQueries = SavedQuery[];
+export type SavedQueriesWithStatuses = SavedQueryWithStatus[];
 
 export type SavedQueriesState = {
   queries: SavedQueriesWithStatuses;
@@ -21,7 +24,7 @@ export type SavedQueriesState = {
 };
 
 const initialState: SavedQueriesState = {
-  queries: {},
+  queries: [],
   status: "not-initialised"
 };
 
@@ -38,16 +41,10 @@ export default (
     case "RECEIVE_LOAD_QUERIES_RESPONSE":
       return {
         ...state,
-        queries: Object.keys(action.queries).reduce(
-          (result: SavedQueriesWithStatuses, key) => {
-            result[key] = {
-              query: { ...action.queries[key] },
-              status: "loaded"
-            };
-            return result;
-          },
-          {}
-        ),
+        queries: action.queries.map(query => ({
+          ...query,
+          status: "saved"
+        })),
         status: "loaded"
       };
     case "CATCH_LOAD_QUERIES_ERROR":
@@ -58,36 +55,65 @@ export default (
     case "SEND_SAVE_QUERY_REQUEST":
       return {
         ...state,
-        queries: {
-          ...state.queries,
-          [action.name]: { query: { ...action.query }, status: "saving" }
-        }
+        queries: state.queries.concat({ ...action.query, status: "saving" })
       };
     case "RECEIVE_SAVE_QUERY_RESPONSE":
       return {
         ...state,
-        queries: {
-          ...state.queries,
-          [action.name]: { ...state.queries[action.name], status: "loaded" }
-        }
+        queries: state.queries.map(query =>
+          query.id === action.id ? { ...query, status: "unnamed" } : query
+        )
+      };
+    case "CATCH_SAVE_QUERY_ERROR":
+      return {
+        ...state,
+        queries: state.queries.map(query =>
+          query.id === action.id ? { ...query, status: "error" } : query
+        )
+      };
+    case "SEND_UPDATE_QUERY_REQUEST":
+      return {
+        ...state,
+        queries: state.queries.map(query =>
+          query.id === action.query.id
+            ? { ...action.query, status: "saving" }
+            : query
+        )
+      };
+    case "RECEIVE_UPDATE_QUERY_RESPONSE":
+      return {
+        ...state,
+        queries: state.queries.map(query =>
+          query.id === action.id ? { ...query, status: "saved" } : query
+        )
+      };
+    case "CATCH_UPDATE_QUERY_ERROR":
+      return {
+        ...state,
+        queries: state.queries.map(query =>
+          query.id === action.id ? { ...query, status: "error" } : query
+        )
       };
     case "SEND_DELETE_QUERY_REQUEST":
       return {
         ...state,
-        queries: {
-          ...state.queries,
-          [action.name]: { ...state.queries[action.name], status: "deleting" }
-        }
+        queries: state.queries.map(query =>
+          query.id === action.id ? { ...query, status: "deleting" } : query
+        )
       };
     case "RECEIVE_DELETE_QUERY_RESPONSE":
       return {
         ...state,
-        queries: Object.keys(state.queries).reduce(
-          (result: SavedQueriesWithStatuses, key) => {
-            if (key !== action.name) result[key] = state.queries[key];
+        queries: state.queries.reduce(
+          (
+            result: SavedQueriesWithStatuses,
+            existingQuery: SavedQueryWithStatus
+          ) => {
+            if (existingQuery.id !== action.id)
+              result = result.concat(existingQuery);
             return result;
           },
-          {}
+          []
         )
       };
     default:

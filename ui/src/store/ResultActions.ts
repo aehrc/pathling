@@ -18,7 +18,7 @@ import {
   Parameters
 } from "../fhir/Types";
 import { GlobalState } from "./index";
-import { Aggregation, Filter, Grouping, QueryState } from "./QueryReducer";
+import { Aggregation, Filter, Grouping, Query } from "./QueryReducer";
 
 interface SendQueryRequest {
   type: "SEND_QUERY_REQUEST";
@@ -29,7 +29,7 @@ interface SendQueryRequest {
 interface ReceiveQueryResult {
   type: "RECEIVE_QUERY_RESULT";
   result: Parameters;
-  query: QueryState;
+  query: Query;
   executionTime: number;
 }
 
@@ -60,7 +60,7 @@ export const sendQueryRequest = (
 
 export const receiveQueryResult = (
   result: Parameters,
-  query: QueryState,
+  query: Query,
   executionTime: number
 ): ReceiveQueryResult => ({
   type: "RECEIVE_QUERY_RESULT",
@@ -133,13 +133,14 @@ export const fetchQueryResult = (fhirServer: string) => (
   dispatch: Dispatch,
   getState: () => GlobalState
 ): AxiosPromise => {
-  const aggregations = getState().query.aggregations,
-    groupings = getState().query.groupings,
-    filters = getState().query.filters,
+  const {
+      query: { query }
+    } = getState(),
+    { aggregations, groupings, filters } = query,
     aggregationParams: Parameter[] = aggregations.map(aggregationToParam),
     groupingParams: Parameter[] = groupings.map(groupingToParam),
     filterParams: Parameter[] = filters.map(filterToParam),
-    query: Parameters = {
+    parameters: Parameters = {
       resourceType: "Parameters",
       parameter: aggregationParams.concat(groupingParams).concat(filterParams)
     };
@@ -149,7 +150,7 @@ export const fetchQueryResult = (fhirServer: string) => (
   }
   let cancel = http.CancelToken.source();
   const result = http
-    .post(`${fhirServer}/$aggregate-query`, query, {
+    .post(`${fhirServer}/$aggregate-query`, parameters, {
       headers: {
         "Content-Type": "application/fhir+json",
         Accept: "application/fhir+json"
@@ -162,7 +163,7 @@ export const fetchQueryResult = (fhirServer: string) => (
       const result = response.data,
         startTime = getState().result.startTime,
         executionTime = startTime ? performance.now() - startTime : null;
-      dispatch(receiveQueryResult(result, getState().query, executionTime));
+      dispatch(receiveQueryResult(result, query, executionTime));
       return result;
     })
     .catch(error => {

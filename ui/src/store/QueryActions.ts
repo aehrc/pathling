@@ -135,7 +135,7 @@ export const clearQuery = (): ClearQuery => ({
   type: "CLEAR_QUERY"
 });
 
-export const loadQuery = (name: string, query: SavedQuery) => ({
+export const loadQuery = (query: SavedQuery) => ({
   type: "LOAD_QUERY",
   name,
   query

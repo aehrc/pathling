@@ -87,11 +87,7 @@ function Filters(props: Props) {
   );
 }
 
-const mapStateToProps = (state: GlobalState) => ({
-  aggregations: state.query.aggregations,
-  groupings: state.query.groupings,
-  filters: state.query.filters
-});
+const mapStateToProps = (state: GlobalState) => ({ ...state.query.query });
 
 const actions = { ...queryActions, ...elementTreeActions };
 

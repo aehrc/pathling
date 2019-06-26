@@ -4,27 +4,24 @@
 
 import { Alignment, Button, Intent, Navbar } from "@blueprintjs/core";
 import * as React from "react";
-import { useState } from "react";
 import { connect } from "react-redux";
 import { GlobalState } from "../store";
 import { clearElementTreeFocus } from "../store/ElementTreeActions";
 import { clearQuery } from "../store/QueryActions";
-import { QueryStateWithName } from "../store/QueryReducer";
-
+import { Query, QueryState } from "../store/QueryReducer";
 import {
   cancelAndClearResult,
   clearResult,
   fetchQueryResult
 } from "../store/ResultActions";
 import { ResultState } from "../store/ResultReducer";
-import { saveQuery } from "../store/SavedQueriesActions";
+import { saveQuery, updateQuery } from "../store/SavedQueriesActions";
 import { SavedQuery } from "../store/SavedQueriesReducer";
 import Alerter from "./Alerter";
-import SaveDialog from "./SaveDialog";
 import "./style/Actions.scss";
 
 interface Props {
-  query: QueryStateWithName;
+  query: QueryState;
   result: ResultState;
   fhirServer?: string;
   fetchQueryResult?: (fhirServer: string) => any;
@@ -32,7 +29,8 @@ interface Props {
   clearResult?: () => any;
   cancelAndClearResult?: () => any;
   clearElementTreeFocus?: () => any;
-  saveQuery?: (name: string, query: SavedQuery) => any;
+  saveQuery?: (query: Query) => any;
+  updateQuery?: (query: SavedQuery) => any;
 }
 
 /**
@@ -42,20 +40,23 @@ interface Props {
  */
 function Actions(props: Props) {
   const {
-      fetchQueryResult,
-      clearQuery,
-      clearResult,
-      cancelAndClearResult,
-      clearElementTreeFocus,
-      saveQuery,
-      query,
-      result: { loading, executionTime },
-      fhirServer
-    } = props,
-    [saveDialogIsOpen, setSaveDialogOpen] = useState(false);
+    fetchQueryResult,
+    clearQuery,
+    clearResult,
+    cancelAndClearResult,
+    clearElementTreeFocus,
+    saveQuery,
+    query: queryState,
+    query: { query },
+    query: {
+      query: { aggregations, groupings }
+    },
+    result: { loading, executionTime },
+    fhirServer
+  } = props;
 
   const queryIsEmpty = (): boolean =>
-    query.aggregations.length === 0 && query.groupings.length === 0;
+    aggregations.length === 0 && groupings.length === 0;
 
   const handleClickExecute = () => {
     if (!fhirServer) {
@@ -79,24 +80,19 @@ function Actions(props: Props) {
   };
 
   const handleClickSave = () => {
-    if (query.name) {
-      saveQuery(query.name, query);
+    if (queryState.id && queryState.name) {
+      updateQuery(queryState as SavedQuery);
       Alerter.show({
-        message: `Query saved as \u201c${query.name}\u201d`,
+        message: `Query \u201c${queryState.name}\u201d updated`,
         intent: "success"
       });
     } else {
-      setSaveDialogOpen(true);
+      saveQuery(query);
+      Alerter.show({
+        message: `New query saved`,
+        intent: "success"
+      });
     }
-  };
-
-  const handleCloseSaveDialog = () => {
-    setSaveDialogOpen(false);
-  };
-
-  const handleSave = (name: string) => {
-    saveQuery(name, query);
-    setSaveDialogOpen(false);
   };
 
   return (
@@ -138,11 +134,6 @@ function Actions(props: Props) {
           </span>
         </Navbar.Group>
       ) : null}
-      <SaveDialog
-        isOpen={saveDialogIsOpen}
-        onClose={handleCloseSaveDialog}
-        onSave={handleSave}
-      />
     </Navbar>
   );
 }
@@ -158,7 +149,8 @@ const mapStateToProps = (state: GlobalState) => ({
     clearResult,
     cancelAndClearResult,
     clearElementTreeFocus,
-    saveQuery
+    saveQuery,
+    updateQuery
   };
 
 export default connect(

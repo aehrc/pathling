@@ -4,14 +4,17 @@
 
 import { QueryAction } from "./QueryActions";
 
-export interface QueryState {
+export interface Query {
   aggregations: Aggregation[];
   groupings: Grouping[];
   filters: Filter[];
 }
 
-export interface QueryStateWithName extends QueryState {
+export interface QueryState {
+  id?: string;
   name?: string;
+  unsavedChanges: boolean;
+  query: Query;
 }
 
 export interface Aggregation {
@@ -44,78 +47,116 @@ export interface PartialFilter {
   expression?: string;
 }
 
-const initialState: QueryStateWithName = {
-  aggregations: [],
-  groupings: [],
-  filters: []
+const initialState: QueryState = {
+  query: {
+    aggregations: [],
+    groupings: [],
+    filters: []
+  },
+  unsavedChanges: false
 };
 
-export default (
-  state = initialState,
-  action: QueryAction
-): QueryStateWithName => {
+export default (state = initialState, action: QueryAction): QueryState => {
   switch (action.type) {
     case "ADD_AGGREGATION":
       return {
         ...state,
-        aggregations: state.aggregations.concat({
-          expression: action.expression,
-          label: action.expression
-        })
+        query: {
+          ...state.query,
+          aggregations: state.query.aggregations.concat({
+            expression: action.expression,
+            label: action.expression
+          })
+        },
+        unsavedChanges: true
       };
     case "REMOVE_AGGREGATION":
       return {
         ...state,
-        aggregations: state.aggregations.filter((_, i) => i !== action.index)
+        query: {
+          ...state.query,
+          aggregations: state.query.aggregations.filter(
+            (_, i) => i !== action.index
+          )
+        },
+        unsavedChanges: true
       };
     case "UPDATE_AGGREGATION":
       return {
         ...state,
-        aggregations: state.aggregations.map((aggregation, i) =>
-          i === action.index
-            ? { ...aggregation, ...action.aggregation }
-            : aggregation
-        )
+        query: {
+          ...state.query,
+          aggregations: state.query.aggregations.map((aggregation, i) =>
+            i === action.index
+              ? { ...aggregation, ...action.aggregation }
+              : aggregation
+          )
+        },
+        unsavedChanges: true
       };
     case "ADD_GROUPING":
       return {
         ...state,
-        groupings: state.groupings.concat({
-          expression: action.expression,
-          label: action.expression
-        })
+        query: {
+          ...state.query,
+          groupings: state.query.groupings.concat({
+            expression: action.expression,
+            label: action.expression
+          })
+        },
+        unsavedChanges: true
       };
     case "REMOVE_GROUPING":
       return {
         ...state,
-        groupings: state.groupings.filter((_, i) => i !== action.index)
+        query: {
+          ...state.query,
+          groupings: state.query.groupings.filter((_, i) => i !== action.index)
+        },
+        unsavedChanges: true
       };
     case "UPDATE_GROUPING":
       return {
         ...state,
-        groupings: state.groupings.map((grouping, i) =>
-          i === action.index ? { ...grouping, ...action.grouping } : grouping
-        )
+        query: {
+          ...state.query,
+          groupings: state.query.groupings.map((grouping, i) =>
+            i === action.index ? { ...grouping, ...action.grouping } : grouping
+          )
+        },
+        unsavedChanges: true
       };
     case "ADD_FILTER":
       return {
         ...state,
-        filters: state.filters.concat({
-          expression: action.expression,
-          label: action.expression
-        })
+        query: {
+          ...state.query,
+          filters: state.query.filters.concat({
+            expression: action.expression,
+            label: action.expression
+          })
+        },
+        unsavedChanges: true
       };
     case "REMOVE_FILTER":
       return {
         ...state,
-        filters: state.filters.filter((_, i) => i !== action.index)
+        query: {
+          ...state.query,
+          filters: state.query.filters.filter((_, i) => i !== action.index)
+        },
+        unsavedChanges: true
       };
     case "UPDATE_FILTER":
       return {
         ...state,
-        filters: state.filters.map((filter, i) =>
-          i === action.index ? { ...filter, ...action.filter } : filter
-        )
+        query: {
+          ...state.query,
+          filters: state.query.filters.map((filter, i) =>
+            i === action.index ? { ...filter, ...action.filter } : filter
+          )
+        },
+        unsavedChanges: true
       };
     case "CLEAR_QUERY":
       return initialState;
@@ -123,7 +164,7 @@ export default (
       return {
         ...state,
         ...action.query,
-        name: action.name
+        unsavedChanges: false
       };
     default:
       return state;
