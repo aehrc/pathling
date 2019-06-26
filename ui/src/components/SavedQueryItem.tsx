@@ -5,6 +5,7 @@
 import React, { MouseEvent } from "react";
 import { Button, ButtonGroup } from "@blueprintjs/core";
 import { SavedQuery, SavedQueryWithStatus } from "../store/SavedQueriesReducer";
+import "./style/SavedQueryItem.scss";
 
 interface Props {
   query: SavedQueryWithStatus;
@@ -31,13 +32,13 @@ function SavedQueryItem(props: Props) {
     <li
       className={
         loaded
-          ? "saved-queries__query saved-queries__query--loaded"
-          : "saved-queries__query"
+          ? "saved-query-item saved-query-item--loaded"
+          : "saved-query-item"
       }
       onClick={loaded ? null : () => onClick(query)}
       title="Load this query"
     >
-      <ButtonGroup className="saved-queries__query-actions" minimal>
+      <ButtonGroup className="saved-query-item__actions" minimal>
         <Button
           icon="edit"
           title="Edit query name"
@@ -51,7 +52,7 @@ function SavedQueryItem(props: Props) {
           onClick={handleClickDelete}
         />
       </ButtonGroup>
-      <div className="saved-queries__query-name">{query.name}</div>
+      <div className="saved-query-item__name">{query.name}</div>
     </li>
   );
 }

@@ -4,6 +4,8 @@
 
 import { Dispatch } from "redux";
 import Alerter from "../components/Alerter";
+import { GlobalState } from "./index";
+import { clearQuery, loadQuery } from "./QueryActions";
 import { Query } from "./QueryReducer";
 import { SavedQueries, SavedQuery } from "./SavedQueriesReducer";
 import uuidv4 from "uuid/v4";
@@ -19,6 +21,16 @@ export interface ReceiveLoadQueriesResponse {
 
 export interface CatchLoadQueriesError {
   type: "CATCH_LOAD_QUERIES_ERROR";
+}
+
+export interface EditSavedQuery {
+  type: "EDIT_SAVED_QUERY";
+  id: string;
+}
+
+export interface CancelEditingSavedQuery {
+  type: "CANCEL_EDITING_SAVED_QUERY";
+  id: string;
 }
 
 export interface SendSaveQueryRequest {
@@ -70,6 +82,8 @@ export type SavedQueriesAction =
   | SendLoadQueriesRequest
   | ReceiveLoadQueriesResponse
   | CatchLoadQueriesError
+  | EditSavedQuery
+  | CancelEditingSavedQuery
   | SendSaveQueryRequest
   | ReceiveSaveQueryResponse
   | CatchSaveQueryError
@@ -94,6 +108,15 @@ export const receiveLoadQueriesResponse = (
 export const catchLoadQueriesError = (): CatchLoadQueriesError => ({
   type: "CATCH_LOAD_QUERIES_ERROR"
 });
+
+export const editSavedQuery = (id: string): EditSavedQuery => ({
+  type: "EDIT_SAVED_QUERY",
+  id
+});
+
+export const cancelEditingSavedQuery = (
+  id: string
+): CancelEditingSavedQuery => ({ type: "CANCEL_EDITING_SAVED_QUERY", id });
 
 export const sendSaveQueryRequest = (
   query: SavedQuery
@@ -230,6 +253,7 @@ export const saveQuery = (query: Query) => (dispatch: Dispatch): any => {
     });
   }
   dispatch(receiveSaveQueryResponse(identifiedQuery.id));
+  dispatch(loadQuery(identifiedQuery));
 };
 
 /**
@@ -268,12 +292,16 @@ export const updateQuery = (query: SavedQuery) => (dispatch: Dispatch): any => {
     });
   }
   dispatch(receiveUpdateQueryResponse(query.id));
+  dispatch(loadQuery(query));
 };
 
 /**
  * Deletes a query. The current implementation uses local storage.
  */
-export const deleteQuery = (id: string) => (dispatch: Dispatch): any => {
+export const deleteQuery = (id: string) => (
+  dispatch: Dispatch,
+  getState: () => GlobalState
+): any => {
   const storage = getLocalStorage(dispatch, catchDeleteQueryError(id));
   if (!storage) return;
   dispatch(sendDeleteQueryRequest(id));
@@ -310,4 +338,7 @@ export const deleteQuery = (id: string) => (dispatch: Dispatch): any => {
     });
   }
   dispatch(receiveDeleteQueryResponse(id));
+  if (getState().query.id === id) {
+    dispatch(clearQuery());
+  }
 };

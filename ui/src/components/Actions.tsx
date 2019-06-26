@@ -7,7 +7,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { GlobalState } from "../store";
 import { clearElementTreeFocus } from "../store/ElementTreeActions";
-import { clearQuery } from "../store/QueryActions";
+import { clearQuery, loadQuery } from "../store/QueryActions";
 import { Query, QueryState } from "../store/QueryReducer";
 import {
   cancelAndClearResult,
@@ -31,6 +31,7 @@ interface Props {
   clearElementTreeFocus?: () => any;
   saveQuery?: (query: Query) => any;
   updateQuery?: (query: SavedQuery) => any;
+  loadQuery?: (query: SavedQuery) => any;
 }
 
 /**
@@ -46,17 +47,19 @@ function Actions(props: Props) {
     cancelAndClearResult,
     clearElementTreeFocus,
     saveQuery,
+    updateQuery,
     query: queryState,
     query: { query },
     query: {
-      query: { aggregations, groupings }
+      query: { aggregations, groupings },
+      unsavedChanges
     },
     result: { loading, executionTime },
     fhirServer
   } = props;
 
   const queryIsEmpty = (): boolean =>
-    aggregations.length === 0 && groupings.length === 0;
+    aggregations.length === 0 && groupings.length === 0 && !unsavedChanges;
 
   const handleClickExecute = () => {
     if (!fhirServer) {
@@ -116,7 +119,7 @@ function Actions(props: Props) {
             title="Clear the current query"
           />
         )}
-        {queryIsEmpty() ? null : (
+        {queryIsEmpty() || !unsavedChanges ? null : (
           <Button
             className="actions__save"
             icon="floppy-disk"
@@ -150,7 +153,8 @@ const mapStateToProps = (state: GlobalState) => ({
     cancelAndClearResult,
     clearElementTreeFocus,
     saveQuery,
-    updateQuery
+    updateQuery,
+    loadQuery
   };
 
 export default connect(

@@ -1,0 +1,47 @@
+/*!
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
+.editable-query-item {
+  list-style-type: none;
+  padding: 0;
+  position: relative;
+
+  &__input {
+    border: 2px solid #0d8050;
+    border-radius: 0.3em;
+    width: 100%;
+    box-shadow: 0 0 0 1px rgba(16, 22, 26, 0.1), 0 0 0 rgba(16, 22, 26, 0),
+      0 1px 1px rgba(16, 22, 26, 0.2);
+    resize: none;
+    text-transform: none;
+    line-height: 1.28581;
+    letter-spacing: 0;
+    font-size: 14px;
+    font-weight: 400;
+    color: #182026;
+    font-family: -apple-system, "BlinkMacSystemFont", "Segoe UI", "Roboto",
+      "Oxygen", "Ubuntu", "Cantarell", "Open Sans", "Helvetica Neue", "Icons16",
+      sans-serif;
+    padding: 1em 4em 1em 1em;
+
+    &:hover {
+      box-shadow: 0 0 0 1px rgba(16, 22, 26, 0.1),
+        0 1px 1px rgba(16, 22, 26, 0.2), 0 2px 6px rgba(16, 22, 26, 0.2);
+    }
+  }
+
+  &__actions {
+    position: absolute;
+    top: 0.5em;
+    right: 0.5em;
+
+    &__accept .bp3-icon {
+      color: #0d8050 !important;
+    }
+
+    &__cancel .bp3-icon {
+      color: #c23030 !important;
+    }
+  }
+}

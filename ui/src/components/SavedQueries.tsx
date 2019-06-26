@@ -7,8 +7,13 @@ import { connect } from "react-redux";
 import { getSubjectResourceFromExpression } from "../fhir/ResourceTree";
 import { setElementTreeFocus } from "../store/ElementTreeActions";
 import { Query } from "../store/QueryReducer";
-import { deleteQuery, saveQuery } from "../store/SavedQueriesActions";
-
+import {
+  cancelEditingSavedQuery,
+  deleteQuery,
+  editSavedQuery,
+  saveQuery,
+  updateQuery
+} from "../store/SavedQueriesActions";
 import {
   SavedQueriesWithStatuses,
   SavedQuery,
@@ -18,6 +23,7 @@ import { GlobalState } from "../store";
 import { loadQuery } from "../store/QueryActions";
 import "./style/SavedQueries.scss";
 import Alerter from "./Alerter";
+import EditableQueryItem from "./EditableQueryItem";
 import SavedQueryItem from "./SavedQueryItem";
 
 interface Props {
@@ -27,6 +33,9 @@ interface Props {
   setElementTreeFocus: (focus: string) => any;
   deleteQuery: (id: string) => any;
   saveQuery: (query: Query) => any;
+  updateQuery: (query: SavedQuery) => any;
+  editSavedQuery: (id: string) => any;
+  cancelEditingSavedQuery: (id: string) => any;
 }
 
 function SavedQueries(props: Props) {
@@ -35,7 +44,10 @@ function SavedQueries(props: Props) {
     loadedQueryId,
     loadQuery,
     setElementTreeFocus,
-    deleteQuery
+    deleteQuery,
+    updateQuery,
+    editSavedQuery,
+    cancelEditingSavedQuery
   } = props;
 
   const getFocusResource = (query: SavedQuery): string => {
@@ -57,13 +69,17 @@ function SavedQueries(props: Props) {
     return allSubjectResources.length > 0 ? allSubjectResources[0] : null;
   };
 
-  const handleQueryClick = (query: SavedQuery) => {
+  const handleClickQuery = (query: SavedQuery) => {
     const focusResource = getFocusResource(query);
     loadQuery(query);
     setElementTreeFocus(focusResource);
   };
 
-  const handleDeleteClick = (query: SavedQuery) => {
+  const handleClickEdit = (query: SavedQuery) => {
+    editSavedQuery(query.id);
+  };
+
+  const handleClickDelete = (query: SavedQuery) => {
     deleteQuery(query.id);
     Alerter.show({
       message: `Query \u201c${query.name}\u201d deleted`,
@@ -82,13 +98,30 @@ function SavedQueries(props: Props) {
     // });
   };
 
+  const handleClickAccept = (query: SavedQuery) => {
+    updateQuery(query);
+  };
+
+  const handleClickCancel = (query: SavedQuery) => {
+    cancelEditingSavedQuery(query.id);
+  };
+
   const renderQuery = (query: SavedQueryWithStatus): ReactElement => {
-    return (
+    return query.status === "editing" ? (
+      <EditableQueryItem
+        key={query.id}
+        query={query}
+        onClickAccept={handleClickAccept}
+        onClickCancel={handleClickCancel}
+      />
+    ) : (
       <SavedQueryItem
+        key={query.id}
         query={query}
         loaded={query.id === loadedQueryId}
-        onClick={handleQueryClick}
-        onClickDelete={handleDeleteClick}
+        onClick={handleClickQuery}
+        onClickEdit={handleClickEdit}
+        onClickDelete={handleClickDelete}
       />
     );
   };
@@ -104,7 +137,15 @@ const mapStateToProps = (state: GlobalState) => ({
     queries: state.savedQueries.queries,
     loadedQueryId: state.query.id
   }),
-  actions = { loadQuery, setElementTreeFocus, deleteQuery, saveQuery };
+  actions = {
+    loadQuery,
+    setElementTreeFocus,
+    deleteQuery,
+    saveQuery,
+    updateQuery,
+    editSavedQuery,
+    cancelEditingSavedQuery
+  };
 
 export default connect(
   mapStateToProps,

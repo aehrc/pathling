@@ -12,7 +12,7 @@ export interface SavedQuery {
 }
 
 export interface SavedQueryWithStatus extends SavedQuery {
-  status: "saving" | "unnamed" | "saved" | "deleting" | "error";
+  status: "saving" | "editing" | "saved" | "deleting" | "error";
 }
 
 export type SavedQueries = SavedQuery[];
@@ -52,6 +52,20 @@ export default (
         ...state,
         status: "error"
       };
+    case "EDIT_SAVED_QUERY":
+      return {
+        ...state,
+        queries: state.queries.map(query =>
+          query.id === action.id ? { ...query, status: "editing" } : query
+        )
+      };
+    case "CANCEL_EDITING_SAVED_QUERY":
+      return {
+        ...state,
+        queries: state.queries.map(query =>
+          query.id === action.id ? { ...query, status: "saved" } : query
+        )
+      };
     case "SEND_SAVE_QUERY_REQUEST":
       return {
         ...state,
@@ -61,7 +75,7 @@ export default (
       return {
         ...state,
         queries: state.queries.map(query =>
-          query.id === action.id ? { ...query, status: "unnamed" } : query
+          query.id === action.id ? { ...query, status: "editing" } : query
         )
       };
     case "CATCH_SAVE_QUERY_ERROR":
