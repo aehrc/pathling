@@ -12,10 +12,7 @@ $title-bg: #394b59;
 $border-color: $query-bg;
 
 .app {
-  display: grid;
-  grid-template-rows: auto;
-  height: 100%;
-  position: relative;
+  display: flex;
 
   h2 {
     margin: 0;
@@ -27,44 +24,37 @@ $border-color: $query-bg;
     color: white;
   }
 
-  &__left-sider {
-    grid-column: 1;
-    grid-row: 1;
-    margin: 0;
+  &__left-sider,
+  &__right-sider {
+    height: 100vh;
+    //max-width: 300px;
     background-color: $sider-bg;
-    border-right: 1px solid $border-color;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-
-    &-inner {
-      flex: 1;
-      overflow-y: auto;
-      width: unset !important;
-    }
   }
 
-  .saved-queries {
-    flex: 1;
+  &__left-sider,
+  &__right-sider,
+  &__content {
+    display: flex;
+    flex-direction: column;
   }
 
   &__content {
-    grid-column: 2;
-    grid-row: 1;
+    flex-grow: 1;
+    border-left: 1px solid $border-color;
+    border-right: 1px solid $border-color;
+
+    &-title {
+      text-transform: uppercase;
+    }
 
     &-inner {
-      height: 100vh !important;
+      height: 100vh;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
       width: unset !important;
-      display: grid;
-      grid-template-columns: 1em auto 1em;
-      grid-template-rows: 23.7667px auto 5em 1fr;
-      background-color: $query-bg;
-      overflow: hidden;
 
       & > h2 {
-        grid-column: 1 / span 3;
-        grid-row: 1;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -73,18 +63,13 @@ $border-color: $query-bg;
 
       & > {
         .actions {
-          grid-column: 1 / span 3;
-          grid-row: 3;
-          padding: 0.2em 1em;
           background-color: $query-bg;
-          position: relative;
-          top: 0.5em;
+          height: 4.4em;
+          padding: 0.4em 1em;
         }
 
         .result {
-          grid-column: 1 / span 3;
-          grid-row: 4;
-          position: relative;
+          flex-grow: 1;
 
           // This fixes a quirk in Firefox around treatment of padding and overflow,
           // see: https://www.brunildo.org/test/overscrollback.html
@@ -96,31 +81,33 @@ $border-color: $query-bg;
         }
       }
     }
+  }
 
-    &-title {
-      text-transform: uppercase;
-    }
+  .element-tree,
+  .saved-queries {
+    flex: 1;
+    overflow-y: auto;
+    -ms-overflow-style: -ms-autohiding-scrollbar;
   }
 
   &__query {
-    grid-column: 2;
-    grid-row: 2;
     display: grid;
-    grid-template-columns: auto 1em auto;
+    grid-template-columns: 1em auto 1em auto 1em;
     grid-template-rows: 1em auto 1em auto;
+    background-color: $query-bg;
 
     & > .aggregations {
-      grid-column: 1;
+      grid-column: 2;
       grid-row: 2;
     }
 
     & > .groupings {
-      grid-column: 3;
+      grid-column: 4;
       grid-row: 2;
     }
 
     & > .filters {
-      grid-column: 1 / span 3;
+      grid-column: 2 / span 3;
       grid-row: 4;
     }
   }
@@ -129,7 +116,6 @@ $border-color: $query-bg;
     grid-column: 3;
     grid-row: 1;
     background-color: $sider-bg;
-    border-left: 1px solid $border-color;
     display: flex;
     flex-direction: column;
   }

@@ -71,11 +71,13 @@ class App extends React.Component<Props, State> {
       siderWidth =
         direction === "left"
           ? event.clientX
-          : window.innerWidth - event.clientX;
-    if (siderWidth < 200) {
-      this.setState(() => ({ ...this.state, [siderWidthKey]: 200 }));
-    } else if (siderWidth > 600) {
-      this.setState(() => ({ ...this.state, [siderWidthKey]: 600 }));
+          : window.innerWidth - event.clientX,
+      minSiderWidth = 0,
+      maxSiderWidth = 999999;
+    if (siderWidth < minSiderWidth) {
+      this.setState(() => ({ ...this.state, [siderWidthKey]: minSiderWidth }));
+    } else if (siderWidth > maxSiderWidth) {
+      this.setState(() => ({ ...this.state, [siderWidthKey]: maxSiderWidth }));
     } else {
       this.setState(() => ({ ...this.state, [siderWidthKey]: siderWidth }));
     }
@@ -86,13 +88,11 @@ class App extends React.Component<Props, State> {
       { leftSiderWidth, rightSiderWidth } = this.state;
 
     return (
-      <div
-        className="app"
-        style={{
-          gridTemplateColumns: `${leftSiderWidth}px auto ${rightSiderWidth}px`
-        }}
-      >
-        <div className="app__left-sider">
+      <div className="app">
+        <div
+          className="app__left-sider"
+          style={{ flexBasis: `${leftSiderWidth}px` }}
+        >
           <h2>Data elements</h2>
           <ElementTree />
         </div>
@@ -111,8 +111,8 @@ class App extends React.Component<Props, State> {
             }}
             handleWrapperClass="app__content-handle"
             handleStyles={{
-              right: { width: "1em", right: "0" },
-              left: { width: "1em", left: "0" }
+              right: { width: "1em", right: "-0.5em" },
+              left: { width: "1em", left: "-0.5em" }
             }}
             onResize={this.handleResize}
           >
@@ -129,7 +129,10 @@ class App extends React.Component<Props, State> {
             <Result />
           </Resizable>
         </main>
-        <div className="app__right-sider">
+        <div
+          className="app__right-sider"
+          style={{ flexBasis: `${rightSiderWidth}px` }}
+        >
           <h2>Saved queries</h2>
           <SavedQueries />
         </div>
