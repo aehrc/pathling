@@ -2,19 +2,17 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import * as React from "react";
-import { connect } from "react-redux";
-import { Spinner, HTMLTable } from "@blueprintjs/core";
+import { HTMLTable } from "@blueprintjs/core";
 import isEqual from "lodash.isequal";
-
-import "./style/Result.scss";
-import { Parameter } from "../fhir/Types";
-import { Query } from "../store/QueryReducer";
+import * as React from "react";
 import { ReactElement } from "react";
+import { connect } from "react-redux";
+import { Parameter } from "../fhir/Types";
 import { GlobalState } from "../store";
+import { Query } from "../store/QueryReducer";
+import "./style/Result.scss";
 
 interface Props {
-  loading: boolean;
   groupings: Parameter[];
   query: Query;
   stale: boolean;
@@ -26,11 +24,7 @@ interface Props {
  * @author John Grimes
  */
 function Result(props: Props) {
-  const { loading, groupings, query, stale } = props;
-
-  const renderLoading = () => (
-    <Spinner className="result__loading" size={100} intent="primary" />
-  );
+  const { groupings, query, stale } = props;
 
   const renderPart = (part: Parameter, i: number): ReactElement => {
     const key = Object.keys(part).find(key => key.match(/^value/) !== null),
@@ -73,20 +67,17 @@ function Result(props: Props) {
     );
   };
 
-  let content = null;
-  if (loading) {
-    content = renderLoading();
-  } else if (groupings !== null) {
-    content = renderGroupings();
-  }
   return (
-    <div className={stale ? "result result--stale" : "result"}>{content}</div>
+    <div className={stale ? "result result--stale" : "result"}>
+      {groupings !== null ? renderGroupings() : null}
+    </div>
   );
 }
 
 function checkStale(state: GlobalState): boolean {
   return !(
-    state.result.query !== null && isEqual(state.query, state.result.query)
+    state.result.query !== null &&
+    isEqual(state.query.query, state.result.query)
   );
 }
 

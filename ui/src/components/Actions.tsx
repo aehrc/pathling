@@ -2,7 +2,13 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import { Alignment, Button, Intent, Navbar } from "@blueprintjs/core";
+import {
+  Alignment,
+  Button,
+  Intent,
+  Navbar,
+  ProgressBar
+} from "@blueprintjs/core";
 import * as React from "react";
 import { connect } from "react-redux";
 import { GlobalState } from "../store";
@@ -129,14 +135,17 @@ function Actions(props: Props) {
           />
         )}
       </Navbar.Group>
-      {executionTime ? (
-        <Navbar.Group align={Alignment.RIGHT}>
+      <Navbar.Group align={Alignment.RIGHT}>
+        {loading ? (
+          <ProgressBar className="actions__progress" intent={Intent.PRIMARY} />
+        ) : null}
+        {executionTime && !loading ? (
           <span>
             Query completed in{" "}
             {executionTime.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ms.
           </span>
-        </Navbar.Group>
-      ) : null}
+        ) : null}
+      </Navbar.Group>
     </Navbar>
   );
 }

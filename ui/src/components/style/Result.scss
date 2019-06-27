@@ -9,10 +9,7 @@
   background-color: white;
   color: #314659;
 
-  &__loading {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
+  &--stale {
+    opacity: 0.5;
   }
 }
