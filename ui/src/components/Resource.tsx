@@ -10,6 +10,7 @@ import {
   ResourceNode,
   reverseReferences
 } from "../fhir/ResourceTree";
+import { Expression } from "../store/QueryReducer";
 import ContainedElements from "./ContainedElements";
 import ReverseReference from "./ReverseReference";
 import TreeNodeTooltip from "./TreeNodeTooltip";
@@ -23,7 +24,7 @@ interface Props extends ResourceNode {
   parentPath?: string;
   disabled?: boolean;
   focus?: string;
-  addAggregation: (expression: string) => any;
+  addAggregation: (aggregation: Expression) => any;
   setElementTreeFocus: (focus: string) => any;
 }
 
@@ -45,7 +46,7 @@ function Resource(props: Props) {
 
   const handleClickAction = () => {
     if (disabled) return;
-    addAggregation(aggregationExpression);
+    addAggregation({ expression: aggregationExpression });
     if (focus === null) setElementTreeFocus(name);
   };
 

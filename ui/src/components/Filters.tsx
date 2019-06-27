@@ -2,28 +2,22 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import React, { ReactElement } from "react";
 import { Icon, Tag } from "@blueprintjs/core";
+import React, { ReactElement } from "react";
 import { connect } from "react-redux";
-
-import * as queryActions from "../store/QueryActions";
-import * as elementTreeActions from "../store/ElementTreeActions";
-import ExpressionEditor from "./ExpressionEditor";
 import { GlobalState } from "../store";
-import {
-  Aggregation,
-  Filter,
-  Grouping,
-  PartialFilter
-} from "../store/QueryReducer";
+import * as elementTreeActions from "../store/ElementTreeActions";
+import * as queryActions from "../store/QueryActions";
+import { ExpressionWithIdentity } from "../store/QueryReducer";
+import ExpressionEditor from "./ExpressionEditor";
 import "./style/Filters.scss";
 
 interface Props {
-  aggregations?: Aggregation[];
-  groupings?: Grouping[];
-  filters?: Filter[];
-  removeFilter: (index: number) => any;
-  updateFilter: (index: number, filter: PartialFilter) => any;
+  aggregations: ExpressionWithIdentity[];
+  groupings: ExpressionWithIdentity[];
+  filters: ExpressionWithIdentity[];
+  removeFilter: (id: string) => any;
+  updateFilter: (filter: ExpressionWithIdentity) => any;
   clearElementTreeFocus: () => any;
 }
 
@@ -43,18 +37,14 @@ function Filters(props: Props) {
     clearElementTreeFocus
   } = props;
 
-  const handleRemove = (event: any, index: number): void => {
+  const handleRemove = (event: any, filter: ExpressionWithIdentity) => {
     // This is required to stop the click event from opening the expression
     // editor for other filters.
     event.stopPropagation();
     if (aggregations.length + groupings.length + filters.length === 1) {
       clearElementTreeFocus();
     }
-    removeFilter(index);
-  };
-
-  const handleChange = (i: number, filter: PartialFilter) => {
-    updateFilter(i, filter);
+    removeFilter(filter.id);
   };
 
   const renderBlankCanvas = (): ReactElement => (
@@ -63,16 +53,12 @@ function Filters(props: Props) {
 
   const renderFilters = (): ReactElement[] =>
     filters.map((filter, i) => (
-      <ExpressionEditor
-        key={i}
-        expression={filter}
-        onChange={filter => handleChange(i, filter)}
-      >
+      <ExpressionEditor key={i} expression={filter} onChange={updateFilter}>
         <Tag
           className="filters__expression"
           round={true}
           large={true}
-          onRemove={event => handleRemove(event, i)}
+          onRemove={event => handleRemove(event, filter)}
           title="Edit this expression"
         >
           {filter.label}

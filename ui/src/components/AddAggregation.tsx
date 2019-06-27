@@ -20,7 +20,7 @@ function AddAggregation(props: Props) {
 
   const handleClick = () => {
     const focus = store.getState().elementTree.focus;
-    store.dispatch(addAggregation(expression));
+    store.dispatch(addAggregation({ expression }));
     if (focus === null)
       store.dispatch(
         setElementTreeFocus(getSubjectResourceFromExpression(path))

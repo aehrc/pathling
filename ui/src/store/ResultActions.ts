@@ -18,7 +18,7 @@ import {
   Parameters
 } from "../fhir/Types";
 import { GlobalState } from "./index";
-import { Aggregation, Filter, Grouping, Query } from "./QueryReducer";
+import { Expression, Query } from "./QueryReducer";
 
 interface SendQueryRequest {
   type: "SEND_QUERY_REQUEST";
@@ -80,8 +80,27 @@ export const catchQueryError = (
 
 export const clearResult = () => ({ type: "CLEAR_RESULT" });
 
+interface ExpressionWithExpression extends Expression {
+  expression: string;
+}
+
+const checkForExpression = (
+  expression: Expression,
+  dispatch: Dispatch
+): ExpressionWithExpression => {
+  if (!expression.expression) {
+    dispatch(
+      catchQueryError(
+        "Aggregation, grouping or filter encountered with a blank expression"
+      )
+    );
+  } else {
+    return expression as ExpressionWithExpression;
+  }
+};
+
 const aggregationToParam = (
-  aggregation: Aggregation
+  aggregation: ExpressionWithExpression
 ): AggregationRequestParameter => {
   const param = {
     name: "aggregation",
@@ -101,7 +120,9 @@ const aggregationToParam = (
   return param;
 };
 
-const groupingToParam = (grouping: Grouping): GroupingRequestParameter => {
+const groupingToParam = (
+  grouping: ExpressionWithExpression
+): GroupingRequestParameter => {
   const param = {
     name: "grouping",
     part: [
@@ -120,7 +141,9 @@ const groupingToParam = (grouping: Grouping): GroupingRequestParameter => {
   return param;
 };
 
-const filterToParam = (filter: Filter): FilterRequestParameter => ({
+const filterToParam = (
+  filter: ExpressionWithExpression
+): FilterRequestParameter => ({
   name: "filter",
   valueString: filter.expression
 });
@@ -137,9 +160,15 @@ export const fetchQueryResult = (fhirServer: string) => (
       query: { query }
     } = getState(),
     { aggregations, groupings, filters } = query,
-    aggregationParams: Parameter[] = aggregations.map(aggregationToParam),
-    groupingParams: Parameter[] = groupings.map(groupingToParam),
-    filterParams: Parameter[] = filters.map(filterToParam),
+    aggregationParams: Parameter[] = aggregations
+      .map(aggregation => checkForExpression(aggregation, dispatch))
+      .map(aggregationToParam),
+    groupingParams: Parameter[] = groupings
+      .map(grouping => checkForExpression(grouping, dispatch))
+      .map(groupingToParam),
+    filterParams: Parameter[] = filters
+      .map(filter => checkForExpression(filter, dispatch))
+      .map(filterToParam),
     parameters: Parameters = {
       resourceType: "Parameters",
       parameter: aggregationParams.concat(groupingParams).concat(filterParams)

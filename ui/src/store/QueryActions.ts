@@ -2,59 +2,53 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import {
-  PartialAggregation,
-  PartialFilter,
-  PartialGrouping
-} from "./QueryReducer";
+import uuidv4 from "uuid/v4";
+import { Expression, ExpressionWithIdentity } from "./QueryReducer";
 import { SavedQuery } from "./SavedQueriesReducer";
 
 export interface AddAggregation {
   type: "ADD_AGGREGATION";
-  expression: string;
+  aggregation: ExpressionWithIdentity;
 }
 
 export interface RemoveAggregation {
   type: "REMOVE_AGGREGATION";
-  index: number;
+  id: string;
 }
 
 export interface UpdateAggregation {
   type: "UPDATE_AGGREGATION";
-  index: number;
-  aggregation: PartialAggregation;
+  aggregation: ExpressionWithIdentity;
 }
 
 export interface AddGrouping {
   type: "ADD_GROUPING";
-  expression: string;
+  grouping: ExpressionWithIdentity;
 }
 
 export interface RemoveGrouping {
   type: "REMOVE_GROUPING";
-  index: number;
+  id: string;
 }
 
 export interface UpdateGrouping {
   type: "UPDATE_GROUPING";
-  index: number;
-  grouping: PartialGrouping;
+  grouping: ExpressionWithIdentity;
 }
 
 export interface AddFilter {
   type: "ADD_FILTER";
-  expression: string;
+  filter: ExpressionWithIdentity;
 }
 
 export interface RemoveFilter {
   type: "REMOVE_FILTER";
-  index: number;
+  id: string;
 }
 
 export interface UpdateFilter {
   type: "UPDATE_FILTER";
-  index: number;
-  filter: PartialFilter;
+  filter: ExpressionWithIdentity;
 }
 
 export interface ClearQuery {
@@ -80,54 +74,48 @@ export type QueryAction =
   | ClearQuery
   | LoadQuery;
 
-export const addAggregation = (expression: string): AddAggregation => ({
+export const addAggregation = (aggregation: Expression): AddAggregation => ({
   type: "ADD_AGGREGATION",
-  expression
+  aggregation: { ...aggregation, id: uuidv4() }
 });
 
-export const removeAggregation = (index: number): RemoveAggregation => ({
+export const removeAggregation = (id: string): RemoveAggregation => ({
   type: "REMOVE_AGGREGATION",
-  index
+  id
 });
 
-export const updateAggregation = (
-  index: number,
-  aggregation: PartialAggregation
-) => ({
+export const updateAggregation = (aggregation: ExpressionWithIdentity) => ({
   type: "UPDATE_AGGREGATION",
-  index,
   aggregation
 });
 
-export const addGrouping = (expression: string): AddGrouping => ({
+export const addGrouping = (grouping: Expression): AddGrouping => ({
   type: "ADD_GROUPING",
-  expression
+  grouping: { ...grouping, id: uuidv4() }
 });
 
-export const removeGrouping = (index: number): RemoveGrouping => ({
+export const removeGrouping = (id: string): RemoveGrouping => ({
   type: "REMOVE_GROUPING",
-  index
+  id
 });
 
-export const updateGrouping = (index: number, grouping: PartialGrouping) => ({
+export const updateGrouping = (grouping: ExpressionWithIdentity) => ({
   type: "UPDATE_GROUPING",
-  index,
   grouping
 });
 
-export const addFilter = (expression: string): AddFilter => ({
+export const addFilter = (filter: Expression): AddFilter => ({
   type: "ADD_FILTER",
-  expression
+  filter: { ...filter, id: uuidv4() }
 });
 
-export const removeFilter = (index: number): RemoveFilter => ({
+export const removeFilter = (id: string): RemoveFilter => ({
   type: "REMOVE_FILTER",
-  index
+  id
 });
 
-export const updateFilter = (index: number, filter: PartialFilter) => ({
+export const updateFilter = (filter: ExpressionWithIdentity) => ({
   type: "UPDATE_FILTER",
-  index,
   filter
 });
 

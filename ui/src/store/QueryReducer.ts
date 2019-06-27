@@ -5,9 +5,9 @@
 import { QueryAction } from "./QueryActions";
 
 export interface Query {
-  aggregations: Aggregation[];
-  groupings: Grouping[];
-  filters: Filter[];
+  aggregations: ExpressionWithIdentity[];
+  groupings: ExpressionWithIdentity[];
+  filters: ExpressionWithIdentity[];
 }
 
 export interface QueryState {
@@ -17,34 +17,13 @@ export interface QueryState {
   query: Query;
 }
 
-export interface Aggregation {
-  label?: string;
-  expression: string;
-}
-
-export interface PartialAggregation {
+export interface Expression {
   label?: string;
   expression?: string;
 }
 
-export interface Grouping {
-  label?: string;
-  expression: string;
-}
-
-export interface PartialGrouping {
-  label?: string;
-  expression?: string;
-}
-
-export interface Filter {
-  label?: string;
-  expression: string;
-}
-
-export interface PartialFilter {
-  label?: string;
-  expression?: string;
+export interface ExpressionWithIdentity extends Expression {
+  id: string;
 }
 
 const initialState: QueryState = {
@@ -63,10 +42,7 @@ export default (state = initialState, action: QueryAction): QueryState => {
         ...state,
         query: {
           ...state.query,
-          aggregations: state.query.aggregations.concat({
-            expression: action.expression,
-            label: action.expression
-          })
+          aggregations: state.query.aggregations.concat(action.aggregation)
         },
         unsavedChanges: true
       };
@@ -76,7 +52,7 @@ export default (state = initialState, action: QueryAction): QueryState => {
         query: {
           ...state.query,
           aggregations: state.query.aggregations.filter(
-            (_, i) => i !== action.index
+            aggregation => aggregation.id !== action.id
           )
         },
         unsavedChanges: true
@@ -86,8 +62,8 @@ export default (state = initialState, action: QueryAction): QueryState => {
         ...state,
         query: {
           ...state.query,
-          aggregations: state.query.aggregations.map((aggregation, i) =>
-            i === action.index
+          aggregations: state.query.aggregations.map(aggregation =>
+            aggregation.id === action.aggregation.id
               ? { ...aggregation, ...action.aggregation }
               : aggregation
           )
@@ -99,10 +75,7 @@ export default (state = initialState, action: QueryAction): QueryState => {
         ...state,
         query: {
           ...state.query,
-          groupings: state.query.groupings.concat({
-            expression: action.expression,
-            label: action.expression
-          })
+          groupings: state.query.groupings.concat(action.grouping)
         },
         unsavedChanges: true
       };
@@ -111,7 +84,9 @@ export default (state = initialState, action: QueryAction): QueryState => {
         ...state,
         query: {
           ...state.query,
-          groupings: state.query.groupings.filter((_, i) => i !== action.index)
+          groupings: state.query.groupings.filter(
+            grouping => grouping.id !== action.id
+          )
         },
         unsavedChanges: true
       };
@@ -120,8 +95,10 @@ export default (state = initialState, action: QueryAction): QueryState => {
         ...state,
         query: {
           ...state.query,
-          groupings: state.query.groupings.map((grouping, i) =>
-            i === action.index ? { ...grouping, ...action.grouping } : grouping
+          groupings: state.query.groupings.map(grouping =>
+            grouping.id === action.grouping.id
+              ? { ...grouping, ...action.grouping }
+              : grouping
           )
         },
         unsavedChanges: true
@@ -131,10 +108,7 @@ export default (state = initialState, action: QueryAction): QueryState => {
         ...state,
         query: {
           ...state.query,
-          filters: state.query.filters.concat({
-            expression: action.expression,
-            label: action.expression
-          })
+          filters: state.query.filters.concat(action.filter)
         },
         unsavedChanges: true
       };
@@ -143,7 +117,7 @@ export default (state = initialState, action: QueryAction): QueryState => {
         ...state,
         query: {
           ...state.query,
-          filters: state.query.filters.filter((_, i) => i !== action.index)
+          filters: state.query.filters.filter(filter => filter.id !== action.id)
         },
         unsavedChanges: true
       };
@@ -152,8 +126,10 @@ export default (state = initialState, action: QueryAction): QueryState => {
         ...state,
         query: {
           ...state.query,
-          filters: state.query.filters.map((filter, i) =>
-            i === action.index ? { ...filter, ...action.filter } : filter
+          filters: state.query.filters.map(filter =>
+            filter.id === action.filter.id
+              ? { ...filter, ...action.filter }
+              : filter
           )
         },
         unsavedChanges: true

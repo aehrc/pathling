@@ -20,7 +20,7 @@ function AddFilter(props: Props) {
 
   const handleClick = () => {
     const focus = store.getState().elementTree.focus;
-    store.dispatch(addFilter(expression));
+    store.dispatch(addFilter({ expression }));
     if (focus === null)
       store.dispatch(
         setElementTreeFocus(getSubjectResourceFromExpression(path))

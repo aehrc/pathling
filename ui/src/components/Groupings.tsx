@@ -2,24 +2,23 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import * as React from "react";
-import { connect } from "react-redux";
 import { Icon, Tag } from "@blueprintjs/core";
-
-import * as queryActions from "../store/QueryActions";
-import * as elementTreeActions from "../store/ElementTreeActions";
-import { Aggregation, Grouping, PartialGrouping } from "../store/QueryReducer";
+import * as React from "react";
+import { MouseEvent, ReactElement } from "react";
+import { connect } from "react-redux";
 import { GlobalState } from "../store";
-import { ReactElement } from "react";
-import "./style/Groupings.scss";
+import * as elementTreeActions from "../store/ElementTreeActions";
+import * as queryActions from "../store/QueryActions";
+import { ExpressionWithIdentity } from "../store/QueryReducer";
 import ExpressionEditor from "./ExpressionEditor";
+import "./style/Groupings.scss";
 
 interface Props {
-  aggregations: Aggregation[];
-  groupings: Grouping[];
-  filters: Grouping[];
-  removeGrouping: (index: number) => void;
-  updateGrouping: (index: number, grouping: PartialGrouping) => void;
+  aggregations: ExpressionWithIdentity[];
+  groupings: ExpressionWithIdentity[];
+  filters: ExpressionWithIdentity[];
+  removeGrouping: (id: string) => any;
+  updateGrouping: (grouping: ExpressionWithIdentity) => any;
   clearElementTreeFocus: () => any;
 }
 
@@ -38,18 +37,17 @@ function Groupings(props: Props) {
     clearElementTreeFocus
   } = props;
 
-  const handleRemove = (event: any, index: number): void => {
+  const handleRemove = (
+    event: MouseEvent,
+    grouping: ExpressionWithIdentity
+  ) => {
     // This is required to stop the click event from opening the expression
     // editor for other groupings.
     event.stopPropagation();
     if (aggregations.length + groupings.length + filters.length === 1) {
       clearElementTreeFocus();
     }
-    removeGrouping(index);
-  };
-
-  const handleChange = (i: number, grouping: PartialGrouping) => {
-    updateGrouping(i, grouping);
+    removeGrouping(grouping.id);
   };
 
   const renderBlankCanvas = (): ReactElement => (
@@ -58,16 +56,12 @@ function Groupings(props: Props) {
 
   const renderGroupings = (): ReactElement[] =>
     groupings.map((grouping, i) => (
-      <ExpressionEditor
-        key={i}
-        expression={grouping}
-        onChange={grouping => handleChange(i, grouping)}
-      >
+      <ExpressionEditor key={i} expression={grouping} onChange={updateGrouping}>
         <Tag
           className="groupings__expression"
           round={true}
           large={true}
-          onRemove={event => handleRemove(event, i)}
+          onRemove={event => handleRemove(event, grouping)}
           title="Edit this expression"
         >
           {grouping.label}

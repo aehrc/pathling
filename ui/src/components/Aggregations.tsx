@@ -2,29 +2,24 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import * as React from "react";
-import { connect } from "react-redux";
 import { Icon, Tag } from "@blueprintjs/core";
+import * as React from "react";
+import { ReactElement } from "react";
+import { connect } from "react-redux";
+import { GlobalState } from "../store";
+import * as elementTreeActions from "../store/ElementTreeActions";
 
 import * as queryActions from "../store/QueryActions";
-import * as elementTreeActions from "../store/ElementTreeActions";
-import {
-  Aggregation,
-  Filter,
-  Grouping,
-  PartialAggregation
-} from "../store/QueryReducer";
-import { GlobalState } from "../store";
-import "./style/Aggregations.scss";
-import { ReactElement } from "react";
+import { ExpressionWithIdentity } from "../store/QueryReducer";
 import ExpressionEditor from "./ExpressionEditor";
+import "./style/Aggregations.scss";
 
 interface Props {
-  aggregations?: Aggregation[];
-  groupings?: Grouping[];
-  filters?: Filter[];
-  removeAggregation: (index: number) => any;
-  updateAggregation: (index: number, aggregation: PartialAggregation) => any;
+  aggregations: ExpressionWithIdentity[];
+  groupings: ExpressionWithIdentity[];
+  filters: ExpressionWithIdentity[];
+  removeAggregation: (id: string) => any;
+  updateAggregation: (aggregation: ExpressionWithIdentity) => any;
   clearElementTreeFocus: () => any;
 }
 
@@ -44,18 +39,14 @@ function Aggregations(props: Props) {
     clearElementTreeFocus
   } = props;
 
-  const handleRemove = (event: any, index: number): void => {
+  const handleRemove = (event: any, aggregation: ExpressionWithIdentity) => {
     // This is required to stop the click event from opening the expression
     // editor for other aggregations.
     event.stopPropagation();
     if (aggregations.length + groupings.length + filters.length === 1) {
       clearElementTreeFocus();
     }
-    removeAggregation(index);
-  };
-
-  const handleChange = (i: number, aggregation: PartialAggregation) => {
-    updateAggregation(i, aggregation);
+    removeAggregation(aggregation.id);
   };
 
   const renderBlankCanvas = (): ReactElement => (
@@ -67,13 +58,13 @@ function Aggregations(props: Props) {
       <ExpressionEditor
         key={i}
         expression={aggregation}
-        onChange={aggregation => handleChange(i, aggregation)}
+        onChange={updateAggregation}
       >
         <Tag
           className="aggregations__expression"
           round={true}
           large={true}
-          onRemove={event => handleRemove(event, i)}
+          onRemove={event => handleRemove(event, aggregation)}
           title="Edit this expression"
         >
           {aggregation.label}

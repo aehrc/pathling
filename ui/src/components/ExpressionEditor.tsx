@@ -2,30 +2,21 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import React from "react";
 import {
   Label,
   Popover,
   PopoverInteractionKind,
   Position
 } from "@blueprintjs/core";
+import React from "react";
+import MonacoEditor from "react-monaco-editor";
+import { Expression } from "../store/QueryReducer";
 
 import "./style/ExpressionEditor.scss";
-import {
-  Aggregation,
-  Filter,
-  Grouping,
-  PartialAggregation,
-  PartialFilter,
-  PartialGrouping
-} from "../store/QueryReducer";
-import MonacoEditor from "react-monaco-editor";
 
 interface Props {
-  expression: Aggregation | Grouping | Filter;
-  onChange: (
-    expression: PartialAggregation | PartialGrouping | PartialFilter
-  ) => void;
+  expression: Expression;
+  onChange: (expression: Expression) => void;
   children: any;
 }
 

@@ -20,7 +20,7 @@ function AddGrouping(props: Props) {
 
   const handleClick = () => {
     const focus = store.getState().elementTree.focus;
-    store.dispatch(addGrouping(expression));
+    store.dispatch(addGrouping({ expression }));
     if (focus === null)
       store.dispatch(
         setElementTreeFocus(getSubjectResourceFromExpression(path))
