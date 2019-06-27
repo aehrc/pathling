@@ -61,6 +61,15 @@ export interface LoadQuery {
   query: SavedQuery;
 }
 
+export interface FocusExpression {
+  type: "FOCUS_EXPRESSION";
+  id: string;
+}
+
+export interface ReceiveExpressionFocus {
+  type: "RECEIVE_EXPRESSION_FOCUS";
+}
+
 export type QueryAction =
   | AddAggregation
   | RemoveAggregation
@@ -72,7 +81,9 @@ export type QueryAction =
   | RemoveFilter
   | UpdateFilter
   | ClearQuery
-  | LoadQuery;
+  | LoadQuery
+  | FocusExpression
+  | ReceiveExpressionFocus;
 
 export const addAggregation = (aggregation: Expression): AddAggregation => ({
   type: "ADD_AGGREGATION",
@@ -127,4 +138,13 @@ export const loadQuery = (query: SavedQuery) => ({
   type: "LOAD_QUERY",
   name,
   query
+});
+
+export const focusExpression = (id: string) => ({
+  type: "FOCUS_EXPRESSION",
+  id
+});
+
+export const receiveExpressionFocus = () => ({
+  type: "RECEIVE_EXPRESSION_FOCUS"
 });

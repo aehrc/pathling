@@ -7,7 +7,7 @@ import { MenuItem } from "@blueprintjs/core";
 
 import store from "../store";
 import { getSubjectResourceFromExpression } from "../fhir/ResourceTree";
-import { addAggregation } from "../store/QueryActions";
+import { addAggregation, focusExpression } from "../store/QueryActions";
 import { setElementTreeFocus } from "../store/ElementTreeActions";
 
 interface Props {
@@ -20,11 +20,16 @@ function AddAggregation(props: Props) {
 
   const handleClick = () => {
     const focus = store.getState().elementTree.focus;
-    store.dispatch(addAggregation({ expression }));
+    const addAggregationAction = addAggregation({
+      label: expression,
+      expression
+    });
+    store.dispatch(addAggregationAction);
     if (focus === null)
       store.dispatch(
         setElementTreeFocus(getSubjectResourceFromExpression(path))
       );
+    store.dispatch(focusExpression(addAggregationAction.aggregation.id));
   };
 
   const handleTabIndexedKeyDown = (event: any) => {

@@ -10,22 +10,22 @@ import {
   ResourceNode,
   reverseReferences
 } from "../fhir/ResourceTree";
-import { Expression } from "../store/QueryReducer";
+import store, { GlobalState } from "../store";
+import * as elementTreeActions from "../store/ElementTreeActions";
+import * as queryActions from "../store/QueryActions";
+import { addAggregation } from "../store/QueryActions";
 import ContainedElements from "./ContainedElements";
 import ReverseReference from "./ReverseReference";
-import TreeNodeTooltip from "./TreeNodeTooltip";
-import * as queryActions from "../store/QueryActions";
-import * as elementTreeActions from "../store/ElementTreeActions";
 import "./style/Resource.scss";
-import { GlobalState } from "../store";
+import TreeNodeTooltip from "./TreeNodeTooltip";
 
 interface Props extends ResourceNode {
   name: string;
   parentPath?: string;
   disabled?: boolean;
   focus?: string;
-  addAggregation: (aggregation: Expression) => any;
   setElementTreeFocus: (focus: string) => any;
+  focusExpression: (id: string) => any;
 }
 
 function Resource(props: Props) {
@@ -36,8 +36,8 @@ function Resource(props: Props) {
       parentPath,
       disabled,
       focus,
-      addAggregation,
-      setElementTreeFocus
+      setElementTreeFocus,
+      focusExpression
     } = props,
     aggregationExpression = `${name}.count()`,
     [isExpanded, setExpanded] = useState(false);
@@ -46,8 +46,13 @@ function Resource(props: Props) {
 
   const handleClickAction = () => {
     if (disabled) return;
-    addAggregation({ expression: aggregationExpression });
+    const addAggregationAction = addAggregation({
+      label: aggregationExpression,
+      expression: aggregationExpression
+    });
+    store.dispatch(addAggregationAction);
     if (focus === null) setElementTreeFocus(name);
+    focusExpression(addAggregationAction.aggregation.id);
   };
 
   const handleTabIndexedKeyDown = (event: any) => {

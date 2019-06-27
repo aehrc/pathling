@@ -8,7 +8,6 @@ import { ReactElement } from "react";
 import { connect } from "react-redux";
 import { GlobalState } from "../store";
 import * as elementTreeActions from "../store/ElementTreeActions";
-
 import * as queryActions from "../store/QueryActions";
 import { ExpressionWithIdentity } from "../store/QueryReducer";
 import ExpressionEditor from "./ExpressionEditor";

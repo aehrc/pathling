@@ -13,8 +13,9 @@ export interface Query {
 export interface QueryState {
   id?: string;
   name?: string;
-  unsavedChanges: boolean;
   query: Query;
+  unsavedChanges: boolean;
+  focusedExpression?: string;
 }
 
 export interface Expression {
@@ -32,7 +33,8 @@ const initialState: QueryState = {
     groupings: [],
     filters: []
   },
-  unsavedChanges: false
+  unsavedChanges: false,
+  focusedExpression: null
 };
 
 export default (state = initialState, action: QueryAction): QueryState => {
@@ -141,6 +143,16 @@ export default (state = initialState, action: QueryAction): QueryState => {
         ...state,
         ...action.query,
         unsavedChanges: false
+      };
+    case "FOCUS_EXPRESSION":
+      return {
+        ...state,
+        focusedExpression: action.id
+      };
+    case "RECEIVE_EXPRESSION_FOCUS":
+      return {
+        ...state,
+        focusedExpression: null
       };
     default:
       return state;

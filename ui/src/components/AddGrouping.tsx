@@ -6,7 +6,7 @@ import * as React from "react";
 import { MenuItem } from "@blueprintjs/core";
 
 import store from "../store";
-import { addGrouping } from "../store/QueryActions";
+import { addGrouping, focusExpression } from "../store/QueryActions";
 import { setElementTreeFocus } from "../store/ElementTreeActions";
 import { getSubjectResourceFromExpression } from "../fhir/ResourceTree";
 
@@ -19,12 +19,14 @@ function AddGrouping(props: Props) {
     expression = path;
 
   const handleClick = () => {
-    const focus = store.getState().elementTree.focus;
-    store.dispatch(addGrouping({ expression }));
+    const focus = store.getState().elementTree.focus,
+      addGroupingAction = addGrouping({ label: expression, expression });
+    store.dispatch(addGroupingAction);
     if (focus === null)
       store.dispatch(
         setElementTreeFocus(getSubjectResourceFromExpression(path))
       );
+    store.dispatch(focusExpression(addGroupingAction.grouping.id));
   };
 
   const handleTabIndexedKeyDown = (event: any) => {

@@ -8,20 +8,32 @@ import {
   PopoverInteractionKind,
   Position
 } from "@blueprintjs/core";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import MonacoEditor from "react-monaco-editor";
-import { Expression } from "../store/QueryReducer";
+import { connect } from "react-redux";
+import { GlobalState } from "../store";
+import { receiveExpressionFocus } from "../store/QueryActions";
+import { ExpressionWithIdentity } from "../store/QueryReducer";
 
 import "./style/ExpressionEditor.scss";
 
 interface Props {
-  expression: Expression;
-  onChange: (expression: Expression) => void;
+  expression: ExpressionWithIdentity;
+  onChange: (expression: ExpressionWithIdentity) => void;
   children: any;
+  focusedExpression: string;
+  receiveExpressionFocus: () => any;
 }
 
 function ExpressionEditor(props: Props) {
-  const { expression, onChange, children } = props;
+  const {
+      expression,
+      onChange,
+      children,
+      focusedExpression,
+      receiveExpressionFocus
+    } = props,
+    popoverRef = useRef(null);
 
   const editorWillMount = (monaco: any) => {
     monaco.languages.register({
@@ -71,7 +83,9 @@ function ExpressionEditor(props: Props) {
           <input
             className="expression-editor__label-input"
             value={expression.label}
-            onChange={event => onChange({ label: event.target.value })}
+            onChange={event =>
+              onChange({ id: expression.id, label: event.target.value })
+            }
             onFocus={event => event.target.select()}
             autoFocus
           />
@@ -82,7 +96,9 @@ function ExpressionEditor(props: Props) {
             <MonacoEditor
               language="fhirPath"
               value={expression.expression}
-              onChange={expression => onChange({ expression })}
+              onChange={value =>
+                onChange({ id: expression.id, expression: value })
+              }
               editorWillMount={editorWillMount}
               options={{
                 minimap: { enabled: false },
@@ -98,6 +114,13 @@ function ExpressionEditor(props: Props) {
     );
   };
 
+  useEffect(() => {
+    if (expression.id === focusedExpression) {
+      popoverRef.current.targetElement.click();
+      receiveExpressionFocus();
+    }
+  });
+
   return (
     <Popover
       content={renderContent()}
@@ -107,6 +130,7 @@ function ExpressionEditor(props: Props) {
       className="expression-editor"
       targetClassName="expression-editor__target"
       popoverClassName="expression-editor__popover"
+      ref={popoverRef}
       autoFocus
     >
       <>{children}</>
@@ -114,4 +138,12 @@ function ExpressionEditor(props: Props) {
   );
 }
 
-export default ExpressionEditor;
+const mapStateToProps = (state: GlobalState) => ({
+    focusedExpression: state.query.focusedExpression
+  }),
+  actions = { receiveExpressionFocus };
+
+export default connect(
+  mapStateToProps,
+  actions
+)(ExpressionEditor);
