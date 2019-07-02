@@ -58,7 +58,11 @@ function Groupings(props: Props) {
     groupings.map((grouping, i) => (
       <ExpressionEditor key={i} expression={grouping} onChange={updateGrouping}>
         <Tag
-          className="groupings__expression"
+          className={
+            grouping.disabled
+              ? "groupings__expression groupings__expression--disabled"
+              : "groupings__expression"
+          }
           round={true}
           large={true}
           onRemove={event => handleRemove(event, grouping)}

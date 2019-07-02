@@ -21,6 +21,7 @@ export interface QueryState {
 export interface Expression {
   label?: string;
   expression?: string;
+  disabled?: boolean;
 }
 
 export interface ExpressionWithIdentity extends Expression {

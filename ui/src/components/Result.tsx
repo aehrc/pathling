@@ -48,12 +48,14 @@ function Result(props: Props) {
   };
 
   const renderGroupings = (): ReactElement => {
-    const groupHeadings = query.groupings.map(grouping => (
-        <th key={grouping.label}>{grouping.label}</th>
-      )),
-      aggregationHeadings = query.aggregations.map(aggregation => (
-        <th key={aggregation.label}>{aggregation.label}</th>
-      )),
+    const groupHeadings = query.groupings
+        .filter(grouping => !grouping.disabled)
+        .map(grouping => <th key={grouping.label}>{grouping.label}</th>),
+      aggregationHeadings = query.aggregations
+        .filter(aggregation => !aggregation.disabled)
+        .map(aggregation => (
+          <th key={aggregation.label}>{aggregation.label}</th>
+        )),
       rows = groupings.map((grouping, i) => renderGrouping(grouping, i));
     return rows.length > 0 ? (
       <HTMLTable interactive={true}>

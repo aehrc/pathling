@@ -8,6 +8,10 @@
   &__form {
     padding: 1em;
     width: 35em;
+
+    label {
+      user-select: none;
+    }
   }
 
   &__label-input,
@@ -26,6 +30,10 @@
     box-shadow: none;
     border: 1px solid #ccc;
     overflow: hidden;
+  }
+
+  &__disabled-input {
+    margin: 1em 0 0 !important;
   }
 }
 

@@ -6,15 +6,15 @@ import {
   Label,
   Popover,
   PopoverInteractionKind,
-  Position
+  Position,
+  Switch
 } from "@blueprintjs/core";
-import React, { useEffect, useRef } from "react";
+import React, { FormEvent, useEffect, useRef } from "react";
 import MonacoEditor from "react-monaco-editor";
 import { connect } from "react-redux";
 import { GlobalState } from "../store";
 import { receiveExpressionFocus } from "../store/QueryActions";
 import { ExpressionWithIdentity } from "../store/QueryReducer";
-
 import "./style/ExpressionEditor.scss";
 
 interface Props {
@@ -110,6 +110,17 @@ function ExpressionEditor(props: Props) {
             />
           </div>
         </Label>
+        <Switch
+          className="expression-editor__disabled-input"
+          checked={!(expression.disabled === true)}
+          labelElement={"Enabled?"}
+          onChange={(event: FormEvent<HTMLInputElement>) =>
+            onChange({
+              id: expression.id,
+              disabled: event.currentTarget.checked !== true
+            })
+          }
+        />
       </div>
     );
   };

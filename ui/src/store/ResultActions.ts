@@ -161,12 +161,15 @@ export const fetchQueryResult = (fhirServer: string) => (
     } = getState(),
     { aggregations, groupings, filters } = query,
     aggregationParams: Parameter[] = aggregations
+      .filter(aggregation => !aggregation.disabled)
       .map(aggregation => checkForExpression(aggregation, dispatch))
       .map(aggregationToParam),
     groupingParams: Parameter[] = groupings
+      .filter(grouping => !grouping.disabled)
       .map(grouping => checkForExpression(grouping, dispatch))
       .map(groupingToParam),
     filterParams: Parameter[] = filters
+      .filter(filter => !filter.disabled)
       .map(filter => checkForExpression(filter, dispatch))
       .map(filterToParam),
     parameters: Parameters = {

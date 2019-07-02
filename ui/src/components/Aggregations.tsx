@@ -60,7 +60,11 @@ function Aggregations(props: Props) {
         onChange={updateAggregation}
       >
         <Tag
-          className="aggregations__expression"
+          className={
+            aggregation.disabled
+              ? "aggregations__expression aggregations__expression--disabled"
+              : "aggregations__expression"
+          }
           round={true}
           large={true}
           onRemove={event => handleRemove(event, aggregation)}

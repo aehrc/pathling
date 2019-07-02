@@ -55,7 +55,11 @@ function Filters(props: Props) {
     filters.map((filter, i) => (
       <ExpressionEditor key={i} expression={filter} onChange={updateFilter}>
         <Tag
-          className="filters__expression"
+          className={
+            filter.disabled
+              ? "filters__expression filters__expression--disabled"
+              : "filters__expression"
+          }
           round={true}
           large={true}
           onRemove={event => handleRemove(event, filter)}
