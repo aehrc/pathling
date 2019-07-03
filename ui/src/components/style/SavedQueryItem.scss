@@ -4,7 +4,7 @@
 
 .saved-query-item {
   list-style-type: none;
-  padding: 1em;
+  padding: 0.8em 1em;
   border-radius: 0.3em;
   box-shadow: 0 0 0 1px rgba(16, 22, 26, 0.1), 0 0 0 rgba(16, 22, 26, 0),
     0 1px 1px rgba(16, 22, 26, 0.2);
@@ -19,7 +19,7 @@
   &__actions {
     float: right;
     position: relative;
-    top: -0.5em;
+    top: -0.2em;
     right: -0.5em;
   }
 
