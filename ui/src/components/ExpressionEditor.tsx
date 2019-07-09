@@ -45,7 +45,7 @@ function ExpressionEditor(props: Props) {
     });
 
     monaco.languages.setMonarchTokensProvider("fhirPath", {
-      keywords: ["and", "or", "true", "false"],
+      keywords: ["and", "or", "true", "false", "$this", "in", "contains"],
       operators: ["<", ">", "<=", ">=", "=", "!="],
       resource: /[A-Z][a-z]+/,
       element: /[a-z][a-zA-Z0-9]+/,
@@ -54,9 +54,10 @@ function ExpressionEditor(props: Props) {
         expression: [
           { include: "@whitespace" },
           [/[()]/, "@brackets"],
+          [/[^|()\s]+\|[^|()\s]+(\|[^()|\s]+)?/, "type"], // Coding literal
           [/'.*'/, "string"],
           [/@[0-9\-]+/, "variable.value"],
-          [/and|or|true|false/, "keyword"],
+          [/and|or|true|false|\$this|in|contains/, "keyword"],
           [/<|>|<=|>=|=|!=/, "operators"],
           [/@element/, "variable.name"],
           [/@resource/, "constant"]
@@ -105,7 +106,8 @@ function ExpressionEditor(props: Props) {
                 codeLens: false,
                 wordWrap: "on",
                 autoClosingBrackets: "always",
-                fontSize: 13
+                fontSize: 13,
+                links: false
               }}
             />
           </div>
