@@ -85,7 +85,16 @@ public class WhereFunctionTest {
         + "  \"resourceType\": \"Parameters\"\n"
         + "}";
 
-    String expectedSql = "SELECT patientEncounterAsSubjectTypeCoding.display AS `Encounter type, where ambulatory`, COUNT(DISTINCT patient.id) AS `Number of patients` FROM patient LEFT JOIN encounter patientEncounterAsSubject ON patient.id = patientEncounterAsSubject.subject.reference AND patientEncounterAsSubject.class.code = 'ambulatory' LATERAL VIEW OUTER explode(patientEncounterAsSubject.type) patientEncounterAsSubjectType AS patientEncounterAsSubjectType LATERAL VIEW OUTER explode(patientEncounterAsSubjectType.coding) patientEncounterAsSubjectTypeCoding AS patientEncounterAsSubjectTypeCoding GROUP BY 1 ORDER BY 1, 2";
+    String expectedSql =
+        "SELECT patientEncounterAsSubjectTypeCoding.display AS `Encounter type, where ambulatory`, "
+            + "COUNT(DISTINCT patient.id) AS `Number of patients` "
+            + "FROM patient LEFT JOIN encounter patientEncounterAsSubject "
+            + "ON patient.id = patientEncounterAsSubject.subject.reference "
+            + "AND patientEncounterAsSubject.class.code = 'ambulatory' "
+            + "LATERAL VIEW OUTER explode(patientEncounterAsSubject.type) patientEncounterAsSubjectType AS patientEncounterAsSubjectType "
+            + "LATERAL VIEW OUTER explode(patientEncounterAsSubjectType.coding) patientEncounterAsSubjectTypeCoding AS patientEncounterAsSubjectTypeCoding "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);
