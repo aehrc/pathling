@@ -8,6 +8,7 @@ import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElemen
 import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.query.Mappings.getFunction;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.CODING;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATETIME;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.*;
@@ -167,7 +168,12 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitMembershipExpression(MembershipExpressionContext ctx) {
-      throw new InvalidRequestException("Membership expressions are not supported");
+      MembershipExpression membershipExpression = new MembershipExpression();
+      ParseResult leftResult = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(0));
+      ParseResult rightResult = new ExpressionVisitor(terminologyClient, spark)
+          .visit(ctx.expression(1));
+      return membershipExpression.invoke(leftResult, rightResult);
     }
 
     @Override
@@ -398,6 +404,14 @@ public class ExpressionParser {
   }
 
   private static class LiteralTermVisitor extends FhirPathBaseVisitor<ParseResult> {
+
+    @Override
+    public ParseResult visitCodingLiteral(CodingLiteralContext ctx) {
+      ParseResult result = new ParseResult();
+      result.setResultType(CODING);
+      result.setExpression(ctx.getText());
+      return result;
+    }
 
     @Override
     public ParseResult visitStringLiteral(StringLiteralContext ctx) {

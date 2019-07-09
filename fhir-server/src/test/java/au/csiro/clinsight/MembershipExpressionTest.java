@@ -19,16 +19,14 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
 import org.eclipse.jetty.server.Server;
-import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @author John Grimes
  */
-public class WhereFunctionTest {
+public class MembershipExpressionTest {
 
   private static final String QUERY_URL = FHIR_SERVER_URL + "/$aggregate-query";
   private Server server;
@@ -52,8 +50,7 @@ public class WhereFunctionTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
-  public void simpleQuery() throws IOException, JSONException {
+  public void simpleQuery() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
         + "    {\n"
@@ -70,32 +67,27 @@ public class WhereFunctionTest {
         + "      ]\n"
         + "    },\n"
         + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).where($this.class.code = 'ambulatory').type.coding.display\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Encounter type, where ambulatory\"\n"
-        + "        }\n"
-        + "      ]\n"
+        + "      \"name\": \"filter\",\n"
+        + "      \"valueString\": \"'40275004' in Patient.reverseResolve(Condition.subject).code.coding.code\"\n"
         + "    }\n"
         + "  ],\n"
         + "  \"resourceType\": \"Parameters\"\n"
         + "}";
 
     String expectedSql =
-        "SELECT patientEncounterAsSubjectTypeCoding.display AS `Encounter type, where ambulatory`, "
-            + "COUNT(DISTINCT patient.id) AS `Number of patients` "
-            + "FROM patient LEFT JOIN encounter patientEncounterAsSubject "
-            + "ON patient.id = patientEncounterAsSubject.subject.reference "
-            + "AND patientEncounterAsSubject.class.code = 'ambulatory' "
-            + "LATERAL VIEW OUTER explode(patientEncounterAsSubject.type) patientEncounterAsSubjectType AS patientEncounterAsSubjectType "
-            + "LATERAL VIEW OUTER explode(patientEncounterAsSubjectType.coding) patientEncounterAsSubjectTypeCoding AS patientEncounterAsSubjectTypeCoding "
-            + "GROUP BY 1 "
-            + "ORDER BY 1, 2";
+        "SELECT COUNT(DISTINCT patient.id) AS `Number of patients` "
+            + "FROM patient "
+            + "LEFT JOIN ("
+            + "SELECT patient.id, "
+            + "IFNULL(MAX(patientConditionAsSubjectCodeCoding.code = '40275004'), FALSE) AS result "
+            + "FROM patient "
+            + "LEFT JOIN condition patientConditionAsSubject "
+            + "ON patient.id = patientConditionAsSubject.subject.reference "
+            + "LATERAL VIEW OUTER explode(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding "
+            + "GROUP BY 1"
+            + ") patientConditionAsSubjectCodeCodingMembership "
+            + "ON patient.id = patientConditionAsSubjectCodeCodingMembership.id "
+            + "WHERE patientConditionAsSubjectCodeCodingMembership.result";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);

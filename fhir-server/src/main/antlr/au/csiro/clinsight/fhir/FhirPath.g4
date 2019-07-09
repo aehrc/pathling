@@ -42,7 +42,8 @@ term
         ;
 
 literal
-        : '{' '}'                                               #nullLiteral
+        : CODING                                                #codingLiteral
+        | '{' '}'                                               #nullLiteral
         | ('true' | 'false')                                    #booleanLiteral
         | STRING                                                #stringLiteral
         | NUMBER                                                #numberLiteral
@@ -118,6 +119,18 @@ identifier
 //        : 'true'
 //        | 'false'
 //        ;
+
+CODING
+        : CODING_WITHOUT_VERSION | CODING_WITH_VERSION
+        ;
+
+CODING_WITHOUT_VERSION
+        : ~[ |\r\n\t()]+ '|' ~[ |\r\n\t()]+
+        ;
+
+CODING_WITH_VERSION
+        : ~[ |\r\n\t()]+ '|' ~[ |\r\n\t()]+ '|' ~[ |\r\n\t()]+
+        ;
 
 DATETIME
         : '@'

@@ -23,6 +23,7 @@ import org.eclipse.jetty.server.Server;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -58,6 +59,7 @@ public class ClosureTest {
 
   @SuppressWarnings("unchecked")
   @Test
+  @Ignore
   public void simpleQuery() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
