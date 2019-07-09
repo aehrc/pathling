@@ -7,8 +7,12 @@ package au.csiro.clinsight.query.parsing;
 import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.PRIMITIVE;
 import static au.csiro.clinsight.query.QueryWrangling.convertUpstreamLateralViewsToInlineQueries;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.EXISTS_JOIN;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.*;
 
+import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.SortedSet;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -22,8 +26,14 @@ import javax.annotation.Nullable;
  */
 public class MembershipExpression {
 
+  private final List<ParseResultType> allowableLeftOperandTypes = Arrays
+      .asList(STRING, BOOLEAN, DATETIME, INTEGER);
+
   @Nonnull
   public ParseResult invoke(@Nullable ParseResult left, @Nonnull ParseResult right) {
+    validateLeftOperand(left);
+    validateRightOperand(right);
+
     // Build a select expression which tests whether there is a code on the right-hand side of the
     // left join, returning a boolean.
     String resourceTable = (String) right.getFromTables().toArray()[0];
@@ -58,6 +68,31 @@ public class MembershipExpression {
     right.setElementTypeCode("boolean");
     right.setSqlExpression(existsSelect);
     return right;
+  }
+
+  private void validateLeftOperand(@Nullable ParseResult left) {
+    if (left == null) {
+      throw new InvalidRequestException("Missing left operand for membership expression");
+    }
+    if (!allowableLeftOperandTypes.contains(left.getResultType())) {
+      String allowableTypes = allowableLeftOperandTypes.stream().map(ParseResultType::getDisplay)
+          .collect(Collectors.joining(", "));
+      String resultType = left.getResultType() != null ? left.getResultType().getDisplay() : null;
+      throw new InvalidRequestException(
+          "Left operand in membership expression must be one of: " + allowableTypes + " ("
+              + resultType + ")");
+    }
+  }
+
+  private void validateRightOperand(@Nullable ParseResult right) {
+    if (right == null) {
+      throw new InvalidRequestException("Missing right operand for membership expression");
+    }
+    if (right.getResultType() != COLLECTION) {
+      String resultType = right.getResultType() != null ? right.getResultType().getDisplay() : null;
+      throw new InvalidRequestException(
+          "Right operand in membership expression must be a Collection (" + resultType + ")");
+    }
   }
 
 }

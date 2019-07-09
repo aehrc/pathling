@@ -104,7 +104,18 @@ public class ParseResult {
   }
 
   public enum ParseResultType {
-    COLLECTION, STRING, BOOLEAN, DATETIME, INTEGER, CODING
+    COLLECTION("Collection"), STRING("String"), BOOLEAN("Boolean"), DATETIME(
+        "DateTime"), INTEGER("Integer"), CODING("Coding");
+
+    private final String display;
+
+    ParseResultType(String display) {
+      this.display = display;
+    }
+
+    public String getDisplay() {
+      return display;
+    }
   }
 
 }

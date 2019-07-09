@@ -148,7 +148,7 @@ public class Join implements Comparable<Join> {
   }
 
   /**
-   * A gategorisation of the type of join, which is used by the query planner to decide how to
+   * A categorisation of the type of join, which is used by the query planner to decide how to
    * translate this into executable instructions.
    *
    * LATERAL_VIEW - used to explode out rows from fields with max cardinalities greater than one.
