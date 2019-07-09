@@ -21,8 +21,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalog.Catalog;
 import org.eclipse.jetty.server.Server;
 import org.json.JSONException;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -58,7 +58,6 @@ public class ClosureTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void simpleQuery() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
@@ -179,4 +178,11 @@ public class ClosureTest {
     verify(mockSpark).sql(expectedSql1);
     verify(mockSpark).sql(expectedSql2);
   }
+
+  @After
+  public void tearDown() throws Exception {
+    server.stop();
+    httpClient.close();
+  }
+
 }

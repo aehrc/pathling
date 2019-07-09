@@ -27,7 +27,6 @@ import org.eclipse.jetty.server.Server;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 
@@ -388,7 +387,6 @@ public class FilterTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void codingLiteral() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
@@ -446,7 +444,6 @@ public class FilterTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void membershipExpression() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"

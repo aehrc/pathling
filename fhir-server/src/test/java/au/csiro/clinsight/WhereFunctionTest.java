@@ -20,8 +20,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
 import org.eclipse.jetty.server.Server;
 import org.json.JSONException;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -51,7 +51,6 @@ public class WhereFunctionTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void simpleQuery() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
@@ -105,6 +104,12 @@ public class WhereFunctionTest {
 
     verify(mockSpark).sql("USE clinsight");
     verify(mockSpark).sql(expectedSql);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    server.stop();
+    httpClient.close();
   }
 
 }
