@@ -73,4 +73,8 @@ public class DateFormatFunction implements ExpressionFunction {
   public void setSparkSession(@Nonnull SparkSession spark) {
   }
 
+  @Override
+  public void setDatabaseName(@Nonnull String databaseName) {
+  }
+
 }

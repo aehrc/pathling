@@ -19,7 +19,6 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
 import org.eclipse.jetty.server.Server;
-import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -53,7 +52,7 @@ public class WhereFunctionTest {
   @SuppressWarnings("unchecked")
   @Test
   @Ignore
-  public void simpleQuery() throws IOException, JSONException {
+  public void simpleQuery() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
         + "    {\n"

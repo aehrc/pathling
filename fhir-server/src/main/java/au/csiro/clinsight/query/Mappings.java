@@ -64,7 +64,7 @@ public abstract class Mappings {
     put("max", new MaxFunction());
     put("resolve", new ResolveFunction());
     put("reverseResolve", new ReverseResolveFunction());
-    put("inValueSet", new InValueSetFunction());
+    put("inValueSet", new ExpandFunction());
     put("dateFormat", new DateFormatFunction());
     put("toSeconds", new DateComponentFunction("toSeconds"));
     put("toMinutes", new DateComponentFunction("toMinutes"));

@@ -41,7 +41,7 @@ class QueryPlanner {
   }};
 
   QueryPlanner(@Nonnull TerminologyClient terminologyClient,
-      @Nonnull SparkSession spark, @Nonnull AggregateQuery query) {
+      @Nonnull SparkSession spark, String databaseName, @Nonnull AggregateQuery query) {
     List<Aggregation> aggregations = query.getAggregations();
     List<Grouping> groupings = query.getGroupings();
     List<String> filters = query.getFilters();
@@ -49,7 +49,7 @@ class QueryPlanner {
       throw new InvalidRequestException("Missing aggregation component within query");
     }
 
-    expressionParser = new ExpressionParser(terminologyClient, spark);
+    expressionParser = new ExpressionParser(terminologyClient, spark, databaseName);
     aggregationParseResults = parseAggregation(aggregations);
     groupingParseResults = parseGroupings(groupings);
     filterParseResults = parseFilters(filters);

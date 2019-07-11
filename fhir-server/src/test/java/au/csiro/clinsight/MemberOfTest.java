@@ -48,7 +48,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 /**
  * @author John Grimes
  */
-public class InValueSetTest {
+public class MemberOfTest {
 
   private static final String QUERY_URL = FHIR_SERVER_URL + "/$aggregate-query";
   private Server server;
@@ -104,7 +104,7 @@ public class InValueSetTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).reason.coding.inValueSet('https://clinsight.csiro.au/fhir/ValueSet/some-value-set-0')\"\n"
+        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).reason.memberOf('https://clinsight.csiro.au/fhir/ValueSet/some-value-set-0')\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -242,7 +242,7 @@ public class InValueSetTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"DiagnosticReport.result.resolve().code.coding.inValueSet('http://loinc.org/vs/LP14885-5')\"\n"
+        + "          \"valueString\": \"DiagnosticReport.result.resolve().code.memberOf('http://loinc.org/vs/LP14885-5')\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -325,7 +325,7 @@ public class InValueSetTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(MedicationRequest.subject).medicationCodeableConcept.coding.inValueSet('http://snomed.info/sct?fhir_vs=ecl/((* : << 30364011000036101|has Australian BoSS| = << 2338011000036107|metoprolol tartrate|) OR ((^ 929360041000036105|Trade product pack reference set| OR ^ 929360051000036108|Containered trade product pack reference set|) : 30409011000036107|has TPUU| = (* : << 30364011000036101|has Australian BoSS| = << 2338011000036107|metoprolol tartrate|)) OR (^ 929360081000036101|Medicinal product pack reference set| : 30348011000036104|has MPUU| = (* : << 30364011000036101|has Australian BoSS| = << 2338011000036107|metoprolol tartrate|)))')\"\n"
+        + "          \"valueString\": \"Patient.reverseResolve(MedicationRequest.subject).medicationCodeableConcept.coding in expand('http://snomed.info/sct?fhir_vs=ecl/((* : << 30364011000036101|has Australian BoSS| = << 2338011000036107|metoprolol tartrate|) OR ((^ 929360041000036105|Trade product pack reference set| OR ^ 929360051000036108|Containered trade product pack reference set|) : 30409011000036107|has TPUU| = (* : << 30364011000036101|has Australian BoSS| = << 2338011000036107|metoprolol tartrate|)) OR (^ 929360081000036101|Medicinal product pack reference set| : 30348011000036104|has MPUU| = (* : << 30364011000036101|has Australian BoSS| = << 2338011000036107|metoprolol tartrate|)))')\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -408,7 +408,7 @@ public class InValueSetTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(MedicationRequest.subject).medicationCodeableConcept.coding.inValueSet('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\"\n"
+        + "          \"valueString\": \"Patient.reverseResolve(MedicationRequest.subject).medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -480,7 +480,7 @@ public class InValueSetTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Condition.code.coding.inValueSet('http://snomed.info/sct?fhir_vs=ecl/<< 125605004')\"\n"
+        + "          \"valueString\": \"Condition.code.memberOf('http://snomed.info/sct?fhir_vs=ecl/<< 125605004')\"\n"
         + "        },\n"
         + "        { \"name\": \"label\", \"valueString\": \"Is it a type of fracture?\" }\n"
         + "      ]\n"
@@ -556,7 +556,7 @@ public class InValueSetTest {
         + "                },\n"
         + "                {\n"
         + "                    \"name\": \"expression\",\n"
-        + "                    \"valueString\": \"Patient.reverseResolve(MedicationRequest.subject).medicationCodeableConcept.coding.inValueSet('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\"\n"
+        + "                    \"valueString\": \"Patient.reverseResolve(MedicationRequest.subject).medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\"\n"
         + "                }\n"
         + "            ]\n"
         + "        },\n"
@@ -569,13 +569,13 @@ public class InValueSetTest {
         + "                },\n"
         + "                {\n"
         + "                    \"name\": \"expression\",\n"
-        + "                    \"valueString\": \"Patient.reverseResolve(Condition.subject).code.coding.inValueSet('http://snomed.info/sct?fhir_vs=ecl/< 64572001|Disease (disorder)| : (363698007|Finding site| = << 39607008|Lung structure|, 370135005|Pathological process| = << 441862004|Infectious process|)')\"\n"
+        + "                    \"valueString\": \"Patient.reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/< 64572001|Disease (disorder)| : (363698007|Finding site| = << 39607008|Lung structure|, 370135005|Pathological process| = << 441862004|Infectious process|)')\"\n"
         + "                }\n"
         + "            ]\n"
         + "        },\n"
         + "        {\n"
         + "            \"name\": \"filter\",\n"
-        + "            \"valueString\": \"Patient.reverseResolve(Condition.subject).code.coding.inValueSet('http://snomed.info/sct?fhir_vs=ecl/< 64572001|Disease (disorder)| : (363698007|Finding site| = << 39352004|Joint structure|, 370135005|Pathological process| = << 263680009|Autoimmune process|)') and Patient.reverseResolve(Condition.subject).code.coding.inValueSet('http://snomed.info/sct?fhir_vs=ecl/< 64572001|Disease (disorder)| : (363698007|Finding site| = << 39607008|Lung structure|, 263502005|Clinical course| = << 90734009|Chronic|)')\"\n"
+        + "            \"valueString\": \"Patient.reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/< 64572001|Disease (disorder)| : (363698007|Finding site| = << 39352004|Joint structure|, 370135005|Pathological process| = << 263680009|Autoimmune process|)') and Patient.reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/< 64572001|Disease (disorder)| : (363698007|Finding site| = << 39607008|Lung structure|, 263502005|Clinical course| = << 90734009|Chronic|)')\"\n"
         + "        }\n"
         + "    ]\n"
         + "}";

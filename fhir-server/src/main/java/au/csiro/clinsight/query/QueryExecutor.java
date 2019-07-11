@@ -99,7 +99,8 @@ public class QueryExecutor {
   public AggregateQueryResult execute(AggregateQuery query) throws InvalidRequestException {
     try {
 
-      QueryPlanner queryPlanner = new QueryPlanner(terminologyClient, spark, query);
+      QueryPlanner queryPlanner = new QueryPlanner(terminologyClient, spark,
+          configuration.getDatabaseName(), query);
       QueryPlan queryPlan = queryPlanner.buildQueryPlan();
 
       Dataset<Row> result = executeQueryPlan(queryPlan, query);

@@ -41,10 +41,13 @@ public class ExpressionParser {
 
   private final TerminologyClient terminologyClient;
   private final SparkSession spark;
+  private final String databaseName;
 
-  public ExpressionParser(TerminologyClient terminologyClient, SparkSession spark) {
+  public ExpressionParser(TerminologyClient terminologyClient, SparkSession spark,
+      String databaseName) {
     this.terminologyClient = terminologyClient;
     this.spark = spark;
+    this.databaseName = databaseName;
   }
 
   public ParseResult parse(String expression) {
@@ -52,7 +55,8 @@ public class ExpressionParser {
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     FhirPathParser parser = new FhirPathParser(tokens);
 
-    ExpressionVisitor expressionVisitor = new ExpressionVisitor(terminologyClient, spark);
+    ExpressionVisitor expressionVisitor = new ExpressionVisitor(terminologyClient, spark,
+        databaseName);
     return expressionVisitor.visit(parser.expression());
   }
 
@@ -64,11 +68,13 @@ public class ExpressionParser {
 
     private final TerminologyClient terminologyClient;
     private final SparkSession spark;
+    private final String databaseName;
 
-    ExpressionVisitor(TerminologyClient terminologyClient,
-        SparkSession spark) {
+    ExpressionVisitor(TerminologyClient terminologyClient, SparkSession spark,
+        String databaseName) {
       this.terminologyClient = terminologyClient;
       this.spark = spark;
+      this.databaseName = databaseName;
     }
 
     /**
@@ -76,7 +82,7 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitTermExpression(TermExpressionContext ctx) {
-      return ctx.term().accept(new TermVisitor(terminologyClient, spark));
+      return ctx.term().accept(new TermVisitor(terminologyClient, spark, databaseName));
     }
 
     /**
@@ -84,22 +90,22 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitInvocationExpression(InvocationExpressionContext ctx) {
-      ParseResult expressionResult = new ExpressionVisitor(terminologyClient, spark)
+      ParseResult expressionResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
           .visit(ctx.expression());
       // The invoking expression is passed through to the invocation visitor's constructor - this
       // will provide it with extra context required to do things like merging in joins from the
       // upstream path.
       return ctx.invocation()
-          .accept(new InvocationVisitor(terminologyClient, spark, expressionResult));
+          .accept(new InvocationVisitor(terminologyClient, spark, databaseName, expressionResult));
     }
 
     @Nonnull
     private ParseResult parseBooleanExpression(ExpressionContext ctx,
         ExpressionContext leftExpression, ExpressionContext rightExpression,
         String operatorString) {
-      ParseResult leftResult = new ExpressionVisitor(terminologyClient, spark)
+      ParseResult leftResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
           .visit(leftExpression);
-      ParseResult rightResult = new ExpressionVisitor(terminologyClient, spark)
+      ParseResult rightResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
           .visit(rightExpression);
       leftResult.setExpression(ctx.getText());
       leftResult.setSqlExpression(
@@ -169,9 +175,9 @@ public class ExpressionParser {
     @Override
     public ParseResult visitMembershipExpression(MembershipExpressionContext ctx) {
       MembershipExpression membershipExpression = new MembershipExpression();
-      ParseResult leftResult = new ExpressionVisitor(terminologyClient, spark)
+      ParseResult leftResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
           .visit(ctx.expression(0));
-      ParseResult rightResult = new ExpressionVisitor(terminologyClient, spark)
+      ParseResult rightResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
           .visit(ctx.expression(1));
       return membershipExpression.invoke(leftResult, rightResult);
     }
@@ -190,10 +196,12 @@ public class ExpressionParser {
 
     private final TerminologyClient terminologyClient;
     private final SparkSession spark;
+    private final String databaseName;
 
-    TermVisitor(TerminologyClient terminologyClient, SparkSession spark) {
+    TermVisitor(TerminologyClient terminologyClient, SparkSession spark, String databaseName) {
       this.terminologyClient = terminologyClient;
       this.spark = spark;
+      this.databaseName = databaseName;
     }
 
     /**
@@ -202,7 +210,7 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitInvocationTerm(InvocationTermContext ctx) {
-      return new InvocationVisitor(terminologyClient, spark).visit(ctx.invocation());
+      return new InvocationVisitor(terminologyClient, spark, databaseName).visit(ctx.invocation());
     }
 
     /**
@@ -223,7 +231,7 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitParenthesizedTerm(ParenthesizedTermContext ctx) {
-      final ParseResult result = new ExpressionVisitor(terminologyClient, spark)
+      final ParseResult result = new ExpressionVisitor(terminologyClient, spark, databaseName)
           .visit(ctx.expression());
       result.setExpression("(" + result.getSqlExpression() + ")");
       result.setSqlExpression("(" + result.getSqlExpression() + ")");
@@ -241,18 +249,21 @@ public class ExpressionParser {
 
     final TerminologyClient terminologyClient;
     final SparkSession spark;
+    final String databaseName;
     ParseResult invoker;
 
-    InvocationVisitor(TerminologyClient terminologyClient,
-        SparkSession spark) {
+    InvocationVisitor(TerminologyClient terminologyClient, SparkSession spark,
+        String databaseName) {
       this.terminologyClient = terminologyClient;
       this.spark = spark;
+      this.databaseName = databaseName;
     }
 
-    InvocationVisitor(TerminologyClient terminologyClient,
-        SparkSession spark, ParseResult invoker) {
+    InvocationVisitor(TerminologyClient terminologyClient, SparkSession spark, String databaseName,
+        ParseResult invoker) {
       this.terminologyClient = terminologyClient;
       this.spark = spark;
+      this.databaseName = databaseName;
       this.invoker = invoker;
     }
 
@@ -387,12 +398,14 @@ public class ExpressionParser {
       arguments = paramList == null
           ? new ArrayList<>()
           : paramList.expression().stream()
-              .map(expression -> new ExpressionVisitor(terminologyClient, spark).visit(expression))
+              .map(expression -> new ExpressionVisitor(terminologyClient, spark, databaseName)
+                  .visit(expression))
               .collect(Collectors.toList());
 
       // Invoke the function and return the result.
       function.setTerminologyClient(terminologyClient);
       function.setSparkSession(spark);
+      function.setDatabaseName(databaseName);
       return function.invoke(invoker, arguments);
     }
 

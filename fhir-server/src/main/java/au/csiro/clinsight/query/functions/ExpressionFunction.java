@@ -30,4 +30,6 @@ public interface ExpressionFunction {
 
   void setSparkSession(@Nonnull SparkSession spark);
 
+  void setDatabaseName(@Nonnull String databaseName);
+
 }
