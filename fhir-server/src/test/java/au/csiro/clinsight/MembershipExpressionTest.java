@@ -57,7 +57,7 @@ public class MembershipExpressionTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void literalStringValue() throws IOException {
+  public void stringLiteral() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
         + "    {\n"
@@ -138,7 +138,7 @@ public class MembershipExpressionTest {
             + "FROM patient "
             + "LEFT JOIN ("
             + "SELECT patient.id, "
-            + "CASE WHEN MAX(patientPhoto.title) IS NULL THEN FALSE ELSE TRUE END AS result "
+            + "IFNULL(MAX(patient.gender = patientPhoto.title), FALSE) AS result "
             + "FROM patient "
             + "LATERAL VIEW OUTER explode(patient.photo) patientPhoto AS patientPhoto "
             + "GROUP BY 1"
@@ -159,7 +159,7 @@ public class MembershipExpressionTest {
   }
 
   @Test
-  public void coding() throws IOException {
+  public void codingLiteral() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
         + "    {\n"
@@ -222,6 +222,67 @@ public class MembershipExpressionTest {
             + "ON patient.id = patientConditionAsSubjectCodeCodingMembership.id "
             + "GROUP BY 1, 2 "
             + "ORDER BY 1, 2, 3";
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    httpClient.execute(httpPost);
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+  }
+
+  @Test
+  public void singularCoding() throws IOException {
+    String inParams = "{\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Encounter.count()\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of encounters\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"Encounter.class in Encounter.type\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Class is in type\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ],\n"
+        + "  \"resourceType\": \"Parameters\"\n"
+        + "}";
+
+    String expectedSql =
+        "SELECT encounterTypeCodingMembership.result AS `Class is in type`, "
+            + "COUNT(DISTINCT encounter.id) AS `Number of encounters` "
+            + "FROM encounter "
+            + "LEFT JOIN ("
+            + "SELECT encounter.id, "
+            + "IFNULL(MAX(encounter.class.system = encounterTypeCoding.system AND encounter.class.code = encounterTypeCoding.code), FALSE) AS result "
+            + "FROM encounter "
+            + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
+            + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
+            + "GROUP BY 1"
+            + ") encounterTypeCodingMembership "
+            + "ON encounter.id = encounterTypeCodingMembership.id "
+            + "GROUP BY 1 "
+            + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);

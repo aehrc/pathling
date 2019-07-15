@@ -4,12 +4,12 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.COMPLEX;
+import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.COMPLEX;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 
-import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.query.Code;
+import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -19,7 +19,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.dstu3.model.UriType;
 import org.hl7.fhir.dstu3.model.ValueSet;
 
@@ -31,18 +30,16 @@ import org.hl7.fhir.dstu3.model.ValueSet;
  */
 public class ExpandFunction implements ExpressionFunction {
 
-  private TerminologyClient terminologyClient;
-  private SparkSession spark;
-  private String databaseName;
+  private ExpressionParserContext context;
 
   @Nonnull
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
     ParseResult argument = validateArgument(arguments);
 
-    assert argument.getExpression() != null;
-    String unquotedArgument = argument.getExpression()
-        .substring(1, argument.getExpression().length() - 1);
+    assert argument.getFhirPath() != null;
+    String unquotedArgument = argument.getFhirPath()
+        .substring(1, argument.getFhirPath().length() - 1);
     // Get a shortened hash of the ValueSet URL for use as part of the temporary view name, and also
     // within the alias in the query. This helps us ensure uniqueness of the names we use.
     String argumentHash = Strings.md5(unquotedArgument).substring(0, 7);
@@ -53,8 +50,8 @@ public class ExpandFunction implements ExpressionFunction {
 
     // Build a new parse result, representing the results of the ValueSet expansion.
     ParseResult result = new ParseResult();
-    result.setExpression("expand(" + argument.getExpression() + ")");
-    result.setSqlExpression(tableName + ".code");
+    result.setFhirPath("expand(" + argument.getFhirPath() + ")");
+    result.setSql(tableName + ".code");
     result.setResultType(COLLECTION);
     result.setElementType(COMPLEX);
     result.setElementTypeCode("Coding");
@@ -69,7 +66,7 @@ public class ExpandFunction implements ExpressionFunction {
     ParseResult argument = arguments.get(0);
     if (argument.getResultType() != STRING) {
       throw new InvalidRequestException(
-          "Argument to expand function must be a String: " + argument.getExpression());
+          "Argument to expand function must be a String: " + argument.getFhirPath());
     }
     return argument;
   }
@@ -91,18 +88,8 @@ public class ExpandFunction implements ExpressionFunction {
   }
 
   @Override
-  public void setTerminologyClient(@Nonnull TerminologyClient terminologyClient) {
-    this.terminologyClient = terminologyClient;
-  }
-
-  @Override
-  public void setSparkSession(@Nonnull SparkSession spark) {
-    this.spark = spark;
-  }
-
-  @Override
-  public void setDatabaseName(@Nonnull String databaseName) {
-    this.databaseName = databaseName;
+  public void setContext(@Nonnull ExpressionParserContext context) {
+    this.context = context;
   }
 
 }

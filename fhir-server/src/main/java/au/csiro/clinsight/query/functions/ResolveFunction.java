@@ -4,9 +4,9 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.definitions.ElementResolver.resolveElement;
-import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.REFERENCE;
-import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.RESOURCE;
+import static au.csiro.clinsight.fhir.definitions.PathResolver.resolvePath;
+import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
+import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getResourceByUrl;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isResource;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
@@ -14,15 +14,14 @@ import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLE
 import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
-import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.fhir.definitions.ResolvedElement;
+import au.csiro.clinsight.fhir.definitions.PathTraversal;
+import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 
 /**
@@ -38,8 +37,8 @@ public class ResolveFunction implements ExpressionFunction {
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
     validateInput(input);
-    assert input.getExpression() != null;
-    ResolvedElement element = resolveElement(input.getExpression());
+    assert input.getFhirPath() != null;
+    PathTraversal element = resolvePath(input.getFhirPath());
     assert element.getType() == REFERENCE;
     String referenceTypeCode;
     if (element.getReferenceTypes().size() > 1) {
@@ -57,7 +56,7 @@ public class ResolveFunction implements ExpressionFunction {
     List<String> pathComponents = tokenizePath(element.getPath());
     String joinAlias = pathToLowerCamelCase(pathComponents);
     String joinExpression = "LEFT JOIN " + referenceTypeCode.toLowerCase() + " " + joinAlias
-        + " ON " + input.getSqlExpression() + ".reference = "
+        + " ON " + input.getSql() + ".reference = "
         + joinAlias + ".id";
     Join join = new Join(joinExpression, referenceTypeCode.toLowerCase(), TABLE_JOIN, joinAlias);
     if (!input.getJoins().isEmpty()) {
@@ -66,8 +65,8 @@ public class ResolveFunction implements ExpressionFunction {
     input.setResultType(COLLECTION);
     input.setElementType(RESOURCE);
     input.setElementTypeCode(referenceTypeCode);
-    input.setExpression(referenceTypeCode);
-    input.setSqlExpression(joinAlias);
+    input.setFhirPath(referenceTypeCode);
+    input.setSql(joinAlias);
     input.getJoins().add(join);
     return input;
   }
@@ -78,7 +77,7 @@ public class ResolveFunction implements ExpressionFunction {
     }
     if (input.getElementType() != REFERENCE) {
       throw new InvalidRequestException(
-          "Input to resolve function must be a Reference: " + input.getExpression() + " ("
+          "Input to resolve function must be a Reference: " + input.getFhirPath() + " ("
               + input.getElementTypeCode() + ")");
     }
   }
@@ -88,9 +87,9 @@ public class ResolveFunction implements ExpressionFunction {
       @Nonnull List<ParseResult> arguments) {
     String referenceTypeCode;
     if (arguments.size() == 1) {
-      String argument = arguments.get(0).getExpression();
+      String argument = arguments.get(0).getFhirPath();
       assert argument != null;
-      ResolvedElement argumentElement = resolveElement(argument);
+      PathTraversal argumentElement = resolvePath(argument);
       referenceTypeCode = argumentElement.getTypeCode();
       assert referenceTypeCode != null;
       if (argumentElement.getType() != RESOURCE
@@ -102,21 +101,13 @@ public class ResolveFunction implements ExpressionFunction {
     } else {
       throw new InvalidRequestException(
           "Attempt to resolve polymorphic reference without providing an argument: " + input
-              .getExpression());
+              .getFhirPath());
     }
     return referenceTypeCode;
   }
 
   @Override
-  public void setTerminologyClient(@Nonnull TerminologyClient terminologyClient) {
-  }
-
-  @Override
-  public void setSparkSession(@Nonnull SparkSession spark) {
-  }
-
-  @Override
-  public void setDatabaseName(@Nonnull String databaseName) {
+  public void setContext(@Nonnull ExpressionParserContext context) {
   }
 
 }

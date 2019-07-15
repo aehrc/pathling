@@ -4,32 +4,26 @@
 
 package au.csiro.clinsight.query.parsing;
 
-import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.PRIMITIVE;
-import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.query.Mappings.getFunction;
-import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.CODING;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATETIME;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.*;
-import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
-import static au.csiro.clinsight.utilities.Strings.tokenizePath;
-import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
-import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
 import au.csiro.clinsight.fhir.FhirPathParser.*;
-import au.csiro.clinsight.fhir.definitions.*;
 import au.csiro.clinsight.query.functions.ExpressionFunction;
+import au.csiro.clinsight.query.functions.MemberInvocation;
+import au.csiro.clinsight.query.functions.MembershipExpression;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.apache.spark.sql.SparkSession;
 
 /**
  * This is an ANTLR-based parser for processing a FHIRPath expression, and aggregating the results
@@ -39,15 +33,10 @@ import org.apache.spark.sql.SparkSession;
  */
 public class ExpressionParser {
 
-  private final TerminologyClient terminologyClient;
-  private final SparkSession spark;
-  private final String databaseName;
+  private final ExpressionParserContext context;
 
-  public ExpressionParser(TerminologyClient terminologyClient, SparkSession spark,
-      String databaseName) {
-    this.terminologyClient = terminologyClient;
-    this.spark = spark;
-    this.databaseName = databaseName;
+  public ExpressionParser(ExpressionParserContext context) {
+    this.context = context;
   }
 
   public ParseResult parse(String expression) {
@@ -55,8 +44,7 @@ public class ExpressionParser {
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     FhirPathParser parser = new FhirPathParser(tokens);
 
-    ExpressionVisitor expressionVisitor = new ExpressionVisitor(terminologyClient, spark,
-        databaseName);
+    ExpressionVisitor expressionVisitor = new ExpressionVisitor(context);
     return expressionVisitor.visit(parser.expression());
   }
 
@@ -66,15 +54,10 @@ public class ExpressionParser {
    */
   private static class ExpressionVisitor extends FhirPathBaseVisitor<ParseResult> {
 
-    private final TerminologyClient terminologyClient;
-    private final SparkSession spark;
-    private final String databaseName;
+    final ExpressionParserContext context;
 
-    ExpressionVisitor(TerminologyClient terminologyClient, SparkSession spark,
-        String databaseName) {
-      this.terminologyClient = terminologyClient;
-      this.spark = spark;
-      this.databaseName = databaseName;
+    ExpressionVisitor(ExpressionParserContext context) {
+      this.context = context;
     }
 
     /**
@@ -82,7 +65,7 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitTermExpression(TermExpressionContext ctx) {
-      return ctx.term().accept(new TermVisitor(terminologyClient, spark, databaseName));
+      return ctx.term().accept(new TermVisitor(context));
     }
 
     /**
@@ -90,30 +73,28 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitInvocationExpression(InvocationExpressionContext ctx) {
-      ParseResult expressionResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
+      ParseResult expressionResult = new ExpressionVisitor(context)
           .visit(ctx.expression());
       // The invoking expression is passed through to the invocation visitor's constructor - this
       // will provide it with extra context required to do things like merging in joins from the
       // upstream path.
       return ctx.invocation()
-          .accept(new InvocationVisitor(terminologyClient, spark, databaseName, expressionResult));
+          .accept(new InvocationVisitor(context, expressionResult));
     }
 
     @Nonnull
     private ParseResult parseBooleanExpression(ExpressionContext ctx,
         ExpressionContext leftExpression, ExpressionContext rightExpression,
         String operatorString) {
-      ParseResult leftResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
+      ParseResult leftResult = new ExpressionVisitor(context)
           .visit(leftExpression);
-      ParseResult rightResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
+      ParseResult rightResult = new ExpressionVisitor(context)
           .visit(rightExpression);
-      leftResult.setExpression(ctx.getText());
-      leftResult.setSqlExpression(
-          leftResult.getSqlExpression() + " " + operatorString + " " + rightResult
-              .getSqlExpression());
-      leftResult.setResultType(COLLECTION);
-      leftResult.setElementType(PRIMITIVE);
-      leftResult.setElementTypeCode("boolean");
+      leftResult.setFhirPath(ctx.getText());
+      leftResult.setSql(
+          leftResult.getSql() + " " + operatorString + " " + rightResult
+              .getSql());
+      leftResult.setResultType(BOOLEAN);
       leftResult.getJoins().addAll(rightResult.getJoins());
       leftResult.getFromTables().addAll(rightResult.getFromTables());
       return leftResult;
@@ -175,9 +156,9 @@ public class ExpressionParser {
     @Override
     public ParseResult visitMembershipExpression(MembershipExpressionContext ctx) {
       MembershipExpression membershipExpression = new MembershipExpression();
-      ParseResult leftResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
+      ParseResult leftResult = new ExpressionVisitor(context)
           .visit(ctx.expression(0));
-      ParseResult rightResult = new ExpressionVisitor(terminologyClient, spark, databaseName)
+      ParseResult rightResult = new ExpressionVisitor(context)
           .visit(ctx.expression(1));
       return membershipExpression.invoke(leftResult, rightResult);
     }
@@ -194,14 +175,10 @@ public class ExpressionParser {
    */
   private static class TermVisitor extends FhirPathBaseVisitor<ParseResult> {
 
-    private final TerminologyClient terminologyClient;
-    private final SparkSession spark;
-    private final String databaseName;
+    final ExpressionParserContext context;
 
-    TermVisitor(TerminologyClient terminologyClient, SparkSession spark, String databaseName) {
-      this.terminologyClient = terminologyClient;
-      this.spark = spark;
-      this.databaseName = databaseName;
+    TermVisitor(ExpressionParserContext context) {
+      this.context = context;
     }
 
     /**
@@ -210,7 +187,7 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitInvocationTerm(InvocationTermContext ctx) {
-      return new InvocationVisitor(terminologyClient, spark, databaseName).visit(ctx.invocation());
+      return new InvocationVisitor(context).visit(ctx.invocation());
     }
 
     /**
@@ -231,10 +208,10 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitParenthesizedTerm(ParenthesizedTermContext ctx) {
-      final ParseResult result = new ExpressionVisitor(terminologyClient, spark, databaseName)
+      final ParseResult result = new ExpressionVisitor(context)
           .visit(ctx.expression());
-      result.setExpression("(" + result.getSqlExpression() + ")");
-      result.setSqlExpression("(" + result.getSqlExpression() + ")");
+      result.setFhirPath("(" + result.getSql() + ")");
+      result.setSql("(" + result.getSql() + ")");
       return result;
     }
 
@@ -247,92 +224,17 @@ public class ExpressionParser {
    */
   private static class InvocationVisitor extends FhirPathBaseVisitor<ParseResult> {
 
-    final TerminologyClient terminologyClient;
-    final SparkSession spark;
-    final String databaseName;
+    final ExpressionParserContext context;
     ParseResult invoker;
 
-    InvocationVisitor(TerminologyClient terminologyClient, SparkSession spark,
-        String databaseName) {
-      this.terminologyClient = terminologyClient;
-      this.spark = spark;
-      this.databaseName = databaseName;
+    InvocationVisitor(ExpressionParserContext context) {
+      this.context = context;
     }
 
-    InvocationVisitor(TerminologyClient terminologyClient, SparkSession spark, String databaseName,
+    InvocationVisitor(ExpressionParserContext context,
         ParseResult invoker) {
-      this.terminologyClient = terminologyClient;
-      this.spark = spark;
-      this.databaseName = databaseName;
+      this.context = context;
       this.invoker = invoker;
-    }
-
-    /**
-     * Processes multi-value traversals within an element definition, adding joins to the
-     * ParseResult along the way.
-     */
-    static void populateJoinsFromElement(ParseResult result, ResolvedElement element) {
-      Join previousJoin = result.getJoins().isEmpty()
-          ? null
-          : result.getJoins().last();
-      if (!element.getMultiValueTraversals().isEmpty()) {
-        populateJoinFromMultiValueTraversal(result, previousJoin,
-            element.getMultiValueTraversals().getLast());
-      }
-
-      // Rewrite the main expression (SELECT) of the parse result to make use of the table aliases
-      // that were created when we processed the joins.
-      if (!result.getJoins().isEmpty()) {
-        Join finalJoin = result.getJoins().last();
-        assert element.getType() != null;
-        String updatedExpression;
-        if (finalJoin.getJoinType() == LATERAL_VIEW) {
-          assert finalJoin.getUdtfExpression() != null;
-          assert result.getSqlExpression() != null;
-          updatedExpression = result.getSqlExpression()
-              .replaceAll(finalJoin.getUdtfExpression() + "(?:\\.|$)", finalJoin.getTableAlias());
-        } else {
-          assert result.getSqlExpression() != null;
-          updatedExpression = result.getSqlExpression()
-              .replaceAll(finalJoin.getRootExpression() + "(?:\\.|$)", finalJoin.getTableAlias());
-        }
-        result.setSqlExpression(updatedExpression);
-      }
-    }
-
-    /**
-     * Populate an individual join into a ParseResult, based on an individual MultiValueTraversal.
-     */
-    private static void populateJoinFromMultiValueTraversal(ParseResult result, Join previousJoin,
-        MultiValueTraversal multiValueTraversal) {
-      // Construct an alias that can be used to refer to the generated table elsewhere in the query.
-      LinkedList<String> pathComponents = tokenizePath(multiValueTraversal.getPath());
-      String tableAlias = pathToLowerCamelCase(pathComponents);
-
-      // Construct a join expression.
-      pathComponents.push(pathComponents.pop().toLowerCase());
-      String rootExpression = untokenizePath(pathComponents);
-      String udtfExpression = rootExpression;
-      String traversalType = multiValueTraversal.getTypeCode();
-
-      // If this is not the first join, record a dependency between this join and the previous one.
-      // The expression needs to be rewritten to refer to the alias of the target join.
-      if (previousJoin != null) {
-        udtfExpression = udtfExpression
-            .replace(previousJoin.getRootExpression(), previousJoin.getTableAlias());
-        tableAlias = pathToLowerCamelCase(tokenizePath(udtfExpression));
-      }
-
-      String joinExpression =
-          "LATERAL VIEW OUTER explode(" + udtfExpression + ") " + tableAlias + " AS " + tableAlias;
-      Join join = new Join(joinExpression, rootExpression, LATERAL_VIEW, tableAlias);
-      join.setUdtfExpression(udtfExpression);
-      join.setTraversalType(traversalType);
-      if (previousJoin != null) {
-        join.setDependsUpon(previousJoin);
-      }
-
-      result.getJoins().add(join);
     }
 
     /**
@@ -341,41 +243,11 @@ public class ExpressionParser {
      */
     @Override
     public ParseResult visitMemberInvocation(MemberInvocationContext ctx) {
-      if (invoker != null && invoker.getElementType() == PRIMITIVE) {
-        throw new InvalidRequestException("Attempt to invoke member on primitive type");
-      }
-      ResolvedElement element;
-      String fhirPathExpression = invoker == null
-          ? ctx.getText()
-          : invoker.getExpression() + "." + ctx.getText();
-      SortedSet<Join> joins = invoker == null
-          ? new TreeSet<>()
-          : invoker.getJoins();
-      try {
-        element = ElementResolver.resolveElement(fhirPathExpression);
-      } catch (ResourceNotKnownException | ElementNotKnownException e) {
-        throw new InvalidRequestException(e.getMessage());
-      }
-      ParseResult result = new ParseResult();
-      if (element.getType() == RESOURCE) {
-        String sqlExpression = fhirPathExpression.toLowerCase();
-        result.setSqlExpression(sqlExpression);
-        result.setExpression(fhirPathExpression);
-        result.getFromTables().add(sqlExpression);
-      } else {
-        assert invoker != null;
-        String sqlExpression = invoker.getSqlExpression() + "." + ctx.getText();
-        result.setSqlExpression(sqlExpression);
-        result.setExpression(fhirPathExpression);
-        result.getFromTables().addAll(invoker.getFromTables());
-      }
-      result.setResultType(COLLECTION);
-      result.setElementType(element.getType());
-      result.setElementTypeCode(element.getTypeCode());
-      result.getJoins().addAll(joins);
-      populateJoinsFromElement(result, element);
-      assert result.getElementTypeCode() != null;
-      return result;
+      assert invoker != null;
+      assert invoker.getPathTraversal() != null;
+
+      return new MemberInvocation(context).invoke(invoker, ctx.getText());
+
     }
 
     /**
@@ -398,14 +270,12 @@ public class ExpressionParser {
       arguments = paramList == null
           ? new ArrayList<>()
           : paramList.expression().stream()
-              .map(expression -> new ExpressionVisitor(terminologyClient, spark, databaseName)
+              .map(expression -> new ExpressionVisitor(context)
                   .visit(expression))
               .collect(Collectors.toList());
 
       // Invoke the function and return the result.
-      function.setTerminologyClient(terminologyClient);
-      function.setSparkSession(spark);
-      function.setDatabaseName(databaseName);
+      function.setContext(context);
       return function.invoke(invoker, arguments);
     }
 
@@ -422,7 +292,7 @@ public class ExpressionParser {
     public ParseResult visitCodingLiteral(CodingLiteralContext ctx) {
       ParseResult result = new ParseResult();
       result.setResultType(CODING);
-      result.setExpression(ctx.getText());
+      result.setFhirPath(ctx.getText());
       return result;
     }
 
@@ -430,8 +300,8 @@ public class ExpressionParser {
     public ParseResult visitStringLiteral(StringLiteralContext ctx) {
       ParseResult result = new ParseResult();
       result.setResultType(STRING);
-      result.setExpression(ctx.getText());
-      result.setSqlExpression(ctx.getText());
+      result.setFhirPath(ctx.getText());
+      result.setSql(ctx.getText());
       return result;
     }
 
@@ -439,8 +309,8 @@ public class ExpressionParser {
     public ParseResult visitDateTimeLiteral(DateTimeLiteralContext ctx) {
       ParseResult result = new ParseResult();
       result.setResultType(DATETIME);
-      result.setExpression(ctx.getText());
-      result.setSqlExpression("'" + ctx.getText().replace("@", "") + "'");
+      result.setFhirPath(ctx.getText());
+      result.setSql("'" + ctx.getText().replace("@", "") + "'");
       return result;
     }
 
@@ -448,8 +318,8 @@ public class ExpressionParser {
     public ParseResult visitNumberLiteral(NumberLiteralContext ctx) {
       ParseResult result = new ParseResult();
       result.setResultType(INTEGER);
-      result.setExpression(ctx.getText());
-      result.setSqlExpression(ctx.getText());
+      result.setFhirPath(ctx.getText());
+      result.setSql(ctx.getText());
       return result;
     }
 
@@ -457,8 +327,8 @@ public class ExpressionParser {
     public ParseResult visitBooleanLiteral(BooleanLiteralContext ctx) {
       ParseResult result = new ParseResult();
       result.setResultType(BOOLEAN);
-      result.setExpression(ctx.getText().toUpperCase());
-      result.setSqlExpression(ctx.getText().toUpperCase());
+      result.setFhirPath(ctx.getText().toUpperCase());
+      result.setSql(ctx.getText().toUpperCase());
       return result;
     }
 

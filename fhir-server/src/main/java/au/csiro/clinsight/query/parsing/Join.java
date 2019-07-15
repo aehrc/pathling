@@ -4,9 +4,9 @@
 
 package au.csiro.clinsight.query.parsing;
 
+import au.csiro.clinsight.fhir.definitions.ElementDefinition;
 import java.util.Objects;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * This class describes the requirements for a join as inferred by the expression parser and
@@ -14,53 +14,42 @@ import javax.annotation.Nullable;
  *
  * @author John Grimes
  */
-@SuppressWarnings({"WeakerAccess", "unused"})
 public class Join implements Comparable<Join> {
 
-  @Nonnull
-  private final String rootExpression;
+  /**
+   * A SQL expression that can be used to execute this join in support of a query.
+   */
+  private String sql;
 
-  @Nonnull
-  private String expression;
-
-  @Nonnull
+  /**
+   * A categorisation of the type of join.
+   */
   private JoinType joinType;
 
-  @Nonnull
+  /**
+   * An alias for use in identifying the result of the join within a query.
+   */
   private String tableAlias;
 
-  @Nullable
-  private String udtfExpression;
+  /**
+   * The definition of the element that this join is designed to allow access to.
+   */
+  private ElementDefinition targetElement;
 
-  @Nullable
-  private String traversalType;
-
-  @Nullable
+  /**
+   * An upstream join that this join depends upon. This is used for ordering joins properly within a
+   * query.
+   */
   private Join dependsUpon;
 
-  public Join(@Nonnull String expression, @Nonnull String rootExpression,
-      @Nonnull JoinType joinType, @Nonnull String tableAlias) {
-    this.expression = expression;
-    this.rootExpression = rootExpression;
-    this.joinType = joinType;
-    this.tableAlias = tableAlias;
+  public String getSql() {
+    return sql;
   }
 
-  @Nonnull
-  public String getExpression() {
-    return expression;
+  public void setSql(@Nonnull String sql) {
+    this.sql = sql;
   }
 
-  public void setExpression(@Nonnull String expression) {
-    this.expression = expression;
-  }
-
-  @Nonnull
-  public String getRootExpression() {
-    return rootExpression;
-  }
-
-  @Nonnull
   public JoinType getJoinType() {
     return joinType;
   }
@@ -69,7 +58,6 @@ public class Join implements Comparable<Join> {
     this.joinType = joinType;
   }
 
-  @Nonnull
   public String getTableAlias() {
     return tableAlias;
   }
@@ -78,30 +66,19 @@ public class Join implements Comparable<Join> {
     this.tableAlias = tableAlias;
   }
 
-  @Nullable
-  public String getUdtfExpression() {
-    return udtfExpression;
+  public ElementDefinition getTargetElement() {
+    return targetElement;
   }
 
-  public void setUdtfExpression(@Nullable String udtfExpression) {
-    this.udtfExpression = udtfExpression;
+  public void setTargetElement(@Nonnull ElementDefinition targetElement) {
+    this.targetElement = targetElement;
   }
 
-  @Nullable
-  public String getTraversalType() {
-    return traversalType;
-  }
-
-  public void setTraversalType(@Nullable String traversalType) {
-    this.traversalType = traversalType;
-  }
-
-  @Nullable
   public Join getDependsUpon() {
     return dependsUpon;
   }
 
-  public void setDependsUpon(@Nullable Join dependsUpon) {
+  public void setDependsUpon(@Nonnull Join dependsUpon) {
     this.dependsUpon = dependsUpon;
   }
 
@@ -130,6 +107,9 @@ public class Join implements Comparable<Join> {
     }
   }
 
+  /**
+   * A join is "equal" to another join if it has the same target element.
+   */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -139,35 +119,42 @@ public class Join implements Comparable<Join> {
       return false;
     }
     Join join = (Join) o;
-    return rootExpression.equals(join.rootExpression);
+    return Objects.equals(targetElement, join.targetElement);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(rootExpression);
+    return Objects.hash(targetElement);
   }
 
   /**
    * A categorisation of the type of join, which is used by the query planner to decide how to
    * translate this into executable instructions.
-   *
-   * LATERAL_VIEW - used to explode out rows from fields with max cardinalities greater than one.
-   *
-   * TABLE_JOIN - a regular left outer join, used to resolve references between different resource
-   * types.
-   *
-   * INLINE_QUERY - a lateral view that has been wrapped within a subquery, to get around the issue
-   * that Spark SQL cannot join from a lateral view.
-   *
-   * EXISTS_JOIN - a left outer join to a table (e.g. a ValueSet expansion) for which a boolean
-   * value is required based upon whether the code on the left hand side exists within the set of
-   * codes on the right hand side. This will later need to be converted to a subquery within a FROM
-   * clause, as it requires two levels of aggregation (one to reduce the multiple codes into a
-   * single NULL or NOT NULL value, then a second to convert that to boolean and aggregate on the
-   * requested aggregation elements).
    */
   public enum JoinType {
-    LATERAL_VIEW, TABLE_JOIN, INLINE_QUERY, EXISTS_JOIN
+    /**
+     * LATERAL_VIEW - used to explode out rows from fields with max cardinalities greater than one.
+     */
+    LATERAL_VIEW,
+    /**
+     * TABLE_JOIN - a regular left outer join, used to resolve references between different resource
+     * types.
+     */
+    TABLE_JOIN,
+    /**
+     * INLINE_QUERY - a lateral view that has been wrapped within a subquery, to get around the
+     * issue that Spark SQL cannot join from a lateral view.
+     */
+    INLINE_QUERY,
+    /**
+     * MEMBERSHIP_JOIN - a left outer join to a table (e.g. a ValueSet expansion) for which a
+     * boolean value is required based upon whether the code on the left hand side exists within the
+     * set of codes on the right hand side. This will later need to be converted to a subquery
+     * within a FROM clause, as it requires two levels of aggregation (one to reduce the multiple
+     * codes into a single NULL or NOT NULL value, then a second to convert that to boolean and
+     * aggregate on the requested aggregation elements).
+     */
+    MEMBERSHIP_JOIN
   }
 
 }

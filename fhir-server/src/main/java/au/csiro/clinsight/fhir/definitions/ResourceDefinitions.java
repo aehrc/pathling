@@ -78,15 +78,15 @@ public abstract class ResourceDefinitions {
   private static final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(
       1);
   private static final long RETRY_DELAY_SECONDS = 10;
-  private static Map<String, Map<String, SummarisedElement>> resourceElements = new HashMap<>();
-  private static Map<String, Map<String, SummarisedElement>> complexTypeElements = new HashMap<>();
+  private static Map<String, Map<String, ElementDefinition>> resourceElements = new HashMap<>();
+  private static Map<String, Map<String, ElementDefinition>> complexTypeElements = new HashMap<>();
   private static Map<String, StructureDefinition> resources = new HashMap<>();
   private static Map<String, StructureDefinition> complexTypes = new HashMap<>();
   private static ResourceDefinitionsStatus status = UNINITIALISED;
 
   /**
    * Fetches all StructureDefinitions known to the supplied terminology server, and loads them into
-   * memory for later querying through the `getBaseResource` and `resolveElement` methods.
+   * memory for later querying through the `getBaseResource` and `resolvePath` methods.
    */
   public static void ensureInitialized(@Nonnull TerminologyClient terminologyClient) {
     status = INITIALISATION_IN_PROGRESS;
@@ -159,8 +159,8 @@ public abstract class ResourceDefinitions {
   /**
    * Returns a map of SummarisedElements for the resource or complex type with the supplied name.
    */
-  static Map<String, SummarisedElement> getElementsForType(@Nonnull String typeName) {
-    Map<String, SummarisedElement> result = resourceElements
+  static Map<String, ElementDefinition> getElementsForType(@Nonnull String typeName) {
+    Map<String, ElementDefinition> result = resourceElements
         .get(BASE_RESOURCE_URL_PREFIX + typeName);
     return result == null
         ? complexTypeElements.get(BASE_RESOURCE_URL_PREFIX + typeName)

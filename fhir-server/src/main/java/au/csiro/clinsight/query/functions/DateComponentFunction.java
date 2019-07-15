@@ -4,16 +4,15 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.PRIMITIVE;
+import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.PRIMITIVE;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.INTEGER;
 
-import au.csiro.clinsight.TerminologyClient;
+import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.spark.sql.SparkSession;
 
 /**
  * @author John Grimes
@@ -46,8 +45,8 @@ public class DateComponentFunction implements ExpressionFunction {
   @Override
   public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
     validateInput(input);
-    String newSqlExpression = functionsMap.get(functionName) + "(" + input.getSqlExpression() + ")";
-    input.setSqlExpression(newSqlExpression);
+    String newSqlExpression = functionsMap.get(functionName) + "(" + input.getSql() + ")";
+    input.setSql(newSqlExpression);
     input.setResultType(INTEGER);
     input.setElementType(null);
     input.setElementTypeCode(null);
@@ -55,7 +54,7 @@ public class DateComponentFunction implements ExpressionFunction {
   }
 
   private void validateInput(ParseResult input) {
-    if (input == null || input.getSqlExpression() == null || input.getSqlExpression().isEmpty()) {
+    if (input == null || input.getSql() == null || input.getSql().isEmpty()) {
       throw new InvalidRequestException(
           "Missing input expression for " + functionName + " function");
     }
@@ -67,15 +66,7 @@ public class DateComponentFunction implements ExpressionFunction {
   }
 
   @Override
-  public void setTerminologyClient(@Nonnull TerminologyClient terminologyClient) {
-  }
-
-  @Override
-  public void setSparkSession(@Nonnull SparkSession spark) {
-  }
-
-  @Override
-  public void setDatabaseName(@Nonnull String databaseName) {
+  public void setContext(@Nonnull ExpressionParserContext context) {
   }
 
 }

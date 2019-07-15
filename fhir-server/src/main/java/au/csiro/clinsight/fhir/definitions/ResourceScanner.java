@@ -11,7 +11,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.dstu3.model.ElementDefinition;
 import org.hl7.fhir.dstu3.model.ElementDefinition.TypeRefComponent;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 import org.hl7.fhir.dstu3.model.StructureDefinition.StructureDefinitionKind;
@@ -109,11 +108,11 @@ class ResourceScanner {
    * HAPI StructureDefinition class.
    */
   @Nonnull
-  static Map<String, Map<String, SummarisedElement>> summariseDefinitions(
+  static Map<String, Map<String, ElementDefinition>> summariseDefinitions(
       @Nonnull Collection<StructureDefinition> definitions) {
-    Map<String, Map<String, SummarisedElement>> result = new HashMap<>();
+    Map<String, Map<String, ElementDefinition>> result = new HashMap<>();
     for (StructureDefinition definition : definitions) {
-      Map<String, SummarisedElement> summarisedElements = summariseElements(
+      Map<String, ElementDefinition> summarisedElements = summariseElements(
           definition.getSnapshot().getElement());
       result.put(definition.getUrl(), summarisedElements);
     }
@@ -125,11 +124,11 @@ class ResourceScanner {
    * definition.
    */
   @Nonnull
-  private static Map<String, SummarisedElement> summariseElements(
-      @Nonnull List<ElementDefinition> elements) {
-    Map<String, SummarisedElement> result = new HashMap<>();
+  private static Map<String, ElementDefinition> summariseElements(
+      @Nonnull List<org.hl7.fhir.dstu3.model.ElementDefinition> elements) {
+    Map<String, ElementDefinition> result = new HashMap<>();
 
-    for (ElementDefinition element : elements) {
+    for (org.hl7.fhir.dstu3.model.ElementDefinition element : elements) {
       List<TypeRefComponent> typeRefComponents = element.getType();
       String elementPath = element.getPath();
       assert elementPath != null : "Encountered element with no path";
@@ -153,11 +152,11 @@ class ResourceScanner {
           assert type != null : "Encountered element type with no code";
           String transformedPath = elementPath
               .replaceAll("\\[x]", Strings.capitalize(type));
-          SummarisedElement summarisedElement = new SummarisedElement(
+          ElementDefinition elementDefinition = new ElementDefinition(
               transformedPath, type);
-          summarisedElement.getChildElements().addAll(elementChildren);
-          summarisedElement.setMaxCardinality(maxCardinality);
-          result.put(transformedPath, summarisedElement);
+          elementDefinition.getChildElements().addAll(elementChildren);
+          elementDefinition.setMaxCardinality(maxCardinality);
+          result.put(transformedPath, elementDefinition);
         }
       } else {
         String typeCode;
@@ -177,9 +176,9 @@ class ResourceScanner {
           //       them.
           continue;
         }
-        SummarisedElement summarisedElement = new SummarisedElement(elementPath, typeCode);
-        summarisedElement.getChildElements().addAll(elementChildren);
-        summarisedElement.setMaxCardinality(maxCardinality);
+        ElementDefinition elementDefinition = new ElementDefinition(elementPath, typeCode);
+        elementDefinition.getChildElements().addAll(elementChildren);
+        elementDefinition.setMaxCardinality(maxCardinality);
 
         if (typeCode.equals("Reference")) {
           // If the element is a Reference, add a list of all the valid types that can be
@@ -188,9 +187,9 @@ class ResourceScanner {
               .stream()
               .map(TypeRefComponent::getTargetProfile)
               .collect(Collectors.toList());
-          summarisedElement.getReferenceTypes().addAll(referenceTypes);
+          elementDefinition.getReferenceTypes().addAll(referenceTypes);
         }
-        result.put(elementPath, summarisedElement);
+        result.put(elementPath, elementDefinition);
       }
     }
 
@@ -203,7 +202,7 @@ class ResourceScanner {
    * structure, they rely on paths to convey the structure.
    */
   private static List<String> findElementChildren(@Nonnull String elementPath,
-      @Nonnull List<ElementDefinition> elements) {
+      @Nonnull List<org.hl7.fhir.dstu3.model.ElementDefinition> elements) {
     List<String> children = elements.stream()
         .filter(e -> e.getPath().matches(elementPath + "\\.[a-zA-Z\\[\\]]+$"))
         .map(e -> {

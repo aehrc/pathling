@@ -142,7 +142,7 @@ public class QueryExecutor {
     }
     String selectClause = "SELECT " + String.join(", ", selectExpressions);
     String fromClause = "FROM " + String.join(", ", queryPlan.getFromTables());
-    String joins = queryPlan.getJoins().stream().map(Join::getExpression).collect(
+    String joins = queryPlan.getJoins().stream().map(Join::getSql).collect(
         Collectors.joining(" "));
     String whereClause = "WHERE " + String.join(" AND ", queryPlan.getFilters());
     String groupByClause = "GROUP BY " + String.join(", ", groupByArgs);

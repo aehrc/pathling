@@ -4,9 +4,9 @@
 
 package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.query.parsing.Join.JoinType.EXISTS_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.INLINE_QUERY;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.MEMBERSHIP_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
@@ -46,7 +46,7 @@ public abstract class QueryWrangling {
         assert downstreamTableJoin != null;
         joins = replaceLateralViews(joins, downstreamTableJoin, lateralViewsToConvert);
       } else {
-        if (cursor.getJoinType() == TABLE_JOIN || cursor.getJoinType() == EXISTS_JOIN) {
+        if (cursor.getJoinType() == TABLE_JOIN || cursor.getJoinType() == MEMBERSHIP_JOIN) {
           if (downstreamTableJoin == null) {
             // We mark a table join that depends upon a lateral view (or set of lateral views) as
             // the "dependent table join". It stays marked until we reach the end of the lateral
@@ -86,7 +86,7 @@ public abstract class QueryWrangling {
     Pattern tableAliasInvocationPattern = Pattern
         .compile("(?:ON|AND)\\s+" + finalTableAlias + "\\.(.*?)[\\s$]");
     Matcher tableAliasInvocationMatcher = tableAliasInvocationPattern
-        .matcher(dependentTableJoin.getExpression());
+        .matcher(dependentTableJoin.getSql());
     boolean found = tableAliasInvocationMatcher.find();
 
     // Build the join expression.
@@ -95,14 +95,14 @@ public abstract class QueryWrangling {
     Join upstreamJoin = firstLateralView.getDependsUpon();
     assert firstLateralView.getUdtfExpression() != null;
     String udtfExpression = firstLateralView.getRootExpression();
-    firstLateralView.setExpression(firstLateralView.getExpression()
+    firstLateralView.setSql(firstLateralView.getSql()
         .replace(firstLateralView.getUdtfExpression(), udtfExpression));
     firstLateralView.setUdtfExpression(udtfExpression);
     String table = tokenizePath(udtfExpression).getFirst();
     String joinConditionTarget = upstreamJoin == null ? table : upstreamJoin.getTableAlias();
     String joinExpression = "LEFT JOIN (SELECT * FROM " + table + " ";
     joinExpression += lateralViewsToConvert.stream()
-        .map(Join::getExpression)
+        .map(Join::getSql)
         .collect(Collectors.joining(" "));
     joinExpression +=
         ") " + newTableAlias + " ON " + joinConditionTarget + ".id = " + newTableAlias + ".id";
@@ -114,10 +114,10 @@ public abstract class QueryWrangling {
     inlineQuery.setDependsUpon(firstLateralView.getDependsUpon());
     dependentTableJoin.setDependsUpon(inlineQuery);
     // Change the expression within the dependent table join to point to the alias of the new join.
-    String transformedExpression = dependentTableJoin.getExpression()
+    String transformedExpression = dependentTableJoin.getSql()
         .replaceAll("(?<=(ON|AND)\\s)" + lateralViewsToConvert.last().getTableAlias() + "\\.",
             inlineQuery.getTableAlias() + "." + finalTableAlias + ".");
-    dependentTableJoin.setExpression(transformedExpression);
+    dependentTableJoin.setSql(transformedExpression);
 
     // This piece of code exists due to some strange behaviour in the removal of items from a set
     // that is not yet understood. Ideally this would be as simple as

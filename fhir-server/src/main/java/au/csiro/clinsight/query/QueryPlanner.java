@@ -4,7 +4,7 @@
 
 package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.fhir.definitions.ResolvedElement.ResolvedElementType.PRIMITIVE;
+import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.PRIMITIVE;
 import static au.csiro.clinsight.query.QueryWrangling.convertUpstreamLateralViewsToInlineQueries;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.*;
 
@@ -118,7 +118,7 @@ class QueryPlanner {
 
     // Get aggregation expressions from the parse results.
     List<String> aggregations = aggregationParseResults.stream()
-        .map(ParseResult::getSqlExpression)
+        .map(ParseResult::getSql)
         .collect(Collectors.toList());
     queryPlan.setAggregations(aggregations);
 
@@ -136,7 +136,7 @@ class QueryPlanner {
 
     // Get grouping expressions from the parse results.
     List<String> groupings = groupingParseResults.stream()
-        .map(ParseResult::getSqlExpression)
+        .map(ParseResult::getSql)
         .collect(Collectors.toList());
     queryPlan.setGroupings(groupings);
 
@@ -154,7 +154,7 @@ class QueryPlanner {
 
     // Get filter expressions from the parse results.
     List<String> filters = filterParseResults.stream()
-        .map(ParseResult::getSqlExpression)
+        .map(ParseResult::getSql)
         .collect(Collectors.toList());
     queryPlan.setFilters(filters);
 
