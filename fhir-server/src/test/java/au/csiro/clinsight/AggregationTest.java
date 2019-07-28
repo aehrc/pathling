@@ -70,6 +70,10 @@ public class AggregationTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
@@ -78,12 +82,12 @@ public class AggregationTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
         + "  ]\n"
-        + "}\n";
+        + "}";
 
     String expectedResponse = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
@@ -93,7 +97,7 @@ public class AggregationTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"result\",\n"
-        + "          \"valueUnsignedInt\": 143716\n"
+        + "          \"valueInteger\": 143716\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -134,16 +138,20 @@ public class AggregationTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.id.foo()\"\n"
+        + "          \"valueString\": \"%resource.id.foo()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
         + "  ]\n"
-        + "}\n";
+        + "}";
 
     String expectedResponse = "{\n"
         + "  \"resourceType\": \"OperationOutcome\",\n"
@@ -171,16 +179,20 @@ public class AggregationTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.foo.count()\"\n"
+        + "          \"valueString\": \"%resource.foo.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
         + "  ]\n"
-        + "}\n";
+        + "}";
 
     String expectedResponse = "{\n"
         + "  \"resourceType\": \"OperationOutcome\",\n"
@@ -208,16 +220,20 @@ public class AggregationTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.identifier.count()\"\n"
+        + "          \"valueString\": \"%resource.identifier.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
         + "  ]\n"
-        + "}\n";
+        + "}";
 
     String expectedResponse = "{\n"
         + "  \"resourceType\": \"OperationOutcome\",\n"
@@ -225,7 +241,7 @@ public class AggregationTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Input to count function must be of primitive or resource type: Patient.identifier (Identifier)\"\n"
+        + "      \"diagnostics\": \"Input to count function must be of primitive or resource type: Patient.identifier\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -245,6 +261,10 @@ public class AggregationTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
@@ -252,12 +272,12 @@ public class AggregationTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
         + "  ]\n"
-        + "}\n";
+        + "}";
 
     String expectedResponse = "{\n"
         + "  \"resourceType\": \"OperationOutcome\",\n"
@@ -285,6 +305,10 @@ public class AggregationTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
@@ -297,7 +321,7 @@ public class AggregationTest {
         + "      ]\n"
         + "    }\n"
         + "  ]\n"
-        + "}\n";
+        + "}";
 
     String expectedResponse = "{\n"
         + "  \"resourceType\": \"OperationOutcome\",\n"
@@ -326,6 +350,10 @@ public class AggregationTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
@@ -334,7 +362,7 @@ public class AggregationTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.identifier.type.coding.code.count()\"\n"
+        + "          \"valueString\": \"%resource.identifier.type.coding.code.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -342,64 +370,10 @@ public class AggregationTest {
         + "}\n";
 
     String expectedSql =
-        "SELECT COUNT(DISTINCT patientIdentifierTypeCoding.code) AS `Number of patients` "
+        "SELECT COUNT(DISTINCT b.code) AS `Number of patients` "
             + "FROM patient "
-            + "LATERAL VIEW OUTER explode(patient.identifier) patientIdentifier AS patientIdentifier "
-            + "LATERAL VIEW OUTER explode(patientIdentifier.type.coding) patientIdentifierTypeCoding AS patientIdentifierTypeCoding";
-
-    Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(any())).thenReturn(mockDataset);
-    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
-
-    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
-    httpClient.execute(httpPost);
-
-    verify(mockSpark).sql("USE clinsight");
-    verify(mockSpark).sql(expectedSql);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Test
-  public void multiValueTraversalInGrouping() throws IOException {
-    String inParams = "{\n"
-        + "  \"resourceType\": \"Parameters\",\n"
-        + "  \"parameter\": [\n"
-        + "    {\n"
-        + "      \"name\": \"aggregation\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Number of patients\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.id.count()\"\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"grouping\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Language\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.communication.language.coding.code\"\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    }\n"
-        + "  ]\n"
-        + "}\n";
-
-    String expectedSql = "SELECT patientCommunicationLanguageCoding.code AS `Language`, "
-        + "COUNT(DISTINCT patient.id) AS `Number of patients` "
-        + "FROM patient "
-        + "LATERAL VIEW OUTER explode(patient.communication) patientCommunication AS patientCommunication "
-        + "LATERAL VIEW OUTER explode(patientCommunication.language.coding) patientCommunicationLanguageCoding AS patientCommunicationLanguageCoding "
-        + "GROUP BY 1 "
-        + "ORDER BY 1, 2";
+            + "LATERAL VIEW OUTER EXPLODE(patient.identifier) a AS a "
+            + "LATERAL VIEW OUTER EXPLODE(a.type.coding) b AS b";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);

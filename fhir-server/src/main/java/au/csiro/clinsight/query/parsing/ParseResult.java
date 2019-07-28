@@ -5,8 +5,6 @@
 package au.csiro.clinsight.query.parsing;
 
 import au.csiro.clinsight.fhir.definitions.PathTraversal;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import javax.annotation.Nonnull;
@@ -24,11 +22,6 @@ public class ParseResult {
    * The set of joins required to execute this expression.
    */
   private final SortedSet<Join> joins = new TreeSet<>();
-
-  /**
-   * The set of tables required to execute this expression.
-   */
-  private final Set<String> fromTables = new HashSet<>();
 
   /**
    * The FHIRPath representation of this expression.
@@ -51,23 +44,23 @@ public class ParseResult {
   private PathTraversal pathTraversal;
 
   /**
-   * Flag indicating whether this expression is represented by a literal value.
+   * Flag indicating whether this expression evaluates to a collection of primitive values.
    */
-  private boolean literal;
+  private boolean primitive;
 
   /**
-   * The literal value of this expression.
+   * Flag indicating whether this expression evaluates to a collection with a single item.
+   */
+  private boolean singular;
+
+  /**
+   * The literal value of this expression, if any.
    */
   private Type literalValue;
 
   @Nonnull
   public SortedSet<Join> getJoins() {
     return joins;
-  }
-
-  @Nonnull
-  public Set<String> getFromTables() {
-    return fromTables;
   }
 
   public String getFhirPath() {
@@ -102,12 +95,20 @@ public class ParseResult {
     this.pathTraversal = pathTraversal;
   }
 
-  public boolean isLiteral() {
-    return literal;
+  public boolean isPrimitive() {
+    return primitive;
   }
 
-  public void setLiteral(boolean literal) {
-    this.literal = literal;
+  public void setPrimitive(boolean primitive) {
+    this.primitive = primitive;
+  }
+
+  public boolean isSingular() {
+    return singular;
+  }
+
+  public void setSingular(boolean singular) {
+    this.singular = singular;
   }
 
   public Type getLiteralValue() {
@@ -125,12 +126,11 @@ public class ParseResult {
     BOOLEAN(BooleanType.class, "Boolean"),
     STRING(StringType.class, "String"),
     INTEGER(IntegerType.class, "Integer"),
-    // DECIMAL(DecimalType.class, "Decimal"),             // Not currently supported
-    // DATE(DateType.class, "Date"),                      // Not currently supported
-    DATETIME(DateTimeType.class, "DateTime"),
-    // TIME(TimeType.class, "Time"),                      // Not currently supported
-    // QUANTITY(Quantity.class, "Quantity"),              // Not currently supported
-    CODING(Coding.class, "Coding");            // Not currently in the spec
+    // DECIMAL(DecimalType.class, "Decimal"),                               // Not currently supported
+    // DATE(DateType.class, "Date"),                                        // Not currently supported
+    DATE_TIME(DateTimeType.class, "DateTime"),
+    // TIME(TimeType.class, "Time");                                        // Not currently supported
+    CODING(Coding.class, "Coding");
 
     // Java class that can be used for representing the value of this expression.
     @Nonnull
@@ -145,10 +145,12 @@ public class ParseResult {
       this.fhirPathType = fhirPathType;
     }
 
+    @Nonnull
     public Class getFhirType() {
       return fhirType;
     }
 
+    @Nonnull
     public String getFhirPathType() {
       return fhirPathType;
     }

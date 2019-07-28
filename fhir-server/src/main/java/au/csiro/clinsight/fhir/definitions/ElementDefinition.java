@@ -7,8 +7,6 @@ package au.csiro.clinsight.fhir.definitions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * This class is used for storing a summarised version of a StructureDefinition in memory, with only
@@ -31,25 +29,17 @@ public class ElementDefinition {
   /**
    * Path to this element, as defined within the StructureDefinition.
    */
-  @Nonnull
   private String path;
 
   /**
    * FHIR data type for this element, as defined within the StructureDefinition.
    */
-  @Nonnull
   private String typeCode;
 
   /**
    * Maximum permitted cardinality for this element.
    */
-  @Nullable
   private String maxCardinality;
-
-  ElementDefinition(@Nonnull String path, @Nonnull String typeCode) {
-    this.path = path;
-    this.typeCode = typeCode;
-  }
 
   public List<String> getChildElements() {
     return childElements;
@@ -59,22 +49,27 @@ public class ElementDefinition {
     return referenceTypes;
   }
 
-  @Nonnull
   public String getPath() {
     return path;
   }
 
-  @Nonnull
+  public void setPath(String path) {
+    this.path = path;
+  }
+
   public String getTypeCode() {
     return typeCode;
   }
 
-  @Nullable
+  public void setTypeCode(String typeCode) {
+    this.typeCode = typeCode;
+  }
+
   public String getMaxCardinality() {
     return maxCardinality;
   }
 
-  public void setMaxCardinality(@Nonnull String maxCardinality) {
+  public void setMaxCardinality(String maxCardinality) {
     this.maxCardinality = maxCardinality;
   }
 

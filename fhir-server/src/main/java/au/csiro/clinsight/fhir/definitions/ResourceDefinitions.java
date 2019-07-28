@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class ResourceDefinitions {
 
+  public static final String BASE_RESOURCE_URL_PREFIX = "http://hl7.org/fhir/StructureDefinition/";
   static final Set<String> supportedComplexTypes = Sets.newHashSet(
       "Ratio",
       "Period",
@@ -56,7 +57,6 @@ public abstract class ResourceDefinitions {
       "Timing",
       "Reference"
   );
-  static final String BASE_RESOURCE_URL_PREFIX = "http://hl7.org/fhir/StructureDefinition/";
   static final Set<String> supportedPrimitiveTypes = Sets.newHashSet(
       "decimal",
       "markdown",
@@ -175,9 +175,17 @@ public abstract class ResourceDefinitions {
   }
 
   /**
+   * Check if the supplied FHIR type code corresponds to a supported primitive type.
+   */
+  public static boolean isPrimitive(@Nonnull String fhirType) {
+    checkInitialised();
+    return supportedPrimitiveTypes.contains(fhirType);
+  }
+
+  /**
    * Check if the supplied FHIR type code corresponds to a supported complex type.
    */
-  static boolean isComplex(@Nonnull String fhirType) {
+  public static boolean isComplex(@Nonnull String fhirType) {
     checkInitialised();
     return supportedComplexTypes.contains(fhirType);
   }

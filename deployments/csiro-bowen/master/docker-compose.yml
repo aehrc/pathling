@@ -10,12 +10,14 @@ services:
       CLINSIGHT_WAREHOUSE_DIRECTORY: hdfs://hb-15-cdc001.it.csiro.au:8020/warehouse
       CLINSIGHT_METASTORE_URL: jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore
       CLINSIGHT_METASTORE_USER: postgres
+      CLINSIGHT_DATABASE_NAME: clinsight
       CLINSIGHT_EXECUTOR_MEMORY: 6g
       CLINSIGHT_TERMINOLOGY_SERVER_URL: http://hb-15-cdc001.it.csiro.au:4066/fhir
     restart: unless-stopped
   ui:
     image: docker-registry.it.csiro.au/clinsight/ui
     network_mode: host
+    restart: unless-stopped
     ports:
       - 8899:80
     environment:

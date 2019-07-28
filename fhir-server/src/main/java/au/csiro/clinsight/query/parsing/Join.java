@@ -32,6 +32,12 @@ public class Join implements Comparable<Join> {
   private String tableAlias;
 
   /**
+   * The SQL expression that represented the member invocation that necessitated this join, prior to
+   * aliasing. This is required so that we can rewrite downstream references to refer to the alias.
+   */
+  private String aliasTarget;
+
+  /**
    * The definition of the element that this join is designed to allow access to.
    */
   private ElementDefinition targetElement;
@@ -64,6 +70,14 @@ public class Join implements Comparable<Join> {
 
   public void setTableAlias(@Nonnull String tableAlias) {
     this.tableAlias = tableAlias;
+  }
+
+  public String getAliasTarget() {
+    return aliasTarget;
+  }
+
+  public void setAliasTarget(String aliasTarget) {
+    this.aliasTarget = aliasTarget;
   }
 
   public ElementDefinition getTargetElement() {
@@ -108,7 +122,7 @@ public class Join implements Comparable<Join> {
   }
 
   /**
-   * A join is "equal" to another join if it has the same target element.
+   * Two joins are equal if they have the same SQL expression.
    */
   @Override
   public boolean equals(Object o) {
@@ -119,12 +133,12 @@ public class Join implements Comparable<Join> {
       return false;
     }
     Join join = (Join) o;
-    return Objects.equals(targetElement, join.targetElement);
+    return Objects.equals(sql, join.sql);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(targetElement);
+    return Objects.hash(sql);
   }
 
   /**
@@ -142,10 +156,10 @@ public class Join implements Comparable<Join> {
      */
     TABLE_JOIN,
     /**
-     * INLINE_QUERY - a lateral view that has been wrapped within a subquery, to get around the
-     * issue that Spark SQL cannot join from a lateral view.
+     * WRAPPED_LATERAL_VIEWS - a lateral view that has been wrapped within a subquery, to get around
+     * the issue that Spark SQL cannot join from a lateral view.
      */
-    INLINE_QUERY,
+    WRAPPED_LATERAL_VIEWS,
     /**
      * MEMBERSHIP_JOIN - a left outer join to a table (e.g. a ValueSet expansion) for which a
      * boolean value is required based upon whether the code on the left hand side exists within the

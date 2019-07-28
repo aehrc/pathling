@@ -43,14 +43,18 @@ public class DateComponentFunction implements ExpressionFunction {
 
   @Nonnull
   @Override
-  public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
+  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
+      @Nonnull List<ParseResult> arguments) {
     validateInput(input);
+
+    ParseResult result = new ParseResult();
+    result.setFhirPath(expression);
     String newSqlExpression = functionsMap.get(functionName) + "(" + input.getSql() + ")";
-    input.setSql(newSqlExpression);
-    input.setResultType(INTEGER);
-    input.setElementType(null);
-    input.setElementTypeCode(null);
-    return input;
+    result.setSql(newSqlExpression);
+    result.setResultType(INTEGER);
+    result.setPrimitive(true);
+    result.setSingular(input.isSingular());
+    return result;
   }
 
   private void validateInput(ParseResult input) {
@@ -58,10 +62,10 @@ public class DateComponentFunction implements ExpressionFunction {
       throw new InvalidRequestException(
           "Missing input expression for " + functionName + " function");
     }
-    if (input.getElementType() != PRIMITIVE || !supportedTypes
-        .contains(input.getElementTypeCode())) {
+    if (input.getPathTraversal().getType() != PRIMITIVE || !supportedTypes
+        .contains(input.getPathTraversal().getElementDefinition().getTypeCode())) {
       throw new InvalidRequestException(
-          "Input to " + functionName + " function must be instant, dateTime or date");
+          "Input to " + functionName + " function must be DateTime");
     }
   }
 

@@ -21,7 +21,6 @@ import org.apache.spark.sql.SparkSession;
 import org.eclipse.jetty.server.Server;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -51,16 +50,19 @@ public class WhereFunctionTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void simpleQuery() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
         + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -73,7 +75,7 @@ public class WhereFunctionTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).where($this.class.code = 'ambulatory').type.coding.display\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where($this.class.code = 'ambulatory').type.coding.display\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -91,8 +93,8 @@ public class WhereFunctionTest {
             + "FROM patient LEFT JOIN encounter patientEncounterAsSubject "
             + "ON patient.id = patientEncounterAsSubject.subject.reference "
             + "AND patientEncounterAsSubject.class.code = 'ambulatory' "
-            + "LATERAL VIEW OUTER explode(patientEncounterAsSubject.type) patientEncounterAsSubjectType AS patientEncounterAsSubjectType "
-            + "LATERAL VIEW OUTER explode(patientEncounterAsSubjectType.coding) patientEncounterAsSubjectTypeCoding AS patientEncounterAsSubjectTypeCoding "
+            + "LATERAL VIEW OUTER EXPLODE(patientEncounterAsSubject.type) patientEncounterAsSubjectType AS patientEncounterAsSubjectType "
+            + "LATERAL VIEW OUTER EXPLODE(patientEncounterAsSubjectType.coding) patientEncounterAsSubjectTypeCoding AS patientEncounterAsSubjectTypeCoding "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 

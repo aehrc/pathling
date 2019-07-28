@@ -14,9 +14,36 @@ import org.apache.spark.sql.SparkSession;
  */
 public class ExpressionParserContext {
 
+  /**
+   * The terminology client that should be used to resolve terminology queries within this
+   * expression.
+   */
   private TerminologyClient terminologyClient;
+
+  /**
+   * The Spark session that should be used to resolve Spark queries required for this expression.
+   */
   private SparkSession sparkSession;
+
+  /**
+   * The name of the database to be accessed via Spark SQL.
+   */
   private String databaseName;
+
+  /**
+   * A ParseResult representing the subject resource specified within the query, which is then
+   * referred to through `%resource` or `%context`.
+   */
+  private ParseResult subjectResource;
+
+  /**
+   * The name of the table that corresponds to the subject resource.
+   */
+  private String fromTable;
+
+  /**
+   * An alias generator for generating aliases for use within SQL expressions.
+   */
   private AliasGenerator aliasGenerator;
 
   public TerminologyClient getTerminologyClient() {
@@ -41,6 +68,22 @@ public class ExpressionParserContext {
 
   public void setDatabaseName(String databaseName) {
     this.databaseName = databaseName;
+  }
+
+  public ParseResult getSubjectResource() {
+    return subjectResource;
+  }
+
+  public void setSubjectResource(ParseResult subjectResource) {
+    this.subjectResource = subjectResource;
+  }
+
+  public String getFromTable() {
+    return fromTable;
+  }
+
+  public void setFromTable(String fromTable) {
+    this.fromTable = fromTable;
   }
 
   public AliasGenerator getAliasGenerator() {

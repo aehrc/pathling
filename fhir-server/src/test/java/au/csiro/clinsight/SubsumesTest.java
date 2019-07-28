@@ -22,7 +22,6 @@ import org.apache.spark.sql.catalog.Catalog;
 import org.eclipse.jetty.server.Server;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -58,16 +57,19 @@ public class SubsumesTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void subsumedBy() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
         + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -80,7 +82,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.gender\"\n"
+        + "          \"valueString\": \"%resource.gender\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -90,7 +92,7 @@ public class SubsumesTest {
         + "    },\n"
         + "    {\n"
         + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|44054006)\"\n"
+        + "      \"valueString\": \"%resource.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|44054006)\"\n"
         + "    }\n"
         + "  ],\n"
         + "  \"resourceType\": \"Parameters\"\n"
@@ -104,7 +106,7 @@ public class SubsumesTest {
         + "FROM patient "
         + "LEFT JOIN condition patientConditionAsSubject "
         + "ON patient.id = patientConditionAsSubject.subject.reference "
-        + "LATERAL VIEW OUTER explode(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding";
+        + "LATERAL VIEW OUTER EXPLODE(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding";
 
     String expectedSql2 =
         "SELECT patient.gender AS `Gender`, "
@@ -117,7 +119,7 @@ public class SubsumesTest {
             + "FROM patient "
             + "LEFT JOIN condition patientConditionAsSubject "
             + "ON patient.id = patientConditionAsSubject.subject.reference "
-            + "LATERAL VIEW OUTER explode(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding "
+            + "LATERAL VIEW OUTER EXPLODE(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding "
             + "LEFT JOIN patientConditionAsSubjectCodeCodingClosure "
             + "ON patientConditionAsSubjectCodeCodingClosure.sourceSystem = 'http://snomed.info/sct' "
             + "AND patientConditionAsSubjectCodeCodingClosure.sourceCode = '44054006' "
@@ -143,16 +145,19 @@ public class SubsumesTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void subsumes() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
         + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -165,7 +170,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.gender\"\n"
+        + "          \"valueString\": \"%resource.gender\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -175,7 +180,7 @@ public class SubsumesTest {
         + "    },\n"
         + "    {\n"
         + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"Patient.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|9859006)\"\n"
+        + "      \"valueString\": \"%resource.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|9859006)\"\n"
         + "    }\n"
         + "  ],\n"
         + "  \"resourceType\": \"Parameters\"\n"
@@ -189,7 +194,7 @@ public class SubsumesTest {
         + "FROM patient "
         + "LEFT JOIN condition patientConditionAsSubject "
         + "ON patient.id = patientConditionAsSubject.subject.reference "
-        + "LATERAL VIEW OUTER explode(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding";
+        + "LATERAL VIEW OUTER EXPLODE(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding";
 
     String expectedSql2 =
         "SELECT patient.gender AS `Gender`, "
@@ -202,7 +207,7 @@ public class SubsumesTest {
             + "FROM patient "
             + "LEFT JOIN condition patientConditionAsSubject "
             + "ON patient.id = patientConditionAsSubject.subject.reference "
-            + "LATERAL VIEW OUTER explode(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding "
+            + "LATERAL VIEW OUTER EXPLODE(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding "
             + "LEFT JOIN patientConditionAsSubjectCodeCodingClosure "
             + "ON patientConditionAsSubjectCodeCoding.system = patientConditionAsSubjectCodeCodingClosure.sourceSystem "
             + "AND patientConditionAsSubjectCodeCoding.code = patientConditionAsSubjectCodeCodingClosure.sourceCode "
@@ -228,16 +233,19 @@ public class SubsumesTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  @Ignore
   public void kidgenExample() throws IOException {
     String inParams = "{\n"
         + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
         + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -250,7 +258,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|referral in $this.type).reverseResolve(Condition.context).verificationStatus\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|referral in $this.type).reverseResolve(Condition.context).verificationStatus\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -263,7 +271,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|pre-investigation in $this.type).reverseResolve(Condition.context).verificationStatus\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|pre-investigation in $this.type).reverseResolve(Condition.context).verificationStatus\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -276,7 +284,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|pre-investigation in $this.type).reverseResolve(Condition.context).code.subsumes(Patient.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|referral in $this.type).reverseResolve(Condition.context).code)\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|pre-investigation in $this.type).reverseResolve(Condition.context).code.subsumes(%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|referral in $this.type).reverseResolve(Condition.context).code)\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -289,7 +297,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject)    .where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|post-investigation in $this.type).reverseResolve(Condition.context).verificationStatus\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|post-investigation in $this.type).reverseResolve(Condition.context).verificationStatus\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -302,7 +310,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|post-investigation in $this.type).reverseResolve(Condition.context).code.subsumedBy(Patient.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|pre-investigation in $this.type).reverseResolve(Condition.context).code)\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|post-investigation in $this.type).reverseResolve(Condition.context).code.subsumedBy(%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|pre-investigation in $this.type).reverseResolve(Condition.context).code)\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -324,7 +332,7 @@ public class SubsumesTest {
         + "ON patient.id = patientEncounterAsSubject.subject.reference "
         + "LEFT JOIN condition encounterConditionAsContext "
         + "ON patientEncounterAsSubject.id = encounterConditionAsContext.context.reference "
-        + "LATERAL VIEW OUTER explode(encounterConditionAsContext.code.coding) encounterConditionAsContextCodeCoding AS encounterConditionAsContextCodeCoding "
+        + "LATERAL VIEW OUTER EXPLODE(encounterConditionAsContext.code.coding) encounterConditionAsContextCodeCoding AS encounterConditionAsContextCodeCoding "
         + "UNION "
         + "SELECT encounterProcedureRequestAsContextReasonCodeCoding.system, "
         + "encounterProcedureRequestAsContextReasonCodeCoding.version, "
@@ -336,8 +344,8 @@ public class SubsumesTest {
         + "ON patient.id = patientEncounterAsSubject.subject.reference "
         + "LEFT JOIN procedurerequest encounterProcedureRequestAsContext "
         + "ON patientEncounterAsSubject.id = encounterProcedureRequestAsContext.context.reference "
-        + "LATERAL VIEW OUTER explode(encounterProcedureRequestAsContext.reasonCode) encounterProcedureRequestAsContextReasonCode AS encounterProcedureRequestAsContextReasonCode "
-        + "LATERAL VIEW OUTER explode(encounterProcedureRequestAsContextReasonCode.coding) encounterProcedureRequestAsContextReasonCodeCoding AS encounterProcedureRequestAsContextReasonCodeCoding";
+        + "LATERAL VIEW OUTER EXPLODE(encounterProcedureRequestAsContext.reasonCode) encounterProcedureRequestAsContextReasonCode AS encounterProcedureRequestAsContextReasonCode "
+        + "LATERAL VIEW OUTER EXPLODE(encounterProcedureRequestAsContextReasonCode.coding) encounterProcedureRequestAsContextReasonCodeCoding AS encounterProcedureRequestAsContextReasonCodeCoding";
 
     String expectedSql2 =
         "SELECT patientEncounterAsSubjectConditionAsContextReferralPreInvestigationClosureInResult.inResult AS `Pre-investigation diagnosis more specific than referral diagnosis?`, "
@@ -350,8 +358,8 @@ public class SubsumesTest {
             + "LEFT JOIN ("
             + "SELECT * "
             + "FROM encounter "
-            + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
-            + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
+            + "LATERAL VIEW OUTER EXPLODE(encounter.type) encounterType AS encounterType "
+            + "LATERAL VIEW OUTER EXPLODE(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
             + "WHERE encounterTypeCoding.code = 'referral'"
             + ") patientEncounterAsSubjectReferral "
             + "ON patient.id = patientEncounterAsSubjectReferral.subject.reference "
@@ -360,14 +368,14 @@ public class SubsumesTest {
             + "LEFT JOIN ("
             + "SELECT * "
             + "FROM condition "
-            + "LATERAL VIEW OUTER explode(condition.code.coding) conditionCodeCoding AS conditionCodeCoding"
+            + "LATERAL VIEW OUTER EXPLODE(condition.code.coding) conditionCodeCoding AS conditionCodeCoding"
             + ") patientEncounterAsSubjectReferralConditionAsContextCodeCodingExploded "
             + "ON patientEncounterAsSubjectReferralConditionAsContext.id = patientEncounterAsSubjectReferralConditionAsContextCodeCodingExploded.id "
             + "LEFT JOIN ("
             + "SELECT * "
             + "FROM encounter "
-            + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
-            + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
+            + "LATERAL VIEW OUTER EXPLODE(encounter.type) encounterType AS encounterType "
+            + "LATERAL VIEW OUTER EXPLODE(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
             + "WHERE encounterTypeCoding.code = 'pre-investigation'"
             + ") patientEncounterAsSubjectPreInvestigation "
             + "ON patient.id = patientEncounterAsSubjectPreInvestigation.subject.reference "
@@ -376,7 +384,7 @@ public class SubsumesTest {
             + "LEFT JOIN ("
             + "SELECT * "
             + "FROM condition "
-            + "LATERAL VIEW OUTER explode(condition.code.coding) conditionCodeCoding AS conditionCodeCoding"
+            + "LATERAL VIEW OUTER EXPLODE(condition.code.coding) conditionCodeCoding AS conditionCodeCoding"
             + ") patientEncounterAsSubjectPreInvestigationConditionAsContextCodeCodingExploded "
             + "ON patientEncounterAsSubjectPreInvestigationConditionAsContext.id = patientEncounterAsSubjectPreInvestigationConditionAsContextCodeCodingExploded.id "
             + "LEFT JOIN `closure_simpleQuery` patientEncounterAsSubjectConditionAsContextReferralPreInvestigationClosure "

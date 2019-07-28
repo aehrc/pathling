@@ -27,7 +27,6 @@ import org.eclipse.jetty.server.Server;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 
@@ -63,6 +62,10 @@ public class FilterTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Encounter\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
@@ -71,13 +74,13 @@ public class FilterTest {
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Encounter.count()\"\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
         + "        }\n"
         + "      ]\n"
         + "    },\n"
         + "    {\n"
         + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"Encounter.class.code = 'emergency'\"\n"
+        + "      \"valueString\": \"%resource.class.code = 'emergency'\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -103,10 +106,20 @@ public class FilterTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/AllergyIntolerance\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
-        + "        { \"name\": \"expression\", \"valueString\": \"AllergyIntolerance.count()\" },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"AllergyIntolerance.count()\" }\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of conditions\"\n"
+        + "        }\n"
         + "      ]\n"
         + "    },\n"
         + "    {\n"
@@ -114,14 +127,19 @@ public class FilterTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"AllergyIntolerance.clinicalStatus\"\n"
+        + "          \"valueString\": \"%resource.clinicalStatus\"\n"
         + "        },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"AllergyIntolerance.clinicalStatus\" }\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Clinical status\"\n"
+        + "        }\n"
         + "      ]\n"
         + "    },\n"
-        + "    { \"name\": \"filter\" }\n"
+        + "    {\n"
+        + "      \"name\": \"filter\"\n"
+        + "    }\n"
         + "  ]\n"
-        + "}\n";
+        + "}";
 
     String expectedResponse = "{\n"
         + "  \"resourceType\": \"OperationOutcome\",\n"
@@ -149,10 +167,20 @@ public class FilterTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/AllergyIntolerance\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
-        + "        { \"name\": \"expression\", \"valueString\": \"AllergyIntolerance.count()\" },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"AllergyIntolerance.count()\" }\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of conditions\"\n"
+        + "        }\n"
         + "      ]\n"
         + "    },\n"
         + "    {\n"
@@ -160,12 +188,18 @@ public class FilterTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"AllergyIntolerance.clinicalStatus\"\n"
+        + "          \"valueString\": \"%resource.clinicalStatus\"\n"
         + "        },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"AllergyIntolerance.clinicalStatus\" }\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Clinical status\"\n"
+        + "        }\n"
         + "      ]\n"
         + "    },\n"
-        + "    { \"name\": \"filter\", \"valueString\": \"AllergyIntolerance.clinicalStatus\" }\n"
+        + "    {\n"
+        + "      \"name\": \"filter\",\n"
+        + "      \"valueString\": \"%resource.clinicalStatus\"\n"
+        + "    }\n"
         + "  ]\n"
         + "}\n";
 
@@ -175,7 +209,7 @@ public class FilterTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Filter expression is not of boolean type: AllergyIntolerance.clinicalStatus\"\n"
+        + "      \"diagnostics\": \"Filter expression is not of boolean type: %resource.clinicalStatus\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -196,24 +230,34 @@ public class FilterTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Encounter\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
-        + "        { \"name\": \"expression\", \"valueString\": \"Encounter.count()\" },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"Number of encounters\" }\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of encounters\"\n"
+        + "        }\n"
         + "      ]\n"
         + "    },\n"
         + "    {\n"
         + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"Encounter.class.code = 'emergency' and Encounter.type.coding.code = '183478001'\"\n"
+        + "      \"valueString\": \"%resource.class.code = 'emergency' and %resource.type.coding.code = '183478001'\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
 
     String expectedSql = "SELECT COUNT(DISTINCT encounter.id) AS `Number of encounters` "
         + "FROM encounter "
-        + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
-        + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
-        + "WHERE encounter.class.code = 'emergency' AND encounterTypeCoding.code = '183478001'";
+        + "LATERAL VIEW OUTER EXPLODE(encounter.type) a AS a "
+        + "LATERAL VIEW OUTER EXPLODE(a.coding) b AS b "
+        + "WHERE encounter.class.code = 'emergency' AND b.code = '183478001'";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);
@@ -233,24 +277,34 @@ public class FilterTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Encounter\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
-        + "        { \"name\": \"expression\", \"valueString\": \"Encounter.count()\" },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"Number of encounters\" }\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of encounters\"\n"
+        + "        }\n"
         + "      ]\n"
         + "    },\n"
         + "    {\n"
         + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"Encounter.class.code = 'emergency' or Encounter.type.coding.code = '183478001'\"\n"
+        + "      \"valueString\": \"%resource.class.code = 'emergency' or %resource.type.coding.code = '183478001'\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
 
     String expectedSql = "SELECT COUNT(DISTINCT encounter.id) AS `Number of encounters` "
         + "FROM encounter "
-        + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
-        + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
-        + "WHERE encounter.class.code = 'emergency' OR encounterTypeCoding.code = '183478001'";
+        + "LATERAL VIEW OUTER EXPLODE(encounter.type) a AS a "
+        + "LATERAL VIEW OUTER EXPLODE(a.coding) b AS b "
+        + "WHERE encounter.class.code = 'emergency' OR b.code = '183478001'";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);
@@ -270,25 +324,35 @@ public class FilterTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Encounter\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
-        + "        { \"name\": \"expression\", \"valueString\": \"Encounter.count()\" },\n"
-        + "        { \"name\": \"label\", \"valueString\": \"Number of encounters\" }\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Number of encounters\"\n"
+        + "        }\n"
         + "      ]\n"
         + "    },\n"
         + "    {\n"
         + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"(Encounter.class.code = 'emergency' and Encounter.type.coding.code = '183478001') or Encounter.class.code = 'inpatient'\"\n"
+        + "      \"valueString\": \"(%resource.class.code = 'emergency' and %resource.type.coding.code = '183478001') or %resource.class.code = 'inpatient'\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
 
     String expectedSql = "SELECT COUNT(DISTINCT encounter.id) AS `Number of encounters` "
         + "FROM encounter "
-        + "LATERAL VIEW OUTER explode(encounter.type) encounterType AS encounterType "
-        + "LATERAL VIEW OUTER explode(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
+        + "LATERAL VIEW OUTER EXPLODE(encounter.type) a AS a "
+        + "LATERAL VIEW OUTER EXPLODE(a.coding) b AS b "
         + "WHERE (encounter.class.code = 'emergency' "
-        + "AND encounterTypeCoding.code = '183478001') "
+        + "AND b.code = '183478001') "
         + "OR encounter.class.code = 'inpatient'";
 
     Dataset mockDataset = createMockDataset();
@@ -309,11 +373,15 @@ public class FilterTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -323,7 +391,7 @@ public class FilterTest {
         + "    },\n"
         + "    {\n"
         + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"Patient.multipleBirthInteger = 3\"\n"
+        + "      \"valueString\": \"%resource.multipleBirthInteger = 3\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -351,11 +419,15 @@ public class FilterTest {
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
         + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
+        + "          \"valueString\": \"%resource.count()\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -365,7 +437,7 @@ public class FilterTest {
         + "    },\n"
         + "    {\n"
         + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"Patient.deceasedBoolean = true\"\n"
+        + "      \"valueString\": \"%resource.deceasedBoolean = true\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -374,64 +446,6 @@ public class FilterTest {
         "SELECT COUNT(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
             + "WHERE patient.deceasedBoolean = TRUE";
-
-    Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(any())).thenReturn(mockDataset);
-    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
-
-    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
-    httpClient.execute(httpPost);
-
-    verify(mockSpark).sql("USE clinsight");
-    verify(mockSpark).sql(expectedSql);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Test
-  @Ignore
-  public void codingLiteral() throws IOException {
-    String inParams = "{\n"
-        + "  \"parameter\": [\n"
-        + "    {\n"
-        + "      \"name\": \"aggregation\",\n"
-        + "      \"part\": [\n"
-        + "        {\n"
-        + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"Patient.count()\"\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"label\",\n"
-        + "          \"valueString\": \"Number of patients\"\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"http://snomed.info/sct|40275004 in Patient.reverseResolve(Condition.subject).code.coding\"\n"
-        + "    }\n"
-        + "  ],\n"
-        + "  \"resourceType\": \"Parameters\"\n"
-        + "}";
-
-    String expectedSql =
-        "SELECT a.result AS `Diagnosed with contact dermatitis`, "
-            + "COUNT(DISTINCT patient.id) AS `Number of patients` "
-            + "FROM patient "
-            + "LEFT JOIN ("
-            + "SELECT patient.id, "
-            + "IFNULL(MAX(patientConditionAsSubjectCodeCoding.system = 'https://snomed.info/sct' AND patientConditionAsSubjectCodeCoding.code = '40275004'), FALSE) OR IFNULL(MAX(patientConditionAsSubjectCodeCodingClosure.equivalence = 'subsumes' OR patientConditionAsSubjectCodeCodingClosure.equivalence = 'equals'), FALSE) AS result "
-            + "FROM patient "
-            + "LEFT JOIN condition patientConditionAsSubject "
-            + "ON patient.id = patientConditionAsSubject.subject.reference "
-            + "LATERAL VIEW OUTER explode(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding "
-            + "LEFT JOIN closure patientConditionAsSubjectCodeCodingClosure "
-            + "ON patientConditionAsSubjectCodeCoding.system = patientConditionAsSubjectCodeCodingClosure.sourceSystem "
-            + "AND patientConditionAsSubjectCodeCoding.code = patientConditionAsSubjectCodeCodingClosure.sourceCode "
-            + "GROUP BY 1"
-            + ") a "
-            + "ON patient.id = a.id "
-            + "GROUP BY 1 "
-            + "ORDER BY 1, 2";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);

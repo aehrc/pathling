@@ -4,17 +4,15 @@
 
 package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.query.parsing.Join.JoinType.INLINE_QUERY;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.MEMBERSHIP_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
-import static au.csiro.clinsight.utilities.Strings.tokenizePath;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.WRAPPED_LATERAL_VIEWS;
 
 import au.csiro.clinsight.query.parsing.Join;
+import java.util.Collections;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -26,8 +24,10 @@ public abstract class QueryWrangling {
    * Spark SQL does not currently allow a table join to follow a LATERAL VIEW join within a query -
    * the LATERAL VIEW statement must first be wrapped within a subquery. This method takes a set of
    * joins and wraps each of the LATERAL VIEW joins in a subquery, then returns a new set of joins.
+   * The `targetAlias` argument is the target of the first join in the set.
    */
-  public static SortedSet<Join> convertUpstreamLateralViewsToInlineQueries(SortedSet<Join> joins) {
+  public static SortedSet<Join> convertUpstreamLateralViewsToInlineQueries(SortedSet<Join> joins,
+      String targetAlias) {
     if (joins.isEmpty()) {
       return joins;
     }
@@ -44,7 +44,7 @@ public abstract class QueryWrangling {
         // Upon reaching the start of the joins, we bundle up any lateral views queued up for
         // conversion.
         assert downstreamTableJoin != null;
-        joins = replaceLateralViews(joins, downstreamTableJoin, lateralViewsToConvert);
+        joins = replaceLateralViews(joins, downstreamTableJoin, lateralViewsToConvert, targetAlias);
       } else {
         if (cursor.getJoinType() == TABLE_JOIN || cursor.getJoinType() == MEMBERSHIP_JOIN) {
           if (downstreamTableJoin == null) {
@@ -57,7 +57,8 @@ public abstract class QueryWrangling {
             // mean that we have reached the end of this contiguous set of lateral views. This is
             // the trigger to take these and convert them into an inline query.
             if (!lateralViewsToConvert.isEmpty()) {
-              joins = replaceLateralViews(joins, downstreamTableJoin, lateralViewsToConvert);
+              joins = replaceLateralViews(joins, downstreamTableJoin, lateralViewsToConvert,
+                  targetAlias);
               downstreamTableJoin = null;
               continue;
             }
@@ -80,43 +81,50 @@ public abstract class QueryWrangling {
    * inline query.
    */
   public static SortedSet<Join> replaceLateralViews(SortedSet<Join> joins, Join dependentTableJoin,
-      SortedSet<Join> lateralViewsToConvert) {
-    // First we search for invocations made against the alias of the last join in the group. This tells us which columns will need to be selected within the subquery.
-    String finalTableAlias = lateralViewsToConvert.last().getTableAlias();
-    Pattern tableAliasInvocationPattern = Pattern
-        .compile("(?:ON|AND)\\s+" + finalTableAlias + "\\.(.*?)[\\s$]");
-    Matcher tableAliasInvocationMatcher = tableAliasInvocationPattern
-        .matcher(dependentTableJoin.getSql());
-    boolean found = tableAliasInvocationMatcher.find();
+      SortedSet<Join> lateralViewsToConvert, String targetAlias) {
+    // First we search for invocations made against the alias of the last join in the group. This
+    // tells us which columns will need to be selected within the subquery.
+    Join firstLateralView = lateralViewsToConvert.first();
+    Join lastLateralView = lateralViewsToConvert.last();
+    String finalTableAlias = lastLateralView.getTableAlias();
+
+    // Create a new set of joins that includes any dependencies of the lateral views.
+    SortedSet<Join> includingDependencies = new TreeSet<>(lateralViewsToConvert);
+    for (Join join : lateralViewsToConvert) {
+      if (join.getDependsUpon() != null) {
+        includingDependencies.add(join.getDependsUpon());
+      }
+    }
+
+    // Rewrite the expressions of the joins to take account of aliases.
+    for (Join join : includingDependencies) {
+      String newSql = rewriteJoinWithJoinAliases(join, includingDependencies);
+      join.setSql(newSql);
+    }
 
     // Build the join expression.
-    String newTableAlias = finalTableAlias + "Exploded";
-    Join firstLateralView = lateralViewsToConvert.first();
-    Join upstreamJoin = firstLateralView.getDependsUpon();
-    assert firstLateralView.getUdtfExpression() != null;
-    String udtfExpression = firstLateralView.getRootExpression();
-    firstLateralView.setSql(firstLateralView.getSql()
-        .replace(firstLateralView.getUdtfExpression(), udtfExpression));
-    firstLateralView.setUdtfExpression(udtfExpression);
-    String table = tokenizePath(udtfExpression).getFirst();
-    String joinConditionTarget = upstreamJoin == null ? table : upstreamJoin.getTableAlias();
-    String joinExpression = "LEFT JOIN (SELECT * FROM " + table + " ";
-    joinExpression += lateralViewsToConvert.stream()
+    String joinAlias = lastLateralView.getTableAlias();
+    String joinExpression =
+        "LEFT JOIN (SELECT " + targetAlias + ".*, " + joinAlias + ".* FROM " + targetAlias + " ";
+    joinExpression += includingDependencies.stream()
         .map(Join::getSql)
         .collect(Collectors.joining(" "));
-    joinExpression +=
-        ") " + newTableAlias + " ON " + joinConditionTarget + ".id = " + newTableAlias + ".id";
-    String rootExpression = lateralViewsToConvert.last().getRootExpression();
+    joinExpression += ") " + joinAlias + " ON " + targetAlias + ".id = " + joinAlias + ".id";
 
     // Build a new Join object to replace the group of lateral views.
-    Join inlineQuery = new Join(joinExpression, rootExpression, INLINE_QUERY,
-        newTableAlias);
-    inlineQuery.setDependsUpon(firstLateralView.getDependsUpon());
-    dependentTableJoin.setDependsUpon(inlineQuery);
+    Join newJoin = new Join();
+    newJoin.setSql(joinExpression);
+    newJoin.setJoinType(WRAPPED_LATERAL_VIEWS);
+    newJoin.setTableAlias(joinAlias);
+    newJoin.setAliasTarget(lastLateralView.getAliasTarget());
+    newJoin.setTargetElement(lastLateralView.getTargetElement());
+    newJoin.setDependsUpon(firstLateralView.getDependsUpon());
+    dependentTableJoin.setDependsUpon(newJoin);
+
     // Change the expression within the dependent table join to point to the alias of the new join.
     String transformedExpression = dependentTableJoin.getSql()
-        .replaceAll("(?<=(ON|AND)\\s)" + lateralViewsToConvert.last().getTableAlias() + "\\.",
-            inlineQuery.getTableAlias() + "." + finalTableAlias + ".");
+        .replaceAll("(?<=(ON|AND)\\s)" + lastLateralView.getTableAlias() + "\\.",
+            newJoin.getTableAlias() + "." + finalTableAlias + ".");
     dependentTableJoin.setSql(transformedExpression);
 
     // This piece of code exists due to some strange behaviour in the removal of items from a set
@@ -135,9 +143,48 @@ public abstract class QueryWrangling {
         newJoins.add(join);
       }
     }
-    newJoins.add(inlineQuery);
+    newJoins.add(newJoin);
     lateralViewsToConvert.clear();
     return newJoins;
+  }
+
+  public static String rewriteSqlWithJoinAliases(String sql, SortedSet<Join> joins) {
+    if (joins.isEmpty()) {
+      return sql;
+    }
+    String newSql = sql;
+
+    // Go through the list and replace the alias target string within the expression with the alias,
+    // for each join.
+    SortedSet<Join> joinsReversed = new TreeSet<>(Collections.reverseOrder());
+    joinsReversed.addAll(joins);
+    for (Join currentJoin : joinsReversed) {
+      newSql = newSql.replaceAll(currentJoin.getAliasTarget(), currentJoin.getTableAlias());
+    }
+
+    return newSql;
+  }
+
+  public static String rewriteJoinWithJoinAliases(Join join, SortedSet<Join> joins) {
+    String newSql = join.getSql();
+
+    // Don't replace aliases in join expressions which contain inline queries (i.e. LEFT JOIN).
+    if (newSql.contains("LEFT JOIN")) {
+      return newSql;
+    }
+
+    // Go through the list and replace the alias target string within the expression with the alias,
+    // for each join.
+    SortedSet<Join> joinsReversed = new TreeSet<>(Collections.reverseOrder());
+    joinsReversed.addAll(joins);
+    for (Join currentJoin : joinsReversed) {
+      if (!join.equals(currentJoin)) {
+        // Match the alias target, unless it is inside an inline query.
+        newSql = newSql.replaceAll(currentJoin.getAliasTarget(), currentJoin.getTableAlias());
+      }
+    }
+
+    return newSql;
   }
 
 }

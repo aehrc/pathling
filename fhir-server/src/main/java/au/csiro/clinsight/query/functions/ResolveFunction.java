@@ -4,17 +4,16 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.definitions.PathResolver.resolvePath;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getResourceByUrl;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isResource;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
-import static au.csiro.clinsight.utilities.Strings.pathToLowerCamelCase;
-import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 
-import au.csiro.clinsight.fhir.definitions.PathTraversal;
+import au.csiro.clinsight.fhir.definitions.ElementDefinition;
+import au.csiro.clinsight.fhir.definitions.PathResolver;
+import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
+import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
@@ -33,52 +32,65 @@ import org.hl7.fhir.dstu3.model.StructureDefinition;
  */
 public class ResolveFunction implements ExpressionFunction {
 
+  private ExpressionParserContext context;
+
   @Nonnull
   @Override
-  public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
+  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
+      @Nonnull List<ParseResult> arguments) {
     validateInput(input);
-    assert input.getFhirPath() != null;
-    PathTraversal element = resolvePath(input.getFhirPath());
-    assert element.getType() == REFERENCE;
+    ElementDefinition element = input.getPathTraversal().getElementDefinition();
     String referenceTypeCode;
     if (element.getReferenceTypes().size() > 1) {
       referenceTypeCode = getTypeForPolymorphicReference(input, arguments);
     } else {
       String referenceTypeUrl = element.getReferenceTypes().get(0);
       StructureDefinition referenceTypeDefinition = getResourceByUrl(referenceTypeUrl);
-      assert referenceTypeDefinition != null;
       referenceTypeCode = referenceTypeDefinition.getType();
       if (referenceTypeCode.equals("Resource")) {
         referenceTypeCode = getTypeForPolymorphicReference(input, arguments);
       }
     }
 
-    List<String> pathComponents = tokenizePath(element.getPath());
-    String joinAlias = pathToLowerCamelCase(pathComponents);
+    // Build a new Join object.
+    String joinAlias = context.getAliasGenerator().getAlias();
     String joinExpression = "LEFT JOIN " + referenceTypeCode.toLowerCase() + " " + joinAlias
         + " ON " + input.getSql() + ".reference = "
         + joinAlias + ".id";
-    Join join = new Join(joinExpression, referenceTypeCode.toLowerCase(), TABLE_JOIN, joinAlias);
+    Join newJoin = new Join();
+    newJoin.setSql(joinExpression);
+    newJoin.setJoinType(TABLE_JOIN);
+    newJoin.setTableAlias(joinAlias);
+    newJoin.setAliasTarget(referenceTypeCode.toLowerCase());
     if (!input.getJoins().isEmpty()) {
-      join.setDependsUpon(input.getJoins().last());
+      newJoin.setDependsUpon(input.getJoins().last());
     }
-    input.setResultType(COLLECTION);
-    input.setElementType(RESOURCE);
-    input.setElementTypeCode(referenceTypeCode);
-    input.setFhirPath(referenceTypeCode);
-    input.setSql(joinAlias);
-    input.getJoins().add(join);
-    return input;
+
+    // Build the parse result.
+    ParseResult result = new ParseResult();
+    result.setFhirPath(expression);
+    result.setSql(joinAlias);
+    result.getJoins().addAll(input.getJoins());
+    result.getJoins().add(newJoin);
+    result.setSingular(input.isSingular());
+
+    // Retrieve the path traversal for the result of the expression.
+    try {
+      result.setPathTraversal(PathResolver.resolvePath(referenceTypeCode));
+    } catch (ResourceNotKnownException | ElementNotKnownException e) {
+      throw new InvalidRequestException(e.getMessage());
+    }
+
+    return result;
   }
 
   private void validateInput(@Nullable ParseResult input) {
     if (input == null) {
       throw new InvalidRequestException("Missing input expression for resolve function");
     }
-    if (input.getElementType() != REFERENCE) {
+    if (input.getPathTraversal().getType() != REFERENCE) {
       throw new InvalidRequestException(
-          "Input to resolve function must be a Reference: " + input.getFhirPath() + " ("
-              + input.getElementTypeCode() + ")");
+          "Input to resolve function must be a Reference: " + input.getFhirPath());
     }
   }
 
@@ -87,16 +99,11 @@ public class ResolveFunction implements ExpressionFunction {
       @Nonnull List<ParseResult> arguments) {
     String referenceTypeCode;
     if (arguments.size() == 1) {
-      String argument = arguments.get(0).getFhirPath();
-      assert argument != null;
-      PathTraversal argumentElement = resolvePath(argument);
-      referenceTypeCode = argumentElement.getTypeCode();
-      assert referenceTypeCode != null;
-      if (argumentElement.getType() != RESOURCE
-          || !isResource(referenceTypeCode)) {
+      ParseResult argument = arguments.get(0);
+      referenceTypeCode = argument.getPathTraversal().getElementDefinition().getTypeCode();
+      if (argument.getPathTraversal().getType() != RESOURCE || !isResource(referenceTypeCode)) {
         throw new InvalidRequestException(
-            "Argument to resolve function must be a base resource type: " + argument + " ("
-                + argumentElement.getTypeCode() + ")");
+            "Argument to resolve function must be a base resource type: " + argument.getFhirPath());
       }
     } else {
       throw new InvalidRequestException(
@@ -108,6 +115,7 @@ public class ResolveFunction implements ExpressionFunction {
 
   @Override
   public void setContext(@Nonnull ExpressionParserContext context) {
+    this.context = context;
   }
 
 }

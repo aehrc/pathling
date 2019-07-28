@@ -4,8 +4,6 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.PRIMITIVE;
-
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -22,15 +20,20 @@ public class MaxFunction implements ExpressionFunction {
 
   @Nonnull
   @Override
-  public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
+  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
+      @Nonnull List<ParseResult> arguments) {
     validateInput(input);
     validateArguments(arguments);
+
+    ParseResult result = new ParseResult();
+    result.setFhirPath(expression);
     // The max function maps to the function with the same name within Spark SQL.
-    input.setPreAggregationExpression(input.getSql());
-    input.setSql("MAX(" + input.getSql() + ")");
+    result.setSql("MAX(" + input.getSql() + ")");
     // A max operation always returns the same type as the input.
-    input.setElementTypeCode(input.getElementTypeCode());
-    return input;
+    result.setResultType(input.getResultType());
+    result.setPrimitive(input.isPrimitive());
+    result.setSingular(true);
+    return result;
   }
 
   private void validateInput(@Nullable ParseResult input) {
@@ -38,10 +41,9 @@ public class MaxFunction implements ExpressionFunction {
       throw new InvalidRequestException("Missing input expression for max function");
     }
     // We can't max an element that is not primitive.
-    if (input.getElementType() != PRIMITIVE) {
+    if (!input.isPrimitive()) {
       throw new InvalidRequestException(
-          "Input to max function must be of primitive type: " + input.getFhirPath()
-              + " (" + input.getElementTypeCode() + ")");
+          "Input to max function must be of primitive type: " + input.getFhirPath());
     }
   }
 

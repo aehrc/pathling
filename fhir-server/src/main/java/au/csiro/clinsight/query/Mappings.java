@@ -4,7 +4,13 @@
 
 package au.csiro.clinsight.query;
 
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATE_TIME;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.INTEGER;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
+
 import au.csiro.clinsight.query.functions.*;
+import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.HashMap;
@@ -17,6 +23,13 @@ import org.hl7.fhir.dstu3.model.*;
  * @author John Grimes
  */
 public abstract class Mappings {
+
+  static final Map<ParseResultType, String> fhirPathTypeToFhirType = new HashMap<ParseResultType, String>() {{
+    put(STRING, "string");
+    put(BOOLEAN, "boolean");
+    put(DATE_TIME, "instant");
+    put(INTEGER, "integer");
+  }};
 
   // Maps a FHIR type code to the class that can be used to populate a value into a resource using
   // HAPI.
@@ -51,11 +64,30 @@ public abstract class Mappings {
     put("string", String.class);
     put("uri", String.class);
     put("oid", String.class);
-    put("integer", int.class);
+    put("integer", Long.class);
     put("unsignedInt", Long.class);
     put("positiveInt", Long.class);
     put("boolean", Boolean.class);
     put("instant", Date.class);
+  }};
+
+  // Maps a FHIR data type to a FHIRPath data type (ParseResult.ParseResultType).
+  private static final Map<String, ParseResultType> fhirTypeToFhirPathType = new HashMap<String, ParseResultType>() {{
+    put("boolean", BOOLEAN);
+    put("string", STRING);
+    put("uri", STRING);
+    put("code", STRING);
+    put("oid", STRING);
+    put("id", STRING);
+    put("markdown", STRING);
+    put("integer", INTEGER);
+    put("unsignedInt", INTEGER);
+    put("positiveInt", INTEGER);
+    // put("decimal", DECIMAL);  // Decimal not yet supported
+    put("date", DATE_TIME);
+    put("dateTime", DATE_TIME);
+    put("instant", DATE_TIME);
+    // put("time", TIME);  // Time not yet supported
   }};
 
   // Maps supported aggregate FHIRPath functions to the equivalent functions within Spark SQL.
@@ -64,7 +96,7 @@ public abstract class Mappings {
     put("max", new MaxFunction());
     put("resolve", new ResolveFunction());
     put("reverseResolve", new ReverseResolveFunction());
-    put("inValueSet", new ExpandFunction());
+    put("memberOf", new MemberOfFunction());
     put("dateFormat", new DateFormatFunction());
     put("toSeconds", new DateComponentFunction("toSeconds"));
     put("toMinutes", new DateComponentFunction("toMinutes"));
@@ -83,6 +115,10 @@ public abstract class Mappings {
 
   static Class getJavaClass(String fhirTypeCode) {
     return fhirTypeToJavaClass.get(fhirTypeCode);
+  }
+
+  public static ParseResultType getFhirPathType(String fhirTypeCode) {
+    return fhirTypeToFhirPathType.get(fhirTypeCode);
   }
 
   public static ExpressionFunction getFunction(String functionName) {

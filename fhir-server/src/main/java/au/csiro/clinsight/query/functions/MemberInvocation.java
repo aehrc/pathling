@@ -6,14 +6,17 @@ package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.PRIMITIVE;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isPrimitive;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
 import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.PathTraversal;
 import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
 import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
+import au.csiro.clinsight.query.Mappings;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
+import au.csiro.clinsight.query.parsing.Join.JoinType;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
@@ -32,44 +35,53 @@ public class MemberInvocation {
     this.context = context;
   }
 
-  public ParseResult invoke(@Nonnull ParseResult input, @Nonnull String member) {
+  public ParseResult invoke(@Nonnull String expression, @Nonnull ParseResult input) {
     // Check that we aren't trying to get to a member of a primitive type.
     if (input.getPathTraversal().getType() == PRIMITIVE) {
       throw new InvalidRequestException("Attempt to invoke member on primitive type");
     }
 
     ParseResult result = new ParseResult();
-    // The new expression is the old expression and the new expression, separated by the path
-    // selection operator.
-    result.setFhirPath(input.getFhirPath() + "." + member);
+    result.setFhirPath(expression);
     // Inherit all joins and from tables from the invoker.
     result.getJoins().addAll(input.getJoins());
-    result.getFromTables().addAll(input.getFromTables());
 
     // Resolve the path of the expression and add it to the result.
     try {
-      result.setPathTraversal(PathResolver.resolvePath(result.getFhirPath()));
+      String path = input.getPathTraversal().getPath() + "." + result.getFhirPath();
+      result.setPathTraversal(PathResolver.resolvePath(path));
     } catch (ResourceNotKnownException | ElementNotKnownException e) {
       throw new InvalidRequestException(e.getMessage());
     }
 
     // Work out the SQL expression.
-    if (result.getPathTraversal().getType() == RESOURCE) {
+    PathTraversal pathTraversal = result.getPathTraversal();
+    if (pathTraversal.getType() == RESOURCE) {
       String sqlExpression = result.getFhirPath().toLowerCase();
       result.setSql(sqlExpression);
-      result.getFromTables().add(sqlExpression);
     } else {
-      String sqlExpression = input.getSql() + "." + member;
+      String sqlExpression = input.getSql() + "." + result.getFhirPath();
       result.setSql(sqlExpression);
     }
 
     // If the final element is the subject of a multi-value traversal, we need to add a join.
-    if (result.getPathTraversal().getElementDefinition()
-        .equals(result.getPathTraversal().getMultiValueTraversals().getLast())) {
-      addJoinForMultiValueTraversal(result,
-          result.getPathTraversal().getMultiValueTraversals().getLast());
+    ElementDefinition elementDefinition = pathTraversal.getElementDefinition();
+    if (!pathTraversal.getMultiValueTraversals().isEmpty() && elementDefinition
+        .equals(pathTraversal.getMultiValueTraversals().getLast())) {
+      addJoinForMultiValueTraversal(result, pathTraversal.getMultiValueTraversals().getLast());
     }
 
+    // Check whether we need to mark this result as a primitive, and record its type.
+    String typeCode = elementDefinition.getTypeCode();
+    if (isPrimitive(typeCode)) {
+      result.setPrimitive(true);
+      result.setResultType(Mappings.getFhirPathType(typeCode));
+    }
+
+    // Check whether we need to mark this result as singular.
+    if (pathTraversal.getMultiValueTraversals().size() == 0) {
+      result.setSingular(true);
+    }
     return result;
   }
 
@@ -82,31 +94,32 @@ public class MemberInvocation {
 
     // Create a new Join, based upon information from the multi-value traversal.
     Join join = new Join();
+    join.setJoinType(JoinType.LATERAL_VIEW);
     join.setTableAlias(context.getAliasGenerator().getAlias());
     join.setTargetElement(multiValueTraversal);
 
     // Work out what the expression to "explode" will need to be, based upon whether there are
     // upstream multi-value traversals required to get to this element.
-    String udtfExpression = multiValueTraversal.getPath();
+    String udtfExpression = result.getSql();
     if (pathTraversal.getMultiValueTraversals().size() > 1) {
       ElementDefinition previousTraversal = pathTraversal.getMultiValueTraversals()
           .get(pathTraversal.getMultiValueTraversals().size() - 2);
       result.getJoins().stream()
-          .filter(j -> j.getTargetElement().equals(previousTraversal)).findFirst()
+          .filter(j ->
+              j.getTargetElement() != null && j.getTargetElement().equals(previousTraversal))
+          .findFirst()
           .ifPresent(join::setDependsUpon);
     }
+    join.setAliasTarget(udtfExpression);
 
     // If this is not the first join, record a dependency between this join and the previous one.
-    // The expression needs to be rewritten to refer to the alias of the target join.
-    if (join.getDependsUpon() != null) {
-      udtfExpression = udtfExpression
-          .replace(join.getDependsUpon().getTargetElement().getPath(),
-              join.getDependsUpon().getTableAlias());
+    if (!result.getJoins().isEmpty()) {
+      join.setDependsUpon(result.getJoins().last());
     }
 
     // Build the SQL expression for the join.
     String joinExpression =
-        "LATERAL VIEW OUTER explode(" + udtfExpression + ") " + join.getTableAlias() + " AS "
+        "LATERAL VIEW OUTER EXPLODE(" + udtfExpression + ") " + join.getTableAlias() + " AS "
             + join.getTableAlias();
     join.setSql(joinExpression);
 

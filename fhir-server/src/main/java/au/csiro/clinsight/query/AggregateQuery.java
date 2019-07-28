@@ -4,15 +4,19 @@
 
 package au.csiro.clinsight.query;
 
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
+
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.dstu3.model.Parameters;
 import org.hl7.fhir.dstu3.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.dstu3.model.UriType;
 
 /**
  * Represents the information provided as part of an invocation of the `aggregate-query` operation.
@@ -21,6 +25,9 @@ import org.hl7.fhir.dstu3.model.Parameters.ParametersParameterComponent;
  */
 @SuppressWarnings("WeakerAccess")
 public class AggregateQuery {
+
+  @Nonnull
+  private final String subjectResource;
 
   @Nonnull
   private final List<Aggregation> aggregations = new ArrayList<>();
@@ -37,6 +44,25 @@ public class AggregateQuery {
    * object.
    */
   public AggregateQuery(Parameters parameters) {
+    // Get subject resource.
+    Stream<ParametersParameterComponent> subjectResourceParams = parameters.getParameter().stream()
+        .filter(param -> param.getName().equals("subjectResource"));
+    if (subjectResourceParams.count() != 1) {
+      throw new InvalidRequestException("There must be one subject resource parameter");
+    }
+    @SuppressWarnings("OptionalGetWithoutIsPresent") ParametersParameterComponent subjectResourceParam = parameters
+        .getParameter().stream().filter(param -> param.getName().equals("subjectResource"))
+        .findFirst().get();
+    if (!subjectResourceParam.hasValue() || subjectResourceParam.getValue().fhirType() != "uri") {
+      throw new InvalidRequestException("Subject resource parameter must have URI value");
+    }
+    subjectResource = ((UriType) subjectResourceParam.getValue()).asStringValue();
+    if (!subjectResource.contains(BASE_RESOURCE_URL_PREFIX)) {
+      // TODO: Support profiled resources.
+      throw new InvalidRequestException("Subject resource must be a base FHIR resource");
+    }
+
+    // Get aggregation expressions.
     parameters.getParameter().stream()
         .filter(param -> param.getName().equals("aggregation"))
         .forEach(aggregationParameter -> {
@@ -65,6 +91,8 @@ public class AggregateQuery {
           });
           aggregations.add(aggregation);
         });
+
+    // Get grouping expressions.
     parameters.getParameter().stream()
         .filter(param -> param.getName().equals("grouping"))
         .forEach(aggregationParameter -> {
@@ -93,6 +121,8 @@ public class AggregateQuery {
           });
           groupings.add(grouping);
         });
+
+    // Get filter expressions.
     filters.addAll(parameters.getParameter().stream()
         .filter(param -> param.getName().equals("filter"))
         .map(param -> {
@@ -103,6 +133,11 @@ public class AggregateQuery {
           return param.getValue().toString();
         })
         .collect(Collectors.toList()));
+  }
+
+  @Nonnull
+  public String getSubjectResource() {
+    return subjectResource;
   }
 
   @Nonnull

@@ -36,6 +36,10 @@ public abstract class Strings {
     return new String(chars);
   }
 
+  public static String quote(String value) {
+    return "\"" + value + "\"";
+  }
+
   public static String backTicks(String value) {
     return "`" + value + "`";
   }

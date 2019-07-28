@@ -6,7 +6,6 @@ package au.csiro.clinsight.query.parsing;
 
 import static au.csiro.clinsight.query.Mappings.getFunction;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.CODING;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATETIME;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.*;
 
@@ -14,16 +13,22 @@ import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
 import au.csiro.clinsight.fhir.FhirPathParser.*;
+import au.csiro.clinsight.fhir.definitions.PathResolver;
+import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
+import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
 import au.csiro.clinsight.query.functions.ExpressionFunction;
 import au.csiro.clinsight.query.functions.MemberInvocation;
 import au.csiro.clinsight.query.functions.MembershipExpression;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.hl7.fhir.dstu3.model.Coding;
 
 /**
  * This is an ANTLR-based parser for processing a FHIRPath expression, and aggregating the results
@@ -78,8 +83,11 @@ public class ExpressionParser {
       // The invoking expression is passed through to the invocation visitor's constructor - this
       // will provide it with extra context required to do things like merging in joins from the
       // upstream path.
-      return ctx.invocation()
+      ParseResult invocationResult = ctx.invocation()
           .accept(new InvocationVisitor(context, expressionResult));
+      invocationResult
+          .setFhirPath(expressionResult.getFhirPath() + "." + invocationResult.getFhirPath());
+      return invocationResult;
     }
 
     @Nonnull
@@ -96,7 +104,6 @@ public class ExpressionParser {
               .getSql());
       leftResult.setResultType(BOOLEAN);
       leftResult.getJoins().addAll(rightResult.getJoins());
-      leftResult.getFromTables().addAll(rightResult.getFromTables());
       return leftResult;
     }
 
@@ -155,12 +162,12 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitMembershipExpression(MembershipExpressionContext ctx) {
-      MembershipExpression membershipExpression = new MembershipExpression();
+      MembershipExpression membershipExpression = new MembershipExpression(context);
       ParseResult leftResult = new ExpressionVisitor(context)
           .visit(ctx.expression(0));
       ParseResult rightResult = new ExpressionVisitor(context)
           .visit(ctx.expression(1));
-      return membershipExpression.invoke(leftResult, rightResult);
+      return membershipExpression.invoke(ctx.getText(), leftResult, rightResult);
     }
 
     @Override
@@ -200,7 +207,11 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitExternalConstantTerm(ExternalConstantTermContext ctx) {
-      throw new InvalidRequestException("Environment variables are not supported");
+      if (ctx.getText().equals("%resource") || ctx.getText().equals("%context")) {
+        return context.getSubjectResource();
+      } else {
+        throw new InvalidRequestException("Unrecognised environment variable: " + ctx.getText());
+      }
     }
 
     /**
@@ -239,15 +250,29 @@ public class ExpressionParser {
 
     /**
      * This method gets called when an element is on the right-hand side of the invocation
-     * expression.
+     * expression, or when an identifier is referred to as a term (e.g. Encounter).
      */
     @Override
     public ParseResult visitMemberInvocation(MemberInvocationContext ctx) {
-      assert invoker != null;
-      assert invoker.getPathTraversal() != null;
+      if (invoker == null) {
+        // If there is no invoker, we assume that this is a resource. If we can't resolve it, an
+        // error will be thrown.
+        ParseResult result = new ParseResult();
+        result.setFhirPath(ctx.getText());
+        try {
+          result.setPathTraversal(PathResolver.resolvePath(result.getFhirPath()));
+        } catch (ResourceNotKnownException | ElementNotKnownException e) {
+          throw new InvalidRequestException(e.getMessage());
+        }
+        result.setSql(ctx.getText().toLowerCase());
+        return result;
 
-      return new MemberInvocation(context).invoke(invoker, ctx.getText());
-
+      } else {
+        // If there is an invoker, this must be a path expression to an element, with a resource or
+        // parent element as the input. We have a class called `MemberInvocation` to encapsulate
+        // the logic required for these traversals.
+        return new MemberInvocation(context).invoke(ctx.getText(), invoker);
+      }
     }
 
     /**
@@ -276,7 +301,7 @@ public class ExpressionParser {
 
       // Invoke the function and return the result.
       function.setContext(context);
-      return function.invoke(invoker, arguments);
+      return function.invoke(ctx.getText(), invoker, arguments);
     }
 
     @Override
@@ -293,6 +318,19 @@ public class ExpressionParser {
       ParseResult result = new ParseResult();
       result.setResultType(CODING);
       result.setFhirPath(ctx.getText());
+      LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(ctx.getText().split("|")));
+      Coding literalValue;
+      if (codingTokens.size() == 2) {
+        literalValue = new Coding(codingTokens.get(0), codingTokens.get(1), null);
+      } else if (codingTokens.size() == 3) {
+        literalValue = new Coding(codingTokens.get(0), codingTokens.get(2), null);
+        literalValue.setVersion(codingTokens.get(1));
+      } else {
+        throw new InvalidRequestException(
+            "Coding literal must be of form [system]|[code] or [system]|[version]|[code]");
+      }
+      result.setLiteralValue(literalValue);
+      result.setSingular(true);
       return result;
     }
 
@@ -308,7 +346,7 @@ public class ExpressionParser {
     @Override
     public ParseResult visitDateTimeLiteral(DateTimeLiteralContext ctx) {
       ParseResult result = new ParseResult();
-      result.setResultType(DATETIME);
+      result.setResultType(DATE_TIME);
       result.setFhirPath(ctx.getText());
       result.setSql("'" + ctx.getText().replace("@", "") + "'");
       return result;

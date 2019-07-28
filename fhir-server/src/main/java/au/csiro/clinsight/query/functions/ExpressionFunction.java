@@ -23,7 +23,8 @@ import javax.annotation.Nullable;
 public interface ExpressionFunction {
 
   @Nonnull
-  ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments);
+  ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
+      @Nonnull List<ParseResult> arguments);
 
   void setContext(@Nonnull ExpressionParserContext context);
 

@@ -29,26 +29,30 @@ public class DateFormatFunction implements ExpressionFunction {
 
   @Nonnull
   @Override
-  public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
+  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
+      @Nonnull List<ParseResult> arguments) {
     validateInput(input);
-    ParseResult parseResult = validateArgument(arguments);
+    ParseResult argument = validateArgument(arguments);
+
+    ParseResult result = new ParseResult();
+    result.setFhirPath(expression);
     String newSqlExpression =
-        "date_format(" + input.getSql() + ", " + parseResult.getFhirPath() + ")";
-    input.setSql(newSqlExpression);
-    input.setResultType(STRING);
-    input.setElementType(null);
-    input.setElementTypeCode(null);
-    return input;
+        "date_format(" + input.getSql() + ", " + argument.getFhirPath() + ")";
+    result.setSql(newSqlExpression);
+    result.setResultType(STRING);
+    result.setPrimitive(true);
+    result.setSingular(input.isSingular());
+    return result;
   }
 
   private void validateInput(ParseResult input) {
     if (input == null || input.getSql() == null || input.getSql().isEmpty()) {
       throw new InvalidRequestException("Missing input expression for dateFormat function");
     }
-    if (input.getElementType() != PRIMITIVE || !supportedTypes
-        .contains(input.getElementTypeCode())) {
+    if (input.getPathTraversal().getType() != PRIMITIVE || !supportedTypes
+        .contains(input.getPathTraversal().getElementDefinition().getTypeCode())) {
       throw new InvalidRequestException(
-          "Input to dateFormat function must be instant, dateTime or date");
+          "Input to dateFormat function must be DateTime: " + input.getFhirPath());
     }
   }
 

@@ -4,19 +4,25 @@
 
 package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.PRIMITIVE;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
+import static au.csiro.clinsight.query.Mappings.fhirPathTypeToFhirType;
 import static au.csiro.clinsight.query.QueryWrangling.convertUpstreamLateralViewsToInlineQueries;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.*;
+import static au.csiro.clinsight.query.QueryWrangling.rewriteJoinWithJoinAliases;
+import static au.csiro.clinsight.query.QueryWrangling.rewriteSqlWithJoinAliases;
+import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
 
 import au.csiro.clinsight.TerminologyClient;
+import au.csiro.clinsight.fhir.definitions.PathResolver;
+import au.csiro.clinsight.fhir.definitions.PathTraversal;
+import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
 import au.csiro.clinsight.query.AggregateQuery.Aggregation;
 import au.csiro.clinsight.query.AggregateQuery.Grouping;
-import au.csiro.clinsight.query.parsing.ExpressionParser;
-import au.csiro.clinsight.query.parsing.Join;
-import au.csiro.clinsight.query.parsing.ParseResult;
-import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
+import au.csiro.clinsight.query.parsing.*;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
@@ -29,16 +35,11 @@ import org.apache.spark.sql.SparkSession;
  */
 class QueryPlanner {
 
+  private final String fromTable;
   private final List<ParseResult> aggregationParseResults;
   private final List<ParseResult> groupingParseResults;
   private final List<ParseResult> filterParseResults;
   private final ExpressionParser expressionParser;
-  private final Map<ParseResultType, String> parseResultToFhirType = new HashMap<ParseResultType, String>() {{
-    put(STRING, "string");
-    put(BOOLEAN, "boolean");
-    put(DATETIME, "instant");
-    put(INTEGER, "integer");
-  }};
 
   QueryPlanner(@Nonnull TerminologyClient terminologyClient,
       @Nonnull SparkSession spark, String databaseName, @Nonnull AggregateQuery query) {
@@ -49,7 +50,35 @@ class QueryPlanner {
       throw new InvalidRequestException("Missing aggregation component within query");
     }
 
-    expressionParser = new ExpressionParser(terminologyClient, spark, databaseName);
+    // Build a ParseResult to represent the subject resource.
+    String resourceName = query.getSubjectResource().replace(BASE_RESOURCE_URL_PREFIX, "");
+    fromTable = resourceName.toLowerCase();
+
+    // Resolve the subject resource, throwing an error if it is not known.
+    PathTraversal resource;
+    try {
+      resource = PathResolver.resolvePath(resourceName);
+    } catch (ResourceNotKnownException e) {
+      throw new InvalidRequestException(
+          "Subject resource not known: " + query.getSubjectResource());
+    }
+
+    ParseResult subjectResource = new ParseResult();
+    subjectResource.setFhirPath(resourceName);
+    subjectResource.setSql(fromTable);
+    subjectResource.setPathTraversal(resource);
+
+    // Gather dependencies for the execution of the expression parser.
+    ExpressionParserContext context = new ExpressionParserContext();
+    context.setTerminologyClient(terminologyClient);
+    context.setSparkSession(spark);
+    context.setDatabaseName(databaseName);
+    context.setSubjectResource(subjectResource);
+    context.setFromTable(fromTable);
+    context.setAliasGenerator(new AliasGenerator());
+
+    // Build a new expression parser, and parse all of the expressions within the query.
+    expressionParser = new ExpressionParser(context);
     aggregationParseResults = parseAggregation(aggregations);
     groupingParseResults = parseGroupings(groupings);
     filterParseResults = parseFilters(filters);
@@ -86,10 +115,9 @@ class QueryPlanner {
             ParseResult result = expressionParser.parse(groupingExpression);
             // Validate that the return value of the expression is a collection of primitive types,
             // this is a requirement for a grouping.
-            if (result.getResultType() == COLLECTION && result.getElementType() != PRIMITIVE) {
+            if (!result.isPrimitive()) {
               throw new InvalidRequestException(
-                  "Grouping expression returns collection of elements not of primitive type: "
-                      + groupingExpression + " (" + result.getElementTypeCode() + ")");
+                  "Grouping expression not of primitive type: " + groupingExpression);
             }
             return result;
           }).collect(Collectors.toList());
@@ -100,14 +128,12 @@ class QueryPlanner {
   private List<ParseResult> parseFilters(List<String> filters) {
     return filters.stream().map(expression -> {
       ParseResult result = expressionParser.parse(expression);
-      if (result.getResultType() != COLLECTION || result.getElementType() != PRIMITIVE
-          || !result.getElementTypeCode().equals("boolean")) {
+      if (result.getResultType() != BOOLEAN) {
         throw new InvalidRequestException(
             "Filter expression is not of boolean type: " + expression);
       }
       return result;
-    })
-        .collect(Collectors.toList());
+    }).collect(Collectors.toList());
   }
 
   /**
@@ -124,13 +150,9 @@ class QueryPlanner {
 
     // Get aggregation data types from the parse results.
     List<String> aggregationTypes = aggregationParseResults.stream()
-        .map(parseResult -> {
-          if (parseResult.getResultType() == COLLECTION) {
-            return parseResult.getElementTypeCode();
-          } else {
-            return parseResultToFhirType.get(parseResult.getResultType());
-          }
-        })
+        .map(parseResult -> parseResult.isPrimitive()
+            ? fhirPathTypeToFhirType.get(parseResult.getResultType())
+            : parseResult.getPathTraversal().getElementDefinition().getTypeCode())
         .collect(Collectors.toList());
     queryPlan.setAggregationTypes(aggregationTypes);
 
@@ -142,13 +164,9 @@ class QueryPlanner {
 
     // Get grouping data types from the parse results.
     List<String> groupingTypes = groupingParseResults.stream()
-        .map(parseResult -> {
-          if (parseResult.getResultType() == COLLECTION) {
-            return parseResult.getElementTypeCode();
-          } else {
-            return parseResultToFhirType.get(parseResult.getResultType());
-          }
-        })
+        .map(parseResult -> parseResult.isPrimitive()
+            ? fhirPathTypeToFhirType.get(parseResult.getResultType())
+            : parseResult.getPathTraversal().getElementDefinition().getTypeCode())
         .collect(Collectors.toList());
     queryPlan.setGroupingTypes(groupingTypes);
 
@@ -158,46 +176,13 @@ class QueryPlanner {
         .collect(Collectors.toList());
     queryPlan.setFilters(filters);
 
-    computeFromTables(queryPlan);
+    queryPlan.setFromTable(fromTable);
 
     computeJoins(queryPlan);
 
-    return queryPlan;
-  }
+    rewriteExpressions(queryPlan);
 
-  /**
-   * Get from tables from the results of parsing both aggregations and groupings, and compute the
-   * union.
-   */
-  private void computeFromTables(QueryPlan queryPlan) {
-    Set<String> aggregationFromTables = new HashSet<>();
-    aggregationParseResults
-        .forEach(parseResult -> aggregationFromTables.addAll(parseResult.getFromTables()));
-    Set<String> groupingFromTables = new HashSet<>();
-    groupingParseResults
-        .forEach(parseResult -> groupingFromTables.addAll(parseResult.getFromTables()));
-    Set<String> filterFromTables = new HashSet<>();
-    filterParseResults
-        .forEach(parseResult -> filterFromTables.addAll(parseResult.getFromTables()));
-    // Check for from tables within the groupings that were not referenced within at least one
-    // aggregation expression.
-    if (!aggregationFromTables.containsAll(groupingFromTables)) {
-      Set<String> difference = new HashSet<>(groupingFromTables);
-      difference.removeAll(aggregationFromTables);
-      throw new InvalidRequestException(
-          "Groupings contain one or more resources that are not the subject of an aggregation: "
-              + String.join(", ", difference));
-    }
-    // Check for from tables within the filters that were not referenced within at least one
-    // aggregation expression.
-    if (!aggregationFromTables.containsAll(filterFromTables)) {
-      Set<String> difference = new HashSet<>(filterFromTables);
-      difference.removeAll(aggregationFromTables);
-      throw new InvalidRequestException(
-          "Filters contain one or more resources that are not the subject of an aggregation: "
-              + String.join(", ", difference));
-    }
-    queryPlan.setFromTables(aggregationFromTables);
+    return queryPlan;
   }
 
   /**
@@ -214,8 +199,30 @@ class QueryPlanner {
     for (ParseResult parseResult : filterParseResults) {
       joins.addAll(parseResult.getJoins());
     }
-    SortedSet<Join> convertedJoins = convertUpstreamLateralViewsToInlineQueries(joins);
+    SortedSet<Join> convertedJoins = convertUpstreamLateralViewsToInlineQueries(joins, fromTable);
     queryPlan.setJoins(convertedJoins);
+  }
+
+  /**
+   * Rewrite expressions to use aliases within the joins.
+   */
+  private void rewriteExpressions(QueryPlan queryPlan) {
+    for (String aggregation : queryPlan.getAggregations()) {
+      String newSql = rewriteSqlWithJoinAliases(aggregation, queryPlan.getJoins());
+      queryPlan.getAggregations().set(queryPlan.getAggregations().indexOf(aggregation), newSql);
+    }
+    for (String grouping : queryPlan.getGroupings()) {
+      String newSql = rewriteSqlWithJoinAliases(grouping, queryPlan.getJoins());
+      queryPlan.getGroupings().set(queryPlan.getGroupings().indexOf(grouping), newSql);
+    }
+    for (String filter : queryPlan.getFilters()) {
+      String newSql = rewriteSqlWithJoinAliases(filter, queryPlan.getJoins());
+      queryPlan.getFilters().set(queryPlan.getFilters().indexOf(filter), newSql);
+    }
+    for (Join join : queryPlan.getJoins()) {
+      String newSql = rewriteJoinWithJoinAliases(join, queryPlan.getJoins());
+      join.setSql(newSql);
+    }
   }
 
 

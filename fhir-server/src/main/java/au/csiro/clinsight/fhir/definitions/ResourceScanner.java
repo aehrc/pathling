@@ -152,8 +152,9 @@ class ResourceScanner {
           assert type != null : "Encountered element type with no code";
           String transformedPath = elementPath
               .replaceAll("\\[x]", Strings.capitalize(type));
-          ElementDefinition elementDefinition = new ElementDefinition(
-              transformedPath, type);
+          ElementDefinition elementDefinition = new ElementDefinition();
+          elementDefinition.setPath(transformedPath);
+          elementDefinition.setTypeCode(type);
           elementDefinition.getChildElements().addAll(elementChildren);
           elementDefinition.setMaxCardinality(maxCardinality);
           result.put(transformedPath, elementDefinition);
@@ -176,7 +177,9 @@ class ResourceScanner {
           //       them.
           continue;
         }
-        ElementDefinition elementDefinition = new ElementDefinition(elementPath, typeCode);
+        ElementDefinition elementDefinition = new ElementDefinition();
+        elementDefinition.setPath(elementPath);
+        elementDefinition.setTypeCode(typeCode);
         elementDefinition.getChildElements().addAll(elementChildren);
         elementDefinition.setMaxCardinality(maxCardinality);
 

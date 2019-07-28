@@ -4,20 +4,21 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.definitions.PathResolver.resolvePath;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
+import static au.csiro.clinsight.query.QueryWrangling.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.COLLECTION;
 
-import au.csiro.clinsight.fhir.definitions.PathTraversal;
+import au.csiro.clinsight.fhir.definitions.ElementDefinition;
+import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
+import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
+import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -32,18 +33,18 @@ import org.hl7.fhir.dstu3.model.StructureDefinition;
  */
 public class ReverseResolveFunction implements ExpressionFunction {
 
+  private ExpressionParserContext context;
+
   @Nonnull
   @Override
-  public ParseResult invoke(@Nullable ParseResult input, @Nonnull List<ParseResult> arguments) {
+  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
+      @Nonnull List<ParseResult> arguments) {
     validateInput(input);
-    validateArguments(arguments);
-    assert input.getFhirPath() != null;
-    PathTraversal inputElement = resolvePath(input.getFhirPath());
-    assert inputElement.getType() == RESOURCE;
-    ParseResult argument = arguments.get(0);
-    assert argument.getFhirPath() != null;
-    PathTraversal argumentElement = resolvePath(argument.getFhirPath());
-    assert argumentElement.getType() == REFERENCE;
+    ParseResult argument = validateArgument(arguments);
+    ElementDefinition inputElement = input.getPathTraversal().getElementDefinition();
+    ElementDefinition argumentElement = argument.getPathTraversal().getElementDefinition();
+
+    // Check that the subject resource type of the argument matches that of the input.
     boolean argumentReferencesResource = argumentElement.getReferenceTypes().stream()
         .anyMatch(typeUrl -> {
           StructureDefinition typeDefinition = ResourceDefinitions.getResourceByUrl(typeUrl);
@@ -55,86 +56,82 @@ public class ReverseResolveFunction implements ExpressionFunction {
           "Argument to reverseResolve function does not reference input resource type: " + argument
               .getFhirPath());
     }
-    if (argument.getJoins().isEmpty()) {
-      resolveJoinlessArgument(input, inputElement, argument, argumentElement);
-    } else {
-      resolveArgumentWithJoins(input, argument, argumentElement);
-    }
-    return input;
+
+    return buildResult(expression, input, argument);
   }
 
-  private void resolveArgumentWithJoins(ParseResult input, ParseResult argument,
-      PathTraversal argumentElement) {
-    LinkedList<String> argumentPathComponents = Strings.tokenizePath(argumentElement.getPath());
-    final String targetResource = argumentPathComponents.getFirst();
+  @Nonnull
+  private ParseResult buildResult(@Nonnull String expression, @Nonnull ParseResult input,
+      @Nonnull ParseResult argument) {
+    String joinAlias = context.getAliasGenerator().getAlias();
+    String targetResource = Strings.tokenizePath(argument.getFhirPath()).getFirst();
     String targetTable = targetResource.toLowerCase();
-    String joinAlias = Strings.pathToLowerCamelCase(argumentPathComponents) + "Resolved";
-    Join finalJoin = argument.getJoins().last();
-    assert finalJoin.getUdtfExpression() != null;
-    String referenceExpression = joinAlias + "." + argument.getSql() + ".reference";
-    referenceExpression = referenceExpression
-        .replace(finalJoin.getUdtfExpression(), finalJoin.getTableAlias());
-    String joinExpression = "LEFT JOIN (SELECT * FROM " + targetTable + " ";
-    joinExpression += argument.getJoins().stream().map(Join::getSql).collect(
-        Collectors.joining(" "));
-    joinExpression +=
-        ") " + joinAlias + " ON " + input.getSql() + ".id = " + referenceExpression;
-    Join join = new Join(joinExpression, targetTable, TABLE_JOIN, joinAlias);
-    input.setResultType(COLLECTION);
-    input.setElementType(RESOURCE);
-    input.setElementTypeCode(targetResource);
-    input.setFhirPath(targetResource);
-    input.setSql(joinAlias);
-    input.getJoins().add(join);
-  }
+    String joinExpression;
+    if (argument.getJoins().isEmpty()) {
+      String targetExpression = argument.getSql().replace(targetTable, joinAlias) + ".reference";
+      joinExpression =
+          "LEFT JOIN " + targetTable + " " + joinAlias + " ON " + input.getSql() + ".id = "
+              + targetExpression;
+    } else {
+      joinExpression = "LEFT JOIN (SELECT * FROM " + targetTable + " ";
+      joinExpression += argument.getJoins().stream().map(Join::getSql)
+          .collect(Collectors.joining(" "));
+      String targetExpression = rewriteSqlWithJoinAliases(argument.getSql() + ".reference",
+          argument.getJoins());
+      joinExpression += ") " + joinAlias + " ON " + input.getSql() + ".id = " + joinAlias + "."
+          + targetExpression;
+    }
 
-  private void resolveJoinlessArgument(@Nonnull ParseResult input,
-      PathTraversal inputElement,
-      ParseResult argument, PathTraversal argumentElement) {
-    LinkedList<String> argumentPathComponents = Strings.tokenizePath(argumentElement.getPath());
-    List<String> argumentPathTail = argumentPathComponents
-        .subList(1, argumentPathComponents.size());
-    assert inputElement.getTypeCode() != null;
-    String joinAlias = inputElement.getTypeCode().toLowerCase() + argumentPathComponents.getFirst();
-    joinAlias += "As" + Strings.pathToUpperCamelCase(argumentPathTail);
-    String targetTable = argumentPathComponents.getFirst().toLowerCase();
-    assert argument.getSql() != null;
-    String targetExpression =
-        argument.getSql().replace(targetTable, joinAlias) + ".reference";
-    String joinExpression =
-        "LEFT JOIN " + targetTable + " " + joinAlias + " ON " + input.getSql() + ".id = "
-            + targetExpression;
-    Join join = new Join(joinExpression, targetTable, TABLE_JOIN, joinAlias);
-    input.setResultType(COLLECTION);
-    input.setElementType(RESOURCE);
-    input.setElementTypeCode(argumentPathComponents.getFirst());
-    input.setFhirPath(argumentPathComponents.getFirst());
-    input.setSql(joinAlias);
-    input.getJoins().add(join);
+    // Build new Join.
+    Join join = new Join();
+    join.setSql(joinExpression);
+    join.setJoinType(TABLE_JOIN);
+    join.setTableAlias(joinAlias);
+    join.setAliasTarget(targetTable);
+    if (!input.getJoins().isEmpty()) {
+      join.setDependsUpon(input.getJoins().last());
+    }
+
+    // Build new parse result.
+    ParseResult result = new ParseResult();
+    result.setFhirPath(expression);
+    result.setSql(joinAlias);
+    result.getJoins().addAll(input.getJoins());
+    result.getJoins().add(join);
+    result.setSingular(input.isSingular());
+
+    // Retrieve the path traversal for the result of the expression.
+    try {
+      result.setPathTraversal(PathResolver.resolvePath(targetResource));
+    } catch (ResourceNotKnownException | ElementNotKnownException e) {
+      throw new InvalidRequestException(e.getMessage());
+    }
+
+    return result;
   }
 
   private void validateInput(@Nullable ParseResult input) {
     if (input == null) {
       throw new InvalidRequestException("Missing input expression for resolve function");
     }
-    if (input.getElementType() != RESOURCE) {
+    if (input.getPathTraversal().getType() != RESOURCE) {
       throw new InvalidRequestException(
-          "Input to reverseResolve function must be a Resource: " + input.getFhirPath()
-              + " (" + input.getElementTypeCode() + ")");
+          "Input to reverseResolve function must be a Resource: " + input.getFhirPath());
     }
   }
 
-  private void validateArguments(@Nonnull List<ParseResult> arguments) {
-    if (arguments.size() != 1
-        || arguments.get(0).getElementType() != REFERENCE) {
+  private ParseResult validateArgument(@Nonnull List<ParseResult> arguments) {
+    ParseResult argument = arguments.get(0);
+    if (arguments.size() != 1 || argument.getPathTraversal().getType() != REFERENCE) {
       throw new InvalidRequestException(
-          "Argument to reverseResolve function must be a Reference: " + arguments.get(0)
-              .getFhirPath() + " (" + arguments.get(0).getElementTypeCode() + ")");
+          "Argument to reverseResolve function must be a Reference: " + argument.getFhirPath());
     }
+    return argument;
   }
 
   @Override
   public void setContext(@Nonnull ExpressionParserContext context) {
+    this.context = context;
   }
 
 }
