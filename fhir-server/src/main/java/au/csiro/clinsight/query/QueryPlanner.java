@@ -6,9 +6,7 @@ package au.csiro.clinsight.query;
 
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
 import static au.csiro.clinsight.query.Mappings.fhirPathTypeToFhirType;
-import static au.csiro.clinsight.query.QueryWrangling.convertUpstreamLateralViewsToInlineQueries;
-import static au.csiro.clinsight.query.QueryWrangling.rewriteJoinWithJoinAliases;
-import static au.csiro.clinsight.query.QueryWrangling.rewriteSqlWithJoinAliases;
+import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
 
 import au.csiro.clinsight.TerminologyClient;
@@ -178,7 +176,7 @@ class QueryPlanner {
 
     queryPlan.setFromTable(fromTable);
 
-    computeJoins(queryPlan);
+    addAllJoins(queryPlan);
 
     rewriteExpressions(queryPlan);
 
@@ -188,7 +186,7 @@ class QueryPlanner {
   /**
    * Get joins from the results of parsing both aggregations and groupings.
    */
-  private void computeJoins(QueryPlan queryPlan) {
+  private void addAllJoins(QueryPlan queryPlan) {
     SortedSet<Join> joins = new TreeSet<>();
     for (ParseResult parseResult : aggregationParseResults) {
       joins.addAll(parseResult.getJoins());
@@ -199,8 +197,7 @@ class QueryPlanner {
     for (ParseResult parseResult : filterParseResults) {
       joins.addAll(parseResult.getJoins());
     }
-    SortedSet<Join> convertedJoins = convertUpstreamLateralViewsToInlineQueries(joins, fromTable);
-    queryPlan.setJoins(convertedJoins);
+    queryPlan.setJoins(joins);
   }
 
   /**
@@ -219,11 +216,6 @@ class QueryPlanner {
       String newSql = rewriteSqlWithJoinAliases(filter, queryPlan.getJoins());
       queryPlan.getFilters().set(queryPlan.getFilters().indexOf(filter), newSql);
     }
-    for (Join join : queryPlan.getJoins()) {
-      String newSql = rewriteJoinWithJoinAliases(join, queryPlan.getJoins());
-      join.setSql(newSql);
-    }
   }
-
 
 }

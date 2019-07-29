@@ -8,7 +8,10 @@ import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementT
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getResourceByUrl;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isResource;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
+import static au.csiro.clinsight.query.parsing.Join.wrapUpstreamJoins;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
 import au.csiro.clinsight.fhir.definitions.PathResolver;
@@ -19,6 +22,8 @@ import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
@@ -52,11 +57,27 @@ public class ResolveFunction implements ExpressionFunction {
       }
     }
 
-    // Build a new Join object.
+    // Draft up the new join expression.
     String joinAlias = context.getAliasGenerator().getAlias();
     String joinExpression = "LEFT JOIN " + referenceTypeCode.toLowerCase() + " " + joinAlias
         + " ON " + input.getSql() + ".reference = "
         + joinAlias + ".id";
+
+    // Build the candidate set of joins.
+    SortedSet<Join> joins = new TreeSet<>(input.getJoins());
+    // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
+    // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
+    // view within a query.
+    if (!joins.isEmpty() && joins.last().getJoinType() == LATERAL_VIEW) {
+      SortedSet<Join> wrappedJoins = wrapUpstreamJoins(joins,
+          context.getAliasGenerator().getAlias(), context.getFromTable());
+      joins.clear();
+      joins.addAll(wrappedJoins);
+    }
+    // Rewrite the new join expression to take account of aliases within the input joins.
+    joinExpression = rewriteSqlWithJoinAliases(joinExpression, joins);
+
+    // Build a new Join object.
     Join newJoin = new Join();
     newJoin.setSql(joinExpression);
     newJoin.setJoinType(TABLE_JOIN);
@@ -65,13 +86,13 @@ public class ResolveFunction implements ExpressionFunction {
     if (!input.getJoins().isEmpty()) {
       newJoin.setDependsUpon(input.getJoins().last());
     }
+    joins.add(newJoin);
 
     // Build the parse result.
     ParseResult result = new ParseResult();
     result.setFhirPath(expression);
     result.setSql(joinAlias);
-    result.getJoins().addAll(input.getJoins());
-    result.getJoins().add(newJoin);
+    result.getJoins().addAll(joins);
     result.setSingular(input.isSingular());
 
     // Retrieve the path traversal for the result of the expression.

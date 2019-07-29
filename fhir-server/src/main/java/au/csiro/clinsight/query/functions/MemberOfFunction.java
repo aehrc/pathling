@@ -4,11 +4,11 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.query.QueryWrangling.convertUpstreamLateralViewsToInlineQueries;
-import static au.csiro.clinsight.query.QueryWrangling.rewriteJoinWithJoinAliases;
-import static au.csiro.clinsight.query.QueryWrangling.rewriteSqlWithJoinAliases;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.MEMBERSHIP_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
+import static au.csiro.clinsight.query.parsing.Join.wrapUpstreamJoins;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
 
@@ -84,13 +84,18 @@ public class MemberOfFunction implements ExpressionFunction {
     valueSetJoin.setAliasTarget(tableName);
     valueSetJoin.setDependsUpon(input.getJoins().last());
 
+    // Build the candidate set of inner joins.
     SortedSet<Join> innerJoins = new TreeSet<>(input.getJoins());
-    innerJoins.add(valueSetJoin);
-    for (Join join : innerJoins) {
-      String newSql = rewriteJoinWithJoinAliases(join, innerJoins);
-      join.setSql(newSql);
+    // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
+    // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
+    // view within a query.
+    if (!innerJoins.isEmpty() && innerJoins.last().getJoinType() == LATERAL_VIEW) {
+      SortedSet<Join> wrappedJoins = wrapUpstreamJoins(innerJoins,
+          context.getAliasGenerator().getAlias(), context.getFromTable());
+      innerJoins.clear();
+      innerJoins.addAll(wrappedJoins);
     }
-    innerJoins = convertUpstreamLateralViewsToInlineQueries(innerJoins, context.getFromTable());
+    innerJoins.add(valueSetJoin);
 
     String subquery = "LEFT JOIN (";
     subquery += "SELECT " + context.getFromTable() + ".id, ";

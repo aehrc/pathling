@@ -6,8 +6,10 @@ package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
-import static au.csiro.clinsight.query.QueryWrangling.rewriteSqlWithJoinAliases;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
+import static au.csiro.clinsight.query.parsing.Join.wrapUpstreamJoins;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
 import au.csiro.clinsight.fhir.definitions.PathResolver;
@@ -20,6 +22,8 @@ import au.csiro.clinsight.query.parsing.ParseResult;
 import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -82,6 +86,20 @@ public class ReverseResolveFunction implements ExpressionFunction {
           + targetExpression;
     }
 
+    // Build the candidate set of joins.
+    SortedSet<Join> joins = new TreeSet<>(input.getJoins());
+    // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
+    // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
+    // view within a query.
+    if (!joins.isEmpty() && joins.last().getJoinType() == LATERAL_VIEW) {
+      SortedSet<Join> wrappedJoins = wrapUpstreamJoins(joins,
+          context.getAliasGenerator().getAlias(), context.getFromTable());
+      joins.clear();
+      joins.addAll(wrappedJoins);
+    }
+    // Rewrite the new join expression to take account of aliases within the input joins.
+    joinExpression = rewriteSqlWithJoinAliases(joinExpression, joins);
+
     // Build new Join.
     Join join = new Join();
     join.setSql(joinExpression);
@@ -91,13 +109,13 @@ public class ReverseResolveFunction implements ExpressionFunction {
     if (!input.getJoins().isEmpty()) {
       join.setDependsUpon(input.getJoins().last());
     }
+    joins.add(join);
 
     // Build new parse result.
     ParseResult result = new ParseResult();
     result.setFhirPath(expression);
     result.setSql(joinAlias);
-    result.getJoins().addAll(input.getJoins());
-    result.getJoins().add(join);
+    result.getJoins().addAll(joins);
     result.setSingular(input.isSingular());
 
     // Retrieve the path traversal for the result of the expression.

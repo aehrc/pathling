@@ -4,7 +4,6 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.query.QueryWrangling.convertUpstreamLateralViewsToInlineQueries;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.MEMBERSHIP_JOIN;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
 import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.CODING;
@@ -81,11 +80,12 @@ public class MembershipExpression {
     }
     // TODO: Deal with versions within Codings and CodeableConcepts.
 
-    // Build a SQL expression representing the new subquery that provides the result of the membership test.
-    String subqueryAlias = context.getAliasGenerator().getAlias();
+    // Get the set of upstream joins.
     SortedSet<Join> upstreamJoins = left.getJoins();
     upstreamJoins.addAll(right.getJoins());
-    upstreamJoins = convertUpstreamLateralViewsToInlineQueries(upstreamJoins, resourceTable);
+
+    // Build a SQL expression representing the new subquery that provides the result of the membership test.
+    String subqueryAlias = context.getAliasGenerator().getAlias();
     String subquery = "LEFT JOIN (";
     subquery += selectExpression;
     subquery += "FROM " + resourceTable;

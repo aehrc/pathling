@@ -7,6 +7,7 @@ package au.csiro.clinsight.query.functions;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.PRIMITIVE;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isPrimitive;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
 import au.csiro.clinsight.fhir.definitions.PathResolver;
@@ -16,7 +17,6 @@ import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
 import au.csiro.clinsight.query.Mappings;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
-import au.csiro.clinsight.query.parsing.Join.JoinType;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
@@ -94,7 +94,7 @@ public class MemberInvocation {
 
     // Create a new Join, based upon information from the multi-value traversal.
     Join join = new Join();
-    join.setJoinType(JoinType.LATERAL_VIEW);
+    join.setJoinType(LATERAL_VIEW);
     join.setTableAlias(context.getAliasGenerator().getAlias());
     join.setTargetElement(multiValueTraversal);
 
@@ -121,8 +121,11 @@ public class MemberInvocation {
     String joinExpression =
         "LATERAL VIEW OUTER EXPLODE(" + udtfExpression + ") " + join.getTableAlias() + " AS "
             + join.getTableAlias();
-    join.setSql(joinExpression);
 
+    // Rewrite the expression taking into account aliases in the upstream joins.
+    joinExpression = Join.rewriteSqlWithJoinAliases(joinExpression, result.getJoins());
+
+    join.setSql(joinExpression);
     result.getJoins().add(join);
   }
 

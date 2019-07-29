@@ -4,8 +4,15 @@
 
 package au.csiro.clinsight.query.parsing;
 
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.WRAPPED_LATERAL_VIEWS;
+
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
+import java.util.Collections;
 import java.util.Objects;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
 /**
@@ -47,6 +54,79 @@ public class Join implements Comparable<Join> {
    * query.
    */
   private Join dependsUpon;
+
+  /**
+   * Replaces alias targets within a SQL expression with aliases found within the supplied set of
+   * joins. Use this for non-join SQL expressions, e.g. SELECT and WHERE.
+   */
+  public static String rewriteSqlWithJoinAliases(String sql, SortedSet<Join> joins) {
+    if (joins.isEmpty()) {
+      return sql;
+    }
+    String newSql = sql;
+
+    // Go through the list and replace the alias target string within the expression with the alias,
+    // for each join.
+    SortedSet<Join> joinsReversed = new TreeSet<>(Collections.reverseOrder());
+    joinsReversed.addAll(joins);
+    for (Join currentJoin : joinsReversed) {
+      newSql = newSql.replaceAll(currentJoin.getAliasTarget(), currentJoin.getTableAlias());
+    }
+
+    return newSql;
+  }
+
+  /**
+   * Replaces alias targets within a join with the aliases found within the supplied set of joins.
+   */
+  public static String rewriteJoinWithJoinAliases(Join join, SortedSet<Join> joins) {
+    String newSql = join.getSql();
+
+    // Don't replace aliases in join expressions which contain inline queries (i.e. LEFT JOIN).
+    if (newSql.contains("LEFT JOIN")) {
+      return newSql;
+    }
+
+    // Go through the list and replace the alias target string within the expression with the alias,
+    // for each join.
+    SortedSet<Join> joinsReversed = new TreeSet<>(Collections.reverseOrder());
+    joinsReversed.addAll(joins);
+    for (Join currentJoin : joinsReversed) {
+      if (!join.equals(currentJoin)) {
+        // Match the alias target, unless it is inside an inline query.
+        newSql = newSql.replaceAll(currentJoin.getAliasTarget(), currentJoin.getTableAlias());
+      }
+    }
+
+    return newSql;
+  }
+
+  /**
+   * Wrap a set of joins in an inline query and LEFT JOIN to it.
+   */
+  public static SortedSet<Join> wrapUpstreamJoins(SortedSet<Join> joins, String joinAlias,
+      String fromTable) {
+    Join lastLateralView = joins.last();
+    String joinExpression =
+        "LEFT JOIN (SELECT " + fromTable + ".id, " + lastLateralView.getTableAlias() + ".* FROM "
+            + fromTable + " ";
+    joinExpression += joins.stream()
+        .map(Join::getSql)
+        .collect(Collectors.joining(" "));
+    joinExpression += ") " + joinAlias + " ON " + fromTable + ".id = " + joinAlias + ".id";
+
+    // Build a new Join object to replace the group of lateral views.
+    Join newJoin = new Join();
+    newJoin.setSql(joinExpression);
+    newJoin.setJoinType(WRAPPED_LATERAL_VIEWS);
+    newJoin.setTableAlias(joinAlias + "." + lastLateralView.getTableAlias());
+    newJoin.setAliasTarget(lastLateralView.getAliasTarget());
+    newJoin.setTargetElement(lastLateralView.getTargetElement());
+
+    SortedSet<Join> result = new TreeSet<>();
+    result.add(newJoin);
+    return result;
+  }
 
   public String getSql() {
     return sql;
@@ -97,28 +177,46 @@ public class Join implements Comparable<Join> {
   }
 
   /**
-   * A join that is dependent on another join is ordered after that join.
+   * A join that is dependent on another join is ordered after that join. If there are no
+   * dependencies between the two joins, order lateral views last.
    */
   @Override
   public int compareTo(@Nonnull Join j) {
+    // If the two joins are equal according to the `equals` function (same SQL expression), return
+    // 0. This will result in the join not being added to a set, for example.
     if (this.equals(j)) {
       return 0;
-    } else if (dependsUpon == null && j.getDependsUpon() == null) {
-      return 1;
-    } else if (j.getDependsUpon() != null && j.getDependsUpon().equals(this)) {
-      return -1;
-    } else if (dependsUpon != null && dependsUpon.equals(j)) {
-      return 1;
-    } else {
-      Join cursor = j;
-      while (cursor != null && cursor.getDependsUpon() != null) {
-        if (cursor.getDependsUpon().equals(this)) {
-          return -1;
-        }
-        cursor = cursor.getDependsUpon();
-      }
-      return 1;
     }
+
+    // If neither join has a dependency, look at the join type. If the second join is a lateral
+    // view, return "less than".
+    if (dependsUpon == null && j.getDependsUpon() == null) {
+      return j.getJoinType() == LATERAL_VIEW ? -1 : 1;
+    }
+
+    // Walk the dependencies upwards from the second join. If it is dependent on the first join,
+    // return "less than".
+    Join cursor = j;
+    while (cursor != null && cursor.getDependsUpon() != null) {
+      if (cursor.getDependsUpon().equals(this)) {
+        return -1;
+      }
+      cursor = cursor.getDependsUpon();
+    }
+
+    // Walk the dependencies upwards from the first join. If it is dependent on the second join,
+    // return "greater than".
+    cursor = this;
+    while (cursor != null && cursor.getDependsUpon() != null) {
+      if (cursor.getDependsUpon().equals(j)) {
+        return 1;
+      }
+      cursor = cursor.getDependsUpon();
+    }
+
+    // If neither join is transitively dependent on the other, look at the join type. If the second
+    // join is a lateral view, return "less than".
+    return j.getJoinType() == LATERAL_VIEW ? -1 : 1;
   }
 
   /**

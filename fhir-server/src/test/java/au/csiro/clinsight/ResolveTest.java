@@ -154,17 +154,16 @@ public class ResolveTest {
         + "}";
 
     String expectedSql =
-        "SELECT c.display AS `Observation type`, "
+        "SELECT d.display AS `Observation type`, "
             + "COUNT(DISTINCT diagnosticreport.id) AS `Number of diagnostic reports` "
             + "FROM diagnosticreport "
             + "LEFT JOIN ("
-            + "SELECT * "
-            + "FROM diagnosticreport "
+            + "SELECT diagnosticreport.id, "
+            + "a.* FROM diagnosticreport "
             + "LATERAL VIEW OUTER EXPLODE(diagnosticreport.result) a AS a"
-            + ") a "
-            + "ON diagnosticreport.id = a.id "
-            + "LEFT JOIN observation b ON a.reference = b.id "
-            + "LATERAL VIEW OUTER EXPLODE(b.code.coding) c AS c "
+            + ") c ON diagnosticreport.id = c.id "
+            + "LEFT JOIN observation b ON c.a.reference = b.id "
+            + "LATERAL VIEW OUTER EXPLODE(b.code.coding) d AS d "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -280,20 +279,18 @@ public class ResolveTest {
         + "}";
 
     String expectedSql =
-        "SELECT e.display AS `Associated diagnosis`, "
+        "SELECT f.display AS `Associated diagnosis`, "
             + "COUNT(DISTINCT condition.id) AS `Number of conditions` "
             + "FROM condition "
             + "LEFT JOIN ("
-            + "SELECT * "
+            + "SELECT condition.id, b.* "
             + "FROM condition "
             + "LATERAL VIEW OUTER EXPLODE(condition.evidence) a AS a "
             + "LATERAL VIEW OUTER EXPLODE(a.detail) b AS b"
-            + ") b "
-            + "ON condition.id = b.id "
-            + "LEFT JOIN diagnosticreport c "
-            + "ON b.reference = c.id "
-            + "LATERAL VIEW OUTER EXPLODE(c.codedDiagnosis) d AS d "
-            + "LATERAL VIEW OUTER EXPLODE(d.coding) e AS e "
+            + ") d ON condition.id = d.id "
+            + "LEFT JOIN diagnosticreport c ON d.b.reference = c.id "
+            + "LATERAL VIEW OUTER EXPLODE(c.codedDiagnosis) e AS e "
+            + "LATERAL VIEW OUTER EXPLODE(e.coding) f AS f "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -488,12 +485,8 @@ public class ResolveTest {
             + "b.gender AS `Patient gender`, "
             + "COUNT(DISTINCT allergyintolerance.id) AS `Number of allergies` "
             + "FROM allergyintolerance "
-            + "LEFT JOIN ("
-            + "SELECT allergyintolerance.*, a.* "
-            + "FROM allergyintolerance "
-            + "LATERAL VIEW OUTER EXPLODE(allergyintolerance.code.coding) a AS a"
-            + ") a ON allergyintolerance.id = a.id "
             + "LEFT JOIN patient b ON allergyintolerance.patient.reference = b.id "
+            + "LATERAL VIEW OUTER EXPLODE(allergyintolerance.code.coding) a AS a "
             + "GROUP BY 1, 2 "
             + "ORDER BY 1, 2, 3";
 
