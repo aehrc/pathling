@@ -108,6 +108,7 @@ public class MembershipExpressionTest {
     verify(mockSpark).sql(expectedSql);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void singularPrimitive() throws IOException {
     String inParams = "{\n"
@@ -159,6 +160,7 @@ public class MembershipExpressionTest {
     verify(mockSpark).sql(expectedSql);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void codingLiteral() throws IOException {
     String inParams = "{\n"
@@ -237,6 +239,7 @@ public class MembershipExpressionTest {
     verify(mockSpark).sql(expectedSql);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void singularCoding() throws IOException {
     String inParams = "{\n"

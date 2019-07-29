@@ -4,7 +4,7 @@
 
 package au.csiro.clinsight.query.parsing;
 
-import static au.csiro.clinsight.query.Mappings.getFunction;
+import static au.csiro.clinsight.query.functions.ExpressionFunction.getFunction;
 import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.CODING;
 
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
