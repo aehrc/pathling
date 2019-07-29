@@ -9,14 +9,15 @@ import static au.csiro.clinsight.query.parsing.Join.JoinType.MEMBERSHIP_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.Join.wrapUpstreamJoins;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
+import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.STRING;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.query.Code;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
@@ -118,7 +119,8 @@ public class MemberOfFunction implements ExpressionFunction {
     ParseResult result = new ParseResult();
     result.setFhirPath(expression);
     result.setSql(subqueryAlias + ".result");
-    result.setResultType(BOOLEAN);
+    result.setFhirPathType(FhirPathType.BOOLEAN);
+    result.setFhirType(FhirType.BOOLEAN);
     result.getJoins().add(newJoin);
     result.setPrimitive(true);
     result.setSingular(input.isSingular());
@@ -142,7 +144,7 @@ public class MemberOfFunction implements ExpressionFunction {
       throw new InvalidRequestException("Must pass URL argument to memberOf function");
     }
     ParseResult argument = arguments.get(0);
-    if (argument.getResultType() != STRING) {
+    if (argument.getFhirPathType() != STRING) {
       throw new InvalidRequestException(
           "Argument to memberOf function must be a String: " + argument.getFhirPath());
     }

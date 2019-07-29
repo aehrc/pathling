@@ -5,6 +5,7 @@
 package au.csiro.clinsight.query;
 
 import au.csiro.clinsight.query.parsing.Join;
+import au.csiro.clinsight.query.parsing.ParseResult;
 import java.util.List;
 import java.util.SortedSet;
 
@@ -17,24 +18,14 @@ import java.util.SortedSet;
 class QueryPlan {
 
   /**
-   * A list of the SQL expressions that represent the aggregations within this query.
+   * A list of the parse results that represent the aggregations within this query.
    */
-  private List<String> aggregations;
+  private List<ParseResult> aggregations;
 
   /**
-   * A list of the FHIR type codes returned by each of the aggregation expressions.
+   * A list of the parse results that represent the groupings within this query.
    */
-  private List<String> aggregationTypes;
-
-  /**
-   * A list of the SQL expressions that represent the groupings within this query.
-   */
-  private List<String> groupings;
-
-  /**
-   * A list of the FHIR type codes returned by each of the grouping expressions.
-   */
-  private List<String> groupingTypes;
+  private List<ParseResult> groupings;
 
   /**
    * The name of the table that is the original target of any joins required for this query.
@@ -47,40 +38,24 @@ class QueryPlan {
   private SortedSet<Join> joins;
 
   /**
-   * A list of the SQL expressions that represent any filters within this query.
+   * A list of the parse results that represent any filters within this query.
    */
-  private List<String> filters;
+  private List<ParseResult> filters;
 
-  public List<String> getAggregations() {
+  public List<ParseResult> getAggregations() {
     return aggregations;
   }
 
-  public void setAggregations(List<String> aggregations) {
+  public void setAggregations(List<ParseResult> aggregations) {
     this.aggregations = aggregations;
   }
 
-  public List<String> getAggregationTypes() {
-    return aggregationTypes;
-  }
-
-  public void setAggregationTypes(List<String> aggregationTypes) {
-    this.aggregationTypes = aggregationTypes;
-  }
-
-  public List<String> getGroupings() {
+  public List<ParseResult> getGroupings() {
     return groupings;
   }
 
-  public void setGroupings(List<String> groupings) {
+  public void setGroupings(List<ParseResult> groupings) {
     this.groupings = groupings;
-  }
-
-  public List<String> getGroupingTypes() {
-    return groupingTypes;
-  }
-
-  public void setGroupingTypes(List<String> groupingTypes) {
-    this.groupingTypes = groupingTypes;
   }
 
   public String getFromTable() {
@@ -99,11 +74,11 @@ class QueryPlan {
     this.joins = joins;
   }
 
-  public List<String> getFilters() {
+  public List<ParseResult> getFilters() {
     return filters;
   }
 
-  public void setFilters(List<String> filters) {
+  public void setFilters(List<ParseResult> filters) {
     this.filters = filters;
   }
 }

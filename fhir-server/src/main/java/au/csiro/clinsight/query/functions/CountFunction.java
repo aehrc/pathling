@@ -9,7 +9,8 @@ import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementT
 
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParseResult;
-import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -40,7 +41,8 @@ public class CountFunction implements ExpressionFunction {
     // The count function maps to the function with the same name within Spark SQL.
     result.setSql("COUNT(DISTINCT " + sqlExpression + ")");
     // A count operation always results in a non-negative integer.
-    result.setResultType(ParseResultType.INTEGER);
+    result.setFhirPathType(FhirPathType.INTEGER);
+    result.setFhirType(FhirType.UNSIGNED_INT);
     result.setPrimitive(true);
     result.setSingular(true);
     return result;

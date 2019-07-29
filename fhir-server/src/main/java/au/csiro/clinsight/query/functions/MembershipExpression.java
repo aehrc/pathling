@@ -5,13 +5,14 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.query.parsing.Join.JoinType.MEMBERSHIP_JOIN;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.CODING;
+import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.CODING;
 import static au.csiro.clinsight.utilities.Strings.quote;
 
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.SortedSet;
 import java.util.stream.Collectors;
@@ -47,14 +48,14 @@ public class MembershipExpression {
     String resourceTable = context.getFromTable();
     String selectExpression;
 
-    if (left.getResultType() == CODING && left.getLiteralValue() == null) {
+    if (left.getFhirPathType() == CODING && left.getLiteralValue() == null) {
       // If the left expression is a singular Coding expression, use equality on the system and code
       // components of the two expressions.
       selectExpression =
           "SELECT " + resourceTable + ".id, IFNULL(MAX(" + right.getSql() + ".system = "
               + left.getSql() + ".system AND " + right.getSql() + ".code = "
               + left.getSql() + ".code), FALSE) AS result";
-    } else if (left.getResultType() == CODING && left.getLiteralValue() != null) {
+    } else if (left.getFhirPathType() == CODING && left.getLiteralValue() != null) {
       // If the left expression is a Coding literal, extract the system and code components from the
       // literal and inject them as literal values into the SQL.
       Coding literalValue = (Coding) left.getLiteralValue();
@@ -62,7 +63,7 @@ public class MembershipExpression {
           "SELECT " + resourceTable + ".id, IFNULL(MAX(" + right.getSql() + ".system = "
               + quote(literalValue.getSystem()) + " AND " + right.getSql() + ".code = "
               + quote(literalValue.getCode()) + "), FALSE) AS result";
-    } else if (left.getResultType() == null && left.getPathTraversal().getElementDefinition()
+    } else if (left.getFhirPathType() == null && left.getPathTraversal().getElementDefinition()
         .getTypeCode().equals("CodeableConcept")) {
       // If the left expression is a singular CodeableConcept, traverse to the `coding` member, then
       // use equality on the system and code.
@@ -103,7 +104,8 @@ public class MembershipExpression {
     result.setFhirPath(expression);
     result.setSql(newJoin.getTableAlias() + ".result");
     result.getJoins().add(newJoin);
-    result.setResultType(BOOLEAN);
+    result.setFhirPathType(FhirPathType.BOOLEAN);
+    result.setFhirType(FhirType.BOOLEAN);
     result.setPrimitive(true);
     result.setSingular(true);
 
@@ -120,7 +122,7 @@ public class MembershipExpression {
               .getFhirPath());
     }
     String typeCode = left.getPathTraversal().getElementDefinition().getTypeCode();
-    if (!left.isPrimitive() || left.getResultType() == CODING || typeCode
+    if (!left.isPrimitive() || left.getFhirPathType() == CODING || typeCode
         .equals("CodeableConcept")) {
       throw new InvalidRequestException(
           "Operand in membership expression must be primitive, Coding or CodeableConcept: " + left
@@ -138,7 +140,7 @@ public class MembershipExpression {
               .getFhirPath());
     }
     String typeCode = right.getPathTraversal().getElementDefinition().getTypeCode();
-    if (!right.isPrimitive() || right.getResultType() == CODING || typeCode
+    if (!right.isPrimitive() || right.getFhirPathType() == CODING || typeCode
         .equals("CodeableConcept")) {
       throw new InvalidRequestException(
           "Operand in membership expression must be primitive, Coding or CodeableConcept: " + right

@@ -5,9 +5,8 @@
 package au.csiro.clinsight.query;
 
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
-import static au.csiro.clinsight.query.Mappings.fhirPathTypeToFhirType;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
+import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.BOOLEAN;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.definitions.PathResolver;
@@ -126,7 +125,7 @@ class QueryPlanner {
   private List<ParseResult> parseFilters(List<String> filters) {
     return filters.stream().map(expression -> {
       ParseResult result = expressionParser.parse(expression);
-      if (result.getResultType() != BOOLEAN) {
+      if (result.getFhirPathType() != BOOLEAN) {
         throw new InvalidRequestException(
             "Filter expression is not of boolean type: " + expression);
       }
@@ -139,47 +138,12 @@ class QueryPlanner {
    */
   QueryPlan buildQueryPlan() {
     QueryPlan queryPlan = new QueryPlan();
-
-    // Get aggregation expressions from the parse results.
-    List<String> aggregations = aggregationParseResults.stream()
-        .map(ParseResult::getSql)
-        .collect(Collectors.toList());
-    queryPlan.setAggregations(aggregations);
-
-    // Get aggregation data types from the parse results.
-    List<String> aggregationTypes = aggregationParseResults.stream()
-        .map(parseResult -> parseResult.isPrimitive()
-            ? fhirPathTypeToFhirType.get(parseResult.getResultType())
-            : parseResult.getPathTraversal().getElementDefinition().getTypeCode())
-        .collect(Collectors.toList());
-    queryPlan.setAggregationTypes(aggregationTypes);
-
-    // Get grouping expressions from the parse results.
-    List<String> groupings = groupingParseResults.stream()
-        .map(ParseResult::getSql)
-        .collect(Collectors.toList());
-    queryPlan.setGroupings(groupings);
-
-    // Get grouping data types from the parse results.
-    List<String> groupingTypes = groupingParseResults.stream()
-        .map(parseResult -> parseResult.isPrimitive()
-            ? fhirPathTypeToFhirType.get(parseResult.getResultType())
-            : parseResult.getPathTraversal().getElementDefinition().getTypeCode())
-        .collect(Collectors.toList());
-    queryPlan.setGroupingTypes(groupingTypes);
-
-    // Get filter expressions from the parse results.
-    List<String> filters = filterParseResults.stream()
-        .map(ParseResult::getSql)
-        .collect(Collectors.toList());
-    queryPlan.setFilters(filters);
-
+    queryPlan.setAggregations(aggregationParseResults);
+    queryPlan.setGroupings(groupingParseResults);
+    queryPlan.setFilters(filterParseResults);
     queryPlan.setFromTable(fromTable);
-
     addAllJoins(queryPlan);
-
     rewriteExpressions(queryPlan);
-
     return queryPlan;
   }
 
@@ -204,17 +168,17 @@ class QueryPlanner {
    * Rewrite expressions to use aliases within the joins.
    */
   private void rewriteExpressions(QueryPlan queryPlan) {
-    for (String aggregation : queryPlan.getAggregations()) {
-      String newSql = rewriteSqlWithJoinAliases(aggregation, queryPlan.getJoins());
-      queryPlan.getAggregations().set(queryPlan.getAggregations().indexOf(aggregation), newSql);
+    for (ParseResult aggregation : queryPlan.getAggregations()) {
+      String newSql = rewriteSqlWithJoinAliases(aggregation.getSql(), queryPlan.getJoins());
+      aggregation.setSql(newSql);
     }
-    for (String grouping : queryPlan.getGroupings()) {
-      String newSql = rewriteSqlWithJoinAliases(grouping, queryPlan.getJoins());
-      queryPlan.getGroupings().set(queryPlan.getGroupings().indexOf(grouping), newSql);
+    for (ParseResult grouping : queryPlan.getGroupings()) {
+      String newSql = rewriteSqlWithJoinAliases(grouping.getSql(), queryPlan.getJoins());
+      grouping.setSql(newSql);
     }
-    for (String filter : queryPlan.getFilters()) {
-      String newSql = rewriteSqlWithJoinAliases(filter, queryPlan.getJoins());
-      queryPlan.getFilters().set(queryPlan.getFilters().indexOf(filter), newSql);
+    for (ParseResult filter : queryPlan.getFilters()) {
+      String newSql = rewriteSqlWithJoinAliases(filter.getSql(), queryPlan.getJoins());
+      filter.setSql(newSql);
     }
   }
 

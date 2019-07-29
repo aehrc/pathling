@@ -30,7 +30,8 @@ public class MaxFunction implements ExpressionFunction {
     // The max function maps to the function with the same name within Spark SQL.
     result.setSql("MAX(" + input.getSql() + ")");
     // A max operation always returns the same type as the input.
-    result.setResultType(input.getResultType());
+    result.setFhirPathType(input.getFhirPathType());
+    result.setFhirType(input.getFhirType());
     result.setPrimitive(input.isPrimitive());
     result.setSingular(true);
     return result;

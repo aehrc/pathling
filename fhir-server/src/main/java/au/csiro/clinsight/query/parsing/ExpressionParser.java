@@ -5,9 +5,7 @@
 package au.csiro.clinsight.query.parsing;
 
 import static au.csiro.clinsight.query.Mappings.getFunction;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.CODING;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.*;
+import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.CODING;
 
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
@@ -19,6 +17,8 @@ import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
 import au.csiro.clinsight.query.functions.ExpressionFunction;
 import au.csiro.clinsight.query.functions.MemberInvocation;
 import au.csiro.clinsight.query.functions.MembershipExpression;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -98,13 +98,17 @@ public class ExpressionParser {
           .visit(leftExpression);
       ParseResult rightResult = new ExpressionVisitor(context)
           .visit(rightExpression);
-      leftResult.setFhirPath(ctx.getText());
-      leftResult.setSql(
+      ParseResult result = new ParseResult();
+      result.setFhirPath(ctx.getText());
+      result.setSql(
           leftResult.getSql() + " " + operatorString + " " + rightResult
               .getSql());
-      leftResult.setResultType(BOOLEAN);
-      leftResult.getJoins().addAll(rightResult.getJoins());
-      return leftResult;
+      result.setFhirPathType(FhirPathType.BOOLEAN);
+      result.setFhirType(FhirType.BOOLEAN);
+      result.getJoins().addAll(leftResult.getJoins());
+      result.getJoins().addAll(rightResult.getJoins());
+      result.setPrimitive(true);
+      return result;
     }
 
     @Override
@@ -316,7 +320,7 @@ public class ExpressionParser {
     @Override
     public ParseResult visitCodingLiteral(CodingLiteralContext ctx) {
       ParseResult result = new ParseResult();
-      result.setResultType(CODING);
+      result.setFhirPathType(CODING);
       result.setFhirPath(ctx.getText());
       LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(ctx.getText().split("|")));
       Coding literalValue;
@@ -337,7 +341,8 @@ public class ExpressionParser {
     @Override
     public ParseResult visitStringLiteral(StringLiteralContext ctx) {
       ParseResult result = new ParseResult();
-      result.setResultType(STRING);
+      result.setFhirPathType(FhirPathType.STRING);
+      result.setFhirType(FhirType.STRING);
       result.setFhirPath(ctx.getText());
       result.setSql(ctx.getText());
       return result;
@@ -346,7 +351,8 @@ public class ExpressionParser {
     @Override
     public ParseResult visitDateTimeLiteral(DateTimeLiteralContext ctx) {
       ParseResult result = new ParseResult();
-      result.setResultType(DATE_TIME);
+      result.setFhirPathType(FhirPathType.DATE_TIME);
+      result.setFhirType(FhirType.DATE_TIME);
       result.setFhirPath(ctx.getText());
       result.setSql("'" + ctx.getText().replace("@", "") + "'");
       return result;
@@ -355,7 +361,8 @@ public class ExpressionParser {
     @Override
     public ParseResult visitNumberLiteral(NumberLiteralContext ctx) {
       ParseResult result = new ParseResult();
-      result.setResultType(INTEGER);
+      result.setFhirPathType(FhirPathType.INTEGER);
+      result.setFhirType(FhirType.INTEGER);
       result.setFhirPath(ctx.getText());
       result.setSql(ctx.getText());
       return result;
@@ -364,7 +371,8 @@ public class ExpressionParser {
     @Override
     public ParseResult visitBooleanLiteral(BooleanLiteralContext ctx) {
       ParseResult result = new ParseResult();
-      result.setResultType(BOOLEAN);
+      result.setFhirPathType(FhirPathType.BOOLEAN);
+      result.setFhirType(FhirType.BOOLEAN);
       result.setFhirPath(ctx.getText().toUpperCase());
       result.setSql(ctx.getText().toUpperCase());
       return result;

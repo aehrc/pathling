@@ -14,10 +14,11 @@ import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.PathTraversal;
 import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
 import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
-import au.csiro.clinsight.query.Mappings;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
 
@@ -75,7 +76,8 @@ public class MemberInvocation {
     String typeCode = elementDefinition.getTypeCode();
     if (isPrimitive(typeCode)) {
       result.setPrimitive(true);
-      result.setResultType(Mappings.getFhirPathType(typeCode));
+      result.setFhirPathType(FhirPathType.forFhirTypeCode(typeCode));
+      result.setFhirType(FhirType.forFhirTypeCode(typeCode));
     }
 
     // Check whether we need to mark this result as singular.

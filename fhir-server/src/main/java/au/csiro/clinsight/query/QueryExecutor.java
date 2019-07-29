@@ -4,13 +4,13 @@
 
 package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.query.Mappings.getFhirClass;
 import static au.csiro.clinsight.utilities.Strings.backTicks;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.AggregateQueryResult.Grouping;
 import au.csiro.clinsight.query.parsing.Join;
+import au.csiro.clinsight.query.parsing.ParseResult;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
@@ -120,14 +120,14 @@ public class QueryExecutor {
     List<String> selectExpressions = new ArrayList<>();
     if (queryPlan.getGroupings() != null && !queryPlan.getGroupings().isEmpty()) {
       for (int i = 0; i < queryPlan.getGroupings().size(); i++) {
-        String grouping = queryPlan.getGroupings().get(i);
+        String grouping = queryPlan.getGroupings().get(i).getSql();
         String label = backTicks(query.getGroupings().get(i).getLabel());
         selectExpressions.add(grouping + " AS " + label);
       }
     }
     if (queryPlan.getAggregations() != null && !queryPlan.getAggregations().isEmpty()) {
       for (int i = 0; i < queryPlan.getAggregations().size(); i++) {
-        String aggregation = queryPlan.getAggregations().get(i);
+        String aggregation = queryPlan.getAggregations().get(i).getSql();
         String label = backTicks(query.getAggregations().get(i).getLabel());
         selectExpressions.add(aggregation + " AS " + label);
       }
@@ -144,7 +144,8 @@ public class QueryExecutor {
     String fromClause = "FROM " + String.join(", ", queryPlan.getFromTable());
     String joins = queryPlan.getJoins().stream().map(Join::getSql).collect(
         Collectors.joining(" "));
-    String whereClause = "WHERE " + String.join(" AND ", queryPlan.getFilters());
+    String whereClause = "WHERE " + queryPlan.getFilters().stream().map(
+        ParseResult::getSql).collect(Collectors.joining(" AND "));
     String groupByClause = "GROUP BY " + String.join(", ", groupByArgs);
     String orderByClause = "ORDER BY " + String.join(", ", orderByArgs);
     List<String> clauses = new LinkedList<>(Arrays.asList(selectClause, fromClause));
@@ -199,14 +200,14 @@ public class QueryExecutor {
       AggregateQueryResult.Grouping grouping = new AggregateQueryResult.Grouping();
 
       for (int i = 0; i < numGroupings; i++) {
-        String fhirType = queryPlan.getGroupingTypes().get(i);
-        Type value = getValueFromRow(row, i, fhirType);
+        ParseResult groupingResult = queryPlan.getGroupings().get(i);
+        Type value = getValueFromRow(row, i, groupingResult);
         grouping.getLabels().add(value);
       }
 
       for (int i = 0; i < numAggregations; i++) {
-        String fhirType = queryPlan.getAggregationTypes().get(i);
-        Type value = getValueFromRow(row, i + numGroupings, fhirType);
+        ParseResult aggregationResult = queryPlan.getAggregations().get(i);
+        Type value = getValueFromRow(row, i + numGroupings, aggregationResult);
         grouping.getResults().add(value);
       }
 
@@ -218,13 +219,14 @@ public class QueryExecutor {
    * Extract a value from the specified column within a row, using the supplied data type. Note that
    * this method may return null where the value is actually null within the Dataset.
    */
-  private Type getValueFromRow(Row row, int columnNumber, String fhirType) {
+  private Type getValueFromRow(Row row, int columnNumber, ParseResult parseResult) {
     try {
-      Class fhirClass = getFhirClass(fhirType);
-      assert fhirClass != null : "Unable to map FHIR type to FHIR class: " + fhirType;
-      Class javaClass = Mappings.getJavaClass(fhirType);
-      assert javaClass != null : "Unable to map FHIR type to Java class: " + fhirType;
-      @SuppressWarnings("unchecked") Constructor constructor = fhirClass.getConstructor(javaClass);
+      assert
+          parseResult.getFhirType() != null :
+          "Parse result encountered with missing FHIR type: " + parseResult;
+      Class hapiClass = parseResult.getFhirType().getHapiClass();
+      Class javaClass = parseResult.getFhirType().getJavaClass();
+      @SuppressWarnings("unchecked") Constructor constructor = hapiClass.getConstructor(javaClass);
       Object value = row.get(columnNumber);
       return value == null ? null : (Type) constructor.newInstance(value);
     } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {

@@ -65,7 +65,7 @@ public class AggregationTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void simpleQuery() throws IOException, JSONException {
+  public void count() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
         + "  \"parameter\": [\n"
@@ -97,7 +97,7 @@ public class AggregationTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"result\",\n"
-        + "          \"valueInteger\": 143716\n"
+        + "          \"valueUnsignedInt\": 143716\n"
         + "        }\n"
         + "      ]\n"
         + "    }\n"
@@ -113,6 +113,75 @@ public class AggregationTest {
     StructType structType = new StructType(fields);
     List<Row> fakeResult = new ArrayList<>(Arrays.asList(
         new GenericRowWithSchema(new Object[]{143716L}, structType)
+    ));
+
+    Dataset mockDataset = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset);
+    when(mockDataset.collectAsList()).thenReturn(fakeResult);
+
+    HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
+    try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+      assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
+    }
+
+    verify(mockSpark).sql("USE clinsight");
+    verify(mockSpark).sql(expectedSql);
+    verifyNoMoreInteractions(mockSpark);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void max() throws IOException, JSONException {
+    String inParams = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"subjectResource\",\n"
+        + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Patient\"\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"name\": \"aggregation\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"label\",\n"
+        + "          \"valueString\": \"Max multiple birth\"\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"expression\",\n"
+        + "          \"valueString\": \"%resource.multipleBirthInteger.max()\"\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}";
+
+    String expectedResponse = "{\n"
+        + "  \"resourceType\": \"Parameters\",\n"
+        + "  \"parameter\": [\n"
+        + "    {\n"
+        + "      \"name\": \"grouping\",\n"
+        + "      \"part\": [\n"
+        + "        {\n"
+        + "          \"name\": \"result\",\n"
+        + "          \"valueInteger\": 3\n"
+        + "        }\n"
+        + "      ]\n"
+        + "    }\n"
+        + "  ]\n"
+        + "}\n";
+
+    String expectedSql =
+        "SELECT MAX(patient.multipleBirthInteger) AS `Max multiple birth` "
+            + "FROM patient";
+    StructField[] fields = {
+        new StructField("Max multiple birth", DataTypes.IntegerType, true, null)
+    };
+    StructType structType = new StructType(fields);
+    List<Row> fakeResult = new ArrayList<>(Arrays.asList(
+        new GenericRowWithSchema(new Object[]{3}, structType)
     ));
 
     Dataset mockDataset = createMockDataset();

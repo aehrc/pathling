@@ -4,18 +4,9 @@
 
 package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.BOOLEAN;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.DATE_TIME;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.INTEGER;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.STRING;
-
 import au.csiro.clinsight.query.functions.*;
-import au.csiro.clinsight.query.parsing.ParseResult.ParseResultType;
-import java.math.BigDecimal;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import org.hl7.fhir.dstu3.model.*;
 
 /**
  * Mappings between data types and functions within FHIR and Apache Spark.
@@ -23,72 +14,6 @@ import org.hl7.fhir.dstu3.model.*;
  * @author John Grimes
  */
 public abstract class Mappings {
-
-  static final Map<ParseResultType, String> fhirPathTypeToFhirType = new HashMap<ParseResultType, String>() {{
-    put(STRING, "string");
-    put(BOOLEAN, "boolean");
-    put(DATE_TIME, "instant");
-    put(INTEGER, "integer");
-  }};
-
-  // Maps a FHIR type code to the class that can be used to populate a value into a resource using
-  // HAPI.
-  private static final Map<String, Class> fhirTypeToFhirClass = new HashMap<String, Class>() {{
-    put("decimal", DecimalType.class);
-    put("markdown", MarkdownType.class);
-    put("id", IdType.class);
-    put("dateTime", DateTimeType.class);
-    put("time", TimeType.class);
-    put("date", DateType.class);
-    put("code", CodeType.class);
-    put("string", StringType.class);
-    put("uri", UriType.class);
-    put("oid", OidType.class);
-    put("integer", IntegerType.class);
-    put("unsignedInt", UnsignedIntType.class);
-    put("positiveInt", PositiveIntType.class);
-    put("boolean", BooleanType.class);
-    put("instant", InstantType.class);
-  }};
-
-  // Maps a FHIR type code to a Java class that can be used to receive the value extracted from the
-  // Row in the Spark Dataset.
-  private static final Map<String, Class> fhirTypeToJavaClass = new HashMap<String, Class>() {{
-    put("decimal", BigDecimal.class);
-    put("markdown", String.class);
-    put("id", String.class);
-    put("dateTime", String.class);
-    put("time", String.class);
-    put("date", String.class);
-    put("code", String.class);
-    put("string", String.class);
-    put("uri", String.class);
-    put("oid", String.class);
-    put("integer", Long.class);
-    put("unsignedInt", Long.class);
-    put("positiveInt", Long.class);
-    put("boolean", Boolean.class);
-    put("instant", Date.class);
-  }};
-
-  // Maps a FHIR data type to a FHIRPath data type (ParseResult.ParseResultType).
-  private static final Map<String, ParseResultType> fhirTypeToFhirPathType = new HashMap<String, ParseResultType>() {{
-    put("boolean", BOOLEAN);
-    put("string", STRING);
-    put("uri", STRING);
-    put("code", STRING);
-    put("oid", STRING);
-    put("id", STRING);
-    put("markdown", STRING);
-    put("integer", INTEGER);
-    put("unsignedInt", INTEGER);
-    put("positiveInt", INTEGER);
-    // put("decimal", DECIMAL);  // Decimal not yet supported
-    put("date", DATE_TIME);
-    put("dateTime", DATE_TIME);
-    put("instant", DATE_TIME);
-    // put("time", TIME);  // Time not yet supported
-  }};
 
   // Maps supported aggregate FHIRPath functions to the equivalent functions within Spark SQL.
   private static final Map<String, ExpressionFunction> funcToClass = new HashMap<String, ExpressionFunction>() {{
@@ -108,18 +33,6 @@ public abstract class Mappings {
     put("toQuarter", new DateComponentFunction("toQuarter"));
     put("toYear", new DateComponentFunction("toYear"));
   }};
-
-  static Class getFhirClass(String fhirTypeCode) {
-    return fhirTypeToFhirClass.get(fhirTypeCode);
-  }
-
-  static Class getJavaClass(String fhirTypeCode) {
-    return fhirTypeToJavaClass.get(fhirTypeCode);
-  }
-
-  public static ParseResultType getFhirPathType(String fhirTypeCode) {
-    return fhirTypeToFhirPathType.get(fhirTypeCode);
-  }
 
   public static ExpressionFunction getFunction(String functionName) {
     return funcToClass.get(functionName);

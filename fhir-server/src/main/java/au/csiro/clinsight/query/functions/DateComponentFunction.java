@@ -5,10 +5,11 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.PRIMITIVE;
-import static au.csiro.clinsight.query.parsing.ParseResult.ParseResultType.INTEGER;
 
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParseResult;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
+import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import javax.annotation.Nonnull;
@@ -51,7 +52,8 @@ public class DateComponentFunction implements ExpressionFunction {
     result.setFhirPath(expression);
     String newSqlExpression = functionsMap.get(functionName) + "(" + input.getSql() + ")";
     result.setSql(newSqlExpression);
-    result.setResultType(INTEGER);
+    result.setFhirPathType(FhirPathType.INTEGER);
+    result.setFhirType(FhirType.INTEGER);
     result.setPrimitive(true);
     result.setSingular(input.isSingular());
     return result;
