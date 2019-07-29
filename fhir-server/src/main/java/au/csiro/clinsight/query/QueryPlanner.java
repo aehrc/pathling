@@ -64,6 +64,7 @@ class QueryPlanner {
     subjectResource.setFhirPath(resourceName);
     subjectResource.setSql(fromTable);
     subjectResource.setPathTraversal(resource);
+    subjectResource.setSingular(true);
 
     // Gather dependencies for the execution of the expression parser.
     ExpressionParserContext context = new ExpressionParserContext();

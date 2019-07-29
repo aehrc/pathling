@@ -40,8 +40,8 @@ public class MembershipExpression {
   @Nonnull
   public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult left,
       @Nonnull ParseResult right) {
-    validateLeftOperand(left);
-    validateRightOperand(right);
+    left = validateLeftOperand(left);
+    right = validateRightOperand(right);
 
     // Build a select expression which tests whether there is a code on the right-hand side of the
     // left join, returning a boolean.
@@ -63,15 +63,6 @@ public class MembershipExpression {
           "SELECT " + resourceTable + ".id, IFNULL(MAX(" + right.getSql() + ".system = "
               + quote(literalValue.getSystem()) + " AND " + right.getSql() + ".code = "
               + quote(literalValue.getCode()) + "), FALSE) AS result";
-    } else if (left.getFhirPathType() == null && left.getPathTraversal().getElementDefinition()
-        .getTypeCode().equals("CodeableConcept")) {
-      // If the left expression is a singular CodeableConcept, traverse to the `coding` member, then
-      // use equality on the system and code.
-      left = new MemberInvocation(context).invoke(left.getFhirPath() + ".coding", left);
-      selectExpression =
-          "SELECT " + resourceTable + ".id, IFNULL(MAX(" + right.getSql() + ".system = "
-              + left.getSql() + ".system AND " + right.getSql() + ".code = "
-              + left.getSql() + ".code), FALSE) AS result";
     } else {
       // If the left expression is a singular primitive expression, use simple equality, leveraging
       // the SQL representation that the parser already added to the result.
@@ -84,13 +75,15 @@ public class MembershipExpression {
     // Get the set of upstream joins.
     SortedSet<Join> upstreamJoins = left.getJoins();
     upstreamJoins.addAll(right.getJoins());
+    selectExpression = Join.rewriteSqlWithJoinAliases(selectExpression, upstreamJoins);
 
     // Build a SQL expression representing the new subquery that provides the result of the membership test.
     String subqueryAlias = context.getAliasGenerator().getAlias();
     String subquery = "LEFT JOIN (";
-    subquery += selectExpression;
-    subquery += "FROM " + resourceTable;
-    subquery += upstreamJoins.stream().map(Join::getSql).collect(Collectors.joining(" "));
+    subquery += selectExpression + " ";
+    subquery += "FROM " + resourceTable + " ";
+    subquery += upstreamJoins.stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
+    subquery += "GROUP BY 1";
     subquery += ") " + subqueryAlias + " ON " + resourceTable + ".id = " + subqueryAlias + ".id";
 
     // Create a new Join that represents the join to the new subquery.
@@ -112,7 +105,7 @@ public class MembershipExpression {
     return result;
   }
 
-  private void validateLeftOperand(@Nullable ParseResult left) {
+  private ParseResult validateLeftOperand(@Nullable ParseResult left) {
     if (left == null) {
       throw new InvalidRequestException("Missing operand for membership expression");
     }
@@ -121,16 +114,24 @@ public class MembershipExpression {
           "Operand in membership expression must evaluate to a single value: " + left
               .getFhirPath());
     }
-    String typeCode = left.getPathTraversal().getElementDefinition().getTypeCode();
-    if (!left.isPrimitive() || left.getFhirPathType() == CODING || typeCode
-        .equals("CodeableConcept")) {
+    boolean isCodeableConcept =
+        left.getPathTraversal() != null && left.getPathTraversal().getElementDefinition()
+            .getTypeCode().equals("CodeableConcept");
+    if (!(left.isPrimitive() || left.getFhirPathType() == CODING || isCodeableConcept)) {
       throw new InvalidRequestException(
           "Operand in membership expression must be primitive, Coding or CodeableConcept: " + left
               .getFhirPath());
     }
+
+    // If the left expression is a singular CodeableConcept, traverse to the `coding` member.
+    if (isCodeableConcept) {
+      left = new MemberInvocation(context).invoke("coding", left);
+    }
+
+    return left;
   }
 
-  private void validateRightOperand(@Nullable ParseResult right) {
+  private ParseResult validateRightOperand(@Nullable ParseResult right) {
     if (right == null) {
       throw new InvalidRequestException("Missing operand for membership expression");
     }
@@ -139,13 +140,21 @@ public class MembershipExpression {
           "Operand in membership expression must evaluate to a collection: " + right
               .getFhirPath());
     }
-    String typeCode = right.getPathTraversal().getElementDefinition().getTypeCode();
-    if (!right.isPrimitive() || right.getFhirPathType() == CODING || typeCode
-        .equals("CodeableConcept")) {
+    boolean isCodeableConcept =
+        right.getPathTraversal() != null && right.getPathTraversal().getElementDefinition()
+            .getTypeCode().equals("CodeableConcept");
+    if (!(right.isPrimitive() || right.getFhirPathType() == CODING || isCodeableConcept)) {
       throw new InvalidRequestException(
           "Operand in membership expression must be primitive, Coding or CodeableConcept: " + right
               .getFhirPath());
     }
+
+    // If the left expression is a singular CodeableConcept, traverse to the `coding` member.
+    if (isCodeableConcept) {
+      right = new MemberInvocation(context).invoke("coding", right);
+    }
+
+    return right;
   }
 
 }

@@ -78,10 +78,12 @@ public class MemberInvocation {
       result.setPrimitive(true);
       result.setFhirPathType(FhirPathType.forFhirTypeCode(typeCode));
       result.setFhirType(FhirType.forFhirTypeCode(typeCode));
+    } else if (typeCode.equals("Coding")) {
+      result.setFhirPathType(FhirPathType.CODING);
     }
 
     // Check whether we need to mark this result as singular.
-    if (pathTraversal.getMultiValueTraversals().size() == 0) {
+    if (pathTraversal.getMultiValueTraversals().size() == 0 && input.isSingular()) {
       result.setSingular(true);
     }
     return result;

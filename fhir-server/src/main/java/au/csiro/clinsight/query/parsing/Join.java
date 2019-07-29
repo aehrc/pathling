@@ -70,30 +70,7 @@ public class Join implements Comparable<Join> {
     SortedSet<Join> joinsReversed = new TreeSet<>(Collections.reverseOrder());
     joinsReversed.addAll(joins);
     for (Join currentJoin : joinsReversed) {
-      newSql = newSql.replaceAll(currentJoin.getAliasTarget(), currentJoin.getTableAlias());
-    }
-
-    return newSql;
-  }
-
-  /**
-   * Replaces alias targets within a join with the aliases found within the supplied set of joins.
-   */
-  public static String rewriteJoinWithJoinAliases(Join join, SortedSet<Join> joins) {
-    String newSql = join.getSql();
-
-    // Don't replace aliases in join expressions which contain inline queries (i.e. LEFT JOIN).
-    if (newSql.contains("LEFT JOIN")) {
-      return newSql;
-    }
-
-    // Go through the list and replace the alias target string within the expression with the alias,
-    // for each join.
-    SortedSet<Join> joinsReversed = new TreeSet<>(Collections.reverseOrder());
-    joinsReversed.addAll(joins);
-    for (Join currentJoin : joinsReversed) {
-      if (!join.equals(currentJoin)) {
-        // Match the alias target, unless it is inside an inline query.
+      if (currentJoin.getTableAlias() != null && currentJoin.getAliasTarget() != null) {
         newSql = newSql.replaceAll(currentJoin.getAliasTarget(), currentJoin.getTableAlias());
       }
     }

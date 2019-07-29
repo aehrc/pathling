@@ -116,7 +116,7 @@ public class ReverseResolveFunction implements ExpressionFunction {
     result.setFhirPath(expression);
     result.setSql(joinAlias);
     result.getJoins().addAll(joins);
-    result.setSingular(input.isSingular());
+    result.setSingular(false);
 
     // Retrieve the path traversal for the result of the expression.
     try {

@@ -166,11 +166,12 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitMembershipExpression(MembershipExpressionContext ctx) {
+      String operator = ctx.children.get(1).getText();
       MembershipExpression membershipExpression = new MembershipExpression(context);
       ParseResult leftResult = new ExpressionVisitor(context)
-          .visit(ctx.expression(0));
+          .visit(ctx.expression(operator.equals("in") ? 0 : 1));
       ParseResult rightResult = new ExpressionVisitor(context)
-          .visit(ctx.expression(1));
+          .visit(ctx.expression(operator.equals("in") ? 1 : 0));
       return membershipExpression.invoke(ctx.getText(), leftResult, rightResult);
     }
 
@@ -322,7 +323,7 @@ public class ExpressionParser {
       ParseResult result = new ParseResult();
       result.setFhirPathType(CODING);
       result.setFhirPath(ctx.getText());
-      LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(ctx.getText().split("|")));
+      LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(ctx.getText().split("\\|")));
       Coding literalValue;
       if (codingTokens.size() == 2) {
         literalValue = new Coding(codingTokens.get(0), codingTokens.get(1), null);
@@ -345,6 +346,8 @@ public class ExpressionParser {
       result.setFhirType(FhirType.STRING);
       result.setFhirPath(ctx.getText());
       result.setSql(ctx.getText());
+      result.setPrimitive(true);
+      result.setSingular(true);
       return result;
     }
 
@@ -355,6 +358,8 @@ public class ExpressionParser {
       result.setFhirType(FhirType.DATE_TIME);
       result.setFhirPath(ctx.getText());
       result.setSql("'" + ctx.getText().replace("@", "") + "'");
+      result.setPrimitive(true);
+      result.setSingular(true);
       return result;
     }
 
@@ -365,6 +370,8 @@ public class ExpressionParser {
       result.setFhirType(FhirType.INTEGER);
       result.setFhirPath(ctx.getText());
       result.setSql(ctx.getText());
+      result.setPrimitive(true);
+      result.setSingular(true);
       return result;
     }
 
@@ -375,6 +382,8 @@ public class ExpressionParser {
       result.setFhirType(FhirType.BOOLEAN);
       result.setFhirPath(ctx.getText().toUpperCase());
       result.setSql(ctx.getText().toUpperCase());
+      result.setPrimitive(true);
+      result.setSingular(true);
       return result;
     }
 

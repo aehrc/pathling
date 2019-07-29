@@ -89,16 +89,13 @@ public class MembershipExpressionTest {
         "SELECT COUNT(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
             + "LEFT JOIN ("
-            + "SELECT patient.id, "
-            + "IFNULL(MAX(patientConditionAsSubjectCodeCoding.code = '40275004'), FALSE) AS result "
+            + "SELECT patient.id, IFNULL(MAX(b.code = '40275004'), FALSE) AS result "
             + "FROM patient "
-            + "LEFT JOIN condition patientConditionAsSubject "
-            + "ON patient.id = patientConditionAsSubject.subject.reference "
-            + "LATERAL VIEW OUTER EXPLODE(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding "
+            + "LEFT JOIN condition a ON patient.id = a.subject.reference "
+            + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b "
             + "GROUP BY 1"
-            + ") patientConditionAsSubjectCodeCodingMembership "
-            + "ON patient.id = patientConditionAsSubjectCodeCodingMembership.id "
-            + "WHERE patientConditionAsSubjectCodeCodingMembership.result";
+            + ") c ON patient.id = c.id "
+            + "WHERE c.result";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);
@@ -141,19 +138,15 @@ public class MembershipExpressionTest {
         + "}";
 
     String expectedSql =
-        "SELECT patientPhotoTitleMembership.result AS `Gender in the title of a photo`, "
-            + "COUNT(DISTINCT patient.id) AS `Number of patients` "
+        "SELECT COUNT(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
             + "LEFT JOIN ("
-            + "SELECT patient.id, "
-            + "IFNULL(MAX(patient.gender = patientPhoto.title), FALSE) AS result "
+            + "SELECT patient.id, IFNULL(MAX(a.title = patient.gender), FALSE) AS result "
             + "FROM patient "
-            + "LATERAL VIEW OUTER EXPLODE(patient.photo) patientPhoto AS patientPhoto "
+            + "LATERAL VIEW OUTER EXPLODE(patient.photo) a AS a "
             + "GROUP BY 1"
-            + ") patientPhotoTitleMembership "
-            + "ON patient.id = patientPhotoTitleMembership.id "
-            + "GROUP BY 1 "
-            + "ORDER BY 1, 2";
+            + ") b ON patient.id = b.id "
+            + "WHERE b.result";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);
@@ -205,7 +198,7 @@ public class MembershipExpressionTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"http://snomed.info/sct|44054006 in Patient.reverseResolve(Condition.subject).code\"\n"
+        + "          \"valueString\": \"http://snomed.info/sct|44054006 in %resource.reverseResolve(Condition.subject).code\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -219,19 +212,17 @@ public class MembershipExpressionTest {
 
     String expectedSql =
         "SELECT patient.gender AS `Gender`, "
-            + "patientConditionAsSubjectCodeCodingMembership.result AS `Diagnosed with type 2 diabetes?`, "
+            + "c.result AS `Diagnosed with type 2 diabetes?`, "
             + "COUNT(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
             + "LEFT JOIN ("
             + "SELECT patient.id, "
-            + "IFNULL(MAX((patientConditionAsSubjectCodeCoding.system = 'http://snomed.info/sct' AND patientConditionAsSubjectCodeCoding.code = '44054006')), FALSE) AS result "
+            + "IFNULL(MAX(b.system = \"http://snomed.info/sct\" AND b.code = \"44054006\"), FALSE) AS result "
             + "FROM patient "
-            + "LEFT JOIN condition patientConditionAsSubject "
-            + "ON patient.id = patientConditionAsSubject.subject.reference "
-            + "LATERAL VIEW OUTER EXPLODE(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding "
+            + "LEFT JOIN condition a ON patient.id = a.subject.reference "
+            + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b "
             + "GROUP BY 1"
-            + ") patientConditionAsSubjectCodeCodingMembership "
-            + "ON patient.id = patientConditionAsSubjectCodeCodingMembership.id "
+            + ") c ON patient.id = c.id "
             + "GROUP BY 1, 2 "
             + "ORDER BY 1, 2, 3";
 
@@ -272,7 +263,7 @@ public class MembershipExpressionTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"%resource.class in Encounter.type\"\n"
+        + "          \"valueString\": \"%resource.class in %resource.type\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -285,18 +276,17 @@ public class MembershipExpressionTest {
         + "}";
 
     String expectedSql =
-        "SELECT encounterTypeCodingMembership.result AS `Class is in type`, "
+        "SELECT c.result AS `Class is in type`, "
             + "COUNT(DISTINCT encounter.id) AS `Number of encounters` "
             + "FROM encounter "
             + "LEFT JOIN ("
             + "SELECT encounter.id, "
-            + "IFNULL(MAX(encounter.class.system = encounterTypeCoding.system AND encounter.class.code = encounterTypeCoding.code), FALSE) AS result "
+            + "IFNULL(MAX(b.system = encounter.class.system AND b.code = encounter.class.code), FALSE) AS result "
             + "FROM encounter "
-            + "LATERAL VIEW OUTER EXPLODE(encounter.type) encounterType AS encounterType "
-            + "LATERAL VIEW OUTER EXPLODE(encounterType.coding) encounterTypeCoding AS encounterTypeCoding "
+            + "LATERAL VIEW OUTER EXPLODE(encounter.type) a AS a "
+            + "LATERAL VIEW OUTER EXPLODE(a.coding) b AS b "
             + "GROUP BY 1"
-            + ") encounterTypeCodingMembership "
-            + "ON encounter.id = encounterTypeCodingMembership.id "
+            + ") c ON encounter.id = c.id "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
@@ -345,16 +335,13 @@ public class MembershipExpressionTest {
         "SELECT COUNT(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
             + "LEFT JOIN ("
-            + "SELECT patient.id, "
-            + "IFNULL(MAX(patientConditionAsSubjectCodeCoding.code = '40275004'), FALSE) AS result "
+            + "SELECT patient.id, IFNULL(MAX(b.code = '40275004'), FALSE) AS result "
             + "FROM patient "
-            + "LEFT JOIN condition patientConditionAsSubject "
-            + "ON patient.id = patientConditionAsSubject.subject.reference "
-            + "LATERAL VIEW OUTER EXPLODE(patientConditionAsSubject.code.coding) patientConditionAsSubjectCodeCoding AS patientConditionAsSubjectCodeCoding "
+            + "LEFT JOIN condition a ON patient.id = a.subject.reference "
+            + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b "
             + "GROUP BY 1"
-            + ") patientConditionAsSubjectCodeCodingMembership "
-            + "ON patient.id = patientConditionAsSubjectCodeCodingMembership.id "
-            + "WHERE patientConditionAsSubjectCodeCodingMembership.result";
+            + ") c ON patient.id = c.id "
+            + "WHERE c.result";
 
     Dataset mockDataset = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset);
@@ -402,7 +389,7 @@ public class MembershipExpressionTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Maximum cardinality of left operand in membership expression must not be greater than one: Patient.name.given\"\n"
+        + "      \"diagnostics\": \"Operand in membership expression must evaluate to a single value: Patient.name.given\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
