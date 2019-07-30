@@ -5,8 +5,7 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
-import static au.csiro.clinsight.query.parsing.Join.JoinType.MEMBERSHIP_JOIN;
-import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.Join.wrapUpstreamJoins;
 import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.STRING;
@@ -40,16 +39,14 @@ import org.hl7.fhir.dstu3.model.ValueSet;
  */
 public class MemberOfFunction implements ExpressionFunction {
 
-  private ExpressionParserContext context;
-
   @Nonnull
   @Override
-  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
-      @Nonnull List<ParseResult> arguments) {
-    validateInput(input);
-    ParseResult argument = validateArgument(arguments);
+  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
+    ParseResult inputResult = validateInput(input.getInput());
+    ParseResult argument = validateArgument(input.getArguments());
+    ExpressionParserContext context = input.getContext();
 
-    assert input.getFhirPath() != null;
+    assert inputResult.getFhirPath() != null;
     assert argument.getFhirPath() != null;
     String unquotedArgument = argument.getFhirPath()
         .substring(1, argument.getFhirPath().length() - 1);
@@ -59,7 +56,7 @@ public class MemberOfFunction implements ExpressionFunction {
     String tableName = "valueSet_" + argumentHash;
 
     // Create a table containing the results of the expanded ValueSet, if it doesn't already exist.
-    ensureExpansionTableExists(unquotedArgument, tableName);
+    ensureExpansionTableExists(unquotedArgument, tableName, context);
 
     // Build a SQL expression representing the new subquery that provides the result of the ValueSet
     // membership test.
@@ -68,25 +65,29 @@ public class MemberOfFunction implements ExpressionFunction {
 
     // If this is a CodeableConcept, we need to update the input expression to the `coding`
     // member first.
-    String inputType = input.getPathTraversal().getElementDefinition().getTypeCode();
+    String inputType = inputResult.getPathTraversal().getElementDefinition().getTypeCode();
     if (inputType.equals("CodeableConcept")) {
-      input = new MemberInvocation(context).invoke("coding", input);
+      ExpressionFunctionInput memberInvocationInput = new ExpressionFunctionInput();
+      memberInvocationInput.setContext(context);
+      memberInvocationInput.setExpression("coding");
+      memberInvocationInput.setInput(inputResult);
+      inputResult = new MemberInvocation().invoke(memberInvocationInput);
     }
 
-    String inputSql = rewriteSqlWithJoinAliases(input.getSql(), input.getJoins());
+    String inputSql = rewriteSqlWithJoinAliases(inputResult.getSql(), inputResult.getJoins());
 
     Join valueSetJoin = new Join();
     String valueSetJoinSql = "LEFT JOIN " + tableName + " " + newJoinAlias + " ";
     valueSetJoinSql += "ON " + inputSql + ".system = " + newJoinAlias + ".system ";
     valueSetJoinSql += "AND " + inputSql + ".code = " + newJoinAlias + ".code";
     valueSetJoin.setSql(valueSetJoinSql);
-    valueSetJoin.setJoinType(TABLE_JOIN);
+    valueSetJoin.setJoinType(LEFT_JOIN);
     valueSetJoin.setTableAlias(newJoinAlias);
     valueSetJoin.setAliasTarget(tableName);
-    valueSetJoin.setDependsUpon(input.getJoins().last());
+    valueSetJoin.setDependsUpon(inputResult.getJoins().last());
 
     // Build the candidate set of inner joins.
-    SortedSet<Join> innerJoins = new TreeSet<>(input.getJoins());
+    SortedSet<Join> innerJoins = new TreeSet<>(inputResult.getJoins());
     // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
     // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
     // view within a query.
@@ -98,11 +99,23 @@ public class MemberOfFunction implements ExpressionFunction {
     }
     innerJoins.add(valueSetJoin);
 
+    // If there is a filter to be applied as part of this invocation, add in its join dependencies.
+    if (input.getFilter() != null) {
+      innerJoins.addAll(input.getFilterJoins());
+    }
+
     String subquery = "LEFT JOIN (";
     subquery += "SELECT " + context.getFromTable() + ".id, ";
     subquery += "MAX(" + newJoinAlias + ".code) IS NULL AS result ";
     subquery += "FROM " + context.getFromTable() + " ";
     subquery += innerJoins.stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
+
+    // If there is a filter to be applied as part of this invocation, add a where clause in here.
+    if (input.getFilter() != null) {
+      String filter = rewriteSqlWithJoinAliases(input.getFilter(), innerJoins);
+      subquery += "WHERE " + filter + " ";
+    }
+
     subquery += "GROUP BY 1";
     subquery +=
         ") " + subqueryAlias + " ON " + context.getFromTable() + ".id = " + subqueryAlias + ".id";
@@ -110,24 +123,26 @@ public class MemberOfFunction implements ExpressionFunction {
     // Create a new Join that represents the join to the new subquery.
     Join newJoin = new Join();
     newJoin.setSql(subquery);
-    newJoin.setJoinType(MEMBERSHIP_JOIN);
+    newJoin.setJoinType(LEFT_JOIN);
     newJoin.setTableAlias(subqueryAlias);
     newJoin.setAliasTarget(subqueryAlias);
-    newJoin.setTargetElement(input.getPathTraversal().getElementDefinition());
+    newJoin.setTargetElement(inputResult.getPathTraversal().getElementDefinition());
 
     // Build a new parse result, representing the results of the ValueSet expansion.
     ParseResult result = new ParseResult();
-    result.setFhirPath(expression);
+    result.setFunction(this);
+    result.setFunctionInput(input);
+    result.setFhirPath(input.getExpression());
     result.setSql(subqueryAlias + ".result");
     result.setFhirPathType(FhirPathType.BOOLEAN);
     result.setFhirType(FhirType.BOOLEAN);
     result.getJoins().add(newJoin);
     result.setPrimitive(true);
-    result.setSingular(input.isSingular());
+    result.setSingular(inputResult.isSingular());
     return result;
   }
 
-  private void validateInput(@Nullable ParseResult input) {
+  private ParseResult validateInput(@Nullable ParseResult input) {
     if (input == null) {
       throw new InvalidRequestException("Must provide an input to memberOf function");
     }
@@ -136,6 +151,7 @@ public class MemberOfFunction implements ExpressionFunction {
       throw new InvalidRequestException(
           "Input to memberOf function must be Coding or CodeableConcept: " + input.getFhirPath());
     }
+    return input;
   }
 
   @Nonnull
@@ -155,7 +171,8 @@ public class MemberOfFunction implements ExpressionFunction {
    * Expands the specified ValueSet using the terminology server, and saves the result to a
    * temporary view identified by the specified table name.
    */
-  private void ensureExpansionTableExists(String valueSetUrl, String tableName) {
+  private void ensureExpansionTableExists(String valueSetUrl, String tableName,
+      ExpressionParserContext context) {
     SparkSession spark = context.getSparkSession();
     String databaseName = context.getDatabaseName();
     TerminologyClient terminologyClient = context.getTerminologyClient();
@@ -169,11 +186,6 @@ public class MemberOfFunction implements ExpressionFunction {
           .createDataset(expansionRows, Encoders.bean(Code.class));
       expansionDataset.createOrReplaceTempView(tableName);
     }
-  }
-
-  @Override
-  public void setContext(@Nonnull ExpressionParserContext context) {
-    this.context = context;
   }
 
 }

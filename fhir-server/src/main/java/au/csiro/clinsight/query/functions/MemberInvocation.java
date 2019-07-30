@@ -8,18 +8,20 @@ import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementT
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isPrimitive;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
 import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.PathTraversal;
 import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
 import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
-import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
 /**
@@ -28,28 +30,28 @@ import javax.annotation.Nonnull;
  *
  * @author John Grimes
  */
-public class MemberInvocation {
+public class MemberInvocation implements ExpressionFunction {
 
-  private final ExpressionParserContext context;
+  @Nonnull
+  @Override
+  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
+    ParseResult inputResult = input.getInput();
 
-  public MemberInvocation(ExpressionParserContext context) {
-    this.context = context;
-  }
-
-  public ParseResult invoke(@Nonnull String expression, @Nonnull ParseResult input) {
     // Check that we aren't trying to get to a member of a primitive type.
-    if (input.getPathTraversal().getType() == PRIMITIVE) {
+    if (inputResult.getPathTraversal().getType() == PRIMITIVE) {
       throw new InvalidRequestException("Attempt to invoke member on primitive type");
     }
 
     ParseResult result = new ParseResult();
-    result.setFhirPath(expression);
+    result.setFunction(this);
+    result.setFunctionInput(input);
+    result.setFhirPath(input.getExpression());
     // Inherit all joins and from tables from the invoker.
-    result.getJoins().addAll(input.getJoins());
+    result.getJoins().addAll(inputResult.getJoins());
 
     // Resolve the path of the expression and add it to the result.
     try {
-      String path = input.getPathTraversal().getPath() + "." + result.getFhirPath();
+      String path = inputResult.getPathTraversal().getPath() + "." + result.getFhirPath();
       result.setPathTraversal(PathResolver.resolvePath(path));
     } catch (ResourceNotKnownException | ElementNotKnownException e) {
       throw new InvalidRequestException(e.getMessage());
@@ -61,7 +63,7 @@ public class MemberInvocation {
       String sqlExpression = result.getFhirPath().toLowerCase();
       result.setSql(sqlExpression);
     } else {
-      String sqlExpression = input.getSql() + "." + result.getFhirPath();
+      String sqlExpression = inputResult.getSql() + "." + result.getFhirPath();
       result.setSql(sqlExpression);
     }
 
@@ -69,7 +71,8 @@ public class MemberInvocation {
     ElementDefinition elementDefinition = pathTraversal.getElementDefinition();
     if (!pathTraversal.getMultiValueTraversals().isEmpty() && elementDefinition
         .equals(pathTraversal.getMultiValueTraversals().getLast())) {
-      addJoinForMultiValueTraversal(result, pathTraversal.getMultiValueTraversals().getLast());
+      addJoinForMultiValueTraversal(result, pathTraversal.getMultiValueTraversals().getLast(),
+          input);
     }
 
     // Check whether we need to mark this result as a primitive, and record its type.
@@ -83,7 +86,7 @@ public class MemberInvocation {
     }
 
     // Check whether we need to mark this result as singular.
-    if (pathTraversal.getMultiValueTraversals().size() == 0 && input.isSingular()) {
+    if (pathTraversal.getMultiValueTraversals().size() == 0 && inputResult.isSingular()) {
       result.setSingular(true);
     }
     return result;
@@ -93,13 +96,13 @@ public class MemberInvocation {
    * Populate an individual join into a ParseResult, based on an individual MultiValueTraversal.
    */
   private void addJoinForMultiValueTraversal(@Nonnull ParseResult result,
-      @Nonnull ElementDefinition multiValueTraversal) {
+      @Nonnull ElementDefinition multiValueTraversal, @Nonnull ExpressionFunctionInput input) {
     PathTraversal pathTraversal = result.getPathTraversal();
 
     // Create a new Join, based upon information from the multi-value traversal.
     Join join = new Join();
     join.setJoinType(LATERAL_VIEW);
-    join.setTableAlias(context.getAliasGenerator().getAlias());
+    join.setTableAlias(input.getContext().getAliasGenerator().getAlias());
     join.setTargetElement(multiValueTraversal);
 
     // Work out what the expression to "explode" will need to be, based upon whether there are
@@ -127,10 +130,41 @@ public class MemberInvocation {
             + join.getTableAlias();
 
     // Rewrite the expression taking into account aliases in the upstream joins.
-    joinExpression = Join.rewriteSqlWithJoinAliases(joinExpression, result.getJoins());
+    joinExpression = rewriteSqlWithJoinAliases(joinExpression, result.getJoins());
 
     join.setSql(joinExpression);
     result.getJoins().add(join);
+
+    // If there is a filter to be applied, we will need to wrap the joins and add a where clause
+    // to the subquery.
+    if (input.getFilter() != null) {
+      // Add filter joins to the result.
+      result.getJoins().addAll(input.getFilterJoins());
+      String filter = rewriteSqlWithJoinAliases(input.getFilter(), result.getJoins());
+
+      // Create a new join, which will wrap all previous joins.
+      Join wrappedJoins = new Join();
+      wrappedJoins.setJoinType(LEFT_JOIN);
+      wrappedJoins.setTableAlias(input.getContext().getAliasGenerator().getAlias());
+      wrappedJoins.setTargetElement(multiValueTraversal);
+
+      // Build the SQL expression for the join.
+      String subqueryAlias = input.getContext().getAliasGenerator().getAlias();
+      String resourceTable = input.getContext().getFromTable();
+      String wrappedExpression = "LEFT JOIN (";
+      wrappedExpression += "SELECT " + resourceTable + ".id, " + join.getTableAlias() + ".* ";
+      wrappedExpression += "FROM " + resourceTable + " ";
+      wrappedExpression +=
+          result.getJoins().stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
+      wrappedExpression += "WHERE " + filter;
+      wrappedExpression +=
+          ") " + subqueryAlias + " ON " + resourceTable + ".id = " + subqueryAlias + ".id";
+      wrappedJoins.setSql(wrappedExpression);
+
+      // Replace the joins in the result with the wrapped joins.
+      result.getJoins().clear();
+      result.getJoins().add(wrappedJoins);
+    }
   }
 
 }

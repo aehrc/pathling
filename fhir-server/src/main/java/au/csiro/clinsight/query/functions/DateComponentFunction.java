@@ -4,18 +4,24 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.PRIMITIVE;
+import static au.csiro.clinsight.query.parsing.ParseResult.FhirType.DATE;
+import static au.csiro.clinsight.query.parsing.ParseResult.FhirType.DATE_TIME;
+import static au.csiro.clinsight.query.parsing.ParseResult.FhirType.INSTANT;
 
-import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
+ * Describes the functionality of a group of functions that are used for extracting numeric
+ * components from date types.
+ *
  * @author John Grimes
  */
 public class DateComponentFunction implements ExpressionFunction {
@@ -31,10 +37,10 @@ public class DateComponentFunction implements ExpressionFunction {
     put("toQuarter", "quarter");
     put("toYear", "year");
   }};
-  private static final Set<String> supportedTypes = new HashSet<String>() {{
-    add("instant");
-    add("dateTime");
-    add("date");
+  private static final Set<FhirType> supportedTypes = new HashSet<FhirType>() {{
+    add(INSTANT);
+    add(DATE_TIME);
+    add(DATE);
   }};
   private final String functionName;
 
@@ -44,35 +50,33 @@ public class DateComponentFunction implements ExpressionFunction {
 
   @Nonnull
   @Override
-  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
-      @Nonnull List<ParseResult> arguments) {
-    validateInput(input);
+  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
+    ParseResult inputResult = validateInput(input.getInput());
 
     ParseResult result = new ParseResult();
-    result.setFhirPath(expression);
-    String newSqlExpression = functionsMap.get(functionName) + "(" + input.getSql() + ")";
+    result.setFunction(this);
+    result.setFunctionInput(input);
+    result.setFhirPath(input.getExpression());
+    String newSqlExpression = functionsMap.get(functionName) + "(" + inputResult.getSql() + ")";
     result.setSql(newSqlExpression);
     result.setFhirPathType(FhirPathType.INTEGER);
     result.setFhirType(FhirType.INTEGER);
     result.setPrimitive(true);
-    result.setSingular(input.isSingular());
+    result.setSingular(inputResult.isSingular());
+    result.getJoins().addAll(inputResult.getJoins());
     return result;
   }
 
-  private void validateInput(ParseResult input) {
+  private ParseResult validateInput(ParseResult input) {
     if (input == null || input.getSql() == null || input.getSql().isEmpty()) {
       throw new InvalidRequestException(
           "Missing input expression for " + functionName + " function");
     }
-    if (input.getPathTraversal().getType() != PRIMITIVE || !supportedTypes
-        .contains(input.getPathTraversal().getElementDefinition().getTypeCode())) {
+    if (!supportedTypes.contains(input.getFhirType())) {
       throw new InvalidRequestException(
           "Input to " + functionName + " function must be DateTime");
     }
-  }
-
-  @Override
-  public void setContext(@Nonnull ExpressionParserContext context) {
+    return input;
   }
 
 }

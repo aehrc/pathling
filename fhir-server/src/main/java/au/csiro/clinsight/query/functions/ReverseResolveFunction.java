@@ -7,7 +7,7 @@ package au.csiro.clinsight.query.functions;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
-import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.Join.wrapUpstreamJoins;
 
@@ -37,15 +37,12 @@ import org.hl7.fhir.dstu3.model.StructureDefinition;
  */
 public class ReverseResolveFunction implements ExpressionFunction {
 
-  private ExpressionParserContext context;
-
   @Nonnull
   @Override
-  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
-      @Nonnull List<ParseResult> arguments) {
-    validateInput(input);
-    ParseResult argument = validateArgument(arguments);
-    ElementDefinition inputElement = input.getPathTraversal().getElementDefinition();
+  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
+    ParseResult inputResult = validateInput(input.getInput());
+    ParseResult argument = validateArgument(input.getArguments());
+    ElementDefinition inputElement = inputResult.getPathTraversal().getElementDefinition();
     ElementDefinition argumentElement = argument.getPathTraversal().getElementDefinition();
 
     // Check that the subject resource type of the argument matches that of the input.
@@ -61,33 +58,48 @@ public class ReverseResolveFunction implements ExpressionFunction {
               .getFhirPath());
     }
 
-    return buildResult(expression, input, argument);
-  }
-
-  @Nonnull
-  private ParseResult buildResult(@Nonnull String expression, @Nonnull ParseResult input,
-      @Nonnull ParseResult argument) {
+    ExpressionParserContext context = input.getContext();
     String joinAlias = context.getAliasGenerator().getAlias();
     String targetResource = Strings.tokenizePath(argument.getFhirPath()).getFirst();
     String targetTable = targetResource.toLowerCase();
     String joinExpression;
-    if (argument.getJoins().isEmpty()) {
+    SortedSet<Join> upstreamJoins = argument.getJoins();
+    if (upstreamJoins.isEmpty()) {
       String targetExpression = argument.getSql().replace(targetTable, joinAlias) + ".reference";
       joinExpression =
-          "LEFT JOIN " + targetTable + " " + joinAlias + " ON " + input.getSql() + ".id = "
+          "LEFT JOIN " + targetTable + " " + joinAlias + " ON " + inputResult.getSql() + ".id = "
               + targetExpression;
+      // If there is a filter to be applied as part of this invocation, add an extra join condition
+      // in here.
+      if (input.getFilter() != null) {
+        String filter = input.getFilter()
+            .replaceAll("(?<=\\b)" + targetTable + "(?=\\b)", joinAlias);
+        joinExpression += " AND " + filter;
+      }
     } else {
+      // If there is a filter to be applied as part of this invocation, add in its join dependencies.
+      if (input.getFilter() != null) {
+        upstreamJoins.addAll(input.getFilterJoins());
+      }
       joinExpression = "LEFT JOIN (SELECT * FROM " + targetTable + " ";
-      joinExpression += argument.getJoins().stream().map(Join::getSql)
+      joinExpression += upstreamJoins.stream().map(Join::getSql)
           .collect(Collectors.joining(" "));
+
+      // If there is a filter, add in a where clause to limit the scope of this query.
+      if (input.getFilter() != null) {
+        String filter = rewriteSqlWithJoinAliases(input.getFilter(), upstreamJoins);
+        joinExpression += " WHERE " + filter;
+      }
+
       String targetExpression = rewriteSqlWithJoinAliases(argument.getSql() + ".reference",
-          argument.getJoins());
-      joinExpression += ") " + joinAlias + " ON " + input.getSql() + ".id = " + joinAlias + "."
-          + targetExpression;
+          upstreamJoins);
+      joinExpression +=
+          ") " + joinAlias + " ON " + inputResult.getSql() + ".id = " + joinAlias + "."
+              + targetExpression;
     }
 
     // Build the candidate set of joins.
-    SortedSet<Join> joins = new TreeSet<>(input.getJoins());
+    SortedSet<Join> joins = new TreeSet<>(inputResult.getJoins());
     // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
     // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
     // view within a query.
@@ -103,17 +115,19 @@ public class ReverseResolveFunction implements ExpressionFunction {
     // Build new Join.
     Join join = new Join();
     join.setSql(joinExpression);
-    join.setJoinType(TABLE_JOIN);
+    join.setJoinType(LEFT_JOIN);
     join.setTableAlias(joinAlias);
     join.setAliasTarget(targetTable);
-    if (!input.getJoins().isEmpty()) {
-      join.setDependsUpon(input.getJoins().last());
+    if (!inputResult.getJoins().isEmpty()) {
+      join.setDependsUpon(inputResult.getJoins().last());
     }
     joins.add(join);
 
     // Build new parse result.
     ParseResult result = new ParseResult();
-    result.setFhirPath(expression);
+    result.setFunction(this);
+    result.setFunctionInput(input);
+    result.setFhirPath(input.getExpression());
     result.setSql(joinAlias);
     result.getJoins().addAll(joins);
     result.setSingular(false);
@@ -128,7 +142,7 @@ public class ReverseResolveFunction implements ExpressionFunction {
     return result;
   }
 
-  private void validateInput(@Nullable ParseResult input) {
+  private ParseResult validateInput(@Nullable ParseResult input) {
     if (input == null) {
       throw new InvalidRequestException("Missing input expression for resolve function");
     }
@@ -136,6 +150,7 @@ public class ReverseResolveFunction implements ExpressionFunction {
       throw new InvalidRequestException(
           "Input to reverseResolve function must be a Resource: " + input.getFhirPath());
     }
+    return input;
   }
 
   private ParseResult validateArgument(@Nonnull List<ParseResult> arguments) {
@@ -145,11 +160,6 @@ public class ReverseResolveFunction implements ExpressionFunction {
           "Argument to reverseResolve function must be a Reference: " + argument.getFhirPath());
     }
     return argument;
-  }
-
-  @Override
-  public void setContext(@Nonnull ExpressionParserContext context) {
-    this.context = context;
   }
 
 }

@@ -15,6 +15,7 @@ import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
 import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
 import au.csiro.clinsight.query.functions.ExpressionFunction;
+import au.csiro.clinsight.query.functions.ExpressionFunctionInput;
 import au.csiro.clinsight.query.functions.MemberInvocation;
 import au.csiro.clinsight.query.functions.MembershipExpression;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
@@ -113,7 +114,44 @@ public class ExpressionParser {
 
     @Override
     public ParseResult visitEqualityExpression(EqualityExpressionContext ctx) {
-      return parseBooleanExpression(ctx, ctx.expression(0), ctx.expression(1), "=");
+      ParseResult leftResult = new ExpressionVisitor(context)
+          .visit(ctx.expression(0));
+      ParseResult rightResult = new ExpressionVisitor(context)
+          .visit(ctx.expression(1));
+
+      // Check that both operands are singular.
+      // if (!leftResult.isSingular()) {
+      //   throw new InvalidRequestException(
+      //       "Equality operator does not support operand that is not singular: " + leftResult
+      //           .getFhirPath());
+      // } else if (!rightResult.isSingular()) {
+      //   throw new InvalidRequestException(
+      //       "Equality operator does not support operand that is not singular: " + rightResult
+      //           .getFhirPath());
+      // }
+
+      // Check that both operands are primitive.
+      // if (!leftResult.isPrimitive()) {
+      //   throw new InvalidRequestException(
+      //       "Equality operator does not support operand that is not primitive: " + leftResult
+      //           .getFhirPath());
+      // } else if (!rightResult.isPrimitive()) {
+      //   throw new InvalidRequestException(
+      //       "Equality operator does not support operand that is not primitive: " + rightResult
+      //           .getFhirPath());
+      // }
+
+      ParseResult result = new ParseResult();
+      result.setFhirPath(ctx.getText());
+      result.setSql(
+          leftResult.getSql() + " = " + rightResult
+              .getSql());
+      result.setFhirPathType(FhirPathType.BOOLEAN);
+      result.setFhirType(FhirType.BOOLEAN);
+      result.getJoins().addAll(leftResult.getJoins());
+      result.getJoins().addAll(rightResult.getJoins());
+      result.setPrimitive(true);
+      return result;
     }
 
     @Override
@@ -167,12 +205,17 @@ public class ExpressionParser {
     @Override
     public ParseResult visitMembershipExpression(MembershipExpressionContext ctx) {
       String operator = ctx.children.get(1).getText();
-      MembershipExpression membershipExpression = new MembershipExpression(context);
+      MembershipExpression membershipExpression = new MembershipExpression();
       ParseResult leftResult = new ExpressionVisitor(context)
           .visit(ctx.expression(operator.equals("in") ? 0 : 1));
       ParseResult rightResult = new ExpressionVisitor(context)
           .visit(ctx.expression(operator.equals("in") ? 1 : 0));
-      return membershipExpression.invoke(ctx.getText(), leftResult, rightResult);
+      ExpressionFunctionInput membershipExpressionInput = new ExpressionFunctionInput();
+      membershipExpressionInput.setContext(context);
+      membershipExpressionInput.setExpression(ctx.getText());
+      membershipExpressionInput.setInput(leftResult);
+      membershipExpressionInput.getArguments().add(rightResult);
+      return membershipExpression.invoke(membershipExpressionInput);
     }
 
     @Override
@@ -276,7 +319,11 @@ public class ExpressionParser {
         // If there is an invoker, this must be a path expression to an element, with a resource or
         // parent element as the input. We have a class called `MemberInvocation` to encapsulate
         // the logic required for these traversals.
-        return new MemberInvocation(context).invoke(ctx.getText(), invoker);
+        ExpressionFunctionInput memberInvocationInput = new ExpressionFunctionInput();
+        memberInvocationInput.setContext(context);
+        memberInvocationInput.setExpression(ctx.getText());
+        memberInvocationInput.setInput(invoker);
+        return new MemberInvocation().invoke(memberInvocationInput);
       }
     }
 
@@ -290,6 +337,7 @@ public class ExpressionParser {
       // Get the function that corresponds to the function identifier.
       String functionIdentifier = ctx.functn().identifier().getText();
       ExpressionFunction function = getFunction(functionIdentifier);
+      ExpressionFunctionInput functionInput = new ExpressionFunctionInput();
       if (function == null) {
         throw new InvalidRequestException("Unrecognised function: " + functionIdentifier);
       }
@@ -297,21 +345,36 @@ public class ExpressionParser {
       // Get the parse results for each of the expressions that make up the functions arguments.
       List<ParseResult> arguments;
       ParamListContext paramList = ctx.functn().paramList();
-      arguments = paramList == null
-          ? new ArrayList<>()
-          : paramList.expression().stream()
-              .map(expression -> new ExpressionVisitor(context)
-                  .visit(expression))
-              .collect(Collectors.toList());
+      if (paramList == null) {
+        arguments = new ArrayList<>();
+      } else {
+        // Create a new ExpressionParserContext, which includes information about how to evaluate
+        // the `$this` expression.
+        ExpressionParserContext argumentContext = new ExpressionParserContext(context);
+        if (invoker != null) {
+          argumentContext.setThisExpression(invoker);
+        }
+        // Parse each of the expressions passed as arguments to the function.
+        arguments = paramList.expression().stream()
+            .map(expression -> new ExpressionVisitor(argumentContext).visit(expression))
+            .collect(Collectors.toList());
+      }
 
       // Invoke the function and return the result.
-      function.setContext(context);
-      return function.invoke(ctx.getText(), invoker, arguments);
+      functionInput.setContext(context);
+      functionInput.setExpression(ctx.getText());
+      functionInput.setInput(invoker);
+      functionInput.getArguments().addAll(arguments);
+      return function.invoke(functionInput);
     }
 
     @Override
     public ParseResult visitThisInvocation(ThisInvocationContext ctx) {
-      throw new InvalidRequestException("$this is not supported");
+      if (context.getThisExpression() == null) {
+        throw new InvalidRequestException(
+            "$this can only be used within the context of arguments to a function");
+      }
+      return context.getThisExpression();
     }
 
   }

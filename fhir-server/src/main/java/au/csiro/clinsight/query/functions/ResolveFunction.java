@@ -9,7 +9,7 @@ import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementT
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getResourceByUrl;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isResource;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
-import static au.csiro.clinsight.query.parsing.Join.JoinType.TABLE_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.Join.wrapUpstreamJoins;
 
@@ -37,34 +37,47 @@ import org.hl7.fhir.dstu3.model.StructureDefinition;
  */
 public class ResolveFunction implements ExpressionFunction {
 
-  private ExpressionParserContext context;
-
   @Nonnull
   @Override
-  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
-      @Nonnull List<ParseResult> arguments) {
-    validateInput(input);
-    ElementDefinition element = input.getPathTraversal().getElementDefinition();
+  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
+    ParseResult inputResult = validateInput(input.getInput());
+    ExpressionParserContext context = input.getContext();
+
+    ElementDefinition element = inputResult.getPathTraversal().getElementDefinition();
     String referenceTypeCode;
     if (element.getReferenceTypes().size() > 1) {
-      referenceTypeCode = getTypeForPolymorphicReference(input, arguments);
+      referenceTypeCode = getTypeForPolymorphicReference(inputResult, input.getArguments());
     } else {
       String referenceTypeUrl = element.getReferenceTypes().get(0);
       StructureDefinition referenceTypeDefinition = getResourceByUrl(referenceTypeUrl);
       referenceTypeCode = referenceTypeDefinition.getType();
       if (referenceTypeCode.equals("Resource")) {
-        referenceTypeCode = getTypeForPolymorphicReference(input, arguments);
+        referenceTypeCode = getTypeForPolymorphicReference(inputResult, input.getArguments());
       }
     }
 
     // Draft up the new join expression.
     String joinAlias = context.getAliasGenerator().getAlias();
     String joinExpression = "LEFT JOIN " + referenceTypeCode.toLowerCase() + " " + joinAlias
-        + " ON " + input.getSql() + ".reference = "
+        + " ON " + inputResult.getSql() + ".reference = "
         + joinAlias + ".id";
 
+    // If there is a filter to be applied as part of this invocation, add an extra join condition
+    // in here.
+    if (input.getFilter() != null) {
+      String filter = input.getFilter()
+          .replaceAll("(?<=\\b)" + referenceTypeCode.toLowerCase() + "(?=\\b)", joinAlias);
+      joinExpression += "AND " + filter;
+    }
+
     // Build the candidate set of joins.
-    SortedSet<Join> joins = new TreeSet<>(input.getJoins());
+    SortedSet<Join> joins = new TreeSet<>(inputResult.getJoins());
+
+    // If there is a filter to be applied as part of this invocation, add in its join dependencies.
+    if (input.getFilter() != null) {
+      joins.addAll(input.getFilterJoins());
+    }
+
     // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
     // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
     // view within a query.
@@ -80,20 +93,22 @@ public class ResolveFunction implements ExpressionFunction {
     // Build a new Join object.
     Join newJoin = new Join();
     newJoin.setSql(joinExpression);
-    newJoin.setJoinType(TABLE_JOIN);
+    newJoin.setJoinType(LEFT_JOIN);
     newJoin.setTableAlias(joinAlias);
     newJoin.setAliasTarget(referenceTypeCode.toLowerCase());
-    if (!input.getJoins().isEmpty()) {
-      newJoin.setDependsUpon(input.getJoins().last());
+    if (!inputResult.getJoins().isEmpty()) {
+      newJoin.setDependsUpon(inputResult.getJoins().last());
     }
     joins.add(newJoin);
 
     // Build the parse result.
     ParseResult result = new ParseResult();
-    result.setFhirPath(expression);
+    result.setFunction(this);
+    result.setFunctionInput(input);
+    result.setFhirPath(input.getExpression());
     result.setSql(joinAlias);
     result.getJoins().addAll(joins);
-    result.setSingular(input.isSingular());
+    result.setSingular(inputResult.isSingular());
 
     // Retrieve the path traversal for the result of the expression.
     try {
@@ -105,7 +120,7 @@ public class ResolveFunction implements ExpressionFunction {
     return result;
   }
 
-  private void validateInput(@Nullable ParseResult input) {
+  private ParseResult validateInput(@Nullable ParseResult input) {
     if (input == null) {
       throw new InvalidRequestException("Missing input expression for resolve function");
     }
@@ -113,6 +128,7 @@ public class ResolveFunction implements ExpressionFunction {
       throw new InvalidRequestException(
           "Input to resolve function must be a Reference: " + input.getFhirPath());
     }
+    return input;
   }
 
   @Nonnull
@@ -132,11 +148,6 @@ public class ResolveFunction implements ExpressionFunction {
               .getFhirPath());
     }
     return referenceTypeCode;
-  }
-
-  @Override
-  public void setContext(@Nonnull ExpressionParserContext context) {
-    this.context = context;
   }
 
 }

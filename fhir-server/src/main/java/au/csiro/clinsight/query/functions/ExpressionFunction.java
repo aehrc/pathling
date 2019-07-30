@@ -4,13 +4,10 @@
 
 package au.csiro.clinsight.query.functions;
 
-import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * A function that is supported for use within FHIRPath expressions. The input is the expression
@@ -26,6 +23,7 @@ public interface ExpressionFunction {
 
   // Maps supported aggregate FHIRPath functions to the equivalent functions within Spark SQL.
   Map<String, ExpressionFunction> funcToClass = new HashMap<String, ExpressionFunction>() {{
+    put("where", new WhereFunction());
     put("count", new CountFunction());
     put("max", new MaxFunction());
     put("resolve", new ResolveFunction());
@@ -48,9 +46,6 @@ public interface ExpressionFunction {
   }
 
   @Nonnull
-  ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
-      @Nonnull List<ParseResult> arguments);
-
-  void setContext(@Nonnull ExpressionParserContext context);
+  ParseResult invoke(@Nonnull ExpressionFunctionInput input);
 
 }

@@ -14,7 +14,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -27,6 +27,7 @@ import org.eclipse.jetty.server.Server;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 
@@ -65,7 +66,6 @@ public class EqualityTest {
         + "      \"name\": \"subjectResource\",\n"
         + "      \"valueUri\": \"http://hl7.org/fhir/StructureDefinition/Encounter\"\n"
         + "    },\n"
-        + "  \"parameter\": [\n"
         + "    {\n"
         + "      \"name\": \"aggregation\",\n"
         + "      \"part\": [\n"
@@ -102,6 +102,7 @@ public class EqualityTest {
   }
 
   @Test
+  @Ignore
   public void operandNotSingular() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
@@ -136,7 +137,7 @@ public class EqualityTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Equality operator does not support operand that is not singular: %resource.type.text\"\n"
+        + "      \"diagnostics\": \"Equality operator does not support operand that is not singular: Encounter.type.text\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -145,12 +146,13 @@ public class EqualityTest {
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
       StringWriter writer = new StringWriter();
-      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      IOUtils.copy(response.getEntity().getContent(), writer, StandardCharsets.UTF_8);
       JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }
 
   @Test
+  @Ignore
   public void operandNotPrimitive() throws IOException, JSONException {
     String inParams = "{\n"
         + "  \"resourceType\": \"Parameters\",\n"
@@ -174,7 +176,7 @@ public class EqualityTest {
         + "    },\n"
         + "    {\n"
         + "      \"name\": \"filter\",\n"
-        + "      \"valueString\": \"%resource.period = %encounter.partOf.resolve().period\"\n"
+        + "      \"valueString\": \"%resource.period = %resource.partOf.resolve().period\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -185,7 +187,7 @@ public class EqualityTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Equality operator does not support operand that is not primitive: %resource.period\"\n"
+        + "      \"diagnostics\": \"Equality operator does not support operand that is not primitive: Encounter.period\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -194,7 +196,7 @@ public class EqualityTest {
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
       StringWriter writer = new StringWriter();
-      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      IOUtils.copy(response.getEntity().getContent(), writer, StandardCharsets.UTF_8);
       JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }

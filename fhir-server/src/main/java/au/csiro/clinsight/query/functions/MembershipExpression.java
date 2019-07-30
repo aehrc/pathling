@@ -4,7 +4,8 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.query.parsing.Join.JoinType.MEMBERSHIP_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
+import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.CODING;
 import static au.csiro.clinsight.utilities.Strings.quote;
 
@@ -14,6 +15,7 @@ import au.csiro.clinsight.query.parsing.ParseResult;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import java.util.List;
 import java.util.SortedSet;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -29,19 +31,14 @@ import org.hl7.fhir.dstu3.model.Coding;
  *
  * @author John Grimes
  */
-public class MembershipExpression {
-
-  private final ExpressionParserContext context;
-
-  public MembershipExpression(ExpressionParserContext context) {
-    this.context = context;
-  }
+public class MembershipExpression implements ExpressionFunction {
 
   @Nonnull
-  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult left,
-      @Nonnull ParseResult right) {
-    left = validateLeftOperand(left);
-    right = validateRightOperand(right);
+  @Override
+  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
+    ExpressionParserContext context = input.getContext();
+    ParseResult left = validateLeftOperand(input.getInput(), context);
+    ParseResult right = validateRightOperand(input.getArguments(), context);
 
     // Build a select expression which tests whether there is a code on the right-hand side of the
     // left join, returning a boolean.
@@ -75,7 +72,12 @@ public class MembershipExpression {
     // Get the set of upstream joins.
     SortedSet<Join> upstreamJoins = left.getJoins();
     upstreamJoins.addAll(right.getJoins());
-    selectExpression = Join.rewriteSqlWithJoinAliases(selectExpression, upstreamJoins);
+    selectExpression = rewriteSqlWithJoinAliases(selectExpression, upstreamJoins);
+
+    // If there is a filter to be applied as part of this invocation, add in its join dependencies.
+    if (input.getFilter() != null) {
+      upstreamJoins.addAll(input.getFilterJoins());
+    }
 
     // Build a SQL expression representing the new subquery that provides the result of the membership test.
     String subqueryAlias = context.getAliasGenerator().getAlias();
@@ -83,18 +85,27 @@ public class MembershipExpression {
     subquery += selectExpression + " ";
     subquery += "FROM " + resourceTable + " ";
     subquery += upstreamJoins.stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
+
+    // If there is a filter to be applied as part of this invocation, add a where clause in here.
+    if (input.getFilter() != null) {
+      String filter = rewriteSqlWithJoinAliases(input.getFilter(), upstreamJoins);
+      subquery += "WHERE " + filter + " ";
+    }
+
     subquery += "GROUP BY 1";
     subquery += ") " + subqueryAlias + " ON " + resourceTable + ".id = " + subqueryAlias + ".id";
 
     // Create a new Join that represents the join to the new subquery.
     Join newJoin = new Join();
     newJoin.setSql(subquery);
-    newJoin.setJoinType(MEMBERSHIP_JOIN);
+    newJoin.setJoinType(LEFT_JOIN);
     newJoin.setTableAlias(subqueryAlias);
 
     // Build up the new result.
     ParseResult result = new ParseResult();
-    result.setFhirPath(expression);
+    result.setFunction(this);
+    result.setFunctionInput(input);
+    result.setFhirPath(input.getExpression());
     result.setSql(newJoin.getTableAlias() + ".result");
     result.getJoins().add(newJoin);
     result.setFhirPathType(FhirPathType.BOOLEAN);
@@ -105,7 +116,8 @@ public class MembershipExpression {
     return result;
   }
 
-  private ParseResult validateLeftOperand(@Nullable ParseResult left) {
+  private ParseResult validateLeftOperand(@Nullable ParseResult left,
+      ExpressionParserContext context) {
     if (left == null) {
       throw new InvalidRequestException("Missing operand for membership expression");
     }
@@ -125,13 +137,20 @@ public class MembershipExpression {
 
     // If the left expression is a singular CodeableConcept, traverse to the `coding` member.
     if (isCodeableConcept) {
-      left = new MemberInvocation(context).invoke("coding", left);
+      ExpressionFunctionInput memberInvocationInput = new ExpressionFunctionInput();
+      memberInvocationInput.setExpression("coding");
+      memberInvocationInput.setInput(left);
+      memberInvocationInput.setContext(context);
+      left = new MemberInvocation().invoke(memberInvocationInput);
     }
 
     return left;
   }
 
-  private ParseResult validateRightOperand(@Nullable ParseResult right) {
+  private ParseResult validateRightOperand(@Nullable List<ParseResult> arguments,
+      ExpressionParserContext context) {
+    assert arguments != null && arguments.size() == 1;
+    ParseResult right = arguments.get(0);
     if (right == null) {
       throw new InvalidRequestException("Missing operand for membership expression");
     }
@@ -149,9 +168,13 @@ public class MembershipExpression {
               .getFhirPath());
     }
 
-    // If the left expression is a singular CodeableConcept, traverse to the `coding` member.
+    // If the right expression is a singular CodeableConcept, traverse to the `coding` member.
     if (isCodeableConcept) {
-      right = new MemberInvocation(context).invoke("coding", right);
+      ExpressionFunctionInput memberInvocationInput = new ExpressionFunctionInput();
+      memberInvocationInput.setExpression("coding");
+      memberInvocationInput.setInput(right);
+      memberInvocationInput.setContext(context);
+      right = new MemberInvocation().invoke(memberInvocationInput);
     }
 
     return right;

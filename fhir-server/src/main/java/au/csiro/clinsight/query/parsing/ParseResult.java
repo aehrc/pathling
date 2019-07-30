@@ -5,6 +5,8 @@
 package au.csiro.clinsight.query.parsing;
 
 import au.csiro.clinsight.fhir.definitions.PathTraversal;
+import au.csiro.clinsight.query.functions.ExpressionFunction;
+import au.csiro.clinsight.query.functions.ExpressionFunctionInput;
 import java.math.BigDecimal;
 import java.util.*;
 import javax.annotation.Nonnull;
@@ -62,6 +64,17 @@ public class ParseResult {
    * The literal value of this expression, if any.
    */
   private Type literalValue;
+
+  /**
+   * The function that was used to produce this result.
+   */
+  private ExpressionFunction function;
+
+  /**
+   * The inputs to the function that was used to produce this result. This is used to replay the
+   * function in cases where expressions modify the meaning of other expressions.
+   */
+  private ExpressionFunctionInput functionInput;
 
   @Nonnull
   public SortedSet<Join> getJoins() {
@@ -130,6 +143,22 @@ public class ParseResult {
 
   public void setLiteralValue(@Nonnull Type literalValue) {
     this.literalValue = literalValue;
+  }
+
+  public ExpressionFunction getFunction() {
+    return function;
+  }
+
+  public void setFunction(ExpressionFunction function) {
+    this.function = function;
+  }
+
+  public ExpressionFunctionInput getFunctionInput() {
+    return functionInput;
+  }
+
+  public void setFunctionInput(ExpressionFunctionInput functionInput) {
+    this.functionInput = functionInput;
   }
 
   /**

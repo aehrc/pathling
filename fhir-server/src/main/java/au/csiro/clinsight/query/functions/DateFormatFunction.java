@@ -4,48 +4,42 @@
 
 package au.csiro.clinsight.query.functions;
 
-import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParseResult;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
+ * Describes a function which allows for the creation of formatted strings based upon dates, using
+ * the syntax from the Java SimpleDateFormat class.
+ *
  * @author John Grimes
  */
 public class DateFormatFunction implements ExpressionFunction {
 
-  private static final Set<String> supportedTypes = new HashSet<String>() {{
-    add("instant");
-    add("dateTime");
-    add("date");
-  }};
-
   @Nonnull
   @Override
-  public ParseResult invoke(@Nonnull String expression, @Nullable ParseResult input,
-      @Nonnull List<ParseResult> arguments) {
-    validateInput(input);
-    ParseResult argument = validateArgument(arguments);
+  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
+    ParseResult inputResult = validateInput(input.getInput());
+    ParseResult argument = validateArgument(input.getArguments());
 
     ParseResult result = new ParseResult();
-    result.setFhirPath(expression);
+    result.setFunction(this);
+    result.setFunctionInput(input);
+    result.setFhirPath(input.getExpression());
     String newSqlExpression =
-        "date_format(" + input.getSql() + ", " + argument.getFhirPath() + ")";
+        "date_format(" + inputResult.getSql() + ", " + argument.getFhirPath() + ")";
     result.setSql(newSqlExpression);
     result.setFhirPathType(FhirPathType.STRING);
     result.setFhirType(FhirType.STRING);
     result.setPrimitive(true);
-    result.setSingular(input.isSingular());
+    result.setSingular(inputResult.isSingular());
     return result;
   }
 
-  private void validateInput(ParseResult input) {
+  private ParseResult validateInput(ParseResult input) {
     if (input == null || input.getSql() == null || input.getSql().isEmpty()) {
       throw new InvalidRequestException("Missing input expression for dateFormat function");
     }
@@ -53,6 +47,7 @@ public class DateFormatFunction implements ExpressionFunction {
       throw new InvalidRequestException(
           "Input to dateFormat function must be a DateTime: " + input.getFhirPath());
     }
+    return input;
   }
 
   private ParseResult validateArgument(List<ParseResult> arguments) {
@@ -65,10 +60,6 @@ public class DateFormatFunction implements ExpressionFunction {
           "Argument to dateFormat function must be a String: " + argument.getFhirPath());
     }
     return argument;
-  }
-
-  @Override
-  public void setContext(@Nonnull ExpressionParserContext context) {
   }
 
 }

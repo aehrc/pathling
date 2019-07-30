@@ -88,13 +88,14 @@ public class WhereFunctionTest {
         + "}";
 
     String expectedSql =
-        "SELECT patientEncounterAsSubjectTypeCoding.display AS `Encounter type, where ambulatory`, "
+        "SELECT d.display AS `Encounter type, where ambulatory`, "
             + "COUNT(DISTINCT patient.id) AS `Number of patients` "
-            + "FROM patient LEFT JOIN encounter patientEncounterAsSubject "
-            + "ON patient.id = patientEncounterAsSubject.subject.reference "
-            + "AND patientEncounterAsSubject.class.code = 'ambulatory' "
-            + "LATERAL VIEW OUTER EXPLODE(patientEncounterAsSubject.type) patientEncounterAsSubjectType AS patientEncounterAsSubjectType "
-            + "LATERAL VIEW OUTER EXPLODE(patientEncounterAsSubjectType.coding) patientEncounterAsSubjectTypeCoding AS patientEncounterAsSubjectTypeCoding "
+            + "FROM patient "
+            + "LEFT JOIN encounter b "
+            + "ON patient.id = b.subject.reference "
+            + "AND b.class.code = 'ambulatory' "
+            + "LATERAL VIEW OUTER EXPLODE(b.type) c AS c "
+            + "LATERAL VIEW OUTER EXPLODE(c.coding) d AS d "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 

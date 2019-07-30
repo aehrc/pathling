@@ -5,7 +5,7 @@
 package au.csiro.clinsight.query.parsing;
 
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
-import static au.csiro.clinsight.query.parsing.Join.JoinType.WRAPPED_LATERAL_VIEWS;
+import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
 import java.util.Collections;
@@ -71,7 +71,31 @@ public class Join implements Comparable<Join> {
     joinsReversed.addAll(joins);
     for (Join currentJoin : joinsReversed) {
       if (currentJoin.getTableAlias() != null && currentJoin.getAliasTarget() != null) {
-        newSql = newSql.replaceAll(currentJoin.getAliasTarget(), currentJoin.getTableAlias());
+        newSql = newSql
+            .replaceAll("(?<=\\b)" + currentJoin.getAliasTarget() + "(?=\\b)",
+                currentJoin.getTableAlias());
+      }
+    }
+
+    return newSql;
+  }
+
+  /**
+   * Reverses the process of replacing alias targets. This is useful where we need to use an
+   * expression to modify another expression, e.g. the where function.
+   */
+  public static String unwindJoinAliases(String sql, SortedSet<Join> joins) {
+    if (joins.isEmpty()) {
+      return sql;
+    }
+    String newSql = sql;
+
+    // Go through the list and replace the alias string within the expression with the alias target.
+    for (Join currentJoin : joins) {
+      if (currentJoin.getTableAlias() != null && currentJoin.getAliasTarget() != null) {
+        newSql = newSql
+            .replaceAll("(?<=\\b)" + currentJoin.getTableAlias() + "(?=\\b)",
+                currentJoin.getAliasTarget());
       }
     }
 
@@ -95,7 +119,7 @@ public class Join implements Comparable<Join> {
     // Build a new Join object to replace the group of lateral views.
     Join newJoin = new Join();
     newJoin.setSql(joinExpression);
-    newJoin.setJoinType(WRAPPED_LATERAL_VIEWS);
+    newJoin.setJoinType(LEFT_JOIN);
     newJoin.setTableAlias(joinAlias + "." + lastLateralView.getTableAlias());
     newJoin.setAliasTarget(lastLateralView.getAliasTarget());
     newJoin.setTargetElement(lastLateralView.getTargetElement());
@@ -226,24 +250,9 @@ public class Join implements Comparable<Join> {
      */
     LATERAL_VIEW,
     /**
-     * TABLE_JOIN - a regular left outer join, used to resolve references between different resource
-     * types.
+     * LEFT_JOIN - a regular left outer join.
      */
-    TABLE_JOIN,
-    /**
-     * WRAPPED_LATERAL_VIEWS - a lateral view that has been wrapped within a subquery, to get around
-     * the issue that Spark SQL cannot join from a lateral view.
-     */
-    WRAPPED_LATERAL_VIEWS,
-    /**
-     * MEMBERSHIP_JOIN - a left outer join to a table (e.g. a ValueSet expansion) for which a
-     * boolean value is required based upon whether the code on the left hand side exists within the
-     * set of codes on the right hand side. This will later need to be converted to a subquery
-     * within a FROM clause, as it requires two levels of aggregation (one to reduce the multiple
-     * codes into a single NULL or NOT NULL value, then a second to convert that to boolean and
-     * aggregate on the requested aggregation elements).
-     */
-    MEMBERSHIP_JOIN
+    LEFT_JOIN;
   }
 
 }

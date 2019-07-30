@@ -12,7 +12,7 @@ import org.apache.spark.sql.SparkSession;
  *
  * @author John Grimes
  */
-public class ExpressionParserContext {
+public class ExpressionParserContext implements Cloneable {
 
   /**
    * The terminology client that should be used to resolve terminology queries within this
@@ -37,6 +37,12 @@ public class ExpressionParserContext {
   private ParseResult subjectResource;
 
   /**
+   * A ParseResult representing an item from an input collection currently under evaluation, e.g.
+   * within the argument to the `where` function.
+   */
+  private ParseResult thisExpression;
+
+  /**
    * The name of the table that corresponds to the subject resource.
    */
   private String fromTable;
@@ -45,6 +51,19 @@ public class ExpressionParserContext {
    * An alias generator for generating aliases for use within SQL expressions.
    */
   private AliasGenerator aliasGenerator;
+
+  public ExpressionParserContext() {
+  }
+
+  public ExpressionParserContext(ExpressionParserContext context) {
+    this.terminologyClient = context.terminologyClient;
+    this.sparkSession = context.sparkSession;
+    this.databaseName = context.databaseName;
+    this.subjectResource = context.subjectResource;
+    this.thisExpression = context.thisExpression;
+    this.fromTable = context.fromTable;
+    this.aliasGenerator = context.aliasGenerator;
+  }
 
   public TerminologyClient getTerminologyClient() {
     return terminologyClient;
@@ -76,6 +95,14 @@ public class ExpressionParserContext {
 
   public void setSubjectResource(ParseResult subjectResource) {
     this.subjectResource = subjectResource;
+  }
+
+  public ParseResult getThisExpression() {
+    return thisExpression;
+  }
+
+  public void setThisExpression(ParseResult thisExpression) {
+    this.thisExpression = thisExpression;
   }
 
   public String getFromTable() {
