@@ -60,8 +60,8 @@ public class MemberOfFunction implements ExpressionFunction {
 
     // Build a SQL expression representing the new subquery that provides the result of the ValueSet
     // membership test.
-    String newJoinAlias = context.getAliasGenerator().getAlias();
-    String subqueryAlias = context.getAliasGenerator().getAlias();
+    String valueSetJoinAlias = context.getAliasGenerator().getAlias();
+    String wrapperJoinAlias = context.getAliasGenerator().getAlias();
 
     // If this is a CodeableConcept, we need to update the input expression to the `coding`
     // member first.
@@ -77,12 +77,12 @@ public class MemberOfFunction implements ExpressionFunction {
     String inputSql = rewriteSqlWithJoinAliases(inputResult.getSql(), inputResult.getJoins());
 
     Join valueSetJoin = new Join();
-    String valueSetJoinSql = "LEFT JOIN " + tableName + " " + newJoinAlias + " ";
-    valueSetJoinSql += "ON " + inputSql + ".system = " + newJoinAlias + ".system ";
-    valueSetJoinSql += "AND " + inputSql + ".code = " + newJoinAlias + ".code";
+    String valueSetJoinSql = "LEFT JOIN " + tableName + " " + valueSetJoinAlias + " ";
+    valueSetJoinSql += "ON " + inputSql + ".system = " + valueSetJoinAlias + ".system ";
+    valueSetJoinSql += "AND " + inputSql + ".code = " + valueSetJoinAlias + ".code";
     valueSetJoin.setSql(valueSetJoinSql);
     valueSetJoin.setJoinType(LEFT_JOIN);
-    valueSetJoin.setTableAlias(newJoinAlias);
+    valueSetJoin.setTableAlias(valueSetJoinAlias);
     valueSetJoin.setAliasTarget(tableName);
     valueSetJoin.setDependsUpon(inputResult.getJoins().last());
 
@@ -104,39 +104,40 @@ public class MemberOfFunction implements ExpressionFunction {
       innerJoins.addAll(input.getFilterJoins());
     }
 
-    String subquery = "LEFT JOIN (";
-    subquery += "SELECT " + context.getFromTable() + ".id, ";
-    subquery += "MAX(" + newJoinAlias + ".code) IS NULL AS result ";
-    subquery += "FROM " + context.getFromTable() + " ";
-    subquery += innerJoins.stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
+    String wrapperJoinSql = "LEFT JOIN (";
+    wrapperJoinSql += "SELECT " + context.getFromTable() + ".id, ";
+    wrapperJoinSql += "MAX(" + valueSetJoinAlias + ".code) IS NULL AS result ";
+    wrapperJoinSql += "FROM " + context.getFromTable() + " ";
+    wrapperJoinSql += innerJoins.stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
 
     // If there is a filter to be applied as part of this invocation, add a where clause in here.
     if (input.getFilter() != null) {
       String filter = rewriteSqlWithJoinAliases(input.getFilter(), innerJoins);
-      subquery += "WHERE " + filter + " ";
+      wrapperJoinSql += "WHERE " + filter + " ";
     }
 
-    subquery += "GROUP BY 1";
-    subquery +=
-        ") " + subqueryAlias + " ON " + context.getFromTable() + ".id = " + subqueryAlias + ".id";
+    wrapperJoinSql += "GROUP BY 1";
+    wrapperJoinSql +=
+        ") " + wrapperJoinAlias + " ON " + context.getFromTable() + ".id = " + wrapperJoinAlias
+            + ".id";
 
     // Create a new Join that represents the join to the new subquery.
-    Join newJoin = new Join();
-    newJoin.setSql(subquery);
-    newJoin.setJoinType(LEFT_JOIN);
-    newJoin.setTableAlias(subqueryAlias);
-    newJoin.setAliasTarget(subqueryAlias);
-    newJoin.setTargetElement(inputResult.getPathTraversal().getElementDefinition());
+    Join wrapperJoin = new Join();
+    wrapperJoin.setSql(wrapperJoinSql);
+    wrapperJoin.setJoinType(LEFT_JOIN);
+    wrapperJoin.setTableAlias(wrapperJoinAlias);
+    wrapperJoin.setAliasTarget(wrapperJoinAlias);
+    wrapperJoin.setTargetElement(inputResult.getPathTraversal().getElementDefinition());
 
     // Build a new parse result, representing the results of the ValueSet expansion.
     ParseResult result = new ParseResult();
     result.setFunction(this);
     result.setFunctionInput(input);
     result.setFhirPath(input.getExpression());
-    result.setSql(subqueryAlias + ".result");
+    result.setSql(wrapperJoinAlias + ".result");
     result.setFhirPathType(FhirPathType.BOOLEAN);
     result.setFhirType(FhirType.BOOLEAN);
-    result.getJoins().add(newJoin);
+    result.getJoins().add(wrapperJoin);
     result.setPrimitive(true);
     result.setSingular(inputResult.isSingular());
     return result;
@@ -180,7 +181,12 @@ public class MemberOfFunction implements ExpressionFunction {
     if (!spark.catalog().tableExists(databaseName, tableName)) {
       ValueSet expansion = terminologyClient.expandValueSet(new UriType(valueSetUrl));
       List<Code> expansionRows = expansion.getExpansion().getContains().stream()
-          .map(contains -> new Code(contains.getSystem(), contains.getCode()))
+          .map(contains -> {
+            Code code = new Code();
+            code.setSystem(contains.getSystem());
+            code.setCode(contains.getCode());
+            return code;
+          })
           .collect(Collectors.toList());
       Dataset<Code> expansionDataset = spark
           .createDataset(expansionRows, Encoders.bean(Code.class));

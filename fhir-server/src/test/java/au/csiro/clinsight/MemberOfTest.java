@@ -16,7 +16,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -203,7 +203,7 @@ public class MemberOfTest {
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
       StringWriter writer = new StringWriter();
-      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      IOUtils.copy(response.getEntity().getContent(), writer, StandardCharsets.UTF_8);
       JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
 

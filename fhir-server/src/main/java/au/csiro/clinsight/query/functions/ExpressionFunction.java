@@ -29,6 +29,7 @@ public interface ExpressionFunction {
     put("resolve", new ResolveFunction());
     put("reverseResolve", new ReverseResolveFunction());
     put("memberOf", new MemberOfFunction());
+    put("subsumes", new SubsumesFunction());
     put("dateFormat", new DateFormatFunction());
     put("toSeconds", new DateComponentFunction("toSeconds"));
     put("toMinutes", new DateComponentFunction("toMinutes"));

@@ -40,6 +40,10 @@ public abstract class Strings {
     return "\"" + value + "\"";
   }
 
+  public static String singleQuote(String value) {
+    return "'" + value + "'";
+  }
+
   public static String backTicks(String value) {
     return "`" + value + "`";
   }
