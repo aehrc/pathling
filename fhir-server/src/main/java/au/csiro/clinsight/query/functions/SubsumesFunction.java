@@ -37,6 +37,8 @@ import org.hl7.fhir.dstu3.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.dstu3.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.dstu3.model.ConceptMap.TargetElementComponent;
 import org.hl7.fhir.dstu3.model.StringType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Describes a function which returns a boolean value based upon whether any of the input set of
@@ -46,11 +48,30 @@ import org.hl7.fhir.dstu3.model.StringType;
  */
 public class SubsumesFunction implements ExpressionFunction {
 
+  private static final Logger logger = LoggerFactory.getLogger(SubsumesFunction.class);
+  private boolean inverted = false;
+  private String functionName = "subsumes";
+
+  public SubsumesFunction() {
+  }
+
+  public SubsumesFunction(boolean inverted) {
+    this.inverted = inverted;
+    if (inverted) {
+      this.functionName = "subsumedBy";
+    }
+  }
+
   @Nonnull
   @Override
   public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
-    ParseResult inputResult = validateInput(input);
-    ParseResult argument = validateArgument(input);
+    if (input.getArguments().size() != 1) {
+      throw new InvalidRequestException(
+          "One argument must be passed to " + functionName + " function");
+    }
+
+    ParseResult inputResult = inverted ? validateArgument(input) : validateInput(input);
+    ParseResult argument = inverted ? validateInput(input) : validateArgument(input);
     ExpressionParserContext context = input.getContext();
 
     String closureTableName = ensureClosureTableExists(input, inputResult, argument);
@@ -87,7 +108,7 @@ public class SubsumesFunction implements ExpressionFunction {
     } else {
       // Otherwise, the values are queried using the SQL expressions within the parse result.
       closureJoinSql +=
-          "AND " + argument.getSql() + ".code = " + closureJoinAlias + ".sourceSystem ";
+          "AND " + argument.getSql() + ".system = " + closureJoinAlias + ".sourceSystem ";
       closureJoinSql += "AND " + argument.getSql() + ".code = " + closureJoinAlias + ".sourceCode";
     }
 
@@ -95,10 +116,19 @@ public class SubsumesFunction implements ExpressionFunction {
     closureJoin.setJoinType(JoinType.LEFT_JOIN);
     closureJoin.setTableAlias(closureJoinAlias);
     closureJoin.setAliasTarget(closureTableName);
-    closureJoin.setDependsUpon(inputResult.getJoins().last());
+    if (!inputResult.getJoins().isEmpty()) {
+      closureJoin.setDependsUpon(inputResult.getJoins().last());
+    }
 
     // Build the candidate set of inner joins.
     SortedSet<Join> innerJoins = new TreeSet<>(inputResult.getJoins());
+    innerJoins.addAll(argument.getJoins());
+
+    // If there is a filter to be applied as part of this invocation, add in its join dependencies.
+    if (input.getFilter() != null) {
+      innerJoins.addAll(input.getFilterJoins());
+    }
+
     // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
     // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
     // view within a query.
@@ -110,11 +140,6 @@ public class SubsumesFunction implements ExpressionFunction {
     }
     closureJoin.setSql(rewriteSqlWithJoinAliases(closureJoin.getSql(), innerJoins));
     innerJoins.add(closureJoin);
-
-    // If there is a filter to be applied as part of this invocation, add in its join dependencies.
-    if (input.getFilter() != null) {
-      innerJoins.addAll(input.getFilterJoins());
-    }
 
     String wrapperJoinSql = "LEFT JOIN (";
     wrapperJoinSql += "SELECT " + context.getFromTable() + ".id, ";
@@ -140,7 +165,9 @@ public class SubsumesFunction implements ExpressionFunction {
     wrapperJoin.setJoinType(LEFT_JOIN);
     wrapperJoin.setTableAlias(wrapperJoinAlias);
     wrapperJoin.setAliasTarget(wrapperJoinAlias);
-    wrapperJoin.setTargetElement(inputResult.getPathTraversal().getElementDefinition());
+    if (inputResult.getPathTraversal() != null) {
+      wrapperJoin.setTargetElement(inputResult.getPathTraversal().getElementDefinition());
+    }
 
     // Build a new parse result, representing the results of the ValueSet expansion.
     ParseResult result = new ParseResult();
@@ -173,13 +200,13 @@ public class SubsumesFunction implements ExpressionFunction {
     if (inputResult.getLiteralValue() != null) {
       codings.add((Coding) inputResult.getLiteralValue());
     } else {
-      inputQuery = buildCodeQuery(inputResult, resourceTable);
+      inputQuery = buildCodeQuery(inputResult, input);
     }
     // If the argument is a literal, harvest the code - otherwise we need to query for the codes.
     if (argument.getLiteralValue() != null) {
       codings.add((Coding) argument.getLiteralValue());
     } else {
-      argumentQuery = buildCodeQuery(argument, resourceTable);
+      argumentQuery = buildCodeQuery(argument, input);
     }
     // The query will be a union if we need to query for both the input and argument codes.
     String query =
@@ -208,22 +235,24 @@ public class SubsumesFunction implements ExpressionFunction {
 
     // Extract the mappings from the closure result into a set of Mapping objects.
     List<ConceptMapGroupComponent> groups = closure.getGroup();
-    assert groups != null && groups.size() == 1;
-    ConceptMapGroupComponent group = groups.get(0);
-    String sourceSystem = group.getSource();
-    String targetSystem = group.getTarget();
-    List<SourceElementComponent> elements = group.getElement();
-    assert elements != null;
     List<Mapping> mappings = new ArrayList<>();
-    for (SourceElementComponent element : elements) {
-      for (TargetElementComponent target : element.getTarget()) {
-        Mapping mapping = new Mapping();
-        mapping.setSourceSystem(sourceSystem);
-        mapping.setSourceCode(element.getCode());
-        mapping.setTargetSystem(targetSystem);
-        mapping.setTargetCode(target.getCode());
-        mappings.add(mapping);
+    if (groups.size() == 1) {
+      ConceptMapGroupComponent group = groups.get(0);
+      String sourceSystem = group.getSource();
+      String targetSystem = group.getTarget();
+      List<SourceElementComponent> elements = group.getElement();
+      for (SourceElementComponent element : elements) {
+        for (TargetElementComponent target : element.getTarget()) {
+          Mapping mapping = new Mapping();
+          mapping.setSourceSystem(sourceSystem);
+          mapping.setSourceCode(element.getCode());
+          mapping.setTargetSystem(targetSystem);
+          mapping.setTargetCode(target.getCode());
+          mappings.add(mapping);
+        }
       }
+    } else if (groups.size() > 1) {
+      logger.warn("Encountered closure response with more than one group");
     }
 
     // Create a Spark Dataset containing the mappings, and make it the subject of a temporary view.
@@ -241,7 +270,8 @@ public class SubsumesFunction implements ExpressionFunction {
     String typeCode = inputResult.getPathTraversal().getElementDefinition().getTypeCode();
     if (!typeCode.equals("CodeableConcept")) {
       throw new InvalidRequestException(
-          "Argument to subsumes function must be Coding or CodeableConcept: " + inputResult
+          "Argument to " + functionName + " function must be Coding or CodeableConcept: "
+              + inputResult
               .getFhirPath());
     } else {
       // If this is a CodeableConcept, we need to traverse to the `coding` member first.
@@ -255,9 +285,6 @@ public class SubsumesFunction implements ExpressionFunction {
   }
 
   private ParseResult validateArgument(ExpressionFunctionInput input) {
-    if (input.getArguments().size() != 1) {
-      throw new InvalidRequestException("One argument must be passed to subsumes function");
-    }
     ParseResult argument = input.getArguments().get(0);
     if (argument.getFhirPathType() == CODING) {
       return argument;
@@ -265,7 +292,7 @@ public class SubsumesFunction implements ExpressionFunction {
     String typeCode = argument.getPathTraversal().getElementDefinition().getTypeCode();
     if (!typeCode.equals("CodeableConcept")) {
       throw new InvalidRequestException(
-          "Argument to subsumes function must be Coding or CodeableConcept: " + argument
+          "Argument to " + functionName + " function must be Coding or CodeableConcept: " + argument
               .getFhirPath());
     } else {
       // If this is a CodeableConcept, we need to traverse to the `coding` member first.
@@ -279,11 +306,23 @@ public class SubsumesFunction implements ExpressionFunction {
   }
 
   @Nonnull
-  private String buildCodeQuery(ParseResult result, String resourceTable) {
-    String query = "SELECT " + result.getSql() + ".system, " + result.getSql() + ".code ";
+  private String buildCodeQuery(ParseResult result, ExpressionFunctionInput input) {
+    SortedSet<Join> joins = new TreeSet<>(result.getJoins());
+
+    // If there is a filter to be applied as part of this invocation, add in its join dependencies.
+    if (input.getFilter() != null) {
+      joins.addAll(input.getFilterJoins());
+    }
+
+    String query = "SELECT DISTINCT " + result.getSql() + ".system, " + result.getSql() + ".code ";
     query = rewriteSqlWithJoinAliases(query, result.getJoins());
-    query += "FROM " + resourceTable + " ";
-    query += result.getJoins().stream().map(Join::getSql).collect(Collectors.joining(" "));
+    query += "FROM " + input.getContext().getFromTable() + " ";
+    query += result.getJoins().stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
+    String nullFilter = "WHERE " + result.getSql() + ".system IS NOT NULL AND " + result.getSql()
+        + ".code IS NOT NULL";
+    nullFilter = rewriteSqlWithJoinAliases(nullFilter, result.getJoins());
+    query += nullFilter;
+
     return query;
   }
 

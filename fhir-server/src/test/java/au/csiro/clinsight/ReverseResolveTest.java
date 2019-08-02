@@ -15,6 +15,7 @@ import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -142,7 +143,7 @@ public class ReverseResolveTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Input to reverseResolve function must be a Resource: Patient.id\"\n"
+        + "      \"diagnostics\": \"Input to reverseResolve function must be a Resource: %resource.id\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -151,7 +152,7 @@ public class ReverseResolveTest {
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
       StringWriter writer = new StringWriter();
-      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      IOUtils.copy(response.getEntity().getContent(), writer, StandardCharsets.UTF_8);
       JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }

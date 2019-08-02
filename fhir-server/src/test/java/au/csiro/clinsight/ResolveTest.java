@@ -332,7 +332,7 @@ public class ResolveTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Attempt to resolve polymorphic reference without providing an argument: Condition.evidence.detail\"\n"
+        + "      \"diagnostics\": \"Attempt to resolve polymorphic reference without providing an argument: %resource.evidence.detail\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -414,7 +414,7 @@ public class ResolveTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Input to resolve function must be a Reference: Condition.evidence\"\n"
+        + "      \"diagnostics\": \"Input to resolve function must be a Reference: %resource.evidence\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";

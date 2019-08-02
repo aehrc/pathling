@@ -310,7 +310,7 @@ public class AggregationTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Input to count function must be of primitive or resource type: Patient.identifier\"\n"
+        + "      \"diagnostics\": \"Input to count function must be of primitive or resource type: %resource.identifier\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";

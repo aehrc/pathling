@@ -7,7 +7,7 @@ package au.csiro.clinsight.query.functions;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.CODING;
-import static au.csiro.clinsight.utilities.Strings.quote;
+import static au.csiro.clinsight.utilities.Strings.singleQuote;
 
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
@@ -58,8 +58,8 @@ public class MembershipExpression implements ExpressionFunction {
       Coding literalValue = (Coding) left.getLiteralValue();
       selectExpression =
           "SELECT " + resourceTable + ".id, IFNULL(MAX(" + right.getSql() + ".system = "
-              + quote(literalValue.getSystem()) + " AND " + right.getSql() + ".code = "
-              + quote(literalValue.getCode()) + "), FALSE) AS result";
+              + singleQuote(literalValue.getSystem()) + " AND " + right.getSql() + ".code = "
+              + singleQuote(literalValue.getCode()) + "), FALSE) AS result";
     } else {
       // If the left expression is a singular primitive expression, use simple equality, leveraging
       // the SQL representation that the parser already added to the result.

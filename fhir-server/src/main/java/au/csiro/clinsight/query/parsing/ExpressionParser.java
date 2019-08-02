@@ -100,7 +100,8 @@ public class ExpressionParser {
       ParseResult rightResult = new ExpressionVisitor(context)
           .visit(rightExpression);
       ParseResult result = new ParseResult();
-      result.setFhirPath(ctx.getText());
+      result.setFhirPath(
+          leftResult.getFhirPath() + " " + operatorString + " " + rightResult.getFhirPath());
       result.setSql(
           leftResult.getSql() + " " + operatorString + " " + rightResult
               .getSql());
@@ -142,7 +143,7 @@ public class ExpressionParser {
       // }
 
       ParseResult result = new ParseResult();
-      result.setFhirPath(ctx.getText());
+      result.setFhirPath(leftResult.getFhirPath() + " = " + rightResult.getFhirPath());
       result.setSql(
           leftResult.getSql() + " = " + rightResult
               .getSql());
@@ -212,7 +213,13 @@ public class ExpressionParser {
           .visit(ctx.expression(operator.equals("in") ? 1 : 0));
       ExpressionFunctionInput membershipExpressionInput = new ExpressionFunctionInput();
       membershipExpressionInput.setContext(context);
-      membershipExpressionInput.setExpression(ctx.getText());
+      if (operator.equals("in")) {
+        membershipExpressionInput
+            .setExpression(leftResult.getFhirPath() + " in " + rightResult.getFhirPath());
+      } else {
+        membershipExpressionInput
+            .setExpression(rightResult.getFhirPath() + " contains " + leftResult.getFhirPath());
+      }
       membershipExpressionInput.setInput(leftResult);
       membershipExpressionInput.getArguments().add(rightResult);
       return membershipExpression.invoke(membershipExpressionInput);
@@ -256,7 +263,9 @@ public class ExpressionParser {
     @Override
     public ParseResult visitExternalConstantTerm(ExternalConstantTermContext ctx) {
       if (ctx.getText().equals("%resource") || ctx.getText().equals("%context")) {
-        return context.getSubjectResource();
+        ParseResult result = context.getSubjectResource();
+        result.setFhirPath(ctx.getText());
+        return result;
       } else {
         throw new InvalidRequestException("Unrecognised environment variable: " + ctx.getText());
       }
@@ -352,7 +361,9 @@ public class ExpressionParser {
         // the `$this` expression.
         ExpressionParserContext argumentContext = new ExpressionParserContext(context);
         if (invoker != null) {
-          argumentContext.setThisExpression(invoker);
+          ParseResult thisResult = new ParseResult(invoker);
+          thisResult.setFhirPath("$this");
+          argumentContext.setThisExpression(thisResult);
         }
         // Parse each of the expressions passed as arguments to the function.
         arguments = paramList.expression().stream()
@@ -362,10 +373,16 @@ public class ExpressionParser {
 
       // Invoke the function and return the result.
       functionInput.setContext(context);
-      functionInput.setExpression(ctx.getText());
+      String fhirPath =
+          functionIdentifier + "(" + arguments.stream().map(ParseResult::getFhirPath).collect(
+              Collectors.joining(", ")) + ")";
+      functionInput.setExpression(fhirPath);
       functionInput.setInput(invoker);
       functionInput.getArguments().addAll(arguments);
-      return function.invoke(functionInput);
+
+      ParseResult result = function.invoke(functionInput);
+      result.setFhirPath(fhirPath);
+      return result;
     }
 
     @Override
@@ -443,7 +460,7 @@ public class ExpressionParser {
       ParseResult result = new ParseResult();
       result.setFhirPathType(FhirPathType.BOOLEAN);
       result.setFhirType(FhirType.BOOLEAN);
-      result.setFhirPath(ctx.getText().toUpperCase());
+      result.setFhirPath(ctx.getText());
       result.setSql(ctx.getText().toUpperCase());
       result.setPrimitive(true);
       result.setSingular(true);

@@ -76,6 +76,23 @@ public class ParseResult {
    */
   private ExpressionFunctionInput functionInput;
 
+  public ParseResult() {
+  }
+
+  public ParseResult(ParseResult parseResult) {
+    this.joins.addAll(parseResult.joins);
+    this.fhirPath = parseResult.fhirPath;
+    this.sql = parseResult.sql;
+    this.fhirPathType = parseResult.fhirPathType;
+    this.fhirType = parseResult.fhirType;
+    this.pathTraversal = parseResult.pathTraversal;
+    this.primitive = parseResult.primitive;
+    this.singular = parseResult.singular;
+    this.literalValue = parseResult.literalValue;
+    this.function = parseResult.function;
+    this.functionInput = parseResult.functionInput;
+  }
+
   @Nonnull
   public SortedSet<Join> getJoins() {
     return joins;

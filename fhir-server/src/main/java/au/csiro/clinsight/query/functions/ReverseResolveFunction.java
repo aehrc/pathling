@@ -100,6 +100,10 @@ public class ReverseResolveFunction implements ExpressionFunction {
 
     // Build the candidate set of joins.
     SortedSet<Join> joins = new TreeSet<>(inputResult.getJoins());
+    // If there is a filter to be applied and the join dependencies were not rolled into the new join, they will need to be added here.
+    if (input.getFilter() != null && upstreamJoins.isEmpty()) {
+      joins.addAll(input.getFilterJoins());
+    }
     // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
     // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
     // view within a query.

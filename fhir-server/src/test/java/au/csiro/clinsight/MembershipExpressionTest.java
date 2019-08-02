@@ -14,7 +14,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -219,7 +219,7 @@ public class MembershipExpressionTest {
             + "FROM patient "
             + "LEFT JOIN ("
             + "SELECT patient.id, "
-            + "IFNULL(MAX(b.system = \"http://snomed.info/sct\" AND b.code = \"44054006\"), FALSE) AS result "
+            + "IFNULL(MAX(b.system = 'http://snomed.info/sct' AND b.code = '44054006'), FALSE) AS result "
             + "FROM patient "
             + "LEFT JOIN condition a ON patient.id = a.subject.reference "
             + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b "
@@ -392,7 +392,7 @@ public class MembershipExpressionTest {
         + "    {\n"
         + "      \"severity\": \"error\",\n"
         + "      \"code\": \"processing\",\n"
-        + "      \"diagnostics\": \"Operand in membership expression must evaluate to a single value: Patient.name.given\"\n"
+        + "      \"diagnostics\": \"Operand in membership expression must evaluate to a single value: %resource.name.given\"\n"
         + "    }\n"
         + "  ]\n"
         + "}\n";
@@ -401,7 +401,7 @@ public class MembershipExpressionTest {
     try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
       assertThat(response.getStatusLine().getStatusCode()).isEqualTo(400);
       StringWriter writer = new StringWriter();
-      IOUtils.copy(response.getEntity().getContent(), writer, Charset.forName("UTF-8"));
+      IOUtils.copy(response.getEntity().getContent(), writer, StandardCharsets.UTF_8);
       JSONAssert.assertEquals(expectedResponse, writer.toString(), true);
     }
   }

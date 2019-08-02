@@ -24,6 +24,20 @@ import javax.annotation.Nonnull;
 public class Join implements Comparable<Join> {
 
   /**
+   * Aliases within SQL expressions are delimited at the front by a non-word character.
+   */
+  public static final String ALIAS_FRONT_DELIMITER = "(?<=\\b)";
+
+  /**
+   * Aliases within SQL expressions are delimited at the rear by a non-word character, followed by
+   * an even number of quotes between that and the end of the string (i.e. we don't match anything
+   * in quotes).
+   *
+   * See: https://stackoverflow.com/a/6464500
+   */
+  public static final String ALIAS_REAR_DELIMITER = "(?=\\b([^']*'[^']*')*[^']*$)";
+
+  /**
    * A SQL expression that can be used to execute this join in support of a query.
    */
   private String sql;
@@ -72,7 +86,7 @@ public class Join implements Comparable<Join> {
     for (Join currentJoin : joinsReversed) {
       if (currentJoin.getTableAlias() != null && currentJoin.getAliasTarget() != null) {
         newSql = newSql
-            .replaceAll("(?<=\\b)" + currentJoin.getAliasTarget() + "(?=\\b)",
+            .replaceAll(ALIAS_FRONT_DELIMITER + currentJoin.getAliasTarget() + ALIAS_REAR_DELIMITER,
                 currentJoin.getTableAlias());
       }
     }
@@ -94,7 +108,7 @@ public class Join implements Comparable<Join> {
     for (Join currentJoin : joins) {
       if (currentJoin.getTableAlias() != null && currentJoin.getAliasTarget() != null) {
         newSql = newSql
-            .replaceAll("(?<=\\b)" + currentJoin.getTableAlias() + "(?=\\b)",
+            .replaceAll(ALIAS_FRONT_DELIMITER + currentJoin.getTableAlias() + ALIAS_REAR_DELIMITER,
                 currentJoin.getAliasTarget());
       }
     }

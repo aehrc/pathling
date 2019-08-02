@@ -51,7 +51,7 @@ public class MemberInvocation implements ExpressionFunction {
 
     // Resolve the path of the expression and add it to the result.
     try {
-      String path = inputResult.getPathTraversal().getPath() + "." + result.getFhirPath();
+      String path = inputResult.getPathTraversal().getPath() + "." + input.getExpression();
       result.setPathTraversal(PathResolver.resolvePath(path));
     } catch (ResourceNotKnownException | ElementNotKnownException e) {
       throw new InvalidRequestException(e.getMessage());

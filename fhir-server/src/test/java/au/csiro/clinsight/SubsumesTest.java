@@ -149,10 +149,11 @@ public class SubsumesTest {
         + "  ]\n"
         + "}\n";
 
-    String expectedSql1 = "SELECT b.system, b.code "
+    String expectedSql1 = "SELECT DISTINCT b.system, b.code "
         + "FROM patient "
         + "LEFT JOIN condition a ON patient.id = a.subject.reference "
-        + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b";
+        + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b "
+        + "WHERE b.system IS NOT NULL AND b.code IS NOT NULL";
 
     String expectedSql2 =
         "SELECT patient.gender AS `Gender`, "
@@ -290,10 +291,11 @@ public class SubsumesTest {
         + "  \"resourceType\": \"Parameters\"\n"
         + "}";
 
-    String expectedSql1 = "SELECT b.system, b.code "
+    String expectedSql1 = "SELECT DISTINCT b.system, b.code "
         + "FROM patient "
         + "LEFT JOIN condition a ON patient.id = a.subject.reference "
-        + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b";
+        + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b "
+        + "WHERE b.system IS NOT NULL AND b.code IS NOT NULL";
 
     String expectedSql2 =
         "SELECT patient.gender AS `Gender`, "
@@ -307,20 +309,26 @@ public class SubsumesTest {
             + "LEFT JOIN condition a ON patient.id = a.subject.reference "
             + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b"
             + ") e ON patient.id = e.id "
-            + "LEFT JOIN closure_a245083 c "
-            + "ON 'http://snomed.info/sct' = c.sourceSystem "
-            + "AND '9859006' = c.sourceCode "
-            + "AND e.b.system = c.targetSystem "
-            + "AND e.b.code = c.targetCode "
+            + "LEFT JOIN closure_de8fc12 c "
+            + "ON 'http://snomed.info/sct' = c.targetSystem "
+            + "AND '44054006' = c.targetCode "
+            + "AND e.b.system = c.sourceSystem "
+            + "AND e.b.code = c.sourceCode "
             + "GROUP BY 1"
             + ") d ON patient.id = d.id "
             + "WHERE d.result "
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
-    Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(any())).thenReturn(mockDataset);
-    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+    Dataset mockDataset1 = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset1);
+    when(mockDataset1.collectAsList()).thenReturn(new ArrayList());
+
+    ConceptMap fakeConceptMap = new ConceptMap();
+    when(mockTerminologyClient.closure(any(), any(), any())).thenReturn(fakeConceptMap);
+
+    Dataset mockDataset2 = createMockDataset();
+    when(mockSpark.createDataset(any(List.class), any(Encoder.class))).thenReturn(mockDataset2);
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
@@ -357,7 +365,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|referral in $this.type).reverseResolve(Condition.context).verificationStatus\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|referral).reverseResolve(Condition.context).verificationStatus\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -370,7 +378,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|pre-investigation in $this.type).reverseResolve(Condition.context).verificationStatus\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|pre-investigation).reverseResolve(Condition.context).verificationStatus\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -383,7 +391,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|pre-investigation in $this.type).reverseResolve(Condition.context).code.subsumes(%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|referral in $this.type).reverseResolve(Condition.context).code)\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|pre-investigation).reverseResolve(Condition.context).code.subsumes(%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|referral).reverseResolve(Condition.context).code)\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -396,7 +404,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|post-investigation in $this.type).reverseResolve(Condition.context).verificationStatus\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|post-investigation).reverseResolve(Condition.context).verificationStatus\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -409,7 +417,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|post-investigation in $this.type).reverseResolve(Condition.context).code.subsumedBy(%resource.reverseResolve(Encounter.subject).where(https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type|pre-investigation in $this.type).reverseResolve(Condition.context).code)\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|post-investigation).reverseResolve(Condition.context).code.subsumedBy(%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|pre-investigation).reverseResolve(Condition.context).code)\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -421,30 +429,37 @@ public class SubsumesTest {
         + "  \"resourceType\": \"Parameters\"\n"
         + "}";
 
-    String expectedSql1 = "SELECT encounterConditionAsContextCodeCoding.system, "
-        + "encounterConditionAsContextCodeCoding.version, "
-        + "encounterConditionAsContextCodeCoding.code, "
-        + "encounterConditionAsContextCodeCoding.display, "
-        + "encounterConditionAsContextCodeCoding.userSelected "
+    String expectedSql1 = "SELECT y.system, y.code "
         + "FROM patient "
-        + "LEFT JOIN encounter patientEncounterAsSubject "
-        + "ON patient.id = patientEncounterAsSubject.subject.reference "
-        + "LEFT JOIN condition encounterConditionAsContext "
-        + "ON patientEncounterAsSubject.id = encounterConditionAsContext.context.reference "
-        + "LATERAL VIEW OUTER EXPLODE(encounterConditionAsContext.code.coding) encounterConditionAsContextCodeCoding AS encounterConditionAsContextCodeCoding "
+        + "LEFT JOIN ("
+        + "SELECT patient.id, "
+        + "IFNULL(MAX(o.system = 'https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0' AND o.code = 'pre-investigation'), FALSE) AS result "
+        + "FROM patient "
+        + "LEFT JOIN encounter m ON patient.id = m.subject.reference "
+        + "LATERAL VIEW OUTER EXPLODE(m.type) n AS n "
+        + "LATERAL VIEW OUTER EXPLODE(n.coding) o AS o "
+        + "GROUP BY 1"
+        + ") p ON patient.id = p.id "
+        + "LEFT JOIN encounter q ON patient.id = q.subject.reference AND p.result "
+        + "LEFT JOIN condition r ON q.id = r.context.reference "
+        + "LATERAL VIEW OUTER EXPLODE(r.code.coding) y AS y "
+        + "WHERE y.system IS NOT NULL AND y.code IS NOT NULL "
         + "UNION "
-        + "SELECT encounterProcedureRequestAsContextReasonCodeCoding.system, "
-        + "encounterProcedureRequestAsContextReasonCodeCoding.version, "
-        + "encounterProcedureRequestAsContextReasonCodeCoding.code, "
-        + "encounterProcedureRequestAsContextReasonCodeCoding.display, "
-        + "encounterProcedureRequestAsContextReasonCodeCoding.userSelected "
+        + "SELECT z.system, z.code "
         + "FROM patient "
-        + "LEFT JOIN encounter patientEncounterAsSubject "
-        + "ON patient.id = patientEncounterAsSubject.subject.reference "
-        + "LEFT JOIN procedurerequest encounterProcedureRequestAsContext "
-        + "ON patientEncounterAsSubject.id = encounterProcedureRequestAsContext.context.reference "
-        + "LATERAL VIEW OUTER EXPLODE(encounterProcedureRequestAsContext.reasonCode) encounterProcedureRequestAsContextReasonCode AS encounterProcedureRequestAsContextReasonCode "
-        + "LATERAL VIEW OUTER EXPLODE(encounterProcedureRequestAsContextReasonCode.coding) encounterProcedureRequestAsContextReasonCodeCoding AS encounterProcedureRequestAsContextReasonCodeCoding";
+        + "LEFT JOIN ("
+        + "SELECT patient.id, "
+        + "IFNULL(MAX(u.system = 'https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0' AND u.code = 'referral'), FALSE) AS result "
+        + "FROM patient "
+        + "LEFT JOIN encounter s ON patient.id = s.subject.reference "
+        + "LATERAL VIEW OUTER EXPLODE(s.type) t AS t "
+        + "LATERAL VIEW OUTER EXPLODE(t.coding) u AS u "
+        + "GROUP BY 1"
+        + ") v ON patient.id = v.id "
+        + "LEFT JOIN encounter w ON patient.id = w.subject.reference AND v.result "
+        + "LEFT JOIN condition x ON w.id = x.context.reference "
+        + "LATERAL VIEW OUTER EXPLODE(x.code.coding) z AS z "
+        + "WHERE z.system IS NOT NULL AND z.code IS NOT NULL";
 
     String expectedSql2 =
         "SELECT patientEncounterAsSubjectConditionAsContextReferralPreInvestigationClosureInResult.inResult AS `Pre-investigation diagnosis more specific than referral diagnosis?`, "
@@ -497,9 +512,15 @@ public class SubsumesTest {
             + "GROUP BY 1 "
             + "ORDER BY 1, 2";
 
-    Dataset mockDataset = createMockDataset();
-    when(mockSpark.sql(any())).thenReturn(mockDataset);
-    when(mockDataset.collectAsList()).thenReturn(new ArrayList());
+    Dataset mockDataset1 = createMockDataset();
+    when(mockSpark.sql(any())).thenReturn(mockDataset1);
+    when(mockDataset1.collectAsList()).thenReturn(new ArrayList());
+
+    ConceptMap fakeConceptMap = new ConceptMap();
+    when(mockTerminologyClient.closure(any(), any(), any())).thenReturn(fakeConceptMap);
+
+    Dataset mockDataset2 = createMockDataset();
+    when(mockSpark.createDataset(any(List.class), any(Encoder.class))).thenReturn(mockDataset2);
 
     HttpPost httpPost = postFhirResource(inParams, QUERY_URL);
     httpClient.execute(httpPost);
