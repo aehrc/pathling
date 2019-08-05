@@ -52,7 +52,6 @@ public class SubsumesTest {
   private Server server;
   private TerminologyClient mockTerminologyClient;
   private SparkSession mockSpark;
-  private Catalog mockCatalog;
   private CloseableHttpClient httpClient;
 
   @Before
@@ -61,9 +60,9 @@ public class SubsumesTest {
     mockSpark = mock(SparkSession.class);
     mockDefinitionRetrieval(mockTerminologyClient);
 
-    mockCatalog = mock(Catalog.class);
+    Catalog mockCatalog = mock(Catalog.class);
     when(mockSpark.catalog()).thenReturn(mockCatalog);
-    when(mockCatalog.tableExists(any(), any())).thenReturn(true);
+    when(mockCatalog.tableExists(any(), any())).thenReturn(false);
 
     AnalyticsServerConfiguration configuration = new AnalyticsServerConfiguration();
     configuration.setTerminologyClient(mockTerminologyClient);
@@ -162,16 +161,15 @@ public class SubsumesTest {
             + "LEFT JOIN ("
             + "SELECT patient.id, MAX(c.equivalence IN ('subsumes', 'equal')) AS result "
             + "FROM patient "
-            + "LEFT JOIN ("
-            + "SELECT patient.id, b.* FROM patient "
             + "LEFT JOIN condition a ON patient.id = a.subject.reference "
-            + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b"
-            + ") e ON patient.id = e.id "
+            + "LEFT JOIN ("
+            + "SELECT condition.id, b.* "
+            + "FROM condition "
+            + "LATERAL VIEW OUTER EXPLODE(condition.code.coding) b AS b"
+            + ") e ON a.id = e.id "
             + "LEFT JOIN closure_a245083 c "
-            + "ON e.b.system = c.targetSystem "
-            + "AND e.b.code = c.targetCode "
-            + "AND 'http://snomed.info/sct' = c.sourceSystem "
-            + "AND '9859006' = c.sourceCode "
+            + "ON e.b.system = c.targetSystem AND e.b.code = c.targetCode "
+            + "AND 'http://snomed.info/sct' = c.sourceSystem AND '9859006' = c.sourceCode "
             + "GROUP BY 1"
             + ") d ON patient.id = d.id "
             + "WHERE d.result "
@@ -304,16 +302,14 @@ public class SubsumesTest {
             + "LEFT JOIN ("
             + "SELECT patient.id, MAX(c.equivalence IN ('subsumes', 'equal')) AS result "
             + "FROM patient "
-            + "LEFT JOIN ("
-            + "SELECT patient.id, b.* FROM patient "
             + "LEFT JOIN condition a ON patient.id = a.subject.reference "
-            + "LATERAL VIEW OUTER EXPLODE(a.code.coding) b AS b"
-            + ") e ON patient.id = e.id "
+            + "LEFT JOIN ("
+            + "SELECT condition.id, b.* FROM condition "
+            + "LATERAL VIEW OUTER EXPLODE(condition.code.coding) b AS b"
+            + ") e ON a.id = e.id "
             + "LEFT JOIN closure_de8fc12 c "
-            + "ON 'http://snomed.info/sct' = c.targetSystem "
-            + "AND '44054006' = c.targetCode "
-            + "AND e.b.system = c.sourceSystem "
-            + "AND e.b.code = c.sourceCode "
+            + "ON 'http://snomed.info/sct' = c.targetSystem AND '44054006' = c.targetCode "
+            + "AND e.b.system = c.sourceSystem AND e.b.code = c.sourceCode "
             + "GROUP BY 1"
             + ") d ON patient.id = d.id "
             + "WHERE d.result "
@@ -391,7 +387,7 @@ public class SubsumesTest {
         + "      \"part\": [\n"
         + "        {\n"
         + "          \"name\": \"expression\",\n"
-        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|pre-investigation).reverseResolve(Condition.context).code.subsumes(%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|referral).reverseResolve(Condition.context).code)\"\n"
+        + "          \"valueString\": \"%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|pre-investigation).reverseResolve(Condition.context).code.subsumedBy(%resource.reverseResolve(Encounter.subject).where($this.type contains https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0|referral).reverseResolve(Condition.context).code)\"\n"
         + "        },\n"
         + "        {\n"
         + "          \"name\": \"label\",\n"
@@ -429,23 +425,7 @@ public class SubsumesTest {
         + "  \"resourceType\": \"Parameters\"\n"
         + "}";
 
-    String expectedSql1 = "SELECT y.system, y.code "
-        + "FROM patient "
-        + "LEFT JOIN ("
-        + "SELECT patient.id, "
-        + "IFNULL(MAX(o.system = 'https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0' AND o.code = 'pre-investigation'), FALSE) AS result "
-        + "FROM patient "
-        + "LEFT JOIN encounter m ON patient.id = m.subject.reference "
-        + "LATERAL VIEW OUTER EXPLODE(m.type) n AS n "
-        + "LATERAL VIEW OUTER EXPLODE(n.coding) o AS o "
-        + "GROUP BY 1"
-        + ") p ON patient.id = p.id "
-        + "LEFT JOIN encounter q ON patient.id = q.subject.reference AND p.result "
-        + "LEFT JOIN condition r ON q.id = r.context.reference "
-        + "LATERAL VIEW OUTER EXPLODE(r.code.coding) y AS y "
-        + "WHERE y.system IS NOT NULL AND y.code IS NOT NULL "
-        + "UNION "
-        + "SELECT z.system, z.code "
+    String expectedSql1 = "SELECT DISTINCT y.system, y.code "
         + "FROM patient "
         + "LEFT JOIN ("
         + "SELECT patient.id, "
@@ -458,10 +438,57 @@ public class SubsumesTest {
         + ") v ON patient.id = v.id "
         + "LEFT JOIN encounter w ON patient.id = w.subject.reference AND v.result "
         + "LEFT JOIN condition x ON w.id = x.context.reference "
-        + "LATERAL VIEW OUTER EXPLODE(x.code.coding) z AS z "
+        + "LATERAL VIEW OUTER EXPLODE(x.code.coding) y AS y "
+        + "WHERE y.system IS NOT NULL AND y.code IS NOT NULL "
+        + "UNION "
+        + "SELECT DISTINCT z.system, z.code "
+        + "FROM patient "
+        + "LEFT JOIN ("
+        + "SELECT patient.id, IFNULL(MAX(o.system = 'https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0' AND o.code = 'pre-investigation'), FALSE) AS result "
+        + "FROM patient "
+        + "LEFT JOIN encounter m ON patient.id = m.subject.reference "
+        + "LATERAL VIEW OUTER EXPLODE(m.type) n AS n "
+        + "LATERAL VIEW OUTER EXPLODE(n.coding) o AS o "
+        + "GROUP BY 1"
+        + ") p ON patient.id = p.id "
+        + "LEFT JOIN encounter q ON patient.id = q.subject.reference AND p.result "
+        + "LEFT JOIN condition r ON q.id = r.context.reference "
+        + "LATERAL VIEW OUTER EXPLODE(r.code.coding) z AS z "
         + "WHERE z.system IS NOT NULL AND z.code IS NOT NULL";
 
-    String expectedSql2 =
+    String expectedSql2 = "SELECT DISTINCT av.system, av.code "
+        + "FROM patient "
+        + "LEFT JOIN ("
+        + "SELECT patient.id, "
+        + "IFNULL(MAX(ar.system = 'https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0' AND ar.code = 'pre-investigation'), FALSE) AS result "
+        + "FROM patient "
+        + "LEFT JOIN encounter ap ON patient.id = ap.subject.reference "
+        + "LATERAL VIEW OUTER EXPLODE(ap.type) aq AS aq "
+        + "LATERAL VIEW OUTER EXPLODE(aq.coding) ar AS ar "
+        + "GROUP BY 1"
+        + ") as ON patient.id = as.id "
+        + "LEFT JOIN encounter at ON patient.id = at.subject.reference AND as.result "
+        + "LEFT JOIN condition au ON at.id = au.context.reference "
+        + "LATERAL VIEW OUTER EXPLODE(au.code.coding) av AS av "
+        + "WHERE av.system IS NOT NULL AND av.code IS NOT NULL "
+        + "UNION "
+        + "SELECT DISTINCT aw.system, aw.code "
+        + "FROM patient "
+        + "LEFT JOIN ("
+        + "SELECT patient.id, "
+        + "IFNULL(MAX(al.system = 'https://csiro.au/fhir/CodeSystem/kidgen-pilot-encounter-type-0' AND al.code = 'post-investigation'), FALSE) AS result "
+        + "FROM patient "
+        + "LEFT JOIN encounter aj ON patient.id = aj.subject.reference "
+        + "LATERAL VIEW OUTER EXPLODE(aj.type) ak AS ak "
+        + "LATERAL VIEW OUTER EXPLODE(ak.coding) al AS al "
+        + "GROUP BY 1"
+        + ") am ON patient.id = am.id "
+        + "LEFT JOIN encounter an ON patient.id = an.subject.reference AND am.result "
+        + "LEFT JOIN condition ao ON an.id = ao.context.reference "
+        + "LATERAL VIEW OUTER EXPLODE(ao.code.coding) aw AS aw "
+        + "WHERE aw.system IS NOT NULL AND aw.code IS NOT NULL";
+
+    String expectedSql3 =
         "SELECT patientEncounterAsSubjectConditionAsContextReferralPreInvestigationClosureInResult.inResult AS `Pre-investigation diagnosis more specific than referral diagnosis?`, "
             + "COUNT(DISTINCT patient.id) AS `Number of patients` "
             + "FROM patient "
@@ -528,6 +555,7 @@ public class SubsumesTest {
     verify(mockSpark).sql("USE clinsight");
     verify(mockSpark).sql(expectedSql1);
     verify(mockSpark).sql(expectedSql2);
+    verify(mockSpark).sql(expectedSql3);
   }
 
   @After

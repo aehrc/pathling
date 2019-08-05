@@ -7,7 +7,7 @@ package au.csiro.clinsight.query.functions;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
-import static au.csiro.clinsight.query.parsing.Join.wrapUpstreamJoins;
+import static au.csiro.clinsight.query.parsing.Join.wrapLateralViews;
 import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.CODING;
 import static au.csiro.clinsight.utilities.Strings.singleQuote;
 
@@ -133,7 +133,7 @@ public class SubsumesFunction implements ExpressionFunction {
     // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
     // view within a query.
     if (!innerJoins.isEmpty() && innerJoins.last().getJoinType() == LATERAL_VIEW) {
-      SortedSet<Join> wrappedJoins = wrapUpstreamJoins(innerJoins,
+      SortedSet<Join> wrappedJoins = wrapLateralViews(innerJoins,
           context.getAliasGenerator().getAlias(), context.getFromTable());
       innerJoins.clear();
       innerJoins.addAll(wrappedJoins);
@@ -215,6 +215,17 @@ public class SubsumesFunction implements ExpressionFunction {
             : inputQuery != null
                 ? inputQuery : argumentQuery;
 
+    // The hash used for the closure table name is based upon the concatenation of the FHIRPath
+    // expressions for input and argument.
+    String closureHash = Strings.md5(inputResult.getFhirPath() + argument.getFhirPath())
+        .substring(0, 7);
+    String closureName = "closure_" + closureHash;
+
+    // Skip the rest if the table already exists.
+    if (spark.catalog().tableExists(input.getContext().getDatabaseName(), closureName)) {
+      return closureName;
+    }
+
     // If needed, execute the query to get the codes, and collect them into a list of Coding
     // objects.
     if (inputQuery != null || argumentQuery != null) {
@@ -226,10 +237,6 @@ public class SubsumesFunction implements ExpressionFunction {
 
     // Execute a closure operation using the set of Codings.
     TerminologyClient terminologyClient = input.getContext().getTerminologyClient();
-    String codingHashSource = codings.stream().map(coding -> coding.getSystem() + coding.getCode())
-        .collect(Collectors.joining());
-    String codingHash = Strings.md5(codingHashSource).substring(0, 7);
-    String closureName = "closure_" + codingHash;
     terminologyClient.closure(new StringType(closureName), null, null);
     ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
 
@@ -264,6 +271,7 @@ public class SubsumesFunction implements ExpressionFunction {
 
   private ParseResult validateInput(ExpressionFunctionInput input) {
     ParseResult inputResult = input.getInput();
+    String inputFhirPath = inputResult.getFhirPath();
     if (inputResult.getFhirPathType() == CODING) {
       return inputResult;
     }
@@ -280,12 +288,14 @@ public class SubsumesFunction implements ExpressionFunction {
       memberInvocationInput.setExpression("coding");
       memberInvocationInput.setInput(inputResult);
       inputResult = new MemberInvocation().invoke(memberInvocationInput);
+      inputResult.setFhirPath(inputFhirPath + ".coding");
       return inputResult;
     }
   }
 
   private ParseResult validateArgument(ExpressionFunctionInput input) {
     ParseResult argument = input.getArguments().get(0);
+    String argumentFhirPath = argument.getFhirPath();
     if (argument.getFhirPathType() == CODING) {
       return argument;
     }
@@ -301,6 +311,7 @@ public class SubsumesFunction implements ExpressionFunction {
       memberInvocationInput.setExpression("coding");
       memberInvocationInput.setInput(argument);
       argument = new MemberInvocation().invoke(memberInvocationInput);
+      argument.setFhirPath(argumentFhirPath + ".coding");
       return argument;
     }
   }

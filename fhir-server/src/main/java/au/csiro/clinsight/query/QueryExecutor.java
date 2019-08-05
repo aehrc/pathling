@@ -108,6 +108,8 @@ public class QueryExecutor {
       return queryResultFromDataset(result, query, queryPlan);
 
     } catch (BaseServerResponseException e) {
+      // Errors relating to invalid input are re-raised, to be dealt with by HAPI.
+      logger.warn("Invalid request", e);
       throw e;
     } catch (Exception | AssertionError e) {
       // All unexpected exceptions get logged and wrapped in a 500 for presenting back to the user.

@@ -8,10 +8,7 @@ import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
-import java.util.Collections;
-import java.util.Objects;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
@@ -119,16 +116,29 @@ public class Join implements Comparable<Join> {
   /**
    * Wrap a set of joins in an inline query and LEFT JOIN to it.
    */
-  public static SortedSet<Join> wrapUpstreamJoins(SortedSet<Join> joins, String joinAlias,
-      String fromTable) {
+  private static Join wrapViews(SortedSet<Join> joins, String joinAlias, String fromTable) {
     Join lastLateralView = joins.last();
+    Join upstreamDependency = joins.first().getDependsUpon();
+    SortedSet<Join> upstreamDependencySet = new TreeSet<>();
+    if (upstreamDependency != null) {
+      fromTable = upstreamDependency.getAliasTarget();
+      upstreamDependencySet.add(upstreamDependency);
+    }
+
     String joinExpression =
         "LEFT JOIN (SELECT " + fromTable + ".id, " + lastLateralView.getTableAlias() + ".* FROM "
             + fromTable + " ";
     joinExpression += joins.stream()
-        .map(Join::getSql)
+        .map(join -> upstreamDependency != null
+            ? unwindJoinAliases(join.getSql(), upstreamDependencySet)
+            : join.getSql())
         .collect(Collectors.joining(" "));
-    joinExpression += ") " + joinAlias + " ON " + fromTable + ".id = " + joinAlias + ".id";
+
+    String joinCondition = fromTable + ".id = " + joinAlias + ".id";
+    if (upstreamDependency != null) {
+      joinCondition = rewriteSqlWithJoinAliases(joinCondition, upstreamDependencySet);
+    }
+    joinExpression += ") " + joinAlias + " ON " + joinCondition;
 
     // Build a new Join object to replace the group of lateral views.
     Join newJoin = new Join();
@@ -138,8 +148,43 @@ public class Join implements Comparable<Join> {
     newJoin.setAliasTarget(lastLateralView.getAliasTarget());
     newJoin.setTargetElement(lastLateralView.getTargetElement());
 
+    return newJoin;
+  }
+
+  /**
+   * Takes a set of views and wraps the set of lateral views that start from the end of this set,
+   * and are dependent on one another. This is preparation for appending a left join to the set of
+   * joins, which is not allowed directly against a lateral view in Spark SQL.
+   */
+  public static SortedSet<Join> wrapLateralViews(SortedSet<Join> joins, String joinAlias,
+      String fromTable) {
+    SortedSet<Join> joinsToWrap = new TreeSet<>();
+    Join cursor = joins.last();
+    while (cursor != null && cursor.getJoinType() == LATERAL_VIEW) {
+      joinsToWrap.add(cursor);
+      cursor = cursor.getDependsUpon();
+    }
+    Join wrappedViews = wrapViews(joinsToWrap, joinAlias, fromTable);
+    wrappedViews.setDependsUpon(cursor);
+    SortedSet<Join> result = new TreeSet<>(joins);
+    result.removeAll(joinsToWrap);
+    result.add(wrappedViews);
+    return result;
+  }
+
+  /**
+   * Recursively retrieves dependency chains from a list of joins.
+   */
+  private static SortedSet<Join> getAllDependents(Map<Join, List<Join>> joinsToDependents,
+      List<Join> joins) {
     SortedSet<Join> result = new TreeSet<>();
-    result.add(newJoin);
+    for (Join join : joins) {
+      List<Join> dependents = joinsToDependents.get(join);
+      result.add(join);
+      if (dependents != null) {
+        result.addAll(getAllDependents(joinsToDependents, dependents));
+      }
+    }
     return result;
   }
 
@@ -147,7 +192,7 @@ public class Join implements Comparable<Join> {
     return sql;
   }
 
-  public void setSql(@Nonnull String sql) {
+  public void setSql(String sql) {
     this.sql = sql;
   }
 
@@ -155,7 +200,7 @@ public class Join implements Comparable<Join> {
     return joinType;
   }
 
-  public void setJoinType(@Nonnull JoinType joinType) {
+  public void setJoinType(JoinType joinType) {
     this.joinType = joinType;
   }
 
@@ -163,7 +208,7 @@ public class Join implements Comparable<Join> {
     return tableAlias;
   }
 
-  public void setTableAlias(@Nonnull String tableAlias) {
+  public void setTableAlias(String tableAlias) {
     this.tableAlias = tableAlias;
   }
 
@@ -179,7 +224,7 @@ public class Join implements Comparable<Join> {
     return targetElement;
   }
 
-  public void setTargetElement(@Nonnull ElementDefinition targetElement) {
+  public void setTargetElement(ElementDefinition targetElement) {
     this.targetElement = targetElement;
   }
 
@@ -187,7 +232,7 @@ public class Join implements Comparable<Join> {
     return dependsUpon;
   }
 
-  public void setDependsUpon(@Nonnull Join dependsUpon) {
+  public void setDependsUpon(Join dependsUpon) {
     this.dependsUpon = dependsUpon;
   }
 

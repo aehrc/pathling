@@ -7,7 +7,7 @@ package au.csiro.clinsight.query.functions;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
-import static au.csiro.clinsight.query.parsing.Join.wrapUpstreamJoins;
+import static au.csiro.clinsight.query.parsing.Join.wrapLateralViews;
 import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.STRING;
 
 import au.csiro.clinsight.TerminologyClient;
@@ -92,7 +92,7 @@ public class MemberOfFunction implements ExpressionFunction {
     // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
     // view within a query.
     if (!innerJoins.isEmpty() && innerJoins.last().getJoinType() == LATERAL_VIEW) {
-      SortedSet<Join> wrappedJoins = wrapUpstreamJoins(innerJoins,
+      SortedSet<Join> wrappedJoins = wrapLateralViews(innerJoins,
           context.getAliasGenerator().getAlias(), context.getFromTable());
       innerJoins.clear();
       innerJoins.addAll(wrappedJoins);

@@ -141,7 +141,9 @@ public class MembershipExpression implements ExpressionFunction {
       memberInvocationInput.setExpression("coding");
       memberInvocationInput.setInput(left);
       memberInvocationInput.setContext(context);
+      String leftFhirPath = left.getFhirPath();
       left = new MemberInvocation().invoke(memberInvocationInput);
+      left.setFhirPath(leftFhirPath + ".coding");
     }
 
     return left;
@@ -174,7 +176,9 @@ public class MembershipExpression implements ExpressionFunction {
       memberInvocationInput.setExpression("coding");
       memberInvocationInput.setInput(right);
       memberInvocationInput.setContext(context);
+      String rightFhirPath = right.getFhirPath();
       right = new MemberInvocation().invoke(memberInvocationInput);
+      right.setFhirPath(rightFhirPath + ".coding");
     }
 
     return right;
