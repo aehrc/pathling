@@ -103,12 +103,12 @@ public class ReverseResolveFunction implements ExpressionFunction {
 
     // Build the candidate set of joins.
     SortedSet<Join> joins = new TreeSet<>(inputResult.getJoins());
+    // Rewrite the new join expression to take account of aliases within the input joins.
+    joinExpression = rewriteSqlWithJoinAliases(joinExpression, joins);
     // If there is a filter to be applied and the join dependencies were not rolled into the new join, they will need to be added here.
     if (input.getFilter() != null && upstreamJoins.isEmpty()) {
       joins.addAll(input.getFilterJoins());
     }
-    // Rewrite the new join expression to take account of aliases within the input joins.
-    joinExpression = rewriteSqlWithJoinAliases(joinExpression, joins);
 
     // Build new Join.
     Join reverseResolveJoin = new Join();
