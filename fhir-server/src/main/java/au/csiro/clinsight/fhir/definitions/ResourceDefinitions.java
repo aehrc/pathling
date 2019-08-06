@@ -10,14 +10,12 @@ import au.csiro.clinsight.TerminologyClient;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.google.common.collect.Sets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import org.hl7.fhir.dstu3.model.CodeSystem;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.StructureDefinition;
 import org.slf4j.Logger;
@@ -82,6 +80,7 @@ public abstract class ResourceDefinitions {
   private static Map<String, Map<String, ElementDefinition>> complexTypeElements = new HashMap<>();
   private static Map<String, StructureDefinition> resources = new HashMap<>();
   private static Map<String, StructureDefinition> complexTypes = new HashMap<>();
+  private static Set<String> knownCodeSystems = new HashSet<>();
   private static ResourceDefinitionsStatus status = UNINITIALISED;
 
   /**
@@ -120,10 +119,17 @@ public abstract class ResourceDefinitions {
       resourceElements = ResourceScanner.summariseDefinitions(resources.values());
       complexTypeElements = ResourceScanner.summariseDefinitions(complexTypes.values());
 
+      // Query all known code systems from the server.
+      List<CodeSystem> codeSystems = terminologyClient.getAllCodeSystems(Sets.newHashSet("url"));
+      for (CodeSystem codeSystem : codeSystems) {
+        knownCodeSystems.add(codeSystem.getUrl());
+      }
+
       // Success! The status can be updated to INITIALISED.
       status = INITIALISED;
       logger.info(resources.size() + " resource definitions and " + complexTypes.size()
           + " complex type definitions scanned");
+      logger.info(knownCodeSystems.size() + " code systems scanned");
     } catch (FhirClientConnectionException e) {
       // If there is a problem connecting to the terminology server, retry the connection using
       // progressive back off function.
@@ -183,19 +189,15 @@ public abstract class ResourceDefinitions {
   }
 
   /**
-   * Check if the supplied FHIR type code corresponds to a supported complex type.
-   */
-  public static boolean isComplex(@Nonnull String fhirType) {
-    checkInitialised();
-    return supportedComplexTypes.contains(fhirType);
-  }
-
-  /**
    * Checks if the supplied FHIR type code looks like a resource name.
    */
   public static boolean isResource(@Nonnull String fhirType) {
     char firstChar = fhirType.charAt(0);
     return Character.isUpperCase(firstChar);
+  }
+
+  public static boolean isCodeSystemKnown(@Nonnull String url) {
+    return knownCodeSystems.contains(url);
   }
 
   public enum ResourceDefinitionsStatus {

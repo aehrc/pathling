@@ -21,6 +21,9 @@ public interface TerminologyClient extends IBasicClient {
   @Read
   StructureDefinition getStructureDefinitionById(@IdParam IdType theId);
 
+  @Search
+  List<CodeSystem> getAllCodeSystems(@Elements Set<String> theElements);
+
   @Operation(name = "$expand", type = ValueSet.class)
   ValueSet expandValueSet(@OperationParam(name = "url") UriType url);
 

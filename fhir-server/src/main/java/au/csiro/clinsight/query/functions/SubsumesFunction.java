@@ -4,6 +4,7 @@
 
 package au.csiro.clinsight.query.functions;
 
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isCodeSystemKnown;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.Join.wrapLateralViews;
@@ -260,6 +261,12 @@ public class SubsumesFunction implements ExpressionFunction {
     TerminologyClient terminologyClient = input.getContext().getTerminologyClient();
     List<Mapping> mappings = new ArrayList<>();
     for (String codeSystem : codingsBySystem.keySet()) {
+      // If the code system is not known, skip adding its codings to the closure.
+      if (!isCodeSystemKnown(codeSystem)) {
+        continue;
+      }
+
+      // Get the codings for this code system.
       List<Coding> codings = codingsBySystem.get(codeSystem);
 
       // Create a unique name for the closure table for this code system.
@@ -310,7 +317,7 @@ public class SubsumesFunction implements ExpressionFunction {
     String typeCode = inputResult.getPathTraversal().getElementDefinition().getTypeCode();
     if (!typeCode.equals("CodeableConcept")) {
       throw new InvalidRequestException(
-          "Argument to " + functionName + " function must be Coding or CodeableConcept: "
+          "Input to " + functionName + " function must be Coding or CodeableConcept: "
               + inputResult
               .getFhirPath());
     } else {
