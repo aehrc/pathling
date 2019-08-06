@@ -24,7 +24,7 @@ public interface TerminologyClient extends IBasicClient {
   @Operation(name = "$expand", type = ValueSet.class)
   ValueSet expandValueSet(@OperationParam(name = "url") UriType url);
 
-  @Operation(name = "$closure", type = ConceptMap.class)
+  @Operation(name = "$closure")
   ConceptMap closure(@OperationParam(name = "name") StringType name,
       @OperationParam(name = "concept") List<Coding> concept,
       @OperationParam(name = "version") StringType version);
