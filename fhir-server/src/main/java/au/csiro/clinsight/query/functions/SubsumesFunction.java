@@ -293,6 +293,7 @@ public class SubsumesFunction implements ExpressionFunction {
             mapping.setSourceCode(element.getCode());
             mapping.setTargetSystem(targetSystem);
             mapping.setTargetCode(target.getCode());
+            mapping.setEquivalence(target.getEquivalence().toCode());
             mappings.add(mapping);
           }
         }
