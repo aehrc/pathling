@@ -9,6 +9,7 @@ import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
@@ -64,7 +65,7 @@ public class Join implements Comparable<Join> {
    * An upstream join that this join depends upon. This is used for ordering joins properly within a
    * query.
    */
-  private Join dependsUpon;
+  private SortedSet<Join> dependsUpon = new TreeSet<>();
 
   /**
    * Replaces alias targets within a SQL expression with aliases found within the supplied set of
@@ -118,25 +119,24 @@ public class Join implements Comparable<Join> {
    */
   private static Join wrapViews(SortedSet<Join> joins, String joinAlias, String fromTable) {
     Join lastLateralView = joins.last();
-    Join upstreamDependency = joins.first().getDependsUpon();
-    SortedSet<Join> upstreamDependencySet = new TreeSet<>();
-    if (upstreamDependency != null) {
-      fromTable = upstreamDependency.getAliasTarget();
-      upstreamDependencySet.add(upstreamDependency);
+    SortedSet<Join> upstreamDependencies = joins.first().getDependsUpon();
+    if (!upstreamDependencies.isEmpty()) {
+      assert upstreamDependencies.size() == 1;
+      fromTable = upstreamDependencies.first().getAliasTarget();
     }
 
     String joinExpression =
         "LEFT JOIN (SELECT " + fromTable + ".id, " + lastLateralView.getTableAlias() + ".* FROM "
             + fromTable + " ";
     joinExpression += joins.stream()
-        .map(join -> upstreamDependency != null
-            ? unwindJoinAliases(join.getSql(), upstreamDependencySet)
-            : join.getSql())
+        .map(join -> upstreamDependencies.isEmpty()
+            ? join.getSql()
+            : unwindJoinAliases(join.getSql(), upstreamDependencies))
         .collect(Collectors.joining(" "));
 
     String joinCondition = fromTable + ".id = " + joinAlias + ".id";
-    if (upstreamDependency != null) {
-      joinCondition = rewriteSqlWithJoinAliases(joinCondition, upstreamDependencySet);
+    if (!upstreamDependencies.isEmpty()) {
+      joinCondition = rewriteSqlWithJoinAliases(joinCondition, upstreamDependencies);
     }
     joinExpression += ") " + joinAlias + " ON " + joinCondition;
 
@@ -145,7 +145,7 @@ public class Join implements Comparable<Join> {
     newJoin.setSql(joinExpression);
     newJoin.setJoinType(LEFT_JOIN);
     newJoin.setTableAlias(joinAlias + "." + lastLateralView.getTableAlias());
-    newJoin.setAliasTarget(lastLateralView.getAliasTarget());
+    newJoin.setAliasTarget(lastLateralView.getTableAlias());
     newJoin.setTargetElement(lastLateralView.getTargetElement());
 
     return newJoin;
@@ -156,35 +156,23 @@ public class Join implements Comparable<Join> {
    * and are dependent on one another. This is preparation for appending a left join to the set of
    * joins, which is not allowed directly against a lateral view in Spark SQL.
    */
-  public static SortedSet<Join> wrapLateralViews(SortedSet<Join> joins, String joinAlias,
-      String fromTable) {
-    SortedSet<Join> joinsToWrap = new TreeSet<>();
-    Join cursor = joins.last();
-    while (cursor != null && cursor.getJoinType() == LATERAL_VIEW) {
-      joinsToWrap.add(cursor);
-      cursor = cursor.getDependsUpon();
-    }
-    Join wrappedViews = wrapViews(joinsToWrap, joinAlias, fromTable);
-    wrappedViews.setDependsUpon(cursor);
+  public static SortedSet<Join> wrapLateralViews(SortedSet<Join> joins, Join subject,
+      AliasGenerator aliasGenerator, String fromTable) {
     SortedSet<Join> result = new TreeSet<>(joins);
-    result.removeAll(joinsToWrap);
-    result.add(wrappedViews);
-    return result;
-  }
+    List<SortedSet<Join>> dependencySets = subject
+        .getDependencySets(join -> join.getJoinType() == LATERAL_VIEW);
+    subject.getDependsUpon().clear();
 
-  /**
-   * Recursively retrieves dependency chains from a list of joins.
-   */
-  private static SortedSet<Join> getAllDependents(Map<Join, List<Join>> joinsToDependents,
-      List<Join> joins) {
-    SortedSet<Join> result = new TreeSet<>();
-    for (Join join : joins) {
-      List<Join> dependents = joinsToDependents.get(join);
-      result.add(join);
-      if (dependents != null) {
-        result.addAll(getAllDependents(joinsToDependents, dependents));
-      }
+    for (SortedSet<Join> joinsToWrap : dependencySets) {
+      Join wrappedViews = wrapViews(joinsToWrap, aliasGenerator.getAlias(), fromTable);
+      subject.getDependsUpon().add(wrappedViews);
+      result.removeAll(joinsToWrap);
+      result.add(wrappedViews);
     }
+
+    // Rewrite the SQL expression within the subject join to take account of the new aliases.
+    subject.setSql(rewriteSqlWithJoinAliases(subject.getSql(), subject.getDependsUpon()));
+
     return result;
   }
 
@@ -228,11 +216,11 @@ public class Join implements Comparable<Join> {
     this.targetElement = targetElement;
   }
 
-  public Join getDependsUpon() {
+  public SortedSet<Join> getDependsUpon() {
     return dependsUpon;
   }
 
-  public void setDependsUpon(Join dependsUpon) {
+  public void setDependsUpon(SortedSet<Join> dependsUpon) {
     this.dependsUpon = dependsUpon;
   }
 
@@ -256,27 +244,64 @@ public class Join implements Comparable<Join> {
 
     // Walk the dependencies upwards from the second join. If it is dependent on the first join,
     // return "less than".
-    Join cursor = j;
-    while (cursor != null && cursor.getDependsUpon() != null) {
-      if (cursor.getDependsUpon().equals(this)) {
-        return -1;
-      }
-      cursor = cursor.getDependsUpon();
+    if (j.isDependentOn(this)) {
+      return -1;
     }
 
     // Walk the dependencies upwards from the first join. If it is dependent on the second join,
     // return "greater than".
-    cursor = this;
-    while (cursor != null && cursor.getDependsUpon() != null) {
-      if (cursor.getDependsUpon().equals(j)) {
-        return 1;
-      }
-      cursor = cursor.getDependsUpon();
+    if (isDependentOn(j)) {
+      return 1;
     }
 
     // If neither join is transitively dependent on the other, look at the join type. If the second
     // join is a lateral view, return "less than".
     return j.getJoinType() == LATERAL_VIEW ? -1 : 1;
+  }
+
+  /**
+   * Recursively finds a join within this join's dependencies.
+   */
+  private boolean isDependentOn(Join target) {
+    for (Join dependency : dependsUpon) {
+      if (dependency.equals(target)) {
+        return true;
+      } else if (dependency.isDependentOn(target)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Returns a set for each join this join depends upon that matches the predicate. Each set will
+   * contain the contiguous upstream dependencies from that point which match the predicate.
+   */
+  private List<SortedSet<Join>> getDependencySets(Predicate<Join> predicate) {
+    List<SortedSet<Join>> result = new ArrayList<>();
+    for (Join dependency : dependsUpon) {
+      if (predicate.test(dependency)) {
+        SortedSet<Join> dependencySet = dependency.getAllDependencies(predicate);
+        dependencySet.add(dependency);
+        result.add(dependencySet);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Recursively retrieves all upstream dependencies for this join. The predicate limits both the
+   * dependencies that are returned, and those that will be traversed.
+   */
+  private SortedSet<Join> getAllDependencies(Predicate<Join> predicate) {
+    SortedSet<Join> result = new TreeSet<>();
+    for (Join dependency : dependsUpon) {
+      if (predicate.test(dependency)) {
+        result.add(dependency);
+        result.addAll(dependency.getAllDependencies(predicate));
+      }
+    }
+    return result;
   }
 
   /**
@@ -311,7 +336,7 @@ public class Join implements Comparable<Join> {
     /**
      * LEFT_JOIN - a regular left outer join.
      */
-    LEFT_JOIN;
+    LEFT_JOIN
   }
 
 }

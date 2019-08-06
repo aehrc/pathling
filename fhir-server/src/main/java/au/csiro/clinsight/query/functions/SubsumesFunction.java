@@ -4,7 +4,6 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.Join.wrapLateralViews;
@@ -13,6 +12,7 @@ import static au.csiro.clinsight.utilities.Strings.singleQuote;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.query.Mapping;
+import au.csiro.clinsight.query.parsing.AliasGenerator;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.Join.JoinType;
@@ -73,6 +73,7 @@ public class SubsumesFunction implements ExpressionFunction {
     ParseResult inputResult = inverted ? validateArgument(input) : validateInput(input);
     ParseResult argument = inverted ? validateInput(input) : validateArgument(input);
     ExpressionParserContext context = input.getContext();
+    AliasGenerator aliasGenerator = context.getAliasGenerator();
 
     String closureTableName = ensureClosureTableExists(input, inputResult, argument);
 
@@ -117,7 +118,10 @@ public class SubsumesFunction implements ExpressionFunction {
     closureJoin.setTableAlias(closureJoinAlias);
     closureJoin.setAliasTarget(closureTableName);
     if (!inputResult.getJoins().isEmpty()) {
-      closureJoin.setDependsUpon(inputResult.getJoins().last());
+      closureJoin.getDependsUpon().add(inputResult.getJoins().last());
+    }
+    if (!argument.getJoins().isEmpty()) {
+      closureJoin.getDependsUpon().add(argument.getJoins().last());
     }
 
     // Build the candidate set of inner joins.
@@ -129,17 +133,11 @@ public class SubsumesFunction implements ExpressionFunction {
       innerJoins.addAll(input.getFilterJoins());
     }
 
-    // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
-    // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
-    // view within a query.
-    if (!innerJoins.isEmpty() && innerJoins.last().getJoinType() == LATERAL_VIEW) {
-      SortedSet<Join> wrappedJoins = wrapLateralViews(innerJoins,
-          context.getAliasGenerator().getAlias(), context.getFromTable());
-      innerJoins.clear();
-      innerJoins.addAll(wrappedJoins);
-    }
     closureJoin.setSql(rewriteSqlWithJoinAliases(closureJoin.getSql(), innerJoins));
     innerJoins.add(closureJoin);
+
+    // Wrap any upstream dependencies of our new join which are lateral views.
+    innerJoins = wrapLateralViews(innerJoins, closureJoin, aliasGenerator, context.getFromTable());
 
     String wrapperJoinSql = "LEFT JOIN (";
     wrapperJoinSql += "SELECT " + context.getFromTable() + ".id, ";

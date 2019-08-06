@@ -6,7 +6,6 @@ package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.RESOURCE;
-import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.Join.wrapLateralViews;
@@ -16,6 +15,7 @@ import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
 import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
+import au.csiro.clinsight.query.parsing.AliasGenerator;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
@@ -59,10 +59,13 @@ public class ReverseResolveFunction implements ExpressionFunction {
     }
 
     ExpressionParserContext context = input.getContext();
-    String joinAlias = context.getAliasGenerator().getAlias();
+    AliasGenerator aliasGenerator = context.getAliasGenerator();
+
+    String joinAlias = aliasGenerator.getAlias();
     String targetResource = Strings.tokenizePath(argument.getFhirPath()).getFirst();
     String targetTable = targetResource.toLowerCase();
     String joinExpression;
+
     SortedSet<Join> upstreamJoins = argument.getJoins();
     if (upstreamJoins.isEmpty()) {
       String targetExpression = argument.getSql().replace(targetTable, joinAlias) + ".reference";
@@ -104,28 +107,22 @@ public class ReverseResolveFunction implements ExpressionFunction {
     if (input.getFilter() != null && upstreamJoins.isEmpty()) {
       joins.addAll(input.getFilterJoins());
     }
-    // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
-    // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
-    // view within a query.
-    if (!joins.isEmpty() && joins.last().getJoinType() == LATERAL_VIEW) {
-      SortedSet<Join> wrappedJoins = wrapLateralViews(joins,
-          context.getAliasGenerator().getAlias(), context.getFromTable());
-      joins.clear();
-      joins.addAll(wrappedJoins);
-    }
     // Rewrite the new join expression to take account of aliases within the input joins.
     joinExpression = rewriteSqlWithJoinAliases(joinExpression, joins);
 
     // Build new Join.
-    Join join = new Join();
-    join.setSql(joinExpression);
-    join.setJoinType(LEFT_JOIN);
-    join.setTableAlias(joinAlias);
-    join.setAliasTarget(targetTable);
+    Join reverseResolveJoin = new Join();
+    reverseResolveJoin.setSql(joinExpression);
+    reverseResolveJoin.setJoinType(LEFT_JOIN);
+    reverseResolveJoin.setTableAlias(joinAlias);
+    reverseResolveJoin.setAliasTarget(targetTable);
     if (!inputResult.getJoins().isEmpty()) {
-      join.setDependsUpon(inputResult.getJoins().last());
+      reverseResolveJoin.getDependsUpon().add(inputResult.getJoins().last());
     }
-    joins.add(join);
+    joins.add(reverseResolveJoin);
+
+    // Wrap any upstream dependencies of our new join which are lateral views.
+    joins = wrapLateralViews(joins, reverseResolveJoin, aliasGenerator, context.getFromTable());
 
     // Build new parse result.
     ParseResult result = new ParseResult();

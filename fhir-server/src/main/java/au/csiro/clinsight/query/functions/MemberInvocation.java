@@ -115,13 +115,13 @@ public class MemberInvocation implements ExpressionFunction {
           .filter(j ->
               j.getTargetElement() != null && j.getTargetElement().equals(previousTraversal))
           .findFirst()
-          .ifPresent(join::setDependsUpon);
+          .ifPresent(dependsUpon -> join.getDependsUpon().add(dependsUpon));
     }
     join.setAliasTarget(udtfExpression);
 
     // If this is not the first join, record a dependency between this join and the previous one.
     if (!result.getJoins().isEmpty()) {
-      join.setDependsUpon(result.getJoins().last());
+      join.getDependsUpon().add(result.getJoins().last());
     }
 
     // Build the SQL expression for the join.

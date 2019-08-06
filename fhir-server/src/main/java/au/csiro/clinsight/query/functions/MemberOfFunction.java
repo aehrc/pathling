@@ -4,7 +4,6 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
 import static au.csiro.clinsight.query.parsing.Join.wrapLateralViews;
@@ -12,6 +11,7 @@ import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.STRING;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.query.Code;
+import au.csiro.clinsight.query.parsing.AliasGenerator;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
 import au.csiro.clinsight.query.parsing.ParseResult;
@@ -45,6 +45,7 @@ public class MemberOfFunction implements ExpressionFunction {
     ParseResult inputResult = validateInput(input.getInput());
     ParseResult argument = validateArgument(input.getArguments());
     ExpressionParserContext context = input.getContext();
+    AliasGenerator aliasGenerator = context.getAliasGenerator();
 
     assert inputResult.getFhirPath() != null;
     assert argument.getFhirPath() != null;
@@ -60,8 +61,8 @@ public class MemberOfFunction implements ExpressionFunction {
 
     // Build a SQL expression representing the new subquery that provides the result of the ValueSet
     // membership test.
-    String valueSetJoinAlias = context.getAliasGenerator().getAlias();
-    String wrapperJoinAlias = context.getAliasGenerator().getAlias();
+    String valueSetJoinAlias = aliasGenerator.getAlias();
+    String wrapperJoinAlias = aliasGenerator.getAlias();
 
     // If this is a CodeableConcept, we need to update the input expression to the `coding`
     // member first.
@@ -84,20 +85,15 @@ public class MemberOfFunction implements ExpressionFunction {
     valueSetJoin.setJoinType(LEFT_JOIN);
     valueSetJoin.setTableAlias(valueSetJoinAlias);
     valueSetJoin.setAliasTarget(tableName);
-    valueSetJoin.setDependsUpon(inputResult.getJoins().last());
+    valueSetJoin.getDependsUpon().add(inputResult.getJoins().last());
 
     // Build the candidate set of inner joins.
     SortedSet<Join> innerJoins = new TreeSet<>(inputResult.getJoins());
     // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
     // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
     // view within a query.
-    if (!innerJoins.isEmpty() && innerJoins.last().getJoinType() == LATERAL_VIEW) {
-      SortedSet<Join> wrappedJoins = wrapLateralViews(innerJoins,
-          context.getAliasGenerator().getAlias(), context.getFromTable());
-      innerJoins.clear();
-      innerJoins.addAll(wrappedJoins);
-    }
     innerJoins.add(valueSetJoin);
+    innerJoins = wrapLateralViews(innerJoins, valueSetJoin, aliasGenerator, context.getFromTable());
 
     // If there is a filter to be applied as part of this invocation, add in its join dependencies.
     if (input.getFilter() != null) {
