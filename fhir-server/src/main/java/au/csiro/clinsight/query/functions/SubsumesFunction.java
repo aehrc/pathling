@@ -12,6 +12,7 @@ import static au.csiro.clinsight.utilities.Strings.singleQuote;
 
 import au.csiro.clinsight.TerminologyClient;
 import au.csiro.clinsight.query.Mapping;
+import au.csiro.clinsight.query.SqlRunner;
 import au.csiro.clinsight.query.parsing.AliasGenerator;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.Join;
@@ -189,6 +190,7 @@ public class SubsumesFunction implements ExpressionFunction {
       ParseResult argument) {
     String resourceTable = input.getContext().getFromTable();
     SparkSession spark = input.getContext().getSparkSession();
+    SqlRunner sqlRunner = input.getContext().getSqlRunner();
     List<Coding> codings = new ArrayList<>();
 
     // Get the set of codes from both the input and the argument.
@@ -227,7 +229,7 @@ public class SubsumesFunction implements ExpressionFunction {
     // If needed, execute the query to get the codes, and collect them into a list of Coding
     // objects.
     if (inputQuery != null || argumentQuery != null) {
-      List<Row> codeResults = spark.sql(query).collectAsList();
+      List<Row> codeResults = sqlRunner.run(query).collectAsList();
       codings.addAll(codeResults.stream()
           .map(row -> new Coding(row.getString(0), row.getString(1), null))
           .collect(Collectors.toList()));

@@ -5,6 +5,7 @@
 package au.csiro.clinsight.query.parsing;
 
 import au.csiro.clinsight.TerminologyClient;
+import au.csiro.clinsight.query.SqlRunner;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -52,6 +53,11 @@ public class ExpressionParserContext implements Cloneable {
    */
   private AliasGenerator aliasGenerator;
 
+  /**
+   * For running SQL queries from the parsing context.
+   */
+  private SqlRunner sqlRunner;
+
   public ExpressionParserContext() {
   }
 
@@ -63,6 +69,7 @@ public class ExpressionParserContext implements Cloneable {
     this.thisExpression = context.thisExpression;
     this.fromTable = context.fromTable;
     this.aliasGenerator = context.aliasGenerator;
+    this.sqlRunner = context.sqlRunner;
   }
 
   public TerminologyClient getTerminologyClient() {
@@ -120,4 +127,13 @@ public class ExpressionParserContext implements Cloneable {
   public void setAliasGenerator(AliasGenerator aliasGenerator) {
     this.aliasGenerator = aliasGenerator;
   }
+
+  public SqlRunner getSqlRunner() {
+    return sqlRunner;
+  }
+
+  public void setSqlRunner(SqlRunner sqlRunner) {
+    this.sqlRunner = sqlRunner;
+  }
+
 }

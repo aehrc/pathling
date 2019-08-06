@@ -43,6 +43,7 @@ public class QueryExecutor {
 
   private final QueryExecutorConfiguration configuration;
   private final FhirContext fhirContext;
+  private final SqlRunner sqlRunner;
   private SparkSession spark;
   private TerminologyClient terminologyClient;
 
@@ -61,7 +62,8 @@ public class QueryExecutor {
     this.fhirContext = fhirContext;
     initialiseSpark();
     initialiseResourceDefinitions();
-    spark.sql("USE " + configuration.getDatabaseName());
+    sqlRunner = new SqlRunner(spark, configuration.getExplainQueries());
+    sqlRunner.run("USE " + configuration.getDatabaseName());
   }
 
   private void initialiseResourceDefinitions() {
@@ -99,7 +101,7 @@ public class QueryExecutor {
   public AggregateQueryResult execute(AggregateQuery query) throws InvalidRequestException {
     try {
 
-      QueryPlanner queryPlanner = new QueryPlanner(terminologyClient, spark,
+      QueryPlanner queryPlanner = new QueryPlanner(terminologyClient, spark, sqlRunner,
           configuration.getDatabaseName(), query);
       QueryPlan queryPlan = queryPlanner.buildQueryPlan();
 
@@ -163,13 +165,7 @@ public class QueryExecutor {
     }
     String sql = String.join(" ", clauses);
 
-    logger.info("Executing query: " + sql);
-    if (configuration.getExplainQueries()) {
-      Dataset<Row> explain = spark.sql("EXPLAIN " + sql);
-      String queryPlanText = explain.collectAsList().get(0).getString(0);
-      logger.debug("Query plan: " + queryPlanText);
-    }
-    return spark.sql(sql);
+    return sqlRunner.run(sql);
   }
 
   /**

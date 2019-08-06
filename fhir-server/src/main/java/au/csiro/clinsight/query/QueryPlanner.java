@@ -38,8 +38,8 @@ class QueryPlanner {
   private final List<ParseResult> filterParseResults;
   private final ExpressionParser expressionParser;
 
-  QueryPlanner(@Nonnull TerminologyClient terminologyClient,
-      @Nonnull SparkSession spark, String databaseName, @Nonnull AggregateQuery query) {
+  QueryPlanner(@Nonnull TerminologyClient terminologyClient, @Nonnull SparkSession spark,
+      @Nonnull SqlRunner sqlRunner, String databaseName, @Nonnull AggregateQuery query) {
     List<Aggregation> aggregations = query.getAggregations();
     List<Grouping> groupings = query.getGroupings();
     List<String> filters = query.getFilters();
@@ -74,6 +74,7 @@ class QueryPlanner {
     context.setSubjectResource(subjectResource);
     context.setFromTable(fromTable);
     context.setAliasGenerator(new AliasGenerator());
+    context.setSqlRunner(sqlRunner);
 
     // Build a new expression parser, and parse all of the expressions within the query.
     expressionParser = new ExpressionParser(context);
