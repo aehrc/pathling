@@ -22,10 +22,7 @@ import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
 import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
 import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
@@ -188,23 +185,30 @@ public class SubsumesFunction implements ExpressionFunction {
    */
   private String ensureClosureTableExists(ExpressionFunctionInput input, ParseResult inputResult,
       ParseResult argument) {
-    String resourceTable = input.getContext().getFromTable();
     SparkSession spark = input.getContext().getSparkSession();
     SqlRunner sqlRunner = input.getContext().getSqlRunner();
-    List<Coding> codings = new ArrayList<>();
+    Map<String, List<Coding>> codingsBySystem = new HashMap<>();
 
     // Get the set of codes from both the input and the argument.
     String inputQuery = null;
     String argumentQuery = null;
     // If the input is a literal, harvest the code - otherwise we need to query for the codes.
     if (inputResult.getLiteralValue() != null) {
-      codings.add((Coding) inputResult.getLiteralValue());
+      Coding literalValue = (Coding) inputResult.getLiteralValue();
+      List<Coding> codings = Arrays.asList(literalValue);
+      codingsBySystem.put(literalValue.getSystem(), codings);
     } else {
       inputQuery = buildCodeQuery(inputResult, input);
     }
     // If the argument is a literal, harvest the code - otherwise we need to query for the codes.
     if (argument.getLiteralValue() != null) {
-      codings.add((Coding) argument.getLiteralValue());
+      Coding literalValue = (Coding) argument.getLiteralValue();
+      List<Coding> codings = Arrays.asList(literalValue);
+      if (codingsBySystem.get(literalValue.getSystem()) == null) {
+        codingsBySystem.put(literalValue.getSystem(), codings);
+      } else {
+        codingsBySystem.get(literalValue.getSystem()).addAll(codings);
+      }
     } else {
       argumentQuery = buildCodeQuery(argument, input);
     }
@@ -226,40 +230,68 @@ public class SubsumesFunction implements ExpressionFunction {
       return closureName;
     }
 
-    // If needed, execute the query to get the codes, and collect them into a list of Coding
-    // objects.
+    // If needed, execute the query to get the codes.
     if (inputQuery != null || argumentQuery != null) {
-      List<Row> codeResults = sqlRunner.run(query).collectAsList();
-      codings.addAll(codeResults.stream()
-          .map(row -> new Coding(row.getString(0), row.getString(1), null))
-          .collect(Collectors.toList()));
-    }
+      Dataset<Row> codeDataset = sqlRunner.run(query);
 
-    // Execute a closure operation using the set of Codings.
-    TerminologyClient terminologyClient = input.getContext().getTerminologyClient();
-    terminologyClient.closure(new StringType(closureName), null, null);
-    ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
+      // Get the list of distinct code systems.
+      List<Row> distinctCodeSystemRows = codeDataset.select(codeDataset.col("system")).distinct()
+          .collectAsList();
+      List<String> distinctCodeSystems = distinctCodeSystemRows.stream()
+          .map(row -> row.getString(0))
+          .collect(Collectors.toList());
 
-    // Extract the mappings from the closure result into a set of Mapping objects.
-    List<ConceptMapGroupComponent> groups = closure.getGroup();
-    List<Mapping> mappings = new ArrayList<>();
-    if (groups.size() == 1) {
-      ConceptMapGroupComponent group = groups.get(0);
-      String sourceSystem = group.getSource();
-      String targetSystem = group.getTarget();
-      List<SourceElementComponent> elements = group.getElement();
-      for (SourceElementComponent element : elements) {
-        for (TargetElementComponent target : element.getTarget()) {
-          Mapping mapping = new Mapping();
-          mapping.setSourceSystem(sourceSystem);
-          mapping.setSourceCode(element.getCode());
-          mapping.setTargetSystem(targetSystem);
-          mapping.setTargetCode(target.getCode());
-          mappings.add(mapping);
+      // Query for the codings from each distinct code system within the result, and add the codings
+      // to the map.
+      for (String codeSystem : distinctCodeSystems) {
+        List<Row> codeResults = codeDataset.filter("system = '" + codeSystem + "'").collectAsList();
+        List<Coding> codings = codeResults.stream()
+            .map(row -> new Coding(row.getString(0), row.getString(1), null))
+            .collect(Collectors.toList());
+        if (codingsBySystem.get(codeSystem) == null) {
+          codingsBySystem.put(codeSystem, codings);
+        } else {
+          codingsBySystem.get(codeSystem).addAll(codings);
         }
       }
-    } else if (groups.size() > 1) {
-      logger.warn("Encountered closure response with more than one group");
+    }
+
+    // Execute a closure operation for each set of codings within each distinct code system.
+    TerminologyClient terminologyClient = input.getContext().getTerminologyClient();
+    List<Mapping> mappings = new ArrayList<>();
+    for (String codeSystem : codingsBySystem.keySet()) {
+      List<Coding> codings = codingsBySystem.get(codeSystem);
+
+      // Create a unique name for the closure table for this code system.
+      String systemClosureHash = Strings
+          .md5(inputResult.getFhirPath() + argument.getFhirPath() + codeSystem).substring(0, 7);
+      String systemClosureName = "closure_" + systemClosureHash;
+
+      // Execute the closure operation against the terminology server.
+      terminologyClient.closure(new StringType(systemClosureName), null, null);
+      ConceptMap closure = terminologyClient
+          .closure(new StringType(systemClosureName), codings, null);
+
+      // Extract the mappings from the closure result into a set of Mapping objects.
+      List<ConceptMapGroupComponent> groups = closure.getGroup();
+      if (groups.size() == 1) {
+        ConceptMapGroupComponent group = groups.get(0);
+        String sourceSystem = group.getSource();
+        String targetSystem = group.getTarget();
+        List<SourceElementComponent> elements = group.getElement();
+        for (SourceElementComponent element : elements) {
+          for (TargetElementComponent target : element.getTarget()) {
+            Mapping mapping = new Mapping();
+            mapping.setSourceSystem(sourceSystem);
+            mapping.setSourceCode(element.getCode());
+            mapping.setTargetSystem(targetSystem);
+            mapping.setTargetCode(target.getCode());
+            mappings.add(mapping);
+          }
+        }
+      } else if (groups.size() > 1) {
+        logger.warn("Encountered closure response with more than one group");
+      }
     }
 
     // Create a Spark Dataset containing the mappings, and make it the subject of a temporary view.

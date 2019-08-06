@@ -23,10 +23,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoder;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.catalog.Catalog;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.DataTypes;
@@ -192,6 +189,10 @@ public class SubsumesTest {
 
     Dataset mockDataset1 = createMockDataset();
     when(mockSpark.sql(expectedSql1)).thenReturn(mockDataset1);
+    when(mockDataset1.select(any(Column.class))).thenReturn(mockDataset1);
+    when(mockDataset1.distinct()).thenReturn(mockDataset1);
+    when(mockDataset1.col(any())).thenReturn(mock(Column.class));
+    when(mockDataset1.filter(any(String.class))).thenReturn(mockDataset1);
     when(mockDataset1.collectAsList()).thenReturn(fakeResult1);
 
     StructField[] fields2 = {
@@ -319,6 +320,10 @@ public class SubsumesTest {
 
     Dataset mockDataset1 = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset1);
+    when(mockDataset1.select(any(Column.class))).thenReturn(mockDataset1);
+    when(mockDataset1.distinct()).thenReturn(mockDataset1);
+    when(mockDataset1.col(any())).thenReturn(mock(Column.class));
+    when(mockDataset1.filter(any(String.class))).thenReturn(mockDataset1);
     when(mockDataset1.collectAsList()).thenReturn(new ArrayList());
 
     ConceptMap fakeConceptMap = new ConceptMap();
@@ -614,6 +619,10 @@ public class SubsumesTest {
 
     Dataset mockDataset1 = createMockDataset();
     when(mockSpark.sql(any())).thenReturn(mockDataset1);
+    when(mockDataset1.select(any(Column.class))).thenReturn(mockDataset1);
+    when(mockDataset1.distinct()).thenReturn(mockDataset1);
+    when(mockDataset1.col(any())).thenReturn(mock(Column.class));
+    when(mockDataset1.filter(any(String.class))).thenReturn(mockDataset1);
     when(mockDataset1.collectAsList()).thenReturn(new ArrayList());
 
     ConceptMap fakeConceptMap = new ConceptMap();
