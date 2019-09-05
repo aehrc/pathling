@@ -6,7 +6,7 @@ package au.csiro.clinsight.fhir.definitions;
 
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.ResourceDefinitionsStatus.*;
 
-import au.csiro.clinsight.TerminologyClient;
+import au.csiro.clinsight.fhir.TerminologyClient;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.google.common.collect.Sets;
@@ -155,11 +155,11 @@ public abstract class ResourceDefinitions {
   }
 
   /**
-   * Gets the StructureDefinition for a resource with the supplied URL.
+   * Returns a set of URLs describing the supported resource definitions.
    */
-  public static StructureDefinition getResourceByUrl(@Nonnull String url) {
+  public static Set<String> getSupportedResources() {
     checkInitialised();
-    return resources.get(url);
+    return resources.keySet();
   }
 
   /**
@@ -173,7 +173,7 @@ public abstract class ResourceDefinitions {
         : result;
   }
 
-  static void checkInitialised() {
+  public static void checkInitialised() {
     if (status != INITIALISED) {
       throw new UnclassifiedServerFailureException(503,
           "Resource definitions have not been initialised");

@@ -1,3 +1,7 @@
+<!--
+  ~ Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+  -->
+
 <configuration>
   <property>
     <name>javax.jdo.option.ConnectionDriverName</name>

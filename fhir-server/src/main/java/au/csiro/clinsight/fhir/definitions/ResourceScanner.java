@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.clinsight.fhir.definitions;
 
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;

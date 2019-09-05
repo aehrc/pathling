@@ -4,62 +4,87 @@
 
 package au.csiro.clinsight.query.functions;
 
-import au.csiro.clinsight.query.parsing.ParseResult;
-import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
+import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.DATE;
+import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.DATE_TIME;
+import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.STRING;
+import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.TIME;
+import static au.csiro.clinsight.utilities.Strings.md5Short;
+import static org.apache.spark.sql.functions.date_format;
+
+import au.csiro.clinsight.query.parsing.ParsedExpression;
+import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * Describes a function which allows for the creation of formatted strings based upon dates, using
  * the syntax from the Java SimpleDateFormat class.
  *
  * @author John Grimes
+ * @see <a href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/functions.html#date_format-org.apache.spark.sql.Column-java.lang.String-">https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/functions.html#date_format-org.apache.spark.sql.Column-java.lang.String-</a>
  */
-public class DateFormatFunction implements ExpressionFunction {
+public class DateFormatFunction implements Function {
+
+  private static final Set<FhirPathType> supportedTypes = new HashSet<FhirPathType>() {{
+    add(DATE);
+    add(DATE_TIME);
+    add(TIME);
+  }};
 
   @Nonnull
   @Override
-  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
-    ParseResult inputResult = validateInput(input.getInput());
-    ParseResult argument = validateArgument(input.getArguments());
+  public ParsedExpression invoke(@Nonnull FunctionInput input) {
+    validateInput(input);
+    ParsedExpression inputResult = input.getInput();
+    ParsedExpression argument = input.getArguments().get(0);
+    Dataset<Row> prevDataset = inputResult.getDataset();
+    String prevColumn = inputResult.getDatasetColumn();
+    String hash = md5Short(input.getExpression());
 
-    ParseResult result = new ParseResult();
-    result.setFunction(this);
-    result.setFunctionInput(input);
+    // Invoke the Spark SQL date_format function and store the result in a new Dataset.
+    Column column;
+    try {
+      column = date_format(prevDataset.col(prevColumn), argument.getLiteralValue().toString());
+    } catch (IllegalArgumentException e) {
+      throw new InvalidRequestException(
+          "Invalid format string passed to dateFormat: " + argument.getFhirPath());
+    }
+    column = column.alias(hash);
+    Column idColumn = prevDataset.col(prevColumn + "_id").alias(hash + "_id");
+    Dataset<Row> dataset = prevDataset.select(idColumn, column);
+
+    // Construct a new parse result.
+    ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
-    String newSqlExpression =
-        "date_format(" + inputResult.getSql() + ", " + argument.getFhirPath() + ")";
-    result.setSql(newSqlExpression);
-    result.setFhirPathType(FhirPathType.STRING);
-    result.setFhirType(FhirType.STRING);
+    result.setFhirPathType(FhirPathType.INTEGER);
+    result.setFhirType(FhirType.INTEGER);
     result.setPrimitive(true);
     result.setSingular(inputResult.isSingular());
+    result.setDataset(dataset);
+    result.setDatasetColumn(hash);
+
     return result;
   }
 
-  private ParseResult validateInput(ParseResult input) {
-    if (input == null || input.getSql() == null || input.getSql().isEmpty()) {
-      throw new InvalidRequestException("Missing input expression for dateFormat function");
-    }
-    if (input.getFhirPathType() != FhirPathType.DATE_TIME) {
+  private void validateInput(FunctionInput input) {
+    if (input.getArguments().size() != 1
+        || input.getArguments().get(0).getFhirPathType() != STRING) {
       throw new InvalidRequestException(
-          "Input to dateFormat function must be a DateTime: " + input.getFhirPath());
+          "dateFormat function accepts one argument of type String: " + input.getExpression());
     }
-    return input;
-  }
 
-  private ParseResult validateArgument(List<ParseResult> arguments) {
-    if (arguments.size() != 1) {
-      throw new InvalidRequestException("Must pass format argument to dateFormat function");
-    }
-    ParseResult argument = arguments.get(0);
-    if (argument.getFhirPathType() != FhirPathType.STRING) {
+    ParsedExpression inputResult = input.getInput();
+    if (!supportedTypes.contains(inputResult.getFhirPathType())) {
       throw new InvalidRequestException(
-          "Argument to dateFormat function must be a String: " + argument.getFhirPath());
+          "Input to dateFormat function is of unsupported type: " + inputResult
+              .getFhirPath());
     }
-    return argument;
   }
 
 }

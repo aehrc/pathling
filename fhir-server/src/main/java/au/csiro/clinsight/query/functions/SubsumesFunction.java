@@ -5,31 +5,21 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isCodeSystemKnown;
-import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
-import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
-import static au.csiro.clinsight.query.parsing.Join.wrapLateralViews;
-import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.CODING;
-import static au.csiro.clinsight.utilities.Strings.singleQuote;
+import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.CODING;
+import static au.csiro.clinsight.utilities.Strings.md5Short;
 
-import au.csiro.clinsight.TerminologyClient;
+import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.query.Mapping;
-import au.csiro.clinsight.query.SqlRunner;
-import au.csiro.clinsight.query.parsing.AliasGenerator;
-import au.csiro.clinsight.query.parsing.ExpressionParserContext;
-import au.csiro.clinsight.query.parsing.Join;
-import au.csiro.clinsight.query.parsing.Join.JoinType;
-import au.csiro.clinsight.query.parsing.ParseResult;
-import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
-import au.csiro.clinsight.utilities.Strings;
+import au.csiro.clinsight.query.operators.PathTraversalInput;
+import au.csiro.clinsight.query.operators.PathTraversalOperator;
+import au.csiro.clinsight.query.parsing.ParsedExpression;
+import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.hl7.fhir.dstu3.model.Coding;
 import org.hl7.fhir.dstu3.model.ConceptMap;
 import org.hl7.fhir.dstu3.model.ConceptMap.ConceptMapGroupComponent;
@@ -44,8 +34,9 @@ import org.slf4j.LoggerFactory;
  * Codings or CodeableConcepts subsume one or more Codings or CodeableConcepts in the target set.
  *
  * @author John Grimes
+ * @see <a href="https://hl7.org/fhir/fhirpath.html#functions">https://hl7.org/fhir/fhirpath.html#functions</a>
  */
-public class SubsumesFunction implements ExpressionFunction {
+public class SubsumesFunction implements Function {
 
   private static final Logger logger = LoggerFactory.getLogger(SubsumesFunction.class);
   private boolean inverted = false;
@@ -63,120 +54,83 @@ public class SubsumesFunction implements ExpressionFunction {
 
   @Nonnull
   @Override
-  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
+  public ParsedExpression invoke(@Nonnull FunctionInput input) {
     if (input.getArguments().size() != 1) {
       throw new InvalidRequestException(
           "One argument must be passed to " + functionName + " function");
     }
 
-    ParseResult inputResult = inverted ? validateArgument(input) : validateInput(input);
-    ParseResult argument = inverted ? validateInput(input) : validateArgument(input);
-    ExpressionParserContext context = input.getContext();
-    AliasGenerator aliasGenerator = context.getAliasGenerator();
+    SparkSession spark = input.getContext().getSparkSession();
+    ParsedExpression inputResult = validateInput(input);
+    ParsedExpression argument = validateArgument(input);
+    String hash = md5Short(input.getExpression());
 
-    String closureTableName = ensureClosureTableExists(input, inputResult, argument);
+    // Create a dataset to represent the input expression.
+    Dataset<Coding> inputDataset;
+    inputDataset = inputResult.getDataset().as(Encoders.bean(Coding.class));
 
-    String closureJoinAlias = input.getContext().getAliasGenerator().getAlias();
-    String wrapperJoinAlias = input.getContext().getAliasGenerator().getAlias();
-
-    // Build a new join across to the closure table.
-    Join closureJoin = new Join();
-    String closureJoinSql = "LEFT JOIN " + closureTableName + " " + closureJoinAlias + " ";
-
-    if (inputResult.getLiteralValue() != null) {
-      // If the input is a Coding literal, inject literal values into the SQL.
-      Coding coding = (Coding) inputResult.getLiteralValue();
-      closureJoinSql +=
-          "ON " + singleQuote(coding.getSystem()) + " = " + closureJoinAlias + ".targetSystem ";
-      closureJoinSql +=
-          "AND " + singleQuote(coding.getCode()) + " = " + closureJoinAlias + ".targetCode ";
+    // Create a dataset to represent the argument expression.
+    Dataset<Coding> argumentDataset;
+    if (argument.getLiteralValue() == null) {
+      argumentDataset = argument.getDataset().as(Encoders.bean(Coding.class));
     } else {
-      // Otherwise, the values are queried using the SQL expressions within the parse result.
-      closureJoinSql +=
-          "ON " + inputResult.getSql() + ".system = " + closureJoinAlias + ".targetSystem ";
-      closureJoinSql +=
-          "AND " + inputResult.getSql() + ".code = " + closureJoinAlias + ".targetCode ";
+      // If the argument is a literal value, we create a dataset with a single Coding.
+      assert argument.getLiteralValue().fhirType().equals("Coding");
+      List<Coding> codings = Arrays.asList((Coding) argument.getLiteralValue());
+      argumentDataset = spark.createDataset(codings, Encoders.bean(Coding.class));
     }
 
-    if (argument.getLiteralValue() != null) {
-      // If the argument is a Coding literal, inject literal values into the SQL.
-      Coding coding = (Coding) argument.getLiteralValue();
-      closureJoinSql +=
-          "AND " + singleQuote(coding.getSystem()) + " = " + closureJoinAlias + ".sourceSystem ";
-      closureJoinSql +=
-          "AND " + singleQuote(coding.getCode()) + " = " + closureJoinAlias + ".sourceCode";
-    } else {
-      // Otherwise, the values are queried using the SQL expressions within the parse result.
-      closureJoinSql +=
-          "AND " + argument.getSql() + ".system = " + closureJoinAlias + ".sourceSystem ";
-      closureJoinSql += "AND " + argument.getSql() + ".code = " + closureJoinAlias + ".sourceCode";
-    }
+    Column inputIdCol = inputDataset.col(inputResult.getDatasetColumn() + "_id");
+    Column inputSystemCol = inputDataset.col(inputResult.getDatasetColumn()).getField("system");
+    Column inputCodeCol = inputDataset.col(inputResult.getDatasetColumn()).getField("code");
+    Column argumentSystemCol = argumentDataset.col(argument.getDatasetColumn()).getField("system");
+    Column argumentCodeCol = argumentDataset.col(argument.getDatasetColumn()).getField("code");
 
-    closureJoin.setSql(closureJoinSql);
-    closureJoin.setJoinType(JoinType.LEFT_JOIN);
-    closureJoin.setTableAlias(closureJoinAlias);
-    closureJoin.setAliasTarget(closureTableName);
-    if (!inputResult.getJoins().isEmpty()) {
-      closureJoin.getDependsUpon().add(inputResult.getJoins().last());
-    }
-    if (!argument.getJoins().isEmpty()) {
-      closureJoin.getDependsUpon().add(argument.getJoins().last());
-    }
+    // Build a closure table dataset.
+    Dataset<Mapping> closureTable = buildClosureTable(input, inputResult, argument);
+    Column closureSourceSystem = closureTable.col("sourceSystem");
+    Column closureSourceCode = closureTable.col("sourceCode");
+    Column closureTargetSystem = closureTable.col("targetSystem");
+    Column closureTargetCode = closureTable.col("targetCode");
+    Column closureEquivalence = closureTable.col("equivalence");
 
-    // Build the candidate set of inner joins.
-    SortedSet<Join> innerJoins = new TreeSet<>(inputResult.getJoins());
-    innerJoins.addAll(argument.getJoins());
+    // Create a new dataset which contains a boolean value for each input coding, which indicates
+    // whether the coding subsumes (or is subsumed by) any of the codings within the argument
+    // dataset.
+    Column inputSystemMatch = inverted
+        ? inputSystemCol.equalTo(closureSourceSystem)
+        : inputSystemCol.equalTo(closureTargetSystem);
+    Column inputCodeMatch = inverted
+        ? inputCodeCol.equalTo(closureSourceCode)
+        : inputCodeCol.equalTo(closureTargetCode);
+    Column argumentSystemMatch = inverted
+        ? argumentSystemCol.equalTo(closureTargetSystem)
+        : argumentSystemCol.equalTo(closureSourceSystem);
+    Column argumentCodeMatch = inverted
+        ? argumentCodeCol.equalTo(closureTargetCode)
+        : argumentCodeCol.equalTo(closureSourceCode);
+    Column equivalenceMatch = inverted
+        ? closureEquivalence.equalTo("specializes")
+        : closureEquivalence.equalTo("subsumes");
+    Column joinCondition = inputSystemMatch.and(inputCodeMatch);
+    joinCondition = joinCondition.and(argumentSystemMatch.and(argumentCodeMatch));
+    Dataset<Row> dataset = inputDataset
+        .join(argumentDataset, joinCondition)
+        .select(inputIdCol, equivalenceMatch);
+    dataset = dataset
+        .groupBy(inputIdCol)
+        .agg(org.apache.spark.sql.functions.max(equivalenceMatch));
+    dataset = dataset.select(inputIdCol.alias(hash + "_id"), equivalenceMatch.alias(hash));
 
-    // If there is a filter to be applied as part of this invocation, add in its join dependencies.
-    if (input.getFilter() != null) {
-      innerJoins.addAll(input.getFilterJoins());
-    }
-
-    closureJoin.setSql(rewriteSqlWithJoinAliases(closureJoin.getSql(), innerJoins));
-    innerJoins.add(closureJoin);
-
-    // Wrap any upstream dependencies of our new join which are lateral views.
-    innerJoins = wrapLateralViews(innerJoins, closureJoin, aliasGenerator, context.getFromTable());
-
-    String wrapperJoinSql = "LEFT JOIN (";
-    wrapperJoinSql += "SELECT " + context.getFromTable() + ".id, ";
-    wrapperJoinSql +=
-        "MAX(" + closureJoinAlias + ".equivalence IN ('subsumes', 'equal')) AS result ";
-    wrapperJoinSql += "FROM " + context.getFromTable() + " ";
-    wrapperJoinSql += innerJoins.stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
-
-    // If there is a filter to be applied as part of this invocation, add a where clause in here.
-    if (input.getFilter() != null) {
-      String filter = rewriteSqlWithJoinAliases(input.getFilter(), innerJoins);
-      wrapperJoinSql += "WHERE " + filter + " ";
-    }
-
-    wrapperJoinSql += "GROUP BY 1";
-    wrapperJoinSql +=
-        ") " + wrapperJoinAlias + " ON " + context.getFromTable() + ".id = " + wrapperJoinAlias
-            + ".id";
-
-    // Create a new Join that represents the join to the new subquery.
-    Join wrapperJoin = new Join();
-    wrapperJoin.setSql(wrapperJoinSql);
-    wrapperJoin.setJoinType(LEFT_JOIN);
-    wrapperJoin.setTableAlias(wrapperJoinAlias);
-    wrapperJoin.setAliasTarget(wrapperJoinAlias);
-    if (inputResult.getPathTraversal() != null) {
-      wrapperJoin.setTargetElement(inputResult.getPathTraversal().getElementDefinition());
-    }
-
-    // Build a new parse result, representing the results of the ValueSet expansion.
-    ParseResult result = new ParseResult();
-    result.setFunction(this);
-    result.setFunctionInput(input);
+    // Construct a new parse result.
+    ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
-    result.setSql(wrapperJoinAlias + ".result");
     result.setFhirPathType(FhirPathType.BOOLEAN);
     result.setFhirType(FhirType.BOOLEAN);
-    result.getJoins().add(wrapperJoin);
     result.setPrimitive(true);
     result.setSingular(inputResult.isSingular());
+    result.setDataset(dataset);
+    result.setDatasetColumn(hash);
     return result;
   }
 
@@ -184,22 +138,21 @@ public class SubsumesFunction implements ExpressionFunction {
    * Executes a closure operation including the codes from the input and argument to this function,
    * then store the result in a Spark Dataset accessible via a temporary view.
    */
-  private String ensureClosureTableExists(ExpressionFunctionInput input, ParseResult inputResult,
-      ParseResult argument) {
+  private Dataset<Mapping> buildClosureTable(FunctionInput input, ParsedExpression inputResult,
+      ParsedExpression argument) {
     SparkSession spark = input.getContext().getSparkSession();
-    SqlRunner sqlRunner = input.getContext().getSqlRunner();
     Map<String, List<Coding>> codingsBySystem = new HashMap<>();
 
     // Get the set of codes from both the input and the argument.
-    String inputQuery = null;
-    String argumentQuery = null;
+    Dataset<Row> inputCodes = null;
+    Dataset<Row> argumentCodes = null;
     // If the input is a literal, harvest the code - otherwise we need to query for the codes.
     if (inputResult.getLiteralValue() != null) {
       Coding literalValue = (Coding) inputResult.getLiteralValue();
       List<Coding> codings = Arrays.asList(literalValue);
       codingsBySystem.put(literalValue.getSystem(), codings);
     } else {
-      inputQuery = buildCodeQuery(inputResult, input);
+      inputCodes = getCodes(inputResult);
     }
     // If the argument is a literal, harvest the code - otherwise we need to query for the codes.
     if (argument.getLiteralValue() != null) {
@@ -211,32 +164,19 @@ public class SubsumesFunction implements ExpressionFunction {
         codingsBySystem.get(literalValue.getSystem()).addAll(codings);
       }
     } else {
-      argumentQuery = buildCodeQuery(argument, input);
+      argumentCodes = getCodes(argument);
     }
     // The query will be a union if we need to query for both the input and argument codes.
-    String query =
-        inputQuery != null && argumentQuery != null
-            ? inputQuery + " UNION " + argumentQuery
-            : inputQuery != null
-                ? inputQuery : argumentQuery;
-
-    // The hash used for the closure table name is based upon the concatenation of the FHIRPath
-    // expressions for input and argument.
-    String closureHash = Strings.md5(inputResult.getFhirPath() + argument.getFhirPath())
-        .substring(0, 7);
-    String closureName = "closure_" + closureHash;
-
-    // Skip the rest if the table already exists.
-    if (spark.catalog().tableExists(input.getContext().getDatabaseName(), closureName)) {
-      return closureName;
-    }
+    Dataset<Row> allCodes =
+        inputCodes != null && argumentCodes != null
+            ? inputCodes.union(argumentCodes)
+            : inputCodes != null
+                ? inputCodes : argumentCodes;
 
     // If needed, execute the query to get the codes.
-    if (inputQuery != null || argumentQuery != null) {
-      Dataset<Row> codeDataset = sqlRunner.run(query);
-
+    if (inputCodes != null || argumentCodes != null) {
       // Get the list of distinct code systems.
-      List<Row> distinctCodeSystemRows = codeDataset.select(codeDataset.col("system")).distinct()
+      List<Row> distinctCodeSystemRows = allCodes.select(allCodes.col("system")).distinct()
           .collectAsList();
       List<String> distinctCodeSystems = distinctCodeSystemRows.stream()
           .map(row -> row.getString(0))
@@ -245,7 +185,8 @@ public class SubsumesFunction implements ExpressionFunction {
       // Query for the codings from each distinct code system within the result, and add the codings
       // to the map.
       for (String codeSystem : distinctCodeSystems) {
-        List<Row> codeResults = codeDataset.filter("system = '" + codeSystem + "'").collectAsList();
+        Column systemCol = allCodes.col("system");
+        List<Row> codeResults = allCodes.filter(systemCol.equalTo(codeSystem)).collectAsList();
         List<Coding> codings = codeResults.stream()
             .map(row -> new Coding(row.getString(0), row.getString(1), null))
             .collect(Collectors.toList());
@@ -269,15 +210,14 @@ public class SubsumesFunction implements ExpressionFunction {
       // Get the codings for this code system.
       List<Coding> codings = codingsBySystem.get(codeSystem);
 
-      // Create a unique name for the closure table for this code system.
-      String systemClosureHash = Strings
-          .md5(inputResult.getFhirPath() + argument.getFhirPath() + codeSystem).substring(0, 7);
-      String systemClosureName = "closure_" + systemClosureHash;
+      // Create a unique name for the closure table for this code system, based upon the expressions
+      // of the input, argument and the CodeSystem URI.
+      String closureName = md5Short(
+          inputResult.getFhirPath() + argument.getFhirPath() + codeSystem);
 
       // Execute the closure operation against the terminology server.
-      terminologyClient.closure(new StringType(systemClosureName), null, null);
-      ConceptMap closure = terminologyClient
-          .closure(new StringType(systemClosureName), codings, null);
+      terminologyClient.closure(new StringType(closureName), null, null);
+      ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
 
       // Extract the mappings from the closure result into a set of Mapping objects.
       List<ConceptMapGroupComponent> groups = closure.getGroup();
@@ -302,16 +242,18 @@ public class SubsumesFunction implements ExpressionFunction {
       }
     }
 
-    // Create a Spark Dataset containing the mappings, and make it the subject of a temporary view.
-    Dataset<Mapping> mappingDataset = spark.createDataset(mappings, Encoders.bean(Mapping.class));
-    mappingDataset.createOrReplaceTempView(closureName);
-
-    return closureName;
+    // Return a Spark Dataset containing the mappings.
+    return spark.createDataset(mappings, Encoders.bean(Mapping.class));
   }
 
-  private ParseResult validateInput(ExpressionFunctionInput input) {
-    ParseResult inputResult = input.getInput();
+  private ParsedExpression validateInput(FunctionInput input) {
+    ParsedExpression inputResult = input.getInput();
     String inputFhirPath = inputResult.getFhirPath();
+    if (inputResult.getLiteralValue() != null) {
+      throw new InvalidRequestException(
+          "Input to " + functionName + " function cannot be a literal value: " + inputResult
+              .getFhirPath());
+    }
     if (inputResult.getFhirPathType() == CODING) {
       return inputResult;
     }
@@ -323,18 +265,19 @@ public class SubsumesFunction implements ExpressionFunction {
               .getFhirPath());
     } else {
       // If this is a CodeableConcept, we need to traverse to the `coding` member first.
-      ExpressionFunctionInput memberInvocationInput = new ExpressionFunctionInput();
-      memberInvocationInput.setContext(input.getContext());
-      memberInvocationInput.setExpression("coding");
-      memberInvocationInput.setInput(inputResult);
-      inputResult = new MemberInvocation().invoke(memberInvocationInput);
+      PathTraversalInput pathTraversalInput = new PathTraversalInput();
+      pathTraversalInput.setContext(input.getContext());
+      pathTraversalInput.setLeft(inputResult);
+      pathTraversalInput.setExpression("coding");
+      pathTraversalInput.setRight("coding");
+      inputResult = new PathTraversalOperator().invoke(pathTraversalInput);
       inputResult.setFhirPath(inputFhirPath + ".coding");
       return inputResult;
     }
   }
 
-  private ParseResult validateArgument(ExpressionFunctionInput input) {
-    ParseResult argument = input.getArguments().get(0);
+  private ParsedExpression validateArgument(FunctionInput input) {
+    ParsedExpression argument = input.getArguments().get(0);
     String argumentFhirPath = argument.getFhirPath();
     if (argument.getFhirPathType() == CODING) {
       return argument;
@@ -346,35 +289,28 @@ public class SubsumesFunction implements ExpressionFunction {
               .getFhirPath());
     } else {
       // If this is a CodeableConcept, we need to traverse to the `coding` member first.
-      ExpressionFunctionInput memberInvocationInput = new ExpressionFunctionInput();
-      memberInvocationInput.setContext(input.getContext());
-      memberInvocationInput.setExpression("coding");
-      memberInvocationInput.setInput(argument);
-      argument = new MemberInvocation().invoke(memberInvocationInput);
+      PathTraversalInput pathTraversalInput = new PathTraversalInput();
+      pathTraversalInput.setContext(input.getContext());
+      pathTraversalInput.setLeft(argument);
+      pathTraversalInput.setExpression("coding");
+      pathTraversalInput.setRight("coding");
+      argument = new PathTraversalOperator().invoke(pathTraversalInput);
       argument.setFhirPath(argumentFhirPath + ".coding");
       return argument;
     }
   }
 
   @Nonnull
-  private String buildCodeQuery(ParseResult result, ExpressionFunctionInput input) {
-    SortedSet<Join> joins = new TreeSet<>(result.getJoins());
+  private Dataset<Row> getCodes(ParsedExpression result) {
+    Dataset<Row> source = result.getDataset();
+    Column systemCol = source.col("system");
+    Column codeCol = source.col("code");
 
-    // If there is a filter to be applied as part of this invocation, add in its join dependencies.
-    if (input.getFilter() != null) {
-      joins.addAll(input.getFilterJoins());
-    }
+    Dataset<Row> codes = source.select(systemCol, codeCol);
+    codes = codes.filter(systemCol.isNotNull().and(codeCol.isNotNull()));
+    codes.distinct();
 
-    String query = "SELECT DISTINCT " + result.getSql() + ".system, " + result.getSql() + ".code ";
-    query = rewriteSqlWithJoinAliases(query, result.getJoins());
-    query += "FROM " + input.getContext().getFromTable() + " ";
-    query += result.getJoins().stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
-    String nullFilter = "WHERE " + result.getSql() + ".system IS NOT NULL AND " + result.getSql()
-        + ".code IS NOT NULL";
-    nullFilter = rewriteSqlWithJoinAliases(nullFilter, result.getJoins());
-    query += nullFilter;
-
-    return query;
+    return codes;
   }
 
 }

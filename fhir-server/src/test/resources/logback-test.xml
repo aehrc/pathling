@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+  -->
+
 <configuration>
   <appender class="ch.qos.logback.core.ConsoleAppender" name="STDOUT">
     <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">

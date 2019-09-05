@@ -16,7 +16,6 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.mitre.dsmiley.httpproxy.ProxyServlet;
 
 /**
  * Creates an embedded Jetty server and mounts the servlets that are required to deliver the
@@ -33,16 +32,21 @@ public class FhirServerContainer {
     setStringPropsUsingEnvVar(config, new HashMap<String, String>() {{
       put("CLINSIGHT_FHIR_SERVER_VERSION", "version");
       put("CLINSIGHT_SPARK_MASTER_URL", "sparkMasterUrl");
-      put("CLINSIGHT_WAREHOUSE_DIRECTORY", "warehouseDirectory");
-      put("CLINSIGHT_METASTORE_URL", "metastoreUrl");
-      put("CLINSIGHT_METASTORE_USER", "metastoreUser");
-      put("CLINSIGHT_METASTORE_PASSWORD", "metastorePassword");
+      put("CLINSIGHT_WAREHOUSE_URL", "warehouseUrl");
       put("CLINSIGHT_DATABASE_NAME", "databaseName");
       put("CLINSIGHT_EXECUTOR_MEMORY", "executorMemory");
       put("CLINSIGHT_TERMINOLOGY_SERVER_URL", "terminologyServerUrl");
     }});
     String explainQueries = System.getenv("CLINSIGHT_EXPLAIN_QUERIES");
     config.setExplainQueries(explainQueries != null && explainQueries.equals("true"));
+    String shufflePartitions = System.getenv("CLINSIGHT_SHUFFLE_PARTITIONS");
+    if (shufflePartitions != null) {
+      config.setShufflePartitions(Integer.parseInt(shufflePartitions));
+    }
+    String loadPartitions = System.getenv("CLINSIGHT_LOAD_PARTITIONS");
+    if (loadPartitions != null) {
+      config.setLoadPartitions(Integer.parseInt(loadPartitions));
+    }
 
     // This is required to force the use of the Woodstox StAX implementation. If you don't use
     // Woodstox, parsing falls over when reading in resources (e.g. StructureDefinitions) that
@@ -73,15 +77,6 @@ public class FhirServerContainer {
     // Add analytics server to handle all other requests.
     ServletHolder analyticsServletHolder = new ServletHolder(new AnalyticsServer(configuration));
     servletHandler.addServletWithMapping(analyticsServletHolder, "/fhir/*");
-
-    // Add proxy servlet to forward terminology and profile-related requests to the configured
-    // terminology server.
-    ProxyServlet terminologyProxyServlet = new ProxyServlet();
-    ServletHolder terminologyProxyHolder = new ServletHolder(terminologyProxyServlet);
-    terminologyProxyHolder.setInitParameter("targetUri",
-        configuration.getTerminologyServerUrl() + "/StructureDefinition");
-    terminologyProxyHolder.setInitParameter("log", "true");
-    servletHandler.addServletWithMapping(terminologyProxyHolder, "/fhir/StructureDefinition/*");
 
     server.setHandler(servletHandler);
 

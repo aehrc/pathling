@@ -4,8 +4,8 @@
 
 package au.csiro.clinsight.query.parsing;
 
+import static au.csiro.clinsight.query.parsing.Join.JoinType.JOIN;
 import static au.csiro.clinsight.query.parsing.Join.JoinType.LATERAL_VIEW;
-import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
 import java.util.*;
@@ -143,7 +143,7 @@ public class Join implements Comparable<Join> {
     // Build a new Join object to replace the group of lateral views.
     Join newJoin = new Join();
     newJoin.setSql(joinExpression);
-    newJoin.setJoinType(LEFT_JOIN);
+    newJoin.setJoinType(JOIN);
     newJoin.setTableAlias(joinAlias + "." + lastLateralView.getTableAlias());
     newJoin.setAliasTarget(lastLateralView.getTableAlias());
     newJoin.setTargetElement(lastLateralView.getTargetElement());
@@ -334,9 +334,9 @@ public class Join implements Comparable<Join> {
      */
     LATERAL_VIEW,
     /**
-     * LEFT_JOIN - a regular left outer join.
+     * JOIN - a regular join, i.e. a LEFT JOIN or an INNER JOIN.
      */
-    LEFT_JOIN
+    JOIN
   }
 
 }

@@ -1,20 +1,18 @@
 /*
- * Copyright CSIRO Australian e-Health Research Centre (http://aehrc.com). All rights reserved. Use is subject to
- * license terms and conditions.
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
 package au.csiro.clinsight.fhir;
 
-import au.csiro.clinsight.query.AggregateQuery;
-import au.csiro.clinsight.query.AggregateQueryResult;
 import au.csiro.clinsight.query.QueryExecutor;
+import au.csiro.clinsight.query.QueryRequest;
+import au.csiro.clinsight.query.QueryResponse;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import org.hl7.fhir.dstu3.model.Parameters;
 
 /**
- * HAPI plain provider that provides an entry point for the `aggregate-query` system-wide
- * operation.
+ * HAPI plain provider that provides an entry point for the `$query` system-wide operation.
  *
  * @author John Grimes
  */
@@ -28,11 +26,10 @@ class QueryOperationProvider {
     this.queryExecutor = queryExecutor;
   }
 
-  @SuppressWarnings("unused")
-  @Operation(name = "$aggregate-query", idempotent = true)
+  @Operation(name = "$query", idempotent = true)
   public Parameters queryOperation(@ResourceParam Parameters parameters) {
-    AggregateQuery query = new AggregateQuery(parameters);
-    AggregateQueryResult result = queryExecutor.execute(query);
+    QueryRequest query = new QueryRequest(parameters);
+    QueryResponse result = queryExecutor.execute(query);
     return result.toParameters();
   }
 

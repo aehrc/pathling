@@ -4,8 +4,10 @@
 
 package au.csiro.clinsight.query.parsing;
 
-import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.query.SqlRunner;
+import au.csiro.clinsight.fhir.TerminologyClient;
+import au.csiro.clinsight.query.ResourceReader;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -13,7 +15,7 @@ import org.apache.spark.sql.SparkSession;
  *
  * @author John Grimes
  */
-public class ExpressionParserContext implements Cloneable {
+public class ExpressionParserContext {
 
   /**
    * The terminology client that should be used to resolve terminology queries within this
@@ -27,36 +29,26 @@ public class ExpressionParserContext implements Cloneable {
   private SparkSession sparkSession;
 
   /**
-   * The name of the database to be accessed via Spark SQL.
+   * A table resolver for retrieving Datasets for resource references.
    */
-  private String databaseName;
+  private ResourceReader resourceReader;
 
   /**
    * A ParseResult representing the subject resource specified within the query, which is then
    * referred to through `%resource` or `%context`.
    */
-  private ParseResult subjectResource;
+  private ParsedExpression subjectContext;
 
   /**
    * A ParseResult representing an item from an input collection currently under evaluation, e.g.
    * within the argument to the `where` function.
    */
-  private ParseResult thisExpression;
+  private ParsedExpression thisContext;
 
   /**
-   * The name of the table that corresponds to the subject resource.
+   * Groupings to be applied to this expression at the point of aggregation.
    */
-  private String fromTable;
-
-  /**
-   * An alias generator for generating aliases for use within SQL expressions.
-   */
-  private AliasGenerator aliasGenerator;
-
-  /**
-   * For running SQL queries from the parsing context.
-   */
-  private SqlRunner sqlRunner;
+  private List<ParsedExpression> groupings = new ArrayList<>();
 
   public ExpressionParserContext() {
   }
@@ -64,12 +56,10 @@ public class ExpressionParserContext implements Cloneable {
   public ExpressionParserContext(ExpressionParserContext context) {
     this.terminologyClient = context.terminologyClient;
     this.sparkSession = context.sparkSession;
-    this.databaseName = context.databaseName;
-    this.subjectResource = context.subjectResource;
-    this.thisExpression = context.thisExpression;
-    this.fromTable = context.fromTable;
-    this.aliasGenerator = context.aliasGenerator;
-    this.sqlRunner = context.sqlRunner;
+    this.resourceReader = context.resourceReader;
+    this.subjectContext = context.subjectContext;
+    this.thisContext = context.thisContext;
+    this.groupings = context.groupings;
   }
 
   public TerminologyClient getTerminologyClient() {
@@ -88,52 +78,32 @@ public class ExpressionParserContext implements Cloneable {
     this.sparkSession = sparkSession;
   }
 
-  public String getDatabaseName() {
-    return databaseName;
+  public ResourceReader getResourceReader() {
+    return resourceReader;
   }
 
-  public void setDatabaseName(String databaseName) {
-    this.databaseName = databaseName;
+  public void setResourceReader(ResourceReader resourceReader) {
+    this.resourceReader = resourceReader;
   }
 
-  public ParseResult getSubjectResource() {
-    return subjectResource;
+  public ParsedExpression getSubjectContext() {
+    return subjectContext;
   }
 
-  public void setSubjectResource(ParseResult subjectResource) {
-    this.subjectResource = subjectResource;
+  public void setSubjectContext(ParsedExpression subjectContext) {
+    this.subjectContext = subjectContext;
   }
 
-  public ParseResult getThisExpression() {
-    return thisExpression;
+  public ParsedExpression getThisContext() {
+    return thisContext;
   }
 
-  public void setThisExpression(ParseResult thisExpression) {
-    this.thisExpression = thisExpression;
+  public void setThisContext(ParsedExpression thisContext) {
+    this.thisContext = thisContext;
   }
 
-  public String getFromTable() {
-    return fromTable;
-  }
-
-  public void setFromTable(String fromTable) {
-    this.fromTable = fromTable;
-  }
-
-  public AliasGenerator getAliasGenerator() {
-    return aliasGenerator;
-  }
-
-  public void setAliasGenerator(AliasGenerator aliasGenerator) {
-    this.aliasGenerator = aliasGenerator;
-  }
-
-  public SqlRunner getSqlRunner() {
-    return sqlRunner;
-  }
-
-  public void setSqlRunner(SqlRunner sqlRunner) {
-    this.sqlRunner = sqlRunner;
+  public List<ParsedExpression> getGroupings() {
+    return groupings;
   }
 
 }

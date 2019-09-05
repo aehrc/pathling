@@ -4,7 +4,6 @@
 
 package au.csiro.clinsight.fhir;
 
-import au.csiro.clinsight.TerminologyClient;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -15,16 +14,15 @@ public class AnalyticsServerConfiguration {
 
   private String version;
   private String sparkMasterUrl;
-  private String warehouseDirectory;
-  private String metastoreUrl;
-  private String metastoreUser;
-  private String metastorePassword;
+  private String warehouseUrl;
   private String databaseName;
   private String executorMemory;
   private String terminologyServerUrl;
   private boolean explainQueries;
   private TerminologyClient terminologyClient;
   private SparkSession sparkSession;
+  private int shufflePartitions;
+  private int loadPartitions;
 
   public String getVersion() {
     return version;
@@ -42,36 +40,12 @@ public class AnalyticsServerConfiguration {
     this.sparkMasterUrl = sparkMasterUrl;
   }
 
-  public String getWarehouseDirectory() {
-    return warehouseDirectory;
+  public String getWarehouseUrl() {
+    return warehouseUrl;
   }
 
-  public void setWarehouseDirectory(String warehouseDirectory) {
-    this.warehouseDirectory = warehouseDirectory;
-  }
-
-  public String getMetastoreUrl() {
-    return metastoreUrl;
-  }
-
-  public void setMetastoreUrl(String metastoreUrl) {
-    this.metastoreUrl = metastoreUrl;
-  }
-
-  public String getMetastoreUser() {
-    return metastoreUser;
-  }
-
-  public void setMetastoreUser(String metastoreUser) {
-    this.metastoreUser = metastoreUser;
-  }
-
-  public String getMetastorePassword() {
-    return metastorePassword;
-  }
-
-  public void setMetastorePassword(String metastorePassword) {
-    this.metastorePassword = metastorePassword;
+  public void setWarehouseUrl(String warehouseUrl) {
+    this.warehouseUrl = warehouseUrl;
   }
 
   public String getDatabaseName() {
@@ -122,21 +96,37 @@ public class AnalyticsServerConfiguration {
     this.sparkSession = sparkSession;
   }
 
+  public int getShufflePartitions() {
+    return shufflePartitions;
+  }
+
+  public void setShufflePartitions(int shufflePartitions) {
+    this.shufflePartitions = shufflePartitions;
+  }
+
+  public int getLoadPartitions() {
+    return loadPartitions;
+  }
+
+  public void setLoadPartitions(int loadPartitions) {
+    this.loadPartitions = loadPartitions;
+  }
+
   @Override
   public String toString() {
     return "AnalyticsServerConfiguration{" +
         "version='" + version + '\'' +
         ", sparkMasterUrl='" + sparkMasterUrl + '\'' +
-        ", warehouseDirectory='" + warehouseDirectory + '\'' +
-        ", metastoreUrl='" + metastoreUrl + '\'' +
-        ", metastoreUser='" + metastoreUser + '\'' +
-        ", metastorePassword='" + metastorePassword + '\'' +
+        ", warehouseUrl='" + warehouseUrl + '\'' +
         ", databaseName='" + databaseName + '\'' +
         ", executorMemory='" + executorMemory + '\'' +
         ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
         ", explainQueries=" + explainQueries +
         ", terminologyClient=" + terminologyClient +
         ", sparkSession=" + sparkSession +
+        ", shufflePartitions=" + shufflePartitions +
+        ", loadPartitions=" + loadPartitions +
         '}';
   }
+
 }

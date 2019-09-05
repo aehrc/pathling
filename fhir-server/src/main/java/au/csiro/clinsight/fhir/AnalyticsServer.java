@@ -12,11 +12,13 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
+import com.cerner.bunsen.FhirEncoders;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.cors.CorsConfiguration;
@@ -31,6 +33,9 @@ public class AnalyticsServer extends RestfulServer {
 
   private static final Logger logger = LoggerFactory.getLogger(AnalyticsServer.class);
   private final AnalyticsServerConfiguration configuration;
+  private final AnalyticsServerCapabilities serverCapabilities;
+  private SparkSession spark;
+  private FhirEncoders fhirEncoders;
   private QueryExecutor queryExecutor;
 
   public AnalyticsServer(@Nonnull AnalyticsServerConfiguration configuration) {
@@ -38,7 +43,8 @@ public class AnalyticsServer extends RestfulServer {
 
     logger.info("Creating new AnalyticsServer: " + configuration);
     this.configuration = configuration;
-    setServerConformanceProvider(new AnalyticsServerCapabilities(configuration));
+    this.serverCapabilities = new AnalyticsServerCapabilities(configuration);
+    setServerConformanceProvider(serverCapabilities);
   }
 
   @Nonnull
@@ -53,9 +59,28 @@ public class AnalyticsServer extends RestfulServer {
     // Set default response encoding to JSON.
     setDefaultResponseEncoding(EncodingEnum.JSON);
 
+    initializeSpark();
+    fhirEncoders = FhirEncoders.forR4().getOrCreate();
     initializeQueryExecutor();
     declareProviders();
     defineCorsConfiguration();
+  }
+
+  private void initializeSpark() {
+    if (configuration.getSparkSession() != null) {
+      spark = configuration.getSparkSession();
+    } else {
+      spark = SparkSession.builder()
+          .appName("clinsight-server")
+          .config("spark.master", configuration.getSparkMasterUrl())
+          .config("spark.executor.memory", configuration.getExecutorMemory())
+          .config("spark.dynamicAllocation.enabled", "true")
+          .config("spark.shuffle.service.enabled", "true")
+          .config("spark.scheduler.mode", "FAIR")
+          .config("spark.sql.autoBroadcastJoinThreshold", "-1")
+          .config("spark.sql.shuffle.partitions", "36")
+          .getOrCreate();
+    }
   }
 
   /**
@@ -63,29 +88,27 @@ public class AnalyticsServer extends RestfulServer {
    */
   private void initializeQueryExecutor() {
     QueryExecutorConfiguration executorConfig = new QueryExecutorConfiguration();
+    executorConfig.setSparkSession(spark);
     copyStringProps(configuration, executorConfig, Arrays
-        .asList("sparkMasterUrl", "warehouseDirectory", "metastoreUrl", "metastoreUser",
-            "metastorePassword", "databaseName", "executorMemory", "terminologyServerUrl"));
+        .asList("sparkMasterUrl", "warehouseUrl", "databaseName", "executorMemory",
+            "terminologyServerUrl"));
     executorConfig.setExplainQueries(configuration.getExplainQueries());
     if (configuration.getTerminologyClient() != null) {
       executorConfig.setTerminologyClient(configuration.getTerminologyClient());
     }
-    if (configuration.getSparkSession() != null) {
-      executorConfig.setSparkSession(configuration.getSparkSession());
-    }
 
     queryExecutor = new QueryExecutor(executorConfig, getFhirContext());
+    serverCapabilities.setQueryExecutor(queryExecutor);
   }
 
   /**
-   * Declare the providers which will handle requests to this server. This server only knows how to
-   * do one thing - satisfy `aggregate-query` requests. This is a system-wide operation, so it is
-   * delivered using a plain provider.
+   * Declare the providers which will handle requests to this server.
    */
   private void declareProviders() {
     List<Object> plainProviders = new ArrayList<>();
     plainProviders.add(new QueryOperationProvider(queryExecutor));
-    setPlainProviders(plainProviders);
+    plainProviders.add(new ImportProvider(configuration, spark, getFhirContext(), fhirEncoders));
+    registerProviders(plainProviders);
   }
 
   /**

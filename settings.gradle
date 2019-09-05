@@ -1,5 +1,0 @@
-rootProject.name = 'clinsight'
-include 'utilities'
-include 'fhir-server'
-include 'terminology-client'
-include ':loaders:fhir-loader'

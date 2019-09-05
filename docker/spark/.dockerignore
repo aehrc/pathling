@@ -1,0 +1,4 @@
+*
+!Dockerfile
+!spark-env.sh
+!target/dependency/*.jar

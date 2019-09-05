@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+  -->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>au.csiro.clinsight</groupId>
+    <artifactId>clinsight</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>spark</artifactId>
+  <version>${project.parent.version}</version>
+  <packaging>pom</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>au.csiro.clinsight</groupId>
+      <artifactId>fhir-server</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.1.1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+          </execution>
+        </executions>
+<!--        <configuration>-->
+<!--          <includeGroupIds>au.csiro.clinsight</includeGroupIds>-->
+<!--          <includeArtifactIds>fhir-server</includeArtifactIds>-->
+<!--        </configuration>-->
+      </plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>dockerfile-maven-plugin</artifactId>
+        <version>1.4.12</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build</goal>
+              <goal>push</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <repository>docker-registry.it.csiro.au/clinsight/spark</repository>
+          <buildArgs>
+            <SPARK_VERSION>${sparkVersion}</SPARK_VERSION>
+            <SPARK_SCALA_VERSION>${sparkScalaVersion}</SPARK_SCALA_VERSION>
+            <HADOOP_VERSION>${hadoopVersion}</HADOOP_VERSION>
+            <SPARK_MIRROR>${sparkMirror}</SPARK_MIRROR>
+            <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
+            <DEPENDENCY_PATH>target/dependency</DEPENDENCY_PATH>
+          </buildArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

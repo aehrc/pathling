@@ -4,189 +4,137 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.query.parsing.Join.JoinType.LEFT_JOIN;
-import static au.csiro.clinsight.query.parsing.Join.rewriteSqlWithJoinAliases;
-import static au.csiro.clinsight.query.parsing.Join.wrapLateralViews;
-import static au.csiro.clinsight.query.parsing.ParseResult.FhirPathType.STRING;
+import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.CODING;
+import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.STRING;
+import static au.csiro.clinsight.utilities.Strings.md5Short;
 
-import au.csiro.clinsight.TerminologyClient;
-import au.csiro.clinsight.query.Code;
-import au.csiro.clinsight.query.parsing.AliasGenerator;
-import au.csiro.clinsight.query.parsing.ExpressionParserContext;
-import au.csiro.clinsight.query.parsing.Join;
-import au.csiro.clinsight.query.parsing.ParseResult;
-import au.csiro.clinsight.query.parsing.ParseResult.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParseResult.FhirType;
-import au.csiro.clinsight.utilities.Strings;
+import au.csiro.clinsight.fhir.TerminologyClient;
+import au.csiro.clinsight.query.IdAndBoolean;
+import au.csiro.clinsight.query.parsing.ParsedExpression;
+import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import java.util.HashSet;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
+import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.dstu3.model.UriType;
-import org.hl7.fhir.dstu3.model.ValueSet;
+import org.apache.spark.sql.Row;
+import org.hl7.fhir.dstu3.model.*;
+import org.hl7.fhir.dstu3.model.Parameters.ParametersParameterComponent;
 
 /**
  * A function that takes a set of Codings as inputs and returns a set of boolean values, based upon
  * whether each Coding is present within the ValueSet identified by the supplied URL.
  *
  * @author John Grimes
+ * @see <a href="https://build.fhir.org/fhirpath.html#functions">https://build.fhir.org/fhirpath.html#functions</a>
  */
-public class MemberOfFunction implements ExpressionFunction {
+public class MemberOfFunction implements Function {
+
+  private static final Set<FhirPathType> supportedTypes = new HashSet<FhirPathType>() {{
+    add(CODING);
+  }};
 
   @Nonnull
   @Override
-  public ParseResult invoke(@Nonnull ExpressionFunctionInput input) {
-    ParseResult inputResult = validateInput(input.getInput());
-    ParseResult argument = validateArgument(input.getArguments());
-    ExpressionParserContext context = input.getContext();
-    AliasGenerator aliasGenerator = context.getAliasGenerator();
+  public ParsedExpression invoke(@Nonnull FunctionInput input) {
+    validateInput(input);
+    ParsedExpression inputResult = input.getInput();
+    ParsedExpression argument = input.getArguments().get(0);
+    String valueSetUri = argument.getLiteralValue().toString();
+    Dataset<Row> prevDataset = input.getInput().getDataset();
+    TerminologyClient terminologyClient = input.getContext().getTerminologyClient();
+    String hash = md5Short(input.getExpression());
 
-    assert inputResult.getFhirPath() != null;
-    assert argument.getFhirPath() != null;
-    String unquotedArgument = argument.getFhirPath()
-        .substring(1, argument.getFhirPath().length() - 1);
-    // Get a shortened hash of the ValueSet URL for use as part of the temporary view name, and also
-    // within the alias in the query. This helps us ensure uniqueness of the names we use.
-    String argumentHash = Strings.md5(unquotedArgument).substring(0, 7);
-    String tableName = "valueSet_" + argumentHash;
+    // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
+    // then create a new dataset with the boolean results.
+    Dataset<IdAndBoolean> validateResults = prevDataset
+        .map((MapFunction<Row, IdAndBoolean>) row -> {
+          IdAndBoolean result = new IdAndBoolean();
+          result.setId(row.getString(0));
+          if (inputResult.getFhirPathType() == CODING) {
+            result.setValue(validateCoding(terminologyClient, valueSetUri, row));
+          } else {
+            result.setValue(validateCodeableConcept(terminologyClient, valueSetUri, row));
+          }
+          return result;
+        }, Encoders.bean(IdAndBoolean.class));
+    Column idColumn = validateResults.col(validateResults.columns()[0]).alias(hash + "_id");
+    Column column = validateResults.col(validateResults.columns()[1]).alias(hash);
+    Dataset<Row> dataset = validateResults.select(idColumn, column);
 
-    // Create a table containing the results of the expanded ValueSet, if it doesn't already exist.
-    ensureExpansionTableExists(unquotedArgument, tableName, context);
-
-    // Build a SQL expression representing the new subquery that provides the result of the ValueSet
-    // membership test.
-    String valueSetJoinAlias = aliasGenerator.getAlias();
-    String wrapperJoinAlias = aliasGenerator.getAlias();
-
-    // If this is a CodeableConcept, we need to update the input expression to the `coding`
-    // member first.
-    String inputType = inputResult.getPathTraversal().getElementDefinition().getTypeCode();
-    if (inputType.equals("CodeableConcept")) {
-      ExpressionFunctionInput memberInvocationInput = new ExpressionFunctionInput();
-      memberInvocationInput.setContext(context);
-      memberInvocationInput.setExpression("coding");
-      memberInvocationInput.setInput(inputResult);
-      inputResult = new MemberInvocation().invoke(memberInvocationInput);
-    }
-
-    String inputSql = rewriteSqlWithJoinAliases(inputResult.getSql(), inputResult.getJoins());
-
-    Join valueSetJoin = new Join();
-    String valueSetJoinSql = "LEFT JOIN " + tableName + " " + valueSetJoinAlias + " ";
-    valueSetJoinSql += "ON " + inputSql + ".system = " + valueSetJoinAlias + ".system ";
-    valueSetJoinSql += "AND " + inputSql + ".code = " + valueSetJoinAlias + ".code";
-    valueSetJoin.setSql(valueSetJoinSql);
-    valueSetJoin.setJoinType(LEFT_JOIN);
-    valueSetJoin.setTableAlias(valueSetJoinAlias);
-    valueSetJoin.setAliasTarget(tableName);
-    valueSetJoin.getDependsUpon().add(inputResult.getJoins().last());
-
-    // Build the candidate set of inner joins.
-    SortedSet<Join> innerJoins = new TreeSet<>(inputResult.getJoins());
-    // If the input has joins and the last one is a lateral view, we will need to wrap the upstream
-    // joins. This is because Spark SQL does not currently allow a table join to follow a lateral
-    // view within a query.
-    innerJoins.add(valueSetJoin);
-    innerJoins = wrapLateralViews(innerJoins, valueSetJoin, aliasGenerator, context.getFromTable());
-
-    // If there is a filter to be applied as part of this invocation, add in its join dependencies.
-    if (input.getFilter() != null) {
-      innerJoins.addAll(input.getFilterJoins());
-    }
-
-    String wrapperJoinSql = "LEFT JOIN (";
-    wrapperJoinSql += "SELECT " + context.getFromTable() + ".id, ";
-    wrapperJoinSql += "MAX(" + valueSetJoinAlias + ".code) IS NULL AS result ";
-    wrapperJoinSql += "FROM " + context.getFromTable() + " ";
-    wrapperJoinSql += innerJoins.stream().map(Join::getSql).collect(Collectors.joining(" ")) + " ";
-
-    // If there is a filter to be applied as part of this invocation, add a where clause in here.
-    if (input.getFilter() != null) {
-      String filter = rewriteSqlWithJoinAliases(input.getFilter(), innerJoins);
-      wrapperJoinSql += "WHERE " + filter + " ";
-    }
-
-    wrapperJoinSql += "GROUP BY 1";
-    wrapperJoinSql +=
-        ") " + wrapperJoinAlias + " ON " + context.getFromTable() + ".id = " + wrapperJoinAlias
-            + ".id";
-
-    // Create a new Join that represents the join to the new subquery.
-    Join wrapperJoin = new Join();
-    wrapperJoin.setSql(wrapperJoinSql);
-    wrapperJoin.setJoinType(LEFT_JOIN);
-    wrapperJoin.setTableAlias(wrapperJoinAlias);
-    wrapperJoin.setAliasTarget(wrapperJoinAlias);
-    wrapperJoin.setTargetElement(inputResult.getPathTraversal().getElementDefinition());
-
-    // Build a new parse result, representing the results of the ValueSet expansion.
-    ParseResult result = new ParseResult();
-    result.setFunction(this);
-    result.setFunctionInput(input);
+    // Construct a new parse result.
+    ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
-    result.setSql(wrapperJoinAlias + ".result");
     result.setFhirPathType(FhirPathType.BOOLEAN);
     result.setFhirType(FhirType.BOOLEAN);
-    result.getJoins().add(wrapperJoin);
     result.setPrimitive(true);
     result.setSingular(inputResult.isSingular());
+    result.setDataset(dataset);
+    result.setDatasetColumn(hash);
     return result;
   }
 
-  private ParseResult validateInput(@Nullable ParseResult input) {
-    if (input == null) {
-      throw new InvalidRequestException("Must provide an input to memberOf function");
-    }
-    String typeCode = input.getPathTraversal().getElementDefinition().getTypeCode();
-    if (input.isPrimitive() || !(typeCode.equals("Coding") || typeCode.equals("CodeableConcept"))) {
-      throw new InvalidRequestException(
-          "Input to memberOf function must be Coding or CodeableConcept: " + input.getFhirPath());
-    }
-    return input;
+  private boolean validateCoding(TerminologyClient terminologyClient, String valueSetUri, Row row) {
+    String system = row.getString(row.fieldIndex("system"));
+    String version = row.getString(row.fieldIndex("version"));
+    String code = row.getString(row.fieldIndex("code"));
+    String display = row.getString(row.fieldIndex("display"));
+    Coding coding = new Coding(system, code, display);
+    coding.setVersion(version);
+    Parameters validateCodeResult = terminologyClient
+        .validateCode(new UriType(valueSetUri), coding);
+    ParametersParameterComponent resultParam = validateCodeResult.getParameter().stream()
+        .filter(param -> param.getName().equals("result"))
+        .findFirst()
+        .orElse(null);
+    return resultParam != null
+        && resultParam.hasValue()
+        && resultParam.getValue().isBooleanPrimitive()
+        && ((BooleanType) resultParam.getValue()).booleanValue();
   }
 
-  @Nonnull
-  private ParseResult validateArgument(@Nonnull List<ParseResult> arguments) {
-    if (arguments.size() != 1) {
-      throw new InvalidRequestException("Must pass URL argument to memberOf function");
+  private boolean validateCodeableConcept(TerminologyClient terminologyClient, String valueSetUri,
+      Row row) {
+    List<Row> codingRows = row.getList(row.fieldIndex("coding"));
+    CodeableConcept codeableConcept = new CodeableConcept();
+    for (Row codingRow : codingRows) {
+      String system = codingRow.getString(codingRow.fieldIndex("system"));
+      String version = codingRow.getString(codingRow.fieldIndex("version"));
+      String code = codingRow.getString(codingRow.fieldIndex("code"));
+      String display = codingRow.getString(codingRow.fieldIndex("display"));
+      Coding coding = new Coding(system, code, display);
+      coding.setVersion(version);
+      codeableConcept.getCoding().add(coding);
     }
-    ParseResult argument = arguments.get(0);
-    if (argument.getFhirPathType() != STRING) {
-      throw new InvalidRequestException(
-          "Argument to memberOf function must be a String: " + argument.getFhirPath());
-    }
-    return argument;
+    Parameters validateCodeResult = terminologyClient
+        .validateCode(new UriType(valueSetUri), codeableConcept);
+    ParametersParameterComponent resultParam = validateCodeResult.getParameter().stream()
+        .filter(param -> param.getName().equals("result"))
+        .findFirst()
+        .orElse(null);
+    return resultParam != null
+        && resultParam.hasValue()
+        && resultParam.getValue().isBooleanPrimitive()
+        && ((BooleanType) resultParam.getValue()).booleanValue();
   }
 
-  /**
-   * Expands the specified ValueSet using the terminology server, and saves the result to a
-   * temporary view identified by the specified table name.
-   */
-  private void ensureExpansionTableExists(String valueSetUrl, String tableName,
-      ExpressionParserContext context) {
-    SparkSession spark = context.getSparkSession();
-    String databaseName = context.getDatabaseName();
-    TerminologyClient terminologyClient = context.getTerminologyClient();
+  private void validateInput(FunctionInput input) {
+    ParsedExpression inputResult = input.getInput();
+    if (!(supportedTypes.contains(inputResult.getFhirPathType()) || inputResult.getPathTraversal()
+        .getElementDefinition().getTypeCode().equals("CodeableConcept"))) {
+      throw new InvalidRequestException(
+          "Input to memberOf function is of unsupported type: " + inputResult.getFhirPath());
+    }
 
-    if (!spark.catalog().tableExists(databaseName, tableName)) {
-      ValueSet expansion = terminologyClient.expandValueSet(new UriType(valueSetUrl));
-      List<Code> expansionRows = expansion.getExpansion().getContains().stream()
-          .map(contains -> {
-            Code code = new Code();
-            code.setSystem(contains.getSystem());
-            code.setCode(contains.getCode());
-            return code;
-          })
-          .collect(Collectors.toList());
-      Dataset<Code> expansionDataset = spark
-          .createDataset(expansionRows, Encoders.bean(Code.class));
-      expansionDataset.createOrReplaceTempView(tableName);
+    if (!input.getArguments().isEmpty()
+        || input.getArguments().get(0).getFhirPathType() != STRING) {
+      throw new InvalidRequestException(
+          "memberOf function accepts one argument of type String: " + input.getExpression());
     }
   }
 

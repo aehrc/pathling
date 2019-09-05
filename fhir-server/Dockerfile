@@ -1,9 +1,14 @@
 FROM openjdk:8
-ARG version
+ARG JAR_FILE
+ARG DEPENDENCY_PATH
+ARG VERSION
 
-COPY build/libs/fhir-server-1.0-SNAPSHOT.jar /fhir-server.jar
-COPY build/dependencies /lib/
+ADD $DEPENDENCY_PATH /usr/share/fhir-server/lib
+COPY $JAR_FILE /fhir-server.jar
 
-ENV CLINSIGHT_FHIR_SERVER_VERSION=$version
+ENV CLINSIGHT_FHIR_SERVER_VERSION=$VERSION
 
-CMD ["java", "-ea", "-jar", "/fhir-server.jar"]
+CMD ["java", "-ea", "-cp", "/fhir-server.jar:/usr/share/fhir-server/lib/*", "au.csiro.clinsight.FhirServerContainer"]
+
+HEALTHCHECK --interval=10s --timeout=1s --start-period=25s --retries=3 \
+    CMD curl -v --fail http://localhost:8090/fhir/metadata || exit 1

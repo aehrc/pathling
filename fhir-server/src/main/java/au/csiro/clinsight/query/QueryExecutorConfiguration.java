@@ -4,7 +4,7 @@
 
 package au.csiro.clinsight.query;
 
-import au.csiro.clinsight.TerminologyClient;
+import au.csiro.clinsight.fhir.TerminologyClient;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -14,10 +14,7 @@ import org.apache.spark.sql.SparkSession;
 public class QueryExecutorConfiguration {
 
   private String sparkMasterUrl;
-  private String warehouseDirectory;
-  private String metastoreUrl;
-  private String metastoreUser;
-  private String metastorePassword;
+  private String warehouseUrl;
   private String databaseName;
   private String executorMemory;
   private String terminologyServerUrl;
@@ -27,10 +24,6 @@ public class QueryExecutorConfiguration {
 
   public QueryExecutorConfiguration() {
     sparkMasterUrl = "spark://localhost:7077";
-    warehouseDirectory = ".";
-    metastoreUrl = "jdbc:postgresql://localhost/clinsight_metastore";
-    metastoreUser = "clinsight";
-    metastorePassword = "";
     databaseName = "clinsight";
     executorMemory = "1g";
     terminologyServerUrl = "http://localhost:8080/fhir";
@@ -44,36 +37,12 @@ public class QueryExecutorConfiguration {
     this.sparkMasterUrl = sparkMasterUrl;
   }
 
-  public String getWarehouseDirectory() {
-    return warehouseDirectory;
+  public String getWarehouseUrl() {
+    return warehouseUrl;
   }
 
-  public void setWarehouseDirectory(String warehouseDirectory) {
-    this.warehouseDirectory = warehouseDirectory;
-  }
-
-  public String getMetastoreUrl() {
-    return metastoreUrl;
-  }
-
-  public void setMetastoreUrl(String metastoreUrl) {
-    this.metastoreUrl = metastoreUrl;
-  }
-
-  public String getMetastoreUser() {
-    return metastoreUser;
-  }
-
-  public void setMetastoreUser(String metastoreUser) {
-    this.metastoreUser = metastoreUser;
-  }
-
-  public String getMetastorePassword() {
-    return metastorePassword;
-  }
-
-  public void setMetastorePassword(String metastorePassword) {
-    this.metastorePassword = metastorePassword;
+  public void setWarehouseUrl(String warehouseUrl) {
+    this.warehouseUrl = warehouseUrl;
   }
 
   public String getDatabaseName() {
@@ -128,13 +97,11 @@ public class QueryExecutorConfiguration {
   public String toString() {
     return "QueryExecutorConfiguration{" +
         "sparkMasterUrl='" + sparkMasterUrl + '\'' +
-        ", warehouseDirectory='" + warehouseDirectory + '\'' +
-        ", metastoreUrl='" + metastoreUrl + '\'' +
-        ", metastoreUser='" + metastoreUser + '\'' +
-        ", metastorePassword='" + metastorePassword + '\'' +
+        ", warehouseUrl='" + warehouseUrl + '\'' +
         ", databaseName='" + databaseName + '\'' +
         ", executorMemory='" + executorMemory + '\'' +
         ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
+        ", explainQueries=" + explainQueries +
         ", terminologyClient=" + terminologyClient +
         ", sparkSession=" + sparkSession +
         '}';

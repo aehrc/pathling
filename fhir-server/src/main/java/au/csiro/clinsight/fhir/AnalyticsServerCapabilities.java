@@ -4,9 +4,12 @@
 
 package au.csiro.clinsight.fhir;
 
+import au.csiro.clinsight.query.QueryExecutor;
 import ca.uhn.fhir.rest.annotation.Metadata;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IServerConformanceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -15,6 +18,8 @@ import javax.servlet.http.HttpServletRequest;
 import org.hl7.fhir.dstu3.model.*;
 import org.hl7.fhir.dstu3.model.CapabilityStatement.*;
 import org.hl7.fhir.dstu3.model.Enumerations.PublicationStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides a customised CapabilityStatement describing the functionality of the
@@ -28,7 +33,9 @@ import org.hl7.fhir.dstu3.model.Enumerations.PublicationStatus;
 public class AnalyticsServerCapabilities implements
     IServerConformanceProvider<CapabilityStatement> {
 
+  private static final Logger logger = LoggerFactory.getLogger(AnalyticsServerCapabilities.class);
   AnalyticsServerConfiguration configuration;
+  QueryExecutor queryExecutor;
 
   public AnalyticsServerCapabilities(
       AnalyticsServerConfiguration configuration) {
@@ -37,7 +44,9 @@ public class AnalyticsServerCapabilities implements
 
   @Override
   @Metadata
-  public CapabilityStatement getServerConformance(HttpServletRequest httpServletRequest) {
+  public CapabilityStatement getServerConformance(HttpServletRequest httpServletRequest,
+      RequestDetails requestDetails) {
+    checkServerHealth();
     CapabilityStatement capabilityStatement = new CapabilityStatement();
     capabilityStatement
         .setUrl("https://clinsight.csiro.au/fhir/CapabilityStatement/clinsight-fhir-api-0");
@@ -60,6 +69,13 @@ public class AnalyticsServerCapabilities implements
     capabilityStatement.setFormat(Arrays.asList(new CodeType("json"), new CodeType("xml")));
     capabilityStatement.setRest(buildRestComponent());
     return capabilityStatement;
+  }
+
+  private void checkServerHealth() {
+    if (queryExecutor == null || !queryExecutor.isReady()) {
+      throw new UnclassifiedServerFailureException(503,
+          "Server is not currently available for query, check with your server administrator");
+    }
   }
 
   @Nonnull
@@ -90,6 +106,10 @@ public class AnalyticsServerCapabilities implements
 
   @Override
   public void setRestfulServer(RestfulServer restfulServer) {
+  }
+
+  public void setQueryExecutor(QueryExecutor queryExecutor) {
+    this.queryExecutor = queryExecutor;
   }
 
 }
