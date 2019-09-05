@@ -38,16 +38,16 @@
 
   <profiles>
     <profile>
-      <id>default</id>
+      <id>all</id>
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
       <modules>
         <module>fhir-server</module>
+        <module>fhir-server-shaded</module>
         <module>docker/spark</module>
         <module>docker/spark-master</module>
         <module>docker/spark-worker</module>
-        <module>docker/thrift</module>
         <module>docker/notebook</module>
         <module>docker/zeppelin</module>
         <module>docker/synthea</module>
@@ -60,6 +60,20 @@
         <module>docker/spark</module>
         <module>docker/spark-master</module>
         <module>docker/spark-worker</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>notebook</id>
+      <modules>
+        <module>fhir-server</module>
+        <module>docker/notebook</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>zeppelin</id>
+      <modules>
+        <module>fhir-server</module>
+        <module>docker/zeppelin</module>
       </modules>
     </profile>
   </profiles>

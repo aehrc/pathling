@@ -14,7 +14,6 @@
     <version>1.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>spark-worker</artifactId>
-  <version>${project.parent.version}</version>
   <packaging>pom</packaging>
 
   <build>
@@ -33,8 +32,10 @@
         </executions>
         <configuration>
           <repository>docker-registry.it.csiro.au/clinsight/spark-worker</repository>
+          <tag>${project.version}</tag>
           <pullNewerImage>false</pullNewerImage>
           <buildArgs>
+            <BASE_VERSION>${project.version}</BASE_VERSION>
             <PYTHON_VERSION>${pythonVersion}</PYTHON_VERSION>
           </buildArgs>
         </configuration>

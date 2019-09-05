@@ -14,7 +14,6 @@
     <version>1.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>spark-master</artifactId>
-  <version>${project.parent.version}</version>
   <packaging>pom</packaging>
 
   <build>
@@ -33,7 +32,11 @@
         </executions>
         <configuration>
           <repository>docker-registry.it.csiro.au/clinsight/spark-master</repository>
+          <tag>${project.version}</tag>
           <pullNewerImage>false</pullNewerImage>
+          <buildArgs>
+            <BASE_VERSION>${project.version}</BASE_VERSION>
+          </buildArgs>
         </configuration>
       </plugin>
     </plugins>
