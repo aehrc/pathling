@@ -15,9 +15,9 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.dstu3.model.ElementDefinition.TypeRefComponent;
-import org.hl7.fhir.dstu3.model.StructureDefinition;
-import org.hl7.fhir.dstu3.model.StructureDefinition.StructureDefinitionKind;
+import org.hl7.fhir.r4.model.ElementDefinition.TypeRefComponent;
+import org.hl7.fhir.r4.model.StructureDefinition;
+import org.hl7.fhir.r4.model.StructureDefinition.StructureDefinitionKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,7 @@ class ResourceScanner {
       @Nonnull List<StructureDefinition> structureDefinitions,
       @Nonnull Function<StructureDefinition, StructureDefinition> fetchResourceWithId) {
     return structureDefinitions.stream()
-        .filter(sd -> sd.getKind() == StructureDefinitionKind.RESOURCE)
+        .filter(sd -> sd.getKind() == StructureDefinition.StructureDefinitionKind.RESOURCE)
         .peek(sd -> logger.info("Retrieving resource StructureDefinition: " + sd.getUrl()))
         .collect(Collectors.toMap(StructureDefinition::getUrl, fetchResourceWithId));
   }
@@ -61,7 +61,7 @@ class ResourceScanner {
     Supplier<Predicate<StructureDefinition>> complexTypeFilter = () -> sd -> {
       // Check that the StructureDefinition is a complex type, and that the URL matches the base
       // FHIR prefix.
-      if (sd.getKind() != StructureDefinitionKind.COMPLEXTYPE ||
+      if (sd.getKind() != StructureDefinitionKind.RESOURCE ||
           !sd.getUrl().matches("^http://hl7.org/fhir/StructureDefinition/.+")) {
         return false;
       }
@@ -129,10 +129,10 @@ class ResourceScanner {
    */
   @Nonnull
   private static Map<String, ElementDefinition> summariseElements(
-      @Nonnull List<org.hl7.fhir.dstu3.model.ElementDefinition> elements) {
+      @Nonnull List<org.hl7.fhir.r4.model.ElementDefinition> elements) {
     Map<String, ElementDefinition> result = new HashMap<>();
 
-    for (org.hl7.fhir.dstu3.model.ElementDefinition element : elements) {
+    for (org.hl7.fhir.r4.model.ElementDefinition element : elements) {
       List<TypeRefComponent> typeRefComponents = element.getType();
       String elementPath = element.getPath();
       assert elementPath != null : "Encountered element with no path";
@@ -192,7 +192,7 @@ class ResourceScanner {
           // referenced. This will be used later when resolving references.
           @SuppressWarnings("ConstantConditions") List<String> referenceTypes = typeRefComponents
               .stream()
-              .map(TypeRefComponent::getTargetProfile)
+              .map(typeRefComponent -> typeRefComponent.getTargetProfile().toString())
               .collect(Collectors.toList());
           elementDefinition.getReferenceTypes().addAll(referenceTypes);
         }
@@ -209,7 +209,7 @@ class ResourceScanner {
    * structure, they rely on paths to convey the structure.
    */
   private static List<String> findElementChildren(@Nonnull String elementPath,
-      @Nonnull List<org.hl7.fhir.dstu3.model.ElementDefinition> elements) {
+      @Nonnull List<org.hl7.fhir.r4.model.ElementDefinition> elements) {
     List<String> children = elements.stream()
         .filter(e -> e.getPath().matches(elementPath + "\\.[a-zA-Z\\[\\]]+$"))
         .map(e -> {

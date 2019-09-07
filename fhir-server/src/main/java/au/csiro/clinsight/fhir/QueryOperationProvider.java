@@ -9,7 +9,7 @@ import au.csiro.clinsight.query.QueryRequest;
 import au.csiro.clinsight.query.QueryResponse;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
-import org.hl7.fhir.dstu3.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters;
 
 /**
  * HAPI plain provider that provides an entry point for the `$query` system-wide operation.

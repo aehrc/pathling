@@ -2,7 +2,9 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query;
+package au.csiro.clinsight.update;
+
+import static au.csiro.clinsight.utilities.PersistenceScheme.fileNameForResource;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
@@ -30,8 +32,8 @@ public class ResourceWriter {
     return databaseName;
   }
 
-  public void write(String resourceName, Dataset resources) {
-    String tableUrl = warehouseUrl + "/" + databaseName + "/" + resourceName + ".parquet";
+  public void write(String resourceUri, Dataset resources) {
+    String tableUrl = warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceUri);
     resources.write().mode(SaveMode.Overwrite).parquet(tableUrl);
   }
 }

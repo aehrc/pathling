@@ -4,6 +4,8 @@
 
 package au.csiro.clinsight.query;
 
+import static au.csiro.clinsight.utilities.PersistenceScheme.fileNameForResource;
+
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -38,8 +40,8 @@ public class ResourceReader {
     return databaseName;
   }
 
-  public Dataset<Row> read(String resourceName) {
-    String tableUrl = warehouseUrl + "/" + databaseName + "/" + resourceName + ".parquet";
+  public Dataset<Row> read(String resourceUri) {
+    String tableUrl = warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceUri);
     return spark.read().parquet(tableUrl);
   }
 }

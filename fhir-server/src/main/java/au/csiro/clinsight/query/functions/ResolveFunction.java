@@ -64,7 +64,7 @@ public class ResolveFunction implements Function {
       if (referenceType.contains(BASE_RESOURCE_URL_PREFIX)) {
         String resourceName = referenceType.replaceFirst(BASE_RESOURCE_URL_PREFIX, "");
         argumentCol = md5Short(resourceName);
-        argumentDataset = input.getContext().getResourceReader().read(resourceName);
+        argumentDataset = input.getContext().getResourceReader().read(referenceType);
         argumentDataset = argumentDataset.withColumnRenamed("id", argumentCol + "_id");
       } else {
         assert false : "Non-base resource reference encountered: " + referenceType;

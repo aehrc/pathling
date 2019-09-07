@@ -22,13 +22,6 @@ public class QueryExecutorConfiguration {
   private TerminologyClient terminologyClient;
   private SparkSession sparkSession;
 
-  public QueryExecutorConfiguration() {
-    sparkMasterUrl = "spark://localhost:7077";
-    databaseName = "clinsight";
-    executorMemory = "1g";
-    terminologyServerUrl = "http://localhost:8080/fhir";
-  }
-
   public String getSparkMasterUrl() {
     return sparkMasterUrl;
   }

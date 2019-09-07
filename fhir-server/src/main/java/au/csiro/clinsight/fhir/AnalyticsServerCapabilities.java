@@ -15,18 +15,16 @@ import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
-import org.hl7.fhir.dstu3.model.*;
-import org.hl7.fhir.dstu3.model.CapabilityStatement.*;
-import org.hl7.fhir.dstu3.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.CapabilityStatement.*;
+import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
+import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * This class provides a customised CapabilityStatement describing the functionality of the
  * analytics server.
- *
- * TODO: Merge advertised capabilities with those of any other servers that we proxy requests to,
- * such as the terminology server and FHIR REST server.
  *
  * @author John Grimes
  */
@@ -64,8 +62,7 @@ public class AnalyticsServerCapabilities implements
         new StringType("Clinsight FHIR Server"));
     software.setVersion(configuration.getVersion());
     capabilityStatement.setSoftware(software);
-    capabilityStatement.setFhirVersion("3.0.1");
-    capabilityStatement.setAcceptUnknown(UnknownContentCode.NO);
+    capabilityStatement.setFhirVersion(FHIRVersion._4_0_0);
     capabilityStatement.setFormat(Arrays.asList(new CodeType("json"), new CodeType("xml")));
     capabilityStatement.setRest(buildRestComponent());
     return capabilityStatement;
@@ -94,10 +91,11 @@ public class AnalyticsServerCapabilities implements
     List<CapabilityStatementRestComponent> rest = new ArrayList<>();
     CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
     server.setMode(RestfulCapabilityMode.SERVER);
-    List<CapabilityStatementRestOperationComponent> operations = new ArrayList<>();
-    Reference queryOperationReference = new Reference("OperationDefinition/aggregate-query-0");
-    CapabilityStatementRestOperationComponent operation = new CapabilityStatementRestOperationComponent(
-        new StringType("aggregate-query"), queryOperationReference);
+    List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
+    CanonicalType operationUri = new CanonicalType(
+        "https://clinsight.csiro.au/fhir/OperationDefinition/query-0");
+    CapabilityStatementRestResourceOperationComponent operation = new CapabilityStatementRestResourceOperationComponent(
+        new StringType("aggregate-query"), operationUri);
     operations.add(operation);
     server.setOperation(operations);
     rest.add(server);

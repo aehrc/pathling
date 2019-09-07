@@ -2,14 +2,12 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.fhir;
+package au.csiro.clinsight.update;
 
-import au.csiro.clinsight.query.ResourceWriter;
+import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import com.cerner.bunsen.Bundles;
 import com.cerner.bunsen.FhirEncoders;
 import com.google.gson.Gson;
 import java.io.IOException;
@@ -19,11 +17,11 @@ import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.hl7.fhir.dstu3.model.OperationOutcome;
-import org.hl7.fhir.dstu3.model.OperationOutcome.IssueSeverity;
-import org.hl7.fhir.dstu3.model.OperationOutcome.IssueType;
-import org.hl7.fhir.dstu3.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,24 +33,20 @@ import org.slf4j.LoggerFactory;
 public class ImportProvider {
 
   private static final Logger logger = LoggerFactory.getLogger(ImportProvider.class);
-  private final AnalyticsServerConfiguration configuration;
   private final SparkSession spark;
   private final ResourceWriter resourceWriter;
   private final FhirContext fhirContext;
   private final FhirEncoders fhirEncoders;
   private final Gson gson;
-  private final Bundles bundles;
 
   public ImportProvider(AnalyticsServerConfiguration configuration,
       SparkSession spark, FhirContext fhirContext, FhirEncoders fhirEncoders) {
-    this.configuration = configuration;
     this.spark = spark;
     this.resourceWriter = new ResourceWriter(configuration.getWarehouseUrl(),
         configuration.getDatabaseName());
     this.fhirContext = fhirContext;
     this.fhirEncoders = fhirEncoders;
     gson = new Gson();
-    bundles = Bundles.forStu3();
   }
 
   /**
@@ -85,13 +79,12 @@ public class ImportProvider {
     for (ImportRequestInput importRequestInput : importRequest.getInputs()) {
       String resourceName = importRequestInput.getType();
       ExpressionEncoder<IBaseResource> fhirEncoder = fhirEncoders.of(resourceName);
+      @SuppressWarnings("UnnecessaryLocalVariable") FhirContext parsingContext = fhirContext;
 
       Dataset<String> jsonStrings = spark.read().textFile(importRequestInput.getUrl());
       Dataset resources = jsonStrings
-          .map((MapFunction<String, IBaseResource>) json -> {
-            FhirContext fhirContext = FhirEncoders.contextFor(FhirVersionEnum.R4);
-            return fhirContext.newJsonParser().parseResource(json);
-          }, fhirEncoder);
+          .map((MapFunction<String, IBaseResource>) json -> parsingContext.newJsonParser()
+              .parseResource(json), fhirEncoder);
 
       logger.info("Saving resources: " + resourceName);
       resourceWriter.write(resourceName, resources);

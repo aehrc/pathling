@@ -28,7 +28,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.*;
-import org.hl7.fhir.dstu3.model.Type;
+import org.hl7.fhir.r4.model.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,7 +102,7 @@ public class QueryExecutor {
       }
       String resourceName = query.getSubjectResource().replaceFirst(BASE_RESOURCE_URL_PREFIX, "");
       String hash = md5Short(resourceName);
-      Dataset<Row> subject = resourceReader.read(resourceName);
+      Dataset<Row> subject = resourceReader.read(query.getSubjectResource());
       subject = subject.withColumnRenamed("id", hash + "_id");
 
       // Create an expression for the subject resource.

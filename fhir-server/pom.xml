@@ -47,6 +47,13 @@
       <artifactId>spring-web</artifactId>
       <version>5.0.8.RELEASE</version>
     </dependency>
+
+    <!-- Clinsight Client Library, which contains QueryRequest and QueryResponse classes -->
+    <dependency>
+      <groupId>au.csiro.clinsight</groupId>
+      <artifactId>client</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
 
   <build>

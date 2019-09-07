@@ -42,7 +42,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.dstu3.model.*;
+import org.hl7.fhir.r4.model.*;
 
 /**
  * This is an ANTLR-based parser for processing a FHIRPath expression, and aggregating the results
@@ -302,7 +302,7 @@ public class ExpressionParser {
         result.setOrigin(result);
 
         // Add a dataset to the parse result representing the nominated resource.
-        Dataset<Row> dataset = context.getResourceReader().read(fhirPath);
+        Dataset<Row> dataset = context.getResourceReader().read(result.getResourceDefinition());
         dataset = dataset.select(dataset.col("id").alias(hash + "_id"));
         result.setDataset(dataset);
         result.setDatasetColumn(hash);

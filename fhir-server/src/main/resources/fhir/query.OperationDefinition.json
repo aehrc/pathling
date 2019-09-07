@@ -12,7 +12,7 @@
   "useContext": [
     {
       "code": {
-        "system": "http://hl7.org/fhir/usage-context-type",
+        "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
         "code": "task",
         "display": "Workflow Task"
       },
@@ -24,6 +24,8 @@
   "idempotent": true,
   "code": "query",
   "system": true,
+  "type": false,
+  "instance": false,
   "parameter": [
     {
       "name": "subjectResource",

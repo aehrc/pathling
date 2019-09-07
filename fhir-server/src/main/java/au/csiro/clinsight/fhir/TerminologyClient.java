@@ -8,7 +8,7 @@ import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.client.api.IBasicClient;
 import java.util.List;
 import java.util.Set;
-import org.hl7.fhir.dstu3.model.*;
+import org.hl7.fhir.r4.model.*;
 
 /**
  * @author John Grimes

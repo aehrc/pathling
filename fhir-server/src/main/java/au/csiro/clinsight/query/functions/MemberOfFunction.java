@@ -23,8 +23,8 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.dstu3.model.*;
-import org.hl7.fhir.dstu3.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 
 /**
  * A function that takes a set of Codings as inputs and returns a set of boolean values, based upon

@@ -8,6 +8,7 @@ import static au.csiro.clinsight.utilities.Configuration.copyStringProps;
 
 import au.csiro.clinsight.query.QueryExecutor;
 import au.csiro.clinsight.query.QueryExecutorConfiguration;
+import au.csiro.clinsight.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
@@ -24,7 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.cors.CorsConfiguration;
 
 /**
- * A HAPI RestfulServer that understands how to satisfy aggregate queries over a set of STU3 FHIR
+ * A HAPI RestfulServer that understands how to satisfy aggregate queries over a set of FHIR
  * resources.
  *
  * @author John Grimes
@@ -40,6 +41,9 @@ public class AnalyticsServer extends RestfulServer {
 
   public AnalyticsServer(@Nonnull AnalyticsServerConfiguration configuration) {
     super(buildFhirContext());
+    assert configuration.getSparkMasterUrl() != null : "Must supply Spark master URL";
+    assert configuration.getWarehouseUrl() != null : "Must supply warehouse URL";
+    assert configuration.getExecutorMemory() != null : "Must supply executor memory";
 
     logger.info("Creating new AnalyticsServer: " + configuration);
     this.configuration = configuration;
@@ -49,7 +53,8 @@ public class AnalyticsServer extends RestfulServer {
 
   @Nonnull
   private static FhirContext buildFhirContext() {
-    return FhirContext.forDstu3();
+    logger.info("Creating R4 FHIR context");
+    return FhirContext.forR4();
   }
 
   @Override
@@ -60,6 +65,7 @@ public class AnalyticsServer extends RestfulServer {
     setDefaultResponseEncoding(EncodingEnum.JSON);
 
     initializeSpark();
+    logger.info("Creating R4 FHIR encoders");
     fhirEncoders = FhirEncoders.forR4().getOrCreate();
     initializeQueryExecutor();
     declareProviders();

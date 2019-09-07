@@ -7,9 +7,9 @@ package au.csiro.clinsight.query;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.dstu3.model.Parameters;
-import org.hl7.fhir.dstu3.model.Parameters.ParametersParameterComponent;
-import org.hl7.fhir.dstu3.model.Type;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents the information to be provided as the result of the invocation of the
