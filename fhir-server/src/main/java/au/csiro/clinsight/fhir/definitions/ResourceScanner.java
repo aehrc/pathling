@@ -61,7 +61,7 @@ class ResourceScanner {
     Supplier<Predicate<StructureDefinition>> complexTypeFilter = () -> sd -> {
       // Check that the StructureDefinition is a complex type, and that the URL matches the base
       // FHIR prefix.
-      if (sd.getKind() != StructureDefinitionKind.RESOURCE ||
+      if (sd.getKind() != StructureDefinitionKind.COMPLEXTYPE ||
           !sd.getUrl().matches("^http://hl7.org/fhir/StructureDefinition/.+")) {
         return false;
       }
@@ -85,7 +85,7 @@ class ResourceScanner {
       Set<String> difference = supportedComplexTypes.stream()
           .map(t -> BASE_RESOURCE_URL_PREFIX + t).collect(Collectors.toSet());
       difference.removeAll(definitions.keySet());
-      logger.warn("Number of complex type complexTypes retrieved does not equal number of "
+      logger.warn("Number of complex types retrieved does not equal number of "
           + "supported complex types, missing: " + String.join(", ", difference));
     }
 

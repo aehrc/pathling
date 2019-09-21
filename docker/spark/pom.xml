@@ -37,10 +37,6 @@
             </goals>
           </execution>
         </executions>
-<!--        <configuration>-->
-<!--          <includeGroupIds>au.csiro.clinsight</includeGroupIds>-->
-<!--          <includeArtifactIds>fhir-server</includeArtifactIds>-->
-<!--        </configuration>-->
       </plugin>
       <plugin>
         <groupId>com.spotify</groupId>

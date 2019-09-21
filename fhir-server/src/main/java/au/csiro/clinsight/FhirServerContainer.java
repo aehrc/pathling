@@ -29,10 +29,15 @@ public class FhirServerContainer {
   public static void main(String[] args) throws Exception {
     AnalyticsServerConfiguration config = new AnalyticsServerConfiguration();
 
+    String httpPortString = System.getenv("CLINSIGHT_HTTP_PORT");
+    int httpPort = 8080;
+    if (httpPortString != null) {
+      httpPort = Integer.parseInt(httpPortString);
+    }
     setStringPropsUsingEnvVar(config, new HashMap<String, String>() {{
       put("CLINSIGHT_FHIR_SERVER_VERSION", "version");
-      put("CLINSIGHT_SPARK_MASTER_URL", "sparkMasterUrl");
       put("CLINSIGHT_WAREHOUSE_URL", "warehouseUrl");
+      put("CLINSIGHT_SPARK_MASTER_URL", "sparkMasterUrl");
       put("CLINSIGHT_DATABASE_NAME", "databaseName");
       put("CLINSIGHT_EXECUTOR_MEMORY", "executorMemory");
       put("CLINSIGHT_TERMINOLOGY_SERVER_URL", "terminologyServerUrl");
@@ -57,10 +62,11 @@ public class FhirServerContainer {
     System.setProperty("javax.xml.stream.XMLOutputFactory", "com.ctc.wstx.stax.WstxOutputFactory");
     System.setProperty("javax.xml.stream.XMLEventFactory", "com.ctc.wstx.stax.WstxEventFactory");
 
-    start(config);
+    start(httpPort, config);
   }
 
-  private static void start(@Nonnull AnalyticsServerConfiguration configuration) throws Exception {
+  private static void start(int httpPort, @Nonnull AnalyticsServerConfiguration configuration)
+      throws Exception {
     final int maxThreads = 100;
     final int minThreads = 10;
     final int idleTimeout = 120;
@@ -69,7 +75,7 @@ public class FhirServerContainer {
 
     Server server = new Server(threadPool);
     ServerConnector connector = new ServerConnector(server);
-    connector.setPort(8090);
+    connector.setPort(httpPort);
     server.setConnectors(new Connector[]{connector});
 
     ServletHandler servletHandler = new ServletHandler();

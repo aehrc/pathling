@@ -5,6 +5,8 @@
 package au.csiro.clinsight.query;
 
 import au.csiro.clinsight.fhir.TerminologyClient;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -13,56 +15,124 @@ import org.apache.spark.sql.SparkSession;
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class QueryExecutorConfiguration {
 
-  private String sparkMasterUrl;
-  private String warehouseUrl;
-  private String databaseName;
-  private String executorMemory;
-  private String terminologyServerUrl;
-  private boolean explainQueries;
-  private TerminologyClient terminologyClient;
+  /**
+   * (OPTIONAL) Version of this API, as advertised within the CapabilityStatement.
+   */
+  @Nullable
+  private String version;
+
+  /**
+   * (REQUIRED) The Apache Spark session this server should use for import and query.
+   */
+  @Nonnull
   private SparkSession sparkSession;
 
-  public String getSparkMasterUrl() {
-    return sparkMasterUrl;
+  /**
+   * (OPTIONAL) URL for the location of warehouse tables.
+   */
+  @Nonnull
+  private String warehouseUrl;
+
+  /**
+   * (OPTIONAL) Name of the database within the warehouse that this server should make available.
+   */
+  @Nonnull
+  private String databaseName;
+
+  /**
+   * (OPTIONAL) Quantity of memory to make available to Spark executors.
+   */
+  @Nonnull
+  private String executorMemory;
+
+  /**
+   * (REQUIRED) FHIR terminology service client to use in satisfying terminology queries.
+   */
+  @Nonnull
+  private TerminologyClient terminologyClient;
+
+  /**
+   * (OPTIONAL) Whether to run an explain ahead of each Spark SQL query.
+   */
+  private boolean explainQueries;
+
+  /**
+   * (OPTIONAL) Number of partitions to use when shuffling data for joins or aggregations.
+   */
+  private int shufflePartitions;
+
+  /**
+   * (OPTIONAL) Number of partitions to use when writing tables into the warehouse.
+   */
+  private int loadPartitions;
+
+  public QueryExecutorConfiguration(@Nonnull SparkSession sparkSession,
+      @Nonnull TerminologyClient terminologyClient) {
+    this.sparkSession = sparkSession;
+    warehouseUrl = "file:///usr/share/warehouse";
+    databaseName = "default";
+    executorMemory = "1g";
+    this.terminologyClient = terminologyClient;
+    explainQueries = false;
+    shufflePartitions = 36;
+    loadPartitions = 12;
   }
 
-  public void setSparkMasterUrl(String sparkMasterUrl) {
-    this.sparkMasterUrl = sparkMasterUrl;
+  @Nullable
+  public String getVersion() {
+    return version;
   }
 
+  public void setVersion(@Nullable String version) {
+    this.version = version;
+  }
+
+  @Nonnull
+  public SparkSession getSparkSession() {
+    return sparkSession;
+  }
+
+  public void setSparkSession(@Nonnull SparkSession sparkSession) {
+    this.sparkSession = sparkSession;
+  }
+
+  @Nonnull
   public String getWarehouseUrl() {
     return warehouseUrl;
   }
 
-  public void setWarehouseUrl(String warehouseUrl) {
+  public void setWarehouseUrl(@Nonnull String warehouseUrl) {
     this.warehouseUrl = warehouseUrl;
   }
 
+  @Nonnull
   public String getDatabaseName() {
     return databaseName;
   }
 
-  public void setDatabaseName(String databaseName) {
+  public void setDatabaseName(@Nonnull String databaseName) {
     this.databaseName = databaseName;
   }
 
+  @Nonnull
   public String getExecutorMemory() {
     return executorMemory;
   }
 
-  public void setExecutorMemory(String executorMemory) {
+  public void setExecutorMemory(@Nonnull String executorMemory) {
     this.executorMemory = executorMemory;
   }
 
-  public String getTerminologyServerUrl() {
-    return terminologyServerUrl;
+  @Nonnull
+  public TerminologyClient getTerminologyClient() {
+    return terminologyClient;
   }
 
-  public void setTerminologyServerUrl(String terminologyServerUrl) {
-    this.terminologyServerUrl = terminologyServerUrl;
+  public void setTerminologyClient(@Nonnull TerminologyClient terminologyClient) {
+    this.terminologyClient = terminologyClient;
   }
 
-  public boolean getExplainQueries() {
+  public boolean isExplainQueries() {
     return explainQueries;
   }
 
@@ -70,33 +140,32 @@ public class QueryExecutorConfiguration {
     this.explainQueries = explainQueries;
   }
 
-  public TerminologyClient getTerminologyClient() {
-    return terminologyClient;
+  public int getShufflePartitions() {
+    return shufflePartitions;
   }
 
-  public void setTerminologyClient(TerminologyClient terminologyClient) {
-    this.terminologyClient = terminologyClient;
+  public void setShufflePartitions(int shufflePartitions) {
+    this.shufflePartitions = shufflePartitions;
   }
 
-  public SparkSession getSparkSession() {
-    return sparkSession;
+  public int getLoadPartitions() {
+    return loadPartitions;
   }
 
-  public void setSparkSession(SparkSession sparkSession) {
-    this.sparkSession = sparkSession;
+  public void setLoadPartitions(int loadPartitions) {
+    this.loadPartitions = loadPartitions;
   }
 
   @Override
   public String toString() {
     return "QueryExecutorConfiguration{" +
-        "sparkMasterUrl='" + sparkMasterUrl + '\'' +
+        "version='" + version + '\'' +
         ", warehouseUrl='" + warehouseUrl + '\'' +
         ", databaseName='" + databaseName + '\'' +
         ", executorMemory='" + executorMemory + '\'' +
-        ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
         ", explainQueries=" + explainQueries +
-        ", terminologyClient=" + terminologyClient +
-        ", sparkSession=" + sparkSession +
+        ", shufflePartitions=" + shufflePartitions +
+        ", loadPartitions=" + loadPartitions +
         '}';
   }
 

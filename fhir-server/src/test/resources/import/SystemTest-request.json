@@ -1,0 +1,69 @@
+{
+  "inputFormat": "application/fhir+ndjson",
+  "inputs": [
+    {
+      "type": "AllergyIntolerance",
+      "url": "file:///usr/share/staging/test/AllergyIntolerance.ndjson"
+    },
+    {
+      "type": "CarePlan",
+      "url": "file:///usr/share/staging/test/CarePlan.ndjson"
+    },
+    {
+      "type": "Claim",
+      "url": "file:///usr/share/staging/test/Claim.ndjson"
+    },
+    {
+      "type": "Condition",
+      "url": "file:///usr/share/staging/test/Condition.ndjson"
+    },
+    {
+      "type": "DiagnosticReport",
+      "url": "file:///usr/share/staging/test/DiagnosticReport.ndjson"
+    },
+    {
+      "type": "Encounter",
+      "url": "file:///usr/share/staging/test/Encounter.ndjson"
+    },
+    {
+      "type": "ExplanationOfBenefit",
+      "url": "file:///usr/share/staging/test/ExplanationOfBenefit.ndjson"
+    },
+    {
+      "type": "Goal",
+      "url": "file:///usr/share/staging/test/Goal.ndjson"
+    },
+    {
+      "type": "ImagingStudy",
+      "url": "file:///usr/share/staging/test/ImagingStudy.ndjson"
+    },
+    {
+      "type": "Immunization",
+      "url": "file:///usr/share/staging/test/Immunization.ndjson"
+    },
+    {
+      "type": "MedicationRequest",
+      "url": "file:///usr/share/staging/test/MedicationRequest.ndjson"
+    },
+    {
+      "type": "Observation",
+      "url": "file:///usr/share/staging/test/Observation.ndjson"
+    },
+    {
+      "type": "Organization",
+      "url": "file:///usr/share/staging/test/Organization.ndjson"
+    },
+    {
+      "type": "Patient",
+      "url": "file:///usr/share/staging/test/Patient.ndjson"
+    },
+    {
+      "type": "Practitioner",
+      "url": "file:///usr/share/staging/test/Practitioner.ndjson"
+    },
+    {
+      "type": "Procedure",
+      "url": "file:///usr/share/staging/test/Procedure.ndjson"
+    }
+  ]
+}

@@ -36,15 +36,12 @@ public class AnalyticsServer extends RestfulServer {
   private final AnalyticsServerConfiguration configuration;
   private final AnalyticsServerCapabilities serverCapabilities;
   private SparkSession spark;
+  private TerminologyClient terminologyClient;
   private FhirEncoders fhirEncoders;
   private QueryExecutor queryExecutor;
 
   public AnalyticsServer(@Nonnull AnalyticsServerConfiguration configuration) {
     super(buildFhirContext());
-    assert configuration.getSparkMasterUrl() != null : "Must supply Spark master URL";
-    assert configuration.getWarehouseUrl() != null : "Must supply warehouse URL";
-    assert configuration.getExecutorMemory() != null : "Must supply executor memory";
-
     logger.info("Creating new AnalyticsServer: " + configuration);
     this.configuration = configuration;
     this.serverCapabilities = new AnalyticsServerCapabilities(configuration);
@@ -65,45 +62,51 @@ public class AnalyticsServer extends RestfulServer {
     setDefaultResponseEncoding(EncodingEnum.JSON);
 
     initializeSpark();
-    logger.info("Creating R4 FHIR encoders");
-    fhirEncoders = FhirEncoders.forR4().getOrCreate();
+    initializeTerminologyClient();
+    initializeFhirEncoders();
     initializeQueryExecutor();
     declareProviders();
     defineCorsConfiguration();
   }
 
   private void initializeSpark() {
-    if (configuration.getSparkSession() != null) {
-      spark = configuration.getSparkSession();
-    } else {
-      spark = SparkSession.builder()
-          .appName("clinsight-server")
-          .config("spark.master", configuration.getSparkMasterUrl())
-          .config("spark.executor.memory", configuration.getExecutorMemory())
-          .config("spark.dynamicAllocation.enabled", "true")
-          .config("spark.shuffle.service.enabled", "true")
-          .config("spark.scheduler.mode", "FAIR")
-          .config("spark.sql.autoBroadcastJoinThreshold", "-1")
-          .config("spark.sql.shuffle.partitions", "36")
-          .getOrCreate();
-    }
+    logger.info("Initializing Spark session");
+    spark = SparkSession.builder()
+        .appName("clinsight-server")
+        .config("spark.master", configuration.getSparkMasterUrl())
+        .config("spark.executor.memory", configuration.getExecutorMemory())
+        .config("spark.dynamicAllocation.enabled", "true")
+        .config("spark.shuffle.service.enabled", "true")
+        .config("spark.scheduler.mode", "FAIR")
+        .config("spark.sql.autoBroadcastJoinThreshold", "-1")
+        .config("spark.sql.shuffle.partitions", "36")
+        .getOrCreate();
+  }
+
+  private void initializeTerminologyClient() {
+    logger.info("Creating FHIR terminology client");
+    terminologyClient = getFhirContext()
+        .newRestfulClient(TerminologyClient.class, configuration.getTerminologyServerUrl());
+  }
+
+  private void initializeFhirEncoders() {
+    logger.info("Creating R4 FHIR encoders");
+    fhirEncoders = FhirEncoders.forR4().getOrCreate();
   }
 
   /**
    * Initialise a new query executor, and pass through the relevant configuration parameters.
    */
   private void initializeQueryExecutor() {
-    QueryExecutorConfiguration executorConfig = new QueryExecutorConfiguration();
-    executorConfig.setSparkSession(spark);
-    copyStringProps(configuration, executorConfig, Arrays
-        .asList("sparkMasterUrl", "warehouseUrl", "databaseName", "executorMemory",
-            "terminologyServerUrl"));
-    executorConfig.setExplainQueries(configuration.getExplainQueries());
-    if (configuration.getTerminologyClient() != null) {
-      executorConfig.setTerminologyClient(configuration.getTerminologyClient());
-    }
+    QueryExecutorConfiguration executorConfig = new QueryExecutorConfiguration(spark,
+        terminologyClient);
+    copyStringProps(configuration, executorConfig,
+        Arrays.asList("version", "warehouseUrl", "databaseName", "executorMemory"));
+    executorConfig.setExplainQueries(configuration.isExplainQueries());
+    executorConfig.setShufflePartitions(configuration.getShufflePartitions());
+    executorConfig.setLoadPartitions(configuration.getLoadPartitions());
 
-    queryExecutor = new QueryExecutor(executorConfig, getFhirContext());
+    queryExecutor = new QueryExecutor(executorConfig);
     serverCapabilities.setQueryExecutor(queryExecutor);
   }
 

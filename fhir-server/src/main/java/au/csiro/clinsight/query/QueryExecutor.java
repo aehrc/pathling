@@ -16,13 +16,11 @@ import au.csiro.clinsight.query.QueryRequest.Grouping;
 import au.csiro.clinsight.query.parsing.ExpressionParser;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -42,35 +40,20 @@ public class QueryExecutor {
 
   private static final Logger logger = LoggerFactory.getLogger(QueryExecutor.class);
 
-  private final QueryExecutorConfiguration configuration;
-  private final FhirContext fhirContext;
-  private SparkSession spark;
-  private ResourceReader resourceReader;
+  private final SparkSession spark;
+  private final ResourceReader resourceReader;
   private TerminologyClient terminologyClient;
 
-  public QueryExecutor(QueryExecutorConfiguration configuration,
-      FhirContext fhirContext) {
-    assert configuration != null : "Must supply configuration";
-    assert configuration.getSparkMasterUrl() != null : "Must supply Spark master URL";
-    assert configuration.getWarehouseUrl() != null : "Must supply warehouse URL";
-    assert configuration.getExecutorMemory() != null : "Must supply executor memory";
-
+  public QueryExecutor(@Nonnull QueryExecutorConfiguration configuration) {
     logger.info("Creating new QueryExecutor: " + configuration);
-    this.configuration = configuration;
-    this.fhirContext = fhirContext;
     this.spark = configuration.getSparkSession();
+    this.terminologyClient = configuration.getTerminologyClient();
     this.resourceReader = new ResourceReader(configuration.getSparkSession(),
         configuration.getWarehouseUrl(), configuration.getDatabaseName());
     initialiseResourceDefinitions();
   }
 
   private void initialiseResourceDefinitions() {
-    if (configuration.getTerminologyClient() != null) {
-      terminologyClient = configuration.getTerminologyClient();
-    } else {
-      terminologyClient = fhirContext
-          .newRestfulClient(TerminologyClient.class, configuration.getTerminologyServerUrl());
-    }
     ensureInitialized(terminologyClient);
   }
 
@@ -137,8 +120,8 @@ public class QueryExecutor {
           parsedFilters);
 
       // Translate the result into a response object to be passed back to the user.
-      return buildResponse(result, query, parsedAggregations, parsedGroupings,
-          parsedFilters);
+      return buildResponse(result, parsedAggregations, parsedGroupings
+      );
 
     } catch (BaseServerResponseException e) {
       // Errors relating to invalid input are re-raised, to be dealt with by HAPI.
@@ -173,7 +156,7 @@ public class QueryExecutor {
    */
   private List<ParsedExpression> parseGroupings(@Nonnull ExpressionParser expressionParser,
       @Nonnull List<Grouping> groupings) {
-    List<ParsedExpression> groupingParsedExpressions = new ArrayList<>();
+    List<ParsedExpression> groupingParsedExpressions;
     groupingParsedExpressions = groupings.stream()
         .map(grouping -> {
           String groupingExpression = grouping.getExpression();
@@ -240,7 +223,7 @@ public class QueryExecutor {
       // result.
       ParsedExpression firstGrouping = parsedGroupings.get(0);
       Column firstId = firstGrouping.getDataset().col(firstGrouping.getDatasetColumn() + "_id");
-      if (result != null) {
+      if (result == null) {
         // If there were no filters, the first grouping is our starting point.
         result = firstGrouping.getDataset();
       } else {
@@ -263,9 +246,6 @@ public class QueryExecutor {
         String groupingLabel = query.getGroupings().get(i).getLabel();
         Column currentId = currentGrouping.getDataset()
             .col(currentGrouping.getDatasetColumn() + "_id");
-        Column currentValue = currentGrouping.getDataset()
-            .col(currentGrouping.getDatasetColumn() + "_id")
-            .alias(groupingLabel);
         result = result.alias("prev_result");
         result = result
             .join(currentGrouping.getDataset(), prevId.equalTo(currentId), "left_outer");
@@ -277,7 +257,7 @@ public class QueryExecutor {
     // the result.
     ParsedExpression firstAggregation = parsedAggregations.get(0);
     Column firstId = firstAggregation.getDataset().col(firstAggregation.getDatasetColumn() + "_id");
-    if (result != null) {
+    if (result == null) {
       // If there were no groupings, the first aggregation is our starting point.
       result = firstAggregation.getDataset();
     } else {
@@ -300,9 +280,6 @@ public class QueryExecutor {
       String aggregationLabel = query.getAggregations().get(i).getLabel();
       Column currentId = currentAggregation.getDataset()
           .col(currentAggregation.getDatasetColumn() + "_id");
-      Column currentValue = currentAggregation.getDataset()
-          .col(currentAggregation.getDatasetColumn() + "_id")
-          .alias(aggregationLabel);
       result = result.alias("prev_result");
       result = result
           .join(currentAggregation.getDataset(), prevId.equalTo(currentId), "left_outer");
@@ -328,12 +305,9 @@ public class QueryExecutor {
    * AggregateQuery and honouring the hints within the QueryPlan.
    */
   private QueryResponse buildResponse(@Nonnull Dataset<Row> dataset,
-      @Nonnull QueryRequest query, @Nonnull List<ParsedExpression> parsedAggregations,
-      @Nonnull List<ParsedExpression> parsedGroupings,
-      @Nonnull List<ParsedExpression> parsedFilters) {
+      @Nonnull List<ParsedExpression> parsedAggregations,
+      @Nonnull List<ParsedExpression> parsedGroupings) {
     List<Row> rows = dataset.collectAsList();
-    int numGroupings = query.getGroupings().size();
-    int numAggregations = query.getAggregations().size();
 
     QueryResponse queryResult = new QueryResponse();
 

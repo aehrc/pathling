@@ -47,13 +47,6 @@
       <artifactId>spring-web</artifactId>
       <version>5.0.8.RELEASE</version>
     </dependency>
-
-    <!-- Clinsight Client Library, which contains QueryRequest and QueryResponse classes -->
-    <dependency>
-      <groupId>au.csiro.clinsight</groupId>
-      <artifactId>client</artifactId>
-      <version>${project.version}</version>
-    </dependency>
   </dependencies>
 
   <build>
@@ -107,7 +100,35 @@
           </buildArgs>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>au.csiro.clinsight</groupId>
+        <artifactId>fhir-definitions-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>bundle</goal>
+            </goals>
+            <phase>generate-test-resources</phase>
+          </execution>
+        </executions>
+        <configuration>
+          <sourceFiles>
+            <param>profiles-resources.json</param>
+            <param>profiles-types.json</param>
+          </sourceFiles>
+        </configuration>
+      </plugin>
     </plugins>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources</directory>
+      </testResource>
+      <testResource>
+        <directory>target/fhir-definitions</directory>
+        <targetPath>../../src/test/resources/fhir</targetPath>
+      </testResource>
+    </testResources>
   </build>
 
 </project>

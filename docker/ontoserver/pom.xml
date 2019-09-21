@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+  -->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>au.csiro.clinsight</groupId>
+    <artifactId>clinsight</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>ontoserver</artifactId>
+  <packaging>pom</packaging>
+
+  <properties>
+    <ontoserverVersion>latest</ontoserverVersion>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>au.csiro.clinsight</groupId>
+        <artifactId>fhir-definitions-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>bundle</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <sourceFiles>
+            <param>profiles-resources.json</param>
+            <param>profiles-types.json</param>
+            <param>valuesets.json</param>
+          </sourceFiles>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>au.csiro.clinsight</groupId>
+        <artifactId>ontoserver-preload-maven-plugin</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <syndicationUrl>https://r4.ontoserver.csiro.au/synd/syndication.xml</syndicationUrl>
+          <upstreamContentItems>
+            <contentItem>
+              <identifier>http://snomed.info/sct</identifier>
+              <version>http://snomed.info/sct/32506021000036107/version/20190831</version>
+            </contentItem>
+            <contentItem>
+              <identifier>http://loinc.org</identifier>
+              <version>2.65</version>
+            </contentItem>
+          </upstreamContentItems>
+          <bundles>
+            <param>${project.build.directory}/fhir-definitions/fhir-definitions.Bundle.json
+            </param>
+          </bundles>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>dockerfile-maven-plugin</artifactId>
+        <version>1.4.12</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build</goal>
+              <goal>push</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <repository>docker-registry.it.csiro.au/clinsight/ontoserver</repository>
+          <tag>${project.version}</tag>
+          <pullNewerImage>false</pullNewerImage>
+          <buildArgs>
+            <ONTOSERVER_VERSION>${ontoserverVersion}</ONTOSERVER_VERSION>
+            <PRELOAD_PATH>target/ontoserver-preload</PRELOAD_PATH>
+          </buildArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

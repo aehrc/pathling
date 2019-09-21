@@ -69,6 +69,9 @@ public class ImportProvider {
 
     // Parse and validate the JSON request.
     ImportRequest importRequest = gson.fromJson(request.getReader(), ImportRequest.class);
+    if (importRequest.getInputFormat() == null) {
+      throw new InvalidRequestException("Missing element: inputFormat");
+    }
     if (!importRequest.getInputFormat().equals("application/fhir+ndjson")) {
       throw new InvalidRequestException(
           "$import operation only supports inputFormat of application/fhir+ndjson");
@@ -76,6 +79,9 @@ public class ImportProvider {
 
     // For each input within the request, read the resources of the declared type and create
     // the corresponding table in the warehouse.
+    if (importRequest.getInputs() == null) {
+      throw new InvalidRequestException("Missing element: inputs");
+    }
     for (ImportRequestInput importRequestInput : importRequest.getInputs()) {
       String resourceName = importRequestInput.getType();
       ExpressionEncoder<IBaseResource> fhirEncoder = fhirEncoders.of(resourceName);

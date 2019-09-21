@@ -27,9 +27,6 @@ import org.hl7.fhir.r4.model.UriType;
 public class QueryRequest {
 
   @Nonnull
-  private final String subjectResource;
-
-  @Nonnull
   private final List<Aggregation> aggregations = new ArrayList<>();
 
   @Nonnull
@@ -37,6 +34,12 @@ public class QueryRequest {
 
   @Nonnull
   private final List<String> filters = new ArrayList<>();
+
+  @Nonnull
+  private String subjectResource;
+
+  public QueryRequest() {
+  }
 
   /**
    * This constructor takes a Parameters resource (with the parameters defined within the
@@ -138,6 +141,10 @@ public class QueryRequest {
   @Nonnull
   public String getSubjectResource() {
     return subjectResource;
+  }
+
+  public void setSubjectResource(@Nonnull String subjectResource) {
+    this.subjectResource = subjectResource;
   }
 
   @Nonnull
