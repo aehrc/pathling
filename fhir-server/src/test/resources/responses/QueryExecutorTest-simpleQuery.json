@@ -1,0 +1,428 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Anemia (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Fracture of rib"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Perennial allergic rhinitis with seasonal variation"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Cystitis"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Fetus with unknown complication"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 133
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "IMP"
+        },
+        {
+          "name": "label",
+          "valueString": "Injury of anterior cruciate ligament"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Secondary malignant neoplasm of colon"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 7
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Seasonal allergic rhinitis"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Acute viral pharyngitis (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 6
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Malignant tumor of colon"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 7
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Bleeding from anus"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Normal pregnancy"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 12
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "EMER"
+        },
+        {
+          "name": "label",
+          "valueString": "Normal pregnancy"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Acute bronchitis (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 5
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Viral sinusitis (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 14
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "IMP"
+        },
+        {
+          "name": "label",
+          "valueString": "Malignant tumor of colon"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Childhood asthma"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Asthma"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 5
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Otitis media"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 3
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "EMER"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 8
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Acute bacterial sinusitis (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "EMER"
+        },
+        {
+          "name": "label",
+          "valueString": "Asthma"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "Hyperlipidemia"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 2
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label",
+          "valueString": "First degree burn"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 2
+        }
+      ]
+    }
+  ]
+}

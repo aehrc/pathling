@@ -138,7 +138,7 @@ public abstract class ResourceDefinitions {
       scheduledThreadPoolExecutor.schedule(retryTask, RETRY_DELAY_SECONDS, TimeUnit.SECONDS);
       status = WAITING_FOR_RETRY;
       logger.warn("Unable to connect to terminology server, retrying in " + RETRY_DELAY_SECONDS
-          + " seconds: " + terminologyClient.getServerBase());
+          + " seconds: " + terminologyClient.getServerBase(), e);
     } catch (Exception e) {
       // If there is any other sort of error, clear the state and update the status.
       clearDefinitions();
@@ -186,14 +186,6 @@ public abstract class ResourceDefinitions {
   public static boolean isPrimitive(@Nonnull String fhirType) {
     checkInitialised();
     return supportedPrimitiveTypes.contains(fhirType);
-  }
-
-  /**
-   * Checks if the supplied FHIR type code looks like a resource name.
-   */
-  public static boolean isResource(@Nonnull String fhirType) {
-    char firstChar = fhirType.charAt(0);
-    return Character.isUpperCase(firstChar);
   }
 
   public static boolean isCodeSystemKnown(@Nonnull String url) {

@@ -32,7 +32,7 @@
       "use": "in",
       "min": 1,
       "max": "1",
-      "documentation": "A URI that defines the subject resource that the expressions within this query are evaluated against",
+      "documentation": "A URI that defines the subject resource that the expressions within this query are evaluated against.",
       "type": "uri"
     },
     {
@@ -40,14 +40,14 @@
       "use": "in",
       "min": 1,
       "max": "*",
-      "documentation": "A description of a function which is used to calculate a summary value from each grouping of values",
+      "documentation": "An expression which is used to calculate a summary value from each grouping.",
       "part": [
         {
           "name": "expression",
           "use": "in",
           "min": 1,
           "max": "1",
-          "documentation": "A FHIRPath expression that defines the aggregation function",
+          "documentation": "A FHIRPath expression that defines the aggregation. The %resource variable is bound to a collection of resources of the type specified in the subjectResource parameter. The expression must evaluate to a primitive value.",
           "type": "string"
         },
         {
@@ -55,7 +55,7 @@
           "use": "in",
           "min": 0,
           "max": "1",
-          "documentation": "A short description for the aggregation, for display purposes",
+          "documentation": "A short description for the aggregation, for display purposes.",
           "type": "string"
         }
       ]
@@ -65,14 +65,14 @@
       "use": "in",
       "min": 0,
       "max": "*",
-      "documentation": "A description of how to group data into groups within the query result",
+      "documentation": "A description of how to group aggregate results.",
       "part": [
         {
           "name": "expression",
           "use": "in",
           "min": 1,
           "max": "1",
-          "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine which groupings it should be counted within",
+          "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine which groupings it should be counted within. The %resource variable is bound to an individual resource of the type specified in the subjectResource parameter. The expression must evaluate to a primitive value.",
           "type": "string"
         },
         {
@@ -80,7 +80,7 @@
           "use": "in",
           "min": 0,
           "max": "1",
-          "documentation": "A short description for the grouping, for display purposes",
+          "documentation": "A short description for the grouping, for display purposes.",
           "type": "string"
         }
       ]
@@ -90,7 +90,7 @@
       "use": "in",
       "min": 0,
       "max": "*",
-      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine whether it is included within the result",
+      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine whether it is included within the result. The %resource variable is bound to an individual resource of the type specified in the subjectResource parameter. The expression must evaluate to a Boolean value.",
       "type": "string"
     },
     {
@@ -98,14 +98,14 @@
       "use": "out",
       "min": 0,
       "max": "*",
-      "documentation": "The grouped results of the aggregations requested in the query",
+      "documentation": "The grouped results of the aggregations requested in the query. There will be one grouping for each distinct combination of values determined by executing the grouping expressions against each of the resources within the filtered set of subject resources.",
       "part": [
         {
           "name": "label",
           "use": "out",
           "min": 0,
           "max": "*",
-          "documentation": "The set of descriptive labels that describe this grouping, and correspond to those requested in the query",
+          "documentation": "The set of descriptive labels that describe this grouping, and correspond to those requested in the query. There will be one label for each grouping within the query, and the type of each label will correspond to the type returned by the expression of the corresponding grouping.",
           "type": "Type"
         },
         {
@@ -113,7 +113,7 @@
           "use": "out",
           "min": 1,
           "max": "*",
-          "documentation": "The set of values that resulted from the execution of the aggregations that were requested in the query",
+          "documentation": "The set of values that resulted from the execution of the aggregations that were requested in the query. There will be one result for each aggregation within the query, and the type of each result will correspond to the type returned by the expression of the corresponding aggregation.",
           "type": "Type"
         }
       ]

@@ -43,7 +43,7 @@ class ResourceScanner {
       @Nonnull Function<StructureDefinition, StructureDefinition> fetchResourceWithId) {
     return structureDefinitions.stream()
         .filter(sd -> sd.getKind() == StructureDefinition.StructureDefinitionKind.RESOURCE)
-        .peek(sd -> logger.info("Retrieving resource StructureDefinition: " + sd.getUrl()))
+        .peek(sd -> logger.debug("Retrieving resource StructureDefinition: " + sd.getUrl()))
         .collect(Collectors.toMap(StructureDefinition::getUrl, fetchResourceWithId));
   }
 
@@ -77,7 +77,7 @@ class ResourceScanner {
     // Retrieve the StructureDefinitions that match the complex type filter.
     Map<String, StructureDefinition> definitions = structureDefinitions.stream()
         .filter(complexTypeFilter.get())
-        .peek(sd -> logger.info("Retrieving complex type StructureDefinition: " + sd.getUrl()))
+        .peek(sd -> logger.debug("Retrieving complex type StructureDefinition: " + sd.getUrl()))
         .collect(Collectors.toMap(StructureDefinition::getUrl, fetchResourceWithId));
 
     // Do a sanity check that we were able to retrieve all of the supported types.

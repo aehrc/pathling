@@ -50,10 +50,12 @@ import org.slf4j.LoggerFactory;
 public class SystemTest {
 
   private static final Logger logger = LoggerFactory.getLogger(SystemTest.class);
-  private static final String CLINSIGHT_VERSION = "1.0.0-SNAPSHOT";
   private static final String FHIR_SERVER_CONTAINER_NAME = "clinsight-test-fhir-server";
+  private static final String FHIR_SERVER_STAGING_PATH = "/usr/share/staging/test";
 
-  // These two system properties need to be set to enable authentication to the NCTS.
+  // These two system properties need to be set.
+  private static final String FHIR_SERVER_DOCKER_TAG = System
+      .getProperty("clinsight.test.fhirServerDockerTag");
   private static final String TERMINOLOGY_SERVICE_URL = System
       .getProperty("clinsight.test.terminologyServiceUrl");
 
@@ -97,7 +99,7 @@ public class SystemTest {
       fhirServerHostConfig.withPortBindings(fhirServerPortBinding);
       CreateContainerResponse fhirServerContainer = dockerClient
           .createContainerCmd(
-              "docker-registry.it.csiro.au/clinsight/fhir-server:" + CLINSIGHT_VERSION)
+              "docker-registry.it.csiro.au/clinsight/fhir-server:" + FHIR_SERVER_DOCKER_TAG)
           .withExposedPorts(fhirServerPort)
           .withHostConfig(fhirServerHostConfig)
           .withEnv(
@@ -133,20 +135,19 @@ public class SystemTest {
 
       // Save the test resources into a staging area inside the container.
       logger.info("Loading test data into container");
-      String stagingPath = "/usr/share/staging";
       for (File testFile : getResourceFolderFiles("test-data/fhir")) {
-        String remotePath = stagingPath + "/test/" + testFile.getName();
         logger.debug(
-            "Copying " + testFile.getAbsolutePath() + " to " + remotePath + " within container");
+            "Copying " + testFile.getAbsolutePath() + " to " + FHIR_SERVER_STAGING_PATH
+                + " within container");
         dockerClient.copyArchiveToContainerCmd("clinsight-test-fhir-server")
             .withHostResource(testFile.getAbsolutePath())
-            .withRemotePath(remotePath)
+            .withRemotePath(FHIR_SERVER_STAGING_PATH)
             .exec();
-        logger.debug("Copied: " + remotePath);
       }
       logger.info("Test data load complete");
-    } finally {
+    } catch (Exception e) {
       stopContainer(dockerClient, fhirServerContainerId);
+      throw e;
     }
   }
 
@@ -159,20 +160,20 @@ public class SystemTest {
           .getResourceAsStream("import/SystemTest-request.json");
       assertThat(requestStream).isNotNull();
 
-      HttpPost importRequest = new HttpPost("http://localhost:8090/fhir/$import");
+      HttpPost importRequest = new HttpPost("http://localhost:8091/fhir/$import");
       importRequest.setEntity(new InputStreamEntity(requestStream));
       importRequest.addHeader("Content-Type", "application/json");
       importRequest.addHeader("Accept", "application/fhir+json");
 
       logger.info("Sending import request");
-      InputStream importResponseStream;
+      OperationOutcome importOutcome;
       try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient
           .execute(importRequest)) {
         assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
-        importResponseStream = response.getEntity().getContent();
+        InputStream importResponseStream = response.getEntity().getContent();
+        importOutcome = (OperationOutcome) jsonParser
+            .parseResource(importResponseStream);
       }
-      OperationOutcome importOutcome = (OperationOutcome) jsonParser
-          .parseResource(importResponseStream);
       assertThat(importOutcome.getIssueFirstRep().getDiagnostics())
           .isEqualTo("Data import completed successfully");
       logger.info("Import completed successfully");
@@ -225,7 +226,7 @@ public class SystemTest {
 
       // Send a request to the `$query` operation on the FHIR server.
       String requestString = jsonParser.encodeResourceToString(inParams);
-      HttpPost queryRequest = new HttpPost("http://localhost:8090/fhir/$query");
+      HttpPost queryRequest = new HttpPost("http://localhost:8091/fhir/$query");
       queryRequest.setEntity(new StringEntity(requestString));
       queryRequest.addHeader("Content-Type", "application/fhir+json");
       queryRequest.addHeader("Accept", "application/fhir+json");

@@ -42,7 +42,7 @@ public abstract class TestUtilities {
       .map(entry -> (StructureDefinition) entry.getResource())
       .collect(Collectors.toList());
 
-  static void mockDefinitionRetrieval(TerminologyClient terminologyClient) {
+  public static void mockDefinitionRetrieval(TerminologyClient terminologyClient) {
     when(terminologyClient.getAllStructureDefinitions(Sets.newHashSet("url", "kind")))
         .thenReturn(profiles);
     when(terminologyClient.getStructureDefinitionById(any(IdType.class))).thenAnswer(

@@ -4,9 +4,6 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.utilities.Strings.md5Short;
-import static org.apache.spark.sql.functions.count;
-
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
@@ -15,6 +12,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 
 /**
  * A function for aggregating data based on counting the number of rows within the result.
@@ -29,17 +27,20 @@ public class CountFunction implements Function {
   public ParsedExpression invoke(@Nonnull FunctionInput input) {
     validateInput(input);
     ParsedExpression inputResult = input.getInput();
-    Dataset<Row> prevDataset = inputResult.getDataset();
-    String prevColumn = inputResult.getDatasetColumn();
-    String hash = md5Short(input.getExpression());
+    Dataset<Row> dataset = inputResult.getDataset();
+    Column column = dataset.col(inputResult.getDatasetColumn());
+    Column idColumn = dataset.col(inputResult.getDatasetColumn() + "_id");
 
     // Create new ID and value columns, based on the hash computed off the FHIRPath expression.
-    Column idColumn = prevDataset.col(prevColumn + "_id").alias(hash + "_id");
-    Column column = inputResult.isResource()
-        ? prevDataset.col(prevColumn).alias(hash + "id")
-        : prevDataset.col(prevColumn).alias(hash);
-    Dataset<Row> dataset = prevDataset.select(idColumn, column);
-    Column aggregation = count(column);
+    Column aggregation = inputResult.isResource()
+        ? functions.countDistinct(idColumn)
+        : functions.countDistinct(idColumn, column);
+
+    // If the count is to be based upon an element, filter out any nulls so that they aren't
+    // counted.
+    if (!inputResult.isResource()) {
+      dataset = dataset.where(column.isNotNull());
+    }
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -49,7 +50,7 @@ public class CountFunction implements Function {
     result.setPrimitive(true);
     result.setSingular(true);
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
+    result.setDatasetColumn(inputResult.getDatasetColumn());
     result.setAggregation(aggregation);
 
     return result;
@@ -60,7 +61,6 @@ public class CountFunction implements Function {
       throw new InvalidRequestException(
           "Arguments can not be passed to count function: " + input.getExpression());
     }
-    assert !input.getContext().getGroupings().isEmpty() : "Count function called with no groupings";
   }
 
 }

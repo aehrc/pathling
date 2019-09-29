@@ -52,6 +52,12 @@ public class QueryExecutorConfiguration {
   private TerminologyClient terminologyClient;
 
   /**
+   * (OPTIONAL) Object for reading resources from the warehouse.
+   */
+  @Nonnull
+  private ResourceReader resourceReader;
+
+  /**
    * (OPTIONAL) Whether to run an explain ahead of each Spark SQL query.
    */
   private boolean explainQueries;
@@ -67,12 +73,13 @@ public class QueryExecutorConfiguration {
   private int loadPartitions;
 
   public QueryExecutorConfiguration(@Nonnull SparkSession sparkSession,
-      @Nonnull TerminologyClient terminologyClient) {
+      @Nonnull TerminologyClient terminologyClient, @Nonnull ResourceReader resourceReader) {
     this.sparkSession = sparkSession;
     warehouseUrl = "file:///usr/share/warehouse";
     databaseName = "default";
     executorMemory = "1g";
     this.terminologyClient = terminologyClient;
+    this.resourceReader = resourceReader;
     explainQueries = false;
     shufflePartitions = 36;
     loadPartitions = 12;
@@ -130,6 +137,15 @@ public class QueryExecutorConfiguration {
 
   public void setTerminologyClient(@Nonnull TerminologyClient terminologyClient) {
     this.terminologyClient = terminologyClient;
+  }
+
+  @Nonnull
+  public ResourceReader getResourceReader() {
+    return resourceReader;
+  }
+
+  public void setResourceReader(@Nonnull ResourceReader resourceReader) {
+    this.resourceReader = resourceReader;
   }
 
   public boolean isExplainQueries() {

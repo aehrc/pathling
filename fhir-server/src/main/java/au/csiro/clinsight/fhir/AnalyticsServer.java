@@ -8,6 +8,7 @@ import static au.csiro.clinsight.utilities.Configuration.copyStringProps;
 
 import au.csiro.clinsight.query.QueryExecutor;
 import au.csiro.clinsight.query.QueryExecutorConfiguration;
+import au.csiro.clinsight.query.ResourceReader;
 import au.csiro.clinsight.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -98,8 +99,10 @@ public class AnalyticsServer extends RestfulServer {
    * Initialise a new query executor, and pass through the relevant configuration parameters.
    */
   private void initializeQueryExecutor() {
+    ResourceReader resourceReader = new ResourceReader(spark, configuration.getWarehouseUrl(),
+        configuration.getDatabaseName());
     QueryExecutorConfiguration executorConfig = new QueryExecutorConfiguration(spark,
-        terminologyClient);
+        terminologyClient, resourceReader);
     copyStringProps(configuration, executorConfig,
         Arrays.asList("version", "warehouseUrl", "databaseName", "executorMemory"));
     executorConfig.setExplainQueries(configuration.isExplainQueries());

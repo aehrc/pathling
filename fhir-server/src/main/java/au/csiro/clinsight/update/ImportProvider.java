@@ -4,8 +4,12 @@
 
 package au.csiro.clinsight.update;
 
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getSupportedResources;
+
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import com.cerner.bunsen.FhirEncoders;
@@ -83,17 +87,25 @@ public class ImportProvider {
       throw new InvalidRequestException("Missing element: inputs");
     }
     for (ImportRequestInput importRequestInput : importRequest.getInputs()) {
-      String resourceName = importRequestInput.getType();
-      ExpressionEncoder<IBaseResource> fhirEncoder = fhirEncoders.of(resourceName);
-      @SuppressWarnings("UnnecessaryLocalVariable") FhirContext parsingContext = fhirContext;
+      String resourceUri = importRequestInput.getType();
+      ExpressionEncoder<IBaseResource> fhirEncoder = fhirEncoders.of(resourceUri);
 
       Dataset<String> jsonStrings = spark.read().textFile(importRequestInput.getUrl());
       Dataset resources = jsonStrings
-          .map((MapFunction<String, IBaseResource>) json -> parsingContext.newJsonParser()
+          .map((MapFunction<String, IBaseResource>) json -> FhirEncoders
+              .contextFor(FhirVersionEnum.R4).newJsonParser()
               .parseResource(json), fhirEncoder);
 
-      logger.info("Saving resources: " + resourceName);
-      resourceWriter.write(resourceName, resources);
+      logger.info("Saving resources: " + resourceUri);
+      // If the type does not contain a base resource definition URI but it is a supported resource,
+      // transform it into a URI.
+      if (!resourceUri.startsWith(BASE_RESOURCE_URL_PREFIX) && getSupportedResources()
+          .contains(BASE_RESOURCE_URL_PREFIX + resourceUri)) {
+        resourceUri = BASE_RESOURCE_URL_PREFIX + resourceUri;
+      } else if (!getSupportedResources().contains(resourceUri)) {
+        throw new InvalidRequestException("Resource type not supported: " + resourceUri);
+      }
+      resourceWriter.write(resourceUri, resources);
     }
 
     // We return 200, as this operation is currently synchronous.

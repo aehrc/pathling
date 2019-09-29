@@ -10,6 +10,7 @@ import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.BOO
 import static au.csiro.clinsight.utilities.Strings.md5Short;
 
 import au.csiro.clinsight.fhir.TerminologyClient;
+import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.QueryRequest.Aggregation;
 import au.csiro.clinsight.query.QueryRequest.Grouping;
@@ -21,6 +22,7 @@ import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -46,10 +48,9 @@ public class QueryExecutor {
 
   public QueryExecutor(@Nonnull QueryExecutorConfiguration configuration) {
     logger.info("Creating new QueryExecutor: " + configuration);
-    this.spark = configuration.getSparkSession();
-    this.terminologyClient = configuration.getTerminologyClient();
-    this.resourceReader = new ResourceReader(configuration.getSparkSession(),
-        configuration.getWarehouseUrl(), configuration.getDatabaseName());
+    spark = configuration.getSparkSession();
+    terminologyClient = configuration.getTerminologyClient();
+    resourceReader = configuration.getResourceReader();
     initialiseResourceDefinitions();
   }
 
@@ -86,7 +87,12 @@ public class QueryExecutor {
       String resourceName = query.getSubjectResource().replaceFirst(BASE_RESOURCE_URL_PREFIX, "");
       String hash = md5Short(resourceName);
       Dataset<Row> subject = resourceReader.read(query.getSubjectResource());
-      subject = subject.withColumnRenamed("id", hash + "_id");
+      String firstColumn = subject.columns()[0];
+      String[] remainingColumns = Arrays
+          .copyOfRange(subject.columns(), 1, subject.columns().length);
+      subject = subject
+          .withColumn(hash, org.apache.spark.sql.functions.struct(firstColumn, remainingColumns));
+      subject = subject.select(subject.col("id").alias(hash + "_id"), subject.col(hash));
 
       // Create an expression for the subject resource.
       ParsedExpression subjectResource = new ParsedExpression();
@@ -94,6 +100,8 @@ public class QueryExecutor {
       subjectResource.setDatasetColumn(hash);
       subjectResource.setResource(true);
       subjectResource.setResourceDefinition(query.getSubjectResource());
+      subjectResource.setPathTraversal(PathResolver.resolvePath(resourceName));
+      subjectResource.setSingular(true);
 
       // Gather dependencies for the execution of the expression parser.
       ExpressionParserContext context = new ExpressionParserContext();
@@ -243,13 +251,13 @@ public class QueryExecutor {
         Column prevId = prevGrouping.getDataset()
             .col(prevGrouping.getDatasetColumn() + "_id");
         ParsedExpression currentGrouping = parsedGroupings.get(i);
-        String groupingLabel = query.getGroupings().get(i).getLabel();
-        Column currentId = currentGrouping.getDataset()
-            .col(currentGrouping.getDatasetColumn() + "_id");
+        String groupingId = currentGrouping.getDatasetColumn() + "_id";
+        Column groupingIdColumn = currentGrouping.getDataset().col(groupingId);
+        String groupingValue = currentGrouping.getDatasetColumn();
         result = result.alias("prev_result");
         result = result
-            .join(currentGrouping.getDataset(), prevId.equalTo(currentId), "left_outer");
-        result = result.select("prev_result.*", groupingLabel);
+            .join(currentGrouping.getDataset(), prevId.equalTo(groupingIdColumn), "left_outer");
+        result = result.select("prev_result.*", groupingId, groupingValue);
       }
     }
 
@@ -286,17 +294,16 @@ public class QueryExecutor {
       result = result.select("prev_result.*", aggregationLabel);
     }
     // Group by each of the grouping value columns.
-    Column[] groupingColumns = (Column[]) parsedGroupings.stream()
+    Column[] groupingColumns = parsedGroupings.stream()
         .map(grouping -> grouping.getDataset().col(grouping.getDatasetColumn()))
-        .toArray();
+        .toArray(Column[]::new);
     RelationalGroupedDataset groupedResult = result.groupBy(groupingColumns);
     // Apply the aggregations.
-    Column firstAggregationColumn = firstAggregation.getDataset()
-        .col(firstAggregation.getDatasetColumn());
-    Column[] remainingAggregationColumns = (Column[]) parsedAggregations.stream()
+    Column firstAggregationColumn = firstAggregation.getAggregation();
+    Column[] remainingAggregationColumns = parsedAggregations.stream()
         .skip(1)
         .map(ParsedExpression::getAggregation)
-        .toArray();
+        .toArray(Column[]::new);
     return groupedResult.agg(firstAggregationColumn, remainingAggregationColumns);
   }
 

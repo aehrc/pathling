@@ -41,6 +41,8 @@ public class PathTraversalOperator {
 
     // Resolve the path of the expression.
     PathTraversal pathTraversal;
+    assert left.getPathTraversal()
+        != null : "Encountered input to path traversal operator with no path traversal information";
     try {
       String path = left.getPathTraversal().getPath() + "." + right;
       pathTraversal = PathResolver.resolvePath(path);
@@ -59,7 +61,7 @@ public class PathTraversalOperator {
     Column field = prevDataset.col(prevColumn).getField(right);
     Column column = isSingular ? field : explode_outer(field);
     column = column.alias(hash);
-    Column idColumn = prevDataset.col(left.getDatasetColumn() + "_id").alias(hash + "_id");
+    Column idColumn = prevDataset.col(prevIdColumn).alias(hash + "_id");
     Dataset<Row> dataset = prevDataset.select(idColumn, column);
 
     // Construct a new parse result.
@@ -72,13 +74,14 @@ public class PathTraversalOperator {
     result.setOrigin(left.getOrigin());
     result.setDataset(dataset);
     result.setDatasetColumn(hash);
+    result.setPathTraversal(pathTraversal);
 
     return result;
   }
 
   private void validateInput(PathTraversalInput input) {
     ParsedExpression left = input.getLeft();
-    if (!left.isPrimitive()) {
+    if (left.isPrimitive()) {
       throw new InvalidRequestException(
           "Attempt to perform path traversal on primitive element: " + left.getFhirPath());
     }

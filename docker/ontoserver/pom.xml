@@ -35,9 +35,9 @@
         </executions>
         <configuration>
           <sourceFiles>
-            <param>profiles-resources.json</param>
-            <param>profiles-types.json</param>
             <param>valuesets.json</param>
+            <param>profiles-types.json</param>
+            <param>profiles-resources.json</param>
           </sourceFiles>
         </configuration>
       </plugin>
