@@ -6,6 +6,7 @@ package au.csiro.clinsight.query.parsing;
 
 import au.csiro.clinsight.fhir.definitions.PathTraversal;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +23,12 @@ import org.hl7.fhir.r4.model.*;
  * @author John Grimes
  */
 public class ParsedExpression {
+
+  static final SimpleDateFormat DATE_TIME_FORMAT = new SimpleDateFormat(
+      "yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+  static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("'T'HH:mm:ss.SSSXXX");
+  static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
+      "yyyy-MM-dd");
 
   /**
    * The FHIRPath representation of this expression.
@@ -214,6 +221,47 @@ public class ParsedExpression {
     this.aggregation = aggregation;
   }
 
+  public Object getJavaLiteralValue() {
+    if (literalValue == null) {
+      throw new IllegalStateException(
+          "This method cannot be called on an expression that is not literal");
+    }
+    switch (fhirType) {
+      case DECIMAL:
+        return ((DecimalType) literalValue).getValue();
+      case MARKDOWN:
+        return ((MarkdownType) literalValue).getValue();
+      case ID:
+        return ((IdType) literalValue).getValue();
+      case DATE_TIME:
+        return DATE_TIME_FORMAT.format(((DateTimeType) literalValue).getValue());
+      case TIME:
+        return ((TimeType) literalValue).getValue();
+      case DATE:
+        return DATE_FORMAT.format(((DateType) literalValue).getValue());
+      case CODE:
+        return ((CodeType) literalValue).getValue();
+      case STRING:
+        return ((StringType) literalValue).getValue();
+      case URI:
+        return ((UriType) literalValue).getValue();
+      case OID:
+        return ((OidType) literalValue).getValue();
+      case INTEGER:
+        return ((IntegerType) literalValue).getValue();
+      case UNSIGNED_INT:
+        return new Long(((UnsignedIntType) literalValue).getValue());
+      case POSITIVE_INT:
+        return new Long(((PositiveIntType) literalValue).getValue());
+      case BOOLEAN:
+        return ((BooleanType) literalValue).getValue();
+      case INSTANT:
+        return ((InstantType) literalValue).getValue();
+    }
+    assert false : "Encountered FHIR type not accounted for";
+    return null;
+  }
+
   /**
    * Describes a ParseResult in terms of the FHIRPath type that it evaluates to.
    */
@@ -291,7 +339,7 @@ public class ParsedExpression {
     STRING(StringType.class, String.class, "string"),
     URI(UriType.class, String.class, "uri"),
     OID(OidType.class, String.class, "oid"),
-    INTEGER(IntegerType.class, int.class, "integer"),
+    INTEGER(IntegerType.class, Integer.class, "integer"),
     UNSIGNED_INT(UnsignedIntType.class, Long.class, "unsignedInt"),
     POSITIVE_INT(PositiveIntType.class, Long.class, "positiveInt"),
     BOOLEAN(BooleanType.class, Boolean.class, "boolean"),

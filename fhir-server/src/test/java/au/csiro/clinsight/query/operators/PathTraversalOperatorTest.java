@@ -13,7 +13,6 @@ import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
@@ -32,7 +31,7 @@ public class PathTraversalOperatorTest {
   private SparkSession spark;
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() {
     spark = SparkSession.builder()
         .appName("clinsight-test")
         .config("spark.master", "local")

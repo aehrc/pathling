@@ -30,9 +30,7 @@ import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.math.BigDecimal;
-import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -429,10 +427,9 @@ public class ExpressionParser {
     @Override
     public ParsedExpression visitDateTimeLiteral(DateTimeLiteralContext ctx) {
       // Parse the string according to ISO8601.
-      DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
       Date value = null;
       try {
-        value = dateFormat.parse(ctx.getText().replace("@", ""));
+        value = ParsedExpression.DATE_TIME_FORMAT.parse(ctx.getText().replace("@", ""));
       } catch (ParseException e) {
         throw new InvalidRequestException("Invalid DateTime literal: " + ctx.getText());
       }
@@ -450,10 +447,9 @@ public class ExpressionParser {
     @Override
     public ParsedExpression visitTimeLiteral(TimeLiteralContext ctx) {
       // Parse the string according to ISO8601.
-      DateFormat dateFormat = new SimpleDateFormat("'T'HH:mm:ss.SSSXXX");
       String timeString = ctx.getText().replace("@", "");
       try {
-        dateFormat.parse(timeString);
+        ParsedExpression.TIME_FORMAT.parse(timeString);
       } catch (ParseException e) {
         throw new InvalidRequestException("Invalid Time literal: " + ctx.getText());
       }

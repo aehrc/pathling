@@ -21,6 +21,7 @@ import org.apache.spark.sql.functions;
  * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#count-integer">http://hl7.org/fhirpath/2018Sep/index.html#count-integer</a>
  */
 public class CountFunction implements Function {
+  // TODO: Make count function work outside the context of an aggregation, e.g. %resource.name.given.count() = 3.
 
   @Nonnull
   @Override

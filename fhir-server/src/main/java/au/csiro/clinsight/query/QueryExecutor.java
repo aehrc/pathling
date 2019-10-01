@@ -237,10 +237,9 @@ public class QueryExecutor {
       } else {
         // If there were filters, we join the last filter to the first grouping.
         ParsedExpression lastFilter = parsedFilters.get(parsedFilters.size() - 1);
-        Column lastFilterId = result.col(lastFilter.getDatasetColumn() + "_id")
-            .alias("resource_id");
+        Column resourceId = result.col("resource_id");
         String firstGroupingLabel = query.getGroupings().get(0).getLabel();
-        Column firstGroupingValue = lastFilterId.equalTo(firstId).alias(firstGroupingLabel);
+        Column firstGroupingValue = resourceId.equalTo(firstId).alias(firstGroupingLabel);
         result = result
             .join(firstGrouping.getDataset(), firstGroupingValue, "left_outer");
       }

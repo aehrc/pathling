@@ -41,22 +41,24 @@ public class QueryExecutorTest {
   private SparkSession spark;
   private TerminologyClient terminologyClient;
   private IParser jsonParser;
+  private Path warehouseDirectory;
+  private ResourceReader mockReader;
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     spark = SparkSession.builder()
         .appName("clinsight-test")
         .config("spark.master", "local")
         .getOrCreate();
     terminologyClient = mock(TerminologyClient.class);
     jsonParser = FhirContext.forR4().newJsonParser();
+
+    warehouseDirectory = Files.createTempDirectory("clinsight-test-");
+    mockReader = mock(ResourceReader.class);
   }
 
   @Test
-  public void simpleQuery() throws IOException, JSONException {
-    Path warehouseDirectory = Files.createTempDirectory("clinsight-test-");
-    ResourceReader mockReader = mock(ResourceReader.class);
-
+  public void queryWithMultipleGroupings() throws IOException, JSONException {
     // Load the subject resource dataset from a test Parquet file, and use it to mock out the
     // ResourceReader.
     URL parquetUrl = Thread.currentThread().getContextClassLoader()
@@ -101,7 +103,59 @@ public class QueryExecutorTest {
     Parameters responseParameters = response.toParameters();
     String actualJson = jsonParser.encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream("responses/QueryExecutorTest-simpleQuery.json");
+        .getResourceAsStream(
+            "responses/QueryExecutorTest-queryWithMultipleGroupings.Parameters.json");
+    assertThat(expectedStream).isNotNull();
+    StringWriter writer = new StringWriter();
+    IOUtils.copy(expectedStream, writer, UTF_8);
+    String expectedJson = writer.toString();
+    JSONAssert.assertEquals(expectedJson, actualJson, false);
+  }
+
+  @Test
+  public void queryWithFilter() throws IOException, JSONException {
+    // Load the subject resource dataset from a test Parquet file, and use it to mock out the
+    // ResourceReader.
+    URL parquetUrl = Thread.currentThread().getContextClassLoader()
+        .getResource("test-data/parquet/Patient.parquet");
+    assertThat(parquetUrl).isNotNull();
+    Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
+    when(mockReader.read("http://hl7.org/fhir/StructureDefinition/Patient"))
+        .thenReturn(dataset);
+
+    // Create and configure a new QueryExecutor.
+    QueryExecutorConfiguration config = new QueryExecutorConfiguration(spark, terminologyClient,
+        mockReader);
+    config.setWarehouseUrl(warehouseDirectory.toString());
+    config.setDatabaseName("test");
+
+    TestUtilities.mockDefinitionRetrieval(terminologyClient);
+    executor = new QueryExecutor(config);
+
+    // Build a QueryRequest to pass to the executor.
+    QueryRequest request = new QueryRequest();
+    request.setSubjectResource("http://hl7.org/fhir/StructureDefinition/Patient");
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("%resource.count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Gender");
+    grouping1.setExpression("%resource.gender");
+    request.getGroupings().add(grouping1);
+
+    request.getFilters().add("%resource.gender = 'female'");
+
+    // Execute the query.
+    QueryResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = jsonParser.encodeResourceToString(responseParameters);
+    InputStream expectedStream = Thread.currentThread().getContextClassLoader()
+        .getResourceAsStream("responses/QueryExecutorTest-queryWithFilter.Parameters.json");
     assertThat(expectedStream).isNotNull();
     StringWriter writer = new StringWriter();
     IOUtils.copy(expectedStream, writer, UTF_8);
