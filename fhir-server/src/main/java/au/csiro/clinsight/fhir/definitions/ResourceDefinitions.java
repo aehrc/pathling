@@ -14,10 +14,14 @@ import java.util.*;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.CodeSystem;
-import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.StructureDefinition;
+import org.hl7.fhir.r4.model.UriType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,57 +35,58 @@ import org.slf4j.LoggerFactory;
 public abstract class ResourceDefinitions {
 
   public static final String BASE_RESOURCE_URL_PREFIX = "http://hl7.org/fhir/StructureDefinition/";
-  static final Set<String> supportedComplexTypes = Sets.newHashSet(
-      "Ratio",
-      "Period",
-      "Range",
-      "Attachment",
-      "Identifier",
-      "HumanName",
-      "Annotation",
-      "Address",
-      "ContactPoint",
-      "SampledData",
-      "Money",
-      "Count",
-      "Duration",
-      "SimpleQuantity",
-      "Quantity",
-      "Distance",
-      "Age",
-      "CodeableConcept",
-      "Signature",
-      "Coding",
-      "Timing",
-      "Reference"
+  static final Set<FHIRDefinedType> supportedComplexTypes = Sets.immutableEnumSet(
+      FHIRDefinedType.RATIO,
+      FHIRDefinedType.PERIOD,
+      FHIRDefinedType.RANGE,
+      FHIRDefinedType.ATTACHMENT,
+      FHIRDefinedType.IDENTIFIER,
+      FHIRDefinedType.HUMANNAME,
+      FHIRDefinedType.ANNOTATION,
+      FHIRDefinedType.ADDRESS,
+      FHIRDefinedType.CONTACTPOINT,
+      FHIRDefinedType.SAMPLEDDATA,
+      FHIRDefinedType.MONEY,
+      FHIRDefinedType.COUNT,
+      FHIRDefinedType.DURATION,
+      FHIRDefinedType.SIMPLEQUANTITY,
+      FHIRDefinedType.QUANTITY,
+      FHIRDefinedType.DISTANCE,
+      FHIRDefinedType.AGE,
+      FHIRDefinedType.CODEABLECONCEPT,
+      FHIRDefinedType.SIGNATURE,
+      FHIRDefinedType.CODING,
+      FHIRDefinedType.TIMING,
+      FHIRDefinedType.REFERENCE
   );
-  static final Set<String> supportedPrimitiveTypes = Sets.newHashSet(
-      "decimal",
-      "markdown",
-      "id",
-      "dateTime",
-      "time",
-      "date",
-      "code",
-      "string",
-      "uri",
-      "oid",
-      "integer",
-      "unsignedInt",
-      "positiveInt",
-      "boolean",
-      "instant"
+  static final Set<FHIRDefinedType> supportedPrimitiveTypes = Sets.immutableEnumSet(
+      FHIRDefinedType.DECIMAL,
+      FHIRDefinedType.MARKDOWN,
+      FHIRDefinedType.ID,
+      FHIRDefinedType.DATETIME,
+      FHIRDefinedType.TIME,
+      FHIRDefinedType.DATE,
+      FHIRDefinedType.CODE,
+      FHIRDefinedType.STRING,
+      FHIRDefinedType.URI,
+      FHIRDefinedType.OID,
+      FHIRDefinedType.INTEGER,
+      FHIRDefinedType.UNSIGNEDINT,
+      FHIRDefinedType.POSITIVEINT,
+      FHIRDefinedType.BOOLEAN,
+      FHIRDefinedType.INSTANT
   );
   private static final Logger logger = LoggerFactory.getLogger(ResourceDefinitions.class);
   private static final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(
       1);
   private static final long RETRY_DELAY_SECONDS = 10;
-  private static Map<String, Map<String, ElementDefinition>> resourceElements = new HashMap<>();
-  private static Map<String, Map<String, ElementDefinition>> complexTypeElements = new HashMap<>();
-  private static Map<String, StructureDefinition> resources = new HashMap<>();
-  private static Map<String, StructureDefinition> complexTypes = new HashMap<>();
+  private static Map<ResourceType, Map<String, ElementDefinition>> resourceElements = new HashMap<>();
+  private static Map<FHIRDefinedType, Map<String, ElementDefinition>> complexTypeElements = new HashMap<>();
+  private static Map<ResourceType, StructureDefinition> resources = new HashMap<>();
+  private static Map<FHIRDefinedType, StructureDefinition> complexTypes = new HashMap<>();
   private static Set<String> knownCodeSystems = new HashSet<>();
   private static ResourceDefinitionsStatus status = UNINITIALISED;
+
 
   /**
    * Fetches all StructureDefinitions known to the supplied terminology server, and loads them into
@@ -91,24 +96,41 @@ public abstract class ResourceDefinitions {
     status = INITIALISATION_IN_PROGRESS;
     logger.info("Initialising resource definitions...");
     try {
-      // Do a search to get all the StructureDefinitions. Unfortunately the `kind` search parameter
-      // is not supported by Ontoserver, yet.
-      List<StructureDefinition> structureDefinitions = terminologyClient
-          .getAllStructureDefinitions(Sets.newHashSet("url", "kind"));
+      // Create a function that knows how to retrieve a StructureDefinition for a resource type.
+      Function<ResourceType, StructureDefinition> fetchStrucDefForResource = resourceType -> {
+        List<StructureDefinition> results = terminologyClient
+            .getStructureDefinitionByUrl(
+                new UriType(BASE_RESOURCE_URL_PREFIX + resourceType.toCode()));
+        if (results.isEmpty()) {
+          throw new UnclassifiedServerFailureException(
+              500, "StructureDefinition not found for resource: " + resourceType.getDisplay());
+        }
+        return results.get(0);
+      };
 
-      // Create a function that knows how to retrieve a StructureDefinition from the terminology
-      // server.
-      Function<StructureDefinition, StructureDefinition> fetchResourceWithId = definition -> terminologyClient
-          .getStructureDefinitionById(new IdType(definition.getId()));
+      // Create a function that knows how to retrieve a StructureDefinition for a complex type.
+      Function<FHIRDefinedType, StructureDefinition> fetchStrucDefForComplexType = complexType -> {
+        List<StructureDefinition> results = terminologyClient
+            .getStructureDefinitionByUrl(
+                new UriType(BASE_RESOURCE_URL_PREFIX + complexType.toCode()));
+        if (results.isEmpty()) {
+          throw new UnclassifiedServerFailureException(
+              500, "StructureDefinition not found for complex type: " + complexType.getDisplay());
+        }
+        return results.get(0);
+      };
 
-      // Fetch each resource StructureDefinition and create a HashMap keyed on URL.
-      resources = ResourceScanner
-          .retrieveResourceDefinitions(structureDefinitions, fetchResourceWithId);
+      // Fetch each resource StructureDefinition and create a map.
+      resources = ResourceDefinitions.getSupportedResources().stream()
+          .peek(resourceType -> logger
+              .debug("Retrieving resource StructureDefinition: " + resourceType.getDisplay()))
+          .collect(Collectors.toMap(Function.identity(), fetchStrucDefForResource));
 
-      // Fetch each complex type StructureDefinition (just the ones that are part of the base spec)
-      // and create a HashMap keyed on URL.
-      complexTypes = ResourceScanner
-          .retrieveComplexTypeDefinitions(structureDefinitions, fetchResourceWithId);
+      // Fetch each complex type StructureDefinition and create a map.
+      complexTypes = supportedComplexTypes.stream()
+          .peek(complexType -> logger
+              .debug("Retrieving complex type StructureDefinition: " + complexType.getDisplay()))
+          .collect(Collectors.toMap(Function.identity(), fetchStrucDefForComplexType));
 
       // Check that all definitions have a snapshot element.
       ResourceScanner.validateDefinitions(resources.values());
@@ -116,11 +138,12 @@ public abstract class ResourceDefinitions {
 
       // Build a map of element paths and key information from their ElementDefinitions, for each
       // resource and complex type.
-      resourceElements = ResourceScanner.summariseDefinitions(resources.values());
-      complexTypeElements = ResourceScanner.summariseDefinitions(complexTypes.values());
+      resourceElements = ResourceScanner.summariseResourceDefinitions(resources.values());
+      complexTypeElements = ResourceScanner.summariseComplexTypeDefinitions(complexTypes.values());
 
       // Query all known code systems from the server.
       List<CodeSystem> codeSystems = terminologyClient.getAllCodeSystems(Sets.newHashSet("url"));
+      logger.debug("Querying known code systems");
       for (CodeSystem codeSystem : codeSystems) {
         knownCodeSystems.add(codeSystem.getUrl());
       }
@@ -154,25 +177,19 @@ public abstract class ResourceDefinitions {
     complexTypeElements.clear();
   }
 
-  /**
-   * Returns a set of URLs describing the supported resource definitions.
-   */
-  public static Set<String> getSupportedResources() {
-    checkInitialised();
-    return resources.keySet();
+  static Map<String, ElementDefinition> getElementsForResourceType(
+      @Nonnull ResourceType resourceType) {
+    return resourceElements.get(resourceType);
+  }
+
+  static Map<String, ElementDefinition> getElementsForComplexType(
+      @Nonnull FHIRDefinedType complexType) {
+    return complexTypeElements.get(complexType);
   }
 
   /**
-   * Returns a map of SummarisedElements for the resource or complex type with the supplied name.
+   * Check if the resource definitions have been successfully initialised.
    */
-  static Map<String, ElementDefinition> getElementsForType(@Nonnull String typeName) {
-    Map<String, ElementDefinition> result = resourceElements
-        .get(BASE_RESOURCE_URL_PREFIX + typeName);
-    return result == null
-        ? complexTypeElements.get(BASE_RESOURCE_URL_PREFIX + typeName)
-        : result;
-  }
-
   public static void checkInitialised() {
     if (status != INITIALISED) {
       throw new UnclassifiedServerFailureException(503,
@@ -181,13 +198,38 @@ public abstract class ResourceDefinitions {
   }
 
   /**
+   * Return the set of supported resource types.
+   */
+  public static Set<ResourceType> getSupportedResources() {
+    return Arrays.stream(ResourceType.values())
+        .filter(resourceType -> !resourceType.equals(ResourceType.NULL))
+        .collect(Collectors.toSet());
+  }
+
+  /**
+   * Check if the supplied resource name is a supported resource.
+   */
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  public static boolean isSupportedResourceName(String resourceName) {
+    try {
+      ResourceType.fromCode(resourceName);
+    } catch (FHIRException e) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Check if the supplied FHIR type code corresponds to a supported primitive type.
    */
-  public static boolean isPrimitive(@Nonnull String fhirType) {
+  public static boolean isPrimitive(@Nonnull FHIRDefinedType fhirType) {
     checkInitialised();
     return supportedPrimitiveTypes.contains(fhirType);
   }
 
+  /**
+   * Check if the supplied string is the URL of a known CodeSystem.
+   */
   public static boolean isCodeSystemKnown(@Nonnull String url) {
     return knownCodeSystems.contains(url);
   }

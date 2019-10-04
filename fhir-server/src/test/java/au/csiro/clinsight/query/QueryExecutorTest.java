@@ -25,6 +25,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.json.JSONException;
 import org.junit.After;
@@ -65,7 +66,7 @@ public class QueryExecutorTest {
         .getResource("test-data/parquet/Encounter.parquet");
     assertThat(parquetUrl).isNotNull();
     Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-    when(mockReader.read("http://hl7.org/fhir/StructureDefinition/Encounter"))
+    when(mockReader.read(ResourceType.ENCOUNTER))
         .thenReturn(dataset);
 
     // Create and configure a new QueryExecutor.
@@ -79,7 +80,7 @@ public class QueryExecutorTest {
 
     // Build a QueryRequest to pass to the executor.
     QueryRequest request = new QueryRequest();
-    request.setSubjectResource("http://hl7.org/fhir/StructureDefinition/Encounter");
+    request.setSubjectResource(ResourceType.ENCOUNTER);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of encounters");
@@ -120,7 +121,7 @@ public class QueryExecutorTest {
         .getResource("test-data/parquet/Patient.parquet");
     assertThat(parquetUrl).isNotNull();
     Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-    when(mockReader.read("http://hl7.org/fhir/StructureDefinition/Patient"))
+    when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(dataset);
 
     // Create and configure a new QueryExecutor.
@@ -134,7 +135,7 @@ public class QueryExecutorTest {
 
     // Build a QueryRequest to pass to the executor.
     QueryRequest request = new QueryRequest();
-    request.setSubjectResource("http://hl7.org/fhir/StructureDefinition/Patient");
+    request.setSubjectResource(ResourceType.PATIENT);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of patients");
@@ -156,6 +157,59 @@ public class QueryExecutorTest {
     String actualJson = jsonParser.encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream("responses/QueryExecutorTest-queryWithFilter.Parameters.json");
+    assertThat(expectedStream).isNotNull();
+    StringWriter writer = new StringWriter();
+    IOUtils.copy(expectedStream, writer, UTF_8);
+    String expectedJson = writer.toString();
+    JSONAssert.assertEquals(expectedJson, actualJson, false);
+  }
+
+  @Test
+  public void queryWithResolve() throws IOException, JSONException {
+    // Load the subject resource dataset from a test Parquet file, and use it to mock out the
+    // ResourceReader.
+    ResourceType[] resourceTypes = new ResourceType[]{ResourceType.ALLERGYINTOLERANCE,
+        ResourceType.PATIENT};
+    for (ResourceType resourceType : resourceTypes) {
+      URL parquetUrl = Thread.currentThread().getContextClassLoader()
+          .getResource("test-data/parquet/" + resourceType + ".parquet");
+      assertThat(parquetUrl).isNotNull();
+      Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
+      when(mockReader.read(resourceType))
+          .thenReturn(dataset);
+    }
+
+    // Create and configure a new QueryExecutor.
+    QueryExecutorConfiguration config = new QueryExecutorConfiguration(spark, terminologyClient,
+        mockReader);
+    config.setWarehouseUrl(warehouseDirectory.toString());
+    config.setDatabaseName("test");
+
+    TestUtilities.mockDefinitionRetrieval(terminologyClient);
+    executor = new QueryExecutor(config);
+
+    // Build a QueryRequest to pass to the executor.
+    QueryRequest request = new QueryRequest();
+    request.setSubjectResource(ResourceType.ALLERGYINTOLERANCE);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of allergies");
+    aggregation.setExpression("%resource.count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Patient gender");
+    grouping1.setExpression("%resource.patient.resolve().gender");
+    request.getGroupings().add(grouping1);
+
+    // Execute the query.
+    QueryResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = jsonParser.encodeResourceToString(responseParameters);
+    InputStream expectedStream = Thread.currentThread().getContextClassLoader()
+        .getResourceAsStream("responses/QueryExecutorTest-queryWithResolve.Parameters.json");
     assertThat(expectedStream).isNotNull();
     StringWriter writer = new StringWriter();
     IOUtils.copy(expectedStream, writer, UTF_8);

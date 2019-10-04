@@ -4,7 +4,6 @@
 
 package au.csiro.clinsight.query.parsing;
 
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.CODING;
 import static au.csiro.clinsight.utilities.Strings.md5Short;
 import static au.csiro.clinsight.utilities.Strings.unSingleQuote;
@@ -279,8 +278,8 @@ public class ExpressionParser {
     public ParsedExpression visitMemberInvocation(MemberInvocationContext ctx) {
       String fhirPath = ctx.getText();
       if (invoker == null) {
-        // If there is no invoker, we assume that this is a base resource. If we can't resolve it, an
-        // error will be thrown.
+        // If there is no invoker, we assume that this is a base resource. If we can't resolve it,
+        // an error will be thrown.
         String hash = md5Short(fhirPath);
         PathTraversal pathTraversal;
         try {
@@ -296,11 +295,11 @@ public class ExpressionParser {
         result.setFhirPath(fhirPath);
         result.setPathTraversal(pathTraversal);
         result.setResource(true);
-        result.setResourceDefinition(BASE_RESOURCE_URL_PREFIX + fhirPath);
+        result.setResourceType(Enumerations.ResourceType.fromCode(fhirPath));
         result.setOrigin(result);
 
         // Add a dataset to the parse result representing the nominated resource.
-        Dataset<Row> dataset = context.getResourceReader().read(result.getResourceDefinition());
+        Dataset<Row> dataset = context.getResourceReader().read(result.getResourceType());
         dataset = dataset.select(dataset.col("id").alias(hash + "_id"));
         result.setDataset(dataset);
         result.setDatasetColumn(hash);
@@ -308,7 +307,8 @@ public class ExpressionParser {
         return result;
 
       } else {
-        // If there is an invoker, then we use a path traversal to move to the element named on the right hand side of the operator.
+        // If there is an invoker, then we use a path traversal to move to the element named on the
+        // right hand side of the operator.
         PathTraversalInput pathTraversalInput = new PathTraversalInput();
         pathTraversalInput.setLeft(invoker);
         pathTraversalInput.setRight(fhirPath);

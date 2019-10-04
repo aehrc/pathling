@@ -183,7 +183,7 @@ public class SystemTest {
       // Set subject resource parameter.
       ParametersParameterComponent subjectResourceParam = new ParametersParameterComponent();
       subjectResourceParam.setName("subjectResource");
-      subjectResourceParam.setValue(new UriType("http://hl7.org/fhir/StructureDefinition/Patient"));
+      subjectResourceParam.setValue(new CodeType("Patient"));
 
       // Add aggregation, number of patients.
       ParametersParameterComponent aggregationParam = new ParametersParameterComponent();

@@ -5,18 +5,24 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
 import static au.csiro.clinsight.utilities.Strings.md5Short;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.clinsight.fhir.definitions.ElementDefinition;
+import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.PathTraversal;
+import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A function for resolving a Reference element in order to access the elements of the target
@@ -27,68 +33,87 @@ import org.apache.spark.sql.Row;
  */
 public class ResolveFunction implements Function {
 
-  private static boolean referenceIsPolymorphic(ParsedExpression reference) {
-    PathTraversal pathTraversal = reference.getPathTraversal();
-    List<String> referenceTypes = pathTraversal.getElementDefinition().getReferenceTypes();
-    assert referenceTypes.size() != 0 : "Encountered reference with no types";
-    return referenceTypes.size() > 1 || referenceTypes.get(0)
-        .equals(BASE_RESOURCE_URL_PREFIX + "/Resource");
-  }
-
   @Nonnull
   @Override
   public ParsedExpression invoke(@Nonnull FunctionInput input) {
     validateInput(input);
+    SparkSession spark = input.getContext().getSparkSession();
     ParsedExpression inputResult = input.getInput();
-    Dataset<Row> inputDataset = inputResult.getDataset().alias("input");
-    Dataset<Row> argumentDataset = null;
-    String argumentCol = null;
-    String resourceDefinition = null;
+    Dataset<Row> inputDataset = inputResult.getDataset();
     String hash = md5Short(input.getExpression());
+    Column inputIdCol = inputDataset.col(inputResult.getDatasetColumn() + "_id");
+    Column referenceCol = inputDataset.col(inputResult.getDatasetColumn());
 
-    // Work out the target resource dataset that we will need to join to.
-    if (referenceIsPolymorphic(inputResult)) {
-      // If an argument has been provided, we can get the dataset straight out of the argument parse
-      // result.
-      ParsedExpression argument = input.getArguments().get(0);
-      argumentDataset = argument.getDataset();
-      argumentCol = argument.getDatasetColumn();
-      resourceDefinition = argument.getResourceDefinition();
-    } else {
-      // If an argument has not been provided, we have to work out which table to get the dataset
-      // from based upon the reference types within the element definition.
-      PathTraversal pathTraversal = inputResult.getPathTraversal();
-      ElementDefinition elementDefinition = pathTraversal.getElementDefinition();
-      String referenceType = elementDefinition.getReferenceTypes().get(0);
-      resourceDefinition = referenceType;
-      if (referenceType.contains(BASE_RESOURCE_URL_PREFIX)) {
-        String resourceName = referenceType.replaceFirst(BASE_RESOURCE_URL_PREFIX, "");
-        argumentCol = md5Short(resourceName);
-        argumentDataset = input.getContext().getResourceReader().read(referenceType);
-        argumentDataset = argumentDataset.withColumnRenamed("id", argumentCol + "_id");
-      } else {
-        assert false : "Non-base resource reference encountered: " + referenceType;
-      }
+    // Get the allowed types for the input reference. This gives us the set of possible resource
+    // types that this reference could resolve to.
+    PathTraversal pathTraversal = inputResult.getPathTraversal();
+    ElementDefinition elementDefinition = pathTraversal.getElementDefinition();
+    Set<ResourceType> referenceTypes = elementDefinition.getReferenceTypes();
+    // If the type is Resource, all resource types need to be looked at.
+    if (referenceTypes.contains(ResourceType.RESOURCE)) {
+      referenceTypes = ResourceDefinitions.getSupportedResources();
     }
-    argumentDataset = argumentDataset.alias("argument");
+    assert referenceTypes.size() > 0 : "Encountered reference with no types";
+
+    Dataset<Row> targetDataset;
+    Column targetIdCol = null, targetCol = null;
+    if (referenceTypes.size() == 1) {
+      // If this is a monomorphic reference, we just need to retrieve the appropriate table and
+      // create a dataset with the full resources.
+      targetDataset = input.getContext().getResourceReader().read(
+          (ResourceType) referenceTypes.toArray()[0]);
+      targetIdCol = targetDataset.col("id");
+      targetCol = org.apache.spark.sql.functions.struct(targetDataset.col("*"));
+    } else {
+      // If this is a polymorphic reference, create a dataset for each reference type, and union
+      // them together to produce the target dataset. The dataset will not contain the resources
+      // themselves, only a type and identifier for later resolution.
+      List<Dataset<Row>> referenceTypeDatasets = new ArrayList<>();
+      for (ResourceType referenceType : referenceTypes) {
+        Dataset<Row> referenceTypeDataset = input.getContext().getResourceReader()
+            .read(referenceType);
+        targetIdCol = referenceTypeDataset.col("id");
+        Column referenceTypeCol = lit(referenceType.toCode()).alias("type");
+        referenceTypeDataset = referenceTypeDataset.select(targetIdCol, referenceTypeCol);
+        referenceTypeDatasets.add(referenceTypeDataset);
+      }
+      targetDataset = referenceTypeDatasets.stream()
+          .reduce(Dataset::union)
+          .orElse(null);
+      assert targetDataset != null;
+      targetIdCol = targetDataset.col("id");
+      targetCol = targetDataset.col("type");
+    }
 
     // Create a new dataset by joining to the target resource dataset.
-    String inputIdColName = inputResult.getDatasetColumn() + "_id";
-    Column referenceCol = inputDataset.col(inputResult.getDatasetColumn());
-    Column argumentIdCol = argumentDataset.col(argumentCol + "_id");
-    Dataset<Row> dataset = inputDataset
-        .join(argumentDataset, referenceCol.equalTo(argumentIdCol), "left_outer");
-    dataset = dataset.select(inputIdColName, "argument.*");
-    dataset = dataset.withColumnRenamed(inputIdColName, hash + "_id");
+    // TODO: Implement support for resolving references based upon identifier.
+    Column equality = referenceCol.getField("reference").equalTo(targetIdCol);
+    Dataset<Row> dataset = inputDataset.join(targetDataset, equality, "left_outer");
+    if (referenceTypes.size() == 1) {
+      dataset = dataset.select(inputIdCol.alias(hash + "_id"), targetCol.alias(hash));
+    } else {
+      dataset = dataset.select(inputIdCol.alias(hash + "_id"), targetCol.alias(hash + "_type"),
+          targetIdCol.alias(hash));
+    }
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
-    result.setResource(true);
-    result.setResourceDefinition(resourceDefinition);
-
+    result.setSingular(inputResult.isSingular());
     result.setDataset(dataset);
     result.setDatasetColumn(hash);
+
+    // Resolution of polymorphic references are flagged, and don't carry information about the
+    // resource type and path traversal.
+    if (referenceTypes.size() == 1) {
+      result.setResource(true);
+      result.setResourceType(
+          ResourceType.fromCode(((ResourceType) referenceTypes.toArray()[0]).toCode()));
+      result.setPathTraversal(PathResolver.resolvePath(result.getResourceType().toCode()));
+    } else {
+      result.setPolymorphic(true);
+    }
+
     return result;
   }
 
@@ -99,23 +124,8 @@ public class ResolveFunction implements Function {
       throw new InvalidRequestException(
           "Input to resolve function must be a Reference: " + inputResult.getFhirPath());
     }
-    // Input is polymorphic is there is more than one reference type, or if the only reference type
-    // is a reference to Resource (which implies an "any" reference).
-    if (referenceIsPolymorphic(inputResult)) {
-      ParsedExpression argument = input.getArguments().get(0);
-      if (input.getArguments().size() != 1 || !argument.isResource()) {
-        // If the reference is polymorphic and an argument has not been provided, throw an error.
-        throw new InvalidRequestException(
-            "resolve function requires an argument of type Resource when input is polymorphic: "
-                + argument.getFhirPath());
-      }
-    } else {
-      if (input.getArguments().size() > 0) {
-        // If the reference is monomorphic and an argument has been provided, throw an error.
-        throw new InvalidRequestException(
-            "Argument provided to resolve function when input is a monomorphic reference: "
-                + inputResult.getFhirPath());
-      }
+    if (!input.getArguments().isEmpty()) {
+      throw new InvalidRequestException("resolve function does not accept arguments");
     }
   }
 

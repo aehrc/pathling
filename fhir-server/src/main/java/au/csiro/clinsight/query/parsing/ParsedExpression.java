@@ -8,13 +8,14 @@ import au.csiro.clinsight.fhir.definitions.PathTraversal;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Used to represent the results from the parsing of a FHIRPath expression, including information
@@ -71,9 +72,15 @@ public class ParsedExpression {
   private boolean isResource;
 
   /**
-   * If this expression evaluates to a resource, this field holds the StructureDefinition URI.
+   * If this expression evaluates to a resource, this field holds the type of the resource.
    */
-  private String resourceDefinition;
+  private Enumerations.ResourceType resourceType;
+
+  /**
+   * If this expression is an unresolved polymorphic result, e.g. the result of a call to resolve()
+   * on a reference with multiple types, this flag will be set.
+   */
+  private boolean polymorphic;
 
   /**
    * A reference to the ParseResult at the beginning of this expression. This is used for reverse
@@ -110,7 +117,7 @@ public class ParsedExpression {
     this.singular = parsedExpression.singular;
     this.literalValue = parsedExpression.literalValue;
     this.isResource = parsedExpression.isResource;
-    this.resourceDefinition = parsedExpression.resourceDefinition;
+    this.resourceType = parsedExpression.resourceType;
     this.origin = parsedExpression.origin;
     this.dataset = parsedExpression.dataset;
     this.datasetColumn = parsedExpression.datasetColumn;
@@ -189,12 +196,20 @@ public class ParsedExpression {
     isResource = resource;
   }
 
-  public String getResourceDefinition() {
-    return resourceDefinition;
+  public Enumerations.ResourceType getResourceType() {
+    return resourceType;
   }
 
-  public void setResourceDefinition(String resourceDefinition) {
-    this.resourceDefinition = resourceDefinition;
+  public void setResourceType(Enumerations.ResourceType resourceType) {
+    this.resourceType = resourceType;
+  }
+
+  public boolean isPolymorphic() {
+    return polymorphic;
+  }
+
+  public void setPolymorphic(boolean polymorphic) {
+    this.polymorphic = polymorphic;
   }
 
   public ParsedExpression getOrigin() {
@@ -276,22 +291,23 @@ public class ParsedExpression {
     QUANTITY(Quantity.class, "Quantity"),
     CODING(Coding.class, "Coding");
 
-    private static final Map<String, FhirPathType> fhirTypeCodeToFhirPathType = new HashMap<String, FhirPathType>() {{
-      put("decimal", DECIMAL);
-      put("markdown", STRING);
-      put("id", STRING);
-      put("dateTime", DATE_TIME);
-      put("time", TIME);
-      put("date", DATE_TIME);
-      put("code", STRING);
-      put("string", STRING);
-      put("uri", STRING);
-      put("oid", STRING);
-      put("integer", INTEGER);
-      put("unsignedInt", INTEGER);
-      put("positiveInt", INTEGER);
-      put("boolean", BOOLEAN);
-      put("instant", DATE_TIME);
+    private static final Map<FHIRDefinedType, FhirPathType> fhirTypeCodeToFhirPathType = new EnumMap<FHIRDefinedType, FhirPathType>(
+        FHIRDefinedType.class) {{
+      put(FHIRDefinedType.DECIMAL, DECIMAL);
+      put(FHIRDefinedType.MARKDOWN, STRING);
+      put(FHIRDefinedType.ID, STRING);
+      put(FHIRDefinedType.DATETIME, DATE_TIME);
+      put(FHIRDefinedType.TIME, TIME);
+      put(FHIRDefinedType.DATE, DATE_TIME);
+      put(FHIRDefinedType.CODE, STRING);
+      put(FHIRDefinedType.STRING, STRING);
+      put(FHIRDefinedType.URI, STRING);
+      put(FHIRDefinedType.OID, STRING);
+      put(FHIRDefinedType.INTEGER, INTEGER);
+      put(FHIRDefinedType.UNSIGNEDINT, INTEGER);
+      put(FHIRDefinedType.POSITIVEINT, INTEGER);
+      put(FHIRDefinedType.BOOLEAN, BOOLEAN);
+      put(FHIRDefinedType.INSTANT, DATE_TIME);
     }};
 
     // Java class that can be used for representing the value of this expression.
@@ -308,7 +324,7 @@ public class ParsedExpression {
     }
 
     // Maps a FHIR type code to a FHIRPath data type.
-    public static FhirPathType forFhirTypeCode(String fhirTypeCode) {
+    public static FhirPathType forFhirTypeCode(FHIRDefinedType fhirTypeCode) {
       return fhirTypeCodeToFhirPathType.get(fhirTypeCode);
     }
 
@@ -345,22 +361,23 @@ public class ParsedExpression {
     BOOLEAN(BooleanType.class, Boolean.class, "boolean"),
     INSTANT(InstantType.class, Date.class, "instant");
 
-    private static final Map<String, FhirType> fhirTypeCodeToFhirType = new HashMap<String, FhirType>() {{
-      put("decimal", DECIMAL);
-      put("markdown", MARKDOWN);
-      put("id", ID);
-      put("dateTime", DATE_TIME);
-      put("time", TIME);
-      put("date", DATE);
-      put("code", CODE);
-      put("string", STRING);
-      put("uri", URI);
-      put("oid", OID);
-      put("integer", INTEGER);
-      put("unsignedInt", UNSIGNED_INT);
-      put("positiveInt", POSITIVE_INT);
-      put("boolean", BOOLEAN);
-      put("instant", INSTANT);
+    private static final Map<FHIRDefinedType, FhirType> fhirTypeCodeToFhirType = new EnumMap<FHIRDefinedType, FhirType>(
+        FHIRDefinedType.class) {{
+      put(FHIRDefinedType.DECIMAL, DECIMAL);
+      put(FHIRDefinedType.MARKDOWN, MARKDOWN);
+      put(FHIRDefinedType.ID, ID);
+      put(FHIRDefinedType.DATETIME, DATE_TIME);
+      put(FHIRDefinedType.TIME, TIME);
+      put(FHIRDefinedType.DATE, DATE);
+      put(FHIRDefinedType.CODE, CODE);
+      put(FHIRDefinedType.STRING, STRING);
+      put(FHIRDefinedType.URI, URI);
+      put(FHIRDefinedType.OID, OID);
+      put(FHIRDefinedType.INTEGER, INTEGER);
+      put(FHIRDefinedType.UNSIGNEDINT, UNSIGNED_INT);
+      put(FHIRDefinedType.POSITIVEINT, POSITIVE_INT);
+      put(FHIRDefinedType.BOOLEAN, BOOLEAN);
+      put(FHIRDefinedType.INSTANT, INSTANT);
     }};
 
     // HAPI class that can be used for representing the value of this expression.
@@ -383,7 +400,7 @@ public class ParsedExpression {
     }
 
     // Maps a FHIR type code to a FHIR data type.
-    public static FhirType forFhirTypeCode(String fhirTypeCode) {
+    public static FhirType forFhirTypeCode(FHIRDefinedType fhirTypeCode) {
       return fhirTypeCodeToFhirType.get(fhirTypeCode);
     }
 

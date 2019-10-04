@@ -19,10 +19,8 @@ public interface TerminologyClient extends IBasicClient {
   CapabilityStatement getServerMetadata();
 
   @Search
-  List<StructureDefinition> getAllStructureDefinitions(@Elements Set<String> theElements);
-
-  @Read
-  StructureDefinition getStructureDefinitionById(@IdParam IdType theId);
+  List<StructureDefinition> getStructureDefinitionByUrl(
+      @RequiredParam(name = StructureDefinition.SP_URL) UriType url);
 
   @Search
   List<CodeSystem> getAllCodeSystems(@Elements Set<String> theElements);

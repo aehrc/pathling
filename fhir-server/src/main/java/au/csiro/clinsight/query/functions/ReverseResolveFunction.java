@@ -5,17 +5,17 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
 import static au.csiro.clinsight.utilities.Strings.md5Short;
 
 import au.csiro.clinsight.fhir.definitions.PathTraversal;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A function for accessing elements of resources which refer to the input resource. The path to the
@@ -25,10 +25,11 @@ import org.apache.spark.sql.Row;
  */
 public class ReverseResolveFunction implements Function {
 
-  private static boolean referenceRefersToType(ParsedExpression reference, String typeUri) {
+  private static boolean referenceRefersToType(ParsedExpression reference,
+      ResourceType resourceType) {
     PathTraversal pathTraversal = reference.getPathTraversal();
-    List<String> referenceTypes = pathTraversal.getElementDefinition().getReferenceTypes();
-    return referenceTypes.contains(BASE_RESOURCE_URL_PREFIX) || referenceTypes.contains(typeUri);
+    Set<ResourceType> referenceTypes = pathTraversal.getElementDefinition().getReferenceTypes();
+    return referenceTypes.contains(ResourceType.RESOURCE) || referenceTypes.contains(resourceType);
   }
 
   @Nonnull
@@ -58,7 +59,7 @@ public class ReverseResolveFunction implements Function {
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setResource(true);
-    result.setResourceDefinition(argument.getOrigin().getResourceDefinition());
+    result.setResourceType(argument.getOrigin().getResourceType());
 
     result.setDataset(dataset);
     result.setDatasetColumn(hash);
@@ -77,7 +78,7 @@ public class ReverseResolveFunction implements Function {
         throw new InvalidRequestException(
             "Argument to reverseResolve function must be Reference: " + argument.getFhirPath());
       }
-      if (!referenceRefersToType(argument, inputResult.getResourceDefinition())) {
+      if (!referenceRefersToType(argument, inputResult.getResourceType())) {
         throw new InvalidRequestException(
             "Reference in argument to reverseResolve does not support input resource type: " + input
                 .getExpression());

@@ -126,7 +126,7 @@ public class MemberOfFunction implements Function {
   private void validateInput(FunctionInput input) {
     ParsedExpression inputResult = input.getInput();
     if (!(supportedTypes.contains(inputResult.getFhirPathType()) || inputResult.getPathTraversal()
-        .getElementDefinition().getTypeCode().equals("CodeableConcept"))) {
+        .getElementDefinition().getFhirType().equals("CodeableConcept"))) {
       throw new InvalidRequestException(
           "Input to memberOf function is of unsupported type: " + inputResult.getFhirPath());
     }

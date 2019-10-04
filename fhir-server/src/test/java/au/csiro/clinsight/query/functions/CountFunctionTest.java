@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.*;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -59,7 +60,7 @@ public class CountFunctionTest {
     ParsedExpression input = new ParsedExpression();
     input.setFhirPath("%resource");
     input.setResource(true);
-    input.setResourceDefinition("http://hl7.org/fhir/StructureDefinition/Patient");
+    input.setResourceType(ResourceType.PATIENT);
     input.setOrigin(input);
     input.setDataset(dataset);
     input.setDatasetColumn("123abcd");

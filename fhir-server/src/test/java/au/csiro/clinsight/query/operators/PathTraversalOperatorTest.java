@@ -5,6 +5,7 @@
 package au.csiro.clinsight.query.operators;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.clinsight.TestUtilities;
@@ -13,6 +14,7 @@ import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Collections;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
@@ -20,6 +22,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.*;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -57,7 +60,7 @@ public class PathTraversalOperatorTest {
 
     ParsedExpression left = new ParsedExpression();
     left.setFhirPath("%resource");
-    left.setResourceDefinition("http://hl7.org/fhir/StructureDefinition/Patient");
+    left.setResourceType(ResourceType.PATIENT);
     left.setOrigin(left);
     left.setDataset(dataset);
     left.setDatasetColumn("123abcd");
@@ -89,25 +92,19 @@ public class PathTraversalOperatorTest {
     assertThat(resultRow.getString(1)).isEqualTo("female");
   }
 
-  // TODO: Implement this test.
-  // @Test
-  // @SuppressWarnings("unchecked")
-  // public void primitiveLeftExpression() {
-  //   ParsedExpression left = new ParsedExpression();
-  //   left.setFhirPath("%resource");
-  //   left.setResourceDefinition("http://hl7.org/fhir/StructureDefinition/Patient");
-  //   left.setOrigin(left);
-  //   left.setDataset((Dataset<Row>) mock(Dataset.class));
-  //   left.setDatasetColumn("123abcd");
-  //   left.setPathTraversal(PathResolver.resolvePath("Patient"));
-  //
-  //   PathTraversalInput input = new PathTraversalInput();
-  //   input.setLeft(left);
-  //   input.setRight("gender");
-  //   input.setExpression("gender");
-  //
-  //   PathTraversalOperator pathTraversalOperator = new PathTraversalOperator();
-  //   ParsedExpression result = pathTraversalOperator.invoke(input);
-  //
-  // }
+  @Test
+  public void rejectsPolymorphicInput() {
+    ParsedExpression left = new ParsedExpression();
+    left.setFhirPath("Encounter.subject.resolve()");
+    left.setSingular(true);
+    left.setPolymorphic(true);
+
+    PathTraversalInput input = new PathTraversalInput();
+    input.setLeft(left);
+    input.setRight("foo");
+
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> new PathTraversalOperator().invoke(input))
+        .withMessage("Attempt at path traversal on polymorphic input: Encounter.subject.resolve()");
+  }
 }

@@ -8,6 +8,7 @@ import static au.csiro.clinsight.utilities.PersistenceScheme.fileNameForResource
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * This class knows how to persist a Dataset of resources within a specified database.
@@ -32,8 +33,8 @@ public class ResourceWriter {
     return databaseName;
   }
 
-  public void write(String resourceUri, Dataset resources) {
-    String tableUrl = warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceUri);
+  public void write(ResourceType resourceType, Dataset resources) {
+    String tableUrl = warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
     resources.write().mode(SaveMode.Overwrite).parquet(tableUrl);
   }
 }

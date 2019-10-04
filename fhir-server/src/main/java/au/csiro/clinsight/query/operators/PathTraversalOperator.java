@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Provides the ability to move from one element to its child element, using the path selection
@@ -49,10 +50,10 @@ public class PathTraversalOperator {
     } catch (ResourceNotKnownException | ElementNotKnownException e) {
       throw new InvalidRequestException(e.getMessage());
     }
-    String fhirTypeCode = pathTraversal.getElementDefinition().getTypeCode();
-    FhirType fhirType = FhirType.forFhirTypeCode(fhirTypeCode);
-    FhirPathType fhirPathType = FhirPathType.forFhirTypeCode(fhirTypeCode);
-    boolean isPrimitive = ResourceDefinitions.isPrimitive(fhirTypeCode);
+    FHIRDefinedType fhirDefinedType = pathTraversal.getElementDefinition().getFhirType();
+    FhirType fhirType = FhirType.forFhirTypeCode(fhirDefinedType);
+    FhirPathType fhirPathType = FhirPathType.forFhirTypeCode(fhirDefinedType);
+    boolean isPrimitive = ResourceDefinitions.isPrimitive(fhirDefinedType);
     boolean isSingular = pathTraversal.getElementDefinition().getMaxCardinality().equals("1");
 
     // Create a new dataset that contains the ID column and the new value (or the value exploded, if
@@ -84,6 +85,10 @@ public class PathTraversalOperator {
     if (left.isPrimitive()) {
       throw new InvalidRequestException(
           "Attempt to perform path traversal on primitive element: " + left.getFhirPath());
+    }
+    if (left.isPolymorphic()) {
+      throw new InvalidRequestException(
+          "Attempt at path traversal on polymorphic input: " + left.getFhirPath());
     }
   }
 

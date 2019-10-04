@@ -5,9 +5,7 @@
 package au.csiro.clinsight.fhir.definitions;
 
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.*;
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.checkInitialised;
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getElementsForType;
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.supportedPrimitiveTypes;
+import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.*;
 import static au.csiro.clinsight.utilities.Strings.tokenizePath;
 import static au.csiro.clinsight.utilities.Strings.untokenizePath;
 
@@ -17,6 +15,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public class PathResolver {
 
@@ -35,7 +35,9 @@ public class PathResolver {
 
     // Get the StructureDefinition that describes the parent Resource or DataType.
     assert resourceOrDataType != null;
-    Map<String, ElementDefinition> elements = getElementsForType(resourceOrDataType);
+    Map<String, ElementDefinition> elements = isSupportedResourceName(resourceOrDataType)
+        ? getElementsForResourceType(ResourceType.fromCode(resourceOrDataType))
+        : getElementsForComplexType(FHIRDefinedType.fromCode(resourceOrDataType));
     if (elements == null) {
       throw new ResourceNotKnownException("Resource or data type not known: " + resourceOrDataType);
     }
@@ -72,7 +74,7 @@ public class PathResolver {
 
       // If this is a `BackboneElement`, we either keep going along the path, or return it if it is
       // the last element in the path.
-      if (elementDefinition.getTypeCode().equals("BackboneElement")) {
+      if (elementDefinition.getFhirType().equals(FHIRDefinedType.BACKBONEELEMENT)) {
         if (tail.size() == 0) {
           result.setType(BACKBONE);
           result.setElementDefinition(elementDefinition);
@@ -106,17 +108,17 @@ public class PathResolver {
   private static PathTraversal examineLeafElement(@Nonnull LinkedList<String> tail,
       @Nonnull ElementDefinition elementDefinition, @Nonnull PathTraversal result,
       @Nonnull String currentPath) {
-    String typeCode = elementDefinition.getTypeCode();
-    if (supportedPrimitiveTypes.contains(typeCode)) {
+    FHIRDefinedType fhirType = elementDefinition.getFhirType();
+    if (supportedPrimitiveTypes.contains(fhirType)) {
       // If the element is a primitive, stop here and return the result.
       result.setType(PRIMITIVE);
       result.setElementDefinition(elementDefinition);
       return result;
-    } else if (ResourceDefinitions.supportedComplexTypes.contains(typeCode)) {
+    } else if (ResourceDefinitions.supportedComplexTypes.contains(fhirType)) {
       if (tail.isEmpty()) {
         // If the tail is empty, it means that a complex type is the last component of the path. If
         // it is a reference, we tag it as such.
-        if (typeCode.equals("Reference")) {
+        if (fhirType.equals(FHIRDefinedType.REFERENCE)) {
           result.setType(REFERENCE);
         } else {
           result.setType(COMPLEX);
@@ -126,7 +128,7 @@ public class PathResolver {
       } else {
         // If the element is complex and a path within it has been requested, recurse into
         // scanning the definition of that type.
-        String newPath = String.join(".", typeCode, String.join(".", tail));
+        String newPath = String.join(".", fhirType.toCode(), String.join(".", tail));
         PathTraversal nestedResult;
         try {
           nestedResult = resolvePath(newPath);
@@ -139,7 +141,7 @@ public class PathResolver {
         // `Patient.communication.language.coding` for inclusion in the final result.
         List<ElementDefinition> translatedTraversals = nestedResult.getMultiValueTraversals();
         for (ElementDefinition traversal : translatedTraversals) {
-          traversal.setPath(traversal.getPath().replace(typeCode, currentPath));
+          traversal.setPath(traversal.getPath().replace(fhirType.toCode(), currentPath));
         }
 
         // Merge the nested result into the final result and return.
@@ -149,7 +151,7 @@ public class PathResolver {
         return result;
       }
     } else {
-      throw new AssertionError("Encountered unknown type: " + typeCode);
+      throw new AssertionError("Encountered unknown type: " + fhirType);
     }
   }
 

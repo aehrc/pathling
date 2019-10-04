@@ -12,7 +12,6 @@ import au.csiro.clinsight.TestUtilities;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
-import ca.uhn.fhir.context.FhirContext;
 import com.cerner.bunsen.FhirEncoders;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -50,8 +49,7 @@ public class ImportProviderTest {
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
-    importProvider = new ImportProvider(config, spark, FhirContext.forR4(),
-        FhirEncoders.forR4().getOrCreate());
+    importProvider = new ImportProvider(config, spark, FhirEncoders.forR4().getOrCreate());
 
     TerminologyClient terminologyClient = mock(TerminologyClient.class);
     TestUtilities.mockDefinitionRetrieval(terminologyClient);

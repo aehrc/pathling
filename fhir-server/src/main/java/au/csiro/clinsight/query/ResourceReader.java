@@ -9,6 +9,7 @@ import static au.csiro.clinsight.utilities.PersistenceScheme.fileNameForResource
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * This class knows how to retrieve a Dataset representing all resources of a particular type, from
@@ -40,8 +41,8 @@ public class ResourceReader {
     return databaseName;
   }
 
-  public Dataset<Row> read(String resourceUri) {
-    String tableUrl = warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceUri);
+  public Dataset<Row> read(ResourceType resourceType) {
+    String tableUrl = warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
     return spark.read().parquet(tableUrl);
   }
 }

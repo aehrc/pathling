@@ -25,6 +25,7 @@ import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.r4.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -257,8 +258,8 @@ public class SubsumesFunction implements Function {
     if (inputResult.getFhirPathType() == CODING) {
       return inputResult;
     }
-    String typeCode = inputResult.getPathTraversal().getElementDefinition().getTypeCode();
-    if (!typeCode.equals("CodeableConcept")) {
+    FHIRDefinedType typeCode = inputResult.getPathTraversal().getElementDefinition().getFhirType();
+    if (!typeCode.equals(FHIRDefinedType.CODEABLECONCEPT)) {
       throw new InvalidRequestException(
           "Input to " + functionName + " function must be Coding or CodeableConcept: "
               + inputResult
@@ -282,8 +283,8 @@ public class SubsumesFunction implements Function {
     if (argument.getFhirPathType() == CODING) {
       return argument;
     }
-    String typeCode = argument.getPathTraversal().getElementDefinition().getTypeCode();
-    if (!typeCode.equals("CodeableConcept")) {
+    FHIRDefinedType typeCode = argument.getPathTraversal().getElementDefinition().getFhirType();
+    if (!typeCode.equals(FHIRDefinedType.CODEABLECONCEPT)) {
       throw new InvalidRequestException(
           "Argument to " + functionName + " function must be Coding or CodeableConcept: " + argument
               .getFhirPath());

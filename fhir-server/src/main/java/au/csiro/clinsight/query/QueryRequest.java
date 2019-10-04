@@ -4,8 +4,6 @@
 
 package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
-
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,9 +12,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.hl7.fhir.r4.model.UriType;
 
 /**
  * Represents the information provided as part of an invocation of the `aggregate-query` operation.
@@ -36,7 +35,7 @@ public class QueryRequest {
   private final List<String> filters = new ArrayList<>();
 
   @Nonnull
-  private String subjectResource;
+  private ResourceType subjectResource;
 
   public QueryRequest() {
   }
@@ -56,14 +55,11 @@ public class QueryRequest {
     @SuppressWarnings("OptionalGetWithoutIsPresent") ParametersParameterComponent subjectResourceParam = parameters
         .getParameter().stream().filter(param -> param.getName().equals("subjectResource"))
         .findFirst().get();
-    if (!subjectResourceParam.hasValue() || subjectResourceParam.getValue().fhirType() != "uri") {
-      throw new InvalidRequestException("Subject resource parameter must have URI value");
+    if (!subjectResourceParam.hasValue() || subjectResourceParam.getValue().fhirType() != "code") {
+      throw new InvalidRequestException("Subject resource parameter must have code value");
     }
-    subjectResource = ((UriType) subjectResourceParam.getValue()).asStringValue();
-    if (!subjectResource.contains(BASE_RESOURCE_URL_PREFIX)) {
-      // TODO: Support profiled resources.
-      throw new InvalidRequestException("Subject resource must be a base FHIR resource");
-    }
+    subjectResource = ResourceType
+        .fromCode(((CodeType) subjectResourceParam.getValue()).asStringValue());
 
     // Get aggregation expressions.
     parameters.getParameter().stream()
@@ -139,11 +135,11 @@ public class QueryRequest {
   }
 
   @Nonnull
-  public String getSubjectResource() {
+  public ResourceType getSubjectResource() {
     return subjectResource;
   }
 
-  public void setSubjectResource(@Nonnull String subjectResource) {
+  public void setSubjectResource(@Nonnull ResourceType subjectResource) {
     this.subjectResource = subjectResource;
   }
 

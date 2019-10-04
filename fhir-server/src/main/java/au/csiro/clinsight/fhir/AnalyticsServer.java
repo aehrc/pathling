@@ -119,7 +119,7 @@ public class AnalyticsServer extends RestfulServer {
   private void declareProviders() {
     List<Object> plainProviders = new ArrayList<>();
     plainProviders.add(new QueryOperationProvider(queryExecutor));
-    plainProviders.add(new ImportProvider(configuration, spark, getFhirContext(), fhirEncoders));
+    plainProviders.add(new ImportProvider(configuration, spark, fhirEncoders));
     registerProviders(plainProviders);
   }
 

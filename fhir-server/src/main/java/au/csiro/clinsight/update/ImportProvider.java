@@ -4,11 +4,7 @@
 
 package au.csiro.clinsight.update;
 
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.getSupportedResources;
-
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -22,6 +18,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
@@ -39,16 +36,14 @@ public class ImportProvider {
   private static final Logger logger = LoggerFactory.getLogger(ImportProvider.class);
   private final SparkSession spark;
   private final ResourceWriter resourceWriter;
-  private final FhirContext fhirContext;
   private final FhirEncoders fhirEncoders;
   private final Gson gson;
 
-  public ImportProvider(AnalyticsServerConfiguration configuration,
-      SparkSession spark, FhirContext fhirContext, FhirEncoders fhirEncoders) {
+  public ImportProvider(AnalyticsServerConfiguration configuration, SparkSession spark,
+      FhirEncoders fhirEncoders) {
     this.spark = spark;
     this.resourceWriter = new ResourceWriter(configuration.getWarehouseUrl(),
         configuration.getDatabaseName());
-    this.fhirContext = fhirContext;
     this.fhirEncoders = fhirEncoders;
     gson = new Gson();
   }
@@ -87,8 +82,8 @@ public class ImportProvider {
       throw new InvalidRequestException("Missing element: inputs");
     }
     for (ImportRequestInput importRequestInput : importRequest.getInputs()) {
-      String resourceUri = importRequestInput.getType();
-      ExpressionEncoder<IBaseResource> fhirEncoder = fhirEncoders.of(resourceUri);
+      ResourceType resourceType = ResourceType.fromCode(importRequestInput.getType());
+      ExpressionEncoder<IBaseResource> fhirEncoder = fhirEncoders.of(resourceType.toCode());
 
       Dataset<String> jsonStrings = spark.read().textFile(importRequestInput.getUrl());
       Dataset resources = jsonStrings
@@ -96,16 +91,8 @@ public class ImportProvider {
               .contextFor(FhirVersionEnum.R4).newJsonParser()
               .parseResource(json), fhirEncoder);
 
-      logger.info("Saving resources: " + resourceUri);
-      // If the type does not contain a base resource definition URI but it is a supported resource,
-      // transform it into a URI.
-      if (!resourceUri.startsWith(BASE_RESOURCE_URL_PREFIX) && getSupportedResources()
-          .contains(BASE_RESOURCE_URL_PREFIX + resourceUri)) {
-        resourceUri = BASE_RESOURCE_URL_PREFIX + resourceUri;
-      } else if (!getSupportedResources().contains(resourceUri)) {
-        throw new InvalidRequestException("Resource type not supported: " + resourceUri);
-      }
-      resourceWriter.write(resourceUri, resources);
+      logger.info("Saving resources: " + resourceType.toCode());
+      resourceWriter.write(resourceType, resources);
     }
 
     // We return 200, as this operation is currently synchronous.
@@ -118,7 +105,7 @@ public class ImportProvider {
     return opOutcome;
   }
 
-  private class ImportRequest {
+  private static class ImportRequest {
 
     private String inputFormat;
     private List<ImportRequestInput> inputs;
@@ -140,7 +127,7 @@ public class ImportProvider {
     }
   }
 
-  private class ImportRequestInput {
+  private static class ImportRequestInput {
 
     private String type;
     private String url;

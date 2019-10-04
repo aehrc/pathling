@@ -4,7 +4,6 @@
 
 package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.BASE_RESOURCE_URL_PREFIX;
 import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.ensureInitialized;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.BOOLEAN;
 import static au.csiro.clinsight.utilities.Strings.md5Short;
@@ -28,6 +27,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.*;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,14 +79,10 @@ public class QueryExecutor {
   public QueryResponse execute(QueryRequest query) throws InvalidRequestException {
     try {
       // Set up the subject resource dataset.
-      if (!query.getSubjectResource().startsWith(BASE_RESOURCE_URL_PREFIX)) {
-        throw new InvalidRequestException(
-            "Non-base resources not currently supported within subjectResource parameter: " + query
-                .getSubjectResource());
-      }
-      String resourceName = query.getSubjectResource().replaceFirst(BASE_RESOURCE_URL_PREFIX, "");
-      String hash = md5Short(resourceName);
-      Dataset<Row> subject = resourceReader.read(query.getSubjectResource());
+      ResourceType resourceType = query.getSubjectResource();
+      String resourceCode = resourceType.toCode();
+      String hash = md5Short(resourceCode);
+      Dataset<Row> subject = resourceReader.read(resourceType);
       String firstColumn = subject.columns()[0];
       String[] remainingColumns = Arrays
           .copyOfRange(subject.columns(), 1, subject.columns().length);
@@ -99,8 +95,8 @@ public class QueryExecutor {
       subjectResource.setDataset(subject);
       subjectResource.setDatasetColumn(hash);
       subjectResource.setResource(true);
-      subjectResource.setResourceDefinition(query.getSubjectResource());
-      subjectResource.setPathTraversal(PathResolver.resolvePath(resourceName));
+      subjectResource.setResourceType(resourceType);
+      subjectResource.setPathTraversal(PathResolver.resolvePath(resourceCode));
       subjectResource.setSingular(true);
 
       // Gather dependencies for the execution of the expression parser.
@@ -236,7 +232,6 @@ public class QueryExecutor {
         result = firstGrouping.getDataset();
       } else {
         // If there were filters, we join the last filter to the first grouping.
-        ParsedExpression lastFilter = parsedFilters.get(parsedFilters.size() - 1);
         Column resourceId = result.col("resource_id");
         String firstGroupingLabel = query.getGroupings().get(0).getLabel();
         Column firstGroupingValue = resourceId.equalTo(firstId).alias(firstGroupingLabel);
