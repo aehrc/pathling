@@ -190,7 +190,7 @@ public class SystemTest {
       aggregationParam.setName("aggregation");
       ParametersParameterComponent aggregationExpression = new ParametersParameterComponent();
       aggregationExpression.setName("expression");
-      aggregationExpression.setValue(new StringType("%resource.count"));
+      aggregationExpression.setValue(new StringType("count"));
       ParametersParameterComponent aggregationLabel = new ParametersParameterComponent();
       aggregationLabel.setName("label");
       aggregationLabel.setValue(new StringType("Number of patients"));
@@ -203,7 +203,7 @@ public class SystemTest {
       ParametersParameterComponent groupingExpression = new ParametersParameterComponent();
       groupingExpression.setName("expression");
       groupingExpression.setValue(new StringType(
-          "%resource.reverseResolve(Condition.subject)"
+          "reverseResolve(Condition.subject)"
               + ".code"
               + ".memberOf('http://snomed.info/sct?fhir_vs=ecl/"
               + "^ 32570581000036105|Problem/Diagnosis reference set| : "
@@ -217,7 +217,7 @@ public class SystemTest {
       // Add filter, females only.
       ParametersParameterComponent filterParam = new ParametersParameterComponent();
       filterParam.setName("filter");
-      filterParam.setValue(new StringType("%resource.gender = 'female'"));
+      filterParam.setValue(new StringType("gender = 'female'"));
 
       inParams.getParameter().add(subjectResourceParam);
       inParams.getParameter().add(aggregationParam);

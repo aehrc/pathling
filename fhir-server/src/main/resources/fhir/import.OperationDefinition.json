@@ -1,0 +1,48 @@
+{
+  "resourceType": "OperationDefinition",
+  "id": "import-0",
+  "url": "https://clinsight.csiro.au/fhir/OperationDefinition/import-0",
+  "version": "0.0.0",
+  "title": "Import",
+  "status": "draft",
+  "kind": "operation",
+  "experimental": true,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows bulk NDJSON data to be imported into the server, making it available for query",
+  "affectsState": true,
+  "code": "import",
+  "system": true,
+  "type": false,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "source",
+      "use": "in",
+      "min": 1,
+      "max": "*",
+      "documentation": "A source FHIR NDJSON file containing resources to be included within this import operation. Each file must contain only one type of resource.",
+      "part": [
+        {
+          "name": "resourceType",
+          "use": "in",
+          "min": 1,
+          "max": "1",
+          "documentation": "The base FHIR resource type contained within this source file.",
+          "type": "code",
+          "binding": {
+            "strength": "required",
+            "valueSet": "http://hl7.org/fhir/ValueSet/resource-types|4.0.0"
+          }
+        },
+        {
+          "name": "url",
+          "use": "in",
+          "min": 1,
+          "max": "1",
+          "documentation": "A URL that can be used to retrieve this source file.",
+          "type": "url"
+        }
+      ]
+    }
+  ]
+}

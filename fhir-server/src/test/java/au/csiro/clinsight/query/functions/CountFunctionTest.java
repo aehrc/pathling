@@ -153,10 +153,10 @@ public class CountFunctionTest {
 
     // Build up an input for the function.
     ParsedExpression input = new ParsedExpression();
-    input.setFhirPath("%resource.name.given");
+    input.setFhirPath("name.given");
     input.setDataset(dataset);
     input.setDatasetColumn("123abcd");
-    input.setPathTraversal(PathResolver.resolvePath("Patient"));
+    input.setPathTraversal(PathResolver.resolvePath("Patient.name.given"));
 
     FunctionInput countInput = new FunctionInput();
     countInput.setInput(input);

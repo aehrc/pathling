@@ -7,8 +7,6 @@ import ca.uhn.fhir.parser.IParser;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
-import org.hl7.fhir.r4.model.ElementDefinition;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.StructureDefinition;
@@ -29,19 +27,13 @@ public class ResourceScannerTest {
 
   @Test
   public void summariseResourceDefinitions() {
-    // Get the actual ElementDefinition from the StructureDefinition, for later comparison with the
-    // output of the summariseDefinitions method.
+    // Get the Encounter StructureDefinition.
     InputStream encounterStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream("fhir/Encounter.StructureDefinition.json");
     assertThat(encounterStream).isNotNull();
     StructureDefinition encounter = (StructureDefinition) jsonParser.parseResource(encounterStream);
 
-    Optional<ElementDefinition> optionalSubject = encounter.getSnapshot().getElement().stream()
-        .filter(element -> element.getPath().equals("Encounter.subject")).findFirst();
-    assertThat(optionalSubject.isPresent()).isTrue();
-    ElementDefinition subject = optionalSubject.get();
-
-    // Execute the method.
+    // Execute the method using the Encounter StructureDefinition.
     Map<ResourceType, Map<String, au.csiro.clinsight.fhir.definitions.ElementDefinition>> definitions =
         ResourceScanner.summariseResourceDefinitions(Collections.singletonList(encounter));
 

@@ -58,7 +58,7 @@ public class EqualityOperatorTest {
 
     // Build up the left expression for the function.
     ParsedExpression left = new ParsedExpression();
-    left.setFhirPath("%resource.gender");
+    left.setFhirPath("gender");
     left.setFhirPathType(FhirPathType.STRING);
     left.setFhirType(FhirType.CODE);
     left.setDataset(leftDataset);
@@ -79,14 +79,14 @@ public class EqualityOperatorTest {
     BinaryOperatorInput equalityInput = new BinaryOperatorInput();
     equalityInput.setLeft(left);
     equalityInput.setRight(right);
-    equalityInput.setExpression("%resource.gender = 'female'");
+    equalityInput.setExpression("gender = 'female'");
 
     // Execute the equality operator function.
     EqualityOperator equalityOperator = new EqualityOperator("=");
     ParsedExpression result = equalityOperator.invoke(equalityInput);
 
     // Check the result.
-    assertThat(result.getFhirPath()).isEqualTo("%resource.gender = 'female'");
+    assertThat(result.getFhirPath()).isEqualTo("gender = 'female'");
     assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.BOOLEAN);
     assertThat(result.getFhirType()).isEqualTo(FhirType.BOOLEAN);
     assertThat(result.isPrimitive()).isTrue();
@@ -142,7 +142,7 @@ public class EqualityOperatorTest {
 
     // Build up the left expression for the function.
     ParsedExpression left = new ParsedExpression();
-    left.setFhirPath("%resource.location.period.start");
+    left.setFhirPath("location.period.start");
     left.setFhirPathType(FhirPathType.DATE_TIME);
     left.setFhirType(FhirType.DATE_TIME);
     left.setDataset(leftDataset);
@@ -153,7 +153,7 @@ public class EqualityOperatorTest {
 
     // Build up the right expression for the function.
     ParsedExpression right = new ParsedExpression();
-    right.setFhirPath("%resource.location.period.end");
+    right.setFhirPath("location.period.end");
     right.setFhirPathType(FhirPathType.DATE_TIME);
     right.setFhirType(FhirType.DATE_TIME);
     right.setDataset(rightDataset);
@@ -165,7 +165,7 @@ public class EqualityOperatorTest {
     BinaryOperatorInput equalityInput = new BinaryOperatorInput();
     equalityInput.setLeft(left);
     equalityInput.setRight(right);
-    equalityInput.setExpression("%resource.location.period.start = %resource.location.period.end");
+    equalityInput.setExpression("location.period.start = location.period.end");
 
     // Execute the equality operator function.
     EqualityOperator equalityOperator = new EqualityOperator("!=");
