@@ -79,7 +79,7 @@ public class AggregateExecutorTest {
     TestUtilities.mockDefinitionRetrieval(terminologyClient);
     executor = new AggregateExecutor(config);
 
-    // Build a QueryRequest to pass to the executor.
+    // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
     request.setSubjectResource(ResourceType.ENCOUNTER);
 
@@ -135,7 +135,7 @@ public class AggregateExecutorTest {
     TestUtilities.mockDefinitionRetrieval(terminologyClient);
     executor = new AggregateExecutor(config);
 
-    // Build a QueryRequest to pass to the executor.
+    // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
     request.setSubjectResource(ResourceType.PATIENT);
 
@@ -191,7 +191,7 @@ public class AggregateExecutorTest {
     TestUtilities.mockDefinitionRetrieval(terminologyClient);
     executor = new AggregateExecutor(config);
 
-    // Build a QueryRequest to pass to the executor.
+    // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
     request.setSubjectResource(ResourceType.ALLERGYINTOLERANCE);
 
@@ -245,7 +245,7 @@ public class AggregateExecutorTest {
     TestUtilities.mockDefinitionRetrieval(terminologyClient);
     executor = new AggregateExecutor(config);
 
-    // Build a QueryRequest to pass to the executor.
+    // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
     request.setSubjectResource(ResourceType.PATIENT);
 
