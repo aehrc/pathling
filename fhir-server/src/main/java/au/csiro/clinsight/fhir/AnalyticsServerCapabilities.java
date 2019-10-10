@@ -4,7 +4,7 @@
 
 package au.csiro.clinsight.fhir;
 
-import au.csiro.clinsight.query.QueryExecutor;
+import au.csiro.clinsight.query.AggregateExecutor;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IServerConformanceProvider;
@@ -33,7 +33,7 @@ public class AnalyticsServerCapabilities implements
 
   private static final Logger logger = LoggerFactory.getLogger(AnalyticsServerCapabilities.class);
   AnalyticsServerConfiguration configuration;
-  QueryExecutor queryExecutor;
+  AggregateExecutor aggregateExecutor;
 
   public AnalyticsServerCapabilities(
       AnalyticsServerConfiguration configuration) {
@@ -69,7 +69,7 @@ public class AnalyticsServerCapabilities implements
   }
 
   private void checkServerHealth() {
-    if (queryExecutor == null || !queryExecutor.isReady()) {
+    if (aggregateExecutor == null || !aggregateExecutor.isReady()) {
       throw new UnclassifiedServerFailureException(503,
           "Server is not currently available for query, check with your server administrator");
     }
@@ -93,9 +93,9 @@ public class AnalyticsServerCapabilities implements
     server.setMode(RestfulCapabilityMode.SERVER);
     List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
     CanonicalType operationUri = new CanonicalType(
-        "https://clinsight.csiro.au/fhir/OperationDefinition/query-0");
+        "https://clinsight.csiro.au/fhir/OperationDefinition/aggregate-0");
     CapabilityStatementRestResourceOperationComponent operation = new CapabilityStatementRestResourceOperationComponent(
-        new StringType("aggregate-query"), operationUri);
+        new StringType("aggregate"), operationUri);
     operations.add(operation);
     server.setOperation(operations);
     rest.add(server);
@@ -106,8 +106,8 @@ public class AnalyticsServerCapabilities implements
   public void setRestfulServer(RestfulServer restfulServer) {
   }
 
-  public void setQueryExecutor(QueryExecutor queryExecutor) {
-    this.queryExecutor = queryExecutor;
+  public void setAggregateExecutor(AggregateExecutor aggregateExecutor) {
+    this.aggregateExecutor = aggregateExecutor;
   }
 
 }

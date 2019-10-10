@@ -228,7 +228,7 @@ public class SystemTest {
 
       // Send a request to the `$query` operation on the FHIR server.
       String requestString = jsonParser.encodeResourceToString(inParams);
-      HttpPost queryRequest = new HttpPost("http://localhost:8091/fhir/$query");
+      HttpPost queryRequest = new HttpPost("http://localhost:8091/fhir/$aggregate");
       queryRequest.setEntity(new StringEntity(requestString));
       queryRequest.addHeader("Content-Type", "application/fhir+json");
       queryRequest.addHeader("Accept", "application/fhir+json");

@@ -23,7 +23,7 @@ import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
  * @author John Grimes
  */
 @SuppressWarnings("WeakerAccess")
-public class QueryRequest {
+public class AggregateRequest {
 
   @Nonnull
   private final List<Aggregation> aggregations = new ArrayList<>();
@@ -37,7 +37,7 @@ public class QueryRequest {
   @Nonnull
   private ResourceType subjectResource;
 
-  public QueryRequest() {
+  public AggregateRequest() {
   }
 
   /**
@@ -45,7 +45,7 @@ public class QueryRequest {
    * `aggregate-query` OperationDefinition) and populates the values into a new AggregateQuery
    * object.
    */
-  public QueryRequest(Parameters parameters) {
+  public AggregateRequest(Parameters parameters) {
     // Get subject resource.
     Stream<ParametersParameterComponent> subjectResourceParams = parameters.getParameter().stream()
         .filter(param -> param.getName().equals("subjectResource"));

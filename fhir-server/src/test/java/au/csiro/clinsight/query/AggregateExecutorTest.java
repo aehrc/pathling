@@ -11,8 +11,8 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.clinsight.TestUtilities;
 import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.query.QueryRequest.Aggregation;
-import au.csiro.clinsight.query.QueryRequest.Grouping;
+import au.csiro.clinsight.query.AggregateRequest.Aggregation;
+import au.csiro.clinsight.query.AggregateRequest.Grouping;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
@@ -36,9 +36,9 @@ import org.skyscreamer.jsonassert.JSONAssert;
 /**
  * @author John Grimes
  */
-public class QueryExecutorTest {
+public class AggregateExecutorTest {
 
-  private QueryExecutor executor;
+  private AggregateExecutor executor;
   private SparkSession spark;
   private TerminologyClient terminologyClient;
   private IParser jsonParser;
@@ -69,17 +69,18 @@ public class QueryExecutorTest {
     when(mockReader.read(ResourceType.ENCOUNTER))
         .thenReturn(dataset);
 
-    // Create and configure a new QueryExecutor.
-    QueryExecutorConfiguration config = new QueryExecutorConfiguration(spark, terminologyClient,
+    // Create and configure a new AggregateExecutor.
+    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
+        terminologyClient,
         mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
     TestUtilities.mockDefinitionRetrieval(terminologyClient);
-    executor = new QueryExecutor(config);
+    executor = new AggregateExecutor(config);
 
     // Build a QueryRequest to pass to the executor.
-    QueryRequest request = new QueryRequest();
+    AggregateRequest request = new AggregateRequest();
     request.setSubjectResource(ResourceType.ENCOUNTER);
 
     Aggregation aggregation = new Aggregation();
@@ -98,14 +99,14 @@ public class QueryExecutorTest {
     request.getGroupings().add(grouping2);
 
     // Execute the query.
-    QueryResponse response = executor.execute(request);
+    AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = jsonParser.encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(
-            "responses/QueryExecutorTest-queryWithMultipleGroupings.Parameters.json");
+            "responses/AggregateExecutorTest-queryWithMultipleGroupings.Parameters.json");
     assertThat(expectedStream).isNotNull();
     StringWriter writer = new StringWriter();
     IOUtils.copy(expectedStream, writer, UTF_8);
@@ -124,17 +125,18 @@ public class QueryExecutorTest {
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(dataset);
 
-    // Create and configure a new QueryExecutor.
-    QueryExecutorConfiguration config = new QueryExecutorConfiguration(spark, terminologyClient,
+    // Create and configure a new AggregateExecutor.
+    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
+        terminologyClient,
         mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
     TestUtilities.mockDefinitionRetrieval(terminologyClient);
-    executor = new QueryExecutor(config);
+    executor = new AggregateExecutor(config);
 
     // Build a QueryRequest to pass to the executor.
-    QueryRequest request = new QueryRequest();
+    AggregateRequest request = new AggregateRequest();
     request.setSubjectResource(ResourceType.PATIENT);
 
     Aggregation aggregation = new Aggregation();
@@ -150,13 +152,13 @@ public class QueryExecutorTest {
     request.getFilters().add("gender = 'female'");
 
     // Execute the query.
-    QueryResponse response = executor.execute(request);
+    AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = jsonParser.encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream("responses/QueryExecutorTest-queryWithFilter.Parameters.json");
+        .getResourceAsStream("responses/AggregateExecutorTest-queryWithFilter.Parameters.json");
     assertThat(expectedStream).isNotNull();
     StringWriter writer = new StringWriter();
     IOUtils.copy(expectedStream, writer, UTF_8);
@@ -179,17 +181,18 @@ public class QueryExecutorTest {
           .thenReturn(dataset);
     }
 
-    // Create and configure a new QueryExecutor.
-    QueryExecutorConfiguration config = new QueryExecutorConfiguration(spark, terminologyClient,
+    // Create and configure a new AggregateExecutor.
+    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
+        terminologyClient,
         mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
     TestUtilities.mockDefinitionRetrieval(terminologyClient);
-    executor = new QueryExecutor(config);
+    executor = new AggregateExecutor(config);
 
     // Build a QueryRequest to pass to the executor.
-    QueryRequest request = new QueryRequest();
+    AggregateRequest request = new AggregateRequest();
     request.setSubjectResource(ResourceType.ALLERGYINTOLERANCE);
 
     Aggregation aggregation = new Aggregation();
@@ -203,13 +206,13 @@ public class QueryExecutorTest {
     request.getGroupings().add(grouping1);
 
     // Execute the query.
-    QueryResponse response = executor.execute(request);
+    AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = jsonParser.encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream("responses/QueryExecutorTest-queryWithResolve.Parameters.json");
+        .getResourceAsStream("responses/AggregateExecutorTest-queryWithResolve.Parameters.json");
     assertThat(expectedStream).isNotNull();
     StringWriter writer = new StringWriter();
     IOUtils.copy(expectedStream, writer, UTF_8);
@@ -232,17 +235,18 @@ public class QueryExecutorTest {
           .thenReturn(dataset);
     }
 
-    // Create and configure a new QueryExecutor.
-    QueryExecutorConfiguration config = new QueryExecutorConfiguration(spark, terminologyClient,
+    // Create and configure a new AggregateExecutor.
+    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
+        terminologyClient,
         mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
     TestUtilities.mockDefinitionRetrieval(terminologyClient);
-    executor = new QueryExecutor(config);
+    executor = new AggregateExecutor(config);
 
     // Build a QueryRequest to pass to the executor.
-    QueryRequest request = new QueryRequest();
+    AggregateRequest request = new AggregateRequest();
     request.setSubjectResource(ResourceType.PATIENT);
 
     Aggregation aggregation = new Aggregation();
@@ -256,13 +260,14 @@ public class QueryExecutorTest {
     request.getGroupings().add(grouping1);
 
     // Execute the query.
-    QueryResponse response = executor.execute(request);
+    AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = jsonParser.encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream("responses/QueryExecutorTest-queryWithReverseResolve.Parameters.json");
+        .getResourceAsStream(
+            "responses/AggregateExecutorTest-queryWithReverseResolve.Parameters.json");
     assertThat(expectedStream).isNotNull();
     StringWriter writer = new StringWriter();
     IOUtils.copy(expectedStream, writer, UTF_8);

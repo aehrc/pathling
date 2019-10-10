@@ -13,7 +13,7 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
-public class QueryExecutorConfiguration {
+public class AggregateExecutorConfiguration {
 
   /**
    * (OPTIONAL) Version of this API, as advertised within the CapabilityStatement.
@@ -72,7 +72,7 @@ public class QueryExecutorConfiguration {
    */
   private int loadPartitions;
 
-  public QueryExecutorConfiguration(@Nonnull SparkSession sparkSession,
+  public AggregateExecutorConfiguration(@Nonnull SparkSession sparkSession,
       @Nonnull TerminologyClient terminologyClient, @Nonnull ResourceReader resourceReader) {
     this.sparkSession = sparkSession;
     warehouseUrl = "file:///usr/share/warehouse";
@@ -174,7 +174,7 @@ public class QueryExecutorConfiguration {
 
   @Override
   public String toString() {
-    return "QueryExecutorConfiguration{" +
+    return "AggregateExecutorConfiguration{" +
         "version='" + version + '\'' +
         ", warehouseUrl='" + warehouseUrl + '\'' +
         ", databaseName='" + databaseName + '\'' +
@@ -184,5 +184,4 @@ public class QueryExecutorConfiguration {
         ", loadPartitions=" + loadPartitions +
         '}';
   }
-
 }

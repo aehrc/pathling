@@ -11,8 +11,8 @@ import static au.csiro.clinsight.utilities.Strings.md5Short;
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
-import au.csiro.clinsight.query.QueryRequest.Aggregation;
-import au.csiro.clinsight.query.QueryRequest.Grouping;
+import au.csiro.clinsight.query.AggregateRequest.Aggregation;
+import au.csiro.clinsight.query.AggregateRequest.Grouping;
 import au.csiro.clinsight.query.parsing.ExpressionParser;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
@@ -38,16 +38,16 @@ import org.slf4j.LoggerFactory;
  *
  * @author John Grimes
  */
-public class QueryExecutor {
+public class AggregateExecutor {
 
-  private static final Logger logger = LoggerFactory.getLogger(QueryExecutor.class);
+  private static final Logger logger = LoggerFactory.getLogger(AggregateExecutor.class);
 
   private final SparkSession spark;
   private final ResourceReader resourceReader;
   private TerminologyClient terminologyClient;
 
-  public QueryExecutor(@Nonnull QueryExecutorConfiguration configuration) {
-    logger.info("Creating new QueryExecutor: " + configuration);
+  public AggregateExecutor(@Nonnull AggregateExecutorConfiguration configuration) {
+    logger.info("Creating new AggregateExecutor: " + configuration);
     spark = configuration.getSparkSession();
     terminologyClient = configuration.getTerminologyClient();
     resourceReader = configuration.getResourceReader();
@@ -59,7 +59,7 @@ public class QueryExecutor {
   }
 
   /**
-   * Check that the query executor is ready to execute a query by checking the readiness of all
+   * Check that the aggregate executor is ready to execute a query by checking the readiness of all
    * dependencies.
    */
   public boolean isReady() {
@@ -76,7 +76,7 @@ public class QueryExecutor {
     return true;
   }
 
-  public QueryResponse execute(QueryRequest query) throws InvalidRequestException {
+  public AggregateResponse execute(AggregateRequest query) throws InvalidRequestException {
     try {
       // Set up the subject resource dataset.
       ResourceType resourceType = query.getSubjectResource();
@@ -193,7 +193,7 @@ public class QueryExecutor {
     }).collect(Collectors.toList());
   }
 
-  private Dataset<Row> buildResult(@Nonnull QueryRequest query,
+  private Dataset<Row> buildResult(@Nonnull AggregateRequest query,
       @Nonnull List<ParsedExpression> parsedAggregations,
       @Nonnull List<ParsedExpression> parsedGroupings,
       @Nonnull List<ParsedExpression> parsedFilters) {
@@ -307,14 +307,14 @@ public class QueryExecutor {
    * Build an AggregateQueryResult resource from the supplied Dataset, embedding the original
    * AggregateQuery and honouring the hints within the QueryPlan.
    */
-  private QueryResponse buildResponse(@Nonnull Dataset<Row> dataset,
+  private AggregateResponse buildResponse(@Nonnull Dataset<Row> dataset,
       @Nonnull List<ParsedExpression> parsedAggregations,
       @Nonnull List<ParsedExpression> parsedGroupings) {
     List<Row> rows = dataset.collectAsList();
 
-    QueryResponse queryResult = new QueryResponse();
+    AggregateResponse queryResult = new AggregateResponse();
 
-    List<QueryResponse.Grouping> groupings = rows.stream()
+    List<AggregateResponse.Grouping> groupings = rows.stream()
         .map(mapRowToGrouping(parsedAggregations, parsedGroupings))
         .collect(Collectors.toList());
     queryResult.getGroupings().addAll(groupings);
@@ -326,11 +326,11 @@ public class QueryExecutor {
    * Translate a Dataset Row into a grouping component for inclusion within an
    * AggregateQueryResult.
    */
-  private Function<Row, QueryResponse.Grouping> mapRowToGrouping(
+  private Function<Row, AggregateResponse.Grouping> mapRowToGrouping(
       @Nonnull List<ParsedExpression> parsedAggregations,
       @Nonnull List<ParsedExpression> parsedGroupings) {
     return row -> {
-      QueryResponse.Grouping grouping = new QueryResponse.Grouping();
+      AggregateResponse.Grouping grouping = new AggregateResponse.Grouping();
 
       for (int i = 0; i < parsedGroupings.size(); i++) {
         ParsedExpression groupingResult = parsedGroupings.get(i);

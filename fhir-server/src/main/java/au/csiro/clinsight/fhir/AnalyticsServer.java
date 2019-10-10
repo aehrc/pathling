@@ -6,8 +6,8 @@ package au.csiro.clinsight.fhir;
 
 import static au.csiro.clinsight.utilities.Configuration.copyStringProps;
 
-import au.csiro.clinsight.query.QueryExecutor;
-import au.csiro.clinsight.query.QueryExecutorConfiguration;
+import au.csiro.clinsight.query.AggregateExecutor;
+import au.csiro.clinsight.query.AggregateExecutorConfiguration;
 import au.csiro.clinsight.query.ResourceReader;
 import au.csiro.clinsight.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
@@ -39,7 +39,7 @@ public class AnalyticsServer extends RestfulServer {
   private SparkSession spark;
   private TerminologyClient terminologyClient;
   private FhirEncoders fhirEncoders;
-  private QueryExecutor queryExecutor;
+  private AggregateExecutor aggregateExecutor;
 
   public AnalyticsServer(@Nonnull AnalyticsServerConfiguration configuration) {
     super(buildFhirContext());
@@ -65,7 +65,7 @@ public class AnalyticsServer extends RestfulServer {
     initializeSpark();
     initializeTerminologyClient();
     initializeFhirEncoders();
-    initializeQueryExecutor();
+    initializeAggregateExecutor();
     declareProviders();
     defineCorsConfiguration();
   }
@@ -96,12 +96,12 @@ public class AnalyticsServer extends RestfulServer {
   }
 
   /**
-   * Initialise a new query executor, and pass through the relevant configuration parameters.
+   * Initialise a new aggregate executor, and pass through the relevant configuration parameters.
    */
-  private void initializeQueryExecutor() {
+  private void initializeAggregateExecutor() {
     ResourceReader resourceReader = new ResourceReader(spark, configuration.getWarehouseUrl(),
         configuration.getDatabaseName());
-    QueryExecutorConfiguration executorConfig = new QueryExecutorConfiguration(spark,
+    AggregateExecutorConfiguration executorConfig = new AggregateExecutorConfiguration(spark,
         terminologyClient, resourceReader);
     copyStringProps(configuration, executorConfig,
         Arrays.asList("version", "warehouseUrl", "databaseName", "executorMemory"));
@@ -109,8 +109,8 @@ public class AnalyticsServer extends RestfulServer {
     executorConfig.setShufflePartitions(configuration.getShufflePartitions());
     executorConfig.setLoadPartitions(configuration.getLoadPartitions());
 
-    queryExecutor = new QueryExecutor(executorConfig);
-    serverCapabilities.setQueryExecutor(queryExecutor);
+    aggregateExecutor = new AggregateExecutor(executorConfig);
+    serverCapabilities.setAggregateExecutor(aggregateExecutor);
   }
 
   /**
@@ -118,7 +118,7 @@ public class AnalyticsServer extends RestfulServer {
    */
   private void declareProviders() {
     List<Object> plainProviders = new ArrayList<>();
-    plainProviders.add(new QueryOperationProvider(queryExecutor));
+    plainProviders.add(new AggregateOperationProvider(aggregateExecutor));
     plainProviders.add(new ImportProvider(configuration, spark, fhirEncoders));
     registerProviders(plainProviders);
   }

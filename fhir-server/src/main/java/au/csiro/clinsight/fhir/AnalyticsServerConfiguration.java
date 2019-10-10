@@ -20,7 +20,7 @@ public class AnalyticsServerConfiguration {
   private String version;
 
   /**
-   * (OPTIONAL) URL for the Apache Spark cluster this server should use for import and query.
+   * (OPTIONAL) URL for the Apache Spark cluster this server should use.
    */
   @Nonnull
   private String sparkMasterUrl;

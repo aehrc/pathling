@@ -17,7 +17,7 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public class QueryResponse {
+public class AggregateResponse {
 
   @Nonnull
   private final List<Grouping> groupings = new ArrayList<>();
