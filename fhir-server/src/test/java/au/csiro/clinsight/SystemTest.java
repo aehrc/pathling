@@ -157,7 +157,7 @@ public class SystemTest {
       // Create a request to the $import operation, referencing the NDJSON files we have loaded into
       // the staging area.
       InputStream requestStream = Thread.currentThread().getContextClassLoader()
-          .getResourceAsStream("import/SystemTest-request.json");
+          .getResourceAsStream("import/SystemTest-request.Parameters.json");
       assertThat(requestStream).isNotNull();
 
       HttpPost importRequest = new HttpPost("http://localhost:8091/fhir/$import");
@@ -169,10 +169,12 @@ public class SystemTest {
       OperationOutcome importOutcome;
       try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient
           .execute(importRequest)) {
-        assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
         InputStream importResponseStream = response.getEntity().getContent();
         importOutcome = (OperationOutcome) jsonParser
             .parseResource(importResponseStream);
+        assertThat(response.getStatusLine().getStatusCode())
+            .withFailMessage(importOutcome.getIssueFirstRep().getDiagnostics())
+            .isEqualTo(200);
       }
       assertThat(importOutcome.getIssueFirstRep().getDiagnostics())
           .isEqualTo("Data import completed successfully");
@@ -231,14 +233,22 @@ public class SystemTest {
       queryRequest.addHeader("Content-Type", "application/fhir+json");
       queryRequest.addHeader("Accept", "application/fhir+json");
 
-      InputStream queryResponseStream;
+      Parameters outParams = null;
       logger.info("Sending query request");
       try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient
           .execute(queryRequest)) {
-        assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);
-        queryResponseStream = response.getEntity().getContent();
+        int statusCode = response.getStatusLine().getStatusCode();
+        InputStream queryResponseStream = response.getEntity().getContent();
+        if (statusCode == 200) {
+          outParams = (Parameters) jsonParser.parseResource(queryResponseStream);
+        } else {
+          OperationOutcome opOutcome = (OperationOutcome) jsonParser
+              .parseResource(queryResponseStream);
+          assertThat(statusCode)
+              .withFailMessage(opOutcome.getIssueFirstRep().getDiagnostics())
+              .isEqualTo(200);
+        }
       }
-      Parameters outParams = (Parameters) jsonParser.parseResource(queryResponseStream);
 
       // Check the first grouping.
       ParametersParameterComponent firstGrouping = outParams.getParameter().get(0);

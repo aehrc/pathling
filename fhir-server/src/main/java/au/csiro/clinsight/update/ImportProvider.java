@@ -7,22 +7,25 @@ package au.csiro.clinsight.update;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.annotation.Operation;
+import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import com.cerner.bunsen.FhirEncoders;
-import com.google.gson.Gson;
-import java.io.IOException;
 import java.util.List;
-import javax.servlet.http.HttpServletRequest;
+import java.util.stream.Collectors;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.UrlType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +40,6 @@ public class ImportProvider {
   private final SparkSession spark;
   private final ResourceWriter resourceWriter;
   private final FhirEncoders fhirEncoders;
-  private final Gson gson;
 
   public ImportProvider(AnalyticsServerConfiguration configuration, SparkSession spark,
       FhirEncoders fhirEncoders) {
@@ -45,7 +47,6 @@ public class ImportProvider {
     this.resourceWriter = new ResourceWriter(configuration.getWarehouseUrl(),
         configuration.getDatabaseName());
     this.fhirEncoders = fhirEncoders;
-    gson = new Gson();
   }
 
   /**
@@ -57,35 +58,36 @@ public class ImportProvider {
    * currently given any special treatment. Each resource type is assumed to appear in the list only
    * once - multiple occurrences will result in the last input overwriting the previous ones.
    */
-  @Operation(name = "$import", manualRequest = true)
-  public OperationOutcome importOperation(HttpServletRequest request)
-      throws IOException {
-    String contentType = request.getHeader("Content-Type");
-    if (!contentType.equals("application/json")) {
-      throw new InvalidRequestException(
-          "Request to $import operation must have Content-Type of application/json");
-    }
-
+  @Operation(name = "$import")
+  public OperationOutcome importOperation(@ResourceParam Parameters inParams) {
     // Parse and validate the JSON request.
-    ImportRequest importRequest = gson.fromJson(request.getReader(), ImportRequest.class);
-    if (importRequest.getInputFormat() == null) {
-      throw new InvalidRequestException("Missing element: inputFormat");
-    }
-    if (!importRequest.getInputFormat().equals("application/fhir+ndjson")) {
-      throw new InvalidRequestException(
-          "$import operation only supports inputFormat of application/fhir+ndjson");
+    List<ParametersParameterComponent> sourceParams = inParams.getParameter().stream()
+        .filter(param -> param.getName().equals("source")).collect(Collectors.toList());
+    if (sourceParams.isEmpty()) {
+      throw new InvalidRequestException("Must provide at least one source parameter");
     }
 
     // For each input within the request, read the resources of the declared type and create
     // the corresponding table in the warehouse.
-    if (importRequest.getInputs() == null) {
-      throw new InvalidRequestException("Missing element: inputs");
-    }
-    for (ImportRequestInput importRequestInput : importRequest.getInputs()) {
-      ResourceType resourceType = ResourceType.fromCode(importRequestInput.getType());
+    for (ParametersParameterComponent sourceParam : sourceParams) {
+      ParametersParameterComponent resourceTypeParam = sourceParam.getPart().stream()
+          .filter(param -> param.getName().equals("resourceType"))
+          .findFirst()
+          .orElseThrow(
+              () -> new InvalidRequestException("Must provide resourceType for each source"));
+      ParametersParameterComponent urlParam = sourceParam.getPart().stream()
+          .filter(param -> param.getName().equals("url"))
+          .findFirst()
+          .orElseThrow(
+              () -> new InvalidRequestException("Must provide url for each source"));
+
+      String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
+      ResourceType resourceType = ResourceType
+          .fromCode(resourceCode);
       ExpressionEncoder<IBaseResource> fhirEncoder = fhirEncoders.of(resourceType.toCode());
 
-      Dataset<String> jsonStrings = spark.read().textFile(importRequestInput.getUrl());
+      String url = ((UrlType) urlParam.getValue()).getValueAsString();
+      Dataset<String> jsonStrings = spark.read().textFile(url);
       Dataset resources = jsonStrings
           .map((MapFunction<String, IBaseResource>) json -> FhirEncoders
               .contextFor(FhirVersionEnum.R4).newJsonParser()
@@ -105,47 +107,4 @@ public class ImportProvider {
     return opOutcome;
   }
 
-  private static class ImportRequest {
-
-    private String inputFormat;
-    private List<ImportRequestInput> inputs;
-
-    public String getInputFormat() {
-      return inputFormat;
-    }
-
-    public void setInputFormat(String inputFormat) {
-      this.inputFormat = inputFormat;
-    }
-
-    public List<ImportRequestInput> getInputs() {
-      return inputs;
-    }
-
-    public void setInputs(List<ImportRequestInput> inputs) {
-      this.inputs = inputs;
-    }
-  }
-
-  private static class ImportRequestInput {
-
-    private String type;
-    private String url;
-
-    public String getType() {
-      return type;
-    }
-
-    public void setType(String type) {
-      this.type = type;
-    }
-
-    public String getUrl() {
-      return url;
-    }
-
-    public void setUrl(String url) {
-      this.url = url;
-    }
-  }
 }

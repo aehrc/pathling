@@ -6,25 +6,24 @@ package au.csiro.clinsight.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import au.csiro.clinsight.TestUtilities;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import com.cerner.bunsen.FhirEncoders;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.StringReader;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import javax.servlet.http.HttpServletRequest;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,14 +35,18 @@ public class ImportProviderTest {
 
   private ImportProvider importProvider;
   private SparkSession spark;
+  private IParser jsonParser;
 
   @Before
   public void setUp() throws IOException {
     spark = SparkSession.builder()
         .appName("clinsight-test")
         .config("spark.master", "local")
+        .config("spark.driver.bindAddress", "localhost")
         .getOrCreate();
     Path warehouseDirectory = Files.createTempDirectory("clinsight-test");
+
+    jsonParser = FhirContext.forR4().newJsonParser();
 
     AnalyticsServerConfiguration config = new AnalyticsServerConfiguration();
     config.setWarehouseUrl(warehouseDirectory.toString());
@@ -58,24 +61,24 @@ public class ImportProviderTest {
 
   @Test
   public void simpleImport() throws IOException {
-    HttpServletRequest request = mock(HttpServletRequest.class);
-    when(request.getHeader("Content-Type")).thenReturn("application/json");
     URL importUrl = Thread.currentThread().getContextClassLoader()
         .getResource("test-data/fhir/Patient.ndjson");
     assertThat(importUrl).isNotNull();
-    String requestJson = "{\n"
-        + "  \"inputFormat\": \"application/fhir+ndjson\",\n"
-        + "  \"inputs\": [\n"
-        + "    {\n"
-        + "      \"type\": \"Patient\",\n"
-        + "      \"url\": \"" + importUrl.toString() + "\"\n"
-        + "    }\n"
-        + "  ]\n"
-        + "}";
-    BufferedReader requestReader = new BufferedReader(new StringReader(requestJson));
-    when(request.getReader()).thenReturn(requestReader);
 
-    OperationOutcome opOutcome = importProvider.importOperation(request);
+    // Build the request Parameters resource.
+    Parameters requestParameters = new Parameters();
+    ParametersParameterComponent source = new ParametersParameterComponent(
+        new StringType("source"));
+    ParametersParameterComponent resourceType = new ParametersParameterComponent(
+        new StringType("resourceType"));
+    resourceType.setValue(new CodeType("Patient"));
+    source.getPart().add(resourceType);
+    ParametersParameterComponent url = new ParametersParameterComponent(new StringType("url"));
+    url.setValue(new UrlType(importUrl.toString()));
+    source.getPart().add(url);
+    requestParameters.getParameter().add(source);
+
+    OperationOutcome opOutcome = importProvider.importOperation(requestParameters);
 
     assertThat(opOutcome).isNotNull();
     OperationOutcomeIssueComponent issue = opOutcome.getIssueFirstRep();
