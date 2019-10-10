@@ -92,12 +92,14 @@ public class QueryExecutor {
 
       // Create an expression for the subject resource.
       ParsedExpression subjectResource = new ParsedExpression();
+      subjectResource.setFhirPath(resourceCode);
       subjectResource.setDataset(subject);
       subjectResource.setDatasetColumn(hash);
       subjectResource.setResource(true);
       subjectResource.setResourceType(resourceType);
       subjectResource.setPathTraversal(PathResolver.resolvePath(resourceCode));
       subjectResource.setSingular(true);
+      subjectResource.setOrigin(subjectResource);
 
       // Gather dependencies for the execution of the expression parser.
       ExpressionParserContext context = new ExpressionParserContext();

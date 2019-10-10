@@ -84,17 +84,17 @@ public class QueryExecutorTest {
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of encounters");
-    aggregation.setExpression("%resource.count()");
+    aggregation.setExpression("count()");
     request.getAggregations().add(aggregation);
 
     Grouping grouping1 = new Grouping();
     grouping1.setLabel("Class");
-    grouping1.setExpression("%resource.class.code");
+    grouping1.setExpression("class.code");
     request.getGroupings().add(grouping1);
 
     Grouping grouping2 = new Grouping();
     grouping2.setLabel("Reason");
-    grouping2.setExpression("%resource.reasonCode.coding.display");
+    grouping2.setExpression("reasonCode.coding.display");
     request.getGroupings().add(grouping2);
 
     // Execute the query.
@@ -139,15 +139,15 @@ public class QueryExecutorTest {
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of patients");
-    aggregation.setExpression("%resource.count()");
+    aggregation.setExpression("count()");
     request.getAggregations().add(aggregation);
 
     Grouping grouping1 = new Grouping();
     grouping1.setLabel("Gender");
-    grouping1.setExpression("%resource.gender");
+    grouping1.setExpression("gender");
     request.getGroupings().add(grouping1);
 
-    request.getFilters().add("%resource.gender = 'female'");
+    request.getFilters().add("gender = 'female'");
 
     // Execute the query.
     QueryResponse response = executor.execute(request);
@@ -166,8 +166,8 @@ public class QueryExecutorTest {
 
   @Test
   public void queryWithResolve() throws IOException, JSONException {
-    // Load the subject resource dataset from a test Parquet file, and use it to mock out the
-    // ResourceReader.
+    // Load the required resource types from test Parquet files, and use them to mock out the
+    // calls to the resource reader.
     ResourceType[] resourceTypes = new ResourceType[]{ResourceType.ALLERGYINTOLERANCE,
         ResourceType.PATIENT};
     for (ResourceType resourceType : resourceTypes) {
@@ -194,12 +194,12 @@ public class QueryExecutorTest {
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of allergies");
-    aggregation.setExpression("%resource.count()");
+    aggregation.setExpression("count()");
     request.getAggregations().add(aggregation);
 
     Grouping grouping1 = new Grouping();
     grouping1.setLabel("Patient gender");
-    grouping1.setExpression("%resource.patient.resolve().gender");
+    grouping1.setExpression("patient.resolve().gender");
     request.getGroupings().add(grouping1);
 
     // Execute the query.
@@ -210,6 +210,59 @@ public class QueryExecutorTest {
     String actualJson = jsonParser.encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream("responses/QueryExecutorTest-queryWithResolve.Parameters.json");
+    assertThat(expectedStream).isNotNull();
+    StringWriter writer = new StringWriter();
+    IOUtils.copy(expectedStream, writer, UTF_8);
+    String expectedJson = writer.toString();
+    JSONAssert.assertEquals(expectedJson, actualJson, false);
+  }
+
+  @Test
+  public void queryWithReverseResolve() throws IOException, JSONException {
+    // Load the required resource types from test Parquet files, and use them to mock out the
+    // calls to the resource reader.
+    ResourceType[] resourceTypes = new ResourceType[]{ResourceType.CONDITION,
+        ResourceType.PATIENT};
+    for (ResourceType resourceType : resourceTypes) {
+      URL parquetUrl = Thread.currentThread().getContextClassLoader()
+          .getResource("test-data/parquet/" + resourceType + ".parquet");
+      assertThat(parquetUrl).isNotNull();
+      Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
+      when(mockReader.read(resourceType))
+          .thenReturn(dataset);
+    }
+
+    // Create and configure a new QueryExecutor.
+    QueryExecutorConfiguration config = new QueryExecutorConfiguration(spark, terminologyClient,
+        mockReader);
+    config.setWarehouseUrl(warehouseDirectory.toString());
+    config.setDatabaseName("test");
+
+    TestUtilities.mockDefinitionRetrieval(terminologyClient);
+    executor = new QueryExecutor(config);
+
+    // Build a QueryRequest to pass to the executor.
+    QueryRequest request = new QueryRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Condition");
+    grouping1.setExpression("reverseResolve(Condition.subject).code.coding.display");
+    request.getGroupings().add(grouping1);
+
+    // Execute the query.
+    QueryResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = jsonParser.encodeResourceToString(responseParameters);
+    InputStream expectedStream = Thread.currentThread().getContextClassLoader()
+        .getResourceAsStream("responses/QueryExecutorTest-queryWithReverseResolve.Parameters.json");
     assertThat(expectedStream).isNotNull();
     StringWriter writer = new StringWriter();
     IOUtils.copy(expectedStream, writer, UTF_8);

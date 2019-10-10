@@ -21,7 +21,6 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -37,7 +36,6 @@ public class ResolveFunction implements Function {
   @Override
   public ParsedExpression invoke(@Nonnull FunctionInput input) {
     validateInput(input);
-    SparkSession spark = input.getContext().getSparkSession();
     ParsedExpression inputResult = input.getInput();
     Dataset<Row> inputDataset = inputResult.getDataset();
     String hash = md5Short(input.getExpression());
@@ -56,7 +54,7 @@ public class ResolveFunction implements Function {
     assert referenceTypes.size() > 0 : "Encountered reference with no types";
 
     Dataset<Row> targetDataset;
-    Column targetIdCol = null, targetCol = null;
+    Column targetIdCol, targetCol;
     if (referenceTypes.size() == 1) {
       // If this is a monomorphic reference, we just need to retrieve the appropriate table and
       // create a dataset with the full resources.

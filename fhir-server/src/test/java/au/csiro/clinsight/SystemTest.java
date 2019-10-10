@@ -232,6 +232,7 @@ public class SystemTest {
       queryRequest.addHeader("Accept", "application/fhir+json");
 
       InputStream queryResponseStream;
+      logger.info("Sending query request");
       try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient
           .execute(queryRequest)) {
         assertThat(response.getStatusLine().getStatusCode()).isEqualTo(200);

@@ -7,6 +7,7 @@ package au.csiro.clinsight.query.functions;
 import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
 import static au.csiro.clinsight.utilities.Strings.md5Short;
 
+import au.csiro.clinsight.fhir.definitions.PathResolver;
 import au.csiro.clinsight.fhir.definitions.PathTraversal;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -49,20 +50,23 @@ public class ReverseResolveFunction implements Function {
     String inputIdColName = inputResult.getDatasetColumn() + "_id";
     Column inputIdCol = inputDataset.col(inputIdColName);
     Column resourceIdCol = resourceDataset.col(argument.getOrigin().getDatasetColumn() + "_id");
+    Column resourceCol = resourceDataset.col(argument.getOrigin().getDatasetColumn());
     Dataset<Row> dataset = inputDataset
-        .join(argumentDataset, inputIdCol.equalTo(argumentCol), "left_outer")
+        .join(argumentDataset, inputIdCol.equalTo(argumentCol.getField("reference")), "left_outer")
         .join(resourceDataset, argumentIdCol.equalTo(resourceIdCol), "left_outer");
-    dataset = dataset.select(inputIdColName, "resource.*");
-    dataset = dataset.withColumnRenamed(inputIdColName, hash + "_id");
+    dataset = dataset.select(inputIdCol.alias(hash + "_id"), resourceCol.alias(hash));
+
+    // Get a path traversal for the new resource.
+    PathTraversal pathTraversal = PathResolver.resolvePath(argument.getOrigin().getFhirPath());
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setResource(true);
     result.setResourceType(argument.getOrigin().getResourceType());
-
     result.setDataset(dataset);
     result.setDatasetColumn(hash);
+    result.setPathTraversal(pathTraversal);
     return result;
   }
 

@@ -94,7 +94,7 @@ public abstract class ResourceDefinitions {
    */
   public static void ensureInitialized(@Nonnull TerminologyClient terminologyClient) {
     status = INITIALISATION_IN_PROGRESS;
-    logger.info("Initialising resource definitions...");
+    logger.info("Initialising resource definitions");
     try {
       // Create a function that knows how to retrieve a StructureDefinition for a resource type.
       Function<ResourceType, StructureDefinition> fetchStrucDefForResource = resourceType -> {

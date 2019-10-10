@@ -1,0 +1,447 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Viral sinusitis (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 6
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Neuropathy due to type 2 diabetes mellitus (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Otitis media"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 2
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Metabolic syndrome X (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Hypertriglyceridemia (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Cystitis"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Diabetes"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Coronary Heart Disease"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Acute viral pharyngitis (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 4
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Secondary malignant neoplasm of colon"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Recurrent rectal polyp"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Body mass index 30+ - obesity (finding)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 3
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Fracture of rib"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "First degree burn"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 2
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Laceration of foot"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Hypertension"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 3
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Pulmonary emphysema (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Bleeding from anus"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Seasonal allergic rhinitis"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Fetus with unknown complication"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Myocardial Infarction"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Malignant tumor of colon"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Chronic sinusitis (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Sprain of wrist"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Anemia (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 4
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Acute bronchitis (disorder)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 4
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Hyperlipidemia"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Injury of anterior cruciate ligament"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "History of myocardial infarction (situation)"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Polyp of colon"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Normal pregnancy"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Miscarriage in first trimester"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 2
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Protracted diarrhea"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Prediabetes"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 4
+        }
+      ]
+    }
+  ]
+}

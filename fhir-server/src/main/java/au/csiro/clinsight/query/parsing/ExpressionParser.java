@@ -35,10 +35,8 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.Row;
+import org.apache.spark.sql.*;
+import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.*;
 
 /**
@@ -262,6 +260,7 @@ public class ExpressionParser {
 
     InvocationVisitor(ExpressionParserContext context) {
       this.context = context;
+      invoker = context.getSubjectContext();
     }
 
     InvocationVisitor(ExpressionParserContext context,
@@ -277,38 +276,18 @@ public class ExpressionParser {
     @Override
     public ParsedExpression visitMemberInvocation(MemberInvocationContext ctx) {
       String fhirPath = ctx.getText();
-      if (invoker == null) {
-        // If there is no invoker, we assume that this is a base resource. If we can't resolve it,
-        // an error will be thrown.
-        String hash = md5Short(fhirPath);
-        PathTraversal pathTraversal;
-        try {
-          pathTraversal = PathResolver.resolvePath(fhirPath);
-        } catch (ResourceNotKnownException | ElementNotKnownException e) {
-          throw new InvalidRequestException(e.getMessage());
-        }
-        if (pathTraversal.getType() != ResolvedElementType.RESOURCE) {
-          throw new InvalidRequestException("Invalid path entry point: " + fhirPath);
-        }
-        // Build a new parse result to represent the resource.
-        ParsedExpression result = new ParsedExpression();
-        result.setFhirPath(fhirPath);
-        result.setPathTraversal(pathTraversal);
-        result.setResource(true);
-        result.setResourceType(Enumerations.ResourceType.fromCode(fhirPath));
-        result.setOrigin(result);
 
-        // Add a dataset to the parse result representing the nominated resource.
-        Dataset<Row> dataset = context.getResourceReader().read(result.getResourceType());
-        dataset = dataset.select(dataset.col("id").alias(hash + "_id"));
-        result.setDataset(dataset);
-        result.setDatasetColumn(hash);
-
-        return result;
-
-      } else {
-        // If there is an invoker, then we use a path traversal to move to the element named on the
-        // right hand side of the operator.
+      // If there is no invoker, we assume that this is a base resource. If we can't resolve it,
+      // an error will be thrown.
+      String hash = md5Short(fhirPath);
+      PathTraversal pathTraversal;
+      try {
+        //noinspection ResultOfMethodCallIgnored
+        ResourceType.fromCode(fhirPath);
+        pathTraversal = PathResolver.resolvePath(fhirPath);
+      } catch (FHIRException | ResourceNotKnownException | ElementNotKnownException e) {
+        // If the expression is not a base resource type, treat it as a path traversal from the
+        // subject resource.
         PathTraversalInput pathTraversalInput = new PathTraversalInput();
         pathTraversalInput.setLeft(invoker);
         pathTraversalInput.setRight(fhirPath);
@@ -316,6 +295,28 @@ public class ExpressionParser {
         pathTraversalInput.setContext(context);
         return new PathTraversalOperator().invoke(pathTraversalInput);
       }
+      assert pathTraversal.getType() == ResolvedElementType.RESOURCE;
+
+      // Build a new parse result to represent the resource.
+      ParsedExpression result = new ParsedExpression();
+      result.setFhirPath(fhirPath);
+      result.setPathTraversal(pathTraversal);
+      result.setResource(true);
+      result.setResourceType(Enumerations.ResourceType.fromCode(fhirPath));
+      result.setOrigin(result);
+
+      // Add a dataset to the parse result representing the nominated resource.
+      Dataset<Row> dataset = context.getResourceReader().read(result.getResourceType());
+      String firstColumn = dataset.columns()[0];
+      String[] remainingColumns = Arrays
+          .copyOfRange(dataset.columns(), 1, dataset.columns().length);
+      dataset = dataset
+          .withColumn(hash, functions.struct(firstColumn, remainingColumns));
+      dataset = dataset.select(dataset.col("id").alias(hash + "_id"), dataset.col(hash));
+      result.setDataset(dataset);
+      result.setDatasetColumn(hash);
+
+      return result;
     }
 
     /**
@@ -345,11 +346,9 @@ public class ExpressionParser {
         // Create a new ExpressionParserContext, which includes information about how to evaluate
         // the `$this` expression.
         ExpressionParserContext argumentContext = new ExpressionParserContext(context);
-        if (invoker != null) {
-          ParsedExpression thisResult = new ParsedExpression(invoker);
-          thisResult.setFhirPath("$this");
-          argumentContext.setThisContext(thisResult);
-        }
+        ParsedExpression thisResult = new ParsedExpression(invoker);
+        thisResult.setFhirPath("$this");
+        argumentContext.setThisContext(thisResult);
         // Parse each of the expressions passed as arguments to the function.
         arguments = paramList.expression().stream()
             .map(expression -> new ExpressionVisitor(argumentContext).visit(expression))
