@@ -13,14 +13,13 @@ import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.CapabilityStatement.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class provides a customised CapabilityStatement describing the functionality of the
@@ -31,13 +30,14 @@ import org.slf4j.LoggerFactory;
 public class AnalyticsServerCapabilities implements
     IServerConformanceProvider<CapabilityStatement> {
 
-  private static final Logger logger = LoggerFactory.getLogger(AnalyticsServerCapabilities.class);
   AnalyticsServerConfiguration configuration;
   AggregateExecutor aggregateExecutor;
+  Set<ResourceType> availableResourceTypes;
 
   public AnalyticsServerCapabilities(
-      AnalyticsServerConfiguration configuration) {
+      AnalyticsServerConfiguration configuration, Set<ResourceType> availableResourceTypes) {
     this.configuration = configuration;
+    this.availableResourceTypes = availableResourceTypes;
   }
 
   @Override
@@ -56,7 +56,6 @@ public class AnalyticsServerCapabilities implements
     capabilityStatement.setPublisher("Australian e-Health Research Centre, CSIRO");
     capabilityStatement.setCopyright(
         "Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.");
-    capabilityStatement.setUseContext(buildUseContext());
     capabilityStatement.setKind(CapabilityStatementKind.CAPABILITY);
     CapabilityStatementSoftwareComponent software = new CapabilityStatementSoftwareComponent(
         new StringType("Clinsight FHIR Server"));
@@ -76,17 +75,6 @@ public class AnalyticsServerCapabilities implements
   }
 
   @Nonnull
-  private List<UsageContext> buildUseContext() {
-    List<UsageContext> useContext = new ArrayList<>();
-    CodeableConcept task = new CodeableConcept();
-    task.setText("Aggregate data analytics");
-    Coding usageContextType = new Coding("http://hl7.org/fhir/usage-context-type", "task",
-        "Workflow Task");
-    useContext.add(new UsageContext(usageContextType, task));
-    return useContext;
-  }
-
-  @Nonnull
   private List<CapabilityStatementRestComponent> buildRestComponent() {
     List<CapabilityStatementRestComponent> rest = new ArrayList<>();
     CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
@@ -96,6 +84,13 @@ public class AnalyticsServerCapabilities implements
         "https://clinsight.csiro.au/fhir/OperationDefinition/aggregate-0");
     CapabilityStatementRestResourceOperationComponent operation = new CapabilityStatementRestResourceOperationComponent(
         new StringType("aggregate"), operationUri);
+    for (ResourceType resourceType : availableResourceTypes) {
+      Extension extension = new Extension();
+      extension
+          .setUrl("https://clinsight.csiro.au/fhir/StructureDefinition/available-resource-type-0");
+      extension.setValue(new CodeType(resourceType.toString()));
+      operation.addExtension(extension);
+    }
     operations.add(operation);
     server.setOperation(operations);
     rest.add(server);

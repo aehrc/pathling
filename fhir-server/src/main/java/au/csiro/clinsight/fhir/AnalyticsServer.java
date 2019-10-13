@@ -15,12 +15,22 @@ import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import com.cerner.bunsen.FhirEncoders;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.cors.CorsConfiguration;
@@ -35,7 +45,7 @@ public class AnalyticsServer extends RestfulServer {
 
   private static final Logger logger = LoggerFactory.getLogger(AnalyticsServer.class);
   private final AnalyticsServerConfiguration configuration;
-  private final AnalyticsServerCapabilities serverCapabilities;
+  private AnalyticsServerCapabilities serverCapabilities;
   private SparkSession spark;
   private TerminologyClient terminologyClient;
   private FhirEncoders fhirEncoders;
@@ -45,8 +55,6 @@ public class AnalyticsServer extends RestfulServer {
     super(buildFhirContext());
     logger.info("Creating new AnalyticsServer: " + configuration);
     this.configuration = configuration;
-    this.serverCapabilities = new AnalyticsServerCapabilities(configuration);
-    setServerConformanceProvider(serverCapabilities);
   }
 
   @Nonnull
@@ -63,6 +71,12 @@ public class AnalyticsServer extends RestfulServer {
     setDefaultResponseEncoding(EncodingEnum.JSON);
 
     initializeSpark();
+
+    // Initialise the capability statement.
+    this.serverCapabilities = new AnalyticsServerCapabilities(configuration,
+        getAvailableResourceTypes());
+    setServerConformanceProvider(serverCapabilities);
+
     initializeTerminologyClient();
     initializeFhirEncoders();
     initializeAggregateExecutor();
@@ -82,6 +96,28 @@ public class AnalyticsServer extends RestfulServer {
         .config("spark.sql.autoBroadcastJoinThreshold", "-1")
         .config("spark.sql.shuffle.partitions", "36")
         .getOrCreate();
+  }
+
+  @Nonnull
+  private Set<ResourceType> getAvailableResourceTypes() throws ServletException {
+    Set<ResourceType> availableResourceTypes;
+    try {
+      logger.info("Getting available resource types");
+      Configuration hadoopConfiguration = new Configuration();
+      FileSystem warehouse = FileSystem
+          .get(new URI(configuration.getWarehouseUrl()), hadoopConfiguration);
+      FileStatus[] fileStatuses = warehouse.listStatus(
+          new Path(configuration.getWarehouseUrl() + "/" + configuration.getDatabaseName()));
+      availableResourceTypes = Arrays.stream(fileStatuses)
+          .map(fileStatus -> {
+            String code = fileStatus.getPath().getName().replace(".parquet", "");
+            return ResourceType.fromCode(code);
+          })
+          .collect(Collectors.toSet());
+    } catch (IOException | URISyntaxException e) {
+      throw new ServletException("Error querying for available resources", e);
+    }
+    return availableResourceTypes;
   }
 
   private void initializeTerminologyClient() {
