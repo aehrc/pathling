@@ -6,6 +6,7 @@ package au.csiro.clinsight.query.parsing;
 
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.query.ResourceReader;
+import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.spark.sql.SparkSession;
@@ -16,6 +17,11 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 public class ExpressionParserContext {
+
+  /**
+   * A FHIR context that can be used to do FHIR stuff.
+   */
+  private FhirContext fhirContext;
 
   /**
    * The terminology client that should be used to resolve terminology queries within this
@@ -54,12 +60,21 @@ public class ExpressionParserContext {
   }
 
   public ExpressionParserContext(ExpressionParserContext context) {
+    this.fhirContext = context.fhirContext;
     this.terminologyClient = context.terminologyClient;
     this.sparkSession = context.sparkSession;
     this.resourceReader = context.resourceReader;
     this.subjectContext = context.subjectContext;
     this.thisContext = context.thisContext;
     this.groupings = context.groupings;
+  }
+
+  public FhirContext getFhirContext() {
+    return fhirContext;
+  }
+
+  public void setFhirContext(FhirContext fhirContext) {
+    this.fhirContext = fhirContext;
   }
 
   public TerminologyClient getTerminologyClient() {

@@ -34,29 +34,22 @@ public class WhereFunction implements Function {
 
     // Create a new dataset by performing an inner join from the input to the argument, based on
     // whether the boolean value is true or not.
-    Dataset<Row> inputDataset = inputResult.getDataset().alias("input");
+    Dataset<Row> inputDataset = inputResult.getDataset();
     Dataset<Row> argumentDataset = argument.getDataset();
-    String inputIdColName = inputResult.getDatasetColumn() + "_id";
-    Column inputIdCol = inputDataset.col(inputIdColName);
-    Column argumentIdCol = argumentDataset.col(argument.getDatasetColumn() + "_id");
-    Column argumentCol = argumentDataset.col(argument.getDatasetColumn());
+    Column inputIdCol = inputResult.getIdColumn();
+    Column inputValueCol = inputResult.getValueColumn();
+    Column argumentIdCol = argument.getIdColumn();
+    Column argumentValueCol = argument.getValueColumn();
     Dataset<Row> dataset = inputDataset
-        .join(argumentDataset, inputIdCol.equalTo(argumentIdCol).and(argumentCol), "inner");
+        .join(argumentDataset, inputIdCol.equalTo(argumentIdCol).and(argumentValueCol), "inner");
 
-    // If the input is a resource, we need to include all the elements. Otherwise, we just include
-    // the dataset column.
-    if (inputResult.isResource()) {
-      dataset = dataset.select(inputIdColName, "input.*");
-      dataset = dataset.withColumnRenamed(inputIdColName, hash + "_id");
-    } else {
-      Column inputCol = inputDataset.col(inputResult.getDatasetColumn());
-      dataset = dataset.select(inputIdCol.alias(hash + "_id"), inputCol.alias(hash));
-    }
+    dataset = dataset.select(inputIdCol, inputValueCol);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression(inputResult);
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
+    result.setIdColumn(inputIdCol);
+    result.setValueColumn(inputValueCol);
 
     return result;
   }

@@ -28,7 +28,7 @@
     <hapiFhirVersion>4.0.0</hapiFhirVersion>
     <sparkVersion>2.4.4</sparkVersion>
     <sparkScalaVersion>2.12</sparkScalaVersion>
-    <hadoopVersion>3.2.0</hadoopVersion>
+    <hadoopVersion>3.2.1</hadoopVersion>
     <bunsenVersion>0.4.9-SNAPSHOT</bunsenVersion>
     <pythonVersion>3.6.8</pythonVersion>
     <sparkMirror>https://mirror.aarnet.edu.au/pub/apache/spark</sparkMirror>
@@ -199,6 +199,16 @@
             <source>1.8</source>
             <target>1.8</target>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.0.0-M3</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>3.0.0-M3</version>
         </plugin>
       </plugins>
     </pluginManagement>

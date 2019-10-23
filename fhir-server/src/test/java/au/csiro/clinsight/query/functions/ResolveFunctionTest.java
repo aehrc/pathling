@@ -5,28 +5,26 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.clinsight.TestUtilities;
-import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.fhir.definitions.PathResolver;
-import au.csiro.clinsight.fhir.definitions.PathTraversal;
-import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.ResourceReader;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
+import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.*;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * @author John Grimes
  */
+@Category(au.csiro.clinsight.UnitTest.class)
 public class ResolveFunctionTest {
 
   private SparkSession spark;
@@ -38,10 +36,6 @@ public class ResolveFunctionTest {
         .config("spark.master", "local")
         .config("spark.driver.host", "localhost")
         .getOrCreate();
-
-    TerminologyClient terminologyClient = mock(TerminologyClient.class);
-    TestUtilities.mockDefinitionRetrieval(terminologyClient);
-    ResourceDefinitions.ensureInitialized(terminologyClient);
   }
 
   @Test
@@ -68,6 +62,8 @@ public class ResolveFunctionTest {
     Dataset<Row> inputDataset = spark
         .createDataFrame(Arrays.asList(inputRow1, inputRow2, inputRow3, inputRow4),
             inputStruct);
+    Column idColumn = inputDataset.col(inputDataset.columns()[0]);
+    Column valueColumn = inputDataset.col(inputDataset.columns()[1]);
 
     // Build a Dataset with several rows in it, and create a mock reader which returns it as the
     // set of all Patient resources.
@@ -89,16 +85,22 @@ public class ResolveFunctionTest {
     when(mockReader.read(ResourceType.EPISODEOFCARE))
         .thenReturn(episodeOfCareDataset);
 
+    BaseRuntimeChildDefinition childDefinition = TestUtilities.getFhirContext()
+        .getResourceDefinition("Encounter").getChildByName("episodeOfCare");
+    assertThat(childDefinition).isInstanceOf(RuntimeChildResourceDefinition.class);
+
     // Prepare the inputs to the function.
     ExpressionParserContext parserContext = new ExpressionParserContext();
     parserContext.setResourceReader(mockReader);
 
     ParsedExpression inputExpression = new ParsedExpression();
     inputExpression.setFhirPath("episodeOfCare");
-    inputExpression.setPathTraversal(PathResolver.resolvePath("Encounter.episodeOfCare"));
+    inputExpression.setFhirType(FHIRDefinedType.REFERENCE);
+    inputExpression.setDefinition(childDefinition);
     inputExpression.setSingular(false);
     inputExpression.setDataset(inputDataset);
-    inputExpression.setDatasetColumn("789wxyz");
+    inputExpression.setIdColumn(idColumn);
+    inputExpression.setValueColumn(valueColumn);
 
     FunctionInput resolveInput = new FunctionInput();
     resolveInput.setContext(parserContext);
@@ -114,13 +116,14 @@ public class ResolveFunctionTest {
     assertThat(result.isSingular()).isFalse();
     assertThat(result.isResource()).isTrue();
     assertThat(result.getResourceType()).isEqualTo(ResourceType.EPISODEOFCARE);
-    assertThat(result.getPathTraversal()).isInstanceOf(PathTraversal.class);
+    assertThat(result.isPolymorphic()).isFalse();
+    assertThat(result.getIdColumn()).isNotNull();
+    assertThat(result.getValueColumn()).isNotNull();
+    assertThat(result.getResourceTypeColumn()).isNull();
 
     // Check the result dataset.
-    Dataset<Row> resultDataset = result.getDataset();
-    assertThat(resultDataset.columns().length).isEqualTo(2);
-    assertThat(resultDataset.columns()[0]).isEqualTo(result.getDatasetColumn() + "_id");
-    assertThat(resultDataset.columns()[1]).isEqualTo(result.getDatasetColumn());
+    Dataset<Row> resultDataset = result.getDataset()
+        .select(result.getIdColumn(), result.getValueColumn());
     List<Row> resultRows = resultDataset.collectAsList();
     assertThat(resultRows.size()).isEqualTo(4);
     Row resultRow = resultRows.get(0);
@@ -162,6 +165,8 @@ public class ResolveFunctionTest {
     Dataset<Row> inputDataset = spark
         .createDataFrame(Arrays.asList(inputRow1, inputRow2, inputRow3, inputRow4, inputRow5),
             inputStruct);
+    Column idColumn = inputDataset.col(inputDataset.columns()[0]);
+    Column valueColumn = inputDataset.col(inputDataset.columns()[1]);
 
     // Build a Dataset with several rows in it, and create a mock reader which returns it as the
     // set of all Patient resources.
@@ -173,28 +178,41 @@ public class ResolveFunctionTest {
         targetMetadata);
     StructField patientActiveColumn = new StructField("active", DataTypes.BooleanType, true,
         targetMetadata);
-    StructType patientStruct = new StructType(
+    StructType patientResource = new StructType(
         new StructField[]{patientIdColumn, patientGenderColumn, patientActiveColumn});
+    StructField patientStruct = new StructField("resource", patientResource, false, targetMetadata);
+    StructType patientRecord = new StructType(new StructField[]{patientIdColumn, patientStruct});
+
     StructField groupIdColumn = new StructField("id", DataTypes.StringType, false,
         targetMetadata);
     StructField groupNameColumn = new StructField("name", DataTypes.StringType, true,
         targetMetadata);
     StructField groupActiveColumn = new StructField("active", DataTypes.BooleanType, true,
         targetMetadata);
-    StructType groupStruct = new StructType(
+    StructType groupResource = new StructType(
         new StructField[]{groupIdColumn, groupNameColumn, groupActiveColumn});
+    StructField groupStruct = new StructField("resource", groupResource, false, targetMetadata);
+    StructType groupRecord = new StructType(new StructField[]{groupIdColumn, groupStruct});
 
-    Row patientRow1 = RowFactory.create("Patient/abc1", "female", true);
-    Row patientRow2 = RowFactory.create("Patient/abc2", "female", false);
-    Row patientRow3 = RowFactory.create("Patient/abc3", "male", true);
+    Row patientRow1 = RowFactory
+        .create("Patient/abc1", RowFactory.create("Patient/abc1", "female", true));
+    Row patientRow2 = RowFactory
+        .create("Patient/abc2", RowFactory.create("Patient/abc2", "female", false));
+    Row patientRow3 = RowFactory
+        .create("Patient/abc3", RowFactory.create("Patient/abc3", "male", true));
     Dataset<Row> patientDataset = spark
-        .createDataFrame(Arrays.asList(patientRow1, patientRow2, patientRow3), patientStruct);
+        .createDataFrame(Arrays.asList(patientRow1, patientRow2, patientRow3), patientRecord);
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
 
-    Row groupRow = RowFactory.create("Group/def1", "Some group", true);
+    BaseRuntimeChildDefinition childDefinition = TestUtilities.getFhirContext()
+        .getResourceDefinition("Encounter").getChildByName("subject");
+    assertThat(childDefinition).isInstanceOf(RuntimeChildResourceDefinition.class);
+
+    Row groupRow = RowFactory
+        .create("Group/def1", RowFactory.create("Group/def1", "Some group", true));
     Dataset<Row> groupDataset = spark
-        .createDataFrame(Collections.singletonList(groupRow), patientStruct);
+        .createDataFrame(Collections.singletonList(groupRow), groupRecord);
     when(mockReader.read(ResourceType.GROUP))
         .thenReturn(groupDataset);
 
@@ -203,11 +221,13 @@ public class ResolveFunctionTest {
     parserContext.setResourceReader(mockReader);
 
     ParsedExpression inputExpression = new ParsedExpression();
-    inputExpression.setFhirPath("patient");
-    inputExpression.setPathTraversal(PathResolver.resolvePath("Encounter.subject"));
+    inputExpression.setFhirPath("subject");
+    inputExpression.setFhirType(FHIRDefinedType.REFERENCE);
+    inputExpression.setDefinition(childDefinition);
     inputExpression.setSingular(true);
     inputExpression.setDataset(inputDataset);
-    inputExpression.setDatasetColumn("789wxyz");
+    inputExpression.setIdColumn(idColumn);
+    inputExpression.setValueColumn(valueColumn);
 
     FunctionInput resolveInput = new FunctionInput();
     resolveInput.setContext(parserContext);
@@ -224,13 +244,13 @@ public class ResolveFunctionTest {
     assertThat(result.isResource()).isFalse();
     assertThat(result.getResourceType()).isNull();
     assertThat(result.isPolymorphic()).isTrue();
+    assertThat(result.getIdColumn()).isNotNull();
+    assertThat(result.getValueColumn()).isNotNull();
+    assertThat(result.getResourceTypeColumn()).isNotNull();
 
     // Check the result dataset.
-    Dataset<Row> resultDataset = result.getDataset();
-    assertThat(resultDataset.columns().length).isEqualTo(3);
-    assertThat(resultDataset.columns()[0]).isEqualTo(result.getDatasetColumn() + "_id");
-    assertThat(resultDataset.columns()[1]).isEqualTo(result.getDatasetColumn() + "_type");
-    assertThat(resultDataset.columns()[2]).isEqualTo(result.getDatasetColumn());
+    Dataset<Row> resultDataset = result.getDataset()
+        .select(result.getIdColumn(), result.getResourceTypeColumn(), result.getValueColumn());
     List<Row> resultRows = resultDataset.collectAsList();
     assertThat(resultRows.size()).isEqualTo(5);
     Row resultRow = resultRows.get(0);

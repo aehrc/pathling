@@ -4,32 +4,67 @@
 
 package au.csiro.clinsight.query.parsing;
 
-import au.csiro.clinsight.fhir.definitions.PathTraversal;
+import static au.csiro.clinsight.utilities.Strings.md5Short;
+
+import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
- * Used to represent the results from the parsing of a FHIRPath expression, including information
- * gathered to assist in the creation of a query plan that can be executed using Spark SQL.
+ * Used to represent the results from the parsing of a FHIRPath expression.
  *
  * @author John Grimes
  */
 public class ParsedExpression {
 
+  // This mapping needs to reflect the mappings that Bunsen and Spark use.
+  //
+  // The Spark mappings are documented here:
+  // https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/Row.html#get-int-
+  //
+  // The Bunsen mappings can be found within the code here:
+  // https://github.com/cerner/bunsen/blob/master/bunsen-r4/src/main/scala/com/cerner/bunsen/r4/R4DataTypeMappings.scala
+  //
+  private static final Map<FHIRDefinedType, Class> FHIR_TYPE_TO_JAVA_CLASS = new EnumMap<FHIRDefinedType, Class>(
+      FHIRDefinedType.class) {{
+    put(FHIRDefinedType.DECIMAL, BigDecimal.class);
+    put(FHIRDefinedType.MARKDOWN, String.class);
+    put(FHIRDefinedType.ID, String.class);
+    put(FHIRDefinedType.DATETIME, String.class);
+    put(FHIRDefinedType.TIME, String.class);
+    put(FHIRDefinedType.DATE, String.class);
+    put(FHIRDefinedType.CODE, String.class);
+    put(FHIRDefinedType.STRING, String.class);
+    put(FHIRDefinedType.URI, String.class);
+    put(FHIRDefinedType.URL, String.class);
+    put(FHIRDefinedType.CANONICAL, String.class);
+    put(FHIRDefinedType.INTEGER, Integer.class);
+    put(FHIRDefinedType.UNSIGNEDINT, Long.class);
+    put(FHIRDefinedType.POSITIVEINT, Integer.class);
+    put(FHIRDefinedType.BOOLEAN, Boolean.class);
+    put(FHIRDefinedType.INSTANT, Timestamp.class);
+    // TODO: Data types not catered for: base64Binary, oid, uuid, enumeration of codes.
+  }};
+
   static final SimpleDateFormat DATE_TIME_FORMAT = new SimpleDateFormat(
       "yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
   static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("'T'HH:mm:ss.SSSXXX");
-  static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
-      "yyyy-MM-dd");
 
   /**
    * The FHIRPath representation of this expression.
@@ -37,34 +72,19 @@ public class ParsedExpression {
   private String fhirPath;
 
   /**
-   * Information about the FHIRPath type returned by this expression.
+   * Information about the FHIRPath type returned by this expression, if primitive or literal.
    */
   private FhirPathType fhirPathType;
 
   /**
-   * Information about the FHIR type returned by this expression, if primitive.
+   * Information about the FHIR data type returned by this expression.
    */
-  private FhirType fhirType;
+  private FHIRDefinedType fhirType;
 
   /**
-   * The result of executing the PathResolver over this expression.
+   * Definitional information about the type of this element from the FHIR specification.
    */
-  private PathTraversal pathTraversal;
-
-  /**
-   * Flag indicating whether this expression evaluates to a collection of primitive values.
-   */
-  private boolean primitive;
-
-  /**
-   * Flag indicating whether this expression evaluates to a collection with a single item.
-   */
-  private boolean singular;
-
-  /**
-   * The literal value of this expression, if any.
-   */
-  private Type literalValue;
+  private BaseRuntimeChildDefinition definition;
 
   /**
    * If this expression evaluates to a resource, this flag will be set.
@@ -75,6 +95,21 @@ public class ParsedExpression {
    * If this expression evaluates to a resource, this field holds the type of the resource.
    */
   private Enumerations.ResourceType resourceType;
+
+  /**
+   * Flag indicating whether this expression evaluates to a collection of primitive values.
+   */
+  private boolean primitive;
+
+  /**
+   * The literal value of this expression, if any.
+   */
+  private Type literalValue;
+
+  /**
+   * Flag indicating whether this expression evaluates to a collection with a single item.
+   */
+  private boolean singular;
 
   /**
    * If this expression is an unresolved polymorphic result, e.g. the result of a call to resolve()
@@ -96,14 +131,25 @@ public class ParsedExpression {
   private Dataset<Row> dataset;
 
   /**
-   * The name of the column within the dataset that contains the result of this expression.
+   * The column within the dataset that contains the ID of the subject resource.
    */
-  private String datasetColumn;
+  private Column idColumn;
 
   /**
-   * A Column which describes the aggregation associated with this expression, where there is one.
+   * The column within the dataset that contains the result of this expression.
    */
-  private Column aggregation;
+  private Column valueColumn;
+
+  /**
+   * For unresolved polymorphic references, this column holds the resource type code.
+   */
+  private Column resourceTypeColumn;
+
+  /**
+   * For aggregate expressions, this column hold the unresolved aggregation that will be applied
+   * during execution.
+   */
+  private Column aggregationColumn;
 
   public ParsedExpression() {
   }
@@ -111,24 +157,26 @@ public class ParsedExpression {
   public ParsedExpression(ParsedExpression parsedExpression) {
     this.fhirPath = parsedExpression.fhirPath;
     this.fhirPathType = parsedExpression.fhirPathType;
-    this.fhirType = parsedExpression.fhirType;
-    this.pathTraversal = parsedExpression.pathTraversal;
-    this.primitive = parsedExpression.primitive;
-    this.singular = parsedExpression.singular;
-    this.literalValue = parsedExpression.literalValue;
+    this.definition = parsedExpression.definition;
     this.isResource = parsedExpression.isResource;
     this.resourceType = parsedExpression.resourceType;
+    this.primitive = parsedExpression.primitive;
+    this.literalValue = parsedExpression.literalValue;
+    this.singular = parsedExpression.singular;
+    this.polymorphic = parsedExpression.polymorphic;
     this.origin = parsedExpression.origin;
     this.dataset = parsedExpression.dataset;
-    this.datasetColumn = parsedExpression.datasetColumn;
-    this.aggregation = parsedExpression.aggregation;
+    this.idColumn = parsedExpression.idColumn;
+    this.valueColumn = parsedExpression.valueColumn;
+    this.resourceTypeColumn = parsedExpression.resourceTypeColumn;
+    this.aggregationColumn = parsedExpression.aggregationColumn;
   }
 
   public String getFhirPath() {
     return fhirPath;
   }
 
-  public void setFhirPath(@Nonnull String fhirPath) {
+  public void setFhirPath(String fhirPath) {
     this.fhirPath = fhirPath;
   }
 
@@ -136,56 +184,25 @@ public class ParsedExpression {
     return fhirPathType;
   }
 
-  public void setFhirPathType(@Nonnull FhirPathType fhirPathType) {
+  public void setFhirPathType(FhirPathType fhirPathType) {
     this.fhirPathType = fhirPathType;
   }
 
-  public FhirType getFhirType() {
+  public FHIRDefinedType getFhirType() {
     return fhirType;
   }
 
-  public void setFhirType(FhirType fhirType) {
+  public void setFhirType(FHIRDefinedType fhirType) {
     this.fhirType = fhirType;
   }
 
-  public PathTraversal getPathTraversal() {
-    return pathTraversal;
+  public BaseRuntimeChildDefinition getDefinition() {
+    return definition;
   }
 
-  public void setPathTraversal(@Nonnull PathTraversal pathTraversal) {
-    this.pathTraversal = pathTraversal;
-  }
-
-  public boolean isPrimitive() {
-    return primitive;
-  }
-
-  public void setPrimitive(boolean primitive) {
-    this.primitive = primitive;
-  }
-
-  public boolean isSingular() {
-    return singular;
-  }
-
-  public void setSingular(boolean singular) {
-    this.singular = singular;
-  }
-
-  public Type getLiteralValue() {
-    return literalValue;
-  }
-
-  public void setLiteralValue(@Nonnull Type literalValue) {
-    this.literalValue = literalValue;
-  }
-
-  public Dataset<Row> getDataset() {
-    return dataset;
-  }
-
-  public void setDataset(Dataset<Row> dataset) {
-    this.dataset = dataset;
+  public void setDefinition(BaseRuntimeChildDefinition definition) {
+    this.definition = definition;
+    updateFhirTypeFromDefinition();
   }
 
   public boolean isResource() {
@@ -204,6 +221,30 @@ public class ParsedExpression {
     this.resourceType = resourceType;
   }
 
+  public boolean isPrimitive() {
+    return primitive;
+  }
+
+  public void setPrimitive(boolean primitive) {
+    this.primitive = primitive;
+  }
+
+  public Type getLiteralValue() {
+    return literalValue;
+  }
+
+  public void setLiteralValue(Type literalValue) {
+    this.literalValue = literalValue;
+  }
+
+  public boolean isSingular() {
+    return singular;
+  }
+
+  public void setSingular(boolean singular) {
+    this.singular = singular;
+  }
+
   public boolean isPolymorphic() {
     return polymorphic;
   }
@@ -220,67 +261,153 @@ public class ParsedExpression {
     this.origin = origin;
   }
 
-  public String getDatasetColumn() {
-    return datasetColumn;
+  public Dataset<Row> getDataset() {
+    return dataset;
   }
 
-  public void setDatasetColumn(String datasetColumn) {
-    this.datasetColumn = datasetColumn;
+  public void setDataset(Dataset<Row> dataset) {
+    this.dataset = dataset;
   }
 
-  public Column getAggregation() {
-    return aggregation;
+  public Column getIdColumn() {
+    return idColumn;
   }
 
-  public void setAggregation(Column aggregation) {
-    this.aggregation = aggregation;
+  public void setIdColumn(Column idColumn) {
+    this.idColumn = idColumn;
+  }
+
+  public Column getValueColumn() {
+    return valueColumn;
+  }
+
+  public void setValueColumn(Column valueColumn) {
+    this.valueColumn = valueColumn;
+  }
+
+  public Column getResourceTypeColumn() {
+    return resourceTypeColumn;
+  }
+
+  public void setResourceTypeColumn(Column resourceTypeColumn) {
+    this.resourceTypeColumn = resourceTypeColumn;
+  }
+
+  public Column getAggregationColumn() {
+    return aggregationColumn;
+  }
+
+  public void setAggregationColumn(Column aggregationColumn) {
+    this.aggregationColumn = aggregationColumn;
   }
 
   public Object getJavaLiteralValue() {
-    if (literalValue == null) {
-      throw new IllegalStateException(
-          "This method cannot be called on an expression that is not literal");
+    assert PrimitiveType.class.isAssignableFrom(literalValue.getClass()) :
+        "Encountered non-primitive literal value";
+    return ((PrimitiveType) literalValue).getValue();
+  }
+
+  /**
+   * Get the BaseRuntimeElementDefinition for this expression (which has different information in it
+   * as compared to the BaseRuntimeChildDefinition.
+   */
+  public BaseRuntimeElementDefinition getElementDefinition() {
+    if (definition == null) {
+      throw new IllegalStateException("Expression has no definition");
     }
-    switch (fhirType) {
-      case DECIMAL:
-        return ((DecimalType) literalValue).getValue();
-      case MARKDOWN:
-        return ((MarkdownType) literalValue).getValue();
-      case ID:
-        return ((IdType) literalValue).getValue();
-      case DATE_TIME:
-        return DATE_TIME_FORMAT.format(((DateTimeType) literalValue).getValue());
-      case TIME:
-        return ((TimeType) literalValue).getValue();
-      case DATE:
-        return DATE_FORMAT.format(((DateType) literalValue).getValue());
-      case CODE:
-        return ((CodeType) literalValue).getValue();
-      case STRING:
-        return ((StringType) literalValue).getValue();
-      case URI:
-        return ((UriType) literalValue).getValue();
-      case OID:
-        return ((OidType) literalValue).getValue();
-      case INTEGER:
-        return ((IntegerType) literalValue).getValue();
-      case UNSIGNED_INT:
-        return new Long(((UnsignedIntType) literalValue).getValue());
-      case POSITIVE_INT:
-        return new Long(((PositiveIntType) literalValue).getValue());
-      case BOOLEAN:
-        return ((BooleanType) literalValue).getValue();
-      case INSTANT:
-        return ((InstantType) literalValue).getValue();
+    return elementFromChildDefinition(definition);
+  }
+
+  /**
+   * Retrieves the HAPI class that should be used to represent the type of this expression.
+   */
+  public Class getImplementingClass(FhirContext fhirContext) {
+    if (definition == null && fhirType == null) {
+      throw new IllegalStateException("Expression has no definition or FHIR type");
     }
-    assert false : "Encountered FHIR type not accounted for";
-    return null;
+    if (definition == null) {
+      if (fhirContext == null) {
+        throw new IllegalStateException(
+            "Expression has no definition, and null FHIR context passed");
+      }
+      return fhirContext.getElementDefinition(fhirType.toCode()).getImplementingClass();
+    } else {
+      return definition.getChildByName(definition.getElementName()).getImplementingClass();
+    }
+  }
+
+  /**
+   * Retrieves the plain Java class that should be used to represent the type of this expression.
+   */
+  public Class getJavaClass() {
+    return FHIR_TYPE_TO_JAVA_CLASS.get(fhirType);
+  }
+
+  /**
+   * If the type of this expression is a Reference, get the resource types that it can refer to.
+   */
+  public Set<Enumerations.ResourceType> getReferenceResourceTypes() {
+    if (!(definition instanceof RuntimeChildResourceDefinition)) {
+      throw new IllegalStateException("Definition is not a Reference");
+    }
+    RuntimeChildResourceDefinition resourceDefinition = (RuntimeChildResourceDefinition) definition;
+    return resourceDefinition.getResourceTypes().stream()
+        .map(clazz -> {
+          String resourceCode;
+          try {
+            resourceCode = clazz.getConstructor().newInstance().fhirType();
+            return Enumerations.ResourceType.fromCode(resourceCode);
+          } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            throw new RuntimeException("Problem accessing resource types on element", e);
+          }
+        })
+        .collect(Collectors.toSet());
+  }
+
+  /**
+   * Creates new columns for ID and value, and renames them to be hashes of the FHIRPath
+   * expression.
+   */
+  public void setHashedValue(Column idColumn, Column valueColumn) {
+    if (dataset == null || fhirPath == null) {
+      throw new IllegalArgumentException("dataset and fhirPath must be set");
+    }
+    String hash = md5Short(fhirPath);
+    dataset = dataset.withColumn(hash + "_id", idColumn);
+    dataset = dataset.withColumn(hash, valueColumn);
+    this.idColumn = dataset.col(hash + "_id");
+    this.valueColumn = dataset.col(hash);
+  }
+
+  /**
+   * Get the FHIR type from a BaseRuntimeChildDefinition.
+   */
+  public static FHIRDefinedType fhirTypeFromDefinition(BaseRuntimeChildDefinition definition) {
+    IBase exampleObject = definition
+        .getChildByName(definition.getElementName()).newInstance();
+    return FHIRDefinedType.fromCode(exampleObject.fhirType());
+  }
+
+  /**
+   * Get the BaseRuntimeElementDefinition for a BaseRuntimeChildDefinition.
+   */
+  public static BaseRuntimeElementDefinition elementFromChildDefinition(
+      BaseRuntimeChildDefinition childDefinition) {
+    return childDefinition.getChildByName(childDefinition.getElementName());
+  }
+
+  private void updateFhirTypeFromDefinition() {
+    if (definition == null) {
+      throw new IllegalStateException("Expression has no definition");
+    }
+    fhirType = fhirTypeFromDefinition(definition);
   }
 
   /**
    * Describes a ParseResult in terms of the FHIRPath type that it evaluates to.
    */
   public enum FhirPathType {
+    // See http://hl7.org/fhirpath/2018Sep/index.html#expressions.
     BOOLEAN(BooleanType.class, "Boolean"),
     STRING(StringType.class, "String"),
     INTEGER(IntegerType.class, "Integer"),
@@ -289,25 +416,30 @@ public class ParsedExpression {
     DATE_TIME(DateTimeType.class, "DateTime"),
     TIME(TimeType.class, "Time"),
     QUANTITY(Quantity.class, "Quantity"),
+    // The Coding data type does not exist in the FHIRPath spec, this is currently unique to our
+    // implementation.
     CODING(Coding.class, "Coding");
 
+    // See https://hl7.org/fhir/fhirpath.html#types.
     private static final Map<FHIRDefinedType, FhirPathType> fhirTypeCodeToFhirPathType = new EnumMap<FHIRDefinedType, FhirPathType>(
         FHIRDefinedType.class) {{
-      put(FHIRDefinedType.DECIMAL, DECIMAL);
-      put(FHIRDefinedType.MARKDOWN, STRING);
-      put(FHIRDefinedType.ID, STRING);
-      put(FHIRDefinedType.DATETIME, DATE_TIME);
-      put(FHIRDefinedType.TIME, TIME);
-      put(FHIRDefinedType.DATE, DATE_TIME);
-      put(FHIRDefinedType.CODE, STRING);
+      put(FHIRDefinedType.BOOLEAN, BOOLEAN);
       put(FHIRDefinedType.STRING, STRING);
       put(FHIRDefinedType.URI, STRING);
+      put(FHIRDefinedType.CODE, STRING);
       put(FHIRDefinedType.OID, STRING);
+      put(FHIRDefinedType.ID, STRING);
+      put(FHIRDefinedType.UUID, STRING);
+      put(FHIRDefinedType.MARKDOWN, STRING);
+      put(FHIRDefinedType.BASE64BINARY, STRING);
       put(FHIRDefinedType.INTEGER, INTEGER);
       put(FHIRDefinedType.UNSIGNEDINT, INTEGER);
       put(FHIRDefinedType.POSITIVEINT, INTEGER);
-      put(FHIRDefinedType.BOOLEAN, BOOLEAN);
+      put(FHIRDefinedType.DECIMAL, DECIMAL);
+      put(FHIRDefinedType.DATE, DATE_TIME);
+      put(FHIRDefinedType.DATETIME, DATE_TIME);
       put(FHIRDefinedType.INSTANT, DATE_TIME);
+      put(FHIRDefinedType.TIME, TIME);
     }};
 
     // Java class that can be used for representing the value of this expression.
@@ -336,87 +468,6 @@ public class ParsedExpression {
     @Nonnull
     public String getFhirPathType() {
       return fhirPathType;
-    }
-  }
-
-  /**
-   * Describes a ParseResult in terms of the FHIR type that it evaluates to. This may be different
-   * to the FHIRPath type in some cases, e.g. the `count` function returns a FHIRPath Integer, but
-   * an unsignedInt FHIR type.
-   */
-  public enum FhirType {
-    DECIMAL(DecimalType.class, BigDecimal.class, "decimal"),
-    MARKDOWN(MarkdownType.class, String.class, "markdown"),
-    ID(IdType.class, String.class, "id"),
-    DATE_TIME(DateTimeType.class, String.class, "datetime"),
-    TIME(TimeType.class, String.class, "time"),
-    DATE(DateType.class, String.class, "date"),
-    CODE(CodeType.class, String.class, "code"),
-    STRING(StringType.class, String.class, "string"),
-    URI(UriType.class, String.class, "uri"),
-    OID(OidType.class, String.class, "oid"),
-    INTEGER(IntegerType.class, Integer.class, "integer"),
-    UNSIGNED_INT(UnsignedIntType.class, Long.class, "unsignedInt"),
-    POSITIVE_INT(PositiveIntType.class, Long.class, "positiveInt"),
-    BOOLEAN(BooleanType.class, Boolean.class, "boolean"),
-    INSTANT(InstantType.class, Date.class, "instant");
-
-    private static final Map<FHIRDefinedType, FhirType> fhirTypeCodeToFhirType = new EnumMap<FHIRDefinedType, FhirType>(
-        FHIRDefinedType.class) {{
-      put(FHIRDefinedType.DECIMAL, DECIMAL);
-      put(FHIRDefinedType.MARKDOWN, MARKDOWN);
-      put(FHIRDefinedType.ID, ID);
-      put(FHIRDefinedType.DATETIME, DATE_TIME);
-      put(FHIRDefinedType.TIME, TIME);
-      put(FHIRDefinedType.DATE, DATE);
-      put(FHIRDefinedType.CODE, CODE);
-      put(FHIRDefinedType.STRING, STRING);
-      put(FHIRDefinedType.URI, URI);
-      put(FHIRDefinedType.OID, OID);
-      put(FHIRDefinedType.INTEGER, INTEGER);
-      put(FHIRDefinedType.UNSIGNEDINT, UNSIGNED_INT);
-      put(FHIRDefinedType.POSITIVEINT, POSITIVE_INT);
-      put(FHIRDefinedType.BOOLEAN, BOOLEAN);
-      put(FHIRDefinedType.INSTANT, INSTANT);
-    }};
-
-    // HAPI class that can be used for representing the value of this expression.
-    @Nonnull
-    private final Class hapiClass;
-
-    // Java class that can be used for representing the value of this expression.
-    @Nonnull
-    private final Class javaClass;
-
-    // One of the data types defined in the FHIRPath specification.
-    @Nonnull
-    private final String typeCode;
-
-    FhirType(@Nonnull Class hapiClass, @Nonnull Class javaClass,
-        @Nonnull String typeCode) {
-      this.hapiClass = hapiClass;
-      this.javaClass = javaClass;
-      this.typeCode = typeCode;
-    }
-
-    // Maps a FHIR type code to a FHIR data type.
-    public static FhirType forFhirTypeCode(FHIRDefinedType fhirTypeCode) {
-      return fhirTypeCodeToFhirType.get(fhirTypeCode);
-    }
-
-    @Nonnull
-    public Class getHapiClass() {
-      return hapiClass;
-    }
-
-    @Nonnull
-    public Class getJavaClass() {
-      return javaClass;
-    }
-
-    @Nonnull
-    public String getTypeCode() {
-      return typeCode;
     }
   }
 

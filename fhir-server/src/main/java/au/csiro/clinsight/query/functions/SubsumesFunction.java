@@ -4,9 +4,9 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.isCodeSystemKnown;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.CODING;
 import static au.csiro.clinsight.utilities.Strings.md5Short;
+import static org.apache.spark.sql.functions.max;
 
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.query.Mapping;
@@ -14,7 +14,6 @@ import au.csiro.clinsight.query.operators.PathTraversalInput;
 import au.csiro.clinsight.query.operators.PathTraversalOperator;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -64,7 +63,6 @@ public class SubsumesFunction implements Function {
     SparkSession spark = input.getContext().getSparkSession();
     ParsedExpression inputResult = validateInput(input);
     ParsedExpression argument = validateArgument(input);
-    String hash = md5Short(input.getExpression());
 
     // Create a dataset to represent the input expression.
     Dataset<Coding> inputDataset;
@@ -77,15 +75,15 @@ public class SubsumesFunction implements Function {
     } else {
       // If the argument is a literal value, we create a dataset with a single Coding.
       assert argument.getLiteralValue().fhirType().equals("Coding");
-      List<Coding> codings = Arrays.asList((Coding) argument.getLiteralValue());
+      List<Coding> codings = Collections.singletonList((Coding) argument.getLiteralValue());
       argumentDataset = spark.createDataset(codings, Encoders.bean(Coding.class));
     }
 
-    Column inputIdCol = inputDataset.col(inputResult.getDatasetColumn() + "_id");
-    Column inputSystemCol = inputDataset.col(inputResult.getDatasetColumn()).getField("system");
-    Column inputCodeCol = inputDataset.col(inputResult.getDatasetColumn()).getField("code");
-    Column argumentSystemCol = argumentDataset.col(argument.getDatasetColumn()).getField("system");
-    Column argumentCodeCol = argumentDataset.col(argument.getDatasetColumn()).getField("code");
+    Column inputIdCol = inputResult.getIdColumn();
+    Column inputSystemCol = inputResult.getValueColumn().getField("system");
+    Column inputCodeCol = inputResult.getValueColumn().getField("code");
+    Column argumentSystemCol = argument.getValueColumn().getField("system");
+    Column argumentCodeCol = argument.getValueColumn().getField("code");
 
     // Build a closure table dataset.
     Dataset<Mapping> closureTable = buildClosureTable(input, inputResult, argument);
@@ -120,18 +118,19 @@ public class SubsumesFunction implements Function {
         .select(inputIdCol, equivalenceMatch);
     dataset = dataset
         .groupBy(inputIdCol)
-        .agg(org.apache.spark.sql.functions.max(equivalenceMatch));
-    dataset = dataset.select(inputIdCol.alias(hash + "_id"), equivalenceMatch.alias(hash));
+        .agg(max(equivalenceMatch));
+    dataset = dataset.select(inputIdCol, equivalenceMatch);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setFhirPathType(FhirPathType.BOOLEAN);
-    result.setFhirType(FhirType.BOOLEAN);
+    result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);
     result.setSingular(inputResult.isSingular());
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
+    result.setIdColumn(inputIdCol);
+    result.setValueColumn(equivalenceMatch);
     return result;
   }
 
@@ -150,7 +149,7 @@ public class SubsumesFunction implements Function {
     // If the input is a literal, harvest the code - otherwise we need to query for the codes.
     if (inputResult.getLiteralValue() != null) {
       Coding literalValue = (Coding) inputResult.getLiteralValue();
-      List<Coding> codings = Arrays.asList(literalValue);
+      List<Coding> codings = Collections.singletonList(literalValue);
       codingsBySystem.put(literalValue.getSystem(), codings);
     } else {
       inputCodes = getCodes(inputResult);
@@ -158,7 +157,7 @@ public class SubsumesFunction implements Function {
     // If the argument is a literal, harvest the code - otherwise we need to query for the codes.
     if (argument.getLiteralValue() != null) {
       Coding literalValue = (Coding) argument.getLiteralValue();
-      List<Coding> codings = Arrays.asList(literalValue);
+      List<Coding> codings = Collections.singletonList(literalValue);
       if (codingsBySystem.get(literalValue.getSystem()) == null) {
         codingsBySystem.put(literalValue.getSystem(), codings);
       } else {
@@ -203,11 +202,6 @@ public class SubsumesFunction implements Function {
     TerminologyClient terminologyClient = input.getContext().getTerminologyClient();
     List<Mapping> mappings = new ArrayList<>();
     for (String codeSystem : codingsBySystem.keySet()) {
-      // If the code system is not known, skip adding its codings to the closure.
-      if (!isCodeSystemKnown(codeSystem)) {
-        continue;
-      }
-
       // Get the codings for this code system.
       List<Coding> codings = codingsBySystem.get(codeSystem);
 
@@ -258,7 +252,7 @@ public class SubsumesFunction implements Function {
     if (inputResult.getFhirPathType() == CODING) {
       return inputResult;
     }
-    FHIRDefinedType typeCode = inputResult.getPathTraversal().getElementDefinition().getFhirType();
+    FHIRDefinedType typeCode = inputResult.getFhirType();
     if (!typeCode.equals(FHIRDefinedType.CODEABLECONCEPT)) {
       throw new InvalidRequestException(
           "Input to " + functionName + " function must be Coding or CodeableConcept: "
@@ -283,7 +277,7 @@ public class SubsumesFunction implements Function {
     if (argument.getFhirPathType() == CODING) {
       return argument;
     }
-    FHIRDefinedType typeCode = argument.getPathTraversal().getElementDefinition().getFhirType();
+    FHIRDefinedType typeCode = argument.getFhirType();
     if (!typeCode.equals(FHIRDefinedType.CODEABLECONCEPT)) {
       throw new InvalidRequestException(
           "Argument to " + functionName + " function must be Coding or CodeableConcept: " + argument

@@ -9,7 +9,6 @@ import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.INT
 
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.HashSet;
 import java.util.Set;
@@ -17,6 +16,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Provides the functionality of the family of math operators within FHIRPath, i.e. +, -, *, / and
@@ -50,50 +50,63 @@ public class MathOperator implements BinaryOperator {
 
     // Create a new dataset which joins left and right, using the given boolean operator within
     // the condition.
-    Dataset<Row> leftDataset = left.getDataset();
-    Dataset<Row> rightDataset = right.getDataset();
-    Column leftIdColumn = leftDataset.col(left.getDatasetColumn() + "_id");
-    Column leftColumn = leftDataset.col(left.getDatasetColumn());
-    Column rightIdColumn = rightDataset.col(right.getDatasetColumn() + "_id");
-    Column rightColumn = rightDataset.col(right.getDatasetColumn());
-    String newHash = Strings.md5Short(fhirPath);
-    Dataset<Row> newDataset = leftDataset
+    Dataset<Row> leftDataset = left.getDataset(),
+        rightDataset = right.getDataset();
+    Column leftIdColumn = left.getIdColumn(),
+        leftColumn = left.getValueColumn(),
+        rightIdColumn = right.getIdColumn(),
+        rightColumn = right.getValueColumn();
+    Dataset<Row> dataset = leftDataset
         .join(rightDataset, leftIdColumn.equalTo(rightIdColumn), "left_outer");
 
     // Based on the type of operator, create the correct column expression.
-    Column expression;
+    Column expression = null;
+    FhirPathType fhirPathType = null;
+    FHIRDefinedType fhirType = null;
     switch (operator) {
       case "+":
-        leftColumn.plus(rightColumn);
+        expression = leftColumn.plus(rightColumn);
+        fhirPathType = left.getFhirPathType();
+        fhirType = left.getFhirType();
         break;
       case "-":
-        leftColumn.minus(rightColumn);
+        expression = leftColumn.minus(rightColumn);
+        fhirPathType = left.getFhirPathType();
+        fhirType = left.getFhirType();
         break;
       case "*":
-        leftColumn.multiply(rightColumn);
+        expression = leftColumn.multiply(rightColumn);
+        fhirPathType = left.getFhirPathType();
+        fhirType = left.getFhirType();
+        // TODO: Implement smart multiplication for Quantity.
         break;
       case "/":
-        leftColumn.divide(rightColumn);
+        expression = leftColumn.divide(rightColumn);
+        fhirPathType = DECIMAL;
+        fhirType = FHIRDefinedType.DECIMAL;
         break;
       case "mod":
-        leftColumn.mod(rightColumn);
+        expression = leftColumn.mod(rightColumn);
+        fhirPathType = INTEGER;
+        fhirType = FHIRDefinedType.INTEGER;
         break;
       default:
         assert false : "Unsupported math operator encountered: " + operator;
     }
 
-    newDataset = newDataset
-        .select(leftIdColumn.alias(newHash + "_id"), leftColumn.and(rightColumn).alias(newHash));
+    Column valueColumn = expression;
+    dataset = dataset.withColumn("mathResult", valueColumn);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(fhirPath);
-    result.setFhirPathType(left.getFhirPathType());
-    result.setFhirType(left.getFhirType());
+    result.setFhirPathType(fhirPathType);
+    result.setFhirType(fhirType);
     result.setPrimitive(true);
     result.setSingular(true);
-    result.setDataset(newDataset);
-    result.setDatasetColumn(newHash);
+    result.setDataset(dataset);
+    result.setIdColumn(leftIdColumn);
+    result.setValueColumn(valueColumn);
     return result;
   }
 

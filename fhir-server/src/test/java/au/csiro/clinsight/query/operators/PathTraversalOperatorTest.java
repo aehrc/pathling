@@ -6,29 +6,26 @@ package au.csiro.clinsight.query.operators;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.mockito.Mockito.mock;
 
 import au.csiro.clinsight.TestUtilities;
-import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.fhir.definitions.PathResolver;
-import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
+import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Collections;
 import java.util.List;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.*;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * @author John Grimes
  */
+@Category(au.csiro.clinsight.UnitTest.class)
 public class PathTraversalOperatorTest {
 
   private SparkSession spark;
@@ -38,11 +35,8 @@ public class PathTraversalOperatorTest {
     spark = SparkSession.builder()
         .appName("clinsight-test")
         .config("spark.master", "local")
+        .config("spark.driver.host", "localhost")
         .getOrCreate();
-
-    TerminologyClient terminologyClient = mock(TerminologyClient.class);
-    TestUtilities.mockDefinitionRetrieval(terminologyClient);
-    ResourceDefinitions.ensureInitialized(terminologyClient);
   }
 
   @Test
@@ -57,34 +51,42 @@ public class PathTraversalOperatorTest {
 
     Row row = RowFactory.create("abc", RowFactory.create("female", true));
     Dataset<Row> dataset = spark.createDataFrame(Collections.singletonList(row), rowStruct);
+    Column idColumn = dataset.col(dataset.columns()[0]);
+    Column valueColumn = dataset.col(dataset.columns()[1]);
 
     ParsedExpression left = new ParsedExpression();
-    left.setFhirPath("%resource");
+    left.setFhirPath("Patient");
     left.setResourceType(ResourceType.PATIENT);
+    left.setResource(true);
     left.setOrigin(left);
     left.setDataset(dataset);
-    left.setDatasetColumn("123abcd");
-    left.setPathTraversal(PathResolver.resolvePath("Patient"));
+    left.setIdColumn(idColumn);
+    left.setValueColumn(valueColumn);
+
+    ExpressionParserContext context = new ExpressionParserContext();
+    context.setFhirContext(TestUtilities.getFhirContext());
 
     PathTraversalInput input = new PathTraversalInput();
     input.setLeft(left);
     input.setRight("gender");
     input.setExpression("gender");
+    input.setContext(context);
 
     PathTraversalOperator pathTraversalOperator = new PathTraversalOperator();
     ParsedExpression result = pathTraversalOperator.invoke(input);
 
     assertThat(result.getFhirPath()).isEqualTo("gender");
     assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.STRING);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.CODE);
     assertThat(result.isPrimitive()).isTrue();
     assertThat(result.isSingular()).isFalse();
     assertThat(result.getOrigin()).isEqualTo(left);
-    assertThat(result.getDatasetColumn()).isNotBlank();
+    assertThat(result.getIdColumn()).isNotNull();
+    assertThat(result.getValueColumn()).isNotNull();
+    assertThat(result.getDefinition()).isNotNull();
 
-    Dataset<Row> resultDataset = result.getDataset();
-    assertThat(resultDataset.columns().length).isEqualTo(2);
-    assertThat(resultDataset.columns()[0]).isEqualTo(result.getDatasetColumn() + "_id");
-    assertThat(resultDataset.columns()[1]).isEqualTo(result.getDatasetColumn());
+    Dataset<Row> resultDataset = result.getDataset()
+        .select(result.getIdColumn(), result.getValueColumn());
     List<Row> resultRows = resultDataset.collectAsList();
     assertThat(resultRows.size()).isEqualTo(1);
     Row resultRow = resultRows.get(0);

@@ -7,6 +7,6 @@ package au.csiro.clinsight;
 /**
  * @author John Grimes
  */
-public interface SystemTest {
+public interface UnitTest {
 
 }

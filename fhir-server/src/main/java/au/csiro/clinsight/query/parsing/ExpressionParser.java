@@ -13,11 +13,6 @@ import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
 import au.csiro.clinsight.fhir.FhirPathParser.*;
-import au.csiro.clinsight.fhir.definitions.PathResolver;
-import au.csiro.clinsight.fhir.definitions.PathTraversal;
-import au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType;
-import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
-import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
 import au.csiro.clinsight.query.IdAndBoolean;
 import au.csiro.clinsight.query.functions.Function;
 import au.csiro.clinsight.query.functions.FunctionInput;
@@ -26,7 +21,6 @@ import au.csiro.clinsight.query.operators.BinaryOperatorInput;
 import au.csiro.clinsight.query.operators.PathTraversalInput;
 import au.csiro.clinsight.query.operators.PathTraversalOperator;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.math.BigDecimal;
 import java.text.ParseException;
@@ -38,6 +32,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.spark.sql.*;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * This is an ANTLR-based parser for processing a FHIRPath expression, and aggregating the results
@@ -100,8 +95,8 @@ public class ExpressionParser {
     }
 
     @Nonnull
-    private ParsedExpression visitBinaryOperator(ExpressionContext ctx,
-        ExpressionContext leftExpression, ExpressionContext rightExpression,
+    private ParsedExpression visitBinaryOperator(ExpressionContext leftExpression,
+        ExpressionContext rightExpression,
         String operatorString) {
       // Parse the left and right expressions.
       ParsedExpression leftResult = new ExpressionVisitor(context)
@@ -127,37 +122,37 @@ public class ExpressionParser {
 
     @Override
     public ParsedExpression visitEqualityExpression(EqualityExpressionContext ctx) {
-      return visitBinaryOperator(ctx, ctx.expression(0), ctx.expression(1),
+      return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
           ctx.children.get(1).toString());
     }
 
     @Override
     public ParsedExpression visitInequalityExpression(InequalityExpressionContext ctx) {
-      return visitBinaryOperator(ctx, ctx.expression(0), ctx.expression(1),
+      return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
           ctx.children.get(1).toString());
     }
 
     @Override
     public ParsedExpression visitAndExpression(AndExpressionContext ctx) {
-      return visitBinaryOperator(ctx, ctx.expression(0), ctx.expression(1),
+      return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
           ctx.children.get(1).toString());
     }
 
     @Override
     public ParsedExpression visitOrExpression(OrExpressionContext ctx) {
-      return visitBinaryOperator(ctx, ctx.expression(0), ctx.expression(1),
+      return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
           ctx.children.get(1).toString());
     }
 
     @Override
     public ParsedExpression visitImpliesExpression(ImpliesExpressionContext ctx) {
-      return visitBinaryOperator(ctx, ctx.expression(0), ctx.expression(1),
+      return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
           ctx.children.get(1).toString());
     }
 
     @Override
     public ParsedExpression visitMembershipExpression(MembershipExpressionContext ctx) {
-      return visitBinaryOperator(ctx, ctx.expression(0), ctx.expression(1),
+      return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
           ctx.children.get(1).toString());
     }
 
@@ -280,12 +275,10 @@ public class ExpressionParser {
       // If there is no invoker, we assume that this is a base resource. If we can't resolve it,
       // an error will be thrown.
       String hash = md5Short(fhirPath);
-      PathTraversal pathTraversal;
       try {
         //noinspection ResultOfMethodCallIgnored
         ResourceType.fromCode(fhirPath);
-        pathTraversal = PathResolver.resolvePath(fhirPath);
-      } catch (FHIRException | ResourceNotKnownException | ElementNotKnownException e) {
+      } catch (FHIRException e) {
         // If the expression is not a base resource type, treat it as a path traversal from the
         // subject resource.
         PathTraversalInput pathTraversalInput = new PathTraversalInput();
@@ -295,12 +288,10 @@ public class ExpressionParser {
         pathTraversalInput.setContext(context);
         return new PathTraversalOperator().invoke(pathTraversalInput);
       }
-      assert pathTraversal.getType() == ResolvedElementType.RESOURCE;
 
       // Build a new parse result to represent the resource.
       ParsedExpression result = new ParsedExpression();
       result.setFhirPath(fhirPath);
-      result.setPathTraversal(pathTraversal);
       result.setResource(true);
       result.setResourceType(Enumerations.ResourceType.fromCode(fhirPath));
       result.setOrigin(result);
@@ -312,9 +303,12 @@ public class ExpressionParser {
           .copyOfRange(dataset.columns(), 1, dataset.columns().length);
       dataset = dataset
           .withColumn(hash, functions.struct(firstColumn, remainingColumns));
-      dataset = dataset.select(dataset.col("id").alias(hash + "_id"), dataset.col(hash));
+      Column idColumn = dataset.col("id");
+      Column valueColumn = dataset.col(hash);
+      dataset = dataset.select(idColumn, valueColumn);
       result.setDataset(dataset);
-      result.setDatasetColumn(hash);
+      result.setIdColumn(idColumn);
+      result.setValueColumn(valueColumn);
 
       return result;
     }
@@ -415,7 +409,7 @@ public class ExpressionParser {
 
       ParsedExpression result = new ParsedExpression();
       result.setFhirPathType(FhirPathType.STRING);
-      result.setFhirType(FhirType.STRING);
+      result.setFhirType(FHIRDefinedType.STRING);
       result.setFhirPath(ctx.getText());
       result.setLiteralValue(new StringType(value));
       result.setPrimitive(true);
@@ -426,7 +420,7 @@ public class ExpressionParser {
     @Override
     public ParsedExpression visitDateTimeLiteral(DateTimeLiteralContext ctx) {
       // Parse the string according to ISO8601.
-      Date value = null;
+      Date value;
       try {
         value = ParsedExpression.DATE_TIME_FORMAT.parse(ctx.getText().replace("@", ""));
       } catch (ParseException e) {
@@ -435,7 +429,7 @@ public class ExpressionParser {
 
       ParsedExpression result = new ParsedExpression();
       result.setFhirPathType(FhirPathType.DATE_TIME);
-      result.setFhirType(FhirType.DATE_TIME);
+      result.setFhirType(FHIRDefinedType.STRING);
       result.setFhirPath(ctx.getText());
       result.setLiteralValue(new DateTimeType(value));
       result.setPrimitive(true);
@@ -455,7 +449,7 @@ public class ExpressionParser {
 
       ParsedExpression result = new ParsedExpression();
       result.setFhirPathType(FhirPathType.TIME);
-      result.setFhirType(FhirType.TIME);
+      result.setFhirType(FHIRDefinedType.TIME);
       result.setFhirPath(ctx.getText());
       result.setLiteralValue(new TimeType(timeString));
       result.setPrimitive(true);
@@ -476,7 +470,7 @@ public class ExpressionParser {
 
       ParsedExpression result = new ParsedExpression();
       result.setFhirPathType(FhirPathType.INTEGER);
-      result.setFhirType(FhirType.INTEGER);
+      result.setFhirType(FHIRDefinedType.INTEGER);
       result.setFhirPath(ctx.getText());
       result.setLiteralValue(value);
       result.setPrimitive(true);
@@ -490,7 +484,7 @@ public class ExpressionParser {
 
       ParsedExpression result = new ParsedExpression();
       result.setFhirPathType(FhirPathType.BOOLEAN);
-      result.setFhirType(FhirType.BOOLEAN);
+      result.setFhirType(FHIRDefinedType.BOOLEAN);
       result.setFhirPath(ctx.getText());
       result.setLiteralValue(new BooleanType(value));
       result.setPrimitive(true);
@@ -501,17 +495,17 @@ public class ExpressionParser {
     @Override
     public ParsedExpression visitNullLiteral(NullLiteralContext ctx) {
       // Create an empty dataset with and ID and value column.
-      String hash = md5Short(ctx.getText());
       Dataset<Row> dataset = context.getSparkSession()
           .emptyDataset(Encoders.bean(IdAndBoolean.class)).toDF();
-      Column idColumn = dataset.col(dataset.columns()[0]).alias(hash + "_id");
-      Column valueColumn = dataset.col(dataset.columns()[1]).alias(hash);
+      Column idColumn = dataset.col(dataset.columns()[0]);
+      Column valueColumn = dataset.col(dataset.columns()[1]);
       dataset = dataset.select(idColumn, valueColumn);
 
       ParsedExpression result = new ParsedExpression();
       result.setFhirPath(ctx.getText());
       result.setDataset(dataset);
-      result.setDatasetColumn(hash);
+      result.setIdColumn(idColumn);
+      result.setValueColumn(valueColumn);
       return result;
     }
 

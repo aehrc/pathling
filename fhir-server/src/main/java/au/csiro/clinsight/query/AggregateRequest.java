@@ -34,7 +34,6 @@ public class AggregateRequest {
   @Nonnull
   private final List<String> filters = new ArrayList<>();
 
-  @Nonnull
   private ResourceType subjectResource;
 
   public AggregateRequest() {
@@ -55,7 +54,8 @@ public class AggregateRequest {
     @SuppressWarnings("OptionalGetWithoutIsPresent") ParametersParameterComponent subjectResourceParam = parameters
         .getParameter().stream().filter(param -> param.getName().equals("subjectResource"))
         .findFirst().get();
-    if (!subjectResourceParam.hasValue() || subjectResourceParam.getValue().fhirType() != "code") {
+    if (!subjectResourceParam.hasValue() || !subjectResourceParam.getValue().fhirType()
+        .equals("code")) {
       throw new InvalidRequestException("Subject resource parameter must have code value");
     }
     subjectResource = ResourceType

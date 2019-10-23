@@ -4,29 +4,27 @@
 
 package au.csiro.clinsight.query;
 
-import static au.csiro.clinsight.fhir.definitions.ResourceDefinitions.ensureInitialized;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.BOOLEAN;
-import static au.csiro.clinsight.utilities.Strings.md5Short;
 
 import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.fhir.definitions.PathResolver;
-import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.AggregateRequest.Aggregation;
 import au.csiro.clinsight.query.AggregateRequest.Grouping;
 import au.csiro.clinsight.query.parsing.ExpressionParser;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.*;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Enumeration;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Type;
 import org.slf4j.Logger;
@@ -42,6 +40,7 @@ public class AggregateExecutor {
 
   private static final Logger logger = LoggerFactory.getLogger(AggregateExecutor.class);
 
+  private final FhirContext fhirContext;
   private final SparkSession spark;
   private final ResourceReader resourceReader;
   private TerminologyClient terminologyClient;
@@ -49,13 +48,9 @@ public class AggregateExecutor {
   public AggregateExecutor(@Nonnull AggregateExecutorConfiguration configuration) {
     logger.info("Creating new AggregateExecutor: " + configuration);
     spark = configuration.getSparkSession();
+    fhirContext = configuration.getFhirContext();
     terminologyClient = configuration.getTerminologyClient();
     resourceReader = configuration.getResourceReader();
-    initialiseResourceDefinitions();
-  }
-
-  private void initialiseResourceDefinitions() {
-    ensureInitialized(terminologyClient);
   }
 
   /**
@@ -67,7 +62,6 @@ public class AggregateExecutor {
       return false;
     }
     try {
-      ResourceDefinitions.checkInitialised();
       terminologyClient.getServerMetadata();
     } catch (Exception e) {
       logger.error("Readiness failure", e);
@@ -76,33 +70,38 @@ public class AggregateExecutor {
     return true;
   }
 
+  public Set<ResourceType> getAvailableResourceTypes() {
+    return resourceReader.getAvailableResourceTypes();
+  }
+
   public AggregateResponse execute(AggregateRequest query) throws InvalidRequestException {
     try {
       // Set up the subject resource dataset.
       ResourceType resourceType = query.getSubjectResource();
       String resourceCode = resourceType.toCode();
-      String hash = md5Short(resourceCode);
       Dataset<Row> subject = resourceReader.read(resourceType);
       String firstColumn = subject.columns()[0];
       String[] remainingColumns = Arrays
           .copyOfRange(subject.columns(), 1, subject.columns().length);
-      subject = subject
-          .withColumn(hash, org.apache.spark.sql.functions.struct(firstColumn, remainingColumns));
-      subject = subject.select(subject.col("id").alias(hash + "_id"), subject.col(hash));
+      Column idColumn = subject.col("id");
+      subject = subject.withColumn("resource",
+          org.apache.spark.sql.functions.struct(firstColumn, remainingColumns));
+      Column valueColumn = subject.col("resource");
+      subject = subject.select(idColumn, valueColumn);
 
       // Create an expression for the subject resource.
       ParsedExpression subjectResource = new ParsedExpression();
       subjectResource.setFhirPath(resourceCode);
       subjectResource.setDataset(subject);
-      subjectResource.setDatasetColumn(hash);
       subjectResource.setResource(true);
       subjectResource.setResourceType(resourceType);
-      subjectResource.setPathTraversal(PathResolver.resolvePath(resourceCode));
       subjectResource.setSingular(true);
       subjectResource.setOrigin(subjectResource);
+      subjectResource.setHashedValue(idColumn, valueColumn);
 
       // Gather dependencies for the execution of the expression parser.
       ExpressionParserContext context = new ExpressionParserContext();
+      context.setFhirContext(fhirContext);
       context.setTerminologyClient(terminologyClient);
       context.setSparkSession(spark);
       context.setResourceReader(resourceReader);
@@ -121,13 +120,57 @@ public class AggregateExecutor {
       List<ParsedExpression> parsedAggregations = parseAggregation(expressionParser,
           query.getAggregations());
 
-      // Build a dataset representing the final result of the query.
-      Dataset<Row> result = buildResult(query, parsedAggregations, parsedGroupings,
-          parsedFilters);
+      // Gather all expressions into a single list.
+      Dataset<Row> result = subjectResource.getDataset();
+      List<ParsedExpression> allExpressions = new ArrayList<>();
+      allExpressions.add(subjectResource);
+      allExpressions.addAll(parsedFilters);
+      allExpressions.addAll(parsedGroupings);
+      allExpressions.addAll(parsedAggregations);
+      Set<Dataset> joinedDatasets = new HashSet<>();
+      joinedDatasets.add(subjectResource.getDataset());
+
+      // Join all datasets together, omitting any duplicates.
+      ParsedExpression previous = subjectResource;
+      for (int i = 0; i < allExpressions.size(); i++) {
+        ParsedExpression current = allExpressions.get(i);
+        if (i > 0 && !joinedDatasets.contains(current.getDataset())) {
+          result = result.join(current.getDataset(),
+              previous.getIdColumn().equalTo(current.getIdColumn()));
+          previous = current;
+          joinedDatasets.add(current.getDataset());
+        }
+      }
+
+      // Apply filters.
+      Optional<Column> filterCondition = parsedFilters.stream()
+          .map(ParsedExpression::getValueColumn)
+          .reduce(Column::and);
+      if (filterCondition.isPresent()) {
+        result = result.filter(filterCondition.get());
+      }
+
+      // Apply groupings.
+      Column[] groupingCols = parsedGroupings.stream()
+          .map(ParsedExpression::getValueColumn)
+          .toArray(Column[]::new);
+      RelationalGroupedDataset groupedResult = null;
+      if (groupingCols.length > 0) {
+        groupedResult = result.groupBy(groupingCols);
+      }
+
+      // Apply aggregations.
+      Column firstAggregation = parsedAggregations.get(0).getAggregationColumn();
+      Column[] remainingAggregations = parsedAggregations.stream()
+          .skip(1)
+          .map(ParsedExpression::getAggregationColumn)
+          .toArray(Column[]::new);
+      result = groupingCols.length > 0
+          ? groupedResult.agg(firstAggregation, remainingAggregations)
+          : result.agg(firstAggregation, remainingAggregations);
 
       // Translate the result into a response object to be passed back to the user.
-      return buildResponse(result, parsedAggregations, parsedGroupings
-      );
+      return buildResponse(result, parsedAggregations, parsedGroupings);
 
     } catch (BaseServerResponseException e) {
       // Errors relating to invalid input are re-raised, to be dealt with by HAPI.
@@ -193,116 +236,6 @@ public class AggregateExecutor {
     }).collect(Collectors.toList());
   }
 
-  private Dataset<Row> buildResult(@Nonnull AggregateRequest query,
-      @Nonnull List<ParsedExpression> parsedAggregations,
-      @Nonnull List<ParsedExpression> parsedGroupings,
-      @Nonnull List<ParsedExpression> parsedFilters) {
-    Dataset<Row> result = null;
-    // Create a dataset which represents only the resource IDs for which the filter expressions
-    // evaluate to true.
-    if (!parsedFilters.isEmpty()) {
-      // Get the first filter dataset and filter it based upon its values.
-      ParsedExpression firstFilter = parsedFilters.get(0);
-      Column currentId = firstFilter.getDataset().col(firstFilter.getDatasetColumn() + "_id");
-      Column resourceId = currentId.alias("resource_id");
-      Column currentValue = firstFilter.getDataset().col(firstFilter.getDatasetColumn());
-      result = firstFilter.getDataset();
-      result = result.filter(currentValue);
-      result = result.select(resourceId);
-      // Go through each of the remaining filters and perform an inner join from the previous
-      // dataset, conditional on the value column being true.
-      for (int i = 1; i < parsedFilters.size(); i++) {
-        ParsedExpression currentFilter = parsedFilters.get(i);
-        currentId = currentFilter.getDataset().col(currentFilter.getDatasetColumn() + "_id");
-        currentValue = currentFilter.getDataset().col(currentFilter.getDatasetColumn());
-        result = result
-            .join(currentFilter.getDataset(), resourceId.equalTo(currentId).and(currentValue),
-                "inner");
-        result = result.select(resourceId);
-      }
-    }
-
-    // Join each of the grouping datasets to the result, and retain each as a column. These are all
-    // left outer joins.
-    if (!parsedGroupings.isEmpty()) {
-      // Get the first grouping, and either join it to the filters or make it the start of the
-      // result.
-      ParsedExpression firstGrouping = parsedGroupings.get(0);
-      Column firstId = firstGrouping.getDataset().col(firstGrouping.getDatasetColumn() + "_id");
-      if (result == null) {
-        // If there were no filters, the first grouping is our starting point.
-        result = firstGrouping.getDataset();
-      } else {
-        // If there were filters, we join the last filter to the first grouping.
-        Column resourceId = result.col("resource_id");
-        String firstGroupingLabel = query.getGroupings().get(0).getLabel();
-        Column firstGroupingValue = resourceId.equalTo(firstId).alias(firstGroupingLabel);
-        result = result
-            .join(firstGrouping.getDataset(), firstGroupingValue, "left_outer");
-      }
-      // Go through each of the remaining groupings and perform a left outer join from the previous
-      // dataset.
-      for (int i = 1; i < parsedGroupings.size(); i++) {
-        ParsedExpression prevGrouping = parsedGroupings.get(i - 1);
-        Column prevId = prevGrouping.getDataset()
-            .col(prevGrouping.getDatasetColumn() + "_id");
-        ParsedExpression currentGrouping = parsedGroupings.get(i);
-        String groupingId = currentGrouping.getDatasetColumn() + "_id";
-        Column groupingIdColumn = currentGrouping.getDataset().col(groupingId);
-        String groupingValue = currentGrouping.getDatasetColumn();
-        result = result.alias("prev_result");
-        result = result
-            .join(currentGrouping.getDataset(), prevId.equalTo(groupingIdColumn), "left_outer");
-        result = result.select("prev_result.*", groupingId, groupingValue);
-      }
-    }
-
-    // Get the first aggregation, and either join it to the groupings or use it as the start of
-    // the result.
-    ParsedExpression firstAggregation = parsedAggregations.get(0);
-    Column firstId = firstAggregation.getDataset().col(firstAggregation.getDatasetColumn() + "_id");
-    if (result == null) {
-      // If there were no groupings, the first aggregation is our starting point.
-      result = firstAggregation.getDataset();
-    } else {
-      // If there were groupings, we join the last grouping to the first aggregation.
-      ParsedExpression lastGrouping = parsedGroupings.get(parsedGroupings.size() - 1);
-      Column lastGroupingId = result.col(lastGrouping.getDatasetColumn() + "_id")
-          .alias("resource_id");
-      String firstAggregationLabel = query.getAggregations().get(0).getLabel();
-      Column firstAggregationValue = lastGroupingId.equalTo(firstId).alias(firstAggregationLabel);
-      result = result
-          .join(firstAggregation.getDataset(), firstAggregationValue, "left_outer");
-    }
-    // Go through each of the remaining aggregations and perform a left outer join from the previous
-    // dataset.
-    for (int i = 1; i < parsedAggregations.size(); i++) {
-      ParsedExpression prevAggregation = parsedAggregations.get(i - 1);
-      Column prevId = prevAggregation.getDataset()
-          .col(prevAggregation.getDatasetColumn() + "_id");
-      ParsedExpression currentAggregation = parsedAggregations.get(i);
-      String aggregationLabel = query.getAggregations().get(i).getLabel();
-      Column currentId = currentAggregation.getDataset()
-          .col(currentAggregation.getDatasetColumn() + "_id");
-      result = result.alias("prev_result");
-      result = result
-          .join(currentAggregation.getDataset(), prevId.equalTo(currentId), "left_outer");
-      result = result.select("prev_result.*", aggregationLabel);
-    }
-    // Group by each of the grouping value columns.
-    Column[] groupingColumns = parsedGroupings.stream()
-        .map(grouping -> grouping.getDataset().col(grouping.getDatasetColumn()))
-        .toArray(Column[]::new);
-    RelationalGroupedDataset groupedResult = result.groupBy(groupingColumns);
-    // Apply the aggregations.
-    Column firstAggregationColumn = firstAggregation.getAggregation();
-    Column[] remainingAggregationColumns = parsedAggregations.stream()
-        .skip(1)
-        .map(ParsedExpression::getAggregation)
-        .toArray(Column[]::new);
-    return groupedResult.agg(firstAggregationColumn, remainingAggregationColumns);
-  }
-
   /**
    * Build an AggregateQueryResult resource from the supplied Dataset, embedding the original
    * AggregateQuery and honouring the hints within the QueryPlan.
@@ -357,8 +290,11 @@ public class AggregateExecutor {
       assert
           parsedExpression.getFhirType() != null :
           "Parse result encountered with missing FHIR type: " + parsedExpression;
-      Class hapiClass = parsedExpression.getFhirType().getHapiClass();
-      Class javaClass = parsedExpression.getFhirType().getJavaClass();
+      Class hapiClass = parsedExpression.getImplementingClass(fhirContext);
+      if (hapiClass == Enumeration.class) {
+        hapiClass = CodeType.class;
+      }
+      Class javaClass = parsedExpression.getJavaClass();
       @SuppressWarnings("unchecked") Constructor constructor = hapiClass.getConstructor(javaClass);
       Object value = row.get(columnNumber);
       return value == null ? null : (Type) constructor.newInstance(value);

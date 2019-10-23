@@ -6,13 +6,11 @@ package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.CODING;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.STRING;
-import static au.csiro.clinsight.utilities.Strings.md5Short;
 
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.query.IdAndBoolean;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.HashSet;
 import java.util.List;
@@ -24,6 +22,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 
 /**
@@ -48,7 +47,6 @@ public class MemberOfFunction implements Function {
     String valueSetUri = argument.getLiteralValue().toString();
     Dataset<Row> prevDataset = input.getInput().getDataset();
     TerminologyClient terminologyClient = input.getContext().getTerminologyClient();
-    String hash = md5Short(input.getExpression());
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
     // then create a new dataset with the boolean results.
@@ -63,19 +61,20 @@ public class MemberOfFunction implements Function {
           }
           return result;
         }, Encoders.bean(IdAndBoolean.class));
-    Column idColumn = validateResults.col(validateResults.columns()[0]).alias(hash + "_id");
-    Column column = validateResults.col(validateResults.columns()[1]).alias(hash);
-    Dataset<Row> dataset = validateResults.select(idColumn, column);
+    Column idColumn = validateResults.col(validateResults.columns()[0]);
+    Column valueColumn = validateResults.col(validateResults.columns()[1]);
+    Dataset<Row> dataset = validateResults.select(idColumn, valueColumn);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setFhirPathType(FhirPathType.BOOLEAN);
-    result.setFhirType(FhirType.BOOLEAN);
+    result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);
     result.setSingular(inputResult.isSingular());
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
+    result.setIdColumn(idColumn);
+    result.setValueColumn(valueColumn);
     return result;
   }
 
@@ -125,8 +124,7 @@ public class MemberOfFunction implements Function {
 
   private void validateInput(FunctionInput input) {
     ParsedExpression inputResult = input.getInput();
-    if (!(supportedTypes.contains(inputResult.getFhirPathType()) || inputResult.getPathTraversal()
-        .getElementDefinition().getFhirType().equals("CodeableConcept"))) {
+    if (!(supportedTypes.contains(inputResult.getFhirPathType()))) {
       throw new InvalidRequestException(
           "Input to memberOf function is of unsupported type: " + inputResult.getFhirPath());
     }

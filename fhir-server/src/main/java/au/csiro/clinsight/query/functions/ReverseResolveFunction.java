@@ -4,11 +4,6 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.fhir.definitions.PathTraversal.ResolvedElementType.REFERENCE;
-import static au.csiro.clinsight.utilities.Strings.md5Short;
-
-import au.csiro.clinsight.fhir.definitions.PathResolver;
-import au.csiro.clinsight.fhir.definitions.PathTraversal;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Set;
@@ -16,6 +11,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -28,8 +24,7 @@ public class ReverseResolveFunction implements Function {
 
   private static boolean referenceRefersToType(ParsedExpression reference,
       ResourceType resourceType) {
-    PathTraversal pathTraversal = reference.getPathTraversal();
-    Set<ResourceType> referenceTypes = pathTraversal.getElementDefinition().getReferenceTypes();
+    Set<ResourceType> referenceTypes = reference.getReferenceResourceTypes();
     return referenceTypes.contains(ResourceType.RESOURCE) || referenceTypes.contains(resourceType);
   }
 
@@ -37,27 +32,18 @@ public class ReverseResolveFunction implements Function {
   @Override
   public ParsedExpression invoke(@Nonnull FunctionInput input) {
     validateInput(input);
-    ParsedExpression inputResult = input.getInput();
-    ParsedExpression argument = input.getArguments().get(0);
-    String hash = md5Short(input.getExpression());
+    ParsedExpression inputResult = input.getInput(),
+        argument = input.getArguments().get(0);
+    Dataset<Row> argumentDataset = argument.getDataset(),
+        inputDataset = inputResult.getDataset();
+    Column argumentValueCol = argument.getValueColumn(),
+        inputIdCol = inputResult.getIdColumn(),
+        resourceCol = argument.getOrigin().getValueColumn();
 
     // Create a new dataset by joining from the argument to the input dataset.
-    Dataset<Row> argumentDataset = argument.getDataset();
-    Dataset<Row> resourceDataset = argument.getOrigin().getDataset().alias("resource");
-    Dataset<Row> inputDataset = inputResult.getDataset();
-    Column argumentCol = argumentDataset.col(argument.getDatasetColumn());
-    Column argumentIdCol = argumentDataset.col(argument.getDatasetColumn() + "_id");
-    String inputIdColName = inputResult.getDatasetColumn() + "_id";
-    Column inputIdCol = inputDataset.col(inputIdColName);
-    Column resourceIdCol = resourceDataset.col(argument.getOrigin().getDatasetColumn() + "_id");
-    Column resourceCol = resourceDataset.col(argument.getOrigin().getDatasetColumn());
     Dataset<Row> dataset = inputDataset
-        .join(argumentDataset, inputIdCol.equalTo(argumentCol.getField("reference")), "left_outer")
-        .join(resourceDataset, argumentIdCol.equalTo(resourceIdCol), "left_outer");
-    dataset = dataset.select(inputIdCol.alias(hash + "_id"), resourceCol.alias(hash));
-
-    // Get a path traversal for the new resource.
-    PathTraversal pathTraversal = PathResolver.resolvePath(argument.getOrigin().getFhirPath());
+        .join(argumentDataset, inputIdCol.equalTo(argumentValueCol.getField("reference")),
+            "left_outer");
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -65,8 +51,8 @@ public class ReverseResolveFunction implements Function {
     result.setResource(true);
     result.setResourceType(argument.getOrigin().getResourceType());
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
-    result.setPathTraversal(pathTraversal);
+    result.setHashedValue(inputIdCol, resourceCol);
+
     return result;
   }
 
@@ -78,7 +64,7 @@ public class ReverseResolveFunction implements Function {
     }
     if (input.getArguments().size() == 1) {
       ParsedExpression argument = input.getArguments().get(0);
-      if (argument.getPathTraversal().getType() != REFERENCE) {
+      if (argument.getFhirType() != FHIRDefinedType.REFERENCE) {
         throw new InvalidRequestException(
             "Argument to reverseResolve function must be Reference: " + argument.getFhirPath());
       }

@@ -5,6 +5,7 @@
 package au.csiro.clinsight.query;
 
 import au.csiro.clinsight.fhir.TerminologyClient;
+import ca.uhn.fhir.context.FhirContext;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.SparkSession;
@@ -16,16 +17,34 @@ import org.apache.spark.sql.SparkSession;
 public class AggregateExecutorConfiguration {
 
   /**
+   * (REQUIRED) The Apache Spark session this server should use for import and query.
+   */
+  @Nonnull
+  private final SparkSession sparkSession;
+
+  /**
+   * (REQUIRED) FHIR context for doing FHIR stuff.
+   */
+  @Nonnull
+  private final FhirContext fhirContext;
+
+  /**
+   * (REQUIRED) FHIR terminology service client to use in satisfying terminology queries.
+   */
+  @Nonnull
+  private final TerminologyClient terminologyClient;
+
+  /**
+   * (REQUIRED) Object for reading resources from the warehouse.
+   */
+  @Nonnull
+  private final ResourceReader resourceReader;
+
+  /**
    * (OPTIONAL) Version of this API, as advertised within the CapabilityStatement.
    */
   @Nullable
   private String version;
-
-  /**
-   * (REQUIRED) The Apache Spark session this server should use for import and query.
-   */
-  @Nonnull
-  private SparkSession sparkSession;
 
   /**
    * (OPTIONAL) URL for the location of warehouse tables.
@@ -45,17 +64,6 @@ public class AggregateExecutorConfiguration {
   @Nonnull
   private String executorMemory;
 
-  /**
-   * (REQUIRED) FHIR terminology service client to use in satisfying terminology queries.
-   */
-  @Nonnull
-  private TerminologyClient terminologyClient;
-
-  /**
-   * (OPTIONAL) Object for reading resources from the warehouse.
-   */
-  @Nonnull
-  private ResourceReader resourceReader;
 
   /**
    * (OPTIONAL) Whether to run an explain ahead of each Spark SQL query.
@@ -73,16 +81,38 @@ public class AggregateExecutorConfiguration {
   private int loadPartitions;
 
   public AggregateExecutorConfiguration(@Nonnull SparkSession sparkSession,
-      @Nonnull TerminologyClient terminologyClient, @Nonnull ResourceReader resourceReader) {
+      @Nonnull FhirContext fhirContext, @Nonnull TerminologyClient terminologyClient,
+      @Nonnull ResourceReader resourceReader) {
     this.sparkSession = sparkSession;
+    this.fhirContext = fhirContext;
+    this.terminologyClient = terminologyClient;
+    this.resourceReader = resourceReader;
     warehouseUrl = "file:///usr/share/warehouse";
     databaseName = "default";
     executorMemory = "1g";
-    this.terminologyClient = terminologyClient;
-    this.resourceReader = resourceReader;
     explainQueries = false;
     shufflePartitions = 36;
     loadPartitions = 12;
+  }
+
+  @Nonnull
+  public SparkSession getSparkSession() {
+    return sparkSession;
+  }
+
+  @Nonnull
+  public FhirContext getFhirContext() {
+    return fhirContext;
+  }
+
+  @Nonnull
+  public TerminologyClient getTerminologyClient() {
+    return terminologyClient;
+  }
+
+  @Nonnull
+  public ResourceReader getResourceReader() {
+    return resourceReader;
   }
 
   @Nullable
@@ -92,15 +122,6 @@ public class AggregateExecutorConfiguration {
 
   public void setVersion(@Nullable String version) {
     this.version = version;
-  }
-
-  @Nonnull
-  public SparkSession getSparkSession() {
-    return sparkSession;
-  }
-
-  public void setSparkSession(@Nonnull SparkSession sparkSession) {
-    this.sparkSession = sparkSession;
   }
 
   @Nonnull
@@ -128,24 +149,6 @@ public class AggregateExecutorConfiguration {
 
   public void setExecutorMemory(@Nonnull String executorMemory) {
     this.executorMemory = executorMemory;
-  }
-
-  @Nonnull
-  public TerminologyClient getTerminologyClient() {
-    return terminologyClient;
-  }
-
-  public void setTerminologyClient(@Nonnull TerminologyClient terminologyClient) {
-    this.terminologyClient = terminologyClient;
-  }
-
-  @Nonnull
-  public ResourceReader getResourceReader() {
-    return resourceReader;
-  }
-
-  public void setResourceReader(@Nonnull ResourceReader resourceReader) {
-    this.resourceReader = resourceReader;
   }
 
   public boolean isExplainQueries() {
@@ -184,4 +187,5 @@ public class AggregateExecutorConfiguration {
         ", loadPartitions=" + loadPartitions +
         '}';
   }
+
 }

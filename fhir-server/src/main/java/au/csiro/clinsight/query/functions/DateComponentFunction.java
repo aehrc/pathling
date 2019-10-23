@@ -7,11 +7,9 @@ package au.csiro.clinsight.query.functions;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.DATE;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.DATE_TIME;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.TIME;
-import static au.csiro.clinsight.utilities.Strings.md5Short;
 
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -24,6 +22,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes the functionality of a group of functions that are used for extracting numeric
@@ -63,33 +62,32 @@ public class DateComponentFunction implements Function {
     validateInput(input);
     ParsedExpression inputResult = input.getInput();
     Dataset<Row> prevDataset = inputResult.getDataset();
-    String prevColumn = inputResult.getDatasetColumn();
-    String hash = md5Short(input.getExpression());
+    Column prevIdColumn = inputResult.getIdColumn();
+    Column prevValueColumn = inputResult.getValueColumn();
 
-    Column column;
+    Column valueColumn;
     try {
       // Invoke the Spark SQL function named in the above map, and apply it to the value column from
       // the previous dataset.
       Method sparkSqlFunction = functions.class
           .getMethod(functionsMap.get(functionName), Column.class);
-      column = (Column) sparkSqlFunction.invoke(functions.class, prevDataset.col(prevColumn));
+      valueColumn = (Column) sparkSqlFunction.invoke(functions.class, prevValueColumn);
     } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
       throw new RuntimeException(
           "Error occurred when attempting to invoke Spark SQL date component method", e);
     }
-    column = column.alias(hash);
-    Column idColumn = prevDataset.col(prevColumn + "_id").alias(hash + "_id");
-    Dataset<Row> dataset = prevDataset.select(idColumn, column);
+    Dataset<Row> dataset = prevDataset.select(prevIdColumn, valueColumn);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setFhirPathType(FhirPathType.INTEGER);
-    result.setFhirType(FhirType.INTEGER);
+    result.setFhirType(FHIRDefinedType.INTEGER);
     result.setPrimitive(true);
     result.setSingular(inputResult.isSingular());
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
+    result.setIdColumn(prevIdColumn);
+    result.setValueColumn(valueColumn);
 
     return result;
   }

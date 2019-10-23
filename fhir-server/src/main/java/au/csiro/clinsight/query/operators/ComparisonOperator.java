@@ -8,15 +8,14 @@ import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.*;
 
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
-import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Provides the functionality of the family of comparison operators within FHIRPath, i.e. <=, <, >,
@@ -27,13 +26,13 @@ import org.apache.spark.sql.Row;
  */
 public class ComparisonOperator implements BinaryOperator {
 
-  private static final Set<FhirPathType> supportedTypes = new HashSet<FhirPathType>() {{
-    add(STRING);
-    add(INTEGER);
-    add(DECIMAL);
-    add(DATE_TIME);
-    add(TIME);
-  }};
+  private static final Set<FhirPathType> supportedTypes = EnumSet.of(
+      STRING,
+      INTEGER,
+      DECIMAL,
+      DATE_TIME,
+      TIME
+  );
 
   private final String operator;
 
@@ -53,47 +52,47 @@ public class ComparisonOperator implements BinaryOperator {
 
     // Create a new dataset which joins left and right, using the given boolean operator within
     // the condition.
-    Dataset<Row> leftDataset = left.getDataset();
-    Dataset<Row> rightDataset = right.getDataset();
-    Column leftIdColumn = leftDataset.col(left.getDatasetColumn() + "_id");
-    Column leftColumn = leftDataset.col(left.getDatasetColumn());
-    Column rightIdColumn = rightDataset.col(right.getDatasetColumn() + "_id");
-    Column rightColumn = rightDataset.col(right.getDatasetColumn());
-    String newHash = Strings.md5Short(fhirPath);
-    Dataset<Row> newDataset = leftDataset
+    Dataset<Row> leftDataset = left.getDataset(),
+        rightDataset = right.getDataset();
+    Column leftIdColumn = left.getIdColumn(),
+        leftColumn = left.getValueColumn(),
+        rightIdColumn = right.getIdColumn(),
+        rightColumn = right.getValueColumn();
+    Dataset<Row> dataset = leftDataset
         .join(rightDataset, leftIdColumn.equalTo(rightIdColumn), "left_outer");
 
     // Based on the type of operator, create the correct column expression.
-    Column expression;
+    Column expression = null;
     switch (operator) {
       case "<=":
-        leftColumn.leq(rightColumn);
+        expression = leftColumn.leq(rightColumn);
         break;
       case "<":
-        leftColumn.lt(rightColumn);
+        expression = leftColumn.lt(rightColumn);
         break;
       case ">=":
-        leftColumn.geq(rightColumn);
+        expression = leftColumn.geq(rightColumn);
         break;
       case ">":
-        leftColumn.gt(rightColumn);
+        expression = leftColumn.gt(rightColumn);
         break;
       default:
         assert false : "Unsupported comparison operator encountered: " + operator;
     }
 
-    newDataset = newDataset
-        .select(leftIdColumn.alias(newHash + "_id"), leftColumn.and(rightColumn));
+    Column valueColumn = expression;
+    dataset = dataset.withColumn("comparisonResult", valueColumn);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(fhirPath);
     result.setFhirPathType(FhirPathType.BOOLEAN);
-    result.setFhirType(FhirType.BOOLEAN);
+    result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);
     result.setSingular(true);
-    result.setDataset(newDataset);
-    result.setDatasetColumn(newHash);
+    result.setDataset(dataset);
+    result.setIdColumn(leftIdColumn);
+    result.setValueColumn(valueColumn);
     return result;
   }
 

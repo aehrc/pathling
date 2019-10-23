@@ -13,8 +13,6 @@ import au.csiro.clinsight.TestUtilities;
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.query.AggregateRequest.Aggregation;
 import au.csiro.clinsight.query.AggregateRequest.Grouping;
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -31,17 +29,18 @@ import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.skyscreamer.jsonassert.JSONAssert;
 
 /**
  * @author John Grimes
  */
+@Category(au.csiro.clinsight.UnitTest.class)
 public class AggregateExecutorTest {
 
   private AggregateExecutor executor;
   private SparkSession spark;
   private TerminologyClient terminologyClient;
-  private IParser jsonParser;
   private Path warehouseDirectory;
   private ResourceReader mockReader;
 
@@ -50,9 +49,9 @@ public class AggregateExecutorTest {
     spark = SparkSession.builder()
         .appName("clinsight-test")
         .config("spark.master", "local")
+        .config("spark.driver.host", "localhost")
         .getOrCreate();
     terminologyClient = mock(TerminologyClient.class);
-    jsonParser = FhirContext.forR4().newJsonParser();
 
     warehouseDirectory = Files.createTempDirectory("clinsight-test-");
     mockReader = mock(ResourceReader.class);
@@ -71,12 +70,11 @@ public class AggregateExecutorTest {
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        terminologyClient,
-        mockReader);
+        TestUtilities.getFhirContext(),
+        terminologyClient, mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
-    TestUtilities.mockDefinitionRetrieval(terminologyClient);
     executor = new AggregateExecutor(config);
 
     // Build a AggregateRequest to pass to the executor.
@@ -103,7 +101,7 @@ public class AggregateExecutorTest {
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
-    String actualJson = jsonParser.encodeResourceToString(responseParameters);
+    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(
             "responses/AggregateExecutorTest-queryWithMultipleGroupings.Parameters.json");
@@ -127,12 +125,11 @@ public class AggregateExecutorTest {
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        terminologyClient,
-        mockReader);
+        TestUtilities.getFhirContext(),
+        terminologyClient, mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
-    TestUtilities.mockDefinitionRetrieval(terminologyClient);
     executor = new AggregateExecutor(config);
 
     // Build a AggregateRequest to pass to the executor.
@@ -156,7 +153,7 @@ public class AggregateExecutorTest {
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
-    String actualJson = jsonParser.encodeResourceToString(responseParameters);
+    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream("responses/AggregateExecutorTest-queryWithFilter.Parameters.json");
     assertThat(expectedStream).isNotNull();
@@ -183,12 +180,11 @@ public class AggregateExecutorTest {
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        terminologyClient,
-        mockReader);
+        TestUtilities.getFhirContext(),
+        terminologyClient, mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
-    TestUtilities.mockDefinitionRetrieval(terminologyClient);
     executor = new AggregateExecutor(config);
 
     // Build a AggregateRequest to pass to the executor.
@@ -210,7 +206,7 @@ public class AggregateExecutorTest {
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
-    String actualJson = jsonParser.encodeResourceToString(responseParameters);
+    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream("responses/AggregateExecutorTest-queryWithResolve.Parameters.json");
     assertThat(expectedStream).isNotNull();
@@ -237,12 +233,11 @@ public class AggregateExecutorTest {
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        terminologyClient,
-        mockReader);
+        TestUtilities.getFhirContext(),
+        terminologyClient, mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
-    TestUtilities.mockDefinitionRetrieval(terminologyClient);
     executor = new AggregateExecutor(config);
 
     // Build a AggregateRequest to pass to the executor.
@@ -264,7 +259,7 @@ public class AggregateExecutorTest {
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
-    String actualJson = jsonParser.encodeResourceToString(responseParameters);
+    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
     InputStream expectedStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(
             "responses/AggregateExecutorTest-queryWithReverseResolve.Parameters.json");

@@ -5,14 +5,8 @@
 package au.csiro.clinsight.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
-import au.csiro.clinsight.TestUtilities;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
-import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import com.cerner.bunsen.FhirEncoders;
 import java.io.IOException;
 import java.net.URL;
@@ -27,40 +21,35 @@ import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * @author John Grimes
  */
+@Category(au.csiro.clinsight.UnitTest.class)
 public class ImportProviderTest {
 
   private ImportProvider importProvider;
   private SparkSession spark;
-  private IParser jsonParser;
 
   @Before
   public void setUp() throws IOException {
     spark = SparkSession.builder()
         .appName("clinsight-test")
         .config("spark.master", "local")
-        .config("spark.driver.bindAddress", "localhost")
+        .config("spark.driver.host", "localhost")
         .getOrCreate();
     Path warehouseDirectory = Files.createTempDirectory("clinsight-test");
-
-    jsonParser = FhirContext.forR4().newJsonParser();
 
     AnalyticsServerConfiguration config = new AnalyticsServerConfiguration();
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
     importProvider = new ImportProvider(config, spark, FhirEncoders.forR4().getOrCreate());
-
-    TerminologyClient terminologyClient = mock(TerminologyClient.class);
-    TestUtilities.mockDefinitionRetrieval(terminologyClient);
-    ResourceDefinitions.ensureInitialized(terminologyClient);
   }
 
   @Test
-  public void simpleImport() throws IOException {
+  public void simpleImport() {
     URL importUrl = Thread.currentThread().getContextClassLoader()
         .getResource("test-data/fhir/Patient.ndjson");
     assertThat(importUrl).isNotNull();

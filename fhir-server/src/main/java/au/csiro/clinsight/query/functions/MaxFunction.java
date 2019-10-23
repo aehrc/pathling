@@ -5,13 +5,12 @@
 package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.*;
-import static au.csiro.clinsight.utilities.Strings.md5Short;
 import static org.apache.spark.sql.functions.max;
 
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -28,13 +27,13 @@ import org.apache.spark.sql.Row;
  */
 public class MaxFunction implements Function {
 
-  private static final Set<FhirPathType> supportedTypes = new HashSet<FhirPathType>() {{
-    add(STRING);
-    add(INTEGER);
-    add(DECIMAL);
-    add(DATE_TIME);
-    add(TIME);
-  }};
+  private static final Set<FhirPathType> supportedTypes = EnumSet.of(
+      STRING,
+      INTEGER,
+      DECIMAL,
+      DATE_TIME,
+      TIME
+  );
 
   @Nonnull
   @Override
@@ -42,22 +41,19 @@ public class MaxFunction implements Function {
     validateInput(input);
     ParsedExpression inputResult = input.getInput();
     Dataset<Row> prevDataset = inputResult.getDataset();
-    String prevColumn = inputResult.getDatasetColumn();
-    String hash = md5Short(input.getExpression());
+    Column prevIdColumn = inputResult.getIdColumn();
+    Column prevValueColumn = inputResult.getValueColumn();
 
     // First apply the groupings from the expression parser context to the previous dataset.
-    String firstGrouping = input.getContext().getGroupings().get(0).getDatasetColumn();
-    String[] remainingGroupings = (String[]) input.getContext().getGroupings().stream()
-        .skip(1)
-        .map(ParsedExpression::getDatasetColumn)
+    Column[] groupings = (Column[]) input.getContext().getGroupings().stream()
+        .map(ParsedExpression::getValueColumn)
         .toArray();
-    RelationalGroupedDataset grouped = prevDataset.groupBy(firstGrouping, remainingGroupings);
-    Dataset<Row> dataset = grouped.agg(max(prevDataset.col(prevColumn)));
+    RelationalGroupedDataset grouped = prevDataset.groupBy(groupings);
+    Dataset<Row> dataset = grouped.agg(max(prevValueColumn));
 
     // Create new ID and value columns, based on the hash computed off the FHIRPath expression.
-    Column idColumn = dataset.col(prevColumn + "_id").alias(hash + "_id");
-    Column column = dataset.col(dataset.columns()[1]).alias(hash);
-    dataset = dataset.select(idColumn, column);
+    Column valueColumn = dataset.col(dataset.columns()[1]);
+    dataset = dataset.select(prevIdColumn, valueColumn);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -67,7 +63,8 @@ public class MaxFunction implements Function {
     result.setPrimitive(inputResult.isPrimitive());
     result.setSingular(true);
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
+    result.setIdColumn(prevIdColumn);
+    result.setValueColumn(valueColumn);
 
     return result;
   }

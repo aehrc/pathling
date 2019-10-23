@@ -1,32 +1,26 @@
 package au.csiro.clinsight.query.operators;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
-import au.csiro.clinsight.TestUtilities;
-import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.fhir.definitions.PathResolver;
-import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import java.sql.Date;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.*;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * @author John Grimes
  */
+@Category(au.csiro.clinsight.UnitTest.class)
 public class EqualityOperatorTest {
 
   private SparkSession spark;
@@ -36,11 +30,8 @@ public class EqualityOperatorTest {
     spark = SparkSession.builder()
         .appName("clinsight-test")
         .config("spark.master", "local")
+        .config("spark.driver.host", "localhost")
         .getOrCreate();
-
-    TerminologyClient terminologyClient = mock(TerminologyClient.class);
-    TestUtilities.mockDefinitionRetrieval(terminologyClient);
-    ResourceDefinitions.ensureInitialized(terminologyClient);
   }
 
   @Test
@@ -55,23 +46,25 @@ public class EqualityOperatorTest {
     Row row2 = RowFactory.create("abc2", "male");
     Row row3 = RowFactory.create("abc3", null);
     Dataset<Row> leftDataset = spark.createDataFrame(Arrays.asList(row1, row2, row3), rowStruct);
+    Column idColumn = leftDataset.col(leftDataset.columns()[0]);
+    Column valueColumn = leftDataset.col(leftDataset.columns()[1]);
 
     // Build up the left expression for the function.
     ParsedExpression left = new ParsedExpression();
     left.setFhirPath("gender");
     left.setFhirPathType(FhirPathType.STRING);
-    left.setFhirType(FhirType.CODE);
+    left.setFhirType(FHIRDefinedType.CODE);
     left.setDataset(leftDataset);
-    left.setDatasetColumn("123abcd");
+    left.setIdColumn(idColumn);
+    left.setValueColumn(valueColumn);
     left.setSingular(true);
     left.setPrimitive(true);
-    left.setPathTraversal(PathResolver.resolvePath("Patient.gender"));
 
     // Build up the right expression for the function.
     ParsedExpression right = new ParsedExpression();
     right.setFhirPath("'female'");
     right.setFhirPathType(FhirPathType.STRING);
-    right.setFhirType(FhirType.STRING);
+    right.setFhirType(FHIRDefinedType.STRING);
     right.setLiteralValue(new StringType("female"));
     right.setSingular(true);
     right.setPrimitive(true);
@@ -88,15 +81,15 @@ public class EqualityOperatorTest {
     // Check the result.
     assertThat(result.getFhirPath()).isEqualTo("gender = 'female'");
     assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.BOOLEAN);
-    assertThat(result.getFhirType()).isEqualTo(FhirType.BOOLEAN);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.BOOLEAN);
     assertThat(result.isPrimitive()).isTrue();
     assertThat(result.isSingular()).isTrue();
+    assertThat(result.getIdColumn()).isNotNull();
+    assertThat(result.getValueColumn()).isNotNull();
 
     // Check that collecting the dataset result yields the correct values.
-    Dataset<Row> resultDataset = result.getDataset();
-    assertThat(resultDataset.columns().length).isEqualTo(2);
-    assertThat(resultDataset.columns()[0]).isEqualTo(result.getDatasetColumn() + "_id");
-    assertThat(resultDataset.columns()[1]).isEqualTo(result.getDatasetColumn());
+    Dataset<Row> resultDataset = result.getDataset()
+        .select(result.getIdColumn(), result.getValueColumn());
     List<Row> resultRows = resultDataset.collectAsList();
     assertThat(resultRows.size()).isEqualTo(3);
     Row resultRow = resultRows.get(0);
@@ -126,6 +119,8 @@ public class EqualityOperatorTest {
     Row leftRow4 = RowFactory.create("abc4", null);
     Dataset<Row> leftDataset = spark
         .createDataFrame(Arrays.asList(leftRow1, leftRow2, leftRow3, leftRow4), leftRowStruct);
+    Column leftIdColumn = leftDataset.col(leftDataset.columns()[0]);
+    Column leftValueColumn = leftDataset.col(leftDataset.columns()[1]);
 
     // Build up a dataset with several rows in it for the right expression.
     Metadata rightMetadata = new MetadataBuilder().build();
@@ -139,28 +134,30 @@ public class EqualityOperatorTest {
     Row rightRow4 = RowFactory.create("abc4", null);
     Dataset<Row> rightDataset = spark
         .createDataFrame(Arrays.asList(rightRow1, rightRow2, rightRow3, rightRow4), rightRowStruct);
+    Column rightIdColumn = rightDataset.col(rightDataset.columns()[0]);
+    Column rightValueColumn = rightDataset.col(rightDataset.columns()[1]);
 
     // Build up the left expression for the function.
     ParsedExpression left = new ParsedExpression();
     left.setFhirPath("location.period.start");
     left.setFhirPathType(FhirPathType.DATE_TIME);
-    left.setFhirType(FhirType.DATE_TIME);
+    left.setFhirType(FHIRDefinedType.DATETIME);
     left.setDataset(leftDataset);
-    left.setDatasetColumn("123abcd");
+    left.setIdColumn(leftIdColumn);
+    left.setValueColumn(leftValueColumn);
     left.setSingular(true);
     left.setPrimitive(true);
-    left.setPathTraversal(PathResolver.resolvePath("Period.start"));
 
     // Build up the right expression for the function.
     ParsedExpression right = new ParsedExpression();
     right.setFhirPath("location.period.end");
     right.setFhirPathType(FhirPathType.DATE_TIME);
-    right.setFhirType(FhirType.DATE_TIME);
+    right.setFhirType(FHIRDefinedType.DATETIME);
     right.setDataset(rightDataset);
-    right.setDatasetColumn("789wxyz");
+    right.setIdColumn(rightIdColumn);
+    right.setValueColumn(rightValueColumn);
     right.setSingular(true);
     right.setPrimitive(true);
-    right.setPathTraversal(PathResolver.resolvePath("Period.end"));
 
     BinaryOperatorInput equalityInput = new BinaryOperatorInput();
     equalityInput.setLeft(left);
@@ -174,15 +171,15 @@ public class EqualityOperatorTest {
     // Check the result.
     assertThat(result.getFhirPath()).isEqualTo(equalityInput.getExpression());
     assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.BOOLEAN);
-    assertThat(result.getFhirType()).isEqualTo(FhirType.BOOLEAN);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.BOOLEAN);
     assertThat(result.isPrimitive()).isTrue();
     assertThat(result.isSingular()).isTrue();
+    assertThat(result.getIdColumn()).isNotNull();
+    assertThat(result.getValueColumn()).isNotNull();
 
     // Check that collecting the dataset result yields the correct values.
-    Dataset<Row> resultDataset = result.getDataset();
-    assertThat(resultDataset.columns().length).isEqualTo(2);
-    assertThat(resultDataset.columns()[0]).isEqualTo(result.getDatasetColumn() + "_id");
-    assertThat(resultDataset.columns()[1]).isEqualTo(result.getDatasetColumn());
+    Dataset<Row> resultDataset = result.getDataset()
+        .select(result.getIdColumn(), result.getValueColumn());
     List<Row> resultRows = resultDataset.collectAsList();
     assertThat(resultRows.size()).isEqualTo(4);
     Row resultRow = resultRows.get(0);

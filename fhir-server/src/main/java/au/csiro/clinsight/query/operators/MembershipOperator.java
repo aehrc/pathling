@@ -8,13 +8,12 @@ import static org.apache.spark.sql.functions.max;
 
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
-import au.csiro.clinsight.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * An expression that tests whether a singular value is present within a collection.
@@ -55,34 +54,36 @@ public class MembershipOperator implements BinaryOperator {
 
     // Create a new dataset which joins left and right and aggregates on the resource ID based upon
     // whether the left expression is within the set of values in the right expression.
-    Dataset<Row> leftDataset = left.getDataset();
-    Dataset<Row> rightDataset = right.getDataset();
-    Column leftIdColumn = leftDataset.col(left.getDatasetColumn() + "_id");
-    Column leftColumn = leftDataset.col(left.getDatasetColumn());
-    Column rightIdColumn = rightDataset.col(right.getDatasetColumn() + "_id");
-    Column rightColumn = rightDataset.col(right.getDatasetColumn());
-    String newHash = Strings.md5Short(fhirPath);
-    Dataset<Row> equalityDataset = leftDataset
+    Dataset<Row> leftDataset = left.getDataset(),
+        rightDataset = right.getDataset();
+    Column leftIdColumn = left.getIdColumn(),
+        leftColumn = left.getValueColumn(),
+        rightIdColumn = right.getIdColumn(),
+        rightColumn = right.getValueColumn();
+    Dataset<Row> membershipDataset = leftDataset
         .join(rightDataset, leftIdColumn.equalTo(rightIdColumn), "left_outer");
 
     // We take the max of the boolean equality values, aggregated by the resource ID.
     Column equalityColumn = leftColumn.equalTo(rightColumn);
-    equalityDataset = equalityDataset.select(leftIdColumn, equalityColumn);
-    equalityDataset.groupBy().agg(max(equalityColumn));
+    membershipDataset = membershipDataset.select(leftIdColumn, equalityColumn);
+    membershipDataset.groupBy().agg(max(equalityColumn));
+    Column membershipIdCol = membershipDataset.col(membershipDataset.columns()[0]);
+    Column valueColumn = membershipDataset.col(membershipDataset.columns()[1]);
 
-    // Rename the columns using the hashed FHIRPath expression.
-    equalityDataset.select(leftIdColumn.alias(newHash + "_id"),
-        equalityDataset.col(equalityDataset.columns()[1]).alias(newHash));
+    // Join the left dataset to the dataset with the membership result.
+    Dataset<Row> dataset = leftDataset
+        .join(membershipDataset, leftIdColumn.equalTo(membershipIdCol), "left_outer");
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(fhirPath);
     result.setFhirPathType(FhirPathType.BOOLEAN);
-    result.setFhirType(FhirType.BOOLEAN);
+    result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);
     result.setSingular(true);
-    result.setDataset(equalityDataset);
-    result.setDatasetColumn(newHash);
+    result.setDataset(dataset);
+    result.setIdColumn(leftIdColumn);
+    result.setValueColumn(valueColumn);
     return result;
   }
 }

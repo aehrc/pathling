@@ -4,18 +4,17 @@
 
 package au.csiro.clinsight.query.operators;
 
-import static au.csiro.clinsight.utilities.Strings.md5Short;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Provides the functionality of the family of equality operators within FHIRPath, i.e. = and !=.
@@ -39,7 +38,6 @@ public class EqualityOperator implements BinaryOperator {
     ParsedExpression right = input.getRight();
     boolean leftIsLiteral = left.getLiteralValue() != null;
     boolean rightIsLiteral = right.getLiteralValue() != null;
-    String hash = md5Short(input.getExpression());
 
     // Check that at least one of the operands contains a Dataset.
     if (leftIsLiteral && rightIsLiteral) {
@@ -51,10 +49,10 @@ public class EqualityOperator implements BinaryOperator {
     // not.
     Column leftColumn = leftIsLiteral
         ? lit(left.getJavaLiteralValue())
-        : left.getDataset().col(left.getDatasetColumn());
+        : left.getValueColumn();
     Column rightColumn = rightIsLiteral
         ? lit(right.getJavaLiteralValue())
-        : right.getDataset().col(right.getDatasetColumn());
+        : right.getValueColumn();
 
     // Based on the type of operator, create the correct column expression. These expressions are
     // written to take account of the fact that an equality expression involving null will always
@@ -77,26 +75,26 @@ public class EqualityOperator implements BinaryOperator {
     }
 
     // Update the dataset to select the new equality column.
-    String datasetColumn = leftIsLiteral ? right.getDatasetColumn() : left.getDatasetColumn();
     Dataset<Row> dataset = leftIsLiteral ? right.getDataset() : left.getDataset();
-    Column idColumn = dataset.col(datasetColumn + "_id").alias(hash + "_id");
-    Column valueColumn = equality.alias(hash);
+    Column idColumn = leftIsLiteral
+        ? right.getIdColumn()
+        : left.getIdColumn();
+    Column valueColumn = equality;
     // If both expressions have a dataset, we will need to join them.
     if (!leftIsLiteral && !rightIsLiteral) {
-      dataset = dataset.join(right.getDataset(), dataset.col(left.getDatasetColumn() + "_id")
-          .equalTo(right.getDataset().col(right.getDatasetColumn() + "_id")));
+      dataset = dataset.join(right.getDataset(), left.getIdColumn().equalTo(right.getIdColumn()));
     }
-    dataset = dataset.select(idColumn, valueColumn);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setFhirPathType(FhirPathType.BOOLEAN);
-    result.setFhirType(FhirType.BOOLEAN);
+    result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);
     result.setSingular(true);
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
+    result.setIdColumn(idColumn);
+    result.setValueColumn(valueColumn);
     return result;
   }
 

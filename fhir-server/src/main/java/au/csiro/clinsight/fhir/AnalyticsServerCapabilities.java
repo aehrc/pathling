@@ -13,7 +13,6 @@ import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import org.hl7.fhir.r4.model.*;
@@ -30,14 +29,11 @@ import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 public class AnalyticsServerCapabilities implements
     IServerConformanceProvider<CapabilityStatement> {
 
-  AnalyticsServerConfiguration configuration;
-  AggregateExecutor aggregateExecutor;
-  Set<ResourceType> availableResourceTypes;
+  private AnalyticsServerConfiguration configuration;
+  private AggregateExecutor aggregateExecutor;
 
-  public AnalyticsServerCapabilities(
-      AnalyticsServerConfiguration configuration, Set<ResourceType> availableResourceTypes) {
+  public AnalyticsServerCapabilities(AnalyticsServerConfiguration configuration) {
     this.configuration = configuration;
-    this.availableResourceTypes = availableResourceTypes;
   }
 
   @Override
@@ -84,7 +80,7 @@ public class AnalyticsServerCapabilities implements
         "https://clinsight.csiro.au/fhir/OperationDefinition/aggregate-0");
     CapabilityStatementRestResourceOperationComponent operation = new CapabilityStatementRestResourceOperationComponent(
         new StringType("aggregate"), operationUri);
-    for (ResourceType resourceType : availableResourceTypes) {
+    for (Enumerations.ResourceType resourceType : aggregateExecutor.getAvailableResourceTypes()) {
       Extension extension = new Extension();
       extension
           .setUrl("https://clinsight.csiro.au/fhir/StructureDefinition/available-resource-type-0");

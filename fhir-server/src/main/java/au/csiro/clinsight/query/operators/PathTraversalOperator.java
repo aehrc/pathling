@@ -4,17 +4,14 @@
 
 package au.csiro.clinsight.query.operators;
 
-import static au.csiro.clinsight.utilities.Strings.md5Short;
 import static org.apache.spark.sql.functions.explode_outer;
 
-import au.csiro.clinsight.fhir.definitions.PathResolver;
-import au.csiro.clinsight.fhir.definitions.PathTraversal;
-import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
-import au.csiro.clinsight.fhir.definitions.exceptions.ElementNotKnownException;
-import au.csiro.clinsight.fhir.definitions.exceptions.ResourceNotKnownException;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
+import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
+import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -36,46 +33,57 @@ public class PathTraversalOperator {
     validateInput(input);
     ParsedExpression left = input.getLeft();
     String right = input.getRight();
-    Dataset<Row> prevDataset = left.getDataset();
-    String prevColumn = left.getDatasetColumn();
-    String prevIdColumn = left.getDatasetColumn() + "_id";
+    Dataset<Row> leftDataset = left.getDataset();
+    Column leftIdColumn = left.getIdColumn(),
+        leftValueColumn = left.getValueColumn();
 
-    // Resolve the path of the expression.
-    PathTraversal pathTraversal;
-    assert left.getPathTraversal()
-        != null : "Encountered input to path traversal operator with no path traversal information";
-    try {
-      String path = left.getPathTraversal().getPath() + "." + right;
-      pathTraversal = PathResolver.resolvePath(path);
-    } catch (ResourceNotKnownException | ElementNotKnownException e) {
-      throw new InvalidRequestException(e.getMessage());
+    // Determine type and cardinality from the definitions.
+    BaseRuntimeChildDefinition childDefinition = null;
+    if (left.isResource()) {
+      RuntimeResourceDefinition resourceDefinition = input.getContext().getFhirContext()
+          .getResourceDefinition(left.getResourceType().toCode());
+      childDefinition = resourceDefinition.getChildByName(right);
+    } else {
+      BaseRuntimeElementDefinition elementDefinition = left.getElementDefinition();
+      if (elementDefinition instanceof BaseRuntimeElementCompositeDefinition) {
+        childDefinition = ((BaseRuntimeElementCompositeDefinition) elementDefinition)
+            .getChildByName(right);
+      } else {
+        assert false : "Path traversal invoked on non-composite element";
+      }
     }
-    FHIRDefinedType fhirDefinedType = pathTraversal.getElementDefinition().getFhirType();
-    FhirType fhirType = FhirType.forFhirTypeCode(fhirDefinedType);
-    FhirPathType fhirPathType = FhirPathType.forFhirTypeCode(fhirDefinedType);
-    boolean isPrimitive = ResourceDefinitions.isPrimitive(fhirDefinedType);
-    boolean isSingular = pathTraversal.getElementDefinition().getMaxCardinality().equals("1");
+    FHIRDefinedType fhirType = ParsedExpression.fhirTypeFromDefinition(childDefinition);
+    FhirPathType fhirPathType = FhirPathType.forFhirTypeCode(fhirType);
+    boolean isSingular = childDefinition.getMax() == 1;
+    boolean isPrimitive = fhirPathType != null;
 
     // Create a new dataset that contains the ID column and the new value (or the value exploded, if
     // the element has a max cardinality greater than one).
-    String hash = md5Short(input.getExpression());
-    Column field = prevDataset.col(prevColumn).getField(right);
-    Column column = isSingular ? field : explode_outer(field);
-    column = column.alias(hash);
-    Column idColumn = prevDataset.col(prevIdColumn).alias(hash + "_id");
-    Dataset<Row> dataset = prevDataset.select(idColumn, column);
+    Column field = leftValueColumn.getField(right);
+    Column valueColumn = isSingular
+        ? field
+        : explode_outer(field);
+    Dataset<Row> dataset;
+    if (isSingular) {
+      dataset = leftDataset;
+    } else {
+      // If we are exploding a field, we need to explicitly make a new column out of it. Row
+      // generators can not be nested inside expressions.
+      dataset = leftDataset.withColumn("explodeResult", valueColumn);
+      valueColumn = dataset.col("explodeResult");
+    }
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setFhirPathType(fhirPathType);
     result.setFhirType(fhirType);
+    result.setDefinition(childDefinition);
     result.setPrimitive(isPrimitive);
     result.setSingular(left.isSingular() && isSingular);
     result.setOrigin(left.getOrigin());
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
-    result.setPathTraversal(pathTraversal);
+    result.setHashedValue(leftIdColumn, valueColumn);
 
     return result;
   }

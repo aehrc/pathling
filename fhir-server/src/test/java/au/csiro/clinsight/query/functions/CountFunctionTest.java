@@ -4,26 +4,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.clinsight.TestUtilities;
-import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.fhir.definitions.PathResolver;
-import au.csiro.clinsight.fhir.definitions.ResourceDefinitions;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.clinsight.query.parsing.ParsedExpression.FhirType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.*;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * @author John Grimes
  */
+@Category(au.csiro.clinsight.UnitTest.class)
 public class CountFunctionTest {
 
   private SparkSession spark;
@@ -33,11 +31,8 @@ public class CountFunctionTest {
     spark = SparkSession.builder()
         .appName("clinsight-test")
         .config("spark.master", "local")
+        .config("spark.driver.host", "localhost")
         .getOrCreate();
-
-    TerminologyClient terminologyClient = mock(TerminologyClient.class);
-    TestUtilities.mockDefinitionRetrieval(terminologyClient);
-    ResourceDefinitions.ensureInitialized(terminologyClient);
   }
 
   @Test
@@ -55,6 +50,8 @@ public class CountFunctionTest {
     Row row2 = RowFactory.create("abc2", RowFactory.create("female", false));
     Row row3 = RowFactory.create("abc3", RowFactory.create("male", true));
     Dataset<Row> dataset = spark.createDataFrame(Arrays.asList(row1, row2, row3), rowStruct);
+    Column idColumn = dataset.col(dataset.columns()[0]);
+    Column valueColumn = dataset.col(dataset.columns()[1]);
 
     // Build up an input for the function.
     ParsedExpression input = new ParsedExpression();
@@ -63,8 +60,8 @@ public class CountFunctionTest {
     input.setResourceType(ResourceType.PATIENT);
     input.setOrigin(input);
     input.setDataset(dataset);
-    input.setDatasetColumn("123abcd");
-    input.setPathTraversal(PathResolver.resolvePath("Patient"));
+    input.setIdColumn(idColumn);
+    input.setValueColumn(valueColumn);
 
     FunctionInput countInput = new FunctionInput();
     countInput.setInput(input);
@@ -77,17 +74,16 @@ public class CountFunctionTest {
     // Check the result.
     assertThat(result.getFhirPath()).isEqualTo("count()");
     assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.INTEGER);
-    assertThat(result.getFhirType()).isEqualTo(FhirType.UNSIGNED_INT);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.UNSIGNEDINT);
     assertThat(result.isPrimitive()).isTrue();
     assertThat(result.isSingular()).isTrue();
-    assertThat(result.getAggregation()).isInstanceOf(Column.class);
+    assertThat(result.getIdColumn()).isNotNull();
+    assertThat(result.getValueColumn()).isNotNull();
+    assertThat(result.getAggregationColumn()).isNotNull();
 
     // Check that running the aggregation against the Dataset results in the correct count.
     Dataset<Row> resultDataset = result.getDataset();
-    assertThat(resultDataset.columns().length).isEqualTo(2);
-    assertThat(resultDataset.columns()[0]).isEqualTo(result.getDatasetColumn() + "_id");
-    assertThat(resultDataset.columns()[1]).isEqualTo(result.getDatasetColumn());
-    List<Row> resultRows = resultDataset.agg(result.getAggregation()).collectAsList();
+    List<Row> resultRows = resultDataset.agg(result.getAggregationColumn()).collectAsList();
     assertThat(resultRows.size()).isEqualTo(1);
     Row resultRow = resultRows.get(0);
     assertThat(resultRow.getLong(0)).isEqualTo(3);
@@ -113,7 +109,7 @@ public class CountFunctionTest {
     Dataset<Row> groupedResult = groupingDataset.join(resultDataset,
         resultDataset.col("123abcd_id").equalTo(groupingDataset.col("789wxyz_id")), "left_outer");
     groupedResult = groupedResult.groupBy(groupingDataset.col("789wxyz"))
-        .agg(result.getAggregation());
+        .agg(result.getAggregationColumn());
     List<Row> groupedResultRows = groupedResult.collectAsList();
 
     assertThat(groupedResultRows.size()).isEqualTo(3);
@@ -147,6 +143,8 @@ public class CountFunctionTest {
     Row row5 = RowFactory.create("abc4", "Thomas");
     Dataset<Row> dataset = spark
         .createDataFrame(Arrays.asList(row1, row2, row3, row4, row5), rowStruct);
+    Column idColumn = dataset.col(dataset.columns()[0]);
+    Column valueColumn = dataset.col(dataset.columns()[1]);
 
     ExpressionParserContext expressionParserContext = new ExpressionParserContext();
     expressionParserContext.getGroupings().add(mock(ParsedExpression.class));
@@ -155,8 +153,8 @@ public class CountFunctionTest {
     ParsedExpression input = new ParsedExpression();
     input.setFhirPath("name.given");
     input.setDataset(dataset);
-    input.setDatasetColumn("123abcd");
-    input.setPathTraversal(PathResolver.resolvePath("Patient.name.given"));
+    input.setIdColumn(idColumn);
+    input.setValueColumn(valueColumn);
 
     FunctionInput countInput = new FunctionInput();
     countInput.setInput(input);
@@ -170,17 +168,16 @@ public class CountFunctionTest {
     // Check the result.
     assertThat(result.getFhirPath()).isEqualTo("count()");
     assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.INTEGER);
-    assertThat(result.getFhirType()).isEqualTo(FhirType.UNSIGNED_INT);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.UNSIGNEDINT);
     assertThat(result.isPrimitive()).isTrue();
     assertThat(result.isSingular()).isTrue();
-    assertThat(result.getAggregation()).isInstanceOf(Column.class);
+    assertThat(result.getIdColumn()).isNotNull();
+    assertThat(result.getValueColumn()).isNotNull();
+    assertThat(result.getAggregationColumn()).isNotNull();
 
     // Check that running the aggregation against the Dataset results in the correct count.
     Dataset<Row> resultDataset = result.getDataset();
-    assertThat(resultDataset.columns().length).isEqualTo(2);
-    assertThat(resultDataset.columns()[0]).isEqualTo(result.getDatasetColumn() + "_id");
-    assertThat(resultDataset.columns()[1]).isEqualTo(result.getDatasetColumn());
-    List<Row> resultRows = resultDataset.agg(result.getAggregation()).collectAsList();
+    List<Row> resultRows = resultDataset.agg(result.getAggregationColumn()).collectAsList();
     assertThat(resultRows.size()).isEqualTo(1);
     Row resultRow = resultRows.get(0);
     assertThat(resultRow.getLong(0)).isEqualTo(4);
@@ -213,7 +210,7 @@ public class CountFunctionTest {
     Dataset<Row> groupedResult = groupingDataset.join(resultDataset,
         resultDataset.col("123abcd_id").equalTo(groupingDataset.col("789wxyz_id")), "left_outer");
     groupedResult = groupedResult.groupBy(groupingDataset.col("789wxyz"))
-        .agg(result.getAggregation());
+        .agg(result.getAggregationColumn());
     List<Row> groupedResultRows = groupedResult.collectAsList();
 
     assertThat(groupedResultRows.size()).isEqualTo(3);

@@ -16,21 +16,13 @@ import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import com.cerner.bunsen.FhirEncoders;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.cors.CorsConfiguration;
@@ -67,21 +59,25 @@ public class AnalyticsServer extends RestfulServer {
   protected void initialize() throws ServletException {
     super.initialize();
 
-    // Set default response encoding to JSON.
-    setDefaultResponseEncoding(EncodingEnum.JSON);
+    try {
+      // Set default response encoding to JSON.
+      setDefaultResponseEncoding(EncodingEnum.JSON);
 
-    initializeSpark();
+      initializeSpark();
 
-    // Initialise the capability statement.
-    this.serverCapabilities = new AnalyticsServerCapabilities(configuration,
-        getAvailableResourceTypes());
-    setServerConformanceProvider(serverCapabilities);
+      initializeTerminologyClient();
+      initializeFhirEncoders();
+      initializeAggregateExecutor();
+      declareProviders();
+      defineCorsConfiguration();
 
-    initializeTerminologyClient();
-    initializeFhirEncoders();
-    initializeAggregateExecutor();
-    declareProviders();
-    defineCorsConfiguration();
+      // Initialise the capability statement.
+      this.serverCapabilities = new AnalyticsServerCapabilities(configuration);
+      serverCapabilities.setAggregateExecutor(aggregateExecutor);
+      setServerConformanceProvider(serverCapabilities);
+    } catch (Exception e) {
+      throw new ServletException("Error initializing AnalyticsServer", e);
+    }
   }
 
   private void initializeSpark() {
@@ -98,28 +94,6 @@ public class AnalyticsServer extends RestfulServer {
         .getOrCreate();
   }
 
-  @Nonnull
-  private Set<ResourceType> getAvailableResourceTypes() throws ServletException {
-    Set<ResourceType> availableResourceTypes;
-    try {
-      logger.info("Getting available resource types");
-      Configuration hadoopConfiguration = new Configuration();
-      FileSystem warehouse = FileSystem
-          .get(new URI(configuration.getWarehouseUrl()), hadoopConfiguration);
-      FileStatus[] fileStatuses = warehouse.listStatus(
-          new Path(configuration.getWarehouseUrl() + "/" + configuration.getDatabaseName()));
-      availableResourceTypes = Arrays.stream(fileStatuses)
-          .map(fileStatus -> {
-            String code = fileStatus.getPath().getName().replace(".parquet", "");
-            return ResourceType.fromCode(code);
-          })
-          .collect(Collectors.toSet());
-    } catch (IOException | URISyntaxException e) {
-      throw new ServletException("Error querying for available resources", e);
-    }
-    return availableResourceTypes;
-  }
-
   private void initializeTerminologyClient() {
     logger.info("Creating FHIR terminology client");
     terminologyClient = getFhirContext()
@@ -134,11 +108,11 @@ public class AnalyticsServer extends RestfulServer {
   /**
    * Initialise a new aggregate executor, and pass through the relevant configuration parameters.
    */
-  private void initializeAggregateExecutor() {
+  private void initializeAggregateExecutor() throws IOException, URISyntaxException {
     ResourceReader resourceReader = new ResourceReader(spark, configuration.getWarehouseUrl(),
         configuration.getDatabaseName());
     AggregateExecutorConfiguration executorConfig = new AggregateExecutorConfiguration(spark,
-        terminologyClient, resourceReader);
+        getFhirContext(), terminologyClient, resourceReader);
     copyStringProps(configuration, executorConfig,
         Arrays.asList("version", "warehouseUrl", "databaseName", "executorMemory"));
     executorConfig.setExplainQueries(configuration.isExplainQueries());
@@ -146,7 +120,6 @@ public class AnalyticsServer extends RestfulServer {
     executorConfig.setLoadPartitions(configuration.getLoadPartitions());
 
     aggregateExecutor = new AggregateExecutor(executorConfig);
-    serverCapabilities.setAggregateExecutor(aggregateExecutor);
   }
 
   /**

@@ -4,7 +4,6 @@
 
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.utilities.Strings.md5Short;
 import static org.apache.spark.sql.functions.first;
 
 import au.csiro.clinsight.query.parsing.ParsedExpression;
@@ -29,19 +28,18 @@ public class FirstFunction implements Function {
     validateInput(input);
     ParsedExpression inputResult = input.getInput();
     Dataset<Row> prevDataset = inputResult.getDataset();
-    String prevColumn = inputResult.getDatasetColumn();
-    String hash = md5Short(input.getExpression());
+    Column prevIdColumn = inputResult.getIdColumn();
+    Column prevValueColumn = inputResult.getValueColumn();
 
     // First apply a grouping based upon the resource ID.
-    RelationalGroupedDataset grouped = prevDataset.groupBy(prevColumn);
+    RelationalGroupedDataset grouped = prevDataset.groupBy(prevValueColumn);
 
     // Apply the aggregate Spark SQL function to the grouping.
-    Dataset<Row> dataset = grouped.agg(first(prevDataset.col(prevColumn)));
+    Dataset<Row> dataset = grouped.agg(first(prevValueColumn));
 
     // Create new ID and value columns, based on the hash computed off the FHIRPath expression.
-    Column idColumn = dataset.col(prevColumn + "_id").alias(hash + "_id");
-    Column column = dataset.col(dataset.columns()[1]).alias(hash);
-    dataset = dataset.select(idColumn, column);
+    Column valueColumn = dataset.col(dataset.columns()[1]);
+    dataset = dataset.select(prevIdColumn, valueColumn);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -51,7 +49,8 @@ public class FirstFunction implements Function {
     result.setPrimitive(inputResult.isPrimitive());
     result.setSingular(true);
     result.setDataset(dataset);
-    result.setDatasetColumn(hash);
+    result.setIdColumn(prevIdColumn);
+    result.setValueColumn(valueColumn);
 
     return result;
   }
