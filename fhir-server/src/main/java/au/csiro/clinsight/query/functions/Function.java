@@ -39,6 +39,7 @@ public interface Function {
     put("toYear", new DateComponentFunction("toYear"));
     put("resolve", new ResolveFunction());
     put("reverseResolve", new ReverseResolveFunction());
+    put("ofType", new OfTypeFunction());
   }};
 
   static Function getFunction(String functionName) {

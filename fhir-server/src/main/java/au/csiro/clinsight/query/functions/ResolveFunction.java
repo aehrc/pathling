@@ -47,7 +47,7 @@ public class ResolveFunction implements Function {
     boolean isPolymorphic = referenceTypes.size() > 1;
 
     Dataset<Row> targetDataset;
-    Column targetIdCol, targetValueCol, targetTypeCol = null;
+    Column targetIdCol, targetValueCol, targetTypeCol;
     if (isPolymorphic) {
       // If this is a polymorphic reference, create a dataset for each reference type, and union
       // them together to produce the target dataset. The dataset will not contain the resources
@@ -86,16 +86,15 @@ public class ResolveFunction implements Function {
     result.setFhirPath(input.getExpression());
     result.setSingular(inputResult.isSingular());
     result.setDataset(dataset);
-    result.setIdColumn(inputIdCol);
 
     // Resolution of polymorphic references are flagged, and don't carry information about the
     // resource type and path traversal.
     if (isPolymorphic) {
-      result.setValueColumn(targetIdCol);
+      result.setHashedValue(inputIdCol, targetIdCol);
       result.setPolymorphic(true);
       result.setResourceTypeColumn(targetValueCol);
     } else {
-      result.setValueColumn(targetValueCol);
+      result.setHashedValue(inputIdCol, targetValueCol);
       result.setResource(true);
       result.setResourceType(
           ResourceType.fromCode(((ResourceType) referenceTypes.toArray()[0]).toCode()));
