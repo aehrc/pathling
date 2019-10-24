@@ -24,23 +24,24 @@ public class OfTypeFunction implements Function {
   @Override
   public ParsedExpression invoke(@Nonnull FunctionInput input) {
     validateInput(input);
-    ResourceType resourceType = input.getArguments().get(0).getResourceType();
+
     ParsedExpression inputResult = input.getInput();
     Dataset<Row> inputDataset = inputResult.getDataset();
     Column inputValueCol = inputResult.getValueColumn();
     Column resourceTypeColumn = inputResult.getResourceTypeColumn();
 
-    // Get the dataset representing the set of all resources of the specified type.
-    Dataset<Row> targetDataset = input.getContext().getResourceReader().read(resourceType);
-    Column targetIdCol = targetDataset.col("id");
+    ParsedExpression argumentResult = input.getArguments().get(0);
+    ResourceType resourceType = argumentResult.getResourceType();
+    Dataset<Row> argumentDataset = argumentResult.getDataset();
+    Column argumentIdCol = argumentResult.getIdColumn();
 
-    // Join from the filtered input dataset to the target resource dataset.
+    // Join from the filtered input dataset to the argument dataset.
     Column resourceTypeMatches = resourceTypeColumn.equalTo(resourceType.toCode());
     Dataset<Row> dataset = inputDataset
-        .join(targetDataset, resourceTypeMatches.and(inputValueCol.equalTo(targetIdCol)),
+        .join(argumentDataset, resourceTypeMatches.and(inputValueCol.equalTo(argumentIdCol)),
             "left_outer");
     Column idColumn = inputResult.getIdColumn();
-    Column valueColumn = targetDataset.col("resource");
+    Column valueColumn = argumentResult.getValueColumn();
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();

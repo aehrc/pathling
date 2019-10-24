@@ -84,7 +84,7 @@ public class AnalyticsServerCapabilities implements
       Extension extension = new Extension();
       extension
           .setUrl("https://clinsight.csiro.au/fhir/StructureDefinition/available-resource-type-0");
-      extension.setValue(new CodeType(resourceType.toString()));
+      extension.setValue(new CodeType(resourceType.toCode()));
       operation.addExtension(extension);
     }
     operations.add(operation);

@@ -307,8 +307,7 @@ public class ExpressionParser {
       Column valueColumn = dataset.col(hash);
       dataset = dataset.select(idColumn, valueColumn);
       result.setDataset(dataset);
-      result.setIdColumn(idColumn);
-      result.setValueColumn(valueColumn);
+      result.setHashedValue(idColumn, valueColumn);
 
       return result;
     }
@@ -375,7 +374,7 @@ public class ExpressionParser {
 
     final ExpressionParserContext context;
 
-    public LiteralTermVisitor(ExpressionParserContext context) {
+    LiteralTermVisitor(ExpressionParserContext context) {
       this.context = context;
     }
 

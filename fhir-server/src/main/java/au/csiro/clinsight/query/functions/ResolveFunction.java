@@ -6,6 +6,7 @@ package au.csiro.clinsight.query.functions;
 
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.clinsight.query.ResourceReader;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ public class ResolveFunction implements Function {
     validateInput(input);
     ParsedExpression inputResult = input.getInput();
     Dataset<Row> inputDataset = inputResult.getDataset();
+    ResourceReader resourceReader = input.getContext().getResourceReader();
     Column inputIdCol = inputResult.getIdColumn();
     Column referenceCol = inputResult.getValueColumn();
 
@@ -41,7 +43,7 @@ public class ResolveFunction implements Function {
     Set<ResourceType> referenceTypes = inputResult.getReferenceResourceTypes();
     // If the type is Resource, all resource types need to be looked at.
     if (referenceTypes.contains(ResourceType.RESOURCE)) {
-      referenceTypes = input.getContext().getResourceReader().getAvailableResourceTypes();
+      referenceTypes = resourceReader.getAvailableResourceTypes();
     }
     assert referenceTypes.size() > 0 : "Encountered reference with no types";
     boolean isPolymorphic = referenceTypes.size() > 1;
@@ -54,12 +56,14 @@ public class ResolveFunction implements Function {
       // themselves, only a type and identifier for later resolution.
       List<Dataset<Row>> referenceTypeDatasets = new ArrayList<>();
       for (ResourceType referenceType : referenceTypes) {
-        Dataset<Row> referenceTypeDataset = input.getContext().getResourceReader()
-            .read(referenceType);
-        targetIdCol = referenceTypeDataset.col("id");
-        targetTypeCol = lit(referenceType.toCode());
-        referenceTypeDataset = referenceTypeDataset.select(targetIdCol, targetTypeCol);
-        referenceTypeDatasets.add(referenceTypeDataset);
+        if (resourceReader.getAvailableResourceTypes().contains(referenceType)) {
+          Dataset<Row> referenceTypeDataset = resourceReader
+              .read(referenceType);
+          targetIdCol = referenceTypeDataset.col("id");
+          targetTypeCol = lit(referenceType.toCode());
+          referenceTypeDataset = referenceTypeDataset.select(targetIdCol, targetTypeCol);
+          referenceTypeDatasets.add(referenceTypeDataset);
+        }
       }
       targetDataset = referenceTypeDatasets.stream()
           .reduce(Dataset::union)
@@ -70,7 +74,7 @@ public class ResolveFunction implements Function {
     } else {
       // If this is a monomorphic reference, we just need to retrieve the appropriate table and
       // create a dataset with the full resources.
-      targetDataset = input.getContext().getResourceReader().read(
+      targetDataset = resourceReader.read(
           (ResourceType) referenceTypes.toArray()[0]);
       targetIdCol = targetDataset.col("id");
       targetValueCol = org.apache.spark.sql.functions.struct(targetDataset.col("*"));

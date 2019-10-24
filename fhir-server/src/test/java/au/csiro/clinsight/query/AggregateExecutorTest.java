@@ -19,6 +19,8 @@ import java.io.StringWriter;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.HashSet;
 import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -40,8 +42,6 @@ public class AggregateExecutorTest {
 
   private AggregateExecutor executor;
   private SparkSession spark;
-  private TerminologyClient terminologyClient;
-  private Path warehouseDirectory;
   private ResourceReader mockReader;
 
   @Before
@@ -51,22 +51,10 @@ public class AggregateExecutorTest {
         .config("spark.master", "local")
         .config("spark.driver.host", "localhost")
         .getOrCreate();
-    terminologyClient = mock(TerminologyClient.class);
+    TerminologyClient terminologyClient = mock(TerminologyClient.class);
 
-    warehouseDirectory = Files.createTempDirectory("clinsight-test-");
+    Path warehouseDirectory = Files.createTempDirectory("clinsight-test-");
     mockReader = mock(ResourceReader.class);
-  }
-
-  @Test
-  public void queryWithMultipleGroupings() throws IOException, JSONException {
-    // Load the subject resource dataset from a test Parquet file, and use it to mock out the
-    // ResourceReader.
-    URL parquetUrl = Thread.currentThread().getContextClassLoader()
-        .getResource("test-data/parquet/Encounter.parquet");
-    assertThat(parquetUrl).isNotNull();
-    Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-    when(mockReader.read(ResourceType.ENCOUNTER))
-        .thenReturn(dataset);
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
@@ -76,6 +64,11 @@ public class AggregateExecutorTest {
     config.setDatabaseName("test");
 
     executor = new AggregateExecutor(config);
+  }
+
+  @Test
+  public void queryWithMultipleGroupings() throws IOException, JSONException {
+    mockResourceReader(ResourceType.ENCOUNTER);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
@@ -114,23 +107,7 @@ public class AggregateExecutorTest {
 
   @Test
   public void queryWithFilter() throws IOException, JSONException {
-    // Load the subject resource dataset from a test Parquet file, and use it to mock out the
-    // ResourceReader.
-    URL parquetUrl = Thread.currentThread().getContextClassLoader()
-        .getResource("test-data/parquet/Patient.parquet");
-    assertThat(parquetUrl).isNotNull();
-    Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-    when(mockReader.read(ResourceType.PATIENT))
-        .thenReturn(dataset);
-
-    // Create and configure a new AggregateExecutor.
-    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        TestUtilities.getFhirContext(),
-        terminologyClient, mockReader);
-    config.setWarehouseUrl(warehouseDirectory.toString());
-    config.setDatabaseName("test");
-
-    executor = new AggregateExecutor(config);
+    mockResourceReader(ResourceType.PATIENT);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
@@ -165,27 +142,7 @@ public class AggregateExecutorTest {
 
   @Test
   public void queryWithResolve() throws IOException, JSONException {
-    // Load the required resource types from test Parquet files, and use them to mock out the
-    // calls to the resource reader.
-    ResourceType[] resourceTypes = new ResourceType[]{ResourceType.ALLERGYINTOLERANCE,
-        ResourceType.PATIENT};
-    for (ResourceType resourceType : resourceTypes) {
-      URL parquetUrl = Thread.currentThread().getContextClassLoader()
-          .getResource("test-data/parquet/" + resourceType + ".parquet");
-      assertThat(parquetUrl).isNotNull();
-      Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-      when(mockReader.read(resourceType))
-          .thenReturn(dataset);
-    }
-
-    // Create and configure a new AggregateExecutor.
-    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        TestUtilities.getFhirContext(),
-        terminologyClient, mockReader);
-    config.setWarehouseUrl(warehouseDirectory.toString());
-    config.setDatabaseName("test");
-
-    executor = new AggregateExecutor(config);
+    mockResourceReader(ResourceType.ALLERGYINTOLERANCE, ResourceType.PATIENT);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
@@ -217,28 +174,42 @@ public class AggregateExecutorTest {
   }
 
   @Test
+  public void queryWithPolymorphicResolve() throws IOException, JSONException {
+    mockResourceReader(ResourceType.DIAGNOSTICREPORT, ResourceType.PATIENT);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.DIAGNOSTICREPORT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of reports");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Patient active status");
+    grouping1.setExpression("subject.resolve().ofType(Patient).gender");
+    request.getGroupings().add(grouping1);
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
+    InputStream expectedStream = Thread.currentThread().getContextClassLoader()
+        .getResourceAsStream(
+            "responses/AggregateExecutorTest-queryWithPolymorphicResolve.Parameters.json");
+    assertThat(expectedStream).isNotNull();
+    StringWriter writer = new StringWriter();
+    IOUtils.copy(expectedStream, writer, UTF_8);
+    String expectedJson = writer.toString();
+    JSONAssert.assertEquals(expectedJson, actualJson, false);
+  }
+
+  @Test
   public void queryWithReverseResolve() throws IOException, JSONException {
-    // Load the required resource types from test Parquet files, and use them to mock out the
-    // calls to the resource reader.
-    ResourceType[] resourceTypes = new ResourceType[]{ResourceType.CONDITION,
-        ResourceType.PATIENT};
-    for (ResourceType resourceType : resourceTypes) {
-      URL parquetUrl = Thread.currentThread().getContextClassLoader()
-          .getResource("test-data/parquet/" + resourceType + ".parquet");
-      assertThat(parquetUrl).isNotNull();
-      Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-      when(mockReader.read(resourceType))
-          .thenReturn(dataset);
-    }
-
-    // Create and configure a new AggregateExecutor.
-    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        TestUtilities.getFhirContext(),
-        terminologyClient, mockReader);
-    config.setWarehouseUrl(warehouseDirectory.toString());
-    config.setDatabaseName("test");
-
-    executor = new AggregateExecutor(config);
+    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
@@ -268,6 +239,18 @@ public class AggregateExecutorTest {
     IOUtils.copy(expectedStream, writer, UTF_8);
     String expectedJson = writer.toString();
     JSONAssert.assertEquals(expectedJson, actualJson, false);
+  }
+
+  private void mockResourceReader(ResourceType... resourceTypes) {
+    for (ResourceType resourceType : resourceTypes) {
+      URL parquetUrl = Thread.currentThread().getContextClassLoader()
+          .getResource("test-data/parquet/" + resourceType + ".parquet");
+      assertThat(parquetUrl).isNotNull();
+      Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
+      when(mockReader.read(resourceType)).thenReturn(dataset);
+      when(mockReader.getAvailableResourceTypes())
+          .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
+    }
   }
 
   @After
