@@ -75,6 +75,8 @@ public class AnalyticsServer extends RestfulServer {
       this.serverCapabilities = new AnalyticsServerCapabilities(configuration);
       serverCapabilities.setAggregateExecutor(aggregateExecutor);
       setServerConformanceProvider(serverCapabilities);
+
+      logger.info("Ready for query");
     } catch (Exception e) {
       throw new ServletException("Error initializing AnalyticsServer", e);
     }

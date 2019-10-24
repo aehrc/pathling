@@ -52,6 +52,13 @@ public class PathTraversalOperator {
         assert false : "Path traversal invoked on non-composite element";
       }
     }
+
+    // Throw an error if the requested child was not found.
+    if (childDefinition == null) {
+      throw new InvalidRequestException("Unknown child of " + left.getFhirPath() + ": " + right);
+    }
+
+    // Get the FHIR and FHIRPath types from the child definition.
     FHIRDefinedType fhirType = ParsedExpression.fhirTypeFromDefinition(childDefinition);
     FhirPathType fhirPathType = FhirPathType.forFhirTypeCode(fhirType);
     boolean isSingular = childDefinition.getMax() == 1;

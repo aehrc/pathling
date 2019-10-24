@@ -109,4 +109,24 @@ public class PathTraversalOperatorTest {
         .isThrownBy(() -> new PathTraversalOperator().invoke(input))
         .withMessage("Attempt at path traversal on polymorphic input: Encounter.subject.resolve()");
   }
+
+  @Test
+  public void throwsErrorOnNonExistentChild() {
+    ExpressionParserContext context = new ExpressionParserContext();
+    context.setFhirContext(TestUtilities.getFhirContext());
+
+    ParsedExpression left = new ParsedExpression();
+    left.setFhirPath("Encounter");
+    left.setResourceType(ResourceType.ENCOUNTER);
+    left.setResource(true);
+
+    PathTraversalInput input = new PathTraversalInput();
+    input.setLeft(left);
+    input.setRight("reason");
+    input.setContext(context);
+
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> new PathTraversalOperator().invoke(input))
+        .withMessage("Unknown child of " + left.getFhirPath() + ": reason");
+  }
 }
