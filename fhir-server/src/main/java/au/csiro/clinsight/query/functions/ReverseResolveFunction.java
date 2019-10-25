@@ -41,6 +41,7 @@ public class ReverseResolveFunction implements Function {
         resourceCol = argument.getOrigin().getValueColumn();
 
     // Create a new dataset by joining from the argument to the input dataset.
+    // TODO: Implement support for resolving references based upon identifier.
     Dataset<Row> dataset = inputDataset
         .join(argumentDataset, inputIdCol.equalTo(argumentValueCol.getField("reference")),
             "left_outer");

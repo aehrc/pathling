@@ -64,6 +64,7 @@ public class DockerImageTest {
   private final HttpClient httpClient;
   private final IParser jsonParser;
   private String fhirServerContainerId;
+  private StopContainer shutdownHook;
 
   public DockerImageTest() {
     DockerClientConfig dockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder()
@@ -113,7 +114,8 @@ public class DockerImageTest {
       fhirServerContainerId = fhirServerContainer.getId();
       // Add a shutdown hook, so that we always clean up after ourselves even if the test process
       // is terminated abnormally.
-      Runtime.getRuntime().addShutdownHook(new StopContainer(dockerClient, fhirServerContainerId));
+      shutdownHook = new StopContainer(dockerClient, fhirServerContainerId);
+      Runtime.getRuntime().addShutdownHook(shutdownHook);
       logger.info("FHIR server container started");
 
       // Wait until the container reaches a healthy state.
@@ -148,6 +150,8 @@ public class DockerImageTest {
       logger.info("Test data load complete");
     } catch (Exception e) {
       stopContainer(dockerClient, fhirServerContainerId);
+      fhirServerContainerId = null;
+      Runtime.getRuntime().removeShutdownHook(shutdownHook);
       throw e;
     }
   }
@@ -193,7 +197,7 @@ public class DockerImageTest {
       aggregationParam.setName("aggregation");
       ParametersParameterComponent aggregationExpression = new ParametersParameterComponent();
       aggregationExpression.setName("expression");
-      aggregationExpression.setValue(new StringType("count"));
+      aggregationExpression.setValue(new StringType("count()"));
       ParametersParameterComponent aggregationLabel = new ParametersParameterComponent();
       aggregationLabel.setName("label");
       aggregationLabel.setValue(new StringType("Number of patients"));
@@ -201,6 +205,24 @@ public class DockerImageTest {
       aggregationParam.getPart().add(aggregationLabel);
 
       // Add grouping, has the patient been diagnosed with a chronic disease?
+      // TODO: Re-enable this more complex query when memberOf has been completed and unit tested.
+      // ParametersParameterComponent groupingParam = new ParametersParameterComponent();
+      // groupingParam.setName("grouping");
+      // ParametersParameterComponent groupingExpression = new ParametersParameterComponent();
+      // groupingExpression.setName("expression");
+      // groupingExpression.setValue(new StringType(
+      //     "reverseResolve(Condition.subject)"
+      //         + ".code"
+      //         + ".memberOf('http://snomed.info/sct?fhir_vs=ecl/"
+      //         + "^ 32570581000036105|Problem/Diagnosis reference set| : "
+      //         + "<< 263502005|Clinical course| = << 90734009|Chronic|')"));
+      // ParametersParameterComponent groupingLabel = new ParametersParameterComponent();
+      // groupingLabel.setName("label");
+      // groupingLabel.setValue(new StringType("Diagnosed with chronic disease?"));
+      // groupingParam.getPart().add(groupingExpression);
+      // groupingParam.getPart().add(groupingLabel);
+
+      // Add grouping, condition code.
       ParametersParameterComponent groupingParam = new ParametersParameterComponent();
       groupingParam.setName("grouping");
       ParametersParameterComponent groupingExpression = new ParametersParameterComponent();
@@ -208,9 +230,8 @@ public class DockerImageTest {
       groupingExpression.setValue(new StringType(
           "reverseResolve(Condition.subject)"
               + ".code"
-              + ".memberOf('http://snomed.info/sct?fhir_vs=ecl/"
-              + "^ 32570581000036105|Problem/Diagnosis reference set| : "
-              + "<< 263502005|Clinical course| = << 90734009|Chronic|')"));
+              + ".coding"
+              + ".display"));
       ParametersParameterComponent groupingLabel = new ParametersParameterComponent();
       groupingLabel.setName("label");
       groupingLabel.setValue(new StringType("Diagnosed with chronic disease?"));
@@ -256,30 +277,35 @@ public class DockerImageTest {
       Optional<ParametersParameterComponent> firstLabel = firstGrouping.getPart().stream()
           .filter(part -> part.getName().equals("label")).findFirst();
       assertThat(firstLabel.isPresent());
-      assertThat(firstLabel.get().getValue().equals(new BooleanType(true)));
+      assertThat(firstLabel.get().getValue().equals(new StringType("Prediabetes")));
       Optional<ParametersParameterComponent> firstResult = firstGrouping.getPart().stream()
           .filter(part -> part.getName().equals("result")).findFirst();
       assertThat(firstResult.isPresent());
-      assertThat(firstResult.get().getValue().equals(new UnsignedIntType(2)));
+      assertThat(firstResult.get().getValue().equals(new UnsignedIntType(3)));
 
       // Check the second grouping.
       ParametersParameterComponent secondGrouping = outParams.getParameter().get(0);
       Optional<ParametersParameterComponent> secondLabel = secondGrouping.getPart().stream()
           .filter(part -> part.getName().equals("label")).findFirst();
       assertThat(secondLabel.isPresent());
-      assertThat(secondLabel.get().getValue().equals(new BooleanType(true)));
+      assertThat(
+          secondLabel.get().getValue().equals(new StringType("Fetus with unknown complication")));
       Optional<ParametersParameterComponent> secondResult = secondGrouping.getPart().stream()
           .filter(part -> part.getName().equals("result")).findFirst();
       assertThat(secondResult.isPresent());
-      assertThat(secondResult.get().getValue().equals(new UnsignedIntType(2)));
+      assertThat(secondResult.get().getValue().equals(new UnsignedIntType(1)));
     } finally {
       stopContainer(dockerClient, fhirServerContainerId);
+      fhirServerContainerId = null;
+      Runtime.getRuntime().removeShutdownHook(shutdownHook);
     }
   }
 
   @After
   public void tearDown() {
     stopContainer(dockerClient, fhirServerContainerId);
+    fhirServerContainerId = null;
+    Runtime.getRuntime().removeShutdownHook(shutdownHook);
   }
 
   static class StopContainer extends Thread {

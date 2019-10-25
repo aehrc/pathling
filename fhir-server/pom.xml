@@ -146,7 +146,18 @@
           </execution>
         </executions>
         <configuration>
+          <includes>
+            <include>**/*.java</include>
+          </includes>
           <groups>au.csiro.clinsight.SystemTest</groups>
+          <systemPropertyVariables>
+            <clinsight.test.terminologyServiceUrl>
+              https://r4.ontoserver.csiro.au/fhir
+            </clinsight.test.terminologyServiceUrl>
+            <clinsight.test.fhirServerDockerTag>
+              ${project.version}
+            </clinsight.test.fhirServerDockerTag>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
     </plugins>

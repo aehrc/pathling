@@ -12,6 +12,7 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.*;
@@ -215,6 +216,9 @@ public class ResolveFunctionTest {
         .createDataFrame(Collections.singletonList(groupRow), groupRecord);
     when(mockReader.read(ResourceType.GROUP))
         .thenReturn(groupDataset);
+
+    when(mockReader.getAvailableResourceTypes())
+        .thenReturn(new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
 
     // Prepare the inputs to the function.
     ExpressionParserContext parserContext = new ExpressionParserContext();

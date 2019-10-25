@@ -6,7 +6,7 @@
 <configuration>
   <appender class="ch.qos.logback.core.ConsoleAppender" name="STDOUT">
     <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+      <pattern>[%level] %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
   <logger level="INFO" name="au.csiro"/>
