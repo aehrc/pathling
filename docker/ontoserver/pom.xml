@@ -36,6 +36,7 @@
         </executions>
         <configuration>
           <sourceFiles>
+            <param>v3-codesystems.json</param>
             <param>valuesets.json</param>
             <param>profiles-types.json</param>
             <param>profiles-resources.json</param>

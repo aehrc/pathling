@@ -66,6 +66,14 @@
       </modules>
     </profile>
     <profile>
+      <id>ontoserver</id>
+      <modules>
+        <module>fhir-definitions-maven-plugin</module>
+        <module>ontoserver-preload-maven-plugin</module>
+        <module>docker/ontoserver</module>
+      </modules>
+    </profile>
+    <profile>
       <id>notebook</id>
       <modules>
         <module>fhir-server</module>
@@ -107,6 +115,12 @@
       <groupId>ca.uhn.hapi.fhir</groupId>
       <artifactId>hapi-fhir-client</artifactId>
       <version>${hapiFhirVersion}</version>
+    </dependency>
+    <!-- Woodstox is used by HAPI for XML processing -->
+    <dependency>
+      <groupId>com.fasterxml.woodstox</groupId>
+      <artifactId>woodstox-core</artifactId>
+      <version>6.0.2</version>
     </dependency>
 
     <!-- Apache Spark -->
