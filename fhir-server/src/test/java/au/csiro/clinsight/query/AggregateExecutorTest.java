@@ -4,34 +4,41 @@
 
 package au.csiro.clinsight.query;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static au.csiro.clinsight.TestUtilities.getJsonParser;
+import static au.csiro.clinsight.TestUtilities.getResourceAsStream;
+import static au.csiro.clinsight.TestUtilities.getResourceAsString;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.clinsight.TestUtilities;
+import au.csiro.clinsight.fhir.FhirContextFactory;
+import au.csiro.clinsight.fhir.FreshFhirContextFactory;
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.query.AggregateRequest.Aggregation;
 import au.csiro.clinsight.query.AggregateRequest.Grouping;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
-import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.UriType;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import org.skyscreamer.jsonassert.JSONAssert;
 
 /**
@@ -43,6 +50,9 @@ public class AggregateExecutorTest {
   private AggregateExecutor executor;
   private SparkSession spark;
   private ResourceReader mockReader;
+  private TerminologyClient terminologyClient;
+  private Path warehouseDirectory;
+  private String terminologyServiceUrl = "https://r4.ontoserver.csiro.au";
 
   @Before
   public void setUp() throws IOException {
@@ -51,15 +61,17 @@ public class AggregateExecutorTest {
         .config("spark.master", "local")
         .config("spark.driver.host", "localhost")
         .getOrCreate();
-    TerminologyClient terminologyClient = mock(TerminologyClient.class);
 
-    Path warehouseDirectory = Files.createTempDirectory("clinsight-test-");
+    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
+    when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
+
+    warehouseDirectory = Files.createTempDirectory("clinsight-test-");
     mockReader = mock(ResourceReader.class);
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        TestUtilities.getFhirContext(),
-        terminologyClient, mockReader);
+        TestUtilities.getFhirContext(), new FreshFhirContextFactory(), terminologyClient,
+        mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
@@ -94,14 +106,9 @@ public class AggregateExecutorTest {
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
-    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
-    InputStream expectedStream = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream(
-            "responses/AggregateExecutorTest-queryWithMultipleGroupings.Parameters.json");
-    assertThat(expectedStream).isNotNull();
-    StringWriter writer = new StringWriter();
-    IOUtils.copy(expectedStream, writer, UTF_8);
-    String expectedJson = writer.toString();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    String expectedJson = getResourceAsString(
+        "responses/AggregateExecutorTest-queryWithMultipleGroupings.Parameters.json");
     JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
@@ -130,13 +137,9 @@ public class AggregateExecutorTest {
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
-    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
-    InputStream expectedStream = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream("responses/AggregateExecutorTest-queryWithFilter.Parameters.json");
-    assertThat(expectedStream).isNotNull();
-    StringWriter writer = new StringWriter();
-    IOUtils.copy(expectedStream, writer, UTF_8);
-    String expectedJson = writer.toString();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    String expectedJson = getResourceAsString(
+        "responses/AggregateExecutorTest-queryWithFilter.Parameters.json");
     JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
@@ -163,13 +166,9 @@ public class AggregateExecutorTest {
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
-    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
-    InputStream expectedStream = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream("responses/AggregateExecutorTest-queryWithResolve.Parameters.json");
-    assertThat(expectedStream).isNotNull();
-    StringWriter writer = new StringWriter();
-    IOUtils.copy(expectedStream, writer, UTF_8);
-    String expectedJson = writer.toString();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    String expectedJson = getResourceAsString(
+        "responses/AggregateExecutorTest-queryWithResolve.Parameters.json");
     JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
@@ -196,14 +195,9 @@ public class AggregateExecutorTest {
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
-    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
-    InputStream expectedStream = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream(
-            "responses/AggregateExecutorTest-queryWithPolymorphicResolve.Parameters.json");
-    assertThat(expectedStream).isNotNull();
-    StringWriter writer = new StringWriter();
-    IOUtils.copy(expectedStream, writer, UTF_8);
-    String expectedJson = writer.toString();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    String expectedJson = getResourceAsString(
+        "responses/AggregateExecutorTest-queryWithPolymorphicResolve.Parameters.json");
     JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
@@ -230,14 +224,66 @@ public class AggregateExecutorTest {
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
-    String actualJson = TestUtilities.getJsonParser().encodeResourceToString(responseParameters);
-    InputStream expectedStream = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream(
-            "responses/AggregateExecutorTest-queryWithReverseResolve.Parameters.json");
-    assertThat(expectedStream).isNotNull();
-    StringWriter writer = new StringWriter();
-    IOUtils.copy(expectedStream, writer, UTF_8);
-    String expectedJson = writer.toString();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    String expectedJson = getResourceAsString(
+        "responses/AggregateExecutorTest-queryWithReverseResolve.Parameters.json");
+    JSONAssert.assertEquals(expectedJson, actualJson, false);
+  }
+
+  @Test
+  public void queryWithMemberOf() throws IOException, JSONException {
+    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+    Parameters positiveResponse = (Parameters) TestUtilities.getJsonParser()
+        .parseResource(getResourceAsStream(
+            "txResponses/MemberOfFunctionTest-memberOfCoding-validate-code-positive.Parameters.json"));
+
+    // Create a mock FhirContextFactory, and make it return the mock terminology client.
+    FhirContext fhirContext = mock(FhirContext.class, Mockito.withSettings().serializable());
+    when(fhirContext
+        .newRestfulClient(TerminologyClient.class, terminologyServiceUrl))
+        .thenReturn(terminologyClient);
+    FhirContextFactory fhirContextFactory = mock(FhirContextFactory.class,
+        Mockito.withSettings().serializable());
+    when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
+
+    // Mock out responses from the terminology server.
+    when(terminologyClient
+        .validateCode(any(UriType.class), any(CodeableConcept.class)))
+        .thenReturn(positiveResponse);
+
+    // Create and configure a new AggregateExecutor.
+    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
+        TestUtilities.getFhirContext(), fhirContextFactory, terminologyClient, mockReader);
+    config.setWarehouseUrl(warehouseDirectory.toString());
+    config.setDatabaseName("test");
+
+    AggregateExecutor localExecutor = new AggregateExecutor(config);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Condition in ED diagnosis reference set?");
+    String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
+    grouping1.setExpression("reverseResolve(Condition.subject)"
+        + ".code"
+        + ".memberOf('" + valueSetUrl + "'");
+    request.getGroupings().add(grouping1);
+
+    // Execute the query.
+    AggregateResponse response = localExecutor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    String expectedJson = getResourceAsString(
+        "responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json");
     JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 

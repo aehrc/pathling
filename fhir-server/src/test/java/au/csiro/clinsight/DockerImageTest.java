@@ -206,23 +206,6 @@ public class DockerImageTest {
 
       // Add grouping, has the patient been diagnosed with a chronic disease?
       // TODO: Re-enable this more complex query when memberOf has been completed and unit tested.
-      // ParametersParameterComponent groupingParam = new ParametersParameterComponent();
-      // groupingParam.setName("grouping");
-      // ParametersParameterComponent groupingExpression = new ParametersParameterComponent();
-      // groupingExpression.setName("expression");
-      // groupingExpression.setValue(new StringType(
-      //     "reverseResolve(Condition.subject)"
-      //         + ".code"
-      //         + ".memberOf('http://snomed.info/sct?fhir_vs=ecl/"
-      //         + "^ 32570581000036105|Problem/Diagnosis reference set| : "
-      //         + "<< 263502005|Clinical course| = << 90734009|Chronic|')"));
-      // ParametersParameterComponent groupingLabel = new ParametersParameterComponent();
-      // groupingLabel.setName("label");
-      // groupingLabel.setValue(new StringType("Diagnosed with chronic disease?"));
-      // groupingParam.getPart().add(groupingExpression);
-      // groupingParam.getPart().add(groupingLabel);
-
-      // Add grouping, condition code.
       ParametersParameterComponent groupingParam = new ParametersParameterComponent();
       groupingParam.setName("grouping");
       ParametersParameterComponent groupingExpression = new ParametersParameterComponent();
@@ -230,13 +213,30 @@ public class DockerImageTest {
       groupingExpression.setValue(new StringType(
           "reverseResolve(Condition.subject)"
               + ".code"
-              + ".coding"
-              + ".display"));
+              + ".memberOf('http://snomed.info/sct?fhir_vs=ecl/"
+              + "^ 32570581000036105|Problem/Diagnosis reference set| : "
+              + "<< 263502005|Clinical course| = << 90734009|Chronic|')"));
       ParametersParameterComponent groupingLabel = new ParametersParameterComponent();
       groupingLabel.setName("label");
       groupingLabel.setValue(new StringType("Diagnosed with chronic disease?"));
       groupingParam.getPart().add(groupingExpression);
       groupingParam.getPart().add(groupingLabel);
+
+      // Add grouping, condition code.
+      // ParametersParameterComponent groupingParam = new ParametersParameterComponent();
+      // groupingParam.setName("grouping");
+      // ParametersParameterComponent groupingExpression = new ParametersParameterComponent();
+      // groupingExpression.setName("expression");
+      // groupingExpression.setValue(new StringType(
+      //     "reverseResolve(Condition.subject)"
+      //         + ".code"
+      //         + ".coding"
+      //         + ".display"));
+      // ParametersParameterComponent groupingLabel = new ParametersParameterComponent();
+      // groupingLabel.setName("label");
+      // groupingLabel.setValue(new StringType("Diagnosed with chronic disease?"));
+      // groupingParam.getPart().add(groupingExpression);
+      // groupingParam.getPart().add(groupingLabel);
 
       // Add filter, females only.
       ParametersParameterComponent filterParam = new ParametersParameterComponent();

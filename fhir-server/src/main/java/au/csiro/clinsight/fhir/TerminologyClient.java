@@ -4,10 +4,11 @@
 
 package au.csiro.clinsight.fhir;
 
-import ca.uhn.fhir.rest.annotation.*;
+import ca.uhn.fhir.rest.annotation.Metadata;
+import ca.uhn.fhir.rest.annotation.Operation;
+import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.client.api.IBasicClient;
 import java.util.List;
-import java.util.Set;
 import org.hl7.fhir.r4.model.*;
 
 /**
@@ -17,13 +18,6 @@ public interface TerminologyClient extends IBasicClient {
 
   @Metadata
   CapabilityStatement getServerMetadata();
-
-  @Search
-  List<StructureDefinition> getStructureDefinitionByUrl(
-      @RequiredParam(name = StructureDefinition.SP_URL) UriType url);
-
-  @Search
-  List<CodeSystem> getAllCodeSystems(@Elements Set<String> theElements);
 
   @Operation(name = "$validate-code", type = ValueSet.class)
   Parameters validateCode(@OperationParam(name = "url") UriType url,

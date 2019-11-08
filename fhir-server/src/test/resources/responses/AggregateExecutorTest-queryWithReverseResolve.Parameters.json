@@ -162,11 +162,11 @@
       "part": [
         {
           "name": "label",
-          "valueString": "Fracture of rib"
+          "valueString": "First degree burn"
         },
         {
           "name": "result",
-          "valueUnsignedInt": 1
+          "valueUnsignedInt": 2
         }
       ]
     },
@@ -175,11 +175,11 @@
       "part": [
         {
           "name": "label",
-          "valueString": "First degree burn"
+          "valueString": "Fracture of rib"
         },
         {
           "name": "result",
-          "valueUnsignedInt": 2
+          "valueUnsignedInt": 1
         }
       ]
     },
@@ -383,7 +383,7 @@
       "part": [
         {
           "name": "label",
-          "valueString": "Polyp of colon"
+          "valueString": "Normal pregnancy"
         },
         {
           "name": "result",
@@ -396,7 +396,7 @@
       "part": [
         {
           "name": "label",
-          "valueString": "Normal pregnancy"
+          "valueString": "Polyp of colon"
         },
         {
           "name": "result",
@@ -422,11 +422,11 @@
       "part": [
         {
           "name": "label",
-          "valueString": "Protracted diarrhea"
+          "valueString": "Prediabetes"
         },
         {
           "name": "result",
-          "valueUnsignedInt": 1
+          "valueUnsignedInt": 4
         }
       ]
     },
@@ -435,11 +435,11 @@
       "part": [
         {
           "name": "label",
-          "valueString": "Prediabetes"
+          "valueString": "Protracted diarrhea"
         },
         {
           "name": "result",
-          "valueUnsignedInt": 4
+          "valueUnsignedInt": 1
         }
       ]
     }

@@ -5,6 +5,7 @@
 package au.csiro.clinsight.update;
 
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
+import au.csiro.clinsight.fhir.FhirContextFactory;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -40,13 +41,15 @@ public class ImportProvider {
   private final SparkSession spark;
   private final ResourceWriter resourceWriter;
   private final FhirEncoders fhirEncoders;
+  private final FhirContextFactory fhirContextFactory;
 
   public ImportProvider(AnalyticsServerConfiguration configuration, SparkSession spark,
-      FhirEncoders fhirEncoders) {
+      FhirEncoders fhirEncoders, FhirContextFactory fhirContextFactory) {
     this.spark = spark;
     this.resourceWriter = new ResourceWriter(configuration.getWarehouseUrl(),
         configuration.getDatabaseName());
     this.fhirEncoders = fhirEncoders;
+    this.fhirContextFactory = fhirContextFactory;
   }
 
   /**
@@ -85,13 +88,13 @@ public class ImportProvider {
       ResourceType resourceType = ResourceType
           .fromCode(resourceCode);
       ExpressionEncoder<IBaseResource> fhirEncoder = fhirEncoders.of(resourceType.toCode());
+      @SuppressWarnings("UnnecessaryLocalVariable") FhirContextFactory localFhirContextFactory = this.fhirContextFactory;
 
       String url = ((UrlType) urlParam.getValue()).getValueAsString();
       Dataset<String> jsonStrings = spark.read().textFile(url);
       Dataset resources = jsonStrings
-          .map((MapFunction<String, IBaseResource>) json -> FhirEncoders
-              .contextFor(FhirVersionEnum.R4).newJsonParser()
-              .parseResource(json), fhirEncoder);
+          .map((MapFunction<String, IBaseResource>) json -> localFhirContextFactory
+              .getFhirContext(FhirVersionEnum.R4).newJsonParser().parseResource(json), fhirEncoder);
 
       logger.info("Saving resources: " + resourceType.toCode());
       resourceWriter.write(resourceType, resources);

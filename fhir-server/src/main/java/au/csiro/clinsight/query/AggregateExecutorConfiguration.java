@@ -4,6 +4,7 @@
 
 package au.csiro.clinsight.query;
 
+import au.csiro.clinsight.fhir.FhirContextFactory;
 import au.csiro.clinsight.fhir.TerminologyClient;
 import ca.uhn.fhir.context.FhirContext;
 import javax.annotation.Nonnull;
@@ -23,10 +24,16 @@ public class AggregateExecutorConfiguration {
   private final SparkSession sparkSession;
 
   /**
-   * (REQUIRED) FHIR context for doing FHIR stuff.
+   * (REQUIRED) FHIR context for doing FHIR stuff locally.
    */
   @Nonnull
   private final FhirContext fhirContext;
+
+  /**
+   * (REQUIRED) FHIR context factory for doing FHIR stuff on Spark workers.
+   */
+  @Nonnull
+  private final FhirContextFactory fhirContextFactory;
 
   /**
    * (REQUIRED) FHIR terminology service client to use in satisfying terminology queries.
@@ -81,10 +88,11 @@ public class AggregateExecutorConfiguration {
   private int loadPartitions;
 
   public AggregateExecutorConfiguration(@Nonnull SparkSession sparkSession,
-      @Nonnull FhirContext fhirContext, @Nonnull TerminologyClient terminologyClient,
-      @Nonnull ResourceReader resourceReader) {
+      @Nonnull FhirContext fhirContext, @Nonnull FhirContextFactory fhirContextFactory,
+      @Nonnull TerminologyClient terminologyClient, @Nonnull ResourceReader resourceReader) {
     this.sparkSession = sparkSession;
     this.fhirContext = fhirContext;
+    this.fhirContextFactory = fhirContextFactory;
     this.terminologyClient = terminologyClient;
     this.resourceReader = resourceReader;
     warehouseUrl = "file:///usr/share/warehouse";
@@ -103,6 +111,11 @@ public class AggregateExecutorConfiguration {
   @Nonnull
   public FhirContext getFhirContext() {
     return fhirContext;
+  }
+
+  @Nonnull
+  public FhirContextFactory getFhirContextFactory() {
+    return fhirContextFactory;
   }
 
   @Nonnull

@@ -18,7 +18,7 @@
   <packaging>pom</packaging>
 
   <properties>
-    <ontoserverVersion>latest</ontoserverVersion>
+    <ontoserverVersion>ctsa-6.0.0-SNAPSHOT</ontoserverVersion>
   </properties>
 
   <build>
@@ -59,7 +59,7 @@
           <upstreamContentItems>
             <contentItem>
               <identifier>http://snomed.info/sct</identifier>
-              <version>http://snomed.info/sct/32506021000036107/version/20190831</version>
+              <version>http://snomed.info/sct/32506021000036107/version/20191031</version>
             </contentItem>
             <contentItem>
               <identifier>http://loinc.org</identifier>
