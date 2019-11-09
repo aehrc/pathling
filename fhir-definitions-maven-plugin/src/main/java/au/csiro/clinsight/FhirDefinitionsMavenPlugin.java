@@ -6,6 +6,7 @@ package au.csiro.clinsight;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import ca.uhn.fhir.parser.LenientErrorHandler;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -42,7 +43,7 @@ public class FhirDefinitionsMavenPlugin extends AbstractMojo {
   @Parameter(defaultValue = "${project.build.directory}/fhir-definitions")
   private String outputDirectory;
 
-  @Parameter(defaultValue = "http://www.hl7.org/fhir/definitions.json.zip")
+  @Parameter(defaultValue = "http://www.hl7.org/fhir/R4/definitions.json.zip")
   private String downloadUrl;
 
   @Parameter(required = true)
@@ -74,6 +75,9 @@ public class FhirDefinitionsMavenPlugin extends AbstractMojo {
 
       // Initialise the FHIR context.
       FhirContext fhirContext = FhirContext.forR4();
+      LenientErrorHandler errorHandler = new LenientErrorHandler(false);
+      errorHandler.setErrorOnInvalidValue(false);
+      fhirContext.setParserErrorHandler(errorHandler);
       IParser jsonParser = fhirContext.newJsonParser();
 
       // Create a temporary file.

@@ -55,15 +55,11 @@
           </execution>
         </executions>
         <configuration>
-          <syndicationUrl>https://r4.ontoserver.csiro.au/synd/syndication.xml</syndicationUrl>
           <upstreamContentItems>
             <contentItem>
-              <identifier>http://snomed.info/sct</identifier>
+              <identifier>http://snomed.info/sct/32506021000036107</identifier>
               <version>http://snomed.info/sct/32506021000036107/version/20191031</version>
-            </contentItem>
-            <contentItem>
-              <identifier>http://loinc.org</identifier>
-              <version>2.65</version>
+              <categoryTerm>SCT_RF2_FULL</categoryTerm>
             </contentItem>
           </upstreamContentItems>
           <bundles>

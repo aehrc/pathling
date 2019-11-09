@@ -11,6 +11,7 @@ public class ContentItemParameter {
 
   public String identifier;
   public String version;
+  public String categoryTerm;
 
   public String getIdentifier() {
     return identifier;
@@ -26,6 +27,14 @@ public class ContentItemParameter {
 
   public void setVersion(String version) {
     this.version = version;
+  }
+
+  public String getCategoryTerm() {
+    return categoryTerm;
+  }
+
+  public void setCategoryTerm(String categoryTerm) {
+    this.categoryTerm = categoryTerm;
   }
 
 }
