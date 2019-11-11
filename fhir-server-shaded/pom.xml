@@ -15,7 +15,7 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>fhir-server-shaded</artifactId>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
 
   <dependencies>
     <dependency>

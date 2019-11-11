@@ -27,7 +27,7 @@
   <properties>
     <hapiFhirVersion>4.0.0</hapiFhirVersion>
     <sparkVersion>2.4.4</sparkVersion>
-    <sparkScalaVersion>2.12</sparkScalaVersion>
+    <sparkScalaVersion>2.11</sparkScalaVersion>
     <hadoopVersion>3.2.1</hadoopVersion>
     <bunsenVersion>0.4.9-SNAPSHOT</bunsenVersion>
     <pythonVersion>3.6.8</pythonVersion>
@@ -120,11 +120,13 @@
           <artifactId>slf4j-log4j12</artifactId>
         </exclusion>
       </exclusions>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
       <version>${sparkVersion}</version>
+      <scope>provided</scope>
     </dependency>
 
     <!-- Bunsen -->
