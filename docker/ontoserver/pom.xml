@@ -18,30 +18,11 @@
   <packaging>pom</packaging>
 
   <properties>
-    <ontoserverVersion>latest</ontoserverVersion>
+    <ontoserverVersion>ctsa-6.0.0-SNAPSHOT</ontoserverVersion>
   </properties>
 
   <build>
     <plugins>
-      <plugin>
-        <groupId>au.csiro.clinsight</groupId>
-        <artifactId>fhir-definitions-maven-plugin</artifactId>
-        <version>${project.version}</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>bundle</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <sourceFiles>
-            <param>valuesets.json</param>
-            <param>profiles-types.json</param>
-            <param>profiles-resources.json</param>
-          </sourceFiles>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>au.csiro.clinsight</groupId>
         <artifactId>ontoserver-preload-maven-plugin</artifactId>
@@ -58,17 +39,15 @@
           <upstreamContentItems>
             <contentItem>
               <identifier>http://snomed.info/sct</identifier>
-              <version>http://snomed.info/sct/32506021000036107/version/20190831</version>
+              <version>http://snomed.info/sct/32506021000036107/version/20191031</version>
+              <categoryTerm>BINARY</categoryTerm>
             </contentItem>
             <contentItem>
               <identifier>http://loinc.org</identifier>
-              <version>2.65</version>
+              <version>2.66</version>
+              <categoryTerm>BINARY</categoryTerm>
             </contentItem>
           </upstreamContentItems>
-          <bundles>
-            <param>${project.build.directory}/fhir-definitions/fhir-definitions.Bundle.json
-            </param>
-          </bundles>
         </configuration>
       </plugin>
       <plugin>

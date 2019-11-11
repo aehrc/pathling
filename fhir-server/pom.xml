@@ -48,13 +48,6 @@
       <artifactId>spring-web</artifactId>
       <version>5.0.8.RELEASE</version>
     </dependency>
-
-    <!-- Woodstox is used by HAPI for XML processing -->
-    <dependency>
-      <groupId>com.fasterxml.woodstox</groupId>
-      <artifactId>woodstox-core</artifactId>
-      <version>6.0.2</version>
-    </dependency>
   </dependencies>
 
   <build>

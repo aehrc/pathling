@@ -30,7 +30,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -54,7 +53,7 @@ public class OntoserverPreloadMavenPlugin extends AbstractMojo {
   @Parameter(defaultValue = "${project.build.directory}/ontoserver-preload")
   private String outputDirectory;
 
-  @Parameter(property = "syndicationUrl", defaultValue = "foo")
+  @Parameter(property = "syndicationUrl", defaultValue = "https://api.healthterminologies.gov.au/syndication/v1/syndication.xml")
   private String syndicationUrl;
 
   @Parameter
@@ -76,7 +75,7 @@ public class OntoserverPreloadMavenPlugin extends AbstractMojo {
   }
 
   @Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
+  public void execute() throws MojoExecutionException {
     try {
       // Ensure that the output directory exists.
       new File(outputDirectory).mkdirs();
@@ -142,8 +141,13 @@ public class OntoserverPreloadMavenPlugin extends AbstractMojo {
     // Get matching entries from the upstream feed.
     List<Entry> matchingEntries = upstreamFeed.getEntries().stream()
         .filter(entry -> upstreamContentItems.stream()
-            .anyMatch(ci -> ci.getIdentifier().equals(entry.getContentItemIdentifier()) &&
-                ci.getVersion().equals(entry.getContentItemVersion())))
+            .anyMatch(ci -> {
+              boolean identifierEqual = ci.getIdentifier().equals(entry.getContentItemIdentifier());
+              boolean versionEqual = ci.getVersion().equals(entry.getContentItemVersion());
+              boolean containsCategory = entry.getCategories().stream()
+                  .anyMatch(category -> category.getTerm().equals(ci.getCategoryTerm()));
+              return identifierEqual && versionEqual && containsCategory;
+            }))
         .collect(Collectors.toList());
 
     // Add the upstream content items to the preload feed.

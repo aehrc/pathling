@@ -4,6 +4,7 @@
 
 package au.csiro.clinsight.query.parsing;
 
+import au.csiro.clinsight.fhir.FhirContextFactory;
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.query.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
@@ -22,6 +23,12 @@ public class ExpressionParserContext {
    * A FHIR context that can be used to do FHIR stuff.
    */
   private FhirContext fhirContext;
+
+  /**
+   * A factory for creating new FhirContext objects, which is needed within blocks of code that are
+   * run in parallel.
+   */
+  private FhirContextFactory fhirContextFactory;
 
   /**
    * The terminology client that should be used to resolve terminology queries within this
@@ -54,19 +61,20 @@ public class ExpressionParserContext {
   /**
    * Groupings to be applied to this expression at the point of aggregation.
    */
-  private List<ParsedExpression> groupings = new ArrayList<>();
+  private final List<ParsedExpression> groupings = new ArrayList<>();
 
   public ExpressionParserContext() {
   }
 
   public ExpressionParserContext(ExpressionParserContext context) {
     this.fhirContext = context.fhirContext;
+    this.fhirContextFactory = context.fhirContextFactory;
     this.terminologyClient = context.terminologyClient;
     this.sparkSession = context.sparkSession;
     this.resourceReader = context.resourceReader;
     this.subjectContext = context.subjectContext;
     this.thisContext = context.thisContext;
-    this.groupings = context.groupings;
+    this.groupings.addAll(context.groupings);
   }
 
   public FhirContext getFhirContext() {
@@ -75,6 +83,14 @@ public class ExpressionParserContext {
 
   public void setFhirContext(FhirContext fhirContext) {
     this.fhirContext = fhirContext;
+  }
+
+  public FhirContextFactory getFhirContextFactory() {
+    return fhirContextFactory;
+  }
+
+  public void setFhirContextFactory(FhirContextFactory fhirContextFactory) {
+    this.fhirContextFactory = fhirContextFactory;
   }
 
   public TerminologyClient getTerminologyClient() {

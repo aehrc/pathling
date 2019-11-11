@@ -37,7 +37,6 @@ public class AnalyticsServer extends RestfulServer {
 
   private static final Logger logger = LoggerFactory.getLogger(AnalyticsServer.class);
   private final AnalyticsServerConfiguration configuration;
-  private AnalyticsServerCapabilities serverCapabilities;
   private SparkSession spark;
   private TerminologyClient terminologyClient;
   private FhirEncoders fhirEncoders;
@@ -72,7 +71,8 @@ public class AnalyticsServer extends RestfulServer {
       defineCorsConfiguration();
 
       // Initialise the capability statement.
-      this.serverCapabilities = new AnalyticsServerCapabilities(configuration);
+      AnalyticsServerCapabilities serverCapabilities = new AnalyticsServerCapabilities(
+          configuration);
       serverCapabilities.setAggregateExecutor(aggregateExecutor);
       setServerConformanceProvider(serverCapabilities);
 
@@ -114,7 +114,7 @@ public class AnalyticsServer extends RestfulServer {
     ResourceReader resourceReader = new ResourceReader(spark, configuration.getWarehouseUrl(),
         configuration.getDatabaseName());
     AggregateExecutorConfiguration executorConfig = new AggregateExecutorConfiguration(spark,
-        getFhirContext(), terminologyClient, resourceReader);
+        getFhirContext(), new FreshFhirContextFactory(), terminologyClient, resourceReader);
     copyStringProps(configuration, executorConfig,
         Arrays.asList("version", "warehouseUrl", "databaseName", "executorMemory"));
     executorConfig.setExplainQueries(configuration.isExplainQueries());
@@ -128,9 +128,10 @@ public class AnalyticsServer extends RestfulServer {
    * Declare the providers which will handle requests to this server.
    */
   private void declareProviders() {
+    FhirContextFactory fhirContextFactory = new FreshFhirContextFactory();
     List<Object> plainProviders = new ArrayList<>();
     plainProviders.add(new AggregateOperationProvider(aggregateExecutor));
-    plainProviders.add(new ImportProvider(configuration, spark, fhirEncoders));
+    plainProviders.add(new ImportProvider(configuration, spark, fhirEncoders, fhirContextFactory));
     registerProviders(plainProviders);
   }
 

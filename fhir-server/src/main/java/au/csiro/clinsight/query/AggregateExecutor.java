@@ -6,6 +6,7 @@ package au.csiro.clinsight.query;
 
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.BOOLEAN;
 
+import au.csiro.clinsight.fhir.FhirContextFactory;
 import au.csiro.clinsight.fhir.TerminologyClient;
 import au.csiro.clinsight.query.AggregateRequest.Aggregation;
 import au.csiro.clinsight.query.AggregateRequest.Grouping;
@@ -41,6 +42,7 @@ public class AggregateExecutor {
   private static final Logger logger = LoggerFactory.getLogger(AggregateExecutor.class);
 
   private final FhirContext fhirContext;
+  private final FhirContextFactory fhirContextFactory;
   private final SparkSession spark;
   private final ResourceReader resourceReader;
   private TerminologyClient terminologyClient;
@@ -49,6 +51,7 @@ public class AggregateExecutor {
     logger.info("Creating new AggregateExecutor: " + configuration);
     spark = configuration.getSparkSession();
     fhirContext = configuration.getFhirContext();
+    fhirContextFactory = configuration.getFhirContextFactory();
     terminologyClient = configuration.getTerminologyClient();
     resourceReader = configuration.getResourceReader();
   }
@@ -102,6 +105,7 @@ public class AggregateExecutor {
       // Gather dependencies for the execution of the expression parser.
       ExpressionParserContext context = new ExpressionParserContext();
       context.setFhirContext(fhirContext);
+      context.setFhirContextFactory(fhirContextFactory);
       context.setTerminologyClient(terminologyClient);
       context.setSparkSession(spark);
       context.setResourceReader(resourceReader);

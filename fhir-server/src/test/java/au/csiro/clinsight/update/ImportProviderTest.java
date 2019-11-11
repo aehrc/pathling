@@ -7,6 +7,7 @@ package au.csiro.clinsight.update;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
+import au.csiro.clinsight.fhir.FreshFhirContextFactory;
 import com.cerner.bunsen.FhirEncoders;
 import java.io.IOException;
 import java.net.URL;
@@ -45,7 +46,8 @@ public class ImportProviderTest {
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
-    importProvider = new ImportProvider(config, spark, FhirEncoders.forR4().getOrCreate());
+    importProvider = new ImportProvider(config, spark, FhirEncoders.forR4().getOrCreate(),
+        new FreshFhirContextFactory());
   }
 
   @Test
