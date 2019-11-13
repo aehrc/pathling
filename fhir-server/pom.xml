@@ -102,25 +102,6 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>au.csiro.clinsight</groupId>
-        <artifactId>fhir-definitions-maven-plugin</artifactId>
-        <version>${project.version}</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>bundle</goal>
-            </goals>
-            <phase>generate-test-resources</phase>
-          </execution>
-        </executions>
-        <configuration>
-          <sourceFiles>
-            <param>profiles-resources.json</param>
-            <param>profiles-types.json</param>
-          </sourceFiles>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
@@ -154,15 +135,6 @@
         </configuration>
       </plugin>
     </plugins>
-    <testResources>
-      <testResource>
-        <directory>src/test/resources</directory>
-      </testResource>
-      <testResource>
-        <directory>target/fhir-definitions</directory>
-        <targetPath>../../src/test/resources/fhir</targetPath>
-      </testResource>
-    </testResources>
   </build>
 
 </project>
