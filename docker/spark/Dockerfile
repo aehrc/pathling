@@ -6,6 +6,7 @@ ARG SPARK_MIRROR
 ARG HADOOP_MIRROR
 ARG DEPENDENCY_PATH
 
+
 LABEL copyright="Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved." \
   author="John Grimes <John.Grimes@csiro.au>"
 
@@ -20,12 +21,16 @@ RUN cd /tmp && \
   rm hadoop-${HADOOP_VERSION}.tar.gz
 RUN cd /opt && ln -s hadoop-${HADOOP_VERSION} hadoop
 
+
 # Download and extract Spark distribution
+ENV SPARK_PREFIX="spark-${SPARK_VERSION}-bin-without-hadoop-scala-${SPARK_SCALA_VERSION}"
+
 RUN cd /tmp && \
-  wget -q ${SPARK_MIRROR}/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-without-hadoop-scala-${SPARK_SCALA_VERSION}.tgz && \
-  tar xzf spark-${SPARK_VERSION}-bin-without-hadoop-scala-${SPARK_SCALA_VERSION}.tgz -C /opt --owner root --group root --no-same-owner && \
-  rm spark-${SPARK_VERSION}-bin-without-hadoop-scala-${SPARK_SCALA_VERSION}.tgz
-RUN cd /opt && ln -s spark-${SPARK_VERSION}-bin-without-hadoop-scala-${SPARK_SCALA_VERSION} spark
+  wget -q ${SPARK_MIRROR}/spark-${SPARK_VERSION}/${SPARK_PREFIX%-scala-2.11}.tgz && \
+  tar xzf ${SPARK_PREFIX%-scala-2.11}.tgz -C /opt --owner root --group root --no-same-owner && \
+  rm ${SPARK_PREFIX%-scala-2.11}.tgz
+
+RUN cd /opt && ln -s ${SPARK_PREFIX%-scala-2.11} spark
 
 # Copy FHIR server JAR to Spark classpath
 ADD $DEPENDENCY_PATH /opt/spark/jars
