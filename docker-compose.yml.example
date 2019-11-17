@@ -1,0 +1,10 @@
+version: "3"
+services:
+  fhir-server:
+    image: "docker-registry.it.csiro.au/clinsight/fhir-server:${CLINSIGHT_VERSION}"
+    ports:
+      - 8080:8080
+  notebook:
+    image: "docker-registry.it.csiro.au/clinsight/notebook:${CLINSIGHT_VERSION}"
+    ports:
+      - 8888:8888
