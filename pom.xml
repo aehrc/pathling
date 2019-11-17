@@ -52,7 +52,6 @@
         <module>docker/spark-worker</module>
         <module>docker/ontoserver</module>
         <module>docker/notebook</module>
-        <module>docker/zeppelin</module>
         <module>docker/synthea</module>
       </modules>
     </profile>
@@ -78,13 +77,6 @@
       <modules>
         <module>fhir-server</module>
         <module>docker/notebook</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>zeppelin</id>
-      <modules>
-        <module>fhir-server</module>
-        <module>docker/zeppelin</module>
       </modules>
     </profile>
   </profiles>

@@ -1,56 +1,15 @@
-FROM jupyter/scipy-notebook:7f1482f5a136
-ARG SPARK_VERSION
-ARG SPARK_SCALA_VERSION
-ARG SPARK_MIRROR
+FROM jupyter/all-spark-notebook
 ARG FHIR_SERVER_JAR
 
 LABEL copyright="Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved." \
   author="John Grimes <John.Grimes@csiro.au>"
 
-USER root
-
-# Install JRE
-RUN apt-get -y update && \
-  apt-get install --no-install-recommends -y openjdk-8-jre-headless ca-certificates-java && \
-  rm -rf /var/lib/apt/lists/*
-
-
-# Download and extract Spark distribution
-ENV SPARK_PREFIX="spark-${SPARK_VERSION}-bin-without-hadoop-scala-${SPARK_SCALA_VERSION}"
-
-RUN cd /tmp && \
-  wget -q ${SPARK_MIRROR}/spark-${SPARK_VERSION}/${SPARK_PREFIX%-scala-2.11}.tgz && \
-  tar xzf ${SPARK_PREFIX%-scala-2.11}.tgz -C /opt --owner root --group root --no-same-owner && \
-  rm ${SPARK_PREFIX%-scala-2.11}.tgz
-
-RUN cd /opt && ln -s ${SPARK_PREFIX%-scala-2.11} spark
-
 # Copy FHIR server JAR to Spark classpath
 COPY ${FHIR_SERVER_JAR} /opt/spark/jars
 
-ENV SPARK_HOME /usr/local/spark
-ENV PYTHONPATH $SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.7-src.zip
-ENV SPARK_OPTS --driver-java-options=-Xms1024M --driver-java-options=-Xmx4096M --driver-java-options=-Dlog4j.logLevel=info --driver-port=52000
-
-# Configures the Python executable used on worker instances, must be exactly the same version as PYSPARK_DRIVER_PYTHON
-RUN ln -s /opt/conda/bin/python /usr/local/bin/python3.6
-ENV PYSPARK_PYTHON /usr/local/bin/python3.6
-
-# Configures the Python executable used on the notebook instance, this is 3.6.8
-ENV PYSPARK_DRIVER_PYTHON /opt/conda/bin/python
-
-USER $NB_UID
-
-RUN conda install --quiet -y pyarrow matplotlib-venn && \
-  conda clean -tipsy && \
-  fix-permissions $CONDA_DIR && \
-  fix-permissions /home/$NB_USER
-
-# Application web UI
-EXPOSE 4040/tcp
-
-# Driver port
-EXPOSE 52000/tcp
+# Add any additional Python libraries.
+RUN conda install --quiet -y pyarrow matplotlib matplotlib-venn plotnine && \
+  conda clean -tipsy
 
 # Start Jupyter Lab with authentication disabled
 CMD ["start.sh", "jupyter", "lab", "--NotebookApp.token=''"]
