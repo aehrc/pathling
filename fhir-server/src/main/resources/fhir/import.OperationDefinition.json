@@ -3,6 +3,7 @@
   "id": "import-0",
   "url": "https://clinsight.csiro.au/fhir/OperationDefinition/import-0",
   "version": "0.0.0",
+  "name": "import",
   "title": "Import",
   "status": "draft",
   "kind": "operation",
