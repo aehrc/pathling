@@ -12,7 +12,6 @@ import {
 import * as React from "react";
 import { connect } from "react-redux";
 import { GlobalState } from "../store";
-import { clearElementTreeFocus } from "../store/ElementTreeActions";
 import { clearQuery, loadQuery } from "../store/QueryActions";
 import { Query, QueryState } from "../store/QueryReducer";
 import {
@@ -34,7 +33,6 @@ interface Props {
   clearQuery?: () => any;
   clearResult?: () => any;
   cancelAndClearResult?: () => any;
-  clearElementTreeFocus?: () => any;
   saveQuery?: (query: Query) => any;
   updateQuery?: (query: SavedQuery) => any;
   loadQuery?: (query: SavedQuery) => any;
@@ -51,7 +49,6 @@ function Actions(props: Props) {
     clearQuery,
     clearResult,
     cancelAndClearResult,
-    clearElementTreeFocus,
     saveQuery,
     updateQuery,
     query: queryState,
@@ -81,7 +78,6 @@ function Actions(props: Props) {
   const handleClickClearQuery = () => {
     clearQuery();
     clearResult();
-    clearElementTreeFocus();
   };
 
   const handleCancelQuery = () => {
@@ -160,7 +156,6 @@ const mapStateToProps = (state: GlobalState) => ({
     clearQuery,
     clearResult,
     cancelAndClearResult,
-    clearElementTreeFocus,
     saveQuery,
     updateQuery,
     loadQuery

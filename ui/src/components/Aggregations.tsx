@@ -7,7 +7,6 @@ import * as React from "react";
 import { ReactElement } from "react";
 import { connect } from "react-redux";
 import { GlobalState } from "../store";
-import * as elementTreeActions from "../store/ElementTreeActions";
 import * as queryActions from "../store/QueryActions";
 import { ExpressionWithIdentity } from "../store/QueryReducer";
 import ExpressionEditor from "./ExpressionEditor";
@@ -19,7 +18,7 @@ interface Props {
   filters: ExpressionWithIdentity[];
   removeAggregation: (id: string) => any;
   updateAggregation: (aggregation: ExpressionWithIdentity) => any;
-  clearElementTreeFocus: () => any;
+  clearQuery: () => any;
 }
 
 /**
@@ -35,7 +34,7 @@ function Aggregations(props: Props) {
     filters,
     removeAggregation,
     updateAggregation,
-    clearElementTreeFocus
+    clearQuery
   } = props;
 
   const handleRemove = (event: any, aggregation: ExpressionWithIdentity) => {
@@ -43,7 +42,7 @@ function Aggregations(props: Props) {
     // editor for other aggregations.
     event.stopPropagation();
     if (aggregations.length + groupings.length + filters.length === 1) {
-      clearElementTreeFocus();
+      clearQuery();
     }
     removeAggregation(aggregation.id);
   };
@@ -85,7 +84,7 @@ function Aggregations(props: Props) {
 
 const mapStateToProps = (state: GlobalState) => ({ ...state.query.query });
 
-const actions = { ...queryActions, ...elementTreeActions };
+const actions = { ...queryActions };
 
 export default connect(
   mapStateToProps,

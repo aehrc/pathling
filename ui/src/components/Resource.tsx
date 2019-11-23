@@ -11,7 +11,6 @@ import {
   reverseReferences
 } from "../fhir/ResourceTree";
 import store, { GlobalState } from "../store";
-import * as elementTreeActions from "../store/ElementTreeActions";
 import * as queryActions from "../store/QueryActions";
 import { addAggregation } from "../store/QueryActions";
 import ContainedElements from "./ContainedElements";
@@ -23,8 +22,8 @@ interface Props extends ResourceNode {
   name: string;
   parentPath?: string;
   disabled?: boolean;
-  focus?: string;
-  setElementTreeFocus: (focus: string) => any;
+  subjectResource?: string;
+  setSubjectResource: (subjectResource: string) => any;
   focusExpression: (id: string) => any;
 }
 
@@ -35,8 +34,8 @@ function Resource(props: Props) {
       contains,
       parentPath,
       disabled,
-      focus,
-      setElementTreeFocus,
+      subjectResource,
+      setSubjectResource,
       focusExpression
     } = props,
     aggregationExpression = `${name}.count()`,
@@ -51,7 +50,7 @@ function Resource(props: Props) {
       expression: aggregationExpression
     });
     store.dispatch(addAggregationAction);
-    if (focus === null) setElementTreeFocus(name);
+    if (subjectResource === null) setSubjectResource(name);
     focusExpression(addAggregationAction.aggregation.id);
   };
 
@@ -112,10 +111,10 @@ function Resource(props: Props) {
 }
 
 const mapStateToProps = (state: GlobalState) => ({
-  focus: state.elementTree.focus
+  subjectResource: state.query.query.subjectResource
 });
 
-const actions = { ...queryActions, ...elementTreeActions };
+const actions = { ...queryActions };
 
 export default connect(
   mapStateToProps,

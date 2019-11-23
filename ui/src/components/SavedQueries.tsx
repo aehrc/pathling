@@ -4,8 +4,8 @@
 
 import React, { ReactElement } from "react";
 import { connect } from "react-redux";
-import { getSubjectResourceFromExpression } from "../fhir/ResourceTree";
-import { setElementTreeFocus } from "../store/ElementTreeActions";
+import { GlobalState } from "../store";
+import { loadQuery, setSubjectResource } from "../store/QueryActions";
 import { Query } from "../store/QueryReducer";
 import {
   cancelEditingSavedQuery,
@@ -19,18 +19,16 @@ import {
   SavedQuery,
   SavedQueryWithStatus
 } from "../store/SavedQueriesReducer";
-import { GlobalState } from "../store";
-import { loadQuery } from "../store/QueryActions";
-import "./style/SavedQueries.scss";
 import Alerter from "./Alerter";
 import EditableQueryItem from "./EditableQueryItem";
 import SavedQueryItem from "./SavedQueryItem";
+import "./style/SavedQueries.scss";
 
 interface Props {
   queries: SavedQueriesWithStatuses;
   loadedQueryId: string;
   loadQuery: (query: SavedQuery) => any;
-  setElementTreeFocus: (focus: string) => any;
+  setSubjectResource: (subjectResource: string) => any;
   deleteQuery: (id: string) => any;
   saveQuery: (query: Query) => any;
   updateQuery: (query: SavedQuery) => any;
@@ -43,36 +41,14 @@ function SavedQueries(props: Props) {
     queries,
     loadedQueryId,
     loadQuery,
-    setElementTreeFocus,
     deleteQuery,
     updateQuery,
     editSavedQuery,
     cancelEditingSavedQuery
   } = props;
 
-  const getFocusResource = (query: SavedQuery): string => {
-    const {
-        query: { aggregations, groupings, filters }
-      } = query,
-      allSubjectResources = aggregations
-        .map(agg => getSubjectResourceFromExpression(agg.expression))
-        .concat(
-          groupings.map(group =>
-            getSubjectResourceFromExpression(group.expression)
-          )
-        )
-        .concat(
-          filters.map(filter =>
-            getSubjectResourceFromExpression(filter.expression)
-          )
-        );
-    return allSubjectResources.length > 0 ? allSubjectResources[0] : null;
-  };
-
   const handleClickQuery = (query: SavedQuery) => {
-    const focusResource = getFocusResource(query);
     loadQuery(query);
-    setElementTreeFocus(focusResource);
   };
 
   const handleClickEdit = (query: SavedQuery) => {
@@ -139,7 +115,7 @@ const mapStateToProps = (state: GlobalState) => ({
   }),
   actions = {
     loadQuery,
-    setElementTreeFocus,
+    setSubjectResource,
     deleteQuery,
     saveQuery,
     updateQuery,

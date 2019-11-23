@@ -11,7 +11,7 @@ import "./style/ElementTree.scss";
 import { GlobalState } from "../store";
 
 interface Props {
-  focus: string;
+  subjectResource: string;
 }
 
 /**
@@ -21,13 +21,13 @@ interface Props {
  * @author John Grimes
  */
 function ElementTree(props: Props) {
-  const { focus } = props,
+  const { subjectResource } = props,
     resourceNodes = Object.keys(resourceTree).map((resourceName, i) => (
       <Resource
         {...getResource(resourceName)}
         key={i}
         name={resourceName}
-        disabled={focus && focus !== resourceName}
+        disabled={subjectResource && subjectResource !== resourceName}
       />
     ));
   return (
@@ -38,7 +38,7 @@ function ElementTree(props: Props) {
 }
 
 const mapStateToProps = (state: GlobalState) => ({
-  focus: state.elementTree.focus
+  subjectResource: state.query.query.subjectResource
 });
 
 export default connect(mapStateToProps)(ElementTree);

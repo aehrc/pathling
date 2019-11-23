@@ -6,6 +6,11 @@ import uuidv4 from "uuid/v4";
 import { Expression, ExpressionWithIdentity } from "./QueryReducer";
 import { SavedQuery } from "./SavedQueriesReducer";
 
+export interface SetSubjectResource {
+  type: "SET_SUBJECT_RESOURCE";
+  subjectResource: string;
+}
+
 export interface AddAggregation {
   type: "ADD_AGGREGATION";
   aggregation: ExpressionWithIdentity;
@@ -71,6 +76,7 @@ export interface ReceiveExpressionFocus {
 }
 
 export type QueryAction =
+  | SetSubjectResource
   | AddAggregation
   | RemoveAggregation
   | UpdateAggregation
@@ -84,6 +90,11 @@ export type QueryAction =
   | LoadQuery
   | FocusExpression
   | ReceiveExpressionFocus;
+
+export const setSubjectResource = (subjectResource: string): SetSubjectResource => ({
+  type: "SET_SUBJECT_RESOURCE",
+  subjectResource
+});
 
 export const addAggregation = (aggregation: Expression): AddAggregation => ({
   type: "ADD_AGGREGATION",

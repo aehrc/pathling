@@ -2,13 +2,11 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import * as React from "react";
 import { MenuItem } from "@blueprintjs/core";
+import * as React from "react";
 
 import store from "../store";
-import { getSubjectResourceFromExpression } from "../fhir/ResourceTree";
 import { addAggregation, focusExpression } from "../store/QueryActions";
-import { setElementTreeFocus } from "../store/ElementTreeActions";
 
 interface Props {
   path: string;
@@ -19,16 +17,11 @@ function AddAggregation(props: Props) {
     expression = `${path}.count()`;
 
   const handleClick = () => {
-    const focus = store.getState().elementTree.focus;
     const addAggregationAction = addAggregation({
       label: expression,
       expression
     });
     store.dispatch(addAggregationAction);
-    if (focus === null)
-      store.dispatch(
-        setElementTreeFocus(getSubjectResourceFromExpression(path))
-      );
     store.dispatch(focusExpression(addAggregationAction.aggregation.id));
   };
 

@@ -6,7 +6,6 @@ import { Icon, Tag } from "@blueprintjs/core";
 import React, { ReactElement } from "react";
 import { connect } from "react-redux";
 import { GlobalState } from "../store";
-import * as elementTreeActions from "../store/ElementTreeActions";
 import * as queryActions from "../store/QueryActions";
 import { ExpressionWithIdentity } from "../store/QueryReducer";
 import ExpressionEditor from "./ExpressionEditor";
@@ -18,7 +17,7 @@ interface Props {
   filters: ExpressionWithIdentity[];
   removeFilter: (id: string) => any;
   updateFilter: (filter: ExpressionWithIdentity) => any;
-  clearElementTreeFocus: () => any;
+  clearQuery: () => any;
 }
 
 /**
@@ -34,7 +33,7 @@ function Filters(props: Props) {
     filters,
     removeFilter,
     updateFilter,
-    clearElementTreeFocus
+    clearQuery
   } = props;
 
   const handleRemove = (event: any, filter: ExpressionWithIdentity) => {
@@ -42,7 +41,7 @@ function Filters(props: Props) {
     // editor for other filters.
     event.stopPropagation();
     if (aggregations.length + groupings.length + filters.length === 1) {
-      clearElementTreeFocus();
+      clearQuery();
     }
     removeFilter(filter.id);
   };
@@ -80,7 +79,7 @@ function Filters(props: Props) {
 
 const mapStateToProps = (state: GlobalState) => ({ ...state.query.query });
 
-const actions = { ...queryActions, ...elementTreeActions };
+const actions = { ...queryActions };
 
 export default connect(
   mapStateToProps,

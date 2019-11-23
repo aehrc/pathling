@@ -5,6 +5,7 @@
 import { QueryAction } from "./QueryActions";
 
 export interface Query {
+  subjectResource: string;
   aggregations: ExpressionWithIdentity[];
   groupings: ExpressionWithIdentity[];
   filters: ExpressionWithIdentity[];
@@ -30,6 +31,7 @@ export interface ExpressionWithIdentity extends Expression {
 
 const initialState: QueryState = {
   query: {
+    subjectResource: null,
     aggregations: [],
     groupings: [],
     filters: []
@@ -40,6 +42,14 @@ const initialState: QueryState = {
 
 export default (state = initialState, action: QueryAction): QueryState => {
   switch (action.type) {
+    case "SET_SUBJECT_RESOURCE":
+      return {
+        ...state,
+        query: {
+          ...state.query,
+          subjectResource: action.subjectResource
+        }
+      };
     case "ADD_AGGREGATION":
       return {
         ...state,
@@ -93,7 +103,7 @@ export default (state = initialState, action: QueryAction): QueryState => {
         },
         unsavedChanges: true
       };
-    case "UPDATE_GROUPING":
+    case "UPDATE_GROUPING"  :
       return {
         ...state,
         query: {

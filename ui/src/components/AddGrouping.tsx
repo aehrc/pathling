@@ -2,13 +2,11 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import * as React from "react";
 import { MenuItem } from "@blueprintjs/core";
+import * as React from "react";
 
 import store from "../store";
 import { addGrouping, focusExpression } from "../store/QueryActions";
-import { setElementTreeFocus } from "../store/ElementTreeActions";
-import { getSubjectResourceFromExpression } from "../fhir/ResourceTree";
 
 interface Props {
   path: string;
@@ -19,13 +17,8 @@ function AddGrouping(props: Props) {
     expression = path;
 
   const handleClick = () => {
-    const focus = store.getState().elementTree.focus,
-      addGroupingAction = addGrouping({ label: expression, expression });
+    const addGroupingAction = addGrouping({ label: expression, expression });
     store.dispatch(addGroupingAction);
-    if (focus === null)
-      store.dispatch(
-        setElementTreeFocus(getSubjectResourceFromExpression(path))
-      );
     store.dispatch(focusExpression(addGroupingAction.grouping.id));
   };
 

@@ -11,7 +11,6 @@ import {
 import { createLogger } from "redux-logger";
 import thunk, { ThunkDispatch } from "redux-thunk";
 import ConfigReducer, { ConfigState } from "./ConfigReducer";
-import ElementTreeReducer, { ElementTreeState } from "./ElementTreeReducer";
 import QueryReducer, { QueryState } from "./QueryReducer";
 
 import ResultReducer, { ResultState } from "./ResultReducer";
@@ -21,7 +20,6 @@ import SavedQueriesReducer, { SavedQueriesState } from "./SavedQueriesReducer";
 export interface GlobalState {
   query: QueryState;
   result: ResultState;
-  elementTree: ElementTreeState;
   savedQueries: SavedQueriesState;
   config: ConfigState;
 }
@@ -29,7 +27,6 @@ export interface GlobalState {
 const Reducer = combineReducers({
   query: QueryReducer,
   result: ResultReducer,
-  elementTree: ElementTreeReducer,
   savedQueries: SavedQueriesReducer,
   config: ConfigReducer
 });

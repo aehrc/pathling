@@ -7,7 +7,6 @@ import * as React from "react";
 import { MouseEvent, ReactElement } from "react";
 import { connect } from "react-redux";
 import { GlobalState } from "../store";
-import * as elementTreeActions from "../store/ElementTreeActions";
 import * as queryActions from "../store/QueryActions";
 import { ExpressionWithIdentity } from "../store/QueryReducer";
 import ExpressionEditor from "./ExpressionEditor";
@@ -19,7 +18,7 @@ interface Props {
   filters: ExpressionWithIdentity[];
   removeGrouping: (id: string) => any;
   updateGrouping: (grouping: ExpressionWithIdentity) => any;
-  clearElementTreeFocus: () => any;
+  clearQuery: () => any;
 }
 
 /**
@@ -34,7 +33,7 @@ function Groupings(props: Props) {
     filters,
     removeGrouping,
     updateGrouping,
-    clearElementTreeFocus
+    clearQuery
   } = props;
 
   const handleRemove = (
@@ -45,7 +44,7 @@ function Groupings(props: Props) {
     // editor for other groupings.
     event.stopPropagation();
     if (aggregations.length + groupings.length + filters.length === 1) {
-      clearElementTreeFocus();
+      clearQuery();
     }
     removeGrouping(grouping.id);
   };
@@ -83,7 +82,7 @@ function Groupings(props: Props) {
 
 const mapStateToProps = (state: GlobalState) => ({ ...state.query.query });
 
-const actions = { ...queryActions, ...elementTreeActions };
+const actions = { ...queryActions };
 
 export default connect(
   mapStateToProps,

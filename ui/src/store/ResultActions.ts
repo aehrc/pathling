@@ -6,10 +6,7 @@ import http, { AxiosPromise, CancelTokenSource } from "axios";
 import { Dispatch } from "redux";
 import Alerter from "../components/Alerter";
 
-import {
-  OpOutcomeError,
-  opOutcomeFromJsonResponse
-} from "../fhir/OperationOutcome";
+import { OpOutcomeError, opOutcomeFromJsonResponse } from "../fhir/OperationOutcome";
 import {
   AggregationRequestParameter,
   FilterRequestParameter,
@@ -159,7 +156,11 @@ export const fetchQueryResult = (fhirServer: string) => (
   const {
       query: { query }
     } = getState(),
-    { aggregations, groupings, filters } = query,
+    { subjectResource, aggregations, groupings, filters } = query,
+    subjectResourceParam: Parameter = {
+      name: "subjectResource",
+      valueCode: subjectResource
+    },
     aggregationParams: Parameter[] = aggregations
       .filter(aggregation => !aggregation.disabled)
       .map(aggregation => checkForExpression(aggregation, dispatch))
@@ -174,7 +175,10 @@ export const fetchQueryResult = (fhirServer: string) => (
       .map(filterToParam),
     parameters: Parameters = {
       resourceType: "Parameters",
-      parameter: aggregationParams.concat(groupingParams).concat(filterParams)
+      parameter: [subjectResourceParam]
+        .concat(aggregationParams)
+        .concat(groupingParams)
+        .concat(filterParams)
     };
 
   if (aggregations.length === 0) {
@@ -182,7 +186,7 @@ export const fetchQueryResult = (fhirServer: string) => (
   }
   let cancel = http.CancelToken.source();
   const result = http
-    .post(`${fhirServer}/$aggregate-query`, parameters, {
+    .post(`${fhirServer}/$aggregate`, parameters, {
       headers: {
         "Content-Type": "application/fhir+json",
         Accept: "application/fhir+json"

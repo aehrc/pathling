@@ -4,7 +4,6 @@
 
 import { Dispatch } from "redux";
 import Alerter from "../components/Alerter";
-import { clearElementTreeFocus } from "./ElementTreeActions";
 import { GlobalState } from "./index";
 import { clearQuery, loadQuery } from "./QueryActions";
 import { Query } from "./QueryReducer";
@@ -350,6 +349,5 @@ export const deleteQuery = (id: string) => (
   dispatch(receiveDeleteQueryResponse(id));
   if (getState().query.id === id) {
     dispatch(clearQuery());
-    dispatch(clearElementTreeFocus());
   }
 };
