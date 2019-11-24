@@ -2,8 +2,8 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-import rawResourceTree from "../../config/resourceTree.json";
 import rawComplexTypesTree from "../../config/complexTypeTree.json";
+import rawResourceTree from "../../config/resourceTree.json";
 import rawReverseReferences from "../../config/reverseReferences.json";
 
 interface ResourceTree {
@@ -56,8 +56,9 @@ export const getReverseReferences = (resourceName: string): ElementNode[] => {
 };
 
 export const getResolvedPath = (parentPath: string, path: string): string => {
-  const pathComponents = path.split(".");
-  return `${parentPath}.${pathComponents[pathComponents.length - 1]}`;
+  const pathComponents = path.split("."),
+    prefix = parentPath == null ? "" : `${parentPath}.`;
+  return `${prefix}${pathComponents[pathComponents.length - 1]}`;
 };
 
 // Reference is supported, but is left out of this list as it is treated

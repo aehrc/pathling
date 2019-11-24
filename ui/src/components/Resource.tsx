@@ -38,7 +38,7 @@ function Resource(props: Props) {
       setSubjectResource,
       focusExpression
     } = props,
-    aggregationExpression = `${name}.count()`,
+    aggregationExpression = "count()",
     [isExpanded, setExpanded] = useState(false);
 
   const getExpanded = () => isExpanded && !disabled;
@@ -61,7 +61,7 @@ function Resource(props: Props) {
   };
 
   const renderContains = () => {
-    const newParentPath = parentPath ? parentPath : name,
+    const newParentPath = parentPath ? parentPath : null,
       reverseReferenceNodes =
         name in reverseReferences
           ? getReverseReferences(name).map((node, i) => (

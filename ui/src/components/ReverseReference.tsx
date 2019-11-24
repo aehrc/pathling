@@ -23,9 +23,10 @@ interface Props extends ElementNode {
 
 function ReverseReference(props: Props) {
   const { path, type, definition, referenceTypes, parentPath } = props,
+    prefix = parentPath == null ? "" : `${parentPath}.`,
     pathComponents = path.split("."),
     sourceType = pathComponents[0],
-    resolvedPath = `${parentPath}.reverseResolve(${path})`,
+    resolvedPath = `${prefix}reverseResolve(${path})`,
     unsupported = !(sourceType in resourceTree),
     [isExpanded, setExpanded] = useState(false);
 
