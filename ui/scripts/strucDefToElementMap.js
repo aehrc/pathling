@@ -77,10 +77,9 @@ function extractPathsFromElement(element) {
 }
 
 function extractReferenceTypesFromElement(path, element) {
-  const referenceTypes = element["type"]
-    .filter(t => t["code"] === "Reference")
-    .map(t =>
-      t["targetProfile"].replace("http://hl7.org/fhir/StructureDefinition/", "")
+  const type = element["type"].filter(t => t["code"] === "Reference")[0],
+    referenceTypes = type["targetProfile"].map(t =>
+      t.replace("http://hl7.org/fhir/StructureDefinition/", "")
     );
   return { ...path, referenceTypes };
 }

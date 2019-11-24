@@ -45,6 +45,11 @@
   },
   "scripts": {
     "start": "NODE_ENV=development webpack-dev-server --mode=development --watch --hot --port=3000",
-    "build": "scripts/build.sh"
+    "build": "scripts/build.sh",
+    "extractResourceDefinitions": "node scripts/extractResourceStrucDefs.js <target/fhir-definitions/profiles-resources.json >config/resourceDefinitions.json",
+    "extractTypeDefinitions": "node scripts/extractComplexTypeStrucDefs.js <target/fhir-definitions/profiles-types.json >config/complexTypeDefinitions.json",
+    "buildResourceTree": "node scripts/strucDefToElementMap.js <config/resourceDefinitions.json >config/resourceTree.json",
+    "buildComplexTypeTree": "node scripts/strucDefToElementMap.js <config/complexTypeDefinitions.json >config/complexTypeTree.json",
+    "buildReverseReferences": "node scripts/elementMapToReverseReferences.js config/complexTypeTree.json <config/resourceTree.json >config/reverseReferences.json"
   }
 }

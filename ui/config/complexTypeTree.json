@@ -18,7 +18,7 @@
         "name": "text",
         "path": "Address.text",
         "type": "string",
-        "definition": "A full text representation of the address."
+        "definition": "Specifies the entire address as it should be displayed e.g. on a postal label. This may be provided instead of or as well as the specific parts."
       },
       {
         "name": "line",
@@ -30,7 +30,7 @@
         "name": "city",
         "path": "Address.city",
         "type": "string",
-        "definition": "The name of the city, town, village or other community or delivery center."
+        "definition": "The name of the city, town, suburb, village or other community or delivery center."
       },
       {
         "name": "district",
@@ -42,7 +42,7 @@
         "name": "state",
         "path": "Address.state",
         "type": "string",
-        "definition": "Sub-unit of a country with limited sovereignty in a federally organized country. A code may be used if codes are in common use (i.e. US 2 letter state codes)."
+        "definition": "Sub-unit of a country with limited sovereignty in a federally organized country. A code may be used if codes are in common use (e.g. US 2 letter state codes)."
       },
       {
         "name": "postalCode",
@@ -110,7 +110,8 @@
         "referenceTypes": [
           "Practitioner",
           "Patient",
-          "RelatedPerson"
+          "RelatedPerson",
+          "Organization"
         ]
       },
       {
@@ -128,8 +129,8 @@
       {
         "name": "text",
         "path": "Annotation.text",
-        "type": "string",
-        "definition": "The text of the annotation."
+        "type": "markdown",
+        "definition": "The text of the annotation in markdown format."
       }
     ]
   },
@@ -152,13 +153,13 @@
         "name": "data",
         "path": "Attachment.data",
         "type": "base64Binary",
-        "definition": "The actual data of the attachment - a sequence of bytes. In XML, represented using base64."
+        "definition": "The actual data of the attachment - a sequence of bytes, base64 encoded."
       },
       {
         "name": "url",
         "path": "Attachment.url",
-        "type": "uri",
-        "definition": "An alternative location where the data can be accessed."
+        "type": "url",
+        "definition": "A location where the data can be accessed."
       },
       {
         "name": "size",
@@ -216,7 +217,7 @@
         "name": "version",
         "path": "Coding.version",
         "type": "string",
-        "definition": "The version of the code system which was used when choosing this code. Note that a well-maintained code system does not need the version reported, because the meaning of codes is consistent across versions. However this cannot consistently be assured. and when the meaning is not guaranteed to be consistent, the version SHOULD be exchanged."
+        "definition": "The version of the code system which was used when choosing this code. Note that a well-maintained code system does not need the version reported, because the meaning of codes is consistent across versions. However this cannot consistently be assured, and when the meaning is not guaranteed to be consistent, the version SHOULD be exchanged."
       },
       {
         "name": "code",
@@ -234,7 +235,7 @@
         "name": "userSelected",
         "path": "Coding.userSelected",
         "type": "boolean",
-        "definition": "Indicates that this coding was chosen by a user directly - i.e. off a pick list of available items (codes or displays)."
+        "definition": "Indicates that this coding was chosen by a user directly - e.g. off a pick list of available items (codes or displays)."
       }
     ]
   },
@@ -263,7 +264,7 @@
         "name": "rank",
         "path": "ContactPoint.rank",
         "type": "positiveInt",
-        "definition": "Specifies a preferred order in which to use a set of contacts. Contacts are ranked with lower values coming before higher values."
+        "definition": "Specifies a preferred order in which to use a set of contacts. ContactPoints with lower rank values are more preferred than those with higher rank values."
       },
       {
         "name": "period",
@@ -391,7 +392,7 @@
         "name": "text",
         "path": "HumanName.text",
         "type": "string",
-        "definition": "A full text representation of the name."
+        "definition": "Specifies the entire name as it should be displayed e.g. on an application UI. This may be provided instead of or as well as the specific parts."
       },
       {
         "name": "family",
@@ -426,7 +427,7 @@
     ]
   },
   "Identifier": {
-    "definition": "A technical identifier - identifies some entity uniquely and unambiguously.",
+    "definition": "An identifier - identifies some entity uniquely and unambiguously. Typically this is used for business identifiers.",
     "contains": [
       {
         "name": "use",
@@ -476,31 +477,13 @@
         "name": "value",
         "path": "Money.value",
         "type": "decimal",
-        "definition": "The value of the measured amount. The value includes an implicit precision in the presentation of the value."
+        "definition": "Numerical value (with implicit precision)."
       },
       {
-        "name": "comparator",
-        "path": "Money.comparator",
+        "name": "currency",
+        "path": "Money.currency",
         "type": "code",
-        "definition": "How the value should be understood and represented - whether the actual value is greater or less than the stated value due to measurement issues; e.g. if the comparator is \"<\" , then the real value is < stated value."
-      },
-      {
-        "name": "unit",
-        "path": "Money.unit",
-        "type": "string",
-        "definition": "A human-readable form of the unit."
-      },
-      {
-        "name": "system",
-        "path": "Money.system",
-        "type": "uri",
-        "definition": "The identification of the system that provides the coded form of the unit."
-      },
-      {
-        "name": "code",
-        "path": "Money.code",
-        "type": "code",
-        "definition": "A computer processable form of the unit in some unit representation system."
+        "definition": "ISO 4217 Currency Code."
       }
     ]
   },
@@ -517,7 +500,7 @@
         "name": "end",
         "path": "Period.end",
         "type": "dateTime",
-        "definition": "The end of the period. If the end of the period is missing, it means that the period is ongoing. The start may be in the past, and the end date in the future, which means that period is expected/planned to end at that time."
+        "definition": "The end of the period. If the end of the period is missing, it means no end was known or planned at the time the instance was created. The start may be in the past, and the end date in the future, which means that period is expected/planned to end at that time."
       }
     ]
   },
@@ -600,10 +583,16 @@
         "definition": "A reference to a location at which the other resource is found. The reference may be a relative reference, in which case it is relative to the service base URL, or an absolute URL that resolves to the location where the resource is found. The reference may be version specific or not. If the reference is not to a FHIR RESTful server, then it should be assumed to be version specific. Internal fragment references (start with '#') refer to contained resources."
       },
       {
+        "name": "type",
+        "path": "Reference.type",
+        "type": "uri",
+        "definition": "The expected type of the target of the reference. If both Reference.type and Reference.reference are populated and Reference.reference is a FHIR URL, both SHALL be consistent.\n\nThe type is the Canonical URL of Resource Definition that is the type this reference refers to. References are URLs that are relative to http://hl7.org/fhir/StructureDefinition/ e.g. \"Patient\" is a reference to http://hl7.org/fhir/StructureDefinition/Patient. Absolute URLs are only allowed for logical models (and can only be used in references in logical models, not resources)."
+      },
+      {
         "name": "identifier",
         "path": "Reference.identifier",
         "type": "Identifier",
-        "definition": "An identifier for the other resource. This is used when there is no way to reference the other resource directly, either because the entity is not available through a FHIR server, or because there is no way for the author of the resource to convert a known identifier to an actual location. There is no requirement that a Reference.identifier point to something that is actually exposed as a FHIR instance, but it SHALL point to a business concept that would be expected to be exposed as a FHIR instance, and that instance would need to be of a FHIR resource type allowed by the reference."
+        "definition": "An identifier for the target resource. This is used when there is no way to reference the other resource directly, either because the entity it represents is not available through a FHIR server, or because there is no way for the author of the resource to convert a known identifier to an actual location. There is no requirement that a Reference.identifier point to something that is actually exposed as a FHIR instance, but it SHALL point to a business concept that would be expected to be exposed as a FHIR instance, and that instance would need to be of a FHIR resource type allowed by the reference."
       },
       {
         "name": "display",
@@ -661,7 +650,7 @@
     ]
   },
   "Signature": {
-    "definition": "A digital signature along with supporting context. The signature may be electronic/cryptographic in nature, or a graphical image representing a hand-written signature, or a signature process. Different signature approaches have different utilities.",
+    "definition": "A signature along with supporting context. The signature may be a digital signature that is cryptographic in nature, or some other signature acceptable to the domain. This other signature may be as simple as a graphical image representing a hand-written signature, or a signature ceremony Different signature approaches have different utilities.",
     "contains": [
       {
         "name": "type",
@@ -676,18 +665,13 @@
         "definition": "When the digital signature was signed."
       },
       {
-        "name": "whoUri",
-        "path": "Signature.whoUri",
-        "type": "uri",
-        "definition": "A reference to an application-usable description of the identity that signed  (e.g. the signature used their private key)."
-      },
-      {
-        "name": "whoReference",
-        "path": "Signature.whoReference",
+        "name": "who",
+        "path": "Signature.who",
         "type": "Reference",
         "definition": "A reference to an application-usable description of the identity that signed  (e.g. the signature used their private key).",
         "referenceTypes": [
           "Practitioner",
+          "PractitionerRole",
           "RelatedPerson",
           "Patient",
           "Device",
@@ -695,18 +679,13 @@
         ]
       },
       {
-        "name": "onBehalfOfUri",
-        "path": "Signature.onBehalfOfUri",
-        "type": "uri",
-        "definition": "A reference to an application-usable description of the identity that is represented by the signature."
-      },
-      {
-        "name": "onBehalfOfReference",
-        "path": "Signature.onBehalfOfReference",
+        "name": "onBehalfOf",
+        "path": "Signature.onBehalfOf",
         "type": "Reference",
         "definition": "A reference to an application-usable description of the identity that is represented by the signature.",
         "referenceTypes": [
           "Practitioner",
+          "PractitionerRole",
           "RelatedPerson",
           "Patient",
           "Device",
@@ -714,14 +693,20 @@
         ]
       },
       {
-        "name": "contentType",
-        "path": "Signature.contentType",
+        "name": "targetFormat",
+        "path": "Signature.targetFormat",
         "type": "code",
-        "definition": "A mime type that indicates the technical format of the signature. Important mime types are application/signature+xml for X ML DigSig, application/jwt for JWT, and image/* for a graphical image of a signature, etc."
+        "definition": "A mime type that indicates the technical format of the target resources signed by the signature."
       },
       {
-        "name": "blob",
-        "path": "Signature.blob",
+        "name": "sigFormat",
+        "path": "Signature.sigFormat",
+        "type": "code",
+        "definition": "A mime type that indicates the technical format of the signature. Important mime types are application/signature+xml for X ML DigSig, application/jose for JWS, and image/* for a graphical image of a signature, etc."
+      },
+      {
+        "name": "data",
+        "path": "Signature.data",
         "type": "base64Binary",
         "definition": "The base64 encoding of the Signature content. When signature is not recorded electronically this element would be empty."
       }
@@ -763,26 +748,26 @@
           {
             "name": "count",
             "path": "Timing.repeat.count",
-            "type": "integer",
-            "definition": "A total count of the desired number of repetitions."
+            "type": "positiveInt",
+            "definition": "A total count of the desired number of repetitions across the duration of the entire timing specification. If countMax is present, this element indicates the lower bound of the allowed range of count values."
           },
           {
             "name": "countMax",
             "path": "Timing.repeat.countMax",
-            "type": "integer",
-            "definition": "A maximum value for the count of the desired repetitions (e.g. do something 6-8 times)."
+            "type": "positiveInt",
+            "definition": "If present, indicates that the count is a range - so to perform the action between [count] and [countMax] times."
           },
           {
             "name": "duration",
             "path": "Timing.repeat.duration",
             "type": "decimal",
-            "definition": "How long this thing happens for when it happens."
+            "definition": "How long this thing happens for when it happens. If durationMax is present, this element indicates the lower bound of the allowed range of the duration."
           },
           {
             "name": "durationMax",
             "path": "Timing.repeat.durationMax",
             "type": "decimal",
-            "definition": "The upper limit of how long this thing happens for when it happens."
+            "definition": "If present, indicates that the duration is a range - so to perform the action between [duration] and [durationMax] time length."
           },
           {
             "name": "durationUnit",
@@ -793,20 +778,20 @@
           {
             "name": "frequency",
             "path": "Timing.repeat.frequency",
-            "type": "integer",
-            "definition": "The number of times to repeat the action within the specified period / period range (i.e. both period and periodMax provided)."
+            "type": "positiveInt",
+            "definition": "The number of times to repeat the action within the specified period. If frequencyMax is present, this element indicates the lower bound of the allowed range of the frequency."
           },
           {
             "name": "frequencyMax",
             "path": "Timing.repeat.frequencyMax",
-            "type": "integer",
+            "type": "positiveInt",
             "definition": "If present, indicates that the frequency is a range - so to repeat between [frequency] and [frequencyMax] times within the period or period range."
           },
           {
             "name": "period",
             "path": "Timing.repeat.period",
             "type": "decimal",
-            "definition": "Indicates the duration of time over which repetitions are to occur; e.g. to express \"3 times per day\", 3 would be the frequency and \"1 day\" would be the period."
+            "definition": "Indicates the duration of time over which repetitions are to occur; e.g. to express \"3 times per day\", 3 would be the frequency and \"1 day\" would be the period. If periodMax is present, this element indicates the lower bound of the allowed range of the period length."
           },
           {
             "name": "periodMax",
@@ -836,7 +821,7 @@
             "name": "when",
             "path": "Timing.repeat.when",
             "type": "code",
-            "definition": "Real world events that the occurrence of the event should be tied to."
+            "definition": "An approximate time period during the day, potentially linked to an event of daily living that indicates when the action should occur."
           },
           {
             "name": "offset",
@@ -850,7 +835,7 @@
         "name": "code",
         "path": "Timing.code",
         "type": "CodeableConcept",
-        "definition": "A code for the timing schedule. Some codes such as BID are ubiquitous, but many institutions define their own additional codes. If a code is provided, the code is understood to be a complete statement of whatever is specified in the structured timing data, and either the code or the data may be used to interpret the Timing, with the exception that .repeat.bounds still applies over the code (and is not contained in the code)."
+        "definition": "A code for the timing schedule (or just text in code.text). Some codes such as BID are ubiquitous, but many institutions define their own additional codes. If a code is provided, the code is understood to be a complete statement of whatever is specified in the structured timing data, and either the code or the data may be used to interpret the Timing, with the exception that .repeat.bounds still applies over the code (and is not contained in the code)."
       }
     ]
   }

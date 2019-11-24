@@ -53,6 +53,7 @@
         <module>docker/ontoserver</module>
         <module>docker/notebook</module>
         <module>docker/synthea</module>
+        <module>ui</module>
       </modules>
     </profile>
     <profile>
