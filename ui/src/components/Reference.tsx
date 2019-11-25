@@ -43,7 +43,7 @@ function Reference(props: Props) {
     referenceTypes
       .filter(referenceType => referenceType in resourceTree)
       .map((referenceType, i) => {
-        const newParentPath = `${resolvedPath}.resolve(${referenceType})`;
+        const newParentPath = `${resolvedPath}.resolve().ofType(${referenceType})`;
         return (
           <Resource
             {...getResource(referenceType)}
