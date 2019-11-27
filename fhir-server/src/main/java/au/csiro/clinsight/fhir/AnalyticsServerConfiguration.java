@@ -59,11 +59,6 @@ public class AnalyticsServerConfiguration {
    */
   private int shufflePartitions;
 
-  /**
-   * (OPTIONAL) Number of partitions to use when writing tables into the warehouse.
-   */
-  private int loadPartitions;
-
   public AnalyticsServerConfiguration() {
     sparkMasterUrl = "local[*]";
     warehouseUrl = "file:///usr/share/warehouse";
@@ -71,8 +66,7 @@ public class AnalyticsServerConfiguration {
     executorMemory = "1g";
     terminologyServerUrl = "https://r4.ontoserver.csiro.au/fhir";
     explainQueries = false;
-    shufflePartitions = 36;
-    loadPartitions = 12;
+    shufflePartitions = 2;
   }
 
   @Nullable
@@ -145,14 +139,6 @@ public class AnalyticsServerConfiguration {
     this.shufflePartitions = shufflePartitions;
   }
 
-  public int getLoadPartitions() {
-    return loadPartitions;
-  }
-
-  public void setLoadPartitions(int loadPartitions) {
-    this.loadPartitions = loadPartitions;
-  }
-
   @Override
   public String toString() {
     return "AnalyticsServerConfiguration{" +
@@ -164,7 +150,6 @@ public class AnalyticsServerConfiguration {
         ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
         ", explainQueries=" + explainQueries +
         ", shufflePartitions=" + shufflePartitions +
-        ", loadPartitions=" + loadPartitions +
         '}';
   }
 }

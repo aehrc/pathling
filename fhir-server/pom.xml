@@ -96,6 +96,8 @@
           <tag>${project.version}</tag>
           <buildArgs>
             <VERSION>${project.version}</VERSION>
+            <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
+            <HADOOP_VERSION>${hadoopVersion}</HADOOP_VERSION>
             <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
             <DEPENDENCY_PATH>target/dependency</DEPENDENCY_PATH>
           </buildArgs>

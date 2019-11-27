@@ -69,3 +69,4 @@
 # - OPENBLAS_NUM_THREADS=1   Disable multi-threading of OpenBLAS
 
 export SPARK_DIST_CLASSPATH=$(/opt/hadoop/bin/hadoop classpath)
+export LD_LIBRARY_PATH=$HADOOP_HOME/lib/native

@@ -10,9 +10,12 @@ ARG DEPENDENCY_PATH
 LABEL copyright="Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved." \
   author="John Grimes <John.Grimes@csiro.au>"
 
-# Dependencies for Spark scripts
-RUN apt-get update && \
-  apt-get install -y procps
+# Dependencies for Spark scripts and Hadoop native support
+RUN apt-get update && apt-get install -y \
+  libsnappy-dev \
+  libssl-dev \
+  libzstd-dev \
+  procps
 
 # Download and extract Hadoop distribution
 RUN cd /tmp && \
@@ -36,6 +39,9 @@ RUN cd /opt && ln -s ${SPARK_PREFIX%-scala-2.11} spark
 ADD $DEPENDENCY_PATH /opt/spark/jars
 
 COPY spark-env.sh /opt/spark/conf
+
+ENV HADOOP_HOME /opt/hadoop
+ENV SPARK_HOME /opt/spark
 
 # Run all Spark scripts in foreground
 ENV SPARK_NO_DAEMONIZE=true

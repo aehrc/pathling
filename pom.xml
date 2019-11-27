@@ -57,7 +57,7 @@
       </modules>
     </profile>
     <profile>
-      <id>fhir-server</id>
+      <id>spark</id>
       <modules>
         <module>fhir-server</module>
         <module>docker/spark</module>
@@ -68,7 +68,6 @@
     <profile>
       <id>ontoserver</id>
       <modules>
-        <module>fhir-definitions-maven-plugin</module>
         <module>ontoserver-preload-maven-plugin</module>
         <module>docker/ontoserver</module>
       </modules>

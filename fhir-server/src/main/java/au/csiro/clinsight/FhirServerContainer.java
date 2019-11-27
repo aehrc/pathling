@@ -48,10 +48,6 @@ public class FhirServerContainer {
     if (shufflePartitions != null) {
       config.setShufflePartitions(Integer.parseInt(shufflePartitions));
     }
-    String loadPartitions = System.getenv("CLINSIGHT_LOAD_PARTITIONS");
-    if (loadPartitions != null) {
-      config.setLoadPartitions(Integer.parseInt(loadPartitions));
-    }
 
     // This is required to force the use of the Woodstox StAX implementation. If you don't use
     // Woodstox, parsing falls over when reading in resources (e.g. StructureDefinitions) that

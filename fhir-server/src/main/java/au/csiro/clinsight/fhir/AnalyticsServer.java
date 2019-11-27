@@ -14,7 +14,6 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
-import ca.uhn.fhir.rest.server.interceptor.RequestValidatingInterceptor;
 import com.cerner.bunsen.FhirEncoders;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -71,9 +70,6 @@ public class AnalyticsServer extends RestfulServer {
       declareProviders();
       defineCorsConfiguration();
 
-      // Add an interceptor to validate incoming requests.
-      registerInterceptor(new RequestValidatingInterceptor());
-
       // Initialise the capability statement.
       AnalyticsServerCapabilities serverCapabilities = new AnalyticsServerCapabilities(
           configuration);
@@ -96,7 +92,7 @@ public class AnalyticsServer extends RestfulServer {
         .config("spark.shuffle.service.enabled", "true")
         .config("spark.scheduler.mode", "FAIR")
         .config("spark.sql.autoBroadcastJoinThreshold", "-1")
-        .config("spark.sql.shuffle.partitions", "36")
+        .config("spark.sql.shuffle.partitions", configuration.getShufflePartitions())
         .getOrCreate();
   }
 
@@ -123,7 +119,6 @@ public class AnalyticsServer extends RestfulServer {
         Arrays.asList("version", "warehouseUrl", "databaseName", "executorMemory"));
     executorConfig.setExplainQueries(configuration.isExplainQueries());
     executorConfig.setShufflePartitions(configuration.getShufflePartitions());
-    executorConfig.setLoadPartitions(configuration.getLoadPartitions());
 
     aggregateExecutor = new AggregateExecutor(executorConfig);
   }
