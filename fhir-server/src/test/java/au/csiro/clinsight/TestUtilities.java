@@ -12,16 +12,22 @@ import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
-import org.hl7.fhir.r4.model.CodeableConcept;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryResponseComponent;
+import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * @author John Grimes
@@ -73,15 +79,16 @@ public abstract class TestUtilities {
   }
 
   public static Row rowFromCoding(Coding coding) {
-    return RowFactory
-        .create(coding.getSystem(), coding.getVersion(), coding.getCode(), coding.getDisplay(),
-            coding.getUserSelected());
+    return new GenericRowWithSchema(
+        new Object[]{coding.getSystem(), coding.getVersion(), coding.getCode(), coding.getDisplay(),
+            coding.getUserSelected()}, codingStructType());
   }
 
   public static Row rowFromCodeableConcept(CodeableConcept codeableConcept) {
     Object[] codings = codeableConcept.getCoding().stream().map(TestUtilities::rowFromCoding)
         .toArray();
-    return RowFactory.create(codings, codeableConcept.getText());
+    return new GenericRowWithSchema(new Object[]{codings, codeableConcept.getText()},
+        codeableConceptStructType());
   }
 
   public static Coding matchesCoding(Coding expected) {
@@ -135,5 +142,50 @@ public abstract class TestUtilities {
     }
   }
 
+  public static class ValidateCodeAnswer implements Answer<Bundle> {
+
+    Set<Coding> validCodings = new HashSet<>();
+
+    public ValidateCodeAnswer(Coding... validCodings) {
+      this.validCodings.addAll(Arrays.asList(validCodings));
+    }
+
+    /**
+     * Custom Mockito answerer for mocking out batch responses to the $validate-code operation
+     * within a terminology server.
+     */
+    @Override
+    public Bundle answer(InvocationOnMock invocation) {
+      Bundle request = invocation.getArgument(0),
+          response = new Bundle();
+      response.setType(BundleType.BATCHRESPONSE);
+
+      // For each entry in the request, check whether it matches one of the valid concepts and add
+      // an entry to the response bundle.
+      for (BundleEntryComponent entry : request.getEntry()) {
+        BundleEntryComponent responseEntry = new BundleEntryComponent();
+        BundleEntryResponseComponent responseEntryResponse = new BundleEntryResponseComponent();
+        responseEntryResponse.setStatus("200");
+        responseEntry.setResponse(responseEntryResponse);
+        Parameters responseParams = new Parameters();
+        responseEntry.setResource(responseParams);
+
+        Coding codingParam = (Coding) ((Parameters) entry.getResource())
+            .getParameter("coding");
+        if (codingParam != null) {
+          CodingMatcher codingMatcher = new CodingMatcher(codingParam);
+          boolean result = validCodings.stream().anyMatch(codingMatcher::matches);
+          responseParams.setParameter("result", result);
+        } else {
+          responseParams.setParameter("result", false);
+        }
+
+        response.addEntry(responseEntry);
+      }
+
+      return response;
+    }
+
+  }
 
 }

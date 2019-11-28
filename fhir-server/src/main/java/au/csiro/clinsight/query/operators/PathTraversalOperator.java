@@ -59,10 +59,10 @@ public class PathTraversalOperator {
     }
 
     // Get the FHIR and FHIRPath types from the child definition.
-    FHIRDefinedType fhirType = ParsedExpression.fhirTypeFromDefinition(childDefinition);
+    FHIRDefinedType fhirType = ParsedExpression.fhirTypeFromDefinition(childDefinition, right);
     FhirPathType fhirPathType = FhirPathType.forFhirTypeCode(fhirType);
     boolean isSingular = childDefinition.getMax() == 1;
-    boolean isPrimitive = fhirPathType != null;
+    boolean isPrimitive = fhirPathType != null && fhirPathType.isPrimitive();
 
     // Create a new dataset that contains the ID column and the new value (or the value exploded, if
     // the element has a max cardinality greater than one).
@@ -85,7 +85,7 @@ public class PathTraversalOperator {
     result.setFhirPath(input.getExpression());
     result.setFhirPathType(fhirPathType);
     result.setFhirType(fhirType);
-    result.setDefinition(childDefinition);
+    result.setDefinition(childDefinition, right);
     result.setPrimitive(isPrimitive);
     result.setSingular(left.isSingular() && isSingular);
     result.setOrigin(left.getOrigin());

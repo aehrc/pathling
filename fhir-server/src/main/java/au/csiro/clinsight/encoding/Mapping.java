@@ -2,14 +2,16 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query;
+package au.csiro.clinsight.encoding;
+
+import java.io.Serializable;
 
 /**
- * This class is used in the creation of Spark Datasets that contain ConceptMap mappings.
+ * Used to represent the results of $translate and $closure operations.
  *
  * @author John Grimes
  */
-public class Mapping {
+public class Mapping implements Serializable {
 
   private String sourceSystem;
 
@@ -60,4 +62,5 @@ public class Mapping {
   public void setEquivalence(String equivalence) {
     this.equivalence = equivalence;
   }
+
 }

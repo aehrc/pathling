@@ -9,11 +9,11 @@ import static au.csiro.clinsight.utilities.Strings.md5Short;
 import static au.csiro.clinsight.utilities.Strings.unSingleQuote;
 import static au.csiro.clinsight.utilities.Strings.unescapeFhirPathString;
 
+import au.csiro.clinsight.encoding.IdAndBoolean;
 import au.csiro.clinsight.fhir.FhirPathBaseVisitor;
 import au.csiro.clinsight.fhir.FhirPathLexer;
 import au.csiro.clinsight.fhir.FhirPathParser;
 import au.csiro.clinsight.fhir.FhirPathParser.*;
-import au.csiro.clinsight.query.IdAndBoolean;
 import au.csiro.clinsight.query.functions.Function;
 import au.csiro.clinsight.query.functions.FunctionInput;
 import au.csiro.clinsight.query.operators.BinaryOperator;

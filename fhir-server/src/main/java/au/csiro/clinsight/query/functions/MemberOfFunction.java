@@ -7,25 +7,30 @@ package au.csiro.clinsight.query.functions;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.CODING;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.STRING;
 
+import au.csiro.clinsight.encoding.Coding;
+import au.csiro.clinsight.encoding.ValidateCodingResult;
 import au.csiro.clinsight.fhir.FhirContextFactory;
 import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.query.IdAndBoolean;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnull;
-import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryRequestComponent;
+import org.hl7.fhir.r4.model.Bundle.BundleType;
+import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
@@ -37,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 public class MemberOfFunction implements Function {
 
-  private ValidateCodeMapper validateCodeMapper;
+  private ValidateCodingMapper validateCodingMapper;
 
   public MemberOfFunction() {
   }
@@ -45,8 +50,8 @@ public class MemberOfFunction implements Function {
   /**
    * This is used for substituting an alternate mapper for testing purposes.
    */
-  public MemberOfFunction(ValidateCodeMapper validateCodeMapper) {
-    this.validateCodeMapper = validateCodeMapper;
+  public MemberOfFunction(ValidateCodingMapper validateCodingMapper) {
+    this.validateCodingMapper = validateCodingMapper;
   }
 
   @Nonnull
@@ -56,6 +61,8 @@ public class MemberOfFunction implements Function {
     ParsedExpression inputResult = input.getInput();
     ParsedExpression argument = input.getArguments().get(0);
     Dataset<Row> prevDataset = input.getInput().getDataset();
+    Column prevIdColumn = inputResult.getIdColumn(),
+        prevValueColumn = inputResult.getValueColumn();
 
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
@@ -66,16 +73,31 @@ public class MemberOfFunction implements Function {
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
     // then create a new dataset with the boolean results.
-    if (validateCodeMapper == null) {
-      validateCodeMapper = new ValidateCodeMapper(fhirContextFactory, terminologyServerUrl,
-          fhirPathType, valueSetUri);
+    Dataset<Row> dataset;
+    Dataset<ValidateCodingResult> validateResults;
+    Column conceptColumn;
+    if (fhirPathType == CODING) {
+      if (validateCodingMapper == null) {
+        validateCodingMapper = new ValidateCodingMapper(fhirContextFactory, terminologyServerUrl,
+            fhirPathType, valueSetUri);
+      }
+      // This de-duplicates the Codings to be validated, then performs the validation on a
+      // per-partition basis.
+      validateResults = prevDataset
+          .select(prevValueColumn)
+          .dropDuplicates()
+          .mapPartitions(validateCodingMapper, Encoders.bean(ValidateCodingResult.class));
+      conceptColumn = Coding.reorderStructFields(validateResults.col("value"));
+    } else {
+      throw new RuntimeException("This should not happen");
     }
-    Dataset<IdAndBoolean> validateResults = prevDataset
-        .select(inputResult.getIdColumn(), inputResult.getValueColumn())
-        .map(validateCodeMapper, Encoders.bean(IdAndBoolean.class));
-    Column idColumn = validateResults.col(validateResults.columns()[0]);
-    Column valueColumn = validateResults.col(validateResults.columns()[1]);
-    Dataset<Row> dataset = validateResults.select(idColumn, valueColumn);
+
+    // We then join the input dataset to the validated codes, and select the validation result
+    // as the new value.
+    dataset = prevDataset
+        .join(validateResults, prevValueColumn.equalTo(conceptColumn));
+    Column valueColumn = validateResults.col("result");
+    dataset = dataset.select(prevIdColumn, valueColumn);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -85,7 +107,7 @@ public class MemberOfFunction implements Function {
     result.setPrimitive(true);
     result.setSingular(inputResult.isSingular());
     result.setDataset(dataset);
-    result.setIdColumn(idColumn);
+    result.setIdColumn(prevIdColumn);
     result.setValueColumn(valueColumn);
     return result;
   }
@@ -105,15 +127,15 @@ public class MemberOfFunction implements Function {
     }
   }
 
-  public static class ValidateCodeMapper implements MapFunction<Row, IdAndBoolean> {
+  public static class ValidateCodingMapper implements
+      MapPartitionsFunction<Row, ValidateCodingResult> {
 
-    private static final Logger logger = LoggerFactory.getLogger(ValidateCodeMapper.class);
     private final FhirContextFactory fhirContextFactory;
     private final String terminologyServerUrl;
     private final FhirPathType fhirPathType;
     private final String valueSetUri;
 
-    public ValidateCodeMapper(FhirContextFactory fhirContextFactory, String terminologyServerUrl,
+    public ValidateCodingMapper(FhirContextFactory fhirContextFactory, String terminologyServerUrl,
         FhirPathType fhirPathType, String valueSetUri) {
       this.fhirContextFactory = fhirContextFactory;
       this.terminologyServerUrl = terminologyServerUrl;
@@ -122,69 +144,89 @@ public class MemberOfFunction implements Function {
     }
 
     @Override
-    public IdAndBoolean call(Row row) {
+    public Iterator<ValidateCodingResult> call(Iterator<Row> inputRows) throws Exception {
+      // Create a terminology client.
       TerminologyClient terminologyClient = fhirContextFactory
           .getFhirContext(FhirVersionEnum.R4)
           .newRestfulClient(TerminologyClient.class, terminologyServerUrl);
-      IdAndBoolean result = new IdAndBoolean();
-      result.setId(row.getString(0));
-      Row concept = row.getStruct(1);
-      if (concept == null) {
-        result.setValue(false);
-      } else if (fhirPathType == CODING) {
-        result.setValue(validateCoding(terminologyClient, valueSetUri, concept));
-      } else {
-        result.setValue(
-            validateCodeableConcept(terminologyClient, valueSetUri, concept));
-      }
-      return result;
-    }
 
-    private static boolean validateCoding(TerminologyClient terminologyClient, String valueSetUri,
-        Row row) {
-      String system = row.getString(row.fieldIndex("system"));
-      String version = row.getString(row.fieldIndex("version"));
-      String code = row.getString(row.fieldIndex("code"));
-      String display = row.getString(row.fieldIndex("display"));
-      Coding coding = new Coding(system, code, display);
-      coding.setVersion(version);
-      Parameters validateCodeResult = terminologyClient
-          .validateCode(new UriType(valueSetUri), coding);
-      ParametersParameterComponent resultParam = validateCodeResult.getParameter().stream()
-          .filter(param -> param.getName().equals("result"))
-          .findFirst()
-          .orElse(null);
-      return resultParam != null
-          && resultParam.hasValue()
-          && resultParam.getValue().isBooleanPrimitive()
-          && ((BooleanType) resultParam.getValue()).booleanValue();
-    }
+      // Create a Bundle to represent the batch of validate code requests.
+      Bundle validateCodeBatch = new Bundle();
+      validateCodeBatch.setType(BundleType.BATCH);
 
-    private static boolean validateCodeableConcept(TerminologyClient terminologyClient,
-        String valueSetUri,
-        Row row) {
-      List<Row> codingRows = row.getList(row.fieldIndex("coding"));
-      CodeableConcept codeableConcept = new CodeableConcept();
-      for (Row codingRow : codingRows) {
-        String system = codingRow.getString(codingRow.fieldIndex("system"));
-        String version = codingRow.getString(codingRow.fieldIndex("version"));
-        String code = codingRow.getString(codingRow.fieldIndex("code"));
-        String display = codingRow.getString(codingRow.fieldIndex("display"));
-        Coding coding = new Coding(system, code, display);
+      // Create a list to store the details of the Codings requested - this will be used to
+      // correlate requested Codings with responses later on.
+      List<ValidateCodingResult> codings = new ArrayList<>();
+
+      inputRows.forEachRemaining(inputRow -> {
+        // Get the Coding struct out of the Row. If it is null, skip this Row.
+        Row inputCoding = inputRow.getStruct(0);
+        if (inputCoding == null) {
+          return;
+        }
+
+        // Get the Coding information from the row.
+        String system = inputCoding.getString(inputCoding.fieldIndex("system"));
+        String version = inputCoding.getString(inputCoding.fieldIndex("version"));
+        String code = inputCoding.getString(inputCoding.fieldIndex("code"));
+        String display = inputCoding.getString(inputCoding.fieldIndex("display"));
+        boolean userSelected =
+            inputCoding.get(inputCoding.fieldIndex("userSelected")) != null && inputCoding
+                .getBoolean(inputCoding.fieldIndex("userSelected"));
+        Coding coding = new Coding();
+        coding.setSystem(system);
         coding.setVersion(version);
-        codeableConcept.getCoding().add(coding);
+        coding.setCode(code);
+        coding.setDisplay(display);
+        coding.setUserSelected(userSelected);
+        codings.add(new ValidateCodingResult(coding));
+
+        // Construct a Bundle entry containing a validate code request using the Coding.
+        BundleEntryComponent entry = new BundleEntryComponent();
+        BundleEntryRequestComponent request = new BundleEntryRequestComponent();
+        request.setMethod(HTTPVerb.POST);
+        request.setUrl("ValueSet/$validate-code");
+        entry.setRequest(request);
+        Parameters parameters = new Parameters();
+        ParametersParameterComponent systemParam = new ParametersParameterComponent();
+        systemParam.setName("url");
+        systemParam.setValue(new UriType(valueSetUri));
+        ParametersParameterComponent codingParam = new ParametersParameterComponent();
+        codingParam.setName("coding");
+        codingParam.setValue(coding.toHapiCoding());
+        parameters.addParameter(systemParam);
+        parameters.addParameter(codingParam);
+        entry.setResource(parameters);
+
+        // Add the entry to the Bundle.
+        validateCodeBatch.addEntry(entry);
+      });
+
+      // Execute the operation on the terminology server.
+      Bundle validateCodeResult = terminologyClient.batch(validateCodeBatch);
+
+      // Convert each result into a Row.
+      List<ValidateCodingResult> results = new ArrayList<>();
+      for (int i = 0; i < validateCodeResult.getEntry().size(); i++) {
+        BundleEntryComponent entry = validateCodeResult.getEntry().get(i);
+        ValidateCodingResult result = codings.get(i);
+        if (entry.getResponse().getStatus().startsWith("2")) {
+          // If the response was successful, check that it has a `result` parameter with a
+          // value of false.
+          Type resultValue = ((Parameters) entry.getResource()).getParameter("result");
+          boolean validated =
+              resultValue.hasType("boolean") && ((BooleanType) resultValue).booleanValue();
+          result.setResult(validated);
+        } else {
+          // TODO: Investigate whether an unsuccessful response will raise a HAPI server error.
+          result.setResult(false);
+        }
+        results.add(result);
       }
-      Parameters validateCodeResult = terminologyClient
-          .validateCode(new UriType(valueSetUri), codeableConcept);
-      ParametersParameterComponent resultParam = validateCodeResult.getParameter().stream()
-          .filter(param -> param.getName().equals("result"))
-          .findFirst()
-          .orElse(null);
-      return resultParam != null
-          && resultParam.hasValue()
-          && resultParam.getValue().isBooleanPrimitive()
-          && ((BooleanType) resultParam.getValue()).booleanValue();
+
+      return results.iterator();
     }
+
   }
 
 }

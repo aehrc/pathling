@@ -8,8 +8,8 @@ import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.COD
 import static au.csiro.clinsight.utilities.Strings.md5Short;
 import static org.apache.spark.sql.functions.max;
 
+import au.csiro.clinsight.encoding.Mapping;
 import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.query.Mapping;
 import au.csiro.clinsight.query.operators.PathTraversalInput;
 import au.csiro.clinsight.query.operators.PathTraversalOperator;
 import au.csiro.clinsight.query.parsing.ParsedExpression;

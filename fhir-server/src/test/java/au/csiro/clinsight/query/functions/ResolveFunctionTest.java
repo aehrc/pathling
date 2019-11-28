@@ -97,7 +97,7 @@ public class ResolveFunctionTest {
     ParsedExpression inputExpression = new ParsedExpression();
     inputExpression.setFhirPath("episodeOfCare");
     inputExpression.setFhirType(FHIRDefinedType.REFERENCE);
-    inputExpression.setDefinition(childDefinition);
+    inputExpression.setDefinition(childDefinition, "episodeOfCare");
     inputExpression.setSingular(false);
     inputExpression.setDataset(inputDataset);
     inputExpression.setIdColumn(idColumn);
@@ -227,7 +227,7 @@ public class ResolveFunctionTest {
     ParsedExpression inputExpression = new ParsedExpression();
     inputExpression.setFhirPath("subject");
     inputExpression.setFhirType(FHIRDefinedType.REFERENCE);
-    inputExpression.setDefinition(childDefinition);
+    inputExpression.setDefinition(childDefinition, "subject");
     inputExpression.setSingular(true);
     inputExpression.setDataset(inputDataset);
     inputExpression.setIdColumn(idColumn);

@@ -14,9 +14,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -85,6 +83,12 @@ public class ParsedExpression {
    * Definitional information about the type of this element from the FHIR specification.
    */
   private BaseRuntimeChildDefinition definition;
+
+  /**
+   * Definitional information about the type of this element from the FHIR specification. Contains
+   * different information from the child definition, e.g. child information.
+   */
+  private BaseRuntimeElementDefinition elementDefinition;
 
   /**
    * If this expression evaluates to a resource, this flag will be set.
@@ -158,6 +162,7 @@ public class ParsedExpression {
     this.fhirPath = parsedExpression.fhirPath;
     this.fhirPathType = parsedExpression.fhirPathType;
     this.definition = parsedExpression.definition;
+    this.elementDefinition = parsedExpression.elementDefinition;
     this.isResource = parsedExpression.isResource;
     this.resourceType = parsedExpression.resourceType;
     this.primitive = parsedExpression.primitive;
@@ -200,9 +205,16 @@ public class ParsedExpression {
     return definition;
   }
 
-  public void setDefinition(BaseRuntimeChildDefinition definition) {
+  /**
+   * Sets both the (child) definition and element definition.
+   */
+  public void setDefinition(BaseRuntimeChildDefinition definition, String elementName) {
     this.definition = definition;
-    updateFhirTypeFromDefinition();
+    this.elementDefinition = elementFromChildDefinition(definition, elementName);
+  }
+
+  public BaseRuntimeElementDefinition getElementDefinition() {
+    return elementDefinition;
   }
 
   public boolean isResource() {
@@ -308,17 +320,6 @@ public class ParsedExpression {
   }
 
   /**
-   * Get the BaseRuntimeElementDefinition for this expression (which has different information in it
-   * as compared to the BaseRuntimeChildDefinition.
-   */
-  public BaseRuntimeElementDefinition getElementDefinition() {
-    if (definition == null) {
-      throw new IllegalStateException("Expression has no definition");
-    }
-    return elementFromChildDefinition(definition);
-  }
-
-  /**
    * Retrieves the HAPI class that should be used to represent the type of this expression.
    */
   public Class getImplementingClass(FhirContext fhirContext) {
@@ -382,9 +383,9 @@ public class ParsedExpression {
   /**
    * Get the FHIR type from a BaseRuntimeChildDefinition.
    */
-  public static FHIRDefinedType fhirTypeFromDefinition(BaseRuntimeChildDefinition definition) {
-    IBase exampleObject = definition
-        .getChildByName(definition.getElementName()).newInstance();
+  public static FHIRDefinedType fhirTypeFromDefinition(BaseRuntimeChildDefinition definition,
+      String elementName) {
+    IBase exampleObject = definition.getChildByName(elementName).newInstance();
     return FHIRDefinedType.fromCode(exampleObject.fhirType());
   }
 
@@ -392,15 +393,8 @@ public class ParsedExpression {
    * Get the BaseRuntimeElementDefinition for a BaseRuntimeChildDefinition.
    */
   public static BaseRuntimeElementDefinition elementFromChildDefinition(
-      BaseRuntimeChildDefinition childDefinition) {
-    return childDefinition.getChildByName(childDefinition.getElementName());
-  }
-
-  private void updateFhirTypeFromDefinition() {
-    if (definition == null) {
-      throw new IllegalStateException("Expression has no definition");
-    }
-    fhirType = fhirTypeFromDefinition(definition);
+      BaseRuntimeChildDefinition childDefinition, String elementName) {
+    return childDefinition.getChildByName(elementName);
   }
 
   /**
@@ -440,7 +434,11 @@ public class ParsedExpression {
       put(FHIRDefinedType.DATETIME, DATE_TIME);
       put(FHIRDefinedType.INSTANT, DATE_TIME);
       put(FHIRDefinedType.TIME, TIME);
+      put(FHIRDefinedType.CODING, CODING);
     }};
+
+    private static final Set<FhirPathType> primitiveTypes = new HashSet<>(
+        Arrays.asList(BOOLEAN, STRING, INTEGER, DECIMAL, DATE, DATE_TIME, TIME));
 
     // Java class that can be used for representing the value of this expression.
     @Nonnull
@@ -458,6 +456,10 @@ public class ParsedExpression {
     // Maps a FHIR type code to a FHIRPath data type.
     public static FhirPathType forFhirTypeCode(FHIRDefinedType fhirTypeCode) {
       return fhirTypeCodeToFhirPathType.get(fhirTypeCode);
+    }
+
+    public boolean isPrimitive() {
+      return primitiveTypes.contains(this);
     }
 
     @Nonnull

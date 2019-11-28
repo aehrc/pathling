@@ -2,14 +2,16 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.query;
+package au.csiro.clinsight.encoding;
+
+import java.io.Serializable;
 
 /**
  * Used for representing results of functions that return boolean values.
  *
  * @author John Grimes
  */
-public class IdAndBoolean {
+public class IdAndBoolean implements Serializable {
 
   private String id;
   private boolean value;

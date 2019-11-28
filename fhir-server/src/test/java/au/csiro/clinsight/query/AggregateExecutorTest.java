@@ -8,7 +8,6 @@ import static au.csiro.clinsight.TestUtilities.getJsonParser;
 import static au.csiro.clinsight.TestUtilities.getResourceAsStream;
 import static au.csiro.clinsight.TestUtilities.getResourceAsString;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -29,10 +28,8 @@ import java.util.HashSet;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.UriType;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
@@ -247,9 +244,9 @@ public class AggregateExecutorTest {
     when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
 
     // Mock out responses from the terminology server.
-    when(terminologyClient
-        .validateCode(any(UriType.class), any(CodeableConcept.class)))
-        .thenReturn(positiveResponse);
+    // when(terminologyClient
+    //     .validateCode(any(UriType.class), any(CodeableConcept.class)))
+    //     .thenReturn(positiveResponse);
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
