@@ -4,8 +4,6 @@ ARG SPARK_SCALA_VERSION
 ARG HADOOP_VERSION
 ARG SPARK_MIRROR
 ARG HADOOP_MIRROR
-ARG DEPENDENCY_PATH
-
 
 LABEL copyright="Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved." \
   author="John Grimes <John.Grimes@csiro.au>"
@@ -24,7 +22,6 @@ RUN cd /tmp && \
   rm hadoop-${HADOOP_VERSION}.tar.gz
 RUN cd /opt && ln -s hadoop-${HADOOP_VERSION} hadoop
 
-
 # Download and extract Spark distribution
 ENV SPARK_PREFIX="spark-${SPARK_VERSION}-bin-without-hadoop-scala-${SPARK_SCALA_VERSION}"
 
@@ -35,13 +32,13 @@ RUN cd /tmp && \
 
 RUN cd /opt && ln -s ${SPARK_PREFIX%-scala-2.11} spark
 
-# Copy FHIR server JAR to Spark classpath
-ADD $DEPENDENCY_PATH /opt/spark/jars
-
 COPY spark-env.sh /opt/spark/conf
 
 ENV HADOOP_HOME /opt/hadoop
 ENV SPARK_HOME /opt/spark
-
 # Run all Spark scripts in foreground
 ENV SPARK_NO_DAEMONIZE=true
+
+# Copy FHIR server JAR to Spark classpath
+ARG DEPENDENCY_PATH
+ADD $DEPENDENCY_PATH /opt/spark/jars
