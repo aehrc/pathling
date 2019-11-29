@@ -8,6 +8,7 @@ import static au.csiro.clinsight.TestUtilities.getJsonParser;
 import static au.csiro.clinsight.TestUtilities.getResourceAsStream;
 import static au.csiro.clinsight.TestUtilities.getResourceAsString;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +29,7 @@ import java.util.HashSet;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.json.JSONException;
@@ -49,7 +51,7 @@ public class AggregateExecutorTest {
   private ResourceReader mockReader;
   private TerminologyClient terminologyClient;
   private Path warehouseDirectory;
-  private String terminologyServiceUrl = "https://r4.ontoserver.csiro.au";
+  private String terminologyServiceUrl = "https://r4.ontoserver.csiro.au/fhir";
 
   @Before
   public void setUp() throws IOException {
@@ -57,6 +59,7 @@ public class AggregateExecutorTest {
         .appName("clinsight-test")
         .config("spark.master", "local")
         .config("spark.driver.host", "localhost")
+        .config("spark.sql.shuffle.partitions", "1")
         .getOrCreate();
 
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
@@ -230,9 +233,9 @@ public class AggregateExecutorTest {
   @Test
   public void queryWithMemberOf() throws IOException, JSONException {
     mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
-    Parameters positiveResponse = (Parameters) TestUtilities.getJsonParser()
+    Bundle negativeResponse = (Bundle) TestUtilities.getJsonParser()
         .parseResource(getResourceAsStream(
-            "txResponses/MemberOfFunctionTest-memberOfCoding-validate-code-positive.Parameters.json"));
+            "txResponses/MemberOfFunctionTest-memberOfCoding-validate-code-positive.Bundle.json"));
 
     // Create a mock FhirContextFactory, and make it return the mock terminology client.
     FhirContext fhirContext = mock(FhirContext.class, Mockito.withSettings().serializable());
@@ -244,13 +247,13 @@ public class AggregateExecutorTest {
     when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
 
     // Mock out responses from the terminology server.
-    // when(terminologyClient
-    //     .validateCode(any(UriType.class), any(CodeableConcept.class)))
-    //     .thenReturn(positiveResponse);
+    when(terminologyClient.batch(any(Bundle.class)))
+        .thenReturn(negativeResponse);
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        TestUtilities.getFhirContext(), fhirContextFactory, terminologyClient, mockReader);
+        TestUtilities.getFhirContext(), new FreshFhirContextFactory(),
+        terminologyClient, mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 

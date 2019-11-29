@@ -1,0 +1,757 @@
+{
+  "resourceType": "Bundle",
+  "id": "6f3433aa-52d7-43d8-9f2c-18f02116219b",
+  "type": "batch-response",
+  "link": [
+    {
+      "relation": "self",
+      "url": "https://r4.ontoserver.csiro.au/fhir"
+    }
+  ],
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@7c8d3616 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '444814009' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@3001d0b7 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '44054006' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@48b0f380 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '271737000' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@2326a56d were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '15777000' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@6f0a4b25 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '19169002' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@23bc382c were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code 403190006 exists in the ValueSet, but the display \"First degree burn\" is incorrect"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@5638510a were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '195662009' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@44070906 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '302870006' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@160cc1e were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '10509002' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@97a1518 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '65363002' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@39f653b4 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '237602007' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@133a1fa8 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '38341003' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@2ea30052 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '87433001' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@6dd920b3 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '368581000119106' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": true
+          },
+          {
+            "name": "display",
+            "valueString": "Laceration of foot"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@5df90148 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '53741008' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@4391961e were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '22298006' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@3528f9d0 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '399211009' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@442d99f1 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '367498001' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@948793b were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '162864005' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@5fe059d9 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '33737001' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@49aff463 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '444470001' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@27b14c53 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '68496003' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@6fc40638 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '713197008' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@394f465 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '363406005' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@69625c57 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '72892002' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@358d2af were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '156073000' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@42257b14 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '6072007' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@a067511 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '236077008' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@7bd103cd were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '94260004' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@1643bb25 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '55822004' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@789576d6 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '40055000' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@57fc4393 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '38822007' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [
+          {
+            "name": "result",
+            "valueBoolean": false
+          },
+          {
+            "name": "message",
+            "valueString": "None of the codes in codeable concept org.hl7.fhir.r4.model.CodeableConcept@39b64bb5 were valid."
+          },
+          {
+            "name": "message",
+            "valueString": "The code '70704007' from code system 'http://snomed.info/sct' was not found in value set http://snomed.info/sct/32506021000036107/version/20191031?fhir_vs=refset%2F32570521000036109"
+          }
+        ]
+      },
+      "response": {
+        "status": "200"
+      }
+    }
+  ]
+}

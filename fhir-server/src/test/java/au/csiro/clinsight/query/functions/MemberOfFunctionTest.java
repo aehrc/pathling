@@ -1,15 +1,13 @@
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.TestUtilities.ValidateCodeMapperAnswerer;
-import static au.csiro.clinsight.TestUtilities.codingStructType;
-import static au.csiro.clinsight.TestUtilities.getJsonParser;
-import static au.csiro.clinsight.TestUtilities.rowFromCoding;
+import static au.csiro.clinsight.TestUtilities.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.clinsight.TestUtilities.ValidateCodeTxServerAnswerer;
+import au.csiro.clinsight.TestUtilities;
+import au.csiro.clinsight.TestUtilities.*;
 import au.csiro.clinsight.encoding.ValidateCodeResult;
 import au.csiro.clinsight.fhir.FhirContextFactory;
 import au.csiro.clinsight.fhir.TerminologyClient;
@@ -17,6 +15,7 @@ import au.csiro.clinsight.query.functions.MemberOfFunction.ValidateCodeMapper;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
+import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.parser.IParser;
@@ -27,8 +26,10 @@ import java.util.List;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -82,10 +83,10 @@ public class MemberOfFunctionTest {
 
     // Create a mock terminology client.
     TerminologyClient terminologyClient = mock(TerminologyClient.class);
-    ValidateCodeTxServerAnswerer validateCodeTxServerAnswerer = new ValidateCodeTxServerAnswerer(
+    ValidateCodingTxAnswerer validateCodingTxAnswerer = new ValidateCodingTxAnswerer(
         coding2, coding5);
     when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
-    when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodeTxServerAnswerer);
+    when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodingTxAnswerer);
 
     // Create a mock FhirContextFactory, and make it return the mock terminology client.
     FhirContext fhirContext = mock(FhirContext.class);
@@ -177,179 +178,154 @@ public class MemberOfFunctionTest {
     assertThat(validateResult.isResult()).isEqualTo(true);
   }
 
-  // @Test
-  // public void memberOfCodeableConcept() {
-  //   // Build a dataset which represents the input to the function.
-  //   Metadata metadata = new MetadataBuilder().build();
-  //   StructField inputId = new StructField("789wxyz_id", DataTypes.StringType, false,
-  //       metadata);
-  //   StructField inputValue = new StructField("789wxyz", codeableConceptStructType(), true,
-  //       metadata);
-  //   StructType inputStruct = new StructType(new StructField[]{inputId, inputValue});
-  //
-  //   Coding coding1 = new Coding(loincUrl, "10337-4", "Procollagen type I [Mass/volume] in Serum");
-  //   Coding coding2 = new Coding(loincUrl, "10428-1",
-  //       "Varicella zoster virus immune globulin given [Volume]");
-  //   Coding coding3 = new Coding(loincUrl, "10555-1", null);
-  //   Coding coding4 = new Coding(loincUrl, "10665-8",
-  //       "Fungus colony count [#/volume] in Unspecified specimen by Environmental culture");
-  //   Coding coding5 = new Coding(snomedUrl, "416399002",
-  //       "Procollagen type I amino-terminal propeptide level");
-  //
-  //   CodeableConcept codeableConcept1 = new CodeableConcept(coding1);
-  //   codeableConcept1.addCoding(coding5);
-  //   CodeableConcept codeableConcept2 = new CodeableConcept(coding2);
-  //   CodeableConcept codeableConcept3 = new CodeableConcept(coding3);
-  //   CodeableConcept codeableConcept4 = new CodeableConcept(coding3);
-  //   CodeableConcept codeableConcept5 = new CodeableConcept(coding4);
-  //   CodeableConcept codeableConcept6 = new CodeableConcept(coding1);
-  //
-  //   Row inputRow1 = RowFactory
-  //       .create("DiagnosticReport/xyz1", rowFromCodeableConcept(codeableConcept1));
-  //   Row inputRow2 = RowFactory
-  //       .create("DiagnosticReport/xyz2", rowFromCodeableConcept(codeableConcept2));
-  //   Row inputRow3 = RowFactory
-  //       .create("DiagnosticReport/xyz3", rowFromCodeableConcept(codeableConcept3));
-  //   Row inputRow4 = RowFactory
-  //       .create("DiagnosticReport/xyz4", rowFromCodeableConcept(codeableConcept4));
-  //   Row inputRow5 = RowFactory
-  //       .create("DiagnosticReport/xyz5", rowFromCodeableConcept(codeableConcept5));
-  //   Row inputRow6 = RowFactory
-  //       .create("DiagnosticReport/xyz6", rowFromCodeableConcept(codeableConcept6));
-  //   Dataset<Row> inputDataset = spark.createDataFrame(
-  //       Arrays.asList(inputRow1, inputRow2, inputRow3, inputRow4, inputRow5, inputRow6),
-  //       inputStruct);
-  //   Column idColumn = inputDataset.col(inputDataset.columns()[0]);
-  //   Column valueColumn = inputDataset.col(inputDataset.columns()[1]);
-  //
-  //   // Create a mock terminology client which returns validate code responses.
-  //   TerminologyClient terminologyClient = mock(TerminologyClient.class);
-  //   when(terminologyClient
-  //       .validateCode(matchesUri(myValueSetUrl), matchesCodeableConcept(codeableConcept1)))
-  //       .thenReturn(positiveResponse);
-  //   when(terminologyClient
-  //       .validateCode(matchesUri(myValueSetUrl), matchesCodeableConcept(codeableConcept2)))
-  //       .thenReturn(negativeResponse);
-  //   when(terminologyClient
-  //       .validateCode(matchesUri(myValueSetUrl), matchesCodeableConcept(codeableConcept3)))
-  //       .thenReturn(positiveResponse);
-  //   when(terminologyClient
-  //       .validateCode(matchesUri(myValueSetUrl), matchesCodeableConcept(codeableConcept4)))
-  //       .thenReturn(positiveResponse);
-  //   when(terminologyClient
-  //       .validateCode(matchesUri(myValueSetUrl), matchesCodeableConcept(codeableConcept5)))
-  //       .thenReturn(negativeResponse);
-  //   when(terminologyClient
-  //       .validateCode(matchesUri(myValueSetUrl), matchesCodeableConcept(codeableConcept6)))
-  //       .thenReturn(negativeResponse);
-  //   when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
-  //
-  //   // Create a mock FhirContextFactory, and make it return the mock terminology client.
-  //   FhirContext fhirContext = mock(FhirContext.class);
-  //   when(fhirContext
-  //       .newRestfulClient(TerminologyClient.class, terminologyServiceUrl))
-  //       .thenReturn(terminologyClient);
-  //   FhirContextFactory fhirContextFactory = mock(FhirContextFactory.class);
-  //   when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
-  //
-  //   // Create a mock ValidateCodeMapper.
-  //   ValidateCodeMapper mockCodeMapper = mock(ValidateCodeMapper.class);
-  //   IdAndBoolean individualMapResult = new IdAndBoolean();
-  //   individualMapResult.setId("foo");
-  //   when(mockCodeMapper.call(any(Row.class))).thenReturn(individualMapResult);
-  //
-  //   // Prepare the inputs to the function.
-  //   ExpressionParserContext parserContext = new ExpressionParserContext();
-  //   parserContext.setTerminologyClient(terminologyClient);
-  //   parserContext.setFhirContextFactory(fhirContextFactory);
-  //
-  //   // Prepare the input expression.
-  //   ParsedExpression inputExpression = new ParsedExpression();
-  //   inputExpression.setFhirPath("code");
-  //   inputExpression.setSingular(true);
-  //   inputExpression.setDataset(inputDataset);
-  //   inputExpression.setIdColumn(idColumn);
-  //   inputExpression.setValueColumn(valueColumn);
-  //   BaseRuntimeChildDefinition definition = TestUtilities.getFhirContext()
-  //       .getResourceDefinition("DiagnosticReport")
-  //       .getChildByName("code");
-  //   inputExpression.setDefinition(definition);
-  //
-  //   // Prepare the argument expression.
-  //   ParsedExpression argumentExpression = new ParsedExpression();
-  //   argumentExpression.setFhirPath("'" + myValueSetUrl + "'");
-  //   argumentExpression.setFhirPathType(FhirPathType.STRING);
-  //   argumentExpression.setLiteralValue(new StringType(myValueSetUrl));
-  //   argumentExpression.setPrimitive(true);
-  //   argumentExpression.setSingular(true);
-  //
-  //   FunctionInput memberOfInput = new FunctionInput();
-  //   String inputFhirPath = "memberOf('" + myValueSetUrl + "')";
-  //   memberOfInput.setExpression(inputFhirPath);
-  //   memberOfInput.setContext(parserContext);
-  //   memberOfInput.setInput(inputExpression);
-  //   memberOfInput.getArguments().add(argumentExpression);
-  //
-  //   // Invoke the function.
-  //   MemberOfFunction memberOfFunction = new MemberOfFunction(mockCodeMapper);
-  //   ParsedExpression result = memberOfFunction.invoke(memberOfInput);
-  //
-  //   // Check the result.
-  //   assertThat(result.getFhirPath()).isEqualTo(inputFhirPath);
-  //   assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.BOOLEAN);
-  //   assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.BOOLEAN);
-  //   assertThat(result.isPrimitive()).isTrue();
-  //   assertThat(result.isSingular()).isTrue();
-  //   assertThat(result.getIdColumn()).isInstanceOf(Column.class);
-  //   assertThat(result.getValueColumn()).isInstanceOf(Column.class);
-  //
-  //   // Test the mapper.
-  //   ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper(fhirContextFactory,
-  //       terminologyServiceUrl, null, myValueSetUrl);
-  //   List<IdAndBoolean> results = inputDataset.collectAsList().stream()
-  //       .map(validateCodeMapper::call)
-  //       .collect(Collectors.toList());
-  //
-  //   // Check the result dataset.
-  //   assertThat(results.size()).isEqualTo(6);
-  //   IdAndBoolean idAndBoolean = results.get(0);
-  //   assertThat(idAndBoolean.getId()).isEqualTo("DiagnosticReport/xyz1");
-  //   assertThat(idAndBoolean.isValue()).isEqualTo(true);
-  //   idAndBoolean = results.get(1);
-  //   assertThat(idAndBoolean.getId()).isEqualTo("DiagnosticReport/xyz2");
-  //   assertThat(idAndBoolean.isValue()).isEqualTo(false);
-  //   idAndBoolean = results.get(2);
-  //   assertThat(idAndBoolean.getId()).isEqualTo("DiagnosticReport/xyz3");
-  //   assertThat(idAndBoolean.isValue()).isEqualTo(true);
-  //   idAndBoolean = results.get(3);
-  //   assertThat(idAndBoolean.getId()).isEqualTo("DiagnosticReport/xyz4");
-  //   assertThat(idAndBoolean.isValue()).isEqualTo(true);
-  //   idAndBoolean = results.get(4);
-  //   assertThat(idAndBoolean.getId()).isEqualTo("DiagnosticReport/xyz5");
-  //   assertThat(idAndBoolean.isValue()).isEqualTo(false);
-  //   idAndBoolean = results.get(5);
-  //   assertThat(idAndBoolean.getId()).isEqualTo("DiagnosticReport/xyz6");
-  //   assertThat(idAndBoolean.isValue()).isEqualTo(false);
-  // }
-  //
-  // @Test
-  // public void mapperCanHandleNullValue() {
-  //   // Create a mock FhirContextFactory, and make it return the mock terminology client.
-  //   FhirContext fhirContext = mock(FhirContext.class);
-  //   when(fhirContext
-  //       .newRestfulClient(TerminologyClient.class, terminologyServiceUrl))
-  //       .thenReturn(mock(TerminologyClient.class));
-  //   FhirContextFactory fhirContextFactory = mock(FhirContextFactory.class);
-  //   when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
-  //
-  //   // Test the mapper.
-  //   ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper(fhirContextFactory,
-  //       terminologyServiceUrl, null, myValueSetUrl);
-  //   String id = "Patient/abc123";
-  //   Row inputRow = RowFactory.create(id, null);
-  //   IdAndBoolean result = validateCodeMapper.call(inputRow);
-  //
-  //   assertThat(result.getId()).isEqualTo(id);
-  //   assertThat(result.isValue()).isFalse();
-  // }
+  @Test
+  public void memberOfCodeableConcept() {
+    // Build a dataset which represents the input to the function.
+    Metadata metadata = new MetadataBuilder().build();
+    StructField inputId = new StructField("789wxyz_id", DataTypes.StringType, false,
+        metadata);
+    StructField inputValue = new StructField("789wxyz", codeableConceptStructType(), true,
+        metadata);
+    StructType inputStruct = new StructType(new StructField[]{inputId, inputValue});
+
+    Coding coding1 = new Coding(loincUrl, "10337-4", "Procollagen type I [Mass/volume] in Serum");
+    Coding coding2 = new Coding(loincUrl, "10428-1",
+        "Varicella zoster virus immune globulin given [Volume]");
+    Coding coding3 = new Coding(loincUrl, "10555-1", null);
+    Coding coding4 = new Coding(loincUrl, "10665-8",
+        "Fungus colony count [#/volume] in Unspecified specimen by Environmental culture");
+    Coding coding5 = new Coding(snomedUrl, "416399002",
+        "Procollagen type I amino-terminal propeptide level");
+
+    CodeableConcept codeableConcept1 = new CodeableConcept(coding1);
+    codeableConcept1.addCoding(coding5);
+    CodeableConcept codeableConcept2 = new CodeableConcept(coding2);
+    CodeableConcept codeableConcept3 = new CodeableConcept(coding3);
+    CodeableConcept codeableConcept4 = new CodeableConcept(coding3);
+    CodeableConcept codeableConcept5 = new CodeableConcept(coding4);
+    CodeableConcept codeableConcept6 = new CodeableConcept(coding1);
+
+    Row inputRow1 = RowFactory
+        .create("DiagnosticReport/xyz1", rowFromCodeableConcept(codeableConcept1));
+    Row inputRow2 = RowFactory
+        .create("DiagnosticReport/xyz2", rowFromCodeableConcept(codeableConcept2));
+    Row inputRow3 = RowFactory
+        .create("DiagnosticReport/xyz3", rowFromCodeableConcept(codeableConcept3));
+    Row inputRow4 = RowFactory
+        .create("DiagnosticReport/xyz4", rowFromCodeableConcept(codeableConcept4));
+    Row inputRow5 = RowFactory
+        .create("DiagnosticReport/xyz5", rowFromCodeableConcept(codeableConcept5));
+    Row inputRow6 = RowFactory
+        .create("DiagnosticReport/xyz6", rowFromCodeableConcept(codeableConcept6));
+    Dataset<Row> inputDataset = spark.createDataFrame(
+        Arrays.asList(inputRow1, inputRow2, inputRow3, inputRow4, inputRow5, inputRow6),
+        inputStruct);
+    Column idColumn = inputDataset.col(inputDataset.columns()[0]);
+    Column valueColumn = inputDataset.col(inputDataset.columns()[1]);
+
+    // Create a mock terminology client.
+    TerminologyClient terminologyClient = mock(TerminologyClient.class);
+    ValidateCodeableConceptTxAnswerer validateCodeableConceptTxAnswerer = new ValidateCodeableConceptTxAnswerer(
+        codeableConcept1, codeableConcept3, codeableConcept4);
+    when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
+    when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodeableConceptTxAnswerer);
+
+    // Create a mock FhirContextFactory, and make it return the mock terminology client.
+    FhirContext fhirContext = mock(FhirContext.class);
+    when(fhirContext
+        .newRestfulClient(TerminologyClient.class, terminologyServiceUrl))
+        .thenReturn(terminologyClient);
+    FhirContextFactory fhirContextFactory = mock(FhirContextFactory.class);
+    when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
+
+    // Create a mock ValidateCodeMapper.
+    ValidateCodeMapper mockCodeMapper = mock(ValidateCodeMapper.class);
+    ValidateCodeMapperAnswerer validateCodeMapperAnswerer = new ValidateCodeMapperAnswerer(true,
+        false, true, true, false, false);
+    //noinspection unchecked
+    when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
+
+    // Prepare the inputs to the function.
+    ExpressionParserContext parserContext = new ExpressionParserContext();
+    parserContext.setTerminologyClient(terminologyClient);
+    parserContext.setFhirContextFactory(fhirContextFactory);
+
+    // Prepare the input expression.
+    ParsedExpression inputExpression = new ParsedExpression();
+    inputExpression.setFhirPath("code");
+    inputExpression.setFhirType(FHIRDefinedType.CODEABLECONCEPT);
+    inputExpression.setSingular(true);
+    inputExpression.setDataset(inputDataset);
+    inputExpression.setIdColumn(idColumn);
+    inputExpression.setValueColumn(valueColumn);
+    BaseRuntimeChildDefinition definition = TestUtilities.getFhirContext()
+        .getResourceDefinition("DiagnosticReport")
+        .getChildByName("code");
+    inputExpression.setDefinition(definition, "code");
+
+    // Prepare the argument expression.
+    ParsedExpression argumentExpression = new ParsedExpression();
+    argumentExpression.setFhirPath("'" + myValueSetUrl + "'");
+    argumentExpression.setFhirPathType(FhirPathType.STRING);
+    argumentExpression.setLiteralValue(new StringType(myValueSetUrl));
+    argumentExpression.setPrimitive(true);
+    argumentExpression.setSingular(true);
+
+    FunctionInput memberOfInput = new FunctionInput();
+    String inputFhirPath = "memberOf('" + myValueSetUrl + "')";
+    memberOfInput.setExpression(inputFhirPath);
+    memberOfInput.setContext(parserContext);
+    memberOfInput.setInput(inputExpression);
+    memberOfInput.getArguments().add(argumentExpression);
+
+    // Invoke the function.
+    MemberOfFunction memberOfFunction = new MemberOfFunction(mockCodeMapper);
+    ParsedExpression result = memberOfFunction.invoke(memberOfInput);
+
+    // Check the result.
+    assertThat(result.getFhirPath()).isEqualTo(inputFhirPath);
+    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.BOOLEAN);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.BOOLEAN);
+    assertThat(result.isPrimitive()).isTrue();
+    assertThat(result.isSingular()).isTrue();
+    assertThat(result.getIdColumn()).isInstanceOf(Column.class);
+    assertThat(result.getValueColumn()).isInstanceOf(Column.class);
+
+    // Test the mapper.
+    ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper(fhirContextFactory,
+        terminologyServiceUrl, myValueSetUrl, FHIRDefinedType.CODEABLECONCEPT);
+    Row inputCodeableConceptRow1 = RowFactory.create(1, rowFromCodeableConcept(codeableConcept1));
+    Row inputCodeableConceptRow2 = RowFactory.create(2, rowFromCodeableConcept(codeableConcept2));
+    Row inputCodeableConceptRow3 = RowFactory.create(3, rowFromCodeableConcept(codeableConcept3));
+    Row inputCodeableConceptRow4 = RowFactory.create(4, rowFromCodeableConcept(codeableConcept4));
+    Row inputCodeableConceptRow5 = RowFactory.create(5, rowFromCodeableConcept(codeableConcept5));
+    Row inputCodeableConceptRow6 = RowFactory.create(5, rowFromCodeableConcept(codeableConcept6));
+    List<Row> inputCodeableConceptRows = Arrays
+        .asList(inputCodeableConceptRow1, inputCodeableConceptRow2, inputCodeableConceptRow3,
+            inputCodeableConceptRow4, inputCodeableConceptRow5, inputCodeableConceptRow6);
+    List<ValidateCodeResult> results = new ArrayList<>();
+    validateCodeMapper.call(inputCodeableConceptRows.iterator()).forEachRemaining(results::add);
+
+    // Check the result dataset.
+    assertThat(results.size()).isEqualTo(6);
+    ValidateCodeResult validateResult = results.get(0);
+    assertThat(validateResult.getHash()).isEqualTo(1);
+    assertThat(validateResult.isResult()).isEqualTo(true);
+    validateResult = results.get(1);
+    assertThat(validateResult.getHash()).isEqualTo(2);
+    assertThat(validateResult.isResult()).isEqualTo(false);
+    validateResult = results.get(2);
+    assertThat(validateResult.getHash()).isEqualTo(3);
+    assertThat(validateResult.isResult()).isEqualTo(true);
+    validateResult = results.get(3);
+    assertThat(validateResult.getHash()).isEqualTo(4);
+    assertThat(validateResult.isResult()).isEqualTo(true);
+    validateResult = results.get(4);
+    assertThat(validateResult.getHash()).isEqualTo(5);
+    assertThat(validateResult.isResult()).isEqualTo(false);
+    validateResult = results.get(4);
+    assertThat(validateResult.getHash()).isEqualTo(5);
+    assertThat(validateResult.isResult()).isEqualTo(false);
+  }
+
 }

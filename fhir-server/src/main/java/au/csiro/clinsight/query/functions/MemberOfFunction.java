@@ -6,6 +6,7 @@ package au.csiro.clinsight.query.functions;
 
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.CODING;
 import static au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType.STRING;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.clinsight.encoding.ValidateCodeResult;
 import au.csiro.clinsight.fhir.FhirContextFactory;
@@ -15,6 +16,7 @@ import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -82,6 +84,7 @@ public class MemberOfFunction implements Function {
     validateResults = prevDataset
         .select(prevValueHashColumn, prevValueColumn)
         .dropDuplicates()
+        .filter(prevValueColumn.isNotNull())
         .mapPartitions(validateCodeMapper, Encoders.bean(ValidateCodeResult.class));
     Column valueColumn = validateResults.col("result");
     Column resultHashColumn = validateResults.col("hash");
@@ -91,6 +94,9 @@ public class MemberOfFunction implements Function {
     dataset = prevDataset
         .join(validateResults, prevValueHashColumn.equalTo(resultHashColumn));
     dataset = dataset.select(prevIdColumn, valueColumn);
+    // The conditional expression around the value column is required to deal with nulls. This
+    // function should only ever return true or false.
+    valueColumn = when(valueColumn.isNull(), false).otherwise(valueColumn);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -142,6 +148,10 @@ public class MemberOfFunction implements Function {
 
     @Override
     public Iterator<ValidateCodeResult> call(Iterator<Row> inputRows) {
+      if (!inputRows.hasNext()) {
+        return Collections.emptyIterator();
+      }
+
       // Create a terminology client.
       TerminologyClient terminologyClient = fhirContextFactory
           .getFhirContext(FhirVersionEnum.R4)

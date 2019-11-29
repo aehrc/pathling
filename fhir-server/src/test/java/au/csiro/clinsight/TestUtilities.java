@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.util.*;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Row;
@@ -27,6 +28,8 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import scala.collection.JavaConversions;
+import scala.collection.mutable.Buffer;
 
 /**
  * @author John Grimes
@@ -86,11 +89,32 @@ public abstract class TestUtilities {
   }
 
   public static Row rowFromCodeableConcept(CodeableConcept codeableConcept) {
-    Object[] codings = codeableConcept.getCoding().stream().map(TestUtilities::rowFromCoding)
-        .toArray();
+    List<Row> codings = codeableConcept.getCoding().stream().map(TestUtilities::rowFromCoding)
+        .collect(Collectors.toList());
+    Buffer buffer = JavaConversions.asScalaBuffer(codings);
     return new GenericRowWithSchema(
-        new Object[]{codeableConcept.getId(), codings, codeableConcept.getText()},
+        new Object[]{codeableConcept.getId(), buffer.toList(), codeableConcept.getText()},
         codeableConceptStructType());
+  }
+
+  public static boolean codingsAreEqual(Coding coding1, Coding coding2) {
+    return coding1.getUserSelected() == coding2.getUserSelected() &&
+        Objects.equals(coding1.getSystem(), coding2.getSystem()) &&
+        Objects.equals(coding1.getVersion(), coding2.getVersion()) &&
+        Objects.equals(coding1.getCode(), coding2.getCode()) &&
+        Objects.equals(coding1.getDisplay(), coding2.getDisplay());
+  }
+
+  public static boolean codeableConceptsAreEqual(CodeableConcept codeableConcept1,
+      CodeableConcept codeableConcept2) {
+    Iterator<Coding> codings1 = codeableConcept1.getCoding().iterator(),
+        codings2 = codeableConcept2.getCoding().iterator();
+    while (codings1.hasNext()) {
+      if (!codingsAreEqual(codings1.next(), codings2.next())) {
+        return false;
+      }
+    }
+    return Objects.equals(codeableConcept1.getText(), codeableConcept2.getText());
   }
 
   public static Coding matchesCoding(Coding expected) {
@@ -176,20 +200,16 @@ public abstract class TestUtilities {
 
   /**
    * Custom Mockito answerer for returning a mock response from the terminology server in response
-   * to a $validate-code request.
+   * to a $validate-code request using a Coding.
    */
-  public static class ValidateCodeTxServerAnswerer implements Answer<Bundle> {
+  public static class ValidateCodingTxAnswerer implements Answer<Bundle> {
 
     Set<Coding> validCodings = new HashSet<>();
 
-    public ValidateCodeTxServerAnswerer(Coding... validCodings) {
+    public ValidateCodingTxAnswerer(Coding... validCodings) {
       this.validCodings.addAll(Arrays.asList(validCodings));
     }
 
-    /**
-     * Custom Mockito answerer for mocking out batch responses to the $validate-code operation
-     * within a terminology server.
-     */
     @Override
     public Bundle answer(InvocationOnMock invocation) {
       Bundle request = invocation.getArgument(0),
@@ -209,8 +229,55 @@ public abstract class TestUtilities {
         Coding codingParam = (Coding) ((Parameters) entry.getResource())
             .getParameter("coding");
         if (codingParam != null) {
-          CodingMatcher codingMatcher = new CodingMatcher(codingParam);
-          boolean result = validCodings.stream().anyMatch(codingMatcher::matches);
+          boolean result = validCodings.stream()
+              .anyMatch(validCoding -> codingsAreEqual(codingParam, validCoding));
+          responseParams.setParameter("result", result);
+        } else {
+          responseParams.setParameter("result", false);
+        }
+
+        response.addEntry(responseEntry);
+      }
+
+      return response;
+    }
+
+  }
+
+  /**
+   * Custom Mockito answerer for returning a mock response from the terminology server in response
+   * to a $validate-code request using a CodeableConcept.
+   */
+  public static class ValidateCodeableConceptTxAnswerer implements Answer<Bundle> {
+
+    Set<CodeableConcept> validCodeableConcepts = new HashSet<>();
+
+    public ValidateCodeableConceptTxAnswerer(CodeableConcept... validCodeableConcepts) {
+      this.validCodeableConcepts.addAll(Arrays.asList(validCodeableConcepts));
+    }
+
+    @Override
+    public Bundle answer(InvocationOnMock invocation) {
+      Bundle request = invocation.getArgument(0),
+          response = new Bundle();
+      response.setType(BundleType.BATCHRESPONSE);
+
+      // For each entry in the request, check whether it matches one of the valid concepts and add
+      // an entry to the response bundle.
+      for (BundleEntryComponent entry : request.getEntry()) {
+        BundleEntryComponent responseEntry = new BundleEntryComponent();
+        BundleEntryResponseComponent responseEntryResponse = new BundleEntryResponseComponent();
+        responseEntryResponse.setStatus("200");
+        responseEntry.setResponse(responseEntryResponse);
+        Parameters responseParams = new Parameters();
+        responseEntry.setResource(responseParams);
+
+        CodeableConcept codeableConceptParam = (CodeableConcept) ((Parameters) entry.getResource())
+            .getParameter("codeableConcept");
+        if (codeableConceptParam != null) {
+          boolean result = validCodeableConcepts.stream()
+              .anyMatch(validCodeableConcept -> codeableConceptsAreEqual(codeableConceptParam,
+                  validCodeableConcept));
           responseParams.setParameter("result", result);
         } else {
           responseParams.setParameter("result", false);
