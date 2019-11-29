@@ -136,6 +136,40 @@
           </systemPropertyVariables>
         </configuration>
       </plugin>
+      <!-- The packaging of the shaded JAR has been purposefully left out of the default package
+      step of the build - if you want a shaded jar, just run `mvn package shade:shade` -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <transformers>
+            <transformer
+              implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+              <mainClass>au.csiro.clinsight.FhirServerContainer</mainClass>
+            </transformer>
+          </transformers>
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+                <exclude>META-INF/*.RSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
+          <createDependencyReducedPom>false</createDependencyReducedPom>
+          <shadedArtifactAttached>true</shadedArtifactAttached>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
