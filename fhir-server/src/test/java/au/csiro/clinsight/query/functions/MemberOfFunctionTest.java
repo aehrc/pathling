@@ -1,6 +1,6 @@
 package au.csiro.clinsight.query.functions;
 
-import static au.csiro.clinsight.TestUtilities.ValidateCodeAnswer;
+import static au.csiro.clinsight.TestUtilities.ValidateCodeMapperAnswerer;
 import static au.csiro.clinsight.TestUtilities.codingStructType;
 import static au.csiro.clinsight.TestUtilities.getJsonParser;
 import static au.csiro.clinsight.TestUtilities.rowFromCoding;
@@ -9,10 +9,11 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.clinsight.encoding.ValidateCodingResult;
+import au.csiro.clinsight.TestUtilities.ValidateCodeTxServerAnswerer;
+import au.csiro.clinsight.encoding.ValidateCodeResult;
 import au.csiro.clinsight.fhir.FhirContextFactory;
 import au.csiro.clinsight.fhir.TerminologyClient;
-import au.csiro.clinsight.query.functions.MemberOfFunction.ValidateCodingMapper;
+import au.csiro.clinsight.query.functions.MemberOfFunction.ValidateCodeMapper;
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
@@ -23,8 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.Bundle;
@@ -81,11 +80,12 @@ public class MemberOfFunctionTest {
     Column idColumn = inputDataset.col(inputDataset.columns()[0]);
     Column valueColumn = inputDataset.col(inputDataset.columns()[1]);
 
-    // Create a mock terminology client which returns batch $validate-code responses.
+    // Create a mock terminology client.
     TerminologyClient terminologyClient = mock(TerminologyClient.class);
-    ValidateCodeAnswer validateCodeAnswer = new ValidateCodeAnswer(coding2, coding5);
-    when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodeAnswer);
+    ValidateCodeTxServerAnswerer validateCodeTxServerAnswerer = new ValidateCodeTxServerAnswerer(
+        coding2, coding5);
     when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
+    when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodeTxServerAnswerer);
 
     // Create a mock FhirContextFactory, and make it return the mock terminology client.
     FhirContext fhirContext = mock(FhirContext.class);
@@ -96,15 +96,11 @@ public class MemberOfFunctionTest {
     when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
 
     // Create a mock ValidateCodeMapper.
-    ValidateCodingMapper mockCodeMapper = mock(ValidateCodingMapper.class);
-    List<ValidateCodingResult> validateResults = Stream
-        .of(coding1, coding2, coding3, coding4, coding5).map(ValidateCodingResult::new)
-        .collect(Collectors.toList());
-    // Codings 2 and 5 are the only valid codes in this scenario.
-    validateResults.get(1).setResult(true);
-    validateResults.get(4).setResult(true);
+    ValidateCodeMapper mockCodeMapper = mock(ValidateCodeMapper.class);
+    ValidateCodeMapperAnswerer validateCodeMapperAnswerer = new ValidateCodeMapperAnswerer(false,
+        true, false, false, true);
     //noinspection unchecked
-    when(mockCodeMapper.call(any(Iterator.class))).thenReturn(validateResults.iterator());
+    when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
     // Prepare the inputs to the function.
     ExpressionParserContext parserContext = new ExpressionParserContext();
@@ -149,40 +145,35 @@ public class MemberOfFunctionTest {
     assertThat(result.getValueColumn()).isInstanceOf(Column.class);
 
     // Test the mapper.
-    ValidateCodingMapper validateCodeMapper = new ValidateCodingMapper(fhirContextFactory,
-        terminologyServiceUrl, FhirPathType.CODING, myValueSetUrl);
-    Row inputCodingRow1 = RowFactory.create(rowFromCoding(coding1));
-    Row inputCodingRow2 = RowFactory.create(rowFromCoding(coding2));
-    Row inputCodingRow3 = RowFactory.create(rowFromCoding(coding3));
-    Row inputCodingRow4 = RowFactory.create(rowFromCoding(coding4));
-    Row inputCodingRow5 = RowFactory.create(rowFromCoding(coding5));
+    ValidateCodeMapper validateCodingMapper = new ValidateCodeMapper(fhirContextFactory,
+        terminologyServiceUrl, myValueSetUrl, FHIRDefinedType.CODING);
+    Row inputCodingRow1 = RowFactory.create(1, rowFromCoding(coding1));
+    Row inputCodingRow2 = RowFactory.create(2, rowFromCoding(coding2));
+    Row inputCodingRow3 = RowFactory.create(3, rowFromCoding(coding3));
+    Row inputCodingRow4 = RowFactory.create(4, rowFromCoding(coding4));
+    Row inputCodingRow5 = RowFactory.create(5, rowFromCoding(coding5));
     List<Row> inputCodingRows = Arrays
         .asList(inputCodingRow1, inputCodingRow2, inputCodingRow3, inputCodingRow4,
             inputCodingRow5);
-    List<ValidateCodingResult> results = new ArrayList<>();
-    validateCodeMapper.call(inputCodingRows.iterator()).forEachRemaining(results::add);
+    List<ValidateCodeResult> results = new ArrayList<>();
+    validateCodingMapper.call(inputCodingRows.iterator()).forEachRemaining(results::add);
 
     // Check the result dataset.
     assertThat(results.size()).isEqualTo(5);
-    ValidateCodingResult validateResult = results.get(0);
-    assertThat(validateResult.getValue().getCode()).isEqualTo("AMB");
-    assertThat(validateResult.getValue().getDisplay()).isEqualTo("ambulatory");
+    ValidateCodeResult validateResult = results.get(0);
+    assertThat(validateResult.getHash()).isEqualTo(1);
     assertThat(validateResult.isResult()).isEqualTo(false);
     validateResult = results.get(1);
-    assertThat(validateResult.getValue().getCode()).isEqualTo("EMER");
-    assertThat(validateResult.getValue().getDisplay()).isEqualTo(null);
+    assertThat(validateResult.getHash()).isEqualTo(2);
     assertThat(validateResult.isResult()).isEqualTo(true);
     validateResult = results.get(2);
-    assertThat(validateResult.getValue().getCode()).isEqualTo("IMP");
-    assertThat(validateResult.getValue().getDisplay()).isEqualTo("inpatient encounter");
+    assertThat(validateResult.getHash()).isEqualTo(3);
     assertThat(validateResult.isResult()).isEqualTo(false);
     validateResult = results.get(3);
-    assertThat(validateResult.getValue().getCode()).isEqualTo("IMP");
-    assertThat(validateResult.getValue().getDisplay()).isEqualTo(null);
+    assertThat(validateResult.getHash()).isEqualTo(4);
     assertThat(validateResult.isResult()).isEqualTo(false);
     validateResult = results.get(4);
-    assertThat(validateResult.getValue().getCode()).isEqualTo("ACUTE");
-    assertThat(validateResult.getValue().getDisplay()).isEqualTo("inpatient acute");
+    assertThat(validateResult.getHash()).isEqualTo(5);
     assertThat(validateResult.isResult()).isEqualTo(true);
   }
 

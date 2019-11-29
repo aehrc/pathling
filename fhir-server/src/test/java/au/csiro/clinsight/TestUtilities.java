@@ -7,15 +7,14 @@ package au.csiro.clinsight;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.clinsight.encoding.ValidateCodeResult;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
@@ -61,33 +60,36 @@ public abstract class TestUtilities {
 
   public static StructType codingStructType() {
     Metadata metadata = new MetadataBuilder().build();
+    StructField id = new StructField("id", DataTypes.StringType, true, metadata);
     StructField system = new StructField("system", DataTypes.StringType, true, metadata);
     StructField version = new StructField("version", DataTypes.StringType, true, metadata);
     StructField code = new StructField("code", DataTypes.StringType, true, metadata);
     StructField display = new StructField("display", DataTypes.StringType, true, metadata);
     StructField userSelected = new StructField("userSelected", DataTypes.BooleanType, true,
         metadata);
-    return new StructType(new StructField[]{system, version, code, display, userSelected});
+    return new StructType(new StructField[]{id, system, version, code, display, userSelected});
   }
 
   public static StructType codeableConceptStructType() {
     Metadata metadata = new MetadataBuilder().build();
+    StructField id = new StructField("id", DataTypes.StringType, true, metadata);
     StructField coding = new StructField("coding", DataTypes.createArrayType(codingStructType()),
         true, metadata);
     StructField text = new StructField("text", DataTypes.StringType, true, metadata);
-    return new StructType(new StructField[]{coding, text});
+    return new StructType(new StructField[]{id, coding, text});
   }
 
   public static Row rowFromCoding(Coding coding) {
     return new GenericRowWithSchema(
-        new Object[]{coding.getSystem(), coding.getVersion(), coding.getCode(), coding.getDisplay(),
-            coding.getUserSelected()}, codingStructType());
+        new Object[]{coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
+            coding.getDisplay(), coding.getUserSelected()}, codingStructType());
   }
 
   public static Row rowFromCodeableConcept(CodeableConcept codeableConcept) {
     Object[] codings = codeableConcept.getCoding().stream().map(TestUtilities::rowFromCoding)
         .toArray();
-    return new GenericRowWithSchema(new Object[]{codings, codeableConcept.getText()},
+    return new GenericRowWithSchema(
+        new Object[]{codeableConcept.getId(), codings, codeableConcept.getText()},
         codeableConceptStructType());
   }
 
@@ -142,11 +144,45 @@ public abstract class TestUtilities {
     }
   }
 
-  public static class ValidateCodeAnswer implements Answer<Bundle> {
+  /**
+   * Custom Mockito answerer for returning $validate-code results based on the correlation
+   * identifiers in the input Rows.
+   */
+  public static class ValidateCodeMapperAnswerer implements Answer<Iterator<ValidateCodeResult>> {
+
+    List<Boolean> expectedResults;
+
+    public ValidateCodeMapperAnswerer(Boolean... expectedResults) {
+      this.expectedResults = Arrays.asList(expectedResults);
+    }
+
+    @Override
+    public Iterator<ValidateCodeResult> answer(InvocationOnMock invocation) {
+      List rows = IteratorUtils.toList(invocation.getArgument(0));
+      List<ValidateCodeResult> results = new ArrayList<>();
+
+      for (int i = 0; i < rows.size(); i++) {
+        Row row = (Row) rows.get(i);
+        ValidateCodeResult result = new ValidateCodeResult();
+        result.setHash(row.getInt(0));
+        result.setResult(expectedResults.get(i));
+        results.add(result);
+      }
+
+      return results.iterator();
+    }
+
+  }
+
+  /**
+   * Custom Mockito answerer for returning a mock response from the terminology server in response
+   * to a $validate-code request.
+   */
+  public static class ValidateCodeTxServerAnswerer implements Answer<Bundle> {
 
     Set<Coding> validCodings = new HashSet<>();
 
-    public ValidateCodeAnswer(Coding... validCodings) {
+    public ValidateCodeTxServerAnswerer(Coding... validCodings) {
       this.validCodings.addAll(Arrays.asList(validCodings));
     }
 
