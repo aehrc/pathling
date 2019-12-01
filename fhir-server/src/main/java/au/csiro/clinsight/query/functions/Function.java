@@ -22,7 +22,6 @@ public interface Function {
   Map<String, Function> funcToObject = new HashMap<String, Function>() {{
     put("where", new WhereFunction());
     put("count", new CountFunction());
-    put("max", new MaxFunction());
     put("first", new FirstFunction());
     put("memberOf", new MemberOfFunction());
     put("subsumes", new SubsumesFunction());
