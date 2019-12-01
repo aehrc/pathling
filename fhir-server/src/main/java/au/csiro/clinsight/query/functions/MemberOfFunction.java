@@ -92,7 +92,7 @@ public class MemberOfFunction implements Function {
     // We then join the input dataset to the validated codes, and select the validation result
     // as the new value.
     dataset = prevDataset
-        .join(validateResults, prevValueHashColumn.equalTo(resultHashColumn));
+        .join(validateResults, prevValueHashColumn.equalTo(resultHashColumn), "left_outer");
     dataset = dataset.select(prevIdColumn, valueColumn);
     // The conditional expression around the value column is required to deal with nulls. This
     // function should only ever return true or false.
