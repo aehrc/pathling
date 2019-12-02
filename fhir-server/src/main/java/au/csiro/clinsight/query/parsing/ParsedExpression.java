@@ -386,7 +386,10 @@ public class ParsedExpression {
   public static FHIRDefinedType fhirTypeFromDefinition(BaseRuntimeChildDefinition definition,
       String elementName) {
     IBase exampleObject = definition.getChildByName(elementName).newInstance();
-    return FHIRDefinedType.fromCode(exampleObject.fhirType());
+    // BackboneElements do not seem to correctly report their FHIR type.
+    return exampleObject.getClass().getSuperclass() == BackboneElement.class
+        ? FHIRDefinedType.BACKBONEELEMENT
+        : FHIRDefinedType.fromCode(exampleObject.fhirType());
   }
 
   /**
