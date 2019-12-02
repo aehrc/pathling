@@ -79,22 +79,50 @@ public class AnalyticsServerCapabilities implements
     List<CapabilityStatementRestComponent> rest = new ArrayList<>();
     CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
     server.setMode(RestfulCapabilityMode.SERVER);
+    server.setResource(buildResources());
+    server.setOperation(buildOperations());
+    rest.add(server);
+    return rest;
+  }
+
+  private List<CapabilityStatementRestResourceComponent> buildResources() {
+    List<CapabilityStatementRestResourceComponent> resources = new ArrayList<>();
+    CapabilityStatementRestResourceComponent strucDefResource = new CapabilityStatementRestResourceComponent(
+        new CodeType("StructureDefinition"));
+    ResourceInteractionComponent readInteraction = new ResourceInteractionComponent();
+    readInteraction.setCode(TypeRestfulInteraction.READ);
+    strucDefResource.addInteraction(readInteraction);
+    CapabilityStatementRestResourceComponent opDefResource = new CapabilityStatementRestResourceComponent(
+        new CodeType("OperationDefinition"));
+    opDefResource.addInteraction(readInteraction);
+    resources.add(strucDefResource);
+    resources.add(opDefResource);
+    return resources;
+  }
+
+  private List<CapabilityStatementRestResourceOperationComponent> buildOperations() {
     List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
-    CanonicalType operationUri = new CanonicalType(
+
+    CanonicalType aggregateOperationUri = new CanonicalType(
         "https://clinsight.csiro.au/fhir/OperationDefinition/aggregate-0");
-    CapabilityStatementRestResourceOperationComponent operation = new CapabilityStatementRestResourceOperationComponent(
-        new StringType("aggregate"), operationUri);
+    CapabilityStatementRestResourceOperationComponent aggregateOperation = new CapabilityStatementRestResourceOperationComponent(
+        new StringType("aggregate"), aggregateOperationUri);
     for (Enumerations.ResourceType resourceType : aggregateExecutor.getAvailableResourceTypes()) {
       Extension extension = new Extension();
       extension
           .setUrl("https://clinsight.csiro.au/fhir/StructureDefinition/available-resource-type-0");
       extension.setValue(new CodeType(resourceType.toCode()));
-      operation.addExtension(extension);
+      aggregateOperation.addExtension(extension);
     }
-    operations.add(operation);
-    server.setOperation(operations);
-    rest.add(server);
-    return rest;
+
+    CanonicalType importOperationUri = new CanonicalType(
+        "https://clinsight.csiro.au/fhir/OperationDefinition/import-0");
+    CapabilityStatementRestResourceOperationComponent importOperation = new CapabilityStatementRestResourceOperationComponent(
+        new StringType("import"), importOperationUri);
+
+    operations.add(aggregateOperation);
+    operations.add(importOperation);
+    return operations;
   }
 
   @Override

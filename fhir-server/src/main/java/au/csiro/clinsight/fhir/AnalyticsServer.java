@@ -129,10 +129,12 @@ public class AnalyticsServer extends RestfulServer {
    */
   private void declareProviders() {
     FhirContextFactory fhirContextFactory = new FreshFhirContextFactory();
-    List<Object> plainProviders = new ArrayList<>();
-    plainProviders.add(new AggregateOperationProvider(aggregateExecutor));
-    plainProviders.add(new ImportProvider(configuration, spark, fhirEncoders, fhirContextFactory));
-    registerProviders(plainProviders);
+    List<Object> providers = new ArrayList<>();
+    providers.add(new AggregateOperationProvider(aggregateExecutor));
+    providers.add(new ImportProvider(configuration, spark, fhirEncoders, fhirContextFactory));
+    providers.add(new StructureDefinitionProvider(getFhirContext()));
+    providers.add(new OperationDefinitionProvider(getFhirContext()));
+    registerProviders(providers);
   }
 
   /**
