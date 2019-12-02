@@ -1,0 +1,52 @@
+{
+  "resourceType": "StructureDefinition",
+  "url": "https://clinsight.csiro.au/fhir/StructureDefinition/available-resource-type-0",
+  "version": "0.0.0",
+  "name": "AvailableResourceType",
+  "title": "Available Resource Type",
+  "status": "draft",
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "purpose": "This extension represents a resource type that is currently available for use with an operation defined within a CapabilityStatement.",
+  "copyright": "Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.",
+  "fhirVersion": "4.0.0",
+  "mapping": [
+    {
+      "identity": "rim",
+      "uri": "http://hl7.org/v3",
+      "name": "RIM Mapping"
+    }
+  ],
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "CapabilityStatement.rest.operation"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://clinsight.csiro.au/fhir/StructureDefinition/available-resource-type-0"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://hl7.org/fhir/ValueSet/resource-types|4.0.0"
+        }
+      }
+    ]
+  }
+}

@@ -42,6 +42,10 @@ public class AnalyticsServerCapabilities implements
       RequestDetails requestDetails) {
     checkServerHealth();
     CapabilityStatement capabilityStatement = new CapabilityStatement();
+    Meta meta = new Meta();
+    meta.addProfile(
+        "https://clinsight.csiro.au/fhir/StructureDefinition/fhir-server-capabilities-0");
+    capabilityStatement.setMeta(meta);
     capabilityStatement
         .setUrl("https://clinsight.csiro.au/fhir/CapabilityStatement/clinsight-fhir-api-0");
     capabilityStatement.setVersion("0.0.0");
