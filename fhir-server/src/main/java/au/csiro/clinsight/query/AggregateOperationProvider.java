@@ -2,11 +2,8 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.fhir;
+package au.csiro.clinsight.query;
 
-import au.csiro.clinsight.query.AggregateExecutor;
-import au.csiro.clinsight.query.AggregateRequest;
-import au.csiro.clinsight.query.AggregateResponse;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import org.hl7.fhir.r4.model.Parameters;
@@ -16,11 +13,11 @@ import org.hl7.fhir.r4.model.Parameters;
  *
  * @author John Grimes
  */
-class AggregateOperationProvider {
+public class AggregateOperationProvider {
 
   private final AggregateExecutor aggregateExecutor;
 
-  AggregateOperationProvider(AggregateExecutor aggregateExecutor) {
+  public AggregateOperationProvider(AggregateExecutor aggregateExecutor) {
     assert aggregateExecutor != null : "Must supply aggregate executor";
 
     this.aggregateExecutor = aggregateExecutor;

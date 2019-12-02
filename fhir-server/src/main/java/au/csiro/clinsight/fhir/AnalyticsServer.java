@@ -8,6 +8,7 @@ import static au.csiro.clinsight.utilities.Configuration.copyStringProps;
 
 import au.csiro.clinsight.query.AggregateExecutor;
 import au.csiro.clinsight.query.AggregateExecutorConfiguration;
+import au.csiro.clinsight.query.AggregateOperationProvider;
 import au.csiro.clinsight.query.ResourceReader;
 import au.csiro.clinsight.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
