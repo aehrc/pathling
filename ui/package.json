@@ -45,7 +45,7 @@
   },
   "scripts": {
     "start": "NODE_ENV=development webpack-dev-server --mode=development --watch --hot --port=3000",
-    "build": "scripts/build.sh",
+    "build": "webpack --mode=production",
     "extractResourceDefinitions": "node scripts/extractResourceStrucDefs.js <target/fhir-definitions/profiles-resources.json >config/resourceDefinitions.json",
     "extractTypeDefinitions": "node scripts/extractComplexTypeStrucDefs.js <target/fhir-definitions/profiles-types.json >config/complexTypeDefinitions.json",
     "buildResourceTree": "node scripts/strucDefToElementMap.js <config/resourceDefinitions.json >config/resourceTree.json",
