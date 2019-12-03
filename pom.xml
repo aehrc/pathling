@@ -29,7 +29,7 @@
     <sparkVersion>2.4.4</sparkVersion>
     <sparkScalaVersion>2.11</sparkScalaVersion>
     <hadoopVersion>3.2.1</hadoopVersion>
-    <bunsenVersion>0.4.9-SNAPSHOT</bunsenVersion>
+    <bunsenVersion>0.4.9-johngrimes</bunsenVersion>
     <pythonVersion>3.6.8</pythonVersion>
     <sparkMirror>https://mirror.aarnet.edu.au/pub/apache/spark</sparkMirror>
     <hadoopMirror>https://mirror.aarnet.edu.au/pub/apache/hadoop/common</hadoopMirror>
@@ -220,5 +220,12 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <repositories>
+    <repository>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/johngrimes/bunsen</url>
+    </repository>
+  </repositories>
 
 </project>
