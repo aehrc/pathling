@@ -6,6 +6,7 @@ package au.csiro.clinsight.fhir;
 
 import static au.csiro.clinsight.utilities.Configuration.copyStringProps;
 
+import au.csiro.clinsight.bunsen.FhirEncoders;
 import au.csiro.clinsight.query.AggregateExecutor;
 import au.csiro.clinsight.query.AggregateExecutorConfiguration;
 import au.csiro.clinsight.query.AggregateOperationProvider;
@@ -15,7 +16,6 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
-import com.cerner.bunsen.FhirEncoders;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;

@@ -21,7 +21,6 @@
     <dependency>
       <groupId>au.csiro.clinsight</groupId>
       <artifactId>fhir-server</artifactId>
-      <version>${project.version}</version>
     </dependency>
   </dependencies>
 
@@ -30,7 +29,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.1.1</version>
         <executions>
           <execution>
             <goals>
@@ -42,7 +40,6 @@
       <plugin>
         <groupId>com.spotify</groupId>
         <artifactId>dockerfile-maven-plugin</artifactId>
-        <version>1.4.12</version>
         <executions>
           <execution>
             <goals>

@@ -22,7 +22,6 @@
       <plugin>
         <groupId>au.csiro.clinsight</groupId>
         <artifactId>fhir-definitions-maven-plugin</artifactId>
-        <version>${project.version}</version>
         <executions>
           <execution>
             <goals>
@@ -41,7 +40,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
         <executions>
           <execution>
             <id>extractResourceDefinitions</id>
@@ -132,7 +130,6 @@
       <plugin>
         <groupId>com.spotify</groupId>
         <artifactId>dockerfile-maven-plugin</artifactId>
-        <version>1.4.12</version>
         <executions>
           <execution>
             <goals>

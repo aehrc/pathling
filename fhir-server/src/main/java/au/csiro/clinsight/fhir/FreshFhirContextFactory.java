@@ -4,9 +4,9 @@
 
 package au.csiro.clinsight.fhir;
 
+import au.csiro.clinsight.bunsen.FhirEncoders;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
-import com.cerner.bunsen.FhirEncoders;
 
 /**
  * Uses the FhirEncoders class from Bunsen to create a FhirContext. Used for code that runs on Spark

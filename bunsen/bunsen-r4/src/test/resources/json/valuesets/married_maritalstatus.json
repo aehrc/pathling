@@ -1,0 +1,21 @@
+{
+  "resourceType": "ValueSet",
+  "url": "urn:cerner:bunsen:valueset:married_maritalstatus",
+  "version": "0.0.1",
+  "status": "draft",
+  "date": "2018-01-10",
+  "compose": {
+    "include": [
+      {
+        "system": "http://hl7.org/fhir/v3/MaritalStatus",
+        "version": "2016-11-11",
+        "concept": [
+          {
+            "code": "M",
+            "display": "married"
+          }
+        ]
+      }
+    ]
+  }
+}

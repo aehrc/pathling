@@ -26,7 +26,6 @@
       <plugin>
         <groupId>au.csiro.clinsight</groupId>
         <artifactId>ontoserver-preload-maven-plugin</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
         <executions>
           <execution>
             <goals>
@@ -53,7 +52,6 @@
       <plugin>
         <groupId>com.spotify</groupId>
         <artifactId>dockerfile-maven-plugin</artifactId>
-        <version>1.4.12</version>
         <executions>
           <execution>
             <goals>

@@ -4,13 +4,13 @@
 
 package au.csiro.clinsight.update;
 
+import au.csiro.clinsight.bunsen.FhirEncoders;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import au.csiro.clinsight.fhir.FhirContextFactory;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import com.cerner.bunsen.FhirEncoders;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.spark.api.java.function.MapFunction;

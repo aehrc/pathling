@@ -22,7 +22,6 @@
       <plugin>
         <groupId>com.spotify</groupId>
         <artifactId>dockerfile-maven-plugin</artifactId>
-        <version>1.4.12</version>
         <executions>
           <execution>
             <goals>
@@ -37,7 +36,6 @@
           <pullNewerImage>false</pullNewerImage>
           <buildArgs>
             <BASE_VERSION>${project.version}</BASE_VERSION>
-            <PYTHON_VERSION>${pythonVersion}</PYTHON_VERSION>
           </buildArgs>
         </configuration>
       </plugin>

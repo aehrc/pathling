@@ -23,6 +23,63 @@
   </properties>
 
   <dependencies>
+    <!-- HAPI FHIR -->
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-base</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-client</artifactId>
+    </dependency>
+    <!-- Woodstox is used by HAPI for XML processing -->
+    <dependency>
+      <groupId>com.fasterxml.woodstox</groupId>
+      <artifactId>woodstox-core</artifactId>
+    </dependency>
+
+    <!-- Apache Spark -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_${sparkScalaVersion}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
+    </dependency>
+
+    <!-- Bunsen -->
+    <dependency>
+      <groupId>au.csiro.clinsight</groupId>
+      <artifactId>bunsen-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.clinsight</groupId>
+      <artifactId>bunsen-stu3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.clinsight</groupId>
+      <artifactId>bunsen-r4</artifactId>
+    </dependency>
+
+    <!-- Logging -->
+    <dependency>
+      <artifactId>logback-classic</artifactId>
+      <groupId>ch.qos.logback</groupId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
     <!-- ANTLR -->
     <dependency>
       <groupId>org.antlr</groupId>
@@ -48,6 +105,28 @@
       <artifactId>spring-web</artifactId>
       <version>5.0.8.RELEASE</version>
     </dependency>
+
+    <!-- Testing -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.skyscreamer</groupId>
+      <artifactId>jsonassert</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.docker-java</groupId>
+      <artifactId>docker-java</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -70,7 +149,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.1.1</version>
         <executions>
           <execution>
             <goals>
@@ -82,7 +160,6 @@
       <plugin>
         <groupId>com.spotify</groupId>
         <artifactId>dockerfile-maven-plugin</artifactId>
-        <version>1.4.12</version>
         <executions>
           <execution>
             <goals>
@@ -136,12 +213,9 @@
           </systemPropertyVariables>
         </configuration>
       </plugin>
-      <!-- The packaging of the shaded JAR has been purposefully left out of the default package
-      step of the build - if you want a shaded jar, just run `mvn package shade:shade` -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.1</version>
         <executions>
           <execution>
             <goals>

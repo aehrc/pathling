@@ -6,9 +6,9 @@ package au.csiro.clinsight.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.clinsight.bunsen.FhirEncoders;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import au.csiro.clinsight.fhir.FreshFhirContextFactory;
-import com.cerner.bunsen.FhirEncoders;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;

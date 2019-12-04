@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.clinsight.query.functions;
 
 import static org.assertj.core.api.Assertions.assertThat;

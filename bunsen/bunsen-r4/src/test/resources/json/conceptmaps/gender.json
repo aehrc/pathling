@@ -1,0 +1,70 @@
+{
+  "resourceType": "ConceptMap",
+  "sourceUri": "urn:cerner:poprec:valueset:demographics:gender",
+  "targetUri": "http://hl7.org/fhir/ValueSet/administrative-gender",
+  "url": "urn:cerner:poprec:fhir:conceptmap:demographics:gender",
+  "version": "0.0.1",
+  "status": "draft",
+  "experimental": true,
+  "date": "2017-03-01",
+  "group": [
+    {
+      "source": "2.16.840.1.113883.3.26.1.1",
+      "target": "http://hl7.org/fhir/administrative-gender",
+      "element": [
+        {
+          "code": "C46109",
+          "target": [
+            {
+              "code": "male"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "2.16.840.1.113883.5.1",
+      "target": "http://hl7.org/fhir/administrative-gender",
+      "element": [
+        {
+          "code": "F",
+          "target": [
+            {
+              "code": "female"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "http://snomed.info/sct",
+      "target": "http://hl7.org/fhir/administrative-gender",
+      "element": [
+        {
+          "code": "248152002",
+          "target": [
+            {
+              "code": "female"
+            }
+          ]
+        },
+        {
+          "code": "248153007",
+          "target": [
+            {
+              "code": "male"
+            }
+          ]
+        },
+        {
+          "code": "394743007",
+          "target": [
+            {
+              "code": "unknown"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

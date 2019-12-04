@@ -1,4 +1,8 @@
 <?xml version="1.0"?>
+<!--
+  ~ Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+  -->
+
 <allocations>
   <pool name="default">
     <schedulingMode>FAIR</schedulingMode>

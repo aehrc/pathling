@@ -28,9 +28,7 @@
     <hapiFhirVersion>4.0.0</hapiFhirVersion>
     <sparkVersion>2.4.4</sparkVersion>
     <sparkScalaVersion>2.11</sparkScalaVersion>
-    <hadoopVersion>3.2.1</hadoopVersion>
-    <bunsenVersion>0.4.9-johngrimes</bunsenVersion>
-    <pythonVersion>3.6.8</pythonVersion>
+    <hadoopVersion>2.7.7</hadoopVersion>
     <sparkMirror>https://mirror.aarnet.edu.au/pub/apache/spark</sparkMirror>
     <hadoopMirror>https://mirror.aarnet.edu.au/pub/apache/hadoop/common</hadoopMirror>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -43,16 +41,17 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <modules>
-        <module>fhir-server</module>
+        <module>bunsen</module>
         <module>fhir-definitions-maven-plugin</module>
         <module>ontoserver-preload-maven-plugin</module>
+        <module>fhir-server</module>
+        <module>ui</module>
         <module>docker/spark</module>
         <module>docker/spark-master</module>
         <module>docker/spark-worker</module>
         <module>docker/ontoserver</module>
         <module>docker/notebook</module>
         <module>docker/synthea</module>
-        <module>ui</module>
       </modules>
     </profile>
     <profile>
@@ -65,13 +64,6 @@
       </modules>
     </profile>
     <profile>
-      <id>ontoserver</id>
-      <modules>
-        <module>ontoserver-preload-maven-plugin</module>
-        <module>docker/ontoserver</module>
-      </modules>
-    </profile>
-    <profile>
       <id>notebook</id>
       <modules>
         <module>fhir-server</module>
@@ -80,125 +72,175 @@
     </profile>
   </profiles>
 
-  <dependencies>
-    <!-- HAPI FHIR -->
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-base</artifactId>
-      <version>${hapiFhirVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-structures-dstu3</artifactId>
-      <version>${hapiFhirVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-structures-r4</artifactId>
-      <version>${hapiFhirVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-server</artifactId>
-      <version>${hapiFhirVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-client</artifactId>
-      <version>${hapiFhirVersion}</version>
-    </dependency>
-    <!-- Woodstox is used by HAPI for XML processing -->
-    <dependency>
-      <groupId>com.fasterxml.woodstox</groupId>
-      <artifactId>woodstox-core</artifactId>
-      <version>6.0.2</version>
-    </dependency>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>au.csiro.clinsight</groupId>
+        <artifactId>fhir-server</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
-    <!-- Apache Spark -->
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${sparkScalaVersion}</artifactId>
-      <version>${sparkVersion}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-log4j12</artifactId>
-        </exclusion>
-      </exclusions>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
-      <version>${sparkVersion}</version>
-      <scope>provided</scope>
-    </dependency>
+      <!-- HAPI FHIR -->
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>hapi-fhir-base</artifactId>
+        <version>${hapiFhirVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>hapi-fhir-structures-r4</artifactId>
+        <version>${hapiFhirVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>hapi-fhir-validation-resources-r4</artifactId>
+        <version>${hapiFhirVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>hapi-fhir-server</artifactId>
+        <version>${hapiFhirVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>hapi-fhir-client</artifactId>
+        <version>${hapiFhirVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>ca.uhn.hapi.fhir</groupId>
+        <artifactId>org.hl7.fhir.utilities</artifactId>
+        <version>${hapiFhirVersion}</version>
+      </dependency>
+      <!-- Woodstox is used by HAPI for XML processing -->
+      <dependency>
+        <groupId>com.fasterxml.woodstox</groupId>
+        <artifactId>woodstox-core</artifactId>
+        <version>6.0.2</version>
+      </dependency>
 
-    <!-- Bunsen -->
-    <dependency>
-      <groupId>com.cerner.bunsen</groupId>
-      <artifactId>bunsen-core</artifactId>
-      <version>${bunsenVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.cerner.bunsen</groupId>
-      <artifactId>bunsen-stu3</artifactId>
-      <version>${bunsenVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.cerner.bunsen</groupId>
-      <artifactId>bunsen-r4</artifactId>
-      <version>${bunsenVersion}</version>
-    </dependency>
+      <!-- Apache Spark -->
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-core_${sparkScalaVersion}</artifactId>
+        <version>${sparkVersion}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
+        <version>${sparkVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-hive_${sparkScalaVersion}</artifactId>
+        <version>${sparkVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client</artifactId>
+        <version>${hadoopVersion}</version>
+      </dependency>
 
-    <!-- Logging -->
-    <dependency>
-      <artifactId>logback-classic</artifactId>
-      <groupId>ch.qos.logback</groupId>
-      <version>1.2.3</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.7.25</version>
-    </dependency>
+      <!-- Bunsen -->
+      <dependency>
+        <groupId>au.csiro.clinsight</groupId>
+        <artifactId>bunsen-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.clinsight</groupId>
+        <artifactId>bunsen-stu3</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.clinsight</groupId>
+        <artifactId>bunsen-r4</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
-    <!-- Testing -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.12</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <version>3.9.1</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.skyscreamer</groupId>
-      <artifactId>jsonassert</artifactId>
-      <version>1.5.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>3.0.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.github.docker-java</groupId>
-      <artifactId>docker-java</artifactId>
-      <version>3.1.1</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+      <!-- Apache Commons -->
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>4.5.10</version>
+      </dependency>
+
+      <!-- Logging -->
+      <dependency>
+        <artifactId>logback-classic</artifactId>
+        <groupId>ch.qos.logback</groupId>
+        <version>1.2.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>1.7.25</version>
+      </dependency>
+
+      <!-- Testing -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.12</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>3.9.1</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.skyscreamer</groupId>
+        <artifactId>jsonassert</artifactId>
+        <version>1.5.0</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>3.0.0</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.github.docker-java</groupId>
+        <artifactId>docker-java</artifactId>
+        <version>3.1.1</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Plugins -->
+      <dependency>
+        <groupId>org.apache.maven.plugin-tools</groupId>
+        <artifactId>maven-plugin-annotations</artifactId>
+        <version>3.6.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <version>3.6.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>au.csiro.clinsight</groupId>
+          <artifactId>fhir-definitions-maven-plugin</artifactId>
+          <version>${project.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>au.csiro.clinsight</groupId>
+          <artifactId>ontoserver-preload-maven-plugin</artifactId>
+          <version>${project.version}</version>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
@@ -217,15 +259,47 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>3.0.0-M3</version>
         </plugin>
+        <plugin>
+          <groupId>com.spotify</groupId>
+          <artifactId>dockerfile-maven-plugin</artifactId>
+          <version>1.4.12</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>3.2.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.1.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>1.6.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-plugin-plugin</artifactId>
+          <version>3.6.0</version>
+          <executions>
+            <execution>
+              <id>mojo-descriptor</id>
+              <goals>
+                <goal>descriptor</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>help-goal</id>
+              <goals>
+                <goal>helpmojo</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
-
-  <repositories>
-    <repository>
-      <id>github</id>
-      <url>https://maven.pkg.github.com/johngrimes/bunsen</url>
-    </repository>
-  </repositories>
 
 </project>

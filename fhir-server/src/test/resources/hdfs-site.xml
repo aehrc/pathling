@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 
+<!--
+  ~ Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+  -->
+
 <configuration>
   <property>
     <name>dfs.client.use.datanode.hostname</name>
