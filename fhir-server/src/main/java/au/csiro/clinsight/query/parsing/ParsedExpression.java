@@ -161,6 +161,7 @@ public class ParsedExpression {
   public ParsedExpression(ParsedExpression parsedExpression) {
     this.fhirPath = parsedExpression.fhirPath;
     this.fhirPathType = parsedExpression.fhirPathType;
+    this.fhirType = parsedExpression.fhirType;
     this.definition = parsedExpression.definition;
     this.elementDefinition = parsedExpression.elementDefinition;
     this.isResource = parsedExpression.isResource;
