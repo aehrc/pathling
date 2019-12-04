@@ -63,10 +63,6 @@
     </dependency>
     <dependency>
       <groupId>au.csiro.clinsight</groupId>
-      <artifactId>bunsen-stu3</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.clinsight</groupId>
       <artifactId>bunsen-r4</artifactId>
     </dependency>
 
