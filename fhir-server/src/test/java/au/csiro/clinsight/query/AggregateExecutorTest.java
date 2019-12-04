@@ -289,7 +289,7 @@ public class AggregateExecutorTest {
 
   private void mockResourceReader(ResourceType... resourceTypes) {
     for (ResourceType resourceType : resourceTypes) {
-      URL parquetUrl = Thread.currentThread().getContextClassLoader()
+      URL parquetUrl = getClass().getClassLoader()
           .getResource("test-data/parquet/" + resourceType + ".parquet");
       assertThat(parquetUrl).isNotNull();
       Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
