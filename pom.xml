@@ -12,7 +12,7 @@
   <artifactId>clinsight</artifactId>
   <packaging>pom</packaging>
   <organization>
-    <name>Australian e-Health Research Centre</name>
+    <name>Australian e-Health Research Centre, CSIRO</name>
     <url>https://aehrc.com/</url>
   </organization>
   <developers>
@@ -34,43 +34,19 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-  <profiles>
-    <profile>
-      <id>all</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <modules>
-        <module>bunsen</module>
-        <module>plugins/fhir-definitions-maven-plugin</module>
-        <module>plugins/ontoserver-preload-maven-plugin</module>
-        <module>fhir-server</module>
-        <module>ui</module>
-        <module>docker/spark</module>
-        <module>docker/spark-master</module>
-        <module>docker/spark-worker</module>
-        <module>docker/ontoserver</module>
-        <module>docker/notebook</module>
-        <module>docker/synthea</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>spark</id>
-      <modules>
-        <module>fhir-server</module>
-        <module>docker/spark</module>
-        <module>docker/spark-master</module>
-        <module>docker/spark-worker</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>notebook</id>
-      <modules>
-        <module>fhir-server</module>
-        <module>docker/notebook</module>
-      </modules>
-    </profile>
-  </profiles>
+  <modules>
+    <module>bunsen</module>
+    <module>plugins/fhir-definitions-maven-plugin</module>
+    <module>plugins/ontoserver-preload-maven-plugin</module>
+    <module>fhir-server</module>
+    <module>ui</module>
+    <module>docker/spark</module>
+    <module>docker/spark-master</module>
+    <module>docker/spark-worker</module>
+    <module>docker/ontoserver</module>
+    <module>docker/notebook</module>
+    <module>docker/synthea</module>
+  </modules>
 
   <dependencyManagement>
     <dependencies>
