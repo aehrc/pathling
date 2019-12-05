@@ -6,7 +6,8 @@ phases:
       java: openjdk8
   build:
     commands:
-      - mvn install
+      # Build just the FHIR server, and its dependencies.
+      - mvn install -pl fhir-server -am
 cache:
   paths:
     - '/root/.m2/**/*'
