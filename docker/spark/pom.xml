@@ -49,7 +49,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>docker-registry.it.csiro.au/clinsight/spark</repository>
+          <repository>${dockerRegistry/clinsight/spark</repository>
           <tag>${project.version}</tag>
           <buildArgs>
             <SPARK_VERSION>${sparkVersion}</SPARK_VERSION>

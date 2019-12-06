@@ -4,7 +4,7 @@ phases:
   build:
     commands:
       # Build just the FHIR server, and its dependencies.
-      - mvn install -pl fhir-server -am -Ddockerfile.skip
+      - mvn install -pl fhir-server -am
 cache:
   paths:
     - '/root/.m2/**/*'

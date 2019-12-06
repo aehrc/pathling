@@ -54,7 +54,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>docker-registry.it.csiro.au/clinsight/notebook</repository>
+          <repository>${dockerRegistry/clinsight/notebook</repository>
           <tag>${project.version}</tag>
           <buildArgs>
             <SPARK_VERSION>${sparkVersion}</SPARK_VERSION>

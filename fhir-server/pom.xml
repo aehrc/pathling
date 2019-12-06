@@ -165,7 +165,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>docker-registry.it.csiro.au/clinsight/fhir-server</repository>
+          <repository>${dockerRegistry/clinsight/fhir-server</repository>
           <tag>${project.version}</tag>
           <buildArgs>
             <VERSION>${project.version}</VERSION>

@@ -31,6 +31,7 @@
     <hadoopVersion>2.7.7</hadoopVersion>
     <sparkMirror>https://mirror.aarnet.edu.au/pub/apache/spark</sparkMirror>
     <hadoopMirror>https://mirror.aarnet.edu.au/pub/apache/hadoop/common</hadoopMirror>
+    <dockerRegistry>docker-registry.it.csiro.au</dockerRegistry>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 

@@ -31,7 +31,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>docker-registry.it.csiro.au/clinsight/spark-worker</repository>
+          <repository>${dockerRegistry/clinsight/spark-worker</repository>
           <tag>${project.version}</tag>
           <pullNewerImage>false</pullNewerImage>
           <buildArgs>
