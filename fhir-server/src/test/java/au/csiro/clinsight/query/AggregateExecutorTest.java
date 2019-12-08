@@ -20,7 +20,9 @@ import au.csiro.clinsight.query.AggregateRequest.Aggregation;
 import au.csiro.clinsight.query.AggregateRequest.Grouping;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -287,10 +289,11 @@ public class AggregateExecutorTest {
     JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
-  private void mockResourceReader(ResourceType... resourceTypes) {
+  private void mockResourceReader(ResourceType... resourceTypes) throws MalformedURLException {
     for (ResourceType resourceType : resourceTypes) {
-      URL parquetUrl = getClass().getClassLoader()
-          .getResource("test-data/parquet/" + resourceType + ".parquet");
+      File parquetFile = new File(
+          "src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
+      URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
       assertThat(parquetUrl).isNotNull();
       Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
       when(mockReader.read(resourceType)).thenReturn(dataset);

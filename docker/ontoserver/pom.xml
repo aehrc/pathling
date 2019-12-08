@@ -61,7 +61,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry/clinsight/ontoserver</repository>
+          <repository>${dockerRegistry}/clinsight/ontoserver</repository>
           <tag>${project.version}</tag>
           <pullNewerImage>false</pullNewerImage>
           <buildArgs>

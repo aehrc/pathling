@@ -139,7 +139,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry/clinsight/ui</repository>
+          <repository>${dockerRegistry}/clinsight/ui</repository>
           <tag>${project.version}</tag>
           <buildArgs>
             <VERSION>${project.version}</VERSION>

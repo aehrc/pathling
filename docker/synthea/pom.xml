@@ -31,7 +31,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry/clinsight/synthea</repository>
+          <repository>${dockerRegistry}/clinsight/synthea</repository>
         </configuration>
       </plugin>
     </plugins>

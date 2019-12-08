@@ -31,7 +31,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry/clinsight/spark-master</repository>
+          <repository>${dockerRegistry}/clinsight/spark-master</repository>
           <tag>${project.version}</tag>
           <pullNewerImage>false</pullNewerImage>
           <buildArgs>

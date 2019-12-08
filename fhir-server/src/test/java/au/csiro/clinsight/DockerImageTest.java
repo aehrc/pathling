@@ -55,10 +55,10 @@ public class DockerImageTest {
   private static final String FHIR_SERVER_STAGING_PATH = "/usr/share/staging/test";
 
   // These two system properties need to be set.
-  private static final String FHIR_SERVER_DOCKER_TAG = System
-      .getProperty("clinsight.test.fhirServerDockerTag");
+  private static final String VERSION = System.getProperty("version");
   private static final String TERMINOLOGY_SERVICE_URL = System
-      .getProperty("clinsight.test.terminologyServiceUrl");
+      .getProperty("terminologyServiceUrl");
+  private static final String DOCKER_REGISTRY = System.getProperty("dockerRegistry");
 
   private final DockerClient dockerClient;
   private final HttpClient httpClient;
@@ -101,7 +101,7 @@ public class DockerImageTest {
       fhirServerHostConfig.withPortBindings(fhirServerPortBinding);
       CreateContainerResponse fhirServerContainer = dockerClient
           .createContainerCmd(
-              "docker-registry.it.csiro.au/clinsight/fhir-server:" + FHIR_SERVER_DOCKER_TAG)
+              DOCKER_REGISTRY + "/clinsight/fhir-server:" + VERSION)
           .withExposedPorts(fhirServerPort)
           .withHostConfig(fhirServerHostConfig)
           .withEnv(

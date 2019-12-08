@@ -1,10 +1,13 @@
 version: 0.2
 
+env:
+  exported-variables:
+    - DOCKER_REGISTRY
+    - AWS_REGION
 phases:
   build:
     commands:
-      # Build just the FHIR server, and its dependencies.
-      - mvn install -pl fhir-server -am
+      - mvn install -DskipITs -DdockerRegistry=$DOCKER_REGISTRY && $(aws ecr get-login --region $AWS_REGION --no-include-email) && docker push $(docker images -q)
 cache:
   paths:
     - '/root/.m2/**/*'

@@ -165,7 +165,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry/clinsight/fhir-server</repository>
+          <repository>${dockerRegistry}/clinsight/fhir-server</repository>
           <tag>${project.version}</tag>
           <buildArgs>
             <VERSION>${project.version}</VERSION>
@@ -200,12 +200,9 @@
           </includes>
           <groups>au.csiro.clinsight.SystemTest</groups>
           <systemPropertyVariables>
-            <clinsight.test.terminologyServiceUrl>
-              https://r4.ontoserver.csiro.au/fhir
-            </clinsight.test.terminologyServiceUrl>
-            <clinsight.test.fhirServerDockerTag>
-              ${project.version}
-            </clinsight.test.fhirServerDockerTag>
+            <version>${project.version}</version>
+            <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
+            <dockerRegistry>${dockerRegistry}</dockerRegistry>
           </systemPropertyVariables>
         </configuration>
       </plugin>
