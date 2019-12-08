@@ -3,16 +3,24 @@ version: 0.2
 env:
   exported-variables:
     - DOCKER_REGISTRY
-    - AWS_REGION
 phases:
   install:
     runtime-versions:
       java: openjdk8
       nodejs: 12
       docker: 18
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
   build:
     commands:
-      - mvn install -DskipITs -DdockerRegistry=$DOCKER_REGISTRY && $(aws ecr get-login --region $AWS_REGION --no-include-email) && docker push $(docker images -q)
+      - echo Building Docker images...
+      - mvn install -DskipITs -DdockerRegistry=$DOCKER_REGISTRY
+  post_build:
+    commands:
+      - echo Pushing Docker images to ECR...
+      - docker push $(docker images -q)
 cache:
   paths:
     - '/root/.m2/**/*'
