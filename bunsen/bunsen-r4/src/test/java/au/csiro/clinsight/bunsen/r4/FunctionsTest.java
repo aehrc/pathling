@@ -9,10 +9,11 @@
  * CSIRO. All rights reserved.
  */
 
-package au.csiro.clinsight.bunsen.r4.python;
+package au.csiro.clinsight.bunsen.r4;
 
-import ca.uhn.fhir.context.FhirContext;
 import au.csiro.clinsight.bunsen.FhirEncoders;
+import au.csiro.clinsight.bunsen.r4.python.Functions;
+import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.ImmutableList;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
