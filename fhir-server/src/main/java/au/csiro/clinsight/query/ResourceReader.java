@@ -4,6 +4,7 @@
 
 package au.csiro.clinsight.query;
 
+import static au.csiro.clinsight.utilities.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.clinsight.utilities.PersistenceScheme.fileNameForResource;
 
 import java.io.IOException;
@@ -43,18 +44,23 @@ public class ResourceReader {
   public ResourceReader(SparkSession spark, String warehouseUrl, String databaseName)
       throws IOException, URISyntaxException {
     this.spark = spark;
-    this.warehouseUrl = warehouseUrl;
+    this.warehouseUrl = convertS3ToS3aUrl(warehouseUrl);
     this.databaseName = databaseName;
     updateAvailableResourceTypes();
   }
 
   public void updateAvailableResourceTypes() throws IOException, URISyntaxException {
     logger.info("Getting available resource types");
-    Configuration hadoopConfiguration = new Configuration();
+    Configuration hadoopConfiguration = spark.sparkContext().hadoopConfiguration();
     FileSystem warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
 
     // Check that the database path exists.
-    boolean exists = warehouse.exists(new Path(warehouseUrl + "/" + databaseName));
+    boolean exists;
+    try {
+      exists = warehouse.exists(new Path(warehouseUrl + "/" + databaseName));
+    } catch (IOException e) {
+      exists = false;
+    }
     if (!exists) {
       availableResourceTypes = EnumSet.noneOf(ResourceType.class);
       return;

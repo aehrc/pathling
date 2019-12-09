@@ -4,6 +4,7 @@
 
 package au.csiro.clinsight.update;
 
+import static au.csiro.clinsight.utilities.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.clinsight.utilities.PersistenceScheme.fileNameForResource;
 
 import org.apache.spark.sql.Dataset;
@@ -21,7 +22,7 @@ public class ResourceWriter {
   private final String databaseName;
 
   public ResourceWriter(String warehouseUrl, String databaseName) {
-    this.warehouseUrl = warehouseUrl;
+    this.warehouseUrl = convertS3ToS3aUrl(warehouseUrl);
     this.databaseName = databaseName;
   }
 

@@ -41,6 +41,8 @@ public class FhirServerContainer {
       put("CLINSIGHT_DATABASE_NAME", "databaseName");
       put("CLINSIGHT_EXECUTOR_MEMORY", "executorMemory");
       put("CLINSIGHT_TERMINOLOGY_SERVER_URL", "terminologyServerUrl");
+      put("CLINSIGHT_AWS_ACCESS_KEY_ID", "awsAccessKeyId");
+      put("CLINSIGHT_AWS_SECRET_ACCESS_KEY", "awsSecretAccessKey");
     }});
     String explainQueries = System.getenv("CLINSIGHT_EXPLAIN_QUERIES");
     config.setExplainQueries(explainQueries != null && explainQueries.equals("true"));

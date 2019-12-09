@@ -59,6 +59,16 @@ public class AnalyticsServerConfiguration {
    */
   private int shufflePartitions;
 
+  /**
+   * (OPTIONAL) Authentication information for reading and writing data using Amazon S3.
+   */
+  private String awsAccessKeyId;
+
+  /**
+   * (OPTIONAL) Authentication information for reading and writing data using Amazon S3.
+   */
+  private String awsSecretAccessKey;
+
   public AnalyticsServerConfiguration() {
     sparkMasterUrl = "local[*]";
     warehouseUrl = "file:///usr/share/warehouse";
@@ -139,6 +149,22 @@ public class AnalyticsServerConfiguration {
     this.shufflePartitions = shufflePartitions;
   }
 
+  public String getAwsAccessKeyId() {
+    return awsAccessKeyId;
+  }
+
+  public void setAwsAccessKeyId(String awsAccessKeyId) {
+    this.awsAccessKeyId = awsAccessKeyId;
+  }
+
+  public String getAwsSecretAccessKey() {
+    return awsSecretAccessKey;
+  }
+
+  public void setAwsSecretAccessKey(String awsSecretAccessKey) {
+    this.awsSecretAccessKey = awsSecretAccessKey;
+  }
+
   @Override
   public String toString() {
     return "AnalyticsServerConfiguration{" +
@@ -150,6 +176,8 @@ public class AnalyticsServerConfiguration {
         ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
         ", explainQueries=" + explainQueries +
         ", shufflePartitions=" + shufflePartitions +
+        ", awsAccessKeyId='" + awsAccessKeyId + '\'' +
         '}';
   }
+
 }

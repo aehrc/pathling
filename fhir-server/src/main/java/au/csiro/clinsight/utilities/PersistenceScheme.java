@@ -15,4 +15,8 @@ public abstract class PersistenceScheme {
     return resourceType.toCode() + ".parquet";
   }
 
+  public static String convertS3ToS3aUrl(String s3Url) {
+    return s3Url.replaceFirst("s3:", "s3a:");
+  }
+
 }

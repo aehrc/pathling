@@ -7,6 +7,7 @@ package au.csiro.clinsight.update;
 import au.csiro.clinsight.bunsen.FhirEncoders;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import au.csiro.clinsight.fhir.FhirContextFactory;
+import au.csiro.clinsight.utilities.PersistenceScheme;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -91,7 +92,13 @@ public class ImportProvider {
       @SuppressWarnings("UnnecessaryLocalVariable") FhirContextFactory localFhirContextFactory = this.fhirContextFactory;
 
       String url = ((UrlType) urlParam.getValue()).getValueAsString();
-      Dataset<String> jsonStrings = spark.read().textFile(url);
+      url = PersistenceScheme.convertS3ToS3aUrl(url);
+      Dataset<String> jsonStrings;
+      try {
+        jsonStrings = spark.read().textFile(url);
+      } catch (Exception e) {
+        throw new InvalidRequestException(e.getMessage());
+      }
       Dataset resources = jsonStrings
           .map((MapFunction<String, IBaseResource>) json -> localFhirContextFactory
               .getFhirContext(FhirVersionEnum.R4).newJsonParser().parseResource(json), fhirEncoder);

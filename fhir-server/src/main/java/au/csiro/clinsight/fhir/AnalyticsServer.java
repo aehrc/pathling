@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,6 +96,12 @@ public class AnalyticsServer extends RestfulServer {
         .config("spark.sql.autoBroadcastJoinThreshold", "-1")
         .config("spark.sql.shuffle.partitions", configuration.getShufflePartitions())
         .getOrCreate();
+    if (configuration.getAwsAccessKeyId() != null
+        && configuration.getAwsSecretAccessKey() != null) {
+      Configuration hadoopConfiguration = spark.sparkContext().hadoopConfiguration();
+      hadoopConfiguration.set("fs.s3a.access.key", configuration.getAwsAccessKeyId());
+      hadoopConfiguration.set("fs.s3a.secret.key", configuration.getAwsSecretAccessKey());
+    }
   }
 
   private void initializeTerminologyClient() {
