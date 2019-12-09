@@ -20,7 +20,7 @@ phases:
   post_build:
     commands:
       - echo Pushing Docker images to ECR...
-      - docker push $(docker images -q)
+      - docker images --format "{{.Repository}}:{{.Tag}}" "$DOCKER_REGISTRY/clinsight/*" | xargs docker push
 cache:
   paths:
     - '/root/.m2/**/*'
