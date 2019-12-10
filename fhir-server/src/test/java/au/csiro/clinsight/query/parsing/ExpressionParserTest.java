@@ -4,6 +4,7 @@
 
 package au.csiro.clinsight.query.parsing;
 
+import static au.csiro.clinsight.test.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -13,7 +14,6 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -22,7 +22,6 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.HumanName;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -34,6 +33,7 @@ import au.csiro.clinsight.query.ResourceReader;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeCompositeDatatypeDefinition;
+
 
 /**
  * @author Piotr Szul
@@ -70,7 +70,6 @@ public class ExpressionParserTest {
 	}
 
 	@Test
-	@Ignore
 	public void testParseSomeExpression() {
 
 		mockResourceReader(ResourceType.PATIENT);
@@ -101,11 +100,9 @@ public class ExpressionParserTest {
 		subjectResource.setValueColumn(valueColumn);
 
 		parserContext.setSubjectContext(subjectResource);
-		ParsedExpression result = expressionParser.parse("name.family");
-		Dataset<Row> ds = result.getDataset().select(result.getIdColumn(), result.getValueColumn());
-		System.out.println(ReflectionToStringBuilder.toString(result));
-		ds.printSchema();
-		ds.show();
+		ParsedExpression result = expressionParser.parse("name.given.first()");
+
+		assertThat(result).aggByIdResult().debugSchema().debugRows();
 	}
 
 	private void mockResourceReader(ResourceType... resourceTypes) {

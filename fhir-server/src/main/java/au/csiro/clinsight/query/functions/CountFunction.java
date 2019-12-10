@@ -23,9 +23,28 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class CountFunction implements Function {
   // TODO: Make count function work outside the context of an aggregation, e.g. name.given.count() = 3.
 
+	@Nonnull
+	@Override
+	public ParsedExpression invoke(@Nonnull FunctionInput input) {
+		validateInput(input);
+		ParsedExpression result = invokeAgg(input);
+		
+		Dataset<Row> aggDataset = result.getAggregationDataset();
+		// Apply the aggregate Spark SQL function to the grouping.
+		Column aggIdColumn = result.getAggregationIdColumn();
+		Column aggColumn = result.getAggregationColumn();
+
+		// First apply a grouping based upon the resource ID.
+		Dataset<Row> dataset = aggDataset.groupBy(aggIdColumn).agg(aggColumn);
+		Column idColumn = dataset.col(dataset.columns()[0]);
+		Column valueColumn = dataset.col(dataset.columns()[1]);
+		result.setDataset(dataset);
+		result.setHashedValue(idColumn, valueColumn);
+		return result;
+	}
+	
   @Nonnull
-  @Override
-  public ParsedExpression invoke(@Nonnull FunctionInput input) {
+  public ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
     validateInput(input);
     ParsedExpression inputResult = input.getInput();
     Dataset<Row> dataset = inputResult.getDataset();
@@ -50,8 +69,8 @@ public class CountFunction implements Function {
     result.setFhirType(FHIRDefinedType.UNSIGNEDINT);
     result.setPrimitive(true);
     result.setSingular(true);
-    result.setDataset(dataset);
-    result.setHashedValue(idColumn, valueColumn);
+    result.setAggregationDataset(dataset);
+    result.setAggregationIdColumn(dataset.col(dataset.columns()[0]));
     result.setAggregationColumn(aggregationColumn);
 
     return result;

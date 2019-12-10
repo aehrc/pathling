@@ -8,7 +8,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.clinsight.encoding.ValidateCodeResult;
+import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.RuntimeCompositeDatatypeDefinition;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +23,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
+import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryResponseComponent;
@@ -43,6 +47,11 @@ public abstract class TestUtilities {
     return fhirContext;
   }
 
+	public static  BaseRuntimeChildDefinition getChildDefinition(Class<? extends IBase> elementType, String childName) {
+		BaseRuntimeElementDefinition<?> elementDef = fhirContext.getElementDefinition(elementType);
+		return  ((RuntimeCompositeDatatypeDefinition)elementDef).getChildByName(childName);
+	}
+
   public static IParser getJsonParser() {
     return jsonParser;
   }
@@ -60,7 +69,7 @@ public abstract class TestUtilities {
     IOUtils.copy(expectedStream, writer, UTF_8);
     return writer.toString();
   }
-
+  
   public static StructType codingStructType() {
     Metadata metadata = new MetadataBuilder().build();
     StructField id = new StructField("id", DataTypes.StringType, true, metadata);

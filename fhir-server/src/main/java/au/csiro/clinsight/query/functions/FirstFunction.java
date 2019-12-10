@@ -26,28 +26,43 @@ public class FirstFunction implements Function {
 	@Override
 	public ParsedExpression invoke(@Nonnull FunctionInput input) {
 		validateInput(input);
-		ParsedExpression inputResult = input.getInput();
-		ParsedExpression result = new ParsedExpression(inputResult);
-		result.setFhirPath(input.getExpression());
-		if (!inputResult.isResource()) {
-			// Does not have any effect on resources
-			Dataset<Row> prevDataset = inputResult.getDataset();
-			// Apply the aggregate Spark SQL function to the grouping.
-			Column prevIdColumn = inputResult.getIdColumn();
-			Column prevValueColumn = inputResult.getValueColumn();
+		ParsedExpression result = invokeAgg(input);
+		
+		Dataset<Row> aggDataset = result.getAggregationDataset();
+		// Apply the aggregate Spark SQL function to the grouping.
+		Column aggIdColumn = result.getAggregationIdColumn();
+		Column aggColumn = result.getAggregationColumn();
 
-			// First apply a grouping based upon the resource ID.
-			Dataset<Row> dataset = prevDataset.groupBy(prevIdColumn).agg(first(prevValueColumn));
-			Column valueColumn = dataset.col(dataset.columns()[1]);
-			// Construct a new parse result.
-			// Should preserve most of the metadata such as types, definitions, etc.
-			result.setSingular(true);
-			result.setDataset(dataset);
-			result.setHashedValue(prevIdColumn, valueColumn);
-		}
+		// First apply a grouping based upon the resource ID.
+		Dataset<Row> dataset = aggDataset.groupBy(aggIdColumn).agg(aggColumn);
+		Column idColumn = dataset.col(dataset.columns()[0]);
+		Column valueColumn = dataset.col(dataset.columns()[1]);
+		result.setDataset(dataset);
+		result.setHashedValue(idColumn, valueColumn);
 		return result;
 	}
 
+	@Nonnull
+	public ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
+		validateInput(input);
+		// Construct a new parse result.
+		// Should preserve most of the metadata such as types, definitions, etc.		
+		ParsedExpression inputResult = input.getInput();
+		Column prevValueColumn = inputResult.getValueColumn();
+		Column prevIdColumn = inputResult.getIdColumn();
+		
+		ParsedExpression result = new ParsedExpression(inputResult);
+		result.setFhirPath(input.getExpression());
+		result.setSingular(true);
+		result.setDataset(null);
+		result.setIdColumn(null);
+		result.setValueColumn(null);
+		result.setAggregationDataset(inputResult.getDataset());
+		result.setAggregationIdColumn(prevIdColumn);
+		result.setAggregationColumn(first(prevValueColumn));
+		return result;
+	}
+	
 	private void validateInput(FunctionInput input) {
 		if (!input.getArguments().isEmpty()) {
 			throw new InvalidRequestException("Arguments can not be passed to first function: " + input.getExpression());
