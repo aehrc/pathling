@@ -16,11 +16,7 @@ phases:
   build:
     commands:
       - echo Building Docker images...
-      - mvn install -pl fhir-server,ui -am -DskipITs -DdockerRegistry=$DOCKER_REGISTRY
-  post_build:
-    commands:
-      - echo Pushing Docker images to ECR...
-      - docker images --format "{{.Repository}}:{{.Tag}}" "$DOCKER_REGISTRY/clinsight/*" | xargs docker push
+      - mvn deploy -pl fhir-server,ui -am -Dmaven.deploy.skip -DskipITs -DdockerRegistry=$DOCKER_REGISTRY
 cache:
   paths:
     - '/root/.m2/**/*'
