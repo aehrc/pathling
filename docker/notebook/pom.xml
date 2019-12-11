@@ -57,9 +57,6 @@
           <repository>${dockerRegistry}/clinsight/notebook</repository>
           <tag>${project.version}</tag>
           <buildArgs>
-            <SPARK_VERSION>${sparkVersion}</SPARK_VERSION>
-            <SPARK_SCALA_VERSION>${sparkScalaVersion}</SPARK_SCALA_VERSION>
-            <SPARK_MIRROR>${sparkMirror}</SPARK_MIRROR>
             <FHIR_SERVER_JAR>target/dependency/fhir-server-${project.version}.jar</FHIR_SERVER_JAR>
           </buildArgs>
         </configuration>
