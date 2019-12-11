@@ -171,6 +171,7 @@
         <configuration>
           <repository>${dockerRegistry}/clinsight/fhir-server</repository>
           <tag>${project.version}</tag>
+          <cacheFrom>${dockerRegistry}/clinsight/fhir-server:${project.version}</cacheFrom>
           <buildArgs>
             <VERSION>${project.version}</VERSION>
             <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
@@ -210,38 +211,54 @@
           </systemPropertyVariables>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <transformers>
-            <transformer
-              implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-              <mainClass>au.csiro.clinsight.FhirServerContainer</mainClass>
-            </transformer>
-          </transformers>
-          <filters>
-            <filter>
-              <artifact>*:*</artifact>
-              <excludes>
-                <exclude>META-INF/*.SF</exclude>
-                <exclude>META-INF/*.DSA</exclude>
-                <exclude>META-INF/*.RSA</exclude>
-              </excludes>
-            </filter>
-          </filters>
-          <createDependencyReducedPom>false</createDependencyReducedPom>
-          <shadedArtifactAttached>true</shadedArtifactAttached>
-        </configuration>
-      </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>shade</id>
+      <activation>
+        <property>
+          <name>skipShade</name>
+          <value>!true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <transformers>
+                <transformer
+                  implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>au.csiro.clinsight.FhirServerContainer</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
