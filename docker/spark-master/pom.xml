@@ -9,8 +9,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>au.csiro.clinsight</groupId>
-    <artifactId>clinsight</artifactId>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
@@ -31,7 +31,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry}/clinsight/spark-master</repository>
+          <repository>${dockerRegistry}/pathling/spark-master</repository>
           <tag>${project.version}</tag>
           <pullNewerImage>false</pullNewerImage>
           <buildArgs>

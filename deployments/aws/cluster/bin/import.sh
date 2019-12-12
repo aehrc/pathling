@@ -2,10 +2,10 @@
 set -e
 
 BASE_DIR="$(cd `dirname $0`/.. && pwd)"
-CLINSIGHT_URL=$(terraform output -state="${BASE_DIR}/terraform/terraform.tfstate" clinsight_fhir_url)
-DATASET_URL="s3://aehrc-clinsight/share/data/test-set"
+PATHLING_URL=$(terraform output -state="${BASE_DIR}/terraform/terraform.tfstate" pathling_fhir_url)
+DATASET_URL="s3://aehrc-pathling/share/data/test-set"
 
-(cat | curl -v -d "@-" -H "Content-Type: application/json" -X POST "${CLINSIGHT_URL}/\$import")  << EOF
+(cat | curl -v -d "@-" -H "Content-Type: application/json" -X POST "${PATHLING_URL}/\$import")  << EOF
 {
   "resourceType": "Parameters",
   "parameter": [

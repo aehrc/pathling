@@ -1,14 +1,14 @@
 version: "3"
 services:
   worker:
-    image: docker-registry.it.csiro.au/clinsight/spark-worker
+    image: docker-registry.it.csiro.au/pathling/spark-worker
     network_mode: host
     command: bash -c "/opt/spark/sbin/start-slave.sh --host hb-15-cdc002.it.csiro.au spark://hb-15-cdc001.it.csiro.au:7077" 2>&1
     environment:
       SPARK_WORKER_MEMORY: 28g
       SPARK_WORKER_CORES: 6
       SPARK_WORKER_OPTS: "-Dspark.shuffle.service.enabled=true"
-      HIVE_SITE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore"
+      HIVE_SITE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hb-15-cdc001.it.csiro.au/pathling_metastore"
     restart: unless-stopped
   datanode:
     image: uhopper/hadoop-datanode:2.7.2

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x -e
 
-CLISIGHT_RELEASE_S3=s3://csiro-clinsight/deploy/release/1.0.0-latest
+CLISIGHT_RELEASE_S3=s3://csiro-pathling/deploy/release/1.0.0-latest
 IS_MASTER=false
 
 if grep isMaster /mnt/var/lib/info/instance.json | grep true;
@@ -25,12 +25,12 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-upstart_clinsight() {
+upstart_pathling() {
   #setup upstart execution
-  sudo tee /etc/init/clinsight.conf > /dev/null << EOF
-# Clinsight
+  sudo tee /etc/init/pathling.conf > /dev/null << EOF
+# Pathling
 
-description "Clinsight"
+description "Pathling"
 author      "szu004"
 
 respawn
@@ -42,13 +42,13 @@ chdir /home/hadoop
 
 script
   
-su - hadoop > /home/hadoop/clinsight.log 2>&1 <<BASH_SCRIPT
-export CLINSIGHT_SPARK_MASTER_URL=yarn-client
-export CLINSIGHT_HTTP_PORT=8888
-export CLINSIGHT_TERMINOLOGY_SERVER_URL=https://r4.ontoserver.csiro.au/fhir
-export CLINSIGHT_EXECUTOR_MEMORY=4G
-export CLINSIGHT_WAREHOUSE_URL=hdfs:///user/spark/warehouse
-spark-submit --class au.csiro.clinsight.FhirServerContainer --conf spark.executor.userClassPathFirst=true --conf spark.driver.userClassPathFirst=true fhir-server-shaded.jar 
+su - hadoop > /home/hadoop/pathling.log 2>&1 <<BASH_SCRIPT
+export PATHLING_SPARK_MASTER_URL=yarn-client
+export PATHLING_HTTP_PORT=8888
+export PATHLING_TERMINOLOGY_SERVER_URL=https://r4.ontoserver.csiro.au/fhir
+export PATHLING_EXECUTOR_MEMORY=4G
+export PATHLING_WAREHOUSE_URL=hdfs:///user/spark/warehouse
+spark-submit --class au.csiro.pathling.FhirServerContainer --conf spark.executor.userClassPathFirst=true --conf spark.driver.userClassPathFirst=true fhir-server-shaded.jar
 BASH_SCRIPT
       
 end script
@@ -59,5 +59,5 @@ EOF
 if [ "$IS_MASTER" = true ]; then
   aws s3 cp ${CLISIGHT_RELEASE_S3}/fhir-server-shaded.jar ${HOME}
   #Setup daemons
-  upstart_clinsight
+  upstart_pathling
 fi

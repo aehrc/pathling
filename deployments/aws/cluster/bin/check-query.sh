@@ -2,9 +2,9 @@
 set -e
 
 BASE_DIR="$(cd `dirname $0`/.. && pwd)"
-CLINSIGHT_URL=$(terraform output -state="${BASE_DIR}/terraform/terraform.tfstate" clinsight_fhir_url)
+PATHLING_URL=$(terraform output -state="${BASE_DIR}/terraform/terraform.tfstate" pathling_fhir_url)
 
-(cat | curl -v -d "@-" -H "Content-Type: application/json" -X POST "${CLINSIGHT_URL}/\$aggregate")  << EOF
+(cat | curl -v -d "@-" -H "Content-Type: application/json" -X POST "${PATHLING_URL}/\$aggregate")  << EOF
 {
     "resourceType": "Parameters",
     "parameter": [

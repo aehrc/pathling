@@ -2,7 +2,7 @@
 
 # Manual setup (in the tenancy)
 
-Create  `clinsight-deploy` user with the following policies:
+Create  `pathling-deploy` user with the following policies:
 
 - AmazonElasticMapReduceFullAccess
 - IAMReadOnlyAccess
@@ -17,18 +17,18 @@ Create  `clinsight-deploy` user with the following policies:
 - install terraform (v0.12.13 +)
 - instal aws cli tool
 
-Create a profile named `clinsight-aehrc` in `~/.aws/credentials` with  keys for user `clinsight-deploy`, eg:
+Create a profile named `pathling-aehrc` in `~/.aws/credentials` with  keys for user `pathling-deploy`, eg:
 
 
-	[clinsight-aehrc]
+	[pathling-aehrc]
 	aws_access_key_id = ***REMOVED***
 	aws_secret_access_key = *****************
 
 
-Obtain the private key `clinsight` and save it under: `~/.ssh/clinsight.pem`. with `400` permissions.
+Obtain the private key `pathling` and save it under: `~/.ssh/pathling.pem`. with `400` permissions.
 This key can be used to ssh to EMR cluster master, e.g:
 
-	ssh -i ~/.ssh/clinsight.pem hadoop@<maste-public-dns>
+	ssh -i ~/.ssh/pathling.pem hadoop@<maste-public-dns>
 
 
 Go  to `terraform` dir and initialize terraform with:
@@ -46,7 +46,7 @@ To create the cluster in `terrform` dir run:
 The outputs will include the URL to the fhir server, e.g:
 
 
-	clinsight_fhir_url = http://ec2-54-206-79-129.ap-southeast-2.compute.amazonaws.com:8888/fhir
+	pathling_fhir_url = http://ec2-54-206-79-129.ap-southeast-2.compute.amazonaws.com:8888/fhir
 	emr_cluster_id = j-2R197PG822ELH
 	emr_cluster_master_dns = ec2-54-206-79-129.ap-southeast-2.compute.amazonaws.com
 	emr_master_id = i-020c674c64cb603fd
@@ -58,7 +58,7 @@ To test the server you can use:
 	./bin/check-metadata.sh
 
 
-To import example dataset from (`s3://aehrc-clinsight/share/data/test-set`):
+To import example dataset from (`s3://aehrc-pathling/share/data/test-set`):
 
 	./bin/import.sh
 

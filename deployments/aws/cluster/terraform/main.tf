@@ -1,6 +1,6 @@
 provider "aws" {
   region                  = "ap-southeast-2"
-  profile                 = "clinsight-aehrc"
+  profile                 = "pathling-aehrc"
   shared_credentials_file = "$HOME/.aws/credentials"
 }
 
@@ -17,13 +17,13 @@ variable "zone_id" {
 
 variable "key_name" {
   type        = string
-  default     = "clinsight"
+  default     = "pathling"
   description = "The ssh key name to use for the EMR cluster"
 }
 
-variable "clinsight_bucket" {
+variable "pathling_bucket" {
   type        = string
-  default     = "aehrc-clinsight"
+  default     = "aehrc-pathling"
   description = "The bucket to use for setup"
 }
 
@@ -57,15 +57,15 @@ data "aws_security_group" "ElasticMapReduce_master" {
 }
 
 output "emr_cluster_id" {
-  value = aws_emr_cluster.emr_clinsight.id
+  value = aws_emr_cluster.emr_pathling.id
 }
 
 output "emr_cluster_master_dns" {
-  value = aws_emr_cluster.emr_clinsight.master_public_dns
+  value = aws_emr_cluster.emr_pathling.master_public_dns
 }
 
-output "clinsight_fhir_url" {
-  value = "http://${aws_emr_cluster.emr_clinsight.master_public_dns}:8888/fhir"
+output "pathling_fhir_url" {
+  value = "http://${aws_emr_cluster.emr_pathling.master_public_dns}:8888/fhir"
 }
 
 output "emr_master_private_ip" {
@@ -94,7 +94,7 @@ resource "aws_security_group" "allow_csiro_access" {
 
 resource "aws_security_group" "allow_http_access" {
   name        = "cl_allow_http_access"
-  description = "ClinSight Allow HTTP traffic"
+  description = "Pathling Allow HTTP traffic"
 
   ingress {
     from_port = 8888
@@ -106,24 +106,24 @@ resource "aws_security_group" "allow_http_access" {
   }
 
   tags = {
-    Name = "ClinSight allow_http_access"
+    Name = "Pathling allow_http_access"
   }
 }
 
-resource "aws_s3_bucket_object" "clinsight_bootstrap" {
-  bucket = var.clinsight_bucket
-  key    = "/deploy/bootstrap/install-clinsight.sh"
-  source = "../bootstrap/install-clinsight.sh"
+resource "aws_s3_bucket_object" "pathling_bootstrap" {
+  bucket = var.pathling_bucket
+  key    = "/deploy/bootstrap/install-pathling.sh"
+  source = "../bootstrap/install-pathling.sh"
 
   # The filemd5() function is available in Terraform 0.11.12 and later
   # For Terraform 0.11.11 and earlier, use the md5() function and the file() function:
   # etag = "${md5(file("path/to/file"))}"
-  #etag = "${filemd5("../bootstrap/install-clinsight.sh")}"
-  etag = filemd5("../bootstrap/install-clinsight.sh")
+  #etag = "${filemd5("../bootstrap/install-pathling.sh")}"
+  etag = filemd5("../bootstrap/install-pathling.sh")
 }
 
-resource "aws_emr_cluster" "emr_clinsight" {
-  name                              = "Clinsight Server"
+resource "aws_emr_cluster" "emr_pathling" {
+  name                              = "Pathling Server"
   release_label                     = "emr-5.27.0"
   applications                      = ["Spark", "Ganglia"]
   termination_protection            = false
@@ -161,7 +161,7 @@ resource "aws_emr_cluster" "emr_clinsight" {
   }
   service_role = data.aws_iam_role.EMR_DefaultRole.arn
 
-  log_uri = "s3://${var.clinsight_bucket}/logs/emr/"
+  log_uri = "s3://${var.pathling_bucket}/logs/emr/"
 
   configurations_json = <<EOF
     [{
@@ -181,9 +181,9 @@ EOF
 
 
   bootstrap_action {
-    path = "s3://${aws_s3_bucket_object.clinsight_bootstrap.bucket}${aws_s3_bucket_object.clinsight_bootstrap.id}"
-    name = "Install ClinSight"
-    args = ["--release", "s3://${var.clinsight_bucket}/deploy/release/1.0.0-latest"]
+    path = "s3://${aws_s3_bucket_object.pathling_bootstrap.bucket}${aws_s3_bucket_object.pathling_bootstrap.id}"
+    name = "Install Pathling"
+    args = ["--release", "s3://${var.pathling_bucket}/deploy/release/1.0.0-latest"]
   }
 
   # Enable debugging
@@ -198,14 +198,14 @@ EOF
     }
   }
 
-  # Start Clinsight
+  # Start Pathling
   step {
     action_on_failure = "TERMINATE_CLUSTER"
-    name              = "Start Clinsight"
+    name              = "Start Pathling"
 
     hadoop_jar_step {
       jar  = "command-runner.jar"
-      args = ["sudo", "start", "clinsight"]
+      args = ["sudo", "start", "pathling"]
     }
   }
 
@@ -218,7 +218,7 @@ EOF
 data "aws_instance" "master" {
   filter {
     name   = "dns-name"
-    values = [aws_emr_cluster.emr_clinsight.master_public_dns]
+    values = [aws_emr_cluster.emr_pathling.master_public_dns]
   }
 }
 

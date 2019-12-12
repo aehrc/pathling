@@ -9,8 +9,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>au.csiro.clinsight</groupId>
-    <artifactId>clinsight</artifactId>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
@@ -62,11 +62,11 @@
 
     <!-- Bunsen -->
     <dependency>
-      <groupId>au.csiro.clinsight</groupId>
+      <groupId>au.csiro.pathling</groupId>
       <artifactId>bunsen-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>au.csiro.clinsight</groupId>
+      <groupId>au.csiro.pathling</groupId>
       <artifactId>bunsen-r4</artifactId>
     </dependency>
 
@@ -169,9 +169,9 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry}/clinsight/fhir-server</repository>
+          <repository>${dockerRegistry}/pathling/fhir-server</repository>
           <tag>${project.version}</tag>
-          <cacheFrom>${dockerRegistry}/clinsight/fhir-server:${project.version}</cacheFrom>
+          <cacheFrom>${dockerRegistry}/pathling/fhir-server:${project.version}</cacheFrom>
           <buildArgs>
             <VERSION>${project.version}</VERSION>
             <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
@@ -185,7 +185,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <groups>au.csiro.clinsight.UnitTest</groups>
+          <groups>au.csiro.pathling.UnitTest</groups>
         </configuration>
       </plugin>
       <plugin>
@@ -203,7 +203,7 @@
           <includes>
             <include>**/*.java</include>
           </includes>
-          <groups>au.csiro.clinsight.SystemTest</groups>
+          <groups>au.csiro.pathling.SystemTest</groups>
           <systemPropertyVariables>
             <version>${project.version}</version>
             <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
@@ -239,7 +239,7 @@
               <transformers>
                 <transformer
                   implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>au.csiro.clinsight.FhirServerContainer</mainClass>
+                  <mainClass>au.csiro.pathling.FhirServerContainer</mainClass>
                 </transformer>
               </transformers>
               <filters>

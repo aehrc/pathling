@@ -9,7 +9,7 @@
   </property>
   <property>
     <name>javax.jdo.option.ConnectionURL</name>
-    <value>jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore</value>
+    <value>jdbc:postgresql://hb-15-cdc001.it.csiro.au/pathling_metastore</value>
   </property>
   <property>
     <name>javax.jdo.option.ConnectionUserName</name>

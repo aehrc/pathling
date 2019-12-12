@@ -3,8 +3,8 @@ set -e
 
 # Available configuration variables.
 declare -A vars=( \
-  [fhirServer]=CLINSIGHT_FHIR_SERVER \
-  [version]=CLINSIGHT_UI_VERSION
+  [fhirServer]=PATHLING_FHIR_SERVER \
+  [version]=PATHLING_UI_VERSION
 )
 
 # Work out which of the available variables have been set.

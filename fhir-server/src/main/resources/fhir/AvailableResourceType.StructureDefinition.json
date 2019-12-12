@@ -1,6 +1,6 @@
 {
   "resourceType": "StructureDefinition",
-  "url": "https://clinsight.csiro.au/fhir/StructureDefinition/available-resource-type-0",
+  "url": "https://server.pathling.app/fhir/StructureDefinition/available-resource-type-0",
   "version": "0.0.0",
   "name": "AvailableResourceType",
   "title": "Available Resource Type",
@@ -32,7 +32,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://clinsight.csiro.au/fhir/StructureDefinition/available-resource-type-0"
+        "fixedUri": "https://server.pathling.app/fhir/StructureDefinition/available-resource-type-0"
       },
       {
         "id": "Extension.value[x]",

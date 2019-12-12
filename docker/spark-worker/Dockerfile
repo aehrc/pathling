@@ -1,5 +1,5 @@
 ARG BASE_VERSION
-FROM docker-registry.it.csiro.au/clinsight/spark:$BASE_VERSION
+FROM docker-registry.it.csiro.au/pathling/spark:$BASE_VERSION
 
 LABEL copyright="Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved." \ 
   author="John Grimes <John.Grimes@csiro.au>"

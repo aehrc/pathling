@@ -1,12 +1,12 @@
 {
   "resourceType": "StructureDefinition",
-  "url": "https://clinsight.csiro.au/fhir/StructureDefinition/fhir-server-capabilities-0",
+  "url": "https://server.pathling.app/fhir/StructureDefinition/fhir-server-capabilities-0",
   "version": "0.0.0",
   "name": "FhirServerCapabilities",
   "title": "FHIR Server Capabilities",
   "status": "draft",
   "publisher": "Australian e-Health Research Centre, CSIRO",
-  "description": "Used for advertising the capabilities of the Clinsight FHIR analytics server.",
+  "description": "Used for advertising the capabilities of the Pathling FHIR analytics server.",
   "copyright": "Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.",
   "fhirVersion": "4.0.0",
   "mapping": [
@@ -61,7 +61,7 @@
           {
             "code": "Extension",
             "profile": [
-              "https://clinsight.csiro.au/fhir/StructureDefinition/available-resource-type-0"
+              "https://server.pathling.app/fhir/StructureDefinition/available-resource-type-0"
             ]
           }
         ]

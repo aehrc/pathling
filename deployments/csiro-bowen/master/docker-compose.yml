@@ -1,29 +1,29 @@
 version: "3"
 services:
   fhir-server:
-    image: docker-registry.it.csiro.au/clinsight/fhir-server
+    image: docker-registry.it.csiro.au/pathling/fhir-server
     network_mode: host
     depends_on:
       - ontoserver
     environment:
-      CLINSIGHT_SPARK_MASTER_URL: spark://hb-15-cdc001.it.csiro.au:7077
-      CLINSIGHT_WAREHOUSE_DIRECTORY: hdfs://hb-15-cdc001.it.csiro.au:8020/warehouse
-      CLINSIGHT_METASTORE_URL: jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore
-      CLINSIGHT_METASTORE_USER: postgres
-      CLINSIGHT_DATABASE_NAME: clinsight
-      CLINSIGHT_EXECUTOR_MEMORY: 6g
-      CLINSIGHT_TERMINOLOGY_SERVER_URL: http://hb-15-cdc001.it.csiro.au:4066/fhir
+      PATHLING_SPARK_MASTER_URL: spark://hb-15-cdc001.it.csiro.au:7077
+      PATHLING_WAREHOUSE_DIRECTORY: hdfs://hb-15-cdc001.it.csiro.au:8020/warehouse
+      PATHLING_METASTORE_URL: jdbc:postgresql://hb-15-cdc001.it.csiro.au/pathling_metastore
+      PATHLING_METASTORE_USER: postgres
+      PATHLING_DATABASE_NAME: pathling
+      PATHLING_EXECUTOR_MEMORY: 6g
+      PATHLING_TERMINOLOGY_SERVER_URL: http://hb-15-cdc001.it.csiro.au:4066/fhir
     restart: unless-stopped
   ui:
-    image: docker-registry.it.csiro.au/clinsight/ui
+    image: docker-registry.it.csiro.au/pathling/ui
     network_mode: host
     restart: unless-stopped
     ports:
       - 8899:80
     environment:
-      CLINSIGHT_FHIR_SERVER: http://clinsight.it.csiro.au:8090/fhir
+      PATHLING_FHIR_SERVER: http://pathling.it.csiro.au:8090/fhir
   ontoserver:
-    image: docker-registry.it.csiro.au/clinsight/ontoserver:5.4.0-SNAPSHOT
+    image: docker-registry.it.csiro.au/pathling/ontoserver:5.4.0-SNAPSHOT
     network_mode: host
     depends_on:
       - ontodb
@@ -50,7 +50,7 @@ services:
       - ontodb:/var/lib/postgresql/data
     restart: unless-stopped
   master:
-    image: docker-registry.it.csiro.au/clinsight/spark-master
+    image: docker-registry.it.csiro.au/pathling/spark-master
     network_mode: host
     environment:
       SPARK_MASTER_HOST: hb-15-cdc001.it.csiro.au
@@ -58,25 +58,25 @@ services:
       SPARK_DAEMON_MEMORY: 8g
     restart: unless-stopped
   worker:
-    image: docker-registry.it.csiro.au/clinsight/spark-worker
+    image: docker-registry.it.csiro.au/pathling/spark-worker
     network_mode: host
     command: bash -c "/opt/spark/sbin/start-slave.sh --host hb-15-cdc001.it.csiro.au spark://hb-15-cdc001.it.csiro.au:7077" 2>&1
     environment:
       SPARK_WORKER_CORES: 6
       SPARK_WORKER_MEMORY: 28g
       SPARK_WORKER_OPTS: "-Dspark.shuffle.service.enabled=true"
-      HIVE_SITE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore"
+      HIVE_SITE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hb-15-cdc001.it.csiro.au/pathling_metastore"
     restart: unless-stopped
   metastore:
     image: postgres:10
     network_mode: host
     environment:
-      POSTGRES_DB: clinsight_metastore
+      POSTGRES_DB: pathling_metastore
     volumes:
       - metastore:/var/lib/postgresql/data
     restart: unless-stopped
   notebook:
-    image: docker-registry.it.csiro.au/clinsight/notebook
+    image: docker-registry.it.csiro.au/pathling/notebook
     network_mode: host
     environment:
       SPARK_DRIVER_HOST: hb-15-cdc001.it.csiro.au
@@ -90,7 +90,7 @@ services:
     image: uhopper/hadoop-namenode:2.7.2
     network_mode: host
     environment:
-      CLUSTER_NAME: clinsight
+      CLUSTER_NAME: pathling
       CORE_CONF_fs_default_name: hdfs://hb-15-cdc001.it.csiro.au:8020
       HDFS_CONF_dfs_permissions_enabled: "false"
       HDFS_CONF_dfs_client_use_datanode_hostname: "true"

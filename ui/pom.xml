@@ -9,8 +9,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>au.csiro.clinsight</groupId>
-    <artifactId>clinsight</artifactId>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
@@ -20,7 +20,7 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>au.csiro.clinsight</groupId>
+        <groupId>au.csiro.pathling</groupId>
         <artifactId>fhir-definitions-maven-plugin</artifactId>
         <executions>
           <execution>
@@ -152,9 +152,9 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry}/clinsight/ui</repository>
+          <repository>${dockerRegistry}/pathling/ui</repository>
           <tag>${project.version}</tag>
-          <cacheFrom>${dockerRegistry}/clinsight/ui:${project.version}</cacheFrom>
+          <cacheFrom>${dockerRegistry}/pathling/ui:${project.version}</cacheFrom>
           <buildArgs>
             <VERSION>${project.version}</VERSION>
           </buildArgs>

@@ -1,12 +1,12 @@
 version: "3"
 services:
   fhir-loader:
-    image: docker-registry.it.csiro.au/clinsight/fhir-loader
+    image: docker-registry.it.csiro.au/pathling/fhir-loader
     network_mode: host
     environment:
-      CLINSIGHT_SPARK_MASTER_URL: spark://hb-15-cdc001.it.csiro.au:7077
-      CLINSIGHT_WAREHOUSE_DIRECTORY: hdfs://hb-15-cdc001.it.csiro.au:8020/warehouse
-      CLINSIGHT_METASTORE_URL: jdbc:postgresql://hb-15-cdc001.it.csiro.au/clinsight_metastore
-      CLINSIGHT_METASTORE_USER: postgres
-      CLINSIGHT_EXECUTOR_MEMORY: 6g
-      CLINSIGHT_JSON_BUNDLES_PATH: hdfs://hb-15-cdc001.it.csiro.au:8020/staging/synthea/1k_20190412
+      PATHLING_SPARK_MASTER_URL: spark://hb-15-cdc001.it.csiro.au:7077
+      PATHLING_WAREHOUSE_DIRECTORY: hdfs://hb-15-cdc001.it.csiro.au:8020/warehouse
+      PATHLING_METASTORE_URL: jdbc:postgresql://hb-15-cdc001.it.csiro.au/pathling_metastore
+      PATHLING_METASTORE_USER: postgres
+      PATHLING_EXECUTOR_MEMORY: 6g
+      PATHLING_JSON_BUNDLES_PATH: hdfs://hb-15-cdc001.it.csiro.au:8020/staging/synthea/1k_20190412
