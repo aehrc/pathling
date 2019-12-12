@@ -66,6 +66,7 @@ public class AnalyticsServer extends RestfulServer {
       // Set default response encoding to JSON.
       setDefaultResponseEncoding(EncodingEnum.JSON);
 
+      printLogo();
       initializeSpark();
 
       initializeTerminologyClient();
@@ -84,6 +85,15 @@ public class AnalyticsServer extends RestfulServer {
     } catch (Exception e) {
       throw new ServletException("Error initializing AnalyticsServer", e);
     }
+  }
+
+  private void printLogo() {
+    logger.info("    ____        __  __    ___            ");
+    logger.info("   / __ \\____ _/ /_/ /_  / (_)___  ____ _");
+    logger.info("  / /_/ / __ `/ __/ __ \\/ / / __ \\/ __ `/");
+    logger.info(" / ____/ /_/ / /_/ / / / / / / / / /_/ / ");
+    logger.info("/_/    \\__,_/\\__/_/ /_/_/_/_/ /_/\\__, /  ");
+    logger.info("                                /____/");
   }
 
   private void initializeSpark() {
