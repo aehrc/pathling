@@ -11,9 +11,7 @@ import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
 import java.util.Arrays;
 import java.util.HashMap;
 import javax.annotation.Nonnull;
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -76,8 +74,12 @@ public class FhirServerContainer {
 
     QueuedThreadPool threadPool = new QueuedThreadPool(maxThreads, minThreads, idleTimeout);
 
+    HttpConfiguration httpConfiguration = new HttpConfiguration();
+    httpConfiguration.setSendServerVersion(false);
+    HttpConnectionFactory httpConnectionFactory = new HttpConnectionFactory(httpConfiguration);
+
     Server server = new Server(threadPool);
-    ServerConnector connector = new ServerConnector(server);
+    ServerConnector connector = new ServerConnector(server, httpConnectionFactory);
     connector.setPort(httpPort);
     server.setConnectors(new Connector[]{connector});
 

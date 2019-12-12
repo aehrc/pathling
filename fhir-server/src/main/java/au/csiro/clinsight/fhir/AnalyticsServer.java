@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
@@ -160,4 +161,10 @@ public class AnalyticsServer extends RestfulServer {
     registerInterceptor(interceptor);
   }
 
+  @Override
+  public void addHeadersToResponse(HttpServletResponse theHttpResponse) {
+    // This removes the information-leaking `X-Powered-By` header from responses. We will need to
+    // keep an eye on this to make sure that we don't disable and future functionality placed
+    // within this method in the super.
+  }
 }
