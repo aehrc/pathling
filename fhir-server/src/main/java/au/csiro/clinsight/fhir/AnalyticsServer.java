@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
@@ -150,17 +151,10 @@ public class AnalyticsServer extends RestfulServer {
    */
   private void defineCorsConfiguration() {
     CorsConfiguration corsConfig = new CorsConfiguration();
-    corsConfig.addAllowedHeader("x-fhir-starter");
-    corsConfig.addAllowedHeader("Origin");
-    corsConfig.addAllowedHeader("Accept");
-    corsConfig.addAllowedHeader("X-Requested-With");
-    corsConfig.addAllowedHeader("Content-Type");
-
-    corsConfig.addAllowedOrigin("*");
-
-    corsConfig.addExposedHeader("Location");
-    corsConfig.addExposedHeader("Content-Location");
-    corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+    corsConfig.setAllowedOrigins(configuration.getCorsAllowedOrigins());
+    corsConfig.setAllowedMethods(Arrays.asList("GET", "POST"));
+    corsConfig.setAllowedHeaders(Collections.singletonList("Content-Type"));
+    corsConfig.setMaxAge(600L);
 
     CorsInterceptor interceptor = new CorsInterceptor(corsConfig);
     registerInterceptor(interceptor);

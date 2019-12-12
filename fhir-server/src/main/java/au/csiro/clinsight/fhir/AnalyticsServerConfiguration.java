@@ -4,6 +4,8 @@
 
 package au.csiro.clinsight.fhir;
 
+import java.util.Collections;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -69,6 +71,11 @@ public class AnalyticsServerConfiguration {
    */
   private String awsSecretAccessKey;
 
+  /**
+   * (OPTIONAL) Allowed origins for the CORS configuration.
+   */
+  private List<String> corsAllowedOrigins;
+
   public AnalyticsServerConfiguration() {
     sparkMasterUrl = "local[*]";
     warehouseUrl = "file:///usr/share/warehouse";
@@ -77,6 +84,7 @@ public class AnalyticsServerConfiguration {
     terminologyServerUrl = "https://r4.ontoserver.csiro.au/fhir";
     explainQueries = false;
     shufflePartitions = 2;
+    corsAllowedOrigins = Collections.singletonList("*");
   }
 
   @Nullable
@@ -165,6 +173,14 @@ public class AnalyticsServerConfiguration {
     this.awsSecretAccessKey = awsSecretAccessKey;
   }
 
+  public List<String> getCorsAllowedOrigins() {
+    return corsAllowedOrigins;
+  }
+
+  public void setCorsAllowedOrigins(List<String> corsAllowedOrigins) {
+    this.corsAllowedOrigins = corsAllowedOrigins;
+  }
+
   @Override
   public String toString() {
     return "AnalyticsServerConfiguration{" +
@@ -177,7 +193,7 @@ public class AnalyticsServerConfiguration {
         ", explainQueries=" + explainQueries +
         ", shufflePartitions=" + shufflePartitions +
         ", awsAccessKeyId='" + awsAccessKeyId + '\'' +
+        ", corsAllowedOrigins=" + corsAllowedOrigins +
         '}';
   }
-
 }

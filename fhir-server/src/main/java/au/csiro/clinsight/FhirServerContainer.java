@@ -8,6 +8,7 @@ import static au.csiro.clinsight.utilities.Configuration.setStringPropsUsingEnvV
 
 import au.csiro.clinsight.fhir.AnalyticsServer;
 import au.csiro.clinsight.fhir.AnalyticsServerConfiguration;
+import java.util.Arrays;
 import java.util.HashMap;
 import javax.annotation.Nonnull;
 import org.eclipse.jetty.server.Connector;
@@ -49,6 +50,10 @@ public class FhirServerContainer {
     String shufflePartitions = System.getenv("CLINSIGHT_SHUFFLE_PARTITIONS");
     if (shufflePartitions != null) {
       config.setShufflePartitions(Integer.parseInt(shufflePartitions));
+    }
+    String corsAllowedOrigins = System.getenv("CLINSIGHT_CORS_ALLOWED_ORIGINS");
+    if (corsAllowedOrigins != null) {
+      config.setCorsAllowedOrigins(Arrays.asList(corsAllowedOrigins.split(",")));
     }
 
     // This is required to force the use of the Woodstox StAX implementation. If you don't use
