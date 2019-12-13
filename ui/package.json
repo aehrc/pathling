@@ -4,20 +4,20 @@
   "license": "UNLICENSED",
   "dependencies": {
     "@blueprintjs/core": "^3.15.1",
-    "axios": "^0.18.0",
+    "axios": "^0.19.0",
     "lodash.get": "^4.4.2",
     "lodash.isequal": "^4.5.0",
+    "monaco-editor": "^0.18.1",
     "re-resizable": "^4.11.0",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-monaco-editor": "^0.26.1",
+    "react-monaco-editor": "^0.32.1",
     "react-redux": "^7.0.3",
     "redux": "^4.0.1",
     "redux-logger": "^3.0.6",
     "redux-thunk": "^2.3.0"
   },
   "devDependencies": {
-    "@types/axios": "^0.14.0",
     "@types/lodash.get": "^4.4.6",
     "@types/lodash.isequal": "^4.5.5",
     "@types/react": "^16.8.15",
