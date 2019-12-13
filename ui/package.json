@@ -1,6 +1,9 @@
 {
   "name": "analytics-ui",
-  "author": "John Grimes",
+  "author": {
+    "name": "John Grimes",
+    "email": "John.Grimes@csiro.au"
+  },
   "license": "UNLICENSED",
   "dependencies": {
     "@blueprintjs/core": "^3.15.1",
