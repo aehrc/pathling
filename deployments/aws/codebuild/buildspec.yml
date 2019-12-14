@@ -16,7 +16,7 @@ phases:
   build:
     commands:
       - echo Building Docker images...
-      - mvn deploy -pl fhir-server,ui -am -Dmaven.deploy.skip -DskipITs -DdockerRegistry=$DOCKER_REGISTRY
+      - mvn deploy -pl fhir-server,ui,site -am -Dmaven.deploy.skip -DskipITs -DdockerRegistry=$DOCKER_REGISTRY
 cache:
   paths:
     - '/root/.m2/**/*'

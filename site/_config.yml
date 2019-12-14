@@ -1,0 +1,11 @@
+title: Pathling
+description: Health data analytics, on FHIR.
+theme: just-the-docs
+sass:
+  sass_dir: _sass
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - Dockerfile
+  - pom.xml
+  - target

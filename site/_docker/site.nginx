@@ -1,0 +1,12 @@
+server {
+  listen 80;
+  root /usr/share/nginx/html;
+  charset utf-8;
+  gzip on;
+  gzip_types text/css application/javascript application/json;
+  gzip_comp_level 9;
+  etag on;
+  location /index.html {
+    add_header Content-Security-Policy "default-src 'self'; font-src 'self' fonts.googleapis.com fonts.gstatic.com; style-src 'self' fonts.googleapis.com; img-src 'self' data:";
+  }
+}

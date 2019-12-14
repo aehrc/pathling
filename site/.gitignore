@@ -1,0 +1,7 @@
+_site
+.ruby-version
+.ruby-gemset
+.sass-cache
+.jekyll-cache
+.jekyll-metadata
+vendor

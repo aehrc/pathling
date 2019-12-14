@@ -42,6 +42,7 @@
     <module>plugins/ontoserver-preload-maven-plugin</module>
     <module>fhir-server</module>
     <module>ui</module>
+    <module>site</module>
     <module>docker/spark</module>
     <module>docker/spark-master</module>
     <module>docker/spark-worker</module>
