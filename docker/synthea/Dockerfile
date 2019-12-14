@@ -1,5 +1,4 @@
 FROM openjdk:8
-ARG REVISION=master
 
 LABEL copyright="Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved." \
   author="John Grimes <John.Grimes@csiro.au>"
@@ -7,6 +6,7 @@ LABEL copyright="Copyright © Australian e-Health Research Centre, CSIRO. All ri
 WORKDIR /usr/src
 
 # This line invalidates the cache of the following RUN command when the upstream repo is changed.
+ARG REVISION=master
 ADD https://api.github.com/repos/synthetichealth/synthea/git/refs/heads/$REVISION version.json
 
 # Use a shallow clone of only the specified revision.

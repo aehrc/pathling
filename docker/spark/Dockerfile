@@ -1,9 +1,4 @@
 FROM openjdk:8
-ARG SPARK_VERSION
-ARG SPARK_SCALA_VERSION
-ARG HADOOP_VERSION
-ARG SPARK_MIRROR
-ARG HADOOP_MIRROR
 
 LABEL copyright="Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved." \
   author="John Grimes <John.Grimes@csiro.au>"
@@ -16,6 +11,8 @@ RUN apt-get update && apt-get install -y \
   procps
 
 # Download and extract Hadoop distribution
+ARG HADOOP_VERSION
+ARG HADOOP_MIRROR
 RUN cd /tmp && \
   wget -q ${HADOOP_MIRROR}/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz && \
   tar xzf hadoop-${HADOOP_VERSION}.tar.gz -C /opt --owner root --group root --no-same-owner && \
@@ -23,8 +20,11 @@ RUN cd /tmp && \
 RUN cd /opt && ln -s hadoop-${HADOOP_VERSION} hadoop
 
 # Download and extract Spark distribution
+ARG SPARK_VERSION
+ARG SPARK_SCALA_VERSION
 ENV SPARK_PREFIX="spark-${SPARK_VERSION}-bin-without-hadoop-scala-${SPARK_SCALA_VERSION}"
 
+ARG SPARK_MIRROR
 RUN cd /tmp && \
   wget -q ${SPARK_MIRROR}/spark-${SPARK_VERSION}/${SPARK_PREFIX%-scala-2.11}.tgz && \
   tar xzf ${SPARK_PREFIX%-scala-2.11}.tgz -C /opt --owner root --group root --no-same-owner && \
