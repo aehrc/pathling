@@ -10,6 +10,8 @@ phases:
       nodejs: 12
       docker: 18
       ruby: 2.6
+    commands:
+      - gem install bundler:2.0.2
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
