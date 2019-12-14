@@ -9,6 +9,7 @@ phases:
       java: openjdk8
       nodejs: 12
       docker: 18
+      ruby: 2.6
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
@@ -16,7 +17,7 @@ phases:
   build:
     commands:
       - echo Building Docker images...
-      - mvn deploy -pl fhir-server,ui,site -am -Dmaven.deploy.skip -DskipITs -DdockerRegistry=$DOCKER_REGISTRY
+      - mvn deploy -pl fhir-server,ui,site -am -Dmaven.deploy.skip -DskipITs -DskipShade -DdockerRegistry=$DOCKER_REGISTRY
 cache:
   paths:
     - '/root/.m2/**/*'
