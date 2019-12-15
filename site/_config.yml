@@ -1,5 +1,5 @@
 title: Pathling
-description: Health data analytics, on FHIR.
+description: Advanced FHIR&reg; analytics server, capable of performing aggregate queries and transformations of large FHIR datasets.
 theme: just-the-docs
 sass:
   sass_dir: _sass
