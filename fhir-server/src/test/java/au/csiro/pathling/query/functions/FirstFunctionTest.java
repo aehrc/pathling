@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.pathling.query.functions;
 
 import static au.csiro.pathling.test.Assertions.assertThat;
@@ -27,7 +31,7 @@ public class FirstFunctionTest extends FunctionTest {
 
 
   @Test
-  public void testIsNoOpForListOfResources() {
+  public void testGetsFirstResouceCorrectly() {
     Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
     // Build up an input for the function.
     ParsedExpression input = createResourceParsedExpression(dataset, ResourceType.PATIENT);
@@ -54,7 +58,7 @@ public class FirstFunctionTest extends FunctionTest {
   public void testSelectsFirstValuePerResourceFromListOfValues() {
     Dataset<Row> dataset = StringPrimitiveRowFixture.createCompleteDataset(spark);
 
-    // Build up an input for the function
+    // Build up an input for the functionm
     ParsedExpression input = createPrimitiveParsedExpression(dataset);
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);

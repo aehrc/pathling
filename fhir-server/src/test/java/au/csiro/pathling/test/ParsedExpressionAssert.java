@@ -1,9 +1,15 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.pathling.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.query.functions.FunctionInput;
 import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 public class ParsedExpressionAssert {
 
@@ -33,6 +39,12 @@ public class ParsedExpressionAssert {
 
   public ParsedExpressionAssert isResultFor(FunctionInput input) {
     assertThat(parsedExpression.getFhirPath()).isEqualTo(input.getExpression());
+    return this;
+  }
+
+  public ParsedExpressionAssert isOfType(FHIRDefinedType fhirType, FhirPathType fhirPathType) {
+    assertThat(parsedExpression.getFhirPathType()).isEqualTo(fhirPathType);
+    assertThat(parsedExpression.getFhirType()).isEqualTo(fhirType);
     return this;
   }
 
