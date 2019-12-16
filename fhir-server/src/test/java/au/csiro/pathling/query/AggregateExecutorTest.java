@@ -235,7 +235,7 @@ public class AggregateExecutorTest {
   @Test
   public void queryWithMemberOf() throws IOException, JSONException {
     mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
-    Bundle negativeResponse = (Bundle) TestUtilities.getJsonParser()
+    Bundle mockResponse = (Bundle) TestUtilities.getJsonParser()
         .parseResource(getResourceAsStream(
             "txResponses/MemberOfFunctionTest-memberOfCoding-validate-code-positive.Bundle.json"));
 
@@ -250,7 +250,7 @@ public class AggregateExecutorTest {
 
     // Mock out responses from the terminology server.
     when(terminologyClient.batch(any(Bundle.class)))
-        .thenReturn(negativeResponse);
+        .thenReturn(mockResponse);
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
