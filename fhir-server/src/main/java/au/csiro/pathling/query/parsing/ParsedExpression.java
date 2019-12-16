@@ -20,6 +20,8 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import static org.apache.spark.sql.functions.col;
+
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -29,7 +31,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class ParsedExpression {
+public class ParsedExpression  implements Joinable {
 
   // This mapping needs to reflect the mappings that Bunsen and Spark use.
   //
@@ -149,18 +151,27 @@ public class ParsedExpression {
    */
   private Column resourceTypeColumn;
 
+  
+  /**
+   * For aggregation expression, this dataset holds the dataset that grouped aggregation should be performed over 
+   */
+ 
+  private Dataset<Row> aggregationDataset;
   /**
    * For aggregate expressions, this column hold the unresolved aggregation that will be applied
    * during execution.
    */
   private Column aggregationColumn;
 
-  public ParsedExpression() {
+  private Column aggregationIdColumn;
+  
+	public ParsedExpression() {
   }
 
   public ParsedExpression(ParsedExpression parsedExpression) {
     this.fhirPath = parsedExpression.fhirPath;
     this.fhirPathType = parsedExpression.fhirPathType;
+    this.fhirType = parsedExpression.fhirType;
     this.definition = parsedExpression.definition;
     this.elementDefinition = parsedExpression.elementDefinition;
     this.isResource = parsedExpression.isResource;
@@ -174,7 +185,9 @@ public class ParsedExpression {
     this.idColumn = parsedExpression.idColumn;
     this.valueColumn = parsedExpression.valueColumn;
     this.resourceTypeColumn = parsedExpression.resourceTypeColumn;
+    this.aggregationDataset = parsedExpression.aggregationDataset;
     this.aggregationColumn = parsedExpression.aggregationColumn;
+    this.aggregationIdColumn = parsedExpression.aggregationIdColumn; 
   }
 
   public String getFhirPath() {
@@ -273,6 +286,7 @@ public class ParsedExpression {
     this.origin = origin;
   }
 
+  @Override
   public Dataset<Row> getDataset() {
     return dataset;
   }
@@ -281,6 +295,7 @@ public class ParsedExpression {
     this.dataset = dataset;
   }
 
+  @Override
   public Column getIdColumn() {
     return idColumn;
   }
@@ -304,7 +319,14 @@ public class ParsedExpression {
   public void setResourceTypeColumn(Column resourceTypeColumn) {
     this.resourceTypeColumn = resourceTypeColumn;
   }
+  
+  public Dataset<Row> getAggregationDataset() {
+		return aggregationDataset;
+	}
 
+	public void setAggregationDataset(Dataset<Row> aggregationDataset) {
+		this.aggregationDataset = aggregationDataset;
+	}
   public Column getAggregationColumn() {
     return aggregationColumn;
   }
@@ -312,7 +334,30 @@ public class ParsedExpression {
   public void setAggregationColumn(Column aggregationColumn) {
     this.aggregationColumn = aggregationColumn;
   }
+  
+	public Column getAggregationIdColumn() {
+		return aggregationIdColumn;
+	}
 
+	public void setAggregationIdColumn(Column aggregationIdColumn) {
+		this.aggregationIdColumn = aggregationIdColumn;
+	}
+  
+	
+	public Joinable getAggreationJoinable() {
+		return new Joinable() {
+			@Override
+			public Dataset<Row> getDataset() {
+				return getAggregationDataset();
+			}
+
+			@Override
+			public Column getIdColumn() {
+				return getAggregationIdColumn();
+			}
+		};
+	}
+	
   public Object getJavaLiteralValue() {
     assert PrimitiveType.class.isAssignableFrom(literalValue.getClass()) :
         "Encountered non-primitive literal value";
@@ -379,7 +424,7 @@ public class ParsedExpression {
     this.idColumn = dataset.col(hash + "_id");
     this.valueColumn = dataset.col(hash);
   }
-
+    
   /**
    * Get the FHIR type from a BaseRuntimeChildDefinition.
    */
@@ -400,7 +445,7 @@ public class ParsedExpression {
     return childDefinition.getChildByName(elementName);
   }
 
-  /**
+	/**
    * Describes a ParseResult in terms of the FHIRPath type that it evaluates to.
    */
   public enum FhirPathType {
@@ -475,5 +520,4 @@ public class ParsedExpression {
       return fhirPathType;
     }
   }
-
 }

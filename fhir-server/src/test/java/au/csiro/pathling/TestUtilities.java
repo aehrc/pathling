@@ -8,7 +8,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.encoding.ValidateCodeResult;
+import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.RuntimeCompositeDatatypeDefinition;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,12 +23,14 @@ import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.instance.model.api.IBase;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryResponseComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleType;
-import org.mockito.ArgumentMatcher;
-import org.mockito.ArgumentMatchers;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Parameters;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import scala.collection.JavaConversions;
@@ -41,6 +46,12 @@ public abstract class TestUtilities {
 
   public static FhirContext getFhirContext() {
     return fhirContext;
+  }
+
+  public static BaseRuntimeChildDefinition getChildDefinition(Class<? extends IBase> elementType,
+      String childName) {
+    BaseRuntimeElementDefinition<?> elementDef = fhirContext.getElementDefinition(elementType);
+    return ((RuntimeCompositeDatatypeDefinition) elementDef).getChildByName(childName);
   }
 
   public static IParser getJsonParser() {
@@ -115,57 +126,6 @@ public abstract class TestUtilities {
       }
     }
     return Objects.equals(codeableConcept1.getText(), codeableConcept2.getText());
-  }
-
-  public static Coding matchesCoding(Coding expected) {
-    return ArgumentMatchers.argThat(expected::equalsDeep);
-  }
-
-  public static CodeableConcept matchesCodeableConcept(CodeableConcept expected) {
-    return ArgumentMatchers.argThat(expected::equalsDeep);
-  }
-
-  public static UriType matchesUri(String expected) {
-    return ArgumentMatchers.argThat(actual -> new UriType(expected).equalsDeep(actual));
-  }
-
-  public static class CodingMatcher implements ArgumentMatcher<Coding> {
-
-    private Coding coding;
-
-    public CodingMatcher(Coding coding) {
-      this.coding = coding;
-    }
-
-    @Override
-    public boolean matches(Coding argument) {
-      if (argument == null) {
-        return false;
-      }
-      return coding.getUserSelected() == argument.getUserSelected() &&
-          Objects.equals(coding.getSystem(), argument.getSystem()) &&
-          Objects.equals(coding.getVersion(), argument.getVersion()) &&
-          Objects.equals(coding.getCode(), argument.getCode()) &&
-          Objects.equals(coding.getDisplay(), argument.getDisplay());
-    }
-
-  }
-
-  public static class UriMatcher implements ArgumentMatcher<UriType> {
-
-    private UriType uriType;
-
-    public UriMatcher(UriType uriType) {
-      this.uriType = uriType;
-    }
-
-    @Override
-    public boolean matches(UriType argument) {
-      if (argument == null) {
-        return false;
-      }
-      return Objects.equals(argument.asStringValue(), uriType.asStringValue());
-    }
   }
 
   /**

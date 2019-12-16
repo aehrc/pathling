@@ -11,55 +11,62 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.RelationalGroupedDataset;
 import org.apache.spark.sql.Row;
 
 /**
  * This function allows the selection of only the first element of a collection.
  *
  * @author John Grimes
- * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#first-collection">http://hl7.org/fhirpath/2018Sep/index.html#first-collection</a>
+ * @see <a href=
+ *      "http://hl7.org/fhirpath/2018Sep/index.html#first-collection">http://hl7.org/fhirpath/2018Sep/index.html#first-collection</a>
  */
 public class FirstFunction implements Function {
 
-  @Nonnull
-  @Override
-  public ParsedExpression invoke(@Nonnull FunctionInput input) {
-    validateInput(input);
-    ParsedExpression inputResult = input.getInput();
-    Dataset<Row> prevDataset = inputResult.getDataset();
-    Column prevIdColumn = inputResult.getIdColumn();
-    Column prevValueColumn = inputResult.getValueColumn();
+	@Nonnull
+	@Override
+	public ParsedExpression invoke(@Nonnull FunctionInput input) {
+		validateInput(input);
+		ParsedExpression result = invokeAgg(input);
+		
+		Dataset<Row> aggDataset = result.getAggregationDataset();
+		// Apply the aggregate Spark SQL function to the grouping.
+		Column aggIdColumn = result.getAggregationIdColumn();
+		Column aggColumn = result.getAggregationColumn();
 
-    // First apply a grouping based upon the resource ID.
-    RelationalGroupedDataset grouped = prevDataset.groupBy(prevValueColumn);
+		// First apply a grouping based upon the resource ID.
+		Dataset<Row> dataset = aggDataset.groupBy(aggIdColumn).agg(aggColumn);
+		Column idColumn = dataset.col(dataset.columns()[0]);
+		Column valueColumn = dataset.col(dataset.columns()[1]);
+		result.setDataset(dataset);
+		result.setHashedValue(idColumn, valueColumn);
+		return result;
+	}
 
-    // Apply the aggregate Spark SQL function to the grouping.
-    Dataset<Row> dataset = grouped.agg(first(prevValueColumn));
-
-    // Create new ID and value columns, based on the hash computed off the FHIRPath expression.
-    Column valueColumn = dataset.col(dataset.columns()[1]);
-    dataset = dataset.select(prevIdColumn, valueColumn);
-
-    // Construct a new parse result.
-    ParsedExpression result = new ParsedExpression();
-    result.setFhirPath(input.getExpression());
-    result.setFhirPathType(inputResult.getFhirPathType());
-    result.setFhirType(inputResult.getFhirType());
-    result.setPrimitive(inputResult.isPrimitive());
-    result.setSingular(true);
-    result.setDataset(dataset);
-    result.setIdColumn(prevIdColumn);
-    result.setValueColumn(valueColumn);
-
-    return result;
-  }
-
-  private void validateInput(FunctionInput input) {
-    if (!input.getArguments().isEmpty()) {
-      throw new InvalidRequestException(
-          "Arguments can not be passed to first function: " + input.getExpression());
-    }
-  }
+	@Nonnull
+	public ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
+		validateInput(input);
+		// Construct a new parse result.
+		// Should preserve most of the metadata such as types, definitions, etc.		
+		ParsedExpression inputResult = input.getInput();
+		Column prevValueColumn = inputResult.getValueColumn();
+		Column prevIdColumn = inputResult.getIdColumn();
+		
+		ParsedExpression result = new ParsedExpression(inputResult);
+		result.setFhirPath(input.getExpression());
+		result.setSingular(true);
+		result.setDataset(null);
+		result.setIdColumn(null);
+		result.setValueColumn(null);
+		result.setAggregationDataset(inputResult.getDataset());
+		result.setAggregationIdColumn(prevIdColumn);
+		result.setAggregationColumn(first(prevValueColumn));
+		return result;
+	}
+	
+	private void validateInput(FunctionInput input) {
+		if (!input.getArguments().isEmpty()) {
+			throw new InvalidRequestException("Arguments can not be passed to first function: " + input.getExpression());
+		}
+	}
 
 }

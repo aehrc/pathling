@@ -12,6 +12,7 @@ import au.csiro.pathling.query.AggregateRequest.Aggregation;
 import au.csiro.pathling.query.AggregateRequest.Grouping;
 import au.csiro.pathling.query.parsing.ExpressionParser;
 import au.csiro.pathling.query.parsing.ExpressionParserContext;
+import au.csiro.pathling.query.parsing.Joinable;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
@@ -126,18 +127,18 @@ public class AggregateExecutor {
 
       // Gather all expressions into a single list.
       Dataset<Row> result = subjectResource.getDataset();
-      List<ParsedExpression> allExpressions = new ArrayList<>();
+      List<Joinable> allExpressions = new ArrayList<>();
       allExpressions.add(subjectResource);
       allExpressions.addAll(parsedFilters);
       allExpressions.addAll(parsedGroupings);
-      allExpressions.addAll(parsedAggregations);
-      Set<Dataset> joinedDatasets = new HashSet<>();
+      allExpressions.addAll(parsedAggregations.stream().map(ParsedExpression::getAggreationJoinable).collect(Collectors.toList()));
+      Set<Dataset<Row> > joinedDatasets = new HashSet<>();
       joinedDatasets.add(subjectResource.getDataset());
 
       // Join all datasets together, omitting any duplicates.
-      ParsedExpression previous = subjectResource;
+      Joinable previous = subjectResource;
       for (int i = 0; i < allExpressions.size(); i++) {
-        ParsedExpression current = allExpressions.get(i);
+      	Joinable current = allExpressions.get(i);
         if (i > 0 && !joinedDatasets.contains(current.getDataset())) {
           result = result.join(current.getDataset(),
               previous.getIdColumn().equalTo(current.getIdColumn()));
@@ -145,7 +146,8 @@ public class AggregateExecutor {
           joinedDatasets.add(current.getDataset());
         }
       }
-
+      
+      
       // Apply filters.
       Optional<Column> filterCondition = parsedFilters.stream()
           .map(ParsedExpression::getValueColumn)
