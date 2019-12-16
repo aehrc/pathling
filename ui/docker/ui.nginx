@@ -20,7 +20,7 @@ server {
   }
   location /index.html {
     add_header Cache-Control no-cache;
-    add_header Content-Security-Policy "default-src 'self'; connect-src *";
+    add_header Content-Security-Policy "default-src 'self' 'unsafe-inline'; connect-src *";
   }
   location /config.json {
     add_header Cache-Control no-cache;
