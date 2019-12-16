@@ -58,7 +58,7 @@ $body-font-family: "Source Sans Pro", sans-serif;
 //$code-background-color: $grey-lt-000;
 
 //$body-text-color: $grey-dk-100;
-//$body-heading-color: $grey-dk-300;
+$body-heading-color: $grey-dk-300;
 //$search-result-preview-color: $grey-dk-000;
 //$nav-child-link-color: $grey-dk-100;
 $link-color: #2ca0b6;
@@ -139,8 +139,26 @@ $link-color: #2ca0b6;
 
 .navigation-list-link {
   font-family: "Raleway", sans-serif;
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: 0.175em;
   text-transform: uppercase;
   font-size: 13px;
+  color: $body-heading-color !important;
+  margin-bottom: 1em;
+}
+
+.navigation-list-item {
+  .active {
+    .navigation-list-link {
+      font-weight: 700;
+    }
+  }
+}
+
+.callout {
+  &.warning {
+    background-color: #faecdf;
+    padding: 0.75rem;
+    margin: 0.75rem 0;
+  }
 }
