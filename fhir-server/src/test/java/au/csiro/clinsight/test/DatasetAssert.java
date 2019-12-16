@@ -41,6 +41,11 @@ public class DatasetAssert {
 		return this;
 	}
 	
+	public DatasetAssert debugAllRows() {
+		dataset.collectAsList().forEach(System.out::println);
+		return this;
+	}
+	
 	
 	public ObjectAssert<Object> isValue() {
 		List<Row> result = dataset.collectAsList();

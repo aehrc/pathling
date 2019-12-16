@@ -54,7 +54,7 @@ public abstract class FunctionTest {
 		} else {
 			throw new IllegalArgumentException(dataset.schema().fields()[0].dataType() + "is not primitive or not supported");
 		}
-		
+				
 		input.setFhirPath("name.family");
 		input.setPrimitive(true);
 		input.setSingular(false);

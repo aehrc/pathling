@@ -1,230 +1,106 @@
 package au.csiro.clinsight.query.functions;
 
+import static au.csiro.clinsight.test.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.MetadataBuilder;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import au.csiro.clinsight.query.parsing.ExpressionParserContext;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
 import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.clinsight.test.FunctionTest;
+import au.csiro.clinsight.test.PatientResourceRowFixture;
+import au.csiro.clinsight.test.StringPrimitiveRowFixture;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.Arrays;
-import java.util.List;
-import org.apache.spark.sql.*;
-import org.apache.spark.sql.types.*;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 /**
  * @author John Grimes
  */
 @Category(au.csiro.clinsight.UnitTest.class)
-public class CountFunctionTest {
+public class CountFunctionTest  extends FunctionTest {
 
-  private SparkSession spark;
+  @Test
+  public void testCountsResourcesCorrectly() {
+    // Build a Dataset with several rows in it.
+		Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
+		// Build up an input for the function.
+		ParsedExpression input = createResourceParsedExpression(dataset, ResourceType.PATIENT);
+		
+		FunctionInput functionInput = new FunctionInput();
+		functionInput.setInput(input);
+		functionInput.setExpression("count()");
 
-  @Before
-  public void setUp() {
-    spark = SparkSession.builder()
-        .appName("clinsight-test")
-        .config("spark.master", "local")
-        .config("spark.driver.host", "localhost")
-        .getOrCreate();
+		// Execute the first function.
+		Function function = new CountFunction();
+		ParsedExpression result = function.invoke(functionInput);		
+		
+		assertThat(result)
+		.isResultFor(functionInput)
+		.isOfType(FHIRDefinedType.UNSIGNEDINT, FhirPathType.INTEGER)
+		.isPrimitive()
+		.isSingular()
+		.isSelection()
+		.isAggreation();
+		
+		// check results
+		assertThat(result).aggResult().isValue().isEqualTo(3L);
+		assertThat(result).aggByIdResult().hasRows(
+				RowFactory.create("abc1", 1L), 
+				RowFactory.create("abc2", 1L),
+				RowFactory.create("abc3", 1L) 				
+		);
   }
 
   @Test
-  public void resourceCount() {
-    // Build a Dataset with several rows in it.
-    Metadata metadata = new MetadataBuilder().build();
-    StructField genderColumn = new StructField("gender", DataTypes.StringType, true, metadata);
-    StructField activeColumn = new StructField("active", DataTypes.BooleanType, true, metadata);
-    StructType resourceStruct = new StructType(new StructField[]{genderColumn, activeColumn});
-    StructField id = new StructField("123abcd_id", DataTypes.StringType, false, metadata);
-    StructField resource = new StructField("123abcd", resourceStruct, false, metadata);
-    StructType rowStruct = new StructType(new StructField[]{id, resource});
+  public void testCountsElementsCorrectly() {
+		Dataset<Row> dataset = StringPrimitiveRowFixture.createCompleteDataset(spark);
 
-    Row row1 = RowFactory.create("abc1", RowFactory.create("female", true));
-    Row row2 = RowFactory.create("abc2", RowFactory.create("female", false));
-    Row row3 = RowFactory.create("abc3", RowFactory.create("male", true));
-    Dataset<Row> dataset = spark.createDataFrame(Arrays.asList(row1, row2, row3), rowStruct);
-    Column idColumn = dataset.col(dataset.columns()[0]);
-    Column valueColumn = dataset.col(dataset.columns()[1]);
-
-    // Build up an input for the function.
-    ParsedExpression input = new ParsedExpression();
-    input.setFhirPath("%resource");
-    input.setResource(true);
-    input.setResourceType(ResourceType.PATIENT);
-    input.setOrigin(input);
-    input.setDataset(dataset);
-    input.setIdColumn(idColumn);
-    input.setValueColumn(valueColumn);
-
-    FunctionInput countInput = new FunctionInput();
-    countInput.setInput(input);
-    countInput.setExpression("count()");
-
-    // Execute the count function.
-    CountFunction countFunction = new CountFunction();
-    ParsedExpression result = countFunction.invoke(countInput);
-
-    // Check the result.
-    assertThat(result.getFhirPath()).isEqualTo("count()");
-    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.INTEGER);
-    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.UNSIGNEDINT);
-    assertThat(result.isPrimitive()).isTrue();
-    assertThat(result.isSingular()).isTrue();
-    assertThat(result.getIdColumn()).isNotNull();
-    assertThat(result.getValueColumn()).isNotNull();
-    assertThat(result.getAggregationColumn()).isNotNull();
-
-    // Check that running the aggregation against the Dataset results in the correct count.
-    Dataset<Row> resultDataset = result.getDataset();
-    List<Row> resultRows = resultDataset.agg(result.getAggregationColumn()).collectAsList();
-    assertThat(resultRows.size()).isEqualTo(1);
-    Row resultRow = resultRows.get(0);
-    assertThat(resultRow.getLong(0)).isEqualTo(3);
-
-    // Check that running the aggregation results in the correct distinct count when joined against
-    // grouping rows that can have multiple cardinalities.
-    Metadata groupingMetadata = new MetadataBuilder().build();
-    StructField groupingId = new StructField("789wxyz_id", DataTypes.StringType, false,
-        groupingMetadata);
-    StructField groupingValue = new StructField("789wxyz", DataTypes.StringType, true,
-        groupingMetadata);
-    StructType groupingStruct = new StructType(new StructField[]{groupingId, groupingValue});
-
-    Row groupingRow1 = RowFactory.create("abc1", "en");
-    Row groupingRow2 = RowFactory.create("abc2", "en");
-    Row groupingRow3 = RowFactory.create("abc2", "de");
-    Row groupingRow4 = RowFactory.create("abc3", "fr");
-    // This one might be doubled up due to joining against some other multi-cardinality grouping.
-    Row groupingRow5 = RowFactory.create("abc3", "fr");
-    Dataset<Row> groupingDataset = spark.createDataFrame(
-        Arrays.asList(groupingRow1, groupingRow2, groupingRow3, groupingRow4, groupingRow5),
-        groupingStruct);
-    Dataset<Row> groupedResult = groupingDataset.join(resultDataset,
-        resultDataset.col("123abcd_id").equalTo(groupingDataset.col("789wxyz_id")), "left_outer");
-    groupedResult = groupedResult.groupBy(groupingDataset.col("789wxyz"))
-        .agg(result.getAggregationColumn());
-    List<Row> groupedResultRows = groupedResult.collectAsList();
-
-    assertThat(groupedResultRows.size()).isEqualTo(3);
-    Row groupedResultRow = groupedResultRows.get(0);
-    assertThat(groupedResultRow.getString(0)).isEqualTo("en");
-    assertThat(groupedResultRow.getLong(1)).isEqualTo(2);
-    groupedResultRow = groupedResultRows.get(1);
-    assertThat(groupedResultRow.getString(0)).isEqualTo("de");
-    assertThat(groupedResultRow.getLong(1)).isEqualTo(1);
-    groupedResultRow = groupedResultRows.get(2);
-    assertThat(groupedResultRow.getString(0)).isEqualTo("fr");
-    // This should only be 1, as there is only one Patient resource captured in the "fr" group.
-    assertThat(groupedResultRow.getLong(1)).isEqualTo(1);
-  }
-
-  @Test
-  public void elementCount() {
-    // Build a Dataset with several rows in it.
-    Metadata metadata = new MetadataBuilder().build();
-    StructField id = new StructField("123abcd_id", DataTypes.StringType, false, metadata);
-    StructField value = new StructField("123abcd", DataTypes.StringType, true, metadata);
-    StructType rowStruct = new StructType(new StructField[]{id, value});
-
-    // Multiple values against the same resource should be counted individually.
-    Row row1 = RowFactory.create("abc1", "Jude");
-    Row row2 = RowFactory.create("abc1", "Samuel");
-    Row row3 = RowFactory.create("abc2", "Thomas");
-    // The absence of the element should not be counted.
-    Row row4 = RowFactory.create("abc3", null);
-    // A duplicate value should be counted.
-    Row row5 = RowFactory.create("abc4", "Thomas");
-    Dataset<Row> dataset = spark
-        .createDataFrame(Arrays.asList(row1, row2, row3, row4, row5), rowStruct);
-    Column idColumn = dataset.col(dataset.columns()[0]);
-    Column valueColumn = dataset.col(dataset.columns()[1]);
-
-    ExpressionParserContext expressionParserContext = new ExpressionParserContext();
+		// Build up an input for the functionm
+		ParsedExpression input = createPrimitiveParsedExpression(dataset);
+		FunctionInput functionInput = new FunctionInput();
+		functionInput.setInput(input);
+		functionInput.setExpression("name.family.count()");
+	  
+		// TODO: is this necessaey
+		ExpressionParserContext expressionParserContext = new ExpressionParserContext();
     expressionParserContext.getGroupings().add(mock(ParsedExpression.class));
+    functionInput.setContext(expressionParserContext);
 
-    // Build up an input for the function.
-    ParsedExpression input = new ParsedExpression();
-    input.setFhirPath("name.given");
-    input.setDataset(dataset);
-    input.setIdColumn(idColumn);
-    input.setValueColumn(valueColumn);
+		// Execute the fist function.
+		ParsedExpression result = new CountFunction().invoke(functionInput);
+    
+		assertThat(result)
+		.isResultFor(functionInput)
+		.isOfType(FHIRDefinedType.UNSIGNEDINT, FhirPathType.INTEGER)
+		.isPrimitive()
+		.isSingular()
+		.isSelection()
+		.isAggreation();
 
-    FunctionInput countInput = new FunctionInput();
-    countInput.setInput(input);
-    countInput.setExpression("count()");
-    countInput.setContext(expressionParserContext);
-
-    // Execute the count function.
-    CountFunction countFunction = new CountFunction();
-    ParsedExpression result = countFunction.invoke(countInput);
-
-    // Check the result.
-    assertThat(result.getFhirPath()).isEqualTo("count()");
-    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.INTEGER);
-    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.UNSIGNEDINT);
-    assertThat(result.isPrimitive()).isTrue();
-    assertThat(result.isSingular()).isTrue();
-    assertThat(result.getIdColumn()).isNotNull();
-    assertThat(result.getValueColumn()).isNotNull();
-    assertThat(result.getAggregationColumn()).isNotNull();
-
-    // Check that running the aggregation against the Dataset results in the correct count.
-    Dataset<Row> resultDataset = result.getDataset();
-    List<Row> resultRows = resultDataset.agg(result.getAggregationColumn()).collectAsList();
-    assertThat(resultRows.size()).isEqualTo(1);
-    Row resultRow = resultRows.get(0);
-    assertThat(resultRow.getLong(0)).isEqualTo(4);
-
-    // Check that running the aggregation results in the correct distinct count when joined against
-    // grouping rows that can have multiple cardinalities.
-    //
-    // For example, I want to count patient given names, and group on languages. If I join from
-    // [patient ID, language] to [patient ID, given name] and count the given names, I will get
-    // [number of languages] * [number of given names] as the count, rather than [number of given
-    // names].
-    Metadata groupingMetadata = new MetadataBuilder().build();
-    StructField groupingId = new StructField("789wxyz_id", DataTypes.StringType, false,
-        groupingMetadata);
-    StructField groupingValue = new StructField("789wxyz", DataTypes.StringType, true,
-        groupingMetadata);
-    StructType groupingStruct = new StructType(new StructField[]{groupingId, groupingValue});
-
-    Row groupingRow1 = RowFactory.create("abc1", "en");
-    Row groupingRow2 = RowFactory.create("abc2", "en");
-    Row groupingRow3 = RowFactory.create("abc2", "de");
-    Row groupingRow4 = RowFactory.create("abc3", "en");
-    Row groupingRow5 = RowFactory.create("abc4", "fr");
-    // This one might be doubled up due to joining against some other multi-cardinality grouping.
-    Row groupingRow6 = RowFactory.create("abc4", "fr");
-    Dataset<Row> groupingDataset = spark.createDataFrame(
-        Arrays.asList(groupingRow1, groupingRow2, groupingRow3, groupingRow4, groupingRow5,
-            groupingRow6),
-        groupingStruct);
-    Dataset<Row> groupedResult = groupingDataset.join(resultDataset,
-        resultDataset.col("123abcd_id").equalTo(groupingDataset.col("789wxyz_id")), "left_outer");
-    groupedResult = groupedResult.groupBy(groupingDataset.col("789wxyz"))
-        .agg(result.getAggregationColumn());
-    List<Row> groupedResultRows = groupedResult.collectAsList();
-
-    assertThat(groupedResultRows.size()).isEqualTo(3);
-    Row groupedResultRow = groupedResultRows.get(0);
-    assertThat(groupedResultRow.getString(0)).isEqualTo("en");
-    assertThat(groupedResultRow.getLong(1)).isEqualTo(3);
-    groupedResultRow = groupedResultRows.get(1);
-    assertThat(groupedResultRow.getString(0)).isEqualTo("de");
-    assertThat(groupedResultRow.getLong(1)).isEqualTo(1);
-    groupedResultRow = groupedResultRows.get(2);
-    assertThat(groupedResultRow.getString(0)).isEqualTo("fr");
-    // This should only be 1, as there is only one given name for all of the Patient resources
-    // captured in the "fr" group.
-    assertThat(groupedResultRow.getLong(1)).isEqualTo(1);
+		// check results
+		assertThat(result).aggResult().isValue().isEqualTo(4L);
+		assertThat(result).aggByIdResult().hasRows(
+				RowFactory.create("abc1", 1L), 
+				RowFactory.create("abc2", 2L),
+				RowFactory.create("abc4", 1L) 				
+		);
   }
 
   @Test

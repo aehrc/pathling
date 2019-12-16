@@ -31,7 +31,7 @@ public class FirstFunctionTest extends FunctionTest {
 
 	
 	@Test
-	public void testIsNoOpForListOfResources() {
+	public void testGetsFirstResouceCorrectly() {
 		Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
 		// Build up an input for the function.
 		ParsedExpression input = createResourceParsedExpression(dataset, ResourceType.PATIENT);

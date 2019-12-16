@@ -2,8 +2,11 @@ package au.csiro.clinsight.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+
 import au.csiro.clinsight.query.functions.FunctionInput;
 import au.csiro.clinsight.query.parsing.ParsedExpression;
+import au.csiro.clinsight.query.parsing.ParsedExpression.FhirPathType;
 
 public class ParsedExpressionAssert {
 	private final ParsedExpression parsedExpression;
@@ -29,6 +32,12 @@ public class ParsedExpressionAssert {
 	
 	public ParsedExpressionAssert isResultFor(FunctionInput input) {
 		assertThat(parsedExpression.getFhirPath()).isEqualTo(input.getExpression());
+		return this;
+	}
+	
+	public ParsedExpressionAssert isOfType(FHIRDefinedType fhirType, FhirPathType fhirPathType) {
+		assertThat(parsedExpression.getFhirPathType()).isEqualTo(fhirPathType);
+		assertThat(parsedExpression.getFhirType()).isEqualTo(fhirType);
 		return this;
 	}
 	
