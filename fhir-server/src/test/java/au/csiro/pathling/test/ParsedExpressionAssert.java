@@ -42,6 +42,10 @@ public class ParsedExpressionAssert {
     return this;
   }
 
+  public ParsedExpressionAssert isOfBooleanType() {
+    return isOfType(FHIRDefinedType.BOOLEAN, FhirPathType.BOOLEAN).isPrimitive();
+  }
+    
   public ParsedExpressionAssert isOfType(FHIRDefinedType fhirType, FhirPathType fhirPathType) {
     assertThat(parsedExpression.getFhirPathType()).isEqualTo(fhirPathType);
     assertThat(parsedExpression.getFhirType()).isEqualTo(fhirType);

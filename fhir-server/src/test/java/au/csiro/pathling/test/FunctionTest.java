@@ -15,6 +15,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.HumanName;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.Before;
 
 public abstract class FunctionTest {
@@ -44,6 +45,18 @@ public abstract class FunctionTest {
     return input;
   }
 
+  protected ParsedExpression createLiteralExpression(String value) {
+    // Build up the right expression for the function.
+    ParsedExpression expression = new ParsedExpression();
+    expression.setFhirPath("'female'");
+    expression.setFhirPathType(FhirPathType.STRING);
+    expression.setFhirType(FHIRDefinedType.STRING);
+    expression.setLiteralValue(new StringType(value));
+    expression.setSingular(true);
+    expression.setPrimitive(true);
+    return expression;
+  }
+  
   protected ParsedExpression createPrimitiveParsedExpression(Dataset<Row> dataset) {
     Column idColumn = dataset.col(dataset.columns()[0]);
     Column valueColumn = dataset.col(dataset.columns()[1]);

@@ -21,6 +21,14 @@ public class StringPrimitiveRowFixture {
 
   private final static StructType STRING_SCHEMA = createPrimitiveRowStruct(DataTypes.StringType);
 
+  
+  public final static String STRING_ROW_ID_1 = "abc1";
+  public final static String STRING_ROW_ID_2 = "abc2";
+  public final static String STRING_ROW_ID_3 = "abc3";
+  public final static String STRING_ROW_ID_4 = "abc4";
+  public final static String STRING_ROW_ID_5 = "abc5";
+
+  
   public final static Row STRING_1_1_JUDE = RowFactory.create("abc1", "Jude");
   public final static Row STRING_2_1_SAMUEL = RowFactory.create("abc2", "Samuel");
   public final static Row STRING_2_2_TOMAS = RowFactory.create("abc2", "Thomas");
@@ -35,10 +43,21 @@ public class StringPrimitiveRowFixture {
       .asList(STRING_1_1_JUDE, STRING_2_1_SAMUEL, STRING_2_2_TOMAS, STRING_3_1_NULL,
           STRING_4_1_ADAM, STRING_4_2_ADAM, STRING_5_1_NULL, STRING_5_2_NULL);
 
+  public final static List<Row> STRING_NULL_ROWS = Arrays
+      .asList(STRING_3_1_NULL,STRING_5_1_NULL, STRING_5_2_NULL);
+  
   public final static List<Row> NO_ROWS = Collections.emptyList();
 
   public static Dataset<Row> createCompleteDataset(SparkSession spark) {
     return spark.createDataFrame(STRING_ALL_ROWS, STRING_SCHEMA);
+  }
+  
+  public static Dataset<Row> createDataset(SparkSession spark, Row... rows) {
+    return spark.createDataFrame(Arrays.asList(rows), STRING_SCHEMA);
+  }
+
+  public static Dataset<Row> createNullRowsDataset(SparkSession spark) {
+    return spark.createDataFrame(STRING_NULL_ROWS, STRING_SCHEMA);
   }
 
   public static Dataset<Row> createEmptyDataset(SparkSession spark) {

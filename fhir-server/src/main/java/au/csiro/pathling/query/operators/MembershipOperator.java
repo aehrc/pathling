@@ -4,7 +4,7 @@
 
 package au.csiro.pathling.query.operators;
 
-import static org.apache.spark.sql.functions.max;
+import static org.apache.spark.sql.functions.*;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
@@ -34,45 +34,49 @@ public class MembershipOperator implements BinaryOperator {
   public ParsedExpression invoke(@Nonnull BinaryOperatorInput input) {
     // Assign the operands in an order based upon whether this is an "in" or a "contains" operator.
     // The "contains" operator is the reverse of "in".
-    ParsedExpression left = input.getLeft();
-    ParsedExpression right = input.getRight();
+    ParsedExpression element = input.getLeft();
+    ParsedExpression collection = input.getRight();
     if (operator.equals("contains")) {
-      right = input.getLeft();
-      left = input.getRight();
+      collection = input.getLeft();
+      element = input.getRight();
     } else {
       assert operator.equals("in") : "Unsupported membership operator encountered: " + operator;
     }
 
     // Check that the "left" operand is singular.
-    if (!left.isSingular()) {
+    if (!element.isSingular()) {
       throw new InvalidRequestException(
-          "Left operand to " + operator + " operator is not singular: " + left.getFhirPath());
+          "Left operand to " + operator + " operator is not singular: " + element.getFhirPath());
     }
 
     String fhirPath =
-        left.getFhirPath() + " " + operator + " " + right.getFhirPath();
+        element.getFhirPath() + " " + operator + " " + collection.getFhirPath();
 
     // Create a new dataset which joins left and right and aggregates on the resource ID based upon
     // whether the left expression is within the set of values in the right expression.
-    Dataset<Row> leftDataset = left.getDataset(),
-        rightDataset = right.getDataset();
-    Column leftIdColumn = left.getIdColumn(),
-        leftColumn = left.getValueColumn(),
-        rightIdColumn = right.getIdColumn(),
-        rightColumn = right.getValueColumn();
-    Dataset<Row> membershipDataset = leftDataset
-        .join(rightDataset, leftIdColumn.equalTo(rightIdColumn), "left_outer");
+    Dataset<Row>  elementDataset = element.getDataset(); 		
+    Dataset<Row>  collectionDataset = collection.getDataset();
+    
+    Column    collectionIdColumn = collection.getIdColumn();
+    Column    collectionColumn = collection.getValueColumn();
+    Column elementColumn = element.isLiteral() ? lit(element.getJavaLiteralValue()): element.getValueColumn();
+    Column elementIdColumn = element.getIdColumn();
+    
+    Dataset<Row> membershipDataset = element.isLiteral() ? collectionDataset: collectionDataset.join(elementDataset, collectionIdColumn.equalTo(elementIdColumn), "left_outer");
 
     // We take the max of the boolean equality values, aggregated by the resource ID.
-    Column equalityColumn = leftColumn.equalTo(rightColumn);
-    membershipDataset = membershipDataset.select(leftIdColumn, equalityColumn);
-    membershipDataset.groupBy().agg(max(equalityColumn));
-    Column membershipIdCol = membershipDataset.col(membershipDataset.columns()[0]);
+    Column equalityColumn = when(elementColumn.isNull(), lit(null))
+        .when(collectionColumn.isNull(), lit(null))
+        .otherwise(collectionColumn.equalTo(elementColumn));
+       
+    membershipDataset = membershipDataset.select(collectionIdColumn, equalityColumn.alias("equality"));
+    membershipDataset = membershipDataset.groupBy(collectionIdColumn).agg(max(membershipDataset.col("equality")));
+    Column idColumn = membershipDataset.col(membershipDataset.columns()[0]);
     Column valueColumn = membershipDataset.col(membershipDataset.columns()[1]);
 
-    // Join the left dataset to the dataset with the membership result.
-    Dataset<Row> dataset = leftDataset
-        .join(membershipDataset, leftIdColumn.equalTo(membershipIdCol), "left_outer");
+   // // Join the left dataset to the dataset with the membership result.
+   //. Dataset<Row> dataset = elementDataset
+    //    .join(membershipDataset, leftIdColumn.equalTo(membershipIdCol), "left_outer");
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -81,8 +85,8 @@ public class MembershipOperator implements BinaryOperator {
     result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);
     result.setSingular(true);
-    result.setDataset(dataset);
-    result.setIdColumn(leftIdColumn);
+    result.setDataset(membershipDataset);
+    result.setIdColumn(idColumn);
     result.setValueColumn(valueColumn);
     return result;
   }
