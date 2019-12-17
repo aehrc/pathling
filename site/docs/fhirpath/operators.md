@@ -26,6 +26,9 @@ Pathling:
 
 ## Equality
 
+Source:
+[https://hl7.org/fhirpath/2018Sep/index.html#equality](https://hl7.org/fhirpath/2018Sep/index.html#equality)
+
 The `=` operator returns `true` if the left collection is equal to the right
 collection, and a `false` otherwise. The `!=` is the inverse of the `=`
 operator.
@@ -33,6 +36,9 @@ operator.
 <div class="callout warning">The equality operator in Pathling currently only supports singular, primitive operands of the same type.</div>
 
 ## Comparison
+
+Source:
+[https://hl7.org/fhirpath/2018Sep/index.html#comparison](https://hl7.org/fhirpath/2018Sep/index.html#comparison)
 
 The following comparison operators are supported:
 
@@ -60,6 +66,9 @@ All comparison operators return a Boolean value.
 
 ## Math
 
+Source:
+[https://hl7.org/fhirpath/2018Sep/index.html#math](https://hl7.org/fhirpath/2018Sep/index.html#math)
+
 The following math operators are supported:
 
 - `+` - Addition
@@ -74,6 +83,9 @@ All math operators in Pathling support only Integer and Decimal operands. `+`,
 
 ## Boolean logic
 
+Source:
+[https://hl7.org/fhirpath/2018Sep/index.html#boolean-logic](https://hl7.org/fhirpath/2018Sep/index.html#boolean-logic)
+
 The following boolean operations are supported:
 
 - `and`
@@ -85,6 +97,9 @@ Both operands to a boolean operator must be a singular Boolean value. All
 boolean operators return a Boolean value.
 
 ## Membership
+
+Source:
+[https://hl7.org/fhirpath/2018Sep/index.html#collections-2](https://hl7.org/fhirpath/2018Sep/index.html#collections-2)
 
 The following membership operators are supported:
 

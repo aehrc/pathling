@@ -156,9 +156,12 @@ $link-color: #2ca0b6;
 }
 
 .callout {
+  padding: 0.75rem;
+  margin: 0.75rem 0;
   &.warning {
     background-color: #faecdf;
-    padding: 0.75rem;
-    margin: 0.75rem 0;
+  }
+  &.info {
+    background-color: #dbebf5;
   }
 }

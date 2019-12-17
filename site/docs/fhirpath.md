@@ -26,8 +26,7 @@ with links back to the relevant sections of the FHIRPath specifications.
 For convenience, this document does contain redundant information copied from
 the source specification. Any variations from the specification are highlighted.
 
-## Overview
-
 Recommended reading from the FHIRPath specification:
-[Overview](https://hl7.org/fhirpath/2018Sep/index.html#overview) and
-[Navigation model](https://hl7.org/fhirpath/2018Sep/index.html#navigation-model).
+
+- [Overview](https://hl7.org/fhirpath/2018Sep/index.html#overview) and
+- [Navigation model](https://hl7.org/fhirpath/2018Sep/index.html#navigation-model).

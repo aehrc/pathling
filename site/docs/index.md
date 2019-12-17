@@ -9,10 +9,13 @@ and augment tasks related to health data analytics.
 
 ## Functionality
 
-The diagram below shows the additional functionality that we have defined as
-part of this "FHIR Analytics Server". Pathling has currently only implemented
-the `import` and `aggregate` operations - but this serves to give you an idea of
-the bigger picture that we are working towards.
+The diagram below shows the functionality that we envision to be comprised
+within a "FHIR Analytics Server". Pathling has currently only implemented the
+[import](./import.html) and [aggregate](./aggregate.html) operations - but this
+serves to give you an idea of the bigger picture that we are working towards.
+
+See [Roadmap](./roadmap.html) for more information about new features that are
+currently under development.
 
 <img src="/images/analytics-api.png" 
      srcset="/images/analytics-api@2x.png 2x, /images/analytics-api.png 1x"/>
