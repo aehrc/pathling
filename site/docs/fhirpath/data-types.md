@@ -3,12 +3,13 @@ layout: page
 title: Data types
 nav_order: 1
 parent: FHIRPath
+grand_parent: Documentation
 ---
 
 # Data types
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#literals](https://hl7.org/fhirpath/2018Sep/index.html#literals)
+Source: [Literals](https://hl7.org/fhirpath/2018Sep/index.html#literals) and
+[Using FHIR types in expressions](https://hl7.org/fhir/fhirpath.html#types)
 
 The FHIRPath implementation within Pathling supports the following types of
 literal expressions:
@@ -172,3 +173,5 @@ The Coding literal can take two forms:
 Not all code systems require the use of a version to unambiguously specify a
 code - see
 [Versioning Code Systems](https://www.hl7.org/fhir/codesystem.html#versioning).
+
+Next: [Operators](./operators.html)

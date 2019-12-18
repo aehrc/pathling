@@ -1,7 +1,8 @@
 ---
 layout: page
 title: FHIRPath
-nav_order: 1
+nav_order: 0
+parent: Documentation
 has_children: true
 ---
 
@@ -11,7 +12,7 @@ Pathling leverages the [FHIRPath](https://hl7.org/fhirpath/2018Sep/index.html)
 language in order to abstract away some of the complexity of navigating and
 interacting with FHIR data structures.
 
-FHIRPath is actually a model-independent language at its core. For our purposes,
+FHIRPath is actually a model-independent language at its core. For this reason,
 the FHIRPath language is defined in two places:
 
 - [https://hl7.org/fhirpath/2018Sep/index.html](https://hl7.org/fhirpath/2018Sep/index.html) -

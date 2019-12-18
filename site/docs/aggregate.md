@@ -1,7 +1,8 @@
 ---
 layout: page
 title: Aggregate
-nav_order: 3
+nav_order: 2
+parent: Documentation
 ---
 
 # Aggregate
@@ -75,3 +76,5 @@ following parameters:
     were requested in the query. There will be one result for each aggregation
     within the query, and the type of each result will correspond to the type
     returned by the expression of the corresponding aggregation.
+
+Next: [Configuration and deployment](./deployment.html)

@@ -3,12 +3,12 @@ layout: page
 title: Functions
 nav_order: 3
 parent: FHIRPath
+grand_parent: Documentation
 ---
 
 # Functions
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#functions-2](https://hl7.org/fhirpath/2018Sep/index.html#functions-2)
+Source: [Functions](https://hl7.org/fhirpath/2018Sep/index.html#functions-2)
 
 FHIRPath supports the notion of functions, which all take a collection of values
 as input and produce another collection as output and may take parameters.
@@ -35,8 +35,7 @@ The notation used to describe the type signature of each function is as follows:
 
 ## resolve
 
-Source:
-[https://hl7.org/fhir/fhirpath.html#functions](https://hl7.org/fhir/fhirpath.html#functions)
+Source: [Additional functions](https://hl7.org/fhir/fhirpath.html#functions)
 
 ```
 Reference -> resolve(): collection<Resource>
@@ -91,7 +90,7 @@ Patient.reverseResolve(Encounter.subject).reasonCode
 ## ofType
 
 Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#oftypetype-identifier-collection](https://hl7.org/fhirpath/2018Sep/index.html#oftypetype-identifier-collection)
+[ofType](https://hl7.org/fhirpath/2018Sep/index.html#oftypetype-identifier-collection)
 
 ```
 collection -> ofType(type: Resource): collection
@@ -114,8 +113,7 @@ Condition.subject.resolve().ofType(Patient).gender
 
 ## count
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#count-integer](https://hl7.org/fhirpath/2018Sep/index.html#count-integer)
+Source: [count](https://hl7.org/fhirpath/2018Sep/index.html#count-integer)
 
 ```
 collection -> count() : Integer
@@ -139,8 +137,7 @@ Patient.name.given.count()
 
 ## first
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#first-collection](https://hl7.org/fhirpath/2018Sep/index.html#first-collection)
+Source: [first](https://hl7.org/fhirpath/2018Sep/index.html#first-collection)
 
 ```
 collection -> first() : collection
@@ -164,8 +161,7 @@ Patient.name.given.count()
 
 ## memberOf
 
-Source:
-[https://hl7.org/fhir/fhirpath.html#functions](https://hl7.org/fhir/fhirpath.html#functions)
+Source: [Additional functions](https://hl7.org/fhir/fhirpath.html#functions)
 
 ```
 collection<Coding|CodeableConcept> -> memberOf() : collection<Boolean>
@@ -179,3 +175,5 @@ whether the concept is a member of the ValueSet with the specified `url`.
     The <code>memberOf</code> function is an <em>terminology function</em>, which means that it requires a configured
     terminology service. See <a href="../deployment.html">Configuration and deployment</a> for details.
 </div>
+
+Next: [Import](../import.html)

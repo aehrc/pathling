@@ -149,7 +149,7 @@ $link-color: #2ca0b6;
 
 .navigation-list-item {
   .active {
-    .navigation-list-link {
+    > .navigation-list-link {
       font-weight: 700;
     }
   }

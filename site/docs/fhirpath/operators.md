@@ -3,12 +3,12 @@ layout: page
 title: Operators
 nav_order: 2
 parent: FHIRPath
+grand_parent: Documentation
 ---
 
 # Operators
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#operations](https://hl7.org/fhirpath/2018Sep/index.html#operations)
+Source: [Operations](https://hl7.org/fhirpath/2018Sep/index.html#operations)
 
 Operators are special symbols or keywords that take a left and right operand,
 returning some sort of result.
@@ -26,8 +26,7 @@ Pathling:
 
 ## Equality
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#equality](https://hl7.org/fhirpath/2018Sep/index.html#equality)
+Source: [Equality](https://hl7.org/fhirpath/2018Sep/index.html#equality)
 
 The `=` operator returns `true` if the left collection is equal to the right
 collection, and a `false` otherwise. The `!=` is the inverse of the `=`
@@ -37,8 +36,7 @@ operator.
 
 ## Comparison
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#comparison](https://hl7.org/fhirpath/2018Sep/index.html#comparison)
+Source: [Comparison](https://hl7.org/fhirpath/2018Sep/index.html#comparison)
 
 The following comparison operators are supported:
 
@@ -66,8 +64,7 @@ All comparison operators return a Boolean value.
 
 ## Math
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#math](https://hl7.org/fhirpath/2018Sep/index.html#math)
+Source: [Math](https://hl7.org/fhirpath/2018Sep/index.html#math)
 
 The following math operators are supported:
 
@@ -84,7 +81,7 @@ All math operators in Pathling support only Integer and Decimal operands. `+`,
 ## Boolean logic
 
 Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#boolean-logic](https://hl7.org/fhirpath/2018Sep/index.html#boolean-logic)
+[Boolean logic](https://hl7.org/fhirpath/2018Sep/index.html#boolean-logic)
 
 The following boolean operations are supported:
 
@@ -98,8 +95,7 @@ boolean operators return a Boolean value.
 
 ## Membership
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#collections-2](https://hl7.org/fhirpath/2018Sep/index.html#collections-2)
+Source: [Collections](https://hl7.org/fhirpath/2018Sep/index.html#collections-2)
 
 The following membership operators are supported:
 
@@ -113,3 +109,5 @@ right-hand side is empty, the result is `false`. If the left operand has
 multiple items, an error is returned.
 
 The `contains` operator is the inverse of `in`.
+
+Next: [Functions](./functions.html)

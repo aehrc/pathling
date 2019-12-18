@@ -1,7 +1,8 @@
 ---
 layout: page
 title: Import
-nav_order: 2
+nav_order: 1
+parent: Documentation
 ---
 
 # Import
@@ -50,3 +51,5 @@ following parameters:
 The response from the `$import` operation is an
 [OperationOutcome](https://hl7.org/fhir/operationoutcome.html) resource, which
 will indicate success or a description of any errors that occurred.
+
+Next: [Aggregate](./aggregate.html)

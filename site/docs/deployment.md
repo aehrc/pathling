@@ -1,7 +1,8 @@
 ---
 layout: page
 title: Configuration and deployment
-nav_order: 4
+nav_order: 3
+parent: Documentation
 ---
 
 # Configuration and deployment
@@ -53,4 +54,6 @@ The following variables can be used to configure a Pathling instance:
 
 Pathling can optionally connect to, or run within, an
 [Apache Spark](https://spark.apache.org/) cluster. Pathling runs Spark 2.4.4
-(Scala 2.11), with Hadoop version 2.7.7
+(Scala 2.11), with Hadoop version 2.7.7.
+
+Next: [Roadmap](./roadmap)

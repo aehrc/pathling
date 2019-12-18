@@ -3,12 +3,13 @@ layout: page
 title: Path selection
 nav_order: 0
 parent: FHIRPath
+grand_parent: Documentation
 ---
 
 # Path selection
 
 Source:
-[http://hl7.org/fhirpath/2018Sep/index.html#path-selection](http://hl7.org/fhirpath/2018Sep/index.html#path-selection)
+[Path selection](http://hl7.org/fhirpath/2018Sep/index.html#path-selection)
 
 FHIRPath allows navigation through the tree by composing a path of concatenated
 labels, e.g.
@@ -50,8 +51,7 @@ on the context.
 
 ## Collections
 
-Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#collections](https://hl7.org/fhirpath/2018Sep/index.html#collections)
+Source: [Collections](https://hl7.org/fhirpath/2018Sep/index.html#collections)
 
 Collections are fundamental to FHIRPath, in that the result of every expression
 is a collection, even if that expression only results in a single element. This
@@ -61,31 +61,25 @@ traversal.
 
 Within FHIRPath, a collection is:
 
-- Ordered - The order of items in the collection is important and is preserved
-  through operations as much as possible.
-- Non-Unique - Duplicate elements are allowed within a collection. Some
+- **Ordered** - The order of items in the collection is important and is
+  preserved through operations as much as possible.
+- **Non-Unique** - Duplicate elements are allowed within a collection. Some
   functions, such as distinct() and the union operator | produce collections of
   unique elements, but in general, duplicate elements are allowed.
-- Indexed - Each item in a collection can be uniquely addressed by it’s index,
-  i.e. ordinal position within the collection.
+- **Indexed** - Each item in a collection can be uniquely addressed by it’s
+  index, i.e. ordinal position within the collection.
 - Unless specified otherwise by the underlying Object Model, the first item in a
   collection has index 0. Note that if the underlying model specifies that a
   collection is 1-based (the only reasonable alternative to 0-based
   collections), any collections generated from operations on the 1-based list
   are 0-based.
-- Countable - The number of items in a given collection can always be determined
-  using the count() function
-
-Note that the outcome of operations like children() and descendants() cannot be
-assumed to be in any meaningful order, and first(), last(), tail(), skip() and
-take() should not be used on collections derived from these paths. Note that
-some implementations may follow the logical order implied by the data model, and
-some may not, and some may be different depending on the underlying source.
+- **Countable** - The number of items in a given collection can always be
+  determined using the count() function
 
 ## Paths and polymorphic items
 
 Source:
-[https://hl7.org/fhirpath/2018Sep/index.html#paths-and-polymorphic-items](https://hl7.org/fhirpath/2018Sep/index.html#paths-and-polymorphic-items)
+[Paths and polymorphic items](https://hl7.org/fhirpath/2018Sep/index.html#paths-and-polymorphic-items)
 
 In the underlying representation of data, nodes may be typed and represent
 polymorphic items. Paths may either ignore the type of a node, and continue
@@ -98,3 +92,5 @@ Observation.value.ofType(Quantity).unit - only values that are of type Quantity
 ```
 
 <div class="callout warning">The <code>is</code> and <code>as</code> operators from the FHIRPath specification are not currently implemented.</div>
+
+Next: [Data types](./data-types.html)

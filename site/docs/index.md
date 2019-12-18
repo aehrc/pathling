@@ -1,7 +1,10 @@
 ---
 layout: page
 title: Documentation
+has_children: true
 ---
+
+# Documentation
 
 Pathling is a [HL7 FHIR&reg;](https://hl7.org/fhir/) server that implements
 additional functionality designed to ease the delivery of analytics-enabled apps
@@ -36,9 +39,9 @@ FHIRPath [here](./fhirpath.html).
 
 ## Cluster execution
 
-Pathling has the ability to integrate with Apache Spark in order to enable the
-execution of queries and other operations with the help of a distributed
-computing cluster.
+Pathling has the ability to integrate with
+[Apache Spark](https://spark.apache.org/) in order to enable the execution of
+queries and other operations with the help of a distributed computing cluster.
 
 You can get further information about this functionality
 [here](./deployment.html).
