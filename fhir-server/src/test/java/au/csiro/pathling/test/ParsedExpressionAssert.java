@@ -7,6 +7,7 @@ package au.csiro.pathling.test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.query.functions.FunctionInput;
+import au.csiro.pathling.query.operators.BinaryOperatorInput;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -42,6 +43,11 @@ public class ParsedExpressionAssert {
     return this;
   }
 
+  public ParsedExpressionAssert isResultFor(BinaryOperatorInput input) {
+    assertThat(parsedExpression.getFhirPath()).isEqualTo(input.getExpression());
+    return this;
+  }
+  
   public ParsedExpressionAssert isOfBooleanType() {
     return isOfType(FHIRDefinedType.BOOLEAN, FhirPathType.BOOLEAN).isPrimitive();
   }

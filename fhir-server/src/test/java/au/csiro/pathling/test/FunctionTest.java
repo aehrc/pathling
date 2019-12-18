@@ -48,7 +48,7 @@ public abstract class FunctionTest {
   protected ParsedExpression createLiteralExpression(String value) {
     // Build up the right expression for the function.
     ParsedExpression expression = new ParsedExpression();
-    expression.setFhirPath("'female'");
+    expression.setFhirPath("'" + value + "'");
     expression.setFhirPathType(FhirPathType.STRING);
     expression.setFhirType(FHIRDefinedType.STRING);
     expression.setLiteralValue(new StringType(value));

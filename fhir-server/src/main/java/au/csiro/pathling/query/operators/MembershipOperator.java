@@ -46,11 +46,11 @@ public class MembershipOperator implements BinaryOperator {
     // Check that the "left" operand is singular.
     if (!element.isSingular()) {
       throw new InvalidRequestException(
-          "Left operand to " + operator + " operator is not singular: " + element.getFhirPath());
+          "Element operand to " + operator + " operator is not singular: " + element.getFhirPath());
     }
 
     String fhirPath =
-        element.getFhirPath() + " " + operator + " " + collection.getFhirPath();
+    		collection.getFhirPath() + "." + operator + "(" + element.getFhirPath() + ")";
 
     // Create a new dataset which joins left and right and aggregates on the resource ID based upon
     // whether the left expression is within the set of values in the right expression.
@@ -62,21 +62,22 @@ public class MembershipOperator implements BinaryOperator {
     Column elementColumn = element.isLiteral() ? lit(element.getJavaLiteralValue()): element.getValueColumn();
     Column elementIdColumn = element.getIdColumn();
     
-    Dataset<Row> membershipDataset = element.isLiteral() ? collectionDataset: collectionDataset.join(elementDataset, collectionIdColumn.equalTo(elementIdColumn), "left_outer");
+    Dataset<Row> membershipDataset = element.isLiteral() ? collectionDataset:
+    	collectionDataset.join(elementDataset, collectionIdColumn.equalTo(elementIdColumn), "left_outer");
 
     // We take the max of the boolean equality values, aggregated by the resource ID.
-    Column equalityColumn = when(elementColumn.isNull(), lit(null))
-        .when(collectionColumn.isNull(), lit(null))
+    Column equalityColumn = 
+        when(collectionColumn.isNull(), lit(null))
+        .when(elementColumn.isNull(), lit(false))
         .otherwise(collectionColumn.equalTo(elementColumn));
-       
+    
+    
+    // Aliasing of equality columnn here is necessary as otherwise it cannot be 
+    // (for whatever reason) resolved in the aggregation
     membershipDataset = membershipDataset.select(collectionIdColumn, equalityColumn.alias("equality"));
     membershipDataset = membershipDataset.groupBy(collectionIdColumn).agg(max(membershipDataset.col("equality")));
     Column idColumn = membershipDataset.col(membershipDataset.columns()[0]);
     Column valueColumn = membershipDataset.col(membershipDataset.columns()[1]);
-
-   // // Join the left dataset to the dataset with the membership result.
-   //. Dataset<Row> dataset = elementDataset
-    //    .join(membershipDataset, leftIdColumn.equalTo(membershipIdCol), "left_outer");
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -86,8 +87,7 @@ public class MembershipOperator implements BinaryOperator {
     result.setPrimitive(true);
     result.setSingular(true);
     result.setDataset(membershipDataset);
-    result.setIdColumn(idColumn);
-    result.setValueColumn(valueColumn);
+    result.setHashedValue(idColumn, valueColumn);
     return result;
   }
 }
