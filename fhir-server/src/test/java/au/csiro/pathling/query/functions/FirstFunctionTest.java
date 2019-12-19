@@ -31,7 +31,7 @@ public class FirstFunctionTest extends FunctionTest {
 
 
   @Test
-  public void testGetsFirstResouceCorrectly() {
+  public void testGetsFirstResourceCorrectly() {
     Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
     // Build up an input for the function.
     ParsedExpression input = createResourceParsedExpression(dataset, ResourceType.PATIENT);
@@ -48,17 +48,16 @@ public class FirstFunctionTest extends FunctionTest {
         .hasSameTypeAs(input)
         .isResource()
         .isSelection()
-        .isAggreation();
-    // Check that the correct rows were included in the result
+        .isAggregation();
+    // Check that the correct rows were included in the result.
     assertThat(result).selectResult().hasRows(PatientResourceRowFixture.PATIENT_ALL_ROWS);
-    //TODO: Not sure if aggregation make any sense here
   }
 
   @Test
   public void testSelectsFirstValuePerResourceFromListOfValues() {
     Dataset<Row> dataset = StringPrimitiveRowFixture.createCompleteDataset(spark);
 
-    // Build up an input for the functionm
+    // Build up an input for the function.
     ParsedExpression input = createPrimitiveParsedExpression(dataset);
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);
@@ -67,21 +66,21 @@ public class FirstFunctionTest extends FunctionTest {
     // Execute the fist function.
     ParsedExpression result = new FirstFunction().invoke(firstInput);
 
+    // Check that the correct rows were included in the result.
     assertThat(result)
         .isResultFor(firstInput)
         .hasSameTypeAs(input)
         .isPrimitive()
         .isSingular()
         .isSelection()
-        .isAggreation();
-    // Check that the correct rows were included in the result
+        .isAggregation();
 
     List<Row> expectedRows = Arrays
-        .asList(STRING_1_1_JUDE, STRING_2_1_SAMUEL, STRING_3_1_NULL, STRING_4_1_ADAM,
-            STRING_5_1_NULL);
+        .asList(STRING_1_JUDE, STRING_2_SAMUEL, STRING_3_NULL, STRING_4_ADAM,
+            STRING_5_NULL);
     assertThat(result).selectResult().hasRows(expectedRows);
     assertThat(result).aggByIdResult().hasRows(expectedRows);
-    assertThat(result).aggResult().isValue().isEqualTo((STRING_1_1_JUDE.getString(1)));
+    assertThat(result).aggResult().isValue().isEqualTo((STRING_1_JUDE.getString(1)));
   }
 
   @Test
@@ -103,7 +102,7 @@ public class FirstFunctionTest extends FunctionTest {
         .isPrimitive()
         .isSingular()
         .isSelection()
-        .isAggreation();
+        .isAggregation();
 
     // Check that the correct rows were included in the result
     assertThat(result).selectResult().isEmpty();

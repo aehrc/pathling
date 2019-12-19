@@ -262,6 +262,10 @@ public class ParsedExpression  implements Joinable {
     this.literalValue = literalValue;
   }
 
+  public boolean isLiteral() {
+  	return literalValue != null;
+  }
+  
   public boolean isSingular() {
     return singular;
   }

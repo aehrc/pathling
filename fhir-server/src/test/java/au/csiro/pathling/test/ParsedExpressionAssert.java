@@ -5,12 +5,15 @@
 package au.csiro.pathling.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import au.csiro.pathling.query.functions.FunctionInput;
+import au.csiro.pathling.query.operators.BinaryOperatorInput;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+/**
+ * @author Piotr Szul
+ */
 public class ParsedExpressionAssert {
 
   private final ParsedExpression parsedExpression;
@@ -26,20 +29,29 @@ public class ParsedExpressionAssert {
   }
 
   public DatasetAssert aggByIdResult() {
-    return new DatasetAssert(parsedExpression.getAggregationDataset()
-        .groupBy(parsedExpression.getAggregationIdColumn())
-        .agg(parsedExpression.getAggregationColumn())
-        .orderBy(parsedExpression.getAggregationIdColumn()));
+    return new DatasetAssert(
+        parsedExpression.getAggregationDataset().groupBy(parsedExpression.getAggregationIdColumn())
+            .agg(parsedExpression.getAggregationColumn())
+            .orderBy(parsedExpression.getAggregationIdColumn()));
   }
 
   public DatasetAssert aggResult() {
-    return new DatasetAssert(parsedExpression.getAggregationDataset()
-        .agg(parsedExpression.getAggregationColumn()));
+    return new DatasetAssert(
+        parsedExpression.getAggregationDataset().agg(parsedExpression.getAggregationColumn()));
   }
 
   public ParsedExpressionAssert isResultFor(FunctionInput input) {
     assertThat(parsedExpression.getFhirPath()).isEqualTo(input.getExpression());
     return this;
+  }
+
+  public ParsedExpressionAssert isResultFor(BinaryOperatorInput input) {
+    assertThat(parsedExpression.getFhirPath()).isEqualTo(input.getExpression());
+    return this;
+  }
+
+  public ParsedExpressionAssert isOfBooleanType() {
+    return isOfType(FHIRDefinedType.BOOLEAN, FhirPathType.BOOLEAN).isPrimitive();
   }
 
   public ParsedExpressionAssert isOfType(FHIRDefinedType fhirType, FhirPathType fhirPathType) {
@@ -64,7 +76,7 @@ public class ParsedExpressionAssert {
     return this;
   }
 
-  public ParsedExpressionAssert isAggreation() {
+  public ParsedExpressionAssert isAggregation() {
     assertThat(parsedExpression.getIdColumn()).isNotNull();
     assertThat(parsedExpression.getAggregationColumn()).isNotNull();
     assertThat(parsedExpression.getAggregationDataset()).isNotNull();

@@ -1,14 +1,15 @@
 package au.csiro.pathling.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.Arrays;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.assertj.core.api.ObjectAssert;
 
-
+/**
+ * @author Piotr Szul
+ */
 public class DatasetAssert {
 
   private final Dataset<Row> dataset;
@@ -25,6 +26,10 @@ public class DatasetAssert {
   public DatasetAssert hasRows(List<Row> expected) {
     assertThat(dataset.collectAsList()).isEqualTo(expected);
     return this;
+  }
+
+  public DatasetAssert hasRows(RowListBuilder expected) {
+    return hasRows(expected.build());
   }
 
   public DatasetAssert hasRows(Row... expected) {
