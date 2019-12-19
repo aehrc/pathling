@@ -16,6 +16,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
+import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -74,6 +75,9 @@ public class AnalyticsServer extends RestfulServer {
       initializeAggregateExecutor();
       declareProviders();
       defineCorsConfiguration();
+
+      // Respond with HTML when asked.
+      registerInterceptor(new ResponseHighlighterInterceptor());
 
       // Initialise the capability statement.
       AnalyticsServerCapabilities serverCapabilities = new AnalyticsServerCapabilities(
