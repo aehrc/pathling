@@ -70,6 +70,7 @@ public class ImportProvider {
     if (sourceParams.isEmpty()) {
       throw new InvalidRequestException("Must provide at least one source parameter");
     }
+    logger.info("Received $import request");
 
     // For each input within the request, read the resources of the declared type and create
     // the corresponding table in the warehouse.
@@ -108,6 +109,7 @@ public class ImportProvider {
     }
 
     // We return 200, as this operation is currently synchronous.
+    logger.info("Import complete");
     OperationOutcome opOutcome = new OperationOutcome();
     OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
     issue.setSeverity(IssueSeverity.INFORMATION);

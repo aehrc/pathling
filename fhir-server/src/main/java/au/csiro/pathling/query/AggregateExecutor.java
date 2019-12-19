@@ -80,6 +80,14 @@ public class AggregateExecutor {
 
   public AggregateResponse execute(AggregateRequest query) throws InvalidRequestException {
     try {
+      // Log query.
+      logger.info("Received $aggregate request: aggregations=[" + query.getAggregations().stream()
+          .map(Aggregation::getExpression).collect(
+              Collectors.joining(",")) + "] groupings=[" + query.getGroupings().stream()
+          .map(Grouping::getExpression).collect(
+              Collectors.joining(",")) + "] filters=[" + query.getFilters().stream().collect(
+          Collectors.joining(",")) + "]");
+
       // Set up the subject resource dataset.
       ResourceType resourceType = query.getSubjectResource();
       String resourceCode = resourceType.toCode();
@@ -131,14 +139,15 @@ public class AggregateExecutor {
       allExpressions.add(subjectResource);
       allExpressions.addAll(parsedFilters);
       allExpressions.addAll(parsedGroupings);
-      allExpressions.addAll(parsedAggregations.stream().map(ParsedExpression::getAggreationJoinable).collect(Collectors.toList()));
-      Set<Dataset<Row> > joinedDatasets = new HashSet<>();
+      allExpressions.addAll(parsedAggregations.stream().map(ParsedExpression::getAggreationJoinable)
+          .collect(Collectors.toList()));
+      Set<Dataset<Row>> joinedDatasets = new HashSet<>();
       joinedDatasets.add(subjectResource.getDataset());
 
       // Join all datasets together, omitting any duplicates.
       Joinable previous = subjectResource;
       for (int i = 0; i < allExpressions.size(); i++) {
-      	Joinable current = allExpressions.get(i);
+        Joinable current = allExpressions.get(i);
         if (i > 0 && !joinedDatasets.contains(current.getDataset())) {
           result = result.join(current.getDataset(),
               previous.getIdColumn().equalTo(current.getIdColumn()));
@@ -146,8 +155,7 @@ public class AggregateExecutor {
           joinedDatasets.add(current.getDataset());
         }
       }
-      
-      
+
       // Apply filters.
       Optional<Column> filterCondition = parsedFilters.stream()
           .map(ParsedExpression::getValueColumn)

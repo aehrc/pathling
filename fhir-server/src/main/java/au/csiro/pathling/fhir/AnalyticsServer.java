@@ -16,6 +16,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
+import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -75,6 +76,7 @@ public class AnalyticsServer extends RestfulServer {
       initializeAggregateExecutor();
       declareProviders();
       defineCorsConfiguration();
+      configureRequestLogging();
 
       // Respond with HTML when asked.
       registerInterceptor(new ResponseHighlighterInterceptor());
@@ -173,6 +175,19 @@ public class AnalyticsServer extends RestfulServer {
 
     CorsInterceptor interceptor = new CorsInterceptor(corsConfig);
     registerInterceptor(interceptor);
+  }
+
+  private void configureRequestLogging() {
+    // Add the request ID to the logging context before each request.
+    RequestIdInterceptor requestIdInterceptor = new RequestIdInterceptor();
+    registerInterceptor(requestIdInterceptor);
+
+    // Log the request duration following each successful request.
+    LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
+    loggingInterceptor.setLogger(logger);
+    loggingInterceptor.setMessageFormat("Request completed in ${processingTimeMillis} ms");
+    loggingInterceptor.setLogExceptions(false);
+    registerInterceptor(loggingInterceptor);
   }
 
   @Override
