@@ -1,6 +1,8 @@
 title: Pathling
 description: Advanced FHIR&reg; analytics server, capable of performing aggregate queries and transformations of large FHIR datasets.
 theme: just-the-docs
+url: https://pathling.app
+baseurl: /
 sass:
   sass_dir: _sass
 exclude:
