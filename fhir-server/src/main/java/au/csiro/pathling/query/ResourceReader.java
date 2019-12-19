@@ -96,6 +96,8 @@ public class ResourceReader {
 
   public Dataset<Row> read(ResourceType resourceType) {
     String tableUrl = warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
-    return spark.read().parquet(tableUrl);
+    Dataset<Row> resources = spark.read().parquet(tableUrl);
+    resources.cache();
+    return resources;
   }
 }
