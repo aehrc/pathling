@@ -4,20 +4,20 @@
 
 package au.csiro.pathling.query.operators;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static au.csiro.pathling.test.Assertions.assertThat;
+import static au.csiro.pathling.test.StringPrimitiveRowFixture.*;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.test.FunctionTest;
 import au.csiro.pathling.test.StringPrimitiveRowFixture;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import static au.csiro.pathling.test.StringPrimitiveRowFixture.*;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.RowFactory;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import static au.csiro.pathling.test.Assertions.assertThat;
 
 /**
  * @author Piotr Szul
@@ -28,7 +28,7 @@ public class MembershipOperatorTest extends FunctionTest {
 
   @Parameters(name = "{index}:{0}()")
   public static Object[] data() {
-    return new Object[] {"in", "contains"};
+    return new Object[]{"in", "contains"};
   }
 
   private final String operator;
@@ -71,10 +71,8 @@ public class MembershipOperatorTest extends FunctionTest {
     ParsedExpression result = testOperator(collection, element);
 
     assertThat(result).selectResult().hasRows(RowFactory.create(STRING_ROW_ID_1, false),
-        RowFactory.create(STRING_ROW_ID_2, true), RowFactory.create(STRING_ROW_ID_3, null),
-        RowFactory.create(STRING_ROW_ID_4, false), RowFactory.create(STRING_ROW_ID_5, null));
-
-    System.out.println(result.getIdColumn());
+        RowFactory.create(STRING_ROW_ID_2, true), RowFactory.create(STRING_ROW_ID_3, false),
+        RowFactory.create(STRING_ROW_ID_4, false), RowFactory.create(STRING_ROW_ID_5, false));
   }
 
   @Test
@@ -82,8 +80,9 @@ public class MembershipOperatorTest extends FunctionTest {
     ParsedExpression collection =
         createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark));
     ParsedExpression element =
-        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createDataset(spark,
-            RowFactory.create(STRING_ROW_ID_1, "Eva"), STRING_2_1_SAMUEL, STRING_4_1_ADAM));
+        createPrimitiveParsedExpression(StringPrimitiveRowFixture
+            .createDataset(spark, RowFactory.create(STRING_ROW_ID_1, "Eva"), STRING_2_SAMUEL,
+                STRING_3_NULL, STRING_4_ADAM, STRING_5_NULL));
     element.setSingular(true);
     element.setFhirPath("name.family.first()");
 
@@ -91,8 +90,8 @@ public class MembershipOperatorTest extends FunctionTest {
     ParsedExpression result = testOperator(collection, element);
 
     assertThat(result).selectResult().hasRows(RowFactory.create(STRING_ROW_ID_1, false),
-        RowFactory.create(STRING_ROW_ID_2, true), RowFactory.create(STRING_ROW_ID_3, null),
-        RowFactory.create(STRING_ROW_ID_4, true), RowFactory.create(STRING_ROW_ID_5, null));
+        RowFactory.create(STRING_ROW_ID_2, true), RowFactory.create(STRING_ROW_ID_3, false),
+        RowFactory.create(STRING_ROW_ID_4, true), RowFactory.create(STRING_ROW_ID_5, false));
   }
 
   @Test
@@ -104,7 +103,8 @@ public class MembershipOperatorTest extends FunctionTest {
     // name.family.%op%('Samuel')
     ParsedExpression result = testOperator(collection, element);
 
-    assertThat(result).selectResult().hasRows(STRING_3_1_NULL, STRING_5_1_NULL);
+    assertThat(result).selectResult().hasRows(
+        RowFactory.create(STRING_ROW_ID_3, false), RowFactory.create(STRING_ROW_ID_5, false));
   }
 
   @Test
@@ -120,8 +120,8 @@ public class MembershipOperatorTest extends FunctionTest {
     ParsedExpression result = testOperator(collection, element);
 
     assertThat(result).selectResult().hasRows(RowFactory.create(STRING_ROW_ID_1, false),
-        RowFactory.create(STRING_ROW_ID_2, false), RowFactory.create(STRING_ROW_ID_3, null),
-        RowFactory.create(STRING_ROW_ID_4, false), RowFactory.create(STRING_ROW_ID_5, null));
+        RowFactory.create(STRING_ROW_ID_2, false), RowFactory.create(STRING_ROW_ID_3, false),
+        RowFactory.create(STRING_ROW_ID_4, false), RowFactory.create(STRING_ROW_ID_5, false));
   }
 
   @Test
@@ -135,7 +135,7 @@ public class MembershipOperatorTest extends FunctionTest {
     // name.family.%op%(name.given)
     assertThatExceptionOfType(InvalidRequestException.class)
         .isThrownBy(() -> testOperator(collection, element)).withMessage(
-            resolveOperator("Element operand to %op% operator is not singular: name.given"));
+        resolveOperator("Element operand to %op% operator is not singular: name.given"));
   }
 
 
@@ -144,12 +144,15 @@ public class MembershipOperatorTest extends FunctionTest {
     ParsedExpression collection =
         createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark));
     ParsedExpression element = createLiteralExpression(true);
-    element.setFhirPath("name.given");
+    element.setFhirPath("true");
 
     // name.family.%op%(true)
+    String message = operator.equals("in")
+        ? "true in " + collection.getFhirPath()
+        : collection.getFhirPath() + " contains true";
     assertThatExceptionOfType(InvalidRequestException.class)
-        .isThrownBy(() -> testOperator(collection, element)).withMessage(resolveOperator(
-            "Collection type: STRING not compatilble with elementy type: BOOLEAN for operator: %op%"));
+        .isThrownBy(() -> testOperator(collection, element))
+        .withMessage("Operands are of incompatible types: " + message);
   }
 
 }

@@ -76,7 +76,7 @@ public class ParsedExpressionAssert {
     return this;
   }
 
-  public ParsedExpressionAssert isAggreation() {
+  public ParsedExpressionAssert isAggregation() {
     assertThat(parsedExpression.getIdColumn()).isNotNull();
     assertThat(parsedExpression.getAggregationColumn()).isNotNull();
     assertThat(parsedExpression.getAggregationDataset()).isNotNull();

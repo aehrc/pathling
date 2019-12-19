@@ -4,7 +4,10 @@
 
 package au.csiro.pathling.query.operators;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.max;
+import static org.apache.spark.sql.functions.when;
+
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -18,8 +21,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * An expression that tests whether a singular value is present within a collection.
  *
  * @author John Grimes
- * @see <a href=
- *      "http://hl7.org/fhirpath/2018Sep/index.html#collections-2">http://hl7.org/fhirpath/2018Sep/index.html#collections-2</a>
+ * @see <a href= "http://hl7.org/fhirpath/2018Sep/index.html#collections-2">http://hl7.org/fhirpath/2018Sep/index.html#collections-2</a>
  */
 public class MembershipOperator implements BinaryOperator {
 
@@ -51,9 +53,8 @@ public class MembershipOperator implements BinaryOperator {
 
     // check that left and right have the same type
     if (!collection.getFhirPathType().equals(element.getFhirPathType())) {
-      throw new InvalidRequestException("Collection type: " + collection.getFhirPathType()
-          + " not compatilble with elementy type: " + element.getFhirPathType() + " for operator: "
-          + operator);
+      throw new InvalidRequestException(
+          "Operands are of incompatible types: " + input.getExpression());
     }
 
     // Create a new dataset which joins left and right and aggregates on the resource ID based upon
@@ -73,9 +74,8 @@ public class MembershipOperator implements BinaryOperator {
 
     // We take the max of the boolean equality values, aggregated by the resource ID.
     Column equalityColumn =
-        when(collectionColumn.isNull(), lit(null)).when(elementColumn.isNull(), lit(false))
+        when(collectionColumn.isNull().or(elementColumn.isNull()), lit(false))
             .otherwise(collectionColumn.equalTo(elementColumn));
-
 
     // Aliasing of equality columnn here is necessary as otherwise it cannot be
     // (for whatever reason) resolved in the aggregation

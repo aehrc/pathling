@@ -51,7 +51,7 @@ public class CountFunctionTest extends FunctionTest {
         .isPrimitive()
         .isSingular()
         .isSelection()
-        .isAggreation();
+        .isAggregation();
 
     // check results
     assertThat(result).aggResult().isValue().isEqualTo(3L);
@@ -86,7 +86,7 @@ public class CountFunctionTest extends FunctionTest {
         .isPrimitive()
         .isSingular()
         .isSelection()
-        .isAggreation();
+        .isAggregation();
 
     // check results
     assertThat(result).aggResult().isValue().isEqualTo(4L);
