@@ -47,8 +47,7 @@ public class MembershipOperatorTest extends FunctionTest {
   	return string.replace("%op%", operator);
   }
    
-  protected ParsedExpression testOperator(String expression, ParsedExpression collection, ParsedExpression element) {
-    operatorInput.setExpression(resolveOperator(expression));    
+  protected ParsedExpression testOperator(ParsedExpression collection, ParsedExpression element) {
     if ("in".equals(operator)) {
       operatorInput.setLeft(element);
       operatorInput.setRight(collection);    	
@@ -58,6 +57,9 @@ public class MembershipOperatorTest extends FunctionTest {
     } else {
     	throw new IllegalArgumentException("Membership operator '" + operator + "' cannot be tested");
     }
+
+    operatorInput.setExpression(operatorInput.getLeft().getFhirPath() + " " + operator + " " + operatorInput.getRight().getFhirPath());    
+
     ParsedExpression result = new MembershipOperator(operator).invoke(operatorInput);
     assertThat(result)
   	.isResultFor(operatorInput)
@@ -72,7 +74,8 @@ public class MembershipOperatorTest extends FunctionTest {
   	ParsedExpression collection = createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark));
   	ParsedExpression element = createLiteralExpression("Samuel");
 
-  	ParsedExpression result  = testOperator("name.family.%op%('Samuel')", collection, element);    
+  	// "name.family.%op%('Samuel')
+  	ParsedExpression result  = testOperator(collection, element);    
     
     assertThat(result).selectResult().hasRows(
     		RowFactory.create(STRING_ROW_ID_1, false),
@@ -95,7 +98,9 @@ public class MembershipOperatorTest extends FunctionTest {
   	));
   	element.setSingular(true);
   	element.setFhirPath("name.family.first()");
-    ParsedExpression result = testOperator("name.family.%op%(name.family.first())", collection, element);    
+  	
+  	// name.family.%op%(name.family.first())
+    ParsedExpression result = testOperator(collection, element);    
     
     assertThat(result).selectResult().hasRows(
     		RowFactory.create(STRING_ROW_ID_1, false),
@@ -111,7 +116,8 @@ public class MembershipOperatorTest extends FunctionTest {
   	ParsedExpression collection = createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark));
   	ParsedExpression element = createLiteralExpression("Samuel");
 
-  	ParsedExpression result = testOperator("name.family.%op%('Samuel')", collection, element);    
+  	// name.family.%op%('Samuel')
+  	ParsedExpression result = testOperator(collection, element);    
     
     assertThat(result).selectResult().hasRows(
     		STRING_3_1_NULL,
@@ -125,7 +131,9 @@ public class MembershipOperatorTest extends FunctionTest {
   	ParsedExpression element = createPrimitiveParsedExpression(StringPrimitiveRowFixture.createAllRowsNullDataset(spark)); 
   	element.setSingular(true);
   	element.setFhirPath("name.family.first()");
-    ParsedExpression result = testOperator("name.family.%op%(name.family.first())", collection, element);    
+  	
+  	// name.family.%op%(name.family.first())
+    ParsedExpression result = testOperator(collection, element);    
     
     assertThat(result).selectResult().hasRows(
     		RowFactory.create(STRING_ROW_ID_1, false),
@@ -142,9 +150,23 @@ public class MembershipOperatorTest extends FunctionTest {
   	ParsedExpression element = createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark));
   	element.setFhirPath("name.given");
  
+  	// name.family.%op%(name.given)
     assertThatExceptionOfType(InvalidRequestException.class)
-    .isThrownBy(() -> testOperator("name.family.contains(name.given)", collection, element))
-    .withMessage(resolveOperator("Element operand to %op% operator is not singular: ")  +  "name.given");
+    .isThrownBy(() -> testOperator(collection, element))
+    .withMessage(resolveOperator("Element operand to %op% operator is not singular: name.given"));
+  }
+  
+  
+  @Test
+  public void throwExceptionWhenIncompatibleTypes() {	
+  	ParsedExpression collection = createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark));
+  	ParsedExpression element  = createLiteralExpression(true);
+  	element.setFhirPath("name.given");
+ 
+  	// name.family.%op%(true)
+    assertThatExceptionOfType(InvalidRequestException.class)
+    .isThrownBy(() -> testOperator(collection, element))
+    .withMessage(resolveOperator("Collection type: STRING not compatilble with elementy type: BOOLEAN for operator: %op%"));
   }
   
 }

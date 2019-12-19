@@ -42,16 +42,20 @@ public class MembershipOperator implements BinaryOperator {
     } else {
       assert operator.equals("in") : "Unsupported membership operator encountered: " + operator;
     }
-
+    
     // Check that the "left" operand is singular.
     if (!element.isSingular()) {
       throw new InvalidRequestException(
           "Element operand to " + operator + " operator is not singular: " + element.getFhirPath());
     }
 
-    String fhirPath =
-    		collection.getFhirPath() + "." + operator + "(" + element.getFhirPath() + ")";
-
+    // check that left and right have the same type
+    if (!collection.getFhirPathType().equals(element.getFhirPathType())) {
+      throw new InvalidRequestException(
+          "Collection type: " + collection.getFhirPathType() + " not compatilble with elementy type: " + element.getFhirPathType()  + " for operator: " + operator);   	
+    }
+    
+    
     // Create a new dataset which joins left and right and aggregates on the resource ID based upon
     // whether the left expression is within the set of values in the right expression.
     Dataset<Row>  elementDataset = element.getDataset(); 		
@@ -81,7 +85,7 @@ public class MembershipOperator implements BinaryOperator {
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
-    result.setFhirPath(fhirPath);
+    result.setFhirPath(input.getExpression());
     result.setFhirPathType(FhirPathType.BOOLEAN);
     result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);

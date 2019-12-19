@@ -12,6 +12,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.HumanName;
@@ -45,6 +46,18 @@ public abstract class FunctionTest {
     return input;
   }
 
+  protected ParsedExpression createLiteralExpression(boolean value) {
+    // Build up the right expression for the function.
+    ParsedExpression expression = new ParsedExpression();
+    expression.setFhirPath(String.valueOf(value));
+    expression.setFhirPathType(FhirPathType.BOOLEAN);
+    expression.setFhirType(FHIRDefinedType.BOOLEAN);
+    expression.setLiteralValue(new BooleanType(value));
+    expression.setSingular(true);
+    expression.setPrimitive(true);
+    return expression;
+  }
+  
   protected ParsedExpression createLiteralExpression(String value) {
     // Build up the right expression for the function.
     ParsedExpression expression = new ParsedExpression();
