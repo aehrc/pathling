@@ -12,6 +12,9 @@ import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+/**
+ * @author Piotr Szul
+ */
 public class ParsedExpressionAssert {
 
   private final ParsedExpression parsedExpression;

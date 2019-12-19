@@ -9,6 +9,10 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.*;
 
+/**
+ * @author Piotr Szul
+ */
+
 public class PatientResourceRowFixture {
 
   public static StructType createPatientRowStruct() {
