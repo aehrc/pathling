@@ -1,8 +1,8 @@
 package au.csiro.pathling.query.parsing;
 
+import au.csiro.pathling.test.RowListBuilder;
 import java.util.Arrays;
 import java.util.List;
-import au.csiro.pathling.test.RowListBuilder;
 
 
 /**
@@ -28,9 +28,5 @@ public class PatientListBuilder extends RowListBuilder {
 
   public static RowListBuilder allPatientsWithValue(Object value) {
     return allWithValue(value, PATIENT_ALL_IDS);
-  }
-
-  public static RowListBuilder allPatientsNull() {
-    return allNull(PATIENT_ALL_IDS);
   }
 }

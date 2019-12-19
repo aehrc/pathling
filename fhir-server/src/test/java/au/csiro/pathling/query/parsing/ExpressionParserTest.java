@@ -6,12 +6,17 @@ package au.csiro.pathling.query.parsing;
 
 import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_8ee183e2;
 import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_9360820c;
-import static au.csiro.pathling.query.parsing.PatientListBuilder.allPatientsNull;
 import static au.csiro.pathling.query.parsing.PatientListBuilder.allPatientsWithValue;
 import static au.csiro.pathling.test.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import au.csiro.pathling.TestUtilities;
+import au.csiro.pathling.fhir.FreshFhirContextFactory;
+import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.query.ResourceReader;
+import au.csiro.pathling.test.ParsedExpressionAssert;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
@@ -26,11 +31,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-import au.csiro.pathling.TestUtilities;
-import au.csiro.pathling.fhir.FreshFhirContextFactory;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.query.ResourceReader;
-import au.csiro.pathling.test.ParsedExpressionAssert;
 
 /**
  * @author Piotr Szul
@@ -114,7 +114,7 @@ public class ExpressionParserTest {
         .selectResult().hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("name.suffix contains 'MD'").isOfBooleanType().isSelection().selectResult()
-        .hasRows(allPatientsNull().withRow(PATIENT_ID_8ee183e2, true));
+        .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_8ee183e2, true));
   }
 
 
@@ -124,7 +124,7 @@ public class ExpressionParserTest {
         .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("'MD' in name.suffix").isOfBooleanType().isSelection().selectResult()
-        .hasRows(allPatientsNull().withRow(PATIENT_ID_8ee183e2, true));
+        .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_8ee183e2, true));
   }
 
   @After
