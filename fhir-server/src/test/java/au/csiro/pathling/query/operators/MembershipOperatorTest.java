@@ -90,12 +90,12 @@ public class MembershipOperatorTest extends FunctionTest {
     ParsedExpression result = testOperator(collection, element);
 
     assertThat(result).selectResult().hasRows(RowFactory.create(STRING_ROW_ID_1, false),
-        RowFactory.create(STRING_ROW_ID_2, true), RowFactory.create(STRING_ROW_ID_3, false),
-        RowFactory.create(STRING_ROW_ID_4, true), RowFactory.create(STRING_ROW_ID_5, false));
+        RowFactory.create(STRING_ROW_ID_2, true), RowFactory.create(STRING_ROW_ID_3, null),
+        RowFactory.create(STRING_ROW_ID_4, true), RowFactory.create(STRING_ROW_ID_5, null));
   }
 
   @Test
-  public void resultIsEmptyWhenCollectionIsEmpty() {
+  public void resultIsFalseWhenCollectionIsEmpty() {
     ParsedExpression collection =
         createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark));
     ParsedExpression element = createLiteralExpression("Samuel");
@@ -108,7 +108,7 @@ public class MembershipOperatorTest extends FunctionTest {
   }
 
   @Test
-  public void returnsFalseWhenElementIsEmpty() {
+  public void returnsEmptyWhenElementIsEmpty() {
     ParsedExpression collection =
         createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark));
     ParsedExpression element =
@@ -119,9 +119,9 @@ public class MembershipOperatorTest extends FunctionTest {
     // name.family.%op%(name.family.first())
     ParsedExpression result = testOperator(collection, element);
 
-    assertThat(result).selectResult().hasRows(RowFactory.create(STRING_ROW_ID_1, false),
-        RowFactory.create(STRING_ROW_ID_2, false), RowFactory.create(STRING_ROW_ID_3, false),
-        RowFactory.create(STRING_ROW_ID_4, false), RowFactory.create(STRING_ROW_ID_5, false));
+    assertThat(result).selectResult().hasRows(RowFactory.create(STRING_ROW_ID_1, null),
+        RowFactory.create(STRING_ROW_ID_2, null), RowFactory.create(STRING_ROW_ID_3, null),
+        RowFactory.create(STRING_ROW_ID_4, null), RowFactory.create(STRING_ROW_ID_5, null));
   }
 
   @Test

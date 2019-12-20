@@ -72,13 +72,18 @@ public class MembershipOperator implements BinaryOperator {
         : collectionDataset.join(elementDataset, collectionIdColumn.equalTo(elementIdColumn),
             "left_outer");
 
-    // We take the max of the boolean equality values, aggregated by the resource ID.
+    // If the left-hand side of the operator (element) is empty, the result is empty. If the
+    // right-hand side (collection) is empty, the result is false. Otherwise, a Boolean is returned
+    // based on whether the element is present in the collection, using equality semantics.
     Column equalityColumn =
-        when(collectionColumn.isNull().or(elementColumn.isNull()), lit(false))
+        when(elementColumn.isNull(), lit(null))
+            .when(collectionColumn.isNull(), lit(false))
             .otherwise(collectionColumn.equalTo(elementColumn));
 
-    // Aliasing of equality columnn here is necessary as otherwise it cannot be
-    // (for whatever reason) resolved in the aggregation
+    // In order to reduce the result to a single Boolean, we take the max of the boolean equality
+    // values, aggregated by the resource ID.
+    // Aliasing of equality column here is necessary as otherwise it cannot be resolved in the
+    // aggregation.
     membershipDataset =
         membershipDataset.select(collectionIdColumn, equalityColumn.alias("equality"));
     membershipDataset =
