@@ -17,7 +17,9 @@ import au.csiro.pathling.fhir.FreshFhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.query.ResourceReader;
 import au.csiro.pathling.test.ParsedExpressionAssert;
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -92,10 +94,11 @@ public class ExpressionParserTest {
   }
 
 
-  private void mockResourceReader(ResourceType... resourceTypes) {
+  private void mockResourceReader(ResourceType... resourceTypes) throws MalformedURLException {
     for (ResourceType resourceType : resourceTypes) {
-      URL parquetUrl = Thread.currentThread().getContextClassLoader()
-          .getResource("test-data/parquet/" + resourceType + ".parquet");
+      File parquetFile = new File(
+          "src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
+      URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
       assertThat(parquetUrl).isNotNull();
       Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
       when(mockReader.read(resourceType)).thenReturn(dataset);
