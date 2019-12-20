@@ -4,6 +4,9 @@
 
 package au.csiro.pathling.query.operators;
 
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.when;
+
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -21,6 +24,11 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#boolean-logic">http://hl7.org/fhirpath/2018Sep/index.html#boolean-logic</a>
  */
 public class BooleanOperator implements BinaryOperator {
+
+  public static final String AND = "and";
+  public static final String OR = "or";
+  public static final String XOR = "xor";
+  public static final String IMPLIES = "implies";
 
   private String operator;
 
@@ -40,23 +48,21 @@ public class BooleanOperator implements BinaryOperator {
     Dataset<Row> leftDataset = left.getDataset(),
         rightDataset = right.getDataset();
     Column leftIdColumn = left.getIdColumn(),
-        leftColumn = left.getValueColumn(),
+        leftColumn = left.isLiteral() ? lit(left.getJavaLiteralValue()) : left.getValueColumn(),
         rightIdColumn = right.getIdColumn(),
-        rightColumn = right.getValueColumn();
-    Dataset<Row> dataset = leftDataset
-        .join(rightDataset, leftIdColumn.equalTo(rightIdColumn), "left_outer");
+        rightColumn = right.isLiteral() ? lit(right.getJavaLiteralValue()) : right.getValueColumn();
 
     // Based on the type of operator, create the correct column expression.
     Column expression = null;
     switch (operator) {
-      case "and":
+      case AND:
         expression = leftColumn.and(rightColumn);
         break;
-      case "or":
+      case OR:
         expression = leftColumn.or(rightColumn);
         break;
-      case "xor":
-        expression = leftColumn.when(
+      case XOR:
+        expression = when(
             leftColumn.isNull().or(rightColumn.isNull()), null
         ).when(
             leftColumn.equalTo(true).and(rightColumn.equalTo(false)).or(
@@ -64,13 +70,13 @@ public class BooleanOperator implements BinaryOperator {
             ), true
         ).otherwise(false);
         break;
-      case "implies":
-        expression = leftColumn.when(
+      case IMPLIES:
+        expression = when(
             leftColumn.equalTo(true), rightColumn
         ).when(
             leftColumn.equalTo(false), true
         ).otherwise(
-            leftColumn.when(rightColumn.equalTo(true), true)
+            when(rightColumn.equalTo(true), true)
                 .otherwise(null)
         );
         break;
@@ -78,8 +84,20 @@ public class BooleanOperator implements BinaryOperator {
         assert false : "Unsupported boolean operator encountered: " + operator;
     }
 
-    Column valueColumn = expression;
-    dataset = dataset.withColumn("booleanResult", valueColumn);
+    Dataset<Row> dataset;
+    Column idColumn;
+    if (left.isLiteral()) {
+      dataset = rightDataset;
+      idColumn = rightIdColumn;
+    } else if (right.isLiteral()) {
+      dataset = leftDataset;
+      idColumn = leftIdColumn;
+    } else {
+      dataset = leftDataset
+          .join(rightDataset, leftIdColumn.equalTo(rightIdColumn), "left_outer");
+      idColumn = leftIdColumn;
+    }
+    dataset = dataset.withColumn("booleanResult", expression);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -89,14 +107,19 @@ public class BooleanOperator implements BinaryOperator {
     result.setPrimitive(true);
     result.setSingular(true);
     result.setDataset(dataset);
-    result.setIdColumn(leftIdColumn);
-    result.setValueColumn(valueColumn);
+    result.setIdColumn(idColumn);
+    result.setValueColumn(expression);
     return result;
   }
 
   private void validateInput(BinaryOperatorInput input) {
     ParsedExpression left = input.getLeft();
     ParsedExpression right = input.getRight();
+    if (left.isLiteral() && right.isLiteral()) {
+      throw new InvalidRequestException(
+          "Cannot have two literal operands to " + operator + " operator: " + input
+              .getExpression());
+    }
     if (left.getFhirPathType() != FhirPathType.BOOLEAN || !left.isSingular()) {
       throw new InvalidRequestException(
           "Left operand to " + operator + " operator must be singular Boolean: " + left

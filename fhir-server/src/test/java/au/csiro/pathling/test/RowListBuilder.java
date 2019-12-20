@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.pathling.test;
 
 import java.util.Arrays;
@@ -13,6 +17,7 @@ import org.apache.spark.sql.RowFactory;
  * @author Piotr Szul
  */
 public class RowListBuilder {
+
   private final Map<String, List<Object>> rowsAndValues = new TreeMap<String, List<Object>>();
 
   public RowListBuilder withRow(String id, Object value) {

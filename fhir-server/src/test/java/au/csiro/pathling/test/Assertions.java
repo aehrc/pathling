@@ -1,9 +1,12 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.pathling.test;
 
+import au.csiro.pathling.query.parsing.ParsedExpression;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-
-import au.csiro.pathling.query.parsing.ParsedExpression;
 
 public class Assertions {
 

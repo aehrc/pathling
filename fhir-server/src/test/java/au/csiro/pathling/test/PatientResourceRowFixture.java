@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.pathling.test;
 
 import java.util.Arrays;
@@ -19,10 +23,10 @@ public class PatientResourceRowFixture {
     Metadata metadata = new MetadataBuilder().build();
     StructField genderColumn = new StructField("gender", DataTypes.StringType, true, metadata);
     StructField activeColumn = new StructField("active", DataTypes.BooleanType, true, metadata);
-    StructType resourceStruct = new StructType(new StructField[] {genderColumn, activeColumn});
+    StructType resourceStruct = new StructType(new StructField[]{genderColumn, activeColumn});
     StructField id = new StructField("123abcd_id", DataTypes.StringType, false, metadata);
     StructField resource = new StructField("123abcd", resourceStruct, false, metadata);
-    return new StructType(new StructField[] {id, resource});
+    return new StructType(new StructField[]{id, resource});
   }
 
   public static final StructType SCHEMA = createPatientRowStruct();

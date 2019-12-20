@@ -8,10 +8,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.encoding.ValidateCodeResult;
-import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
-import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeCompositeDatatypeDefinition;
+import ca.uhn.fhir.context.*;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,7 +48,11 @@ public abstract class TestUtilities {
   public static BaseRuntimeChildDefinition getChildDefinition(Class<? extends IBase> elementType,
       String childName) {
     BaseRuntimeElementDefinition<?> elementDef = fhirContext.getElementDefinition(elementType);
-    return ((RuntimeCompositeDatatypeDefinition) elementDef).getChildByName(childName);
+    if (RuntimeResourceDefinition.class.isAssignableFrom(elementDef.getClass())) {
+      return ((RuntimeResourceDefinition) elementDef).getChildByName(childName);
+    } else {
+      return ((RuntimeCompositeDatatypeDefinition) elementDef).getChildByName(childName);
+    }
   }
 
   public static IParser getJsonParser() {

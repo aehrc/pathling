@@ -9,10 +9,13 @@ import static au.csiro.pathling.test.StringPrimitiveRowFixture.*;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.test.FunctionTest;
 import au.csiro.pathling.test.StringPrimitiveRowFixture;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.apache.spark.sql.RowFactory;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.HumanName;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -64,7 +67,8 @@ public class MembershipOperatorTest extends FunctionTest {
   @Test
   public void returnsCorrectResultWhenElementIsLiteral() {
     ParsedExpression collection =
-        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark));
+        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark),
+            "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     ParsedExpression element = createLiteralExpression("Samuel");
 
     // "name.family.%op%('Samuel')
@@ -78,11 +82,13 @@ public class MembershipOperatorTest extends FunctionTest {
   @Test
   public void returnsCorrectResultWhenElementIsExpression() {
     ParsedExpression collection =
-        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark));
+        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark),
+            "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     ParsedExpression element =
         createPrimitiveParsedExpression(StringPrimitiveRowFixture
-            .createDataset(spark, RowFactory.create(STRING_ROW_ID_1, "Eva"), STRING_2_SAMUEL,
-                STRING_3_NULL, STRING_4_ADAM, STRING_5_NULL));
+                .createDataset(spark, RowFactory.create(STRING_ROW_ID_1, "Eva"), STRING_2_SAMUEL,
+                    STRING_3_NULL, STRING_4_ADAM, STRING_5_NULL), "name.family", HumanName.class,
+            FhirPathType.STRING, FHIRDefinedType.STRING);
     element.setSingular(true);
     element.setFhirPath("name.family.first()");
 
@@ -97,7 +103,8 @@ public class MembershipOperatorTest extends FunctionTest {
   @Test
   public void resultIsFalseWhenCollectionIsEmpty() {
     ParsedExpression collection =
-        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark));
+        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark),
+            "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     ParsedExpression element = createLiteralExpression("Samuel");
 
     // name.family.%op%('Samuel')
@@ -110,9 +117,11 @@ public class MembershipOperatorTest extends FunctionTest {
   @Test
   public void returnsEmptyWhenElementIsEmpty() {
     ParsedExpression collection =
-        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark));
+        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark),
+            "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     ParsedExpression element =
-        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createAllRowsNullDataset(spark));
+        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createAllRowsNullDataset(spark),
+            "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     element.setSingular(true);
     element.setFhirPath("name.family.first()");
 
@@ -127,9 +136,11 @@ public class MembershipOperatorTest extends FunctionTest {
   @Test
   public void throwExceptionWhenElementIsNotSingular() {
     ParsedExpression collection =
-        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark));
+        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark),
+            "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     ParsedExpression element =
-        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark));
+        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark),
+            "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     element.setFhirPath("name.given");
 
     // name.family.%op%(name.given)
@@ -142,7 +153,8 @@ public class MembershipOperatorTest extends FunctionTest {
   @Test
   public void throwExceptionWhenIncompatibleTypes() {
     ParsedExpression collection =
-        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark));
+        createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark),
+            "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     ParsedExpression element = createLiteralExpression(true);
     element.setFhirPath("true");
 

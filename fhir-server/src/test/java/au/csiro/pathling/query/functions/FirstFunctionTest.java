@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.query.parsing.ExpressionParserContext;
 import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.test.FunctionTest;
 import au.csiro.pathling.test.PatientResourceRowFixture;
 import au.csiro.pathling.test.StringPrimitiveRowFixture;
@@ -19,7 +20,9 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.HumanName;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -58,7 +61,8 @@ public class FirstFunctionTest extends FunctionTest {
     Dataset<Row> dataset = StringPrimitiveRowFixture.createCompleteDataset(spark);
 
     // Build up an input for the function.
-    ParsedExpression input = createPrimitiveParsedExpression(dataset);
+    ParsedExpression input = createPrimitiveParsedExpression(dataset, "name.family",
+        HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);
     firstInput.setExpression("name.family.first()");
@@ -88,7 +92,8 @@ public class FirstFunctionTest extends FunctionTest {
 
     Dataset<Row> dataset = StringPrimitiveRowFixture.createEmptyDataset(spark);
     // Build up an input for the function.
-    ParsedExpression input = createPrimitiveParsedExpression(dataset);
+    ParsedExpression input = createPrimitiveParsedExpression(dataset, "name.family",
+        HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
 
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);

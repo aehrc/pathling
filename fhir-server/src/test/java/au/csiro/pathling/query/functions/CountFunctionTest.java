@@ -20,6 +20,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.HumanName;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -66,8 +67,9 @@ public class CountFunctionTest extends FunctionTest {
   public void testCountsElementsCorrectly() {
     Dataset<Row> dataset = StringPrimitiveRowFixture.createCompleteDataset(spark);
 
-    // Build up an input for the functionm
-    ParsedExpression input = createPrimitiveParsedExpression(dataset);
+    // Build up an input for the function.
+    ParsedExpression input = createPrimitiveParsedExpression(dataset, "name.family",
+        HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
     FunctionInput functionInput = new FunctionInput();
     functionInput.setInput(input);
     functionInput.setExpression("name.family.count()");
