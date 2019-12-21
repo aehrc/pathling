@@ -209,7 +209,7 @@ public class BooleanOperatorTest extends FunctionTest {
   }
 
   @Test
-  public void operandIsNotSingular() {
+  public void leftOperandIsNotSingular() {
     left.setSingular(false);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
@@ -221,6 +221,21 @@ public class BooleanOperatorTest extends FunctionTest {
     assertThatExceptionOfType(InvalidRequestException.class)
         .isThrownBy(() -> booleanOperator.invoke(input))
         .withMessage("Left operand to and operator must be singular Boolean: estimatedAge");
+  }
+
+  @Test
+  public void rightOperandIsNotSingular() {
+    right.setSingular(false);
+
+    BinaryOperatorInput input = new BinaryOperatorInput();
+    input.setLeft(left);
+    input.setRight(right);
+    input.setExpression("estimatedAge and deceasedBoolean");
+
+    BooleanOperator booleanOperator = new BooleanOperator(BooleanOperator.AND);
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> booleanOperator.invoke(input))
+        .withMessage("Right operand to and operator must be singular Boolean: deceasedBoolean");
   }
 
   @Test
