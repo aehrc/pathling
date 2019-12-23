@@ -30,12 +30,13 @@ POST [FHIR endpoint]/$import
 ```
 
 <img src="/images/import.png" 
-     srcset="/images/import@2x.png 2x, /images/import.png 1x"/>
+     srcset="/images/import@2x.png 2x, /images/import.png 1x"
+     alt="Import operation" />
 
 ## Request
 
 The request for the `$import` operation is a
-[Parameters](https://hl7.org/fhir/parameters.html) resource containing the
+[Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
 - `source [1..*]` - A source FHIR NDJSON file containing resources to be
@@ -49,7 +50,7 @@ following parameters:
 ## Response
 
 The response from the `$import` operation is an
-[OperationOutcome](https://hl7.org/fhir/operationoutcome.html) resource, which
-will indicate success or a description of any errors that occurred.
+[OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html) resource,
+which will indicate success or a description of any errors that occurred.
 
 Next: [Aggregate](./aggregate.html)

@@ -9,7 +9,7 @@ grand_parent: Documentation
 # Data types
 
 Source: [Literals](https://hl7.org/fhirpath/2018Sep/index.html#literals) and
-[Using FHIR types in expressions](https://hl7.org/fhir/fhirpath.html#types)
+[Using FHIR types in expressions](https://hl7.org/fhir/R4/fhirpath.html#types)
 
 The FHIRPath implementation within Pathling supports the following types of
 literal expressions:

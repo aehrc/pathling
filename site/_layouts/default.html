@@ -16,7 +16,7 @@ layout: table_wrappers
 
   <div class="page-wrap">
     <div class="side-bar">
-      <div class="site-header">
+      <div class="site-header" role="banner">
         <a href="{{ site.url }}{{ site.baseurl }}" class="site-title lh-tight">{% include title.html %}</a>
         <button class="menu-button fs-3 js-main-nav-trigger" data-text-toggle="Hide" type="button">Menu</button>
       </div>
@@ -25,14 +25,14 @@ layout: table_wrappers
         {% include nav.html %}
       </div>
       <footer class="site-footer">
-        <p class="text-small text-grey-dk-000 mb-4">&copy Australian e-Health Research Centre, CSIRO. All rights reserved.</p>
+        <p class="text-small mb-4">&copy Australian e-Health Research Centre, CSIRO. All rights reserved.</p>
       </footer>
     </div>
     <div class="main-content-wrap js-main-content" tabindex="0">
       <div class="main-content">
         <div class="page-header js-page-header">
           {% if site.search_enabled != false %}
-          <div class="search">
+          <div class="search" role="search">
             <div class="search-input-wrap">
               <input type="text" class="js-search-input search-input" tabindex="0" placeholder="Search {{ site.title }}" aria-label="Search {{ site.title }}" autocomplete="off">
               <svg width="14" height="14" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" class="search-icon"><title>Search</title><g fill-rule="nonzero"><path d="M17.332 20.735c-5.537 0-10-4.6-10-10.247 0-5.646 4.463-10.247 10-10.247 5.536 0 10 4.601 10 10.247s-4.464 10.247-10 10.247zm0-4c3.3 0 6-2.783 6-6.247 0-3.463-2.7-6.247-6-6.247s-6 2.784-6 6.247c0 3.464 2.7 6.247 6 6.247z"/><path d="M11.672 13.791L.192 25.271 3.02 28.1 14.5 16.62z"/></g></svg>
@@ -66,7 +66,7 @@ layout: table_wrappers
           {% endunless %}
           <div id="main-content" class="page-content" role="main">
             {% if site.heading_anchors != false %}
-              {% include vendor/anchor_headings.html html=content beforeHeading="true" anchorBody="<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><use xlink:href=\"#link\"></use></svg>" anchorClass="anchor-heading" %}
+              {% include vendor/anchor_headings.html html=content beforeHeading="true" anchorTitle="Permalink" anchorBody="<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><use xlink:href=\"#link\"></use></svg>" anchorClass="anchor-heading" %}
             {% else %}
               {{ content }}
             {% endif %}

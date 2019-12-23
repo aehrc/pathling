@@ -6,7 +6,7 @@ has_children: true
 
 # Documentation
 
-Pathling is a [HL7 FHIR&reg;](https://hl7.org/fhir/) server that implements
+Pathling is a [HL7 FHIR&reg;](https://hl7.org/fhir/R4/) server that implements
 additional functionality designed to ease the delivery of analytics-enabled apps
 and augment tasks related to health data analytics.
 
@@ -14,8 +14,8 @@ You can find some examples of how to interact with Pathling in our
 [Postman](https://www.getpostman.com/) collection:
 
 <a class="postman-link" 
-   href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest" 
-   alt="Run in Postman"><img src="https://run.pstmn.io/button.svg"/></a>
+   href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest">
+<img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 ## Functionality
 
@@ -28,7 +28,8 @@ See [Roadmap](./roadmap.html) for more information about new features that are
 currently under development.
 
 <img src="/images/analytics-api.png" 
-     srcset="/images/analytics-api@2x.png 2x, /images/analytics-api.png 1x"/>
+     srcset="/images/analytics-api@2x.png 2x, /images/analytics-api.png 1x"
+     alt="FHIR Analytics API" />
 
 ## FHIRPath
 
