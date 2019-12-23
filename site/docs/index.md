@@ -13,16 +13,9 @@ and augment tasks related to health data analytics.
 You can find some examples of how to interact with Pathling in our
 [Postman](https://www.getpostman.com/) collection:
 
-<div class="postman-run-button" data-postman-action="collection/import" data-postman-var-1="9fc2fce275013bd782c3"></div>
-<script type="text/javascript">
-  (function (p,o,s,t,m,a,n) {
-    !p[s] && (p[s] = function () { (p[t] || (p[t] = [])).push(arguments); });
-    !o.getElementById(s+t) && o.getElementsByTagName("head")[0].appendChild((
-      (n = o.createElement("script")),
-      (n.id = s+t), (n.async = 1), (n.src = m), n
-    ));
-  }(window, document, "_pm", "PostmanRunObject", "https://run.pstmn.io/button.js"));
-</script>
+<a class="postman-link" 
+   href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest" 
+   alt="Run in Postman"><img src="https://run.pstmn.io/button.svg"/></a>
 
 ## Functionality
 
