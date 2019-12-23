@@ -16,6 +16,7 @@ import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.fhir.FreshFhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.query.ResourceReader;
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.test.ParsedExpressionAssert;
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +28,9 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -128,6 +131,49 @@ public class ExpressionParserTest {
 
     assertThatResultOf("'MD' in name.suffix").isOfBooleanType().isSelection().selectResult()
         .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_8ee183e2, true));
+  }
+
+  @Test
+  public void testDateTimeLiterals() {
+    // Full DateTime.
+    ParsedExpression result = expressionParser.parse("@2015-02-04T14:34:28Z");
+    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.DATE_TIME);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.DATETIME);
+    assertThat(result.getLiteralValue()).isInstanceOf(StringType.class);
+    assertThat(result.getLiteralValue().toString()).isEqualTo("2015-02-04T14:34:28Z");
+    assertThat(result.getJavaLiteralValue()).isEqualTo("2015-02-04T14:34:28Z");
+    assertThat(result.isSingular()).isTrue();
+
+    // Date with no time component.
+    result = expressionParser.parse("@2015-02-04");
+    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.DATE_TIME);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.DATETIME);
+    assertThat(result.getLiteralValue()).isInstanceOf(StringType.class);
+    assertThat(result.getLiteralValue().toString()).isEqualTo("2015-02-04");
+    assertThat(result.getJavaLiteralValue()).isEqualTo("2015-02-04");
+    assertThat(result.isSingular()).isTrue();
+  }
+
+
+  @Test
+  public void testTimeLiterals() {
+    // Full Time.
+    ParsedExpression result = expressionParser.parse("@T14:34:28Z");
+    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.TIME);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.TIME);
+    assertThat(result.getLiteralValue()).isInstanceOf(StringType.class);
+    assertThat(result.getLiteralValue().toString()).isEqualTo("14:34:28Z");
+    assertThat(result.getJavaLiteralValue()).isEqualTo("14:34:28Z");
+    assertThat(result.isSingular()).isTrue();
+
+    // Hour only.
+    result = expressionParser.parse("@T14");
+    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.TIME);
+    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.TIME);
+    assertThat(result.getLiteralValue()).isInstanceOf(StringType.class);
+    assertThat(result.getLiteralValue().toString()).isEqualTo("14");
+    assertThat(result.getJavaLiteralValue()).isEqualTo("14");
+    assertThat(result.isSingular()).isTrue();
   }
 
   @After

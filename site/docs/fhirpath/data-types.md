@@ -133,8 +133,10 @@ The Time literal uses a subset of ISO8601:
 Examples:
 
 ```
-@T12:00:00.0Z
-@T14:30:14.559-07:00
+@T07:30:14.559-07:00
+@T14:30:14.559Z
+@T14:30
+@T14
 ```
 
 Consult the [formal grammar](https://hl7.org/fhirpath/2018Sep/grammar.html) for

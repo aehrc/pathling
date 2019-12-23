@@ -162,7 +162,7 @@ public class BooleanOperatorTest extends FunctionTest {
 
   @Test
   public void leftIsLiteral() {
-    ParsedExpression literalLeft = createLiteralExpression(true);
+    ParsedExpression literalLeft = createLiteralBooleanExpression(true);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(literalLeft);
@@ -186,7 +186,7 @@ public class BooleanOperatorTest extends FunctionTest {
 
   @Test
   public void rightIsLiteral() {
-    ParsedExpression literalRight = createLiteralExpression(true);
+    ParsedExpression literalRight = createLiteralBooleanExpression(true);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(left);
@@ -240,8 +240,8 @@ public class BooleanOperatorTest extends FunctionTest {
 
   @Test
   public void bothOperandsAreLiteral() {
-    ParsedExpression literalLeft = createLiteralExpression(true);
-    ParsedExpression literalRight = createLiteralExpression(true);
+    ParsedExpression literalLeft = createLiteralBooleanExpression(true);
+    ParsedExpression literalRight = createLiteralBooleanExpression(true);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(literalLeft);

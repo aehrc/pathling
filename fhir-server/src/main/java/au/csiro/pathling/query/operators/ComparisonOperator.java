@@ -5,6 +5,8 @@
 package au.csiro.pathling.query.operators;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.*;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.to_date;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
@@ -26,11 +28,17 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class ComparisonOperator implements BinaryOperator {
 
+  public static final String LESS_THAN_OR_EQUAL_TO = "<=";
+  public static final String LESS_THAN = "<";
+  public static final String GREATER_THAN_OR_EQUAL_TO = ">=";
+  public static final String GREATER_THAN = ">";
+
   private static final Set<FhirPathType> supportedTypes = EnumSet.of(
       STRING,
       INTEGER,
       DECIMAL,
       DATE_TIME,
+      DATE,
       TIME
   );
 
@@ -55,33 +63,48 @@ public class ComparisonOperator implements BinaryOperator {
     Dataset<Row> leftDataset = left.getDataset(),
         rightDataset = right.getDataset();
     Column leftIdColumn = left.getIdColumn(),
-        leftColumn = left.getValueColumn(),
+        leftColumn = left.isLiteral() ? lit(left.getJavaLiteralValue()) : left.getValueColumn(),
         rightIdColumn = right.getIdColumn(),
-        rightColumn = right.getValueColumn();
-    Dataset<Row> dataset = leftDataset
-        .join(rightDataset, leftIdColumn.equalTo(rightIdColumn), "left_outer");
+        rightColumn = right.isLiteral() ? lit(right.getJavaLiteralValue()) : right.getValueColumn();
+
+    if (left.getFhirPathType() == DATE_TIME || left.getFhirPathType() == DATE) {
+      leftColumn = to_date(leftColumn);
+      rightColumn = to_date(rightColumn);
+    }
 
     // Based on the type of operator, create the correct column expression.
     Column expression = null;
     switch (operator) {
-      case "<=":
+      case LESS_THAN_OR_EQUAL_TO:
         expression = leftColumn.leq(rightColumn);
         break;
-      case "<":
+      case LESS_THAN:
         expression = leftColumn.lt(rightColumn);
         break;
-      case ">=":
+      case GREATER_THAN_OR_EQUAL_TO:
         expression = leftColumn.geq(rightColumn);
         break;
-      case ">":
+      case GREATER_THAN:
         expression = leftColumn.gt(rightColumn);
         break;
       default:
         assert false : "Unsupported comparison operator encountered: " + operator;
     }
 
-    Column valueColumn = expression;
-    dataset = dataset.withColumn("comparisonResult", valueColumn);
+    Dataset<Row> dataset;
+    Column idColumn;
+    if (left.isLiteral()) {
+      dataset = rightDataset;
+      idColumn = rightIdColumn;
+    } else if (right.isLiteral()) {
+      dataset = leftDataset;
+      idColumn = leftIdColumn;
+    } else {
+      dataset = leftDataset
+          .join(rightDataset, leftIdColumn.equalTo(rightIdColumn), "left_outer");
+      idColumn = leftIdColumn;
+    }
+    dataset = dataset.withColumn("comparisonResult", expression);
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();
@@ -91,8 +114,8 @@ public class ComparisonOperator implements BinaryOperator {
     result.setPrimitive(true);
     result.setSingular(true);
     result.setDataset(dataset);
-    result.setIdColumn(leftIdColumn);
-    result.setValueColumn(valueColumn);
+    result.setIdColumn(idColumn);
+    result.setValueColumn(expression);
     return result;
   }
 
