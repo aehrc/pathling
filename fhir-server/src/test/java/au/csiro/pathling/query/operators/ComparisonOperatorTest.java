@@ -6,12 +6,14 @@ package au.csiro.pathling.query.operators;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.*;
 import static au.csiro.pathling.test.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.test.FunctionTest;
 import au.csiro.pathling.test.PrimitiveRowFixture;
 import au.csiro.pathling.test.RowListBuilder;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.math.BigDecimal;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
@@ -473,6 +475,88 @@ public class ComparisonOperatorTest extends FunctionTest {
         RowFactory.create("abc5", false),
         RowFactory.create("abc6", null)
     );
+  }
+
+  @Test
+  public void leftOperandIsNotCorrectType() {
+    left.setFhirPathType(BOOLEAN);
+
+    BinaryOperatorInput input = new BinaryOperatorInput();
+    input.setLeft(left);
+    input.setRight(right);
+
+    ComparisonOperator comparisonOperator = new ComparisonOperator(ComparisonOperator.GREATER_THAN);
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> comparisonOperator.invoke(input))
+        .withMessage(
+            "Left operand to > operator is of unsupported type, or is not singular: " + left
+                .getFhirPath());
+  }
+
+  @Test
+  public void rightOperandIsNotCorrectType() {
+    right.setFhirPathType(BOOLEAN);
+
+    BinaryOperatorInput input = new BinaryOperatorInput();
+    input.setLeft(left);
+    input.setRight(right);
+
+    ComparisonOperator comparisonOperator = new ComparisonOperator(ComparisonOperator.GREATER_THAN);
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> comparisonOperator.invoke(input))
+        .withMessage(
+            "Right operand to > operator is of unsupported type, or is not singular: "
+                + right
+                .getFhirPath());
+  }
+
+  @Test
+  public void leftOperandIsNotSingular() {
+    left.setSingular(false);
+
+    BinaryOperatorInput input = new BinaryOperatorInput();
+    input.setLeft(left);
+    input.setRight(right);
+
+    ComparisonOperator comparisonOperator = new ComparisonOperator(ComparisonOperator.GREATER_THAN);
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> comparisonOperator.invoke(input))
+        .withMessage(
+            "Left operand to > operator is of unsupported type, or is not singular: " + left
+                .getFhirPath());
+  }
+
+  @Test
+  public void rightOperandIsNotSingular() {
+    right.setSingular(false);
+
+    BinaryOperatorInput input = new BinaryOperatorInput();
+    input.setLeft(left);
+    input.setRight(right);
+
+    ComparisonOperator comparisonOperator = new ComparisonOperator(ComparisonOperator.GREATER_THAN);
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> comparisonOperator.invoke(input))
+        .withMessage(
+            "Right operand to > operator is of unsupported type, or is not singular: " + right
+                .getFhirPath());
+  }
+
+  @Test
+  public void bothOperandsAreLiteral() {
+    ParsedExpression literalLeft = createLiteralIntegerExpression(1);
+    ParsedExpression literalRight = createLiteralIntegerExpression(1);
+
+    BinaryOperatorInput input = new BinaryOperatorInput();
+    input.setLeft(literalLeft);
+    input.setRight(literalRight);
+    input.setExpression("1 > 1");
+
+    ComparisonOperator comparisonOperator = new ComparisonOperator(ComparisonOperator.GREATER_THAN);
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> comparisonOperator.invoke(input))
+        .withMessage(
+            "Cannot have two literal operands to > operator: 1 > 1");
   }
 
 }

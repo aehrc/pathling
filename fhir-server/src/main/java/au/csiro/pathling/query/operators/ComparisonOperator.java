@@ -122,6 +122,11 @@ public class ComparisonOperator implements BinaryOperator {
   private void validateInput(BinaryOperatorInput input) {
     ParsedExpression left = input.getLeft();
     ParsedExpression right = input.getRight();
+    if (left.isLiteral() && right.isLiteral()) {
+      throw new InvalidRequestException(
+          "Cannot have two literal operands to " + operator + " operator: " + input
+              .getExpression());
+    }
     if (!supportedTypes.contains(left.getFhirPathType()) || !left.isSingular()) {
       throw new InvalidRequestException(
           "Left operand to " + operator + " operator is of unsupported type, or is not singular: "
