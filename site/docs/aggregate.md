@@ -23,12 +23,13 @@ POST [FHIR endpoint]/$aggregate
 ```
 
 <img src="/images/aggregate.png" 
-     srcset="/images/aggregate@2x.png 2x, /images/aggregate.png 1x"/>
+     srcset="/images/aggregate@2x.png 2x, /images/aggregate.png 1x"
+     alt="Aggregate operation" />
 
 ## Request
 
 The request for the `$aggregate` operation is a
-[Parameters](https://hl7.org/fhir/parameters.html) resource containing the
+[Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
 - `subjectResource [1..1]` - (code) The subject resource that the expressions
@@ -59,19 +60,19 @@ following parameters:
 ## Response
 
 The response for the `$aggregate` operation is a
-[Parameters](https://hl7.org/fhir/parameters.html) resource containing the
+[Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
 - `grouping [0..*]` - The grouped results of the aggregations requested in the
   query. There will be one grouping for each distinct combination of values
   determined by executing the grouping expressions against each of the resources
   within the filtered set of subject resources.
-  - `label [0..*]` - ([Type](https://hl7.org/fhir/datatypes.html#primitive)) The
-    set of descriptive labels that describe this grouping, corresponding to
+  - `label [0..*]` - ([Type](https://hl7.org/fhir/R4/datatypes.html#primitive))
+    The set of descriptive labels that describe this grouping, corresponding to
     those requested in the query. There will be one label for each grouping
     within the query, and the type of each label will correspond to the type
     returned by the expression of the corresponding grouping.
-  - `result [1..*]` - ([Type](https://hl7.org/fhir/datatypes.html#primitive))
+  - `result [1..*]` - ([Type](https://hl7.org/fhir/R4/datatypes.html#primitive))
     The set of values that resulted from the execution of the aggregations that
     were requested in the query. There will be one result for each aggregation
     within the query, and the type of each result will correspond to the type

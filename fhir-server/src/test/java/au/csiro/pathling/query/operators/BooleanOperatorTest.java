@@ -162,7 +162,7 @@ public class BooleanOperatorTest extends FunctionTest {
 
   @Test
   public void leftIsLiteral() {
-    ParsedExpression literalLeft = createLiteralExpression(true);
+    ParsedExpression literalLeft = createLiteralBooleanExpression(true);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(literalLeft);
@@ -186,7 +186,7 @@ public class BooleanOperatorTest extends FunctionTest {
 
   @Test
   public void rightIsLiteral() {
-    ParsedExpression literalRight = createLiteralExpression(true);
+    ParsedExpression literalRight = createLiteralBooleanExpression(true);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(left);
@@ -209,7 +209,7 @@ public class BooleanOperatorTest extends FunctionTest {
   }
 
   @Test
-  public void operandIsNotSingular() {
+  public void leftOperandIsNotSingular() {
     left.setSingular(false);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
@@ -224,9 +224,24 @@ public class BooleanOperatorTest extends FunctionTest {
   }
 
   @Test
+  public void rightOperandIsNotSingular() {
+    right.setSingular(false);
+
+    BinaryOperatorInput input = new BinaryOperatorInput();
+    input.setLeft(left);
+    input.setRight(right);
+    input.setExpression("estimatedAge and deceasedBoolean");
+
+    BooleanOperator booleanOperator = new BooleanOperator(BooleanOperator.AND);
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> booleanOperator.invoke(input))
+        .withMessage("Right operand to and operator must be singular Boolean: deceasedBoolean");
+  }
+
+  @Test
   public void bothOperandsAreLiteral() {
-    ParsedExpression literalLeft = createLiteralExpression(true);
-    ParsedExpression literalRight = createLiteralExpression(true);
+    ParsedExpression literalLeft = createLiteralBooleanExpression(true);
+    ParsedExpression literalRight = createLiteralBooleanExpression(true);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(literalLeft);

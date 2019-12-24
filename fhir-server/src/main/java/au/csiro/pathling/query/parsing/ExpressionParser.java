@@ -5,6 +5,7 @@
 package au.csiro.pathling.query.parsing;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.CODING;
+import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.DATE_TIME;
 import static au.csiro.pathling.utilities.Strings.md5Short;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import static au.csiro.pathling.utilities.Strings.unescapeFhirPathString;
@@ -23,8 +24,10 @@ import au.csiro.pathling.query.operators.PathTraversalOperator;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.math.BigDecimal;
-import java.text.ParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.antlr.v4.runtime.CharStreams;
@@ -418,19 +421,12 @@ public class ExpressionParser {
 
     @Override
     public ParsedExpression visitDateTimeLiteral(DateTimeLiteralContext ctx) {
-      // Parse the string according to ISO8601.
-      Date value;
-      try {
-        value = ParsedExpression.DATE_TIME_FORMAT.parse(ctx.getText().replace("@", ""));
-      } catch (ParseException e) {
-        throw new InvalidRequestException("Invalid DateTime literal: " + ctx.getText());
-      }
-
+      String dateTimeString = ctx.getText().replace("@", "");
       ParsedExpression result = new ParsedExpression();
-      result.setFhirPathType(FhirPathType.DATE_TIME);
-      result.setFhirType(FHIRDefinedType.STRING);
+      result.setFhirPathType(DATE_TIME);
+      result.setFhirType(FHIRDefinedType.DATETIME);
       result.setFhirPath(ctx.getText());
-      result.setLiteralValue(new DateTimeType(value));
+      result.setLiteralValue(new StringType(dateTimeString));
       result.setPrimitive(true);
       result.setSingular(true);
       return result;
@@ -438,19 +434,12 @@ public class ExpressionParser {
 
     @Override
     public ParsedExpression visitTimeLiteral(TimeLiteralContext ctx) {
-      // Parse the string according to ISO8601.
-      String timeString = ctx.getText().replace("@", "");
-      try {
-        ParsedExpression.TIME_FORMAT.parse(timeString);
-      } catch (ParseException e) {
-        throw new InvalidRequestException("Invalid Time literal: " + ctx.getText());
-      }
-
+      String timeString = ctx.getText().replace("@T", "");
       ParsedExpression result = new ParsedExpression();
       result.setFhirPathType(FhirPathType.TIME);
       result.setFhirType(FHIRDefinedType.TIME);
       result.setFhirPath(ctx.getText());
-      result.setLiteralValue(new TimeType(timeString));
+      result.setLiteralValue(new StringType(timeString));
       result.setPrimitive(true);
       result.setSingular(true);
       return result;

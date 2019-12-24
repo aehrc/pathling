@@ -17,12 +17,13 @@ of the data. A URL pointing to a delimited text file is returned, which contains
 the result of executing the expressions against each subject resource.
 
 <img src="/images/summarise.png" 
-     srcset="/images/summarise@2x.png 2x, /images/summarise.png 1x"/>
+     srcset="/images/summarise@2x.png 2x, /images/summarise.png 1x"
+     alt="Summarise operation" />
 
 ## Request
 
 The request for the `$summarise` operation is a
-[Parameters](https://hl7.org/fhir/parameters.html) resource containing the
+[Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
 - `subjectResource [1..1]` - (code) The subject resource that the expressions
@@ -41,7 +42,7 @@ following parameters:
 ## Response
 
 The response for the `$summarise` operation is a
-[Parameters](https://hl7.org/fhir/parameters.html) resource containing the
+[Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
 - `url [1..1]` - (uri) A URL at which the result of the operation can be

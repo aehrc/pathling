@@ -10,6 +10,7 @@ import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.math.BigDecimal;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -17,8 +18,10 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.Before;
 
@@ -49,7 +52,7 @@ public abstract class FunctionTest {
     return input;
   }
 
-  protected ParsedExpression createLiteralExpression(boolean value) {
+  protected ParsedExpression createLiteralBooleanExpression(boolean value) {
     // Build up the right expression for the function.
     ParsedExpression expression = new ParsedExpression();
     expression.setFhirPath(String.valueOf(value));
@@ -61,7 +64,7 @@ public abstract class FunctionTest {
     return expression;
   }
 
-  protected ParsedExpression createLiteralExpression(String value) {
+  protected ParsedExpression createLiteralStringExpression(String value) {
     // Build up the right expression for the function.
     ParsedExpression expression = new ParsedExpression();
     expression.setFhirPath("'" + value + "'");
@@ -89,8 +92,55 @@ public abstract class FunctionTest {
     expression.setPrimitive(false);
     return expression;
   }
-  
-  
+    
+  protected ParsedExpression createLiteralIntegerExpression(Integer value) {
+    // Build up the right expression for the function.
+    ParsedExpression expression = new ParsedExpression();
+    expression.setFhirPath(value.toString());
+    expression.setFhirPathType(FhirPathType.INTEGER);
+    expression.setFhirType(FHIRDefinedType.INTEGER);
+    expression.setLiteralValue(new IntegerType(value));
+    expression.setSingular(true);
+    expression.setPrimitive(true);
+    return expression;
+  }
+
+  protected ParsedExpression createLiteralDecimalExpression(BigDecimal value) {
+    // Build up the right expression for the function.
+    ParsedExpression expression = new ParsedExpression();
+    expression.setFhirPath(value.toString());
+    expression.setFhirPathType(FhirPathType.DECIMAL);
+    expression.setFhirType(FHIRDefinedType.DECIMAL);
+    expression.setLiteralValue(new DecimalType(value));
+    expression.setSingular(true);
+    expression.setPrimitive(true);
+    return expression;
+  }
+
+  protected ParsedExpression createLiteralDateTimeExpression(String value) {
+    // Build up the right expression for the function.
+    ParsedExpression expression = new ParsedExpression();
+    expression.setFhirPath("@" + value);
+    expression.setFhirPathType(FhirPathType.DATE_TIME);
+    expression.setFhirType(FHIRDefinedType.DATETIME);
+    expression.setLiteralValue(new StringType(value));
+    expression.setSingular(true);
+    expression.setPrimitive(true);
+    return expression;
+  }
+
+  protected ParsedExpression createLiteralDateExpression(String value) {
+    // Build up the right expression for the function.
+    ParsedExpression expression = new ParsedExpression();
+    expression.setFhirPath("@" + value);
+    expression.setFhirPathType(FhirPathType.DATE);
+    expression.setFhirType(FHIRDefinedType.DATE);
+    expression.setLiteralValue(new StringType(value));
+    expression.setSingular(true);
+    expression.setPrimitive(true);
+    return expression;
+  }
+
   protected ParsedExpression createPrimitiveParsedExpression(Dataset<Row> dataset, String fhirPath,
       Class<? extends IBase> elementType, FhirPathType fhirPathType, FHIRDefinedType fhirType) {
     Column idColumn = dataset.col(dataset.columns()[0]);

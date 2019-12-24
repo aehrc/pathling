@@ -9,7 +9,7 @@ grand_parent: Documentation
 # Data types
 
 Source: [Literals](https://hl7.org/fhirpath/2018Sep/index.html#literals) and
-[Using FHIR types in expressions](https://hl7.org/fhir/fhirpath.html#types)
+[Using FHIR types in expressions](https://hl7.org/fhir/R4/fhirpath.html#types)
 
 The FHIRPath implementation within Pathling supports the following types of
 literal expressions:
@@ -133,8 +133,10 @@ The Time literal uses a subset of ISO8601:
 Examples:
 
 ```
-@T12:00:00.0Z
-@T14:30:14.559-07:00
+@T07:30:14.559-07:00
+@T14:30:14.559Z
+@T14:30
+@T14
 ```
 
 Consult the [formal grammar](https://hl7.org/fhirpath/2018Sep/grammar.html) for

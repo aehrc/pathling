@@ -20,8 +20,6 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import static org.apache.spark.sql.functions.col;
-
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -31,7 +29,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class ParsedExpression  implements Joinable {
+public class ParsedExpression implements Joinable {
 
   // This mapping needs to reflect the mappings that Bunsen and Spark use.
   //
@@ -62,8 +60,10 @@ public class ParsedExpression  implements Joinable {
     // TODO: Data types not catered for: base64Binary, oid, uuid, enumeration of codes.
   }};
 
-  static final SimpleDateFormat DATE_TIME_FORMAT = new SimpleDateFormat(
+  public static final SimpleDateFormat DATE_TIME_FORMAT = new SimpleDateFormat(
       "yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+  public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
+      "yyyy-MM-dd");
   static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("'T'HH:mm:ss.SSSXXX");
 
   /**
@@ -151,11 +151,12 @@ public class ParsedExpression  implements Joinable {
    */
   private Column resourceTypeColumn;
 
-  
+
   /**
-   * For aggregation expression, this dataset holds the dataset that grouped aggregation should be performed over 
+   * For aggregation expression, this dataset holds the dataset that grouped aggregation should be
+   * performed over
    */
- 
+
   private Dataset<Row> aggregationDataset;
   /**
    * For aggregate expressions, this column hold the unresolved aggregation that will be applied
@@ -164,8 +165,8 @@ public class ParsedExpression  implements Joinable {
   private Column aggregationColumn;
 
   private Column aggregationIdColumn;
-  
-	public ParsedExpression() {
+
+  public ParsedExpression() {
   }
 
   public ParsedExpression(ParsedExpression parsedExpression) {
@@ -187,7 +188,7 @@ public class ParsedExpression  implements Joinable {
     this.resourceTypeColumn = parsedExpression.resourceTypeColumn;
     this.aggregationDataset = parsedExpression.aggregationDataset;
     this.aggregationColumn = parsedExpression.aggregationColumn;
-    this.aggregationIdColumn = parsedExpression.aggregationIdColumn; 
+    this.aggregationIdColumn = parsedExpression.aggregationIdColumn;
   }
 
   public String getFhirPath() {
@@ -263,9 +264,9 @@ public class ParsedExpression  implements Joinable {
   }
 
   public boolean isLiteral() {
-  	return literalValue != null;
+    return literalValue != null;
   }
-  
+
   public boolean isSingular() {
     return singular;
   }
@@ -323,14 +324,15 @@ public class ParsedExpression  implements Joinable {
   public void setResourceTypeColumn(Column resourceTypeColumn) {
     this.resourceTypeColumn = resourceTypeColumn;
   }
-  
-  public Dataset<Row> getAggregationDataset() {
-		return aggregationDataset;
-	}
 
-	public void setAggregationDataset(Dataset<Row> aggregationDataset) {
-		this.aggregationDataset = aggregationDataset;
-	}
+  public Dataset<Row> getAggregationDataset() {
+    return aggregationDataset;
+  }
+
+  public void setAggregationDataset(Dataset<Row> aggregationDataset) {
+    this.aggregationDataset = aggregationDataset;
+  }
+
   public Column getAggregationColumn() {
     return aggregationColumn;
   }
@@ -338,30 +340,30 @@ public class ParsedExpression  implements Joinable {
   public void setAggregationColumn(Column aggregationColumn) {
     this.aggregationColumn = aggregationColumn;
   }
-  
-	public Column getAggregationIdColumn() {
-		return aggregationIdColumn;
-	}
 
-	public void setAggregationIdColumn(Column aggregationIdColumn) {
-		this.aggregationIdColumn = aggregationIdColumn;
-	}
-  
-	
-	public Joinable getAggreationJoinable() {
-		return new Joinable() {
-			@Override
-			public Dataset<Row> getDataset() {
-				return getAggregationDataset();
-			}
+  public Column getAggregationIdColumn() {
+    return aggregationIdColumn;
+  }
 
-			@Override
-			public Column getIdColumn() {
-				return getAggregationIdColumn();
-			}
-		};
-	}
-	
+  public void setAggregationIdColumn(Column aggregationIdColumn) {
+    this.aggregationIdColumn = aggregationIdColumn;
+  }
+
+
+  public Joinable getAggreationJoinable() {
+    return new Joinable() {
+      @Override
+      public Dataset<Row> getDataset() {
+        return getAggregationDataset();
+      }
+
+      @Override
+      public Column getIdColumn() {
+        return getAggregationIdColumn();
+      }
+    };
+  }
+
   public Object getJavaLiteralValue() {
     assert PrimitiveType.class.isAssignableFrom(literalValue.getClass()) :
         "Encountered non-primitive literal value";
@@ -428,7 +430,7 @@ public class ParsedExpression  implements Joinable {
     this.idColumn = dataset.col(hash + "_id");
     this.valueColumn = dataset.col(hash);
   }
-    
+
   /**
    * Get the FHIR type from a BaseRuntimeChildDefinition.
    */
@@ -449,7 +451,7 @@ public class ParsedExpression  implements Joinable {
     return childDefinition.getChildByName(elementName);
   }
 
-	/**
+  /**
    * Describes a ParseResult in terms of the FHIRPath type that it evaluates to.
    */
   public enum FhirPathType {

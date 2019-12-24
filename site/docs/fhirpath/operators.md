@@ -47,20 +47,22 @@ The following comparison operators are supported:
 
 The following rules apply to the use of comparison operators:
 
-- The comparison operators are defined for strings, integers, decimals,
-  datetimes and times.
+- The comparison operators can accept operands of type String, Integer, Decimal,
+  DateTime and Date.
 - If one or both of the arguments is an empty collection, a comparison operator
   will return an empty collection.
 - Both arguments must be collections with single values, and the evaluator will
   throw an error if either collection has more than one item.
 - Both arguments must be of the same type, and the evaluator will throw an error
   if the types differ.
-- When comparing integers and decimals, the integer will be converted to a
-  decimal to make comparison possible.
 - String ordering is strictly lexical and is based on the Unicode value of the
   individual characters.
 
 All comparison operators return a Boolean value.
+
+<div class="callout warning">Comparison between Integer and Decimal expressions is not supported. Operands to comparison operators must always be of the same type.</div>
+
+<div class="callout warning">Comparison between Time expressions is not supported.</div>
 
 ## Math
 
@@ -77,6 +79,8 @@ The following math operators are supported:
 All math operators in Pathling support only Integer and Decimal operands. `+`,
 `-` and `*` return the same type as the left operand, `/` returns Decimal and
 `mod` returns Integer.
+
+<div class="callout warning">The math operators in Pathling only support singular, operands of type Integer or Decimal.</div>
 
 ## Boolean logic
 

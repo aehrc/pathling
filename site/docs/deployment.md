@@ -32,8 +32,8 @@ The following variables can be used to configure a Pathling instance:
   strings with a size unit suffix ("k", "m", "g" or "t") (e.g. 512m, 2g).
 - `PATHLING_TERMINOLOGY_SERVER_URL` - (default:
   `https://r4.ontoserver.csiro.au/fhir`) The endpoint of a
-  [FHIR terminology service](https://hl7.org/fhir/terminology-service.html) (R4)
-  that the server can use to resolve terminology queries.
+  [FHIR terminology service](https://hl7.org/fhir/R4/terminology-service.html)
+  (R4) that the server can use to resolve terminology queries.
 - `PATHLING_AWS_ACCESS_KEY_ID` - Authentication details for connecting to a
   protected Amazon S3 bucket.
 - `PATHLING_AWS_SECRET_ACCESS_KEY` - Authentication details for connecting to a

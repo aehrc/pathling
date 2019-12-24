@@ -70,7 +70,7 @@ public class MembershipOperatorTest extends FunctionTest {
     ParsedExpression collection =
         createPrimitiveParsedExpression(StringPrimitiveRowFixture.createCompleteDataset(spark),
             "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
-    ParsedExpression element = createLiteralExpression("Samuel");
+    ParsedExpression element = createLiteralStringExpression("Samuel");
 
     // "name.family.%op%('Samuel')
     ParsedExpression result = testOperator(collection, element);
@@ -105,7 +105,7 @@ public class MembershipOperatorTest extends FunctionTest {
     ParsedExpression collection =
         createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark),
             "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
-    ParsedExpression element = createLiteralExpression("Samuel");
+    ParsedExpression element = createLiteralStringExpression("Samuel");
 
     // name.family.%op%('Samuel')
     ParsedExpression result = testOperator(collection, element);
@@ -187,7 +187,7 @@ public class MembershipOperatorTest extends FunctionTest {
     ParsedExpression collection =
         createPrimitiveParsedExpression(StringPrimitiveRowFixture.createNullRowsDataset(spark),
             "name.family", HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
-    ParsedExpression element = createLiteralExpression(true);
+    ParsedExpression element = createLiteralBooleanExpression(true);
     element.setFhirPath("true");
 
     // name.family.%op%(true)

@@ -146,6 +146,32 @@ public class AggregateExecutorTest {
   }
 
   @Test
+  public void queryWithDateComparison() throws IOException, JSONException {
+    mockResourceReader(ResourceType.PATIENT);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    request.getFilters().add("birthDate > @1980 and birthDate < @1990");
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    String expectedJson = getResourceAsString(
+        "responses/AggregateExecutorTest-queryWithDateComparison.Parameters.json");
+    JSONAssert.assertEquals(expectedJson, actualJson, false);
+  }
+
+  @Test
   public void queryWithResolve() throws IOException, JSONException {
     mockResourceReader(ResourceType.ALLERGYINTOLERANCE, ResourceType.PATIENT);
 

@@ -4,13 +4,13 @@
   ~ Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
   -->
 
-<html>
+<html lang="en">
 <head>
   <title>Pathling</title>
   <meta charset="utf-8"/>
   <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, user-scalable=no"
+      content="width=device-width, initial-scale=1"
   />
   <meta name="description" content="Deploy a FHIR&reg; server capable of performing complex filtering, executing aggregate queries and building summarised extracts. Integrate with a FHIR® terminology service to unlock the rich semantic power within your coded data. Connect to an Apache Spark cluster to process large datasets, and integrate with data transformation and ML pipelines."/>
   <meta name="keywords" content="FHIR server,analytics,health data"/>
@@ -19,7 +19,7 @@
 </head>
 <body class="is-preload">
 <!-- Wrapper -->
-<div id="wrapper">
+<div id="wrapper" role="main">
   <!-- Intro -->
   <section class="intro">
     <header>
@@ -27,9 +27,7 @@
       <p>Advanced FHIR&reg; analytics server</p>
       <ul class="actions">
         <li>
-          <a href="#first" class="arrow scrolly"
-          ><span class="label">Next</span></a
-          >
+          <a href="#first" class="arrow scrolly" aria-label="Next" tabindex="-1"><span class="label">Next</span></a>
         </li>
       </ul>
     </header>
@@ -88,7 +86,7 @@
       <form action="https://usebasin.com/f/28d62caa8170" method="POST">
         <div class="fields">
           <div class="field half">
-            <input type="text" name="name" id="name" placeholder="Name" required/>
+            <input type="text" name="name" id="name" placeholder="Name" required aria-label="Name"/>
           </div>
           <div class="field half">
             <input
@@ -97,6 +95,7 @@
                 id="email"
                 placeholder="Email"
                 required
+                aria-label="Email"
             />
           </div>
           <div class="field">
@@ -106,6 +105,7 @@
                     placeholder="Message"
                     rows="7"
                     required
+                    aria-label="Message"
                 ></textarea>
           </div>
         </div>
@@ -143,11 +143,9 @@
           <h3>Social media</h3>
           <ul class="icons">
             <li>
-              <a
-                  href="https://twitter.com/ehealthresearch"
-                  class="icon brands fa-twitter"
-              ><span class="label">Twitter</span></a
-              >
+              <a href="https://twitter.com/ehealthresearch" class="icon brands fa-twitter" aria-label="Twitter">
+                <span class="label">Twitter</span>
+              </a>
             </li>
           </ul>
         </li>

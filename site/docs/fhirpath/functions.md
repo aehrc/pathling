@@ -35,7 +35,7 @@ The notation used to describe the type signature of each function is as follows:
 
 ## resolve
 
-Source: [Additional functions](https://hl7.org/fhir/fhirpath.html#functions)
+Source: [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
 
 ```
 Reference -> resolve(): collection<Resource>
@@ -161,7 +161,7 @@ Patient.name.given.count()
 
 ## memberOf
 
-Source: [Additional functions](https://hl7.org/fhir/fhirpath.html#functions)
+Source: [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
 
 ```
 collection<Coding|CodeableConcept> -> memberOf() : collection<Boolean>

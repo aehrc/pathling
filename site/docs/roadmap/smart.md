@@ -16,7 +16,8 @@ to be considered:
 
 - Controlling access to individual records, versus aggregate data only
 - Obfuscation of aggregate results to reduce the risk of re-identification
-- How the presence of an associated [Consent](https://hl7.org/fhir/consent.html)
-  resource might influence how access to data is authorised
+- How the presence of an associated
+  [Consent](https://hl7.org/fhir/R4/consent.html) resource might influence how
+  access to data is authorised
 
 Next: [Extension content](./extensions.html)

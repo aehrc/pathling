@@ -23,6 +23,7 @@ parameter in order to "drill down" to the resources that make up each individual
 aggregate result.
 
 <img src="/images/select.png" 
-     srcset="/images/select@2x.png 2x, /images/select.png 1x"/>
+     srcset="/images/select@2x.png 2x, /images/select.png 1x"
+     alt="Drill-down expressions" />
 
 Next: [Summarise operation](./summarise.html)
