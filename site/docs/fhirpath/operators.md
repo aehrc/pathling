@@ -80,6 +80,8 @@ All math operators in Pathling support only Integer and Decimal operands. `+`,
 `-` and `*` return the same type as the left operand, `/` returns Decimal and
 `mod` returns Integer.
 
+<div class="callout warning">The math operators in Pathling only support singular, operands of type Integer or Decimal.</div>
+
 ## Boolean logic
 
 Source:
