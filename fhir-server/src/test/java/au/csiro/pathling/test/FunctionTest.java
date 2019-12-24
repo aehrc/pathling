@@ -7,12 +7,16 @@ package au.csiro.pathling.test;
 import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.StringType;
@@ -69,6 +73,24 @@ public abstract class FunctionTest {
     return expression;
   }
 
+  protected ParsedExpression createCodingLiteralExpression(String system, String version, String code) {
+    // Build up the right expression for the function.
+    
+    Coding literalValue = new Coding(system, code, null);
+    literalValue.setVersion(version);
+    
+    ParsedExpression expression = new ParsedExpression();
+    expression.setFhirPath(Stream.of(system, version, code).filter(Objects::nonNull)
+        .collect(Collectors.joining("|")));
+    expression.setFhirPathType(FhirPathType.CODING);
+    expression.setFhirType(FHIRDefinedType.CODING);
+    expression.setLiteralValue(literalValue);
+    expression.setSingular(true);
+    expression.setPrimitive(false);
+    return expression;
+  }
+  
+  
   protected ParsedExpression createPrimitiveParsedExpression(Dataset<Row> dataset, String fhirPath,
       Class<? extends IBase> elementType, FhirPathType fhirPathType, FHIRDefinedType fhirType) {
     Column idColumn = dataset.col(dataset.columns()[0]);

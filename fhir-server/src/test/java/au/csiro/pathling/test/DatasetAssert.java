@@ -5,18 +5,19 @@
 package au.csiro.pathling.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.assertj.core.api.ListAssert;
 import org.assertj.core.api.ObjectAssert;
 
 /**
  * @author Piotr Szul
  */
 public class DatasetAssert {
-
+  
   private final Dataset<Row> dataset;
 
   public DatasetAssert(Dataset<Row> dataset) {
@@ -62,5 +63,15 @@ public class DatasetAssert {
     assertThat(result.size()).isOne();
     assertThat(result.get(0).size()).isOne();
     return assertThat(result.get(0).get(0));
+  }
+
+  public ListAssert<Object> isValues() {
+    List<Row> result = dataset.collectAsList();
+    result.forEach(row -> assertThat(row.size()).isOne());
+    return assertThat(result.stream().map(row -> row.get(0)).collect(Collectors.toList()));
+  }
+  
+  public Dataset<Row> getDataset() {
+    return dataset;
   }
 }

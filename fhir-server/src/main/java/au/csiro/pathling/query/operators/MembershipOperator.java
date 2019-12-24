@@ -7,7 +7,7 @@ package au.csiro.pathling.query.operators;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.when;
-
+import au.csiro.pathling.query.parsing.FhirPathTypeSqlHelper;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -21,7 +21,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * An expression that tests whether a singular value is present within a collection.
  *
  * @author John Grimes
- * @see <a href= "http://hl7.org/fhirpath/2018Sep/index.html#collections-2">http://hl7.org/fhirpath/2018Sep/index.html#collections-2</a>
+ * @see <a href=
+ *      "http://hl7.org/fhirpath/2018Sep/index.html#collections-2">http://hl7.org/fhirpath/2018Sep/index.html#collections-2</a>
  */
 public class MembershipOperator implements BinaryOperator {
 
@@ -57,6 +58,8 @@ public class MembershipOperator implements BinaryOperator {
           "Operands are of incompatible types: " + input.getExpression());
     }
 
+    FhirPathTypeSqlHelper sqlHelper = FhirPathTypeSqlHelper.forType(element.getFhirPathType());
+
     // Create a new dataset which joins left and right and aggregates on the resource ID based upon
     // whether the left expression is within the set of values in the right expression.
     Dataset<Row> elementDataset = element.getDataset();
@@ -65,7 +68,8 @@ public class MembershipOperator implements BinaryOperator {
     Column collectionIdColumn = collection.getIdColumn();
     Column collectionColumn = collection.getValueColumn();
     Column elementColumn =
-        element.isLiteral() ? lit(element.getJavaLiteralValue()) : element.getValueColumn();
+        element.isLiteral() ? sqlHelper.getLiteralColumn(element.getLiteralValue())
+            : element.getValueColumn();
     Column elementIdColumn = element.getIdColumn();
 
     Dataset<Row> membershipDataset = element.isLiteral() ? collectionDataset
@@ -76,9 +80,8 @@ public class MembershipOperator implements BinaryOperator {
     // right-hand side (collection) is empty, the result is false. Otherwise, a Boolean is returned
     // based on whether the element is present in the collection, using equality semantics.
     Column equalityColumn =
-        when(elementColumn.isNull(), lit(null))
-            .when(collectionColumn.isNull(), lit(false))
-            .otherwise(collectionColumn.equalTo(elementColumn));
+        when(elementColumn.isNull(), lit(null)).when(collectionColumn.isNull(), lit(false))
+            .otherwise(sqlHelper.getEquality().apply(collectionColumn, elementColumn));
 
     // In order to reduce the result to a single Boolean, we take the max of the boolean equality
     // values, aggregated by the resource ID.

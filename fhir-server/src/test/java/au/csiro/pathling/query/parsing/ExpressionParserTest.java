@@ -6,17 +6,13 @@ package au.csiro.pathling.query.parsing;
 
 import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_8ee183e2;
 import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_9360820c;
+import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_bbd33563;
+import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_beff242e;
 import static au.csiro.pathling.query.parsing.PatientListBuilder.allPatientsWithValue;
 import static au.csiro.pathling.test.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import au.csiro.pathling.TestUtilities;
-import au.csiro.pathling.fhir.FreshFhirContextFactory;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.query.ResourceReader;
-import au.csiro.pathling.test.ParsedExpressionAssert;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -33,6 +29,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import au.csiro.pathling.TestUtilities;
+import au.csiro.pathling.fhir.FreshFhirContextFactory;
+import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.query.ResourceReader;
+import au.csiro.pathling.test.ParsedExpressionAssert;
 
 /**
  * @author Piotr Szul
@@ -96,8 +97,8 @@ public class ExpressionParserTest {
 
   private void mockResourceReader(ResourceType... resourceTypes) throws MalformedURLException {
     for (ResourceType resourceType : resourceTypes) {
-      File parquetFile = new File(
-          "src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
+      File parquetFile =
+          new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
       URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
       assertThat(parquetUrl).isNotNull();
       Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
@@ -120,7 +121,6 @@ public class ExpressionParserTest {
         .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_8ee183e2, true));
   }
 
-
   @Test
   public void testInOperator() {
     assertThatResultOf("'Wuckert783' in name.family").isOfBooleanType().isSelection().selectResult()
@@ -128,6 +128,23 @@ public class ExpressionParserTest {
 
     assertThatResultOf("'MD' in name.suffix").isOfBooleanType().isSelection().selectResult()
         .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_8ee183e2, true));
+  }
+
+  @Test
+  public void testCodingOperations() {
+    
+    // test unversioned
+    assertThatResultOf(
+        "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
+            .isOfBooleanType().isSelection().selectResult()
+            .hasRows(allPatientsWithValue(true).withRow(PATIENT_ID_8ee183e2, false)
+                .withRow(PATIENT_ID_9360820c, false).withRow(PATIENT_ID_beff242e, false));
+
+    // test versioned
+    assertThatResultOf(
+        "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
+            .isOfBooleanType().isSelection().selectResult()
+            .hasRows(allPatientsWithValue(true).withRow(PATIENT_ID_bbd33563, false));
   }
 
   @After
