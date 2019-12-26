@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.bunsen.FhirEncoders;
 import au.csiro.pathling.fhir.AnalyticsServerConfiguration;
-import au.csiro.pathling.fhir.FreshFhirContextFactory;
+import au.csiro.pathling.fhir.FhirContextFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -47,7 +47,7 @@ public class ImportProviderTest {
     config.setDatabaseName("test");
 
     importProvider = new ImportProvider(config, spark, FhirEncoders.forR4().getOrCreate(),
-        new FreshFhirContextFactory());
+        new FhirContextFactory());
   }
 
   @Test

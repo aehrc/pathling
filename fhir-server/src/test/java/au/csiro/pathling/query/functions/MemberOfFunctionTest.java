@@ -13,15 +13,13 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.TestUtilities.*;
 import au.csiro.pathling.encoding.ValidateCodeResult;
-import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.functions.MemberOfFunction.ValidateCodeMapper;
 import au.csiro.pathling.query.parsing.ExpressionParserContext;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.parser.IParser;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,13 +90,9 @@ public class MemberOfFunctionTest {
     when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
     when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodingTxAnswerer);
 
-    // Create a mock FhirContextFactory, and make it return the mock terminology client.
-    FhirContext fhirContext = mock(FhirContext.class);
-    when(fhirContext
-        .newRestfulClient(TerminologyClient.class, terminologyServiceUrl))
-        .thenReturn(terminologyClient);
-    FhirContextFactory fhirContextFactory = mock(FhirContextFactory.class);
-    when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
+    // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
+    TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
+    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     // Create a mock ValidateCodeMapper.
     ValidateCodeMapper mockCodeMapper = mock(ValidateCodeMapper.class);
@@ -110,7 +104,7 @@ public class MemberOfFunctionTest {
     // Prepare the inputs to the function.
     ExpressionParserContext parserContext = new ExpressionParserContext();
     parserContext.setTerminologyClient(terminologyClient);
-    parserContext.setFhirContextFactory(fhirContextFactory);
+    parserContext.setTerminologyClientFactory(terminologyClientFactory);
 
     // Prepare the input expression.
     ParsedExpression inputExpression = new ParsedExpression();
@@ -150,8 +144,8 @@ public class MemberOfFunctionTest {
     assertThat(result.getValueColumn()).isInstanceOf(Column.class);
 
     // Test the mapper.
-    ValidateCodeMapper validateCodingMapper = new ValidateCodeMapper(fhirContextFactory,
-        terminologyServiceUrl, myValueSetUrl, FHIRDefinedType.CODING);
+    ValidateCodeMapper validateCodingMapper = new ValidateCodeMapper(terminologyClientFactory,
+        myValueSetUrl, FHIRDefinedType.CODING);
     Row inputCodingRow1 = RowFactory.create(1, rowFromCoding(coding1));
     Row inputCodingRow2 = RowFactory.create(2, rowFromCoding(coding2));
     Row inputCodingRow3 = RowFactory.create(3, rowFromCoding(coding3));
@@ -234,13 +228,9 @@ public class MemberOfFunctionTest {
     when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
     when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodeableConceptTxAnswerer);
 
-    // Create a mock FhirContextFactory, and make it return the mock terminology client.
-    FhirContext fhirContext = mock(FhirContext.class);
-    when(fhirContext
-        .newRestfulClient(TerminologyClient.class, terminologyServiceUrl))
-        .thenReturn(terminologyClient);
-    FhirContextFactory fhirContextFactory = mock(FhirContextFactory.class);
-    when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
+    // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
+    TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
+    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     // Create a mock ValidateCodeMapper.
     ValidateCodeMapper mockCodeMapper = mock(ValidateCodeMapper.class);
@@ -252,7 +242,7 @@ public class MemberOfFunctionTest {
     // Prepare the inputs to the function.
     ExpressionParserContext parserContext = new ExpressionParserContext();
     parserContext.setTerminologyClient(terminologyClient);
-    parserContext.setFhirContextFactory(fhirContextFactory);
+    parserContext.setTerminologyClientFactory(terminologyClientFactory);
 
     // Prepare the input expression.
     ParsedExpression inputExpression = new ParsedExpression();
@@ -296,8 +286,8 @@ public class MemberOfFunctionTest {
     assertThat(result.getValueColumn()).isInstanceOf(Column.class);
 
     // Test the mapper.
-    ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper(fhirContextFactory,
-        terminologyServiceUrl, myValueSetUrl, FHIRDefinedType.CODEABLECONCEPT);
+    ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper(terminologyClientFactory,
+        myValueSetUrl, FHIRDefinedType.CODEABLECONCEPT);
     Row inputCodeableConceptRow1 = RowFactory.create(1, rowFromCodeableConcept(codeableConcept1));
     Row inputCodeableConceptRow2 = RowFactory.create(2, rowFromCodeableConcept(codeableConcept2));
     Row inputCodeableConceptRow3 = RowFactory.create(3, rowFromCodeableConcept(codeableConcept3));

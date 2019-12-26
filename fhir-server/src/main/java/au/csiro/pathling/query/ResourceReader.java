@@ -100,4 +100,14 @@ public class ResourceReader {
     resources.cache();
     return resources;
   }
+
+  @Override
+  public String toString() {
+    return "ResourceReader{" +
+        "warehouseUrl='" + warehouseUrl + '\'' +
+        ", databaseName='" + databaseName + '\'' +
+        ", availableResourceTypes=" + availableResourceTypes +
+        '}';
+  }
+
 }

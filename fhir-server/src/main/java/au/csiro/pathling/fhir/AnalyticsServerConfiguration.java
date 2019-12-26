@@ -52,9 +52,20 @@ public class AnalyticsServerConfiguration {
   private String terminologyServerUrl;
 
   /**
+   * (OPTIONAL) Socket timeout for connections to the FHIR terminology service.
+   */
+  private int terminologySocketTimeout;
+
+  /**
    * (OPTIONAL) Whether to run an explain ahead of each Spark SQL query.
    */
   private boolean explainQueries;
+
+  /**
+   * (OPTIONAL) Turns on verbose logging of the details of requests to the analytics server, and
+   * requests to the terminology server.
+   */
+  private boolean verboseRequestLogging;
 
   /**
    * (OPTIONAL) Number of partitions to use when shuffling data for joins or aggregations.
@@ -82,7 +93,9 @@ public class AnalyticsServerConfiguration {
     databaseName = "default";
     executorMemory = "1g";
     terminologyServerUrl = "https://r4.ontoserver.csiro.au/fhir";
+    terminologySocketTimeout = 60000;
     explainQueries = false;
+    verboseRequestLogging = false;
     shufflePartitions = 2;
     corsAllowedOrigins = Collections.singletonList("*");
   }
@@ -141,12 +154,28 @@ public class AnalyticsServerConfiguration {
     this.terminologyServerUrl = terminologyServerUrl;
   }
 
+  public int getTerminologySocketTimeout() {
+    return terminologySocketTimeout;
+  }
+
+  public void setTerminologySocketTimeout(int terminologySocketTimeout) {
+    this.terminologySocketTimeout = terminologySocketTimeout;
+  }
+
   public boolean isExplainQueries() {
     return explainQueries;
   }
 
   public void setExplainQueries(boolean explainQueries) {
     this.explainQueries = explainQueries;
+  }
+
+  public boolean isVerboseRequestLogging() {
+    return verboseRequestLogging;
+  }
+
+  public void setVerboseRequestLogging(boolean verboseRequestLogging) {
+    this.verboseRequestLogging = verboseRequestLogging;
   }
 
   public int getShufflePartitions() {
@@ -190,10 +219,12 @@ public class AnalyticsServerConfiguration {
         ", databaseName='" + databaseName + '\'' +
         ", executorMemory='" + executorMemory + '\'' +
         ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
+        ", terminologySocketTimeout=" + terminologySocketTimeout +
         ", explainQueries=" + explainQueries +
         ", shufflePartitions=" + shufflePartitions +
         ", awsAccessKeyId='" + awsAccessKeyId + '\'' +
         ", corsAllowedOrigins=" + corsAllowedOrigins +
         '}';
   }
+
 }

@@ -13,13 +13,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.TestUtilities;
-import au.csiro.pathling.fhir.FhirContextFactory;
-import au.csiro.pathling.fhir.FreshFhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.AggregateRequest.Aggregation;
 import au.csiro.pathling.query.AggregateRequest.Grouping;
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -65,14 +62,16 @@ public class AggregateExecutorTest {
         .getOrCreate();
 
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
+    TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
+        Mockito.withSettings().serializable());
+    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     warehouseDirectory = Files.createTempDirectory("pathling-test-");
     mockReader = mock(ResourceReader.class);
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        TestUtilities.getFhirContext(), new FreshFhirContextFactory(), terminologyClient,
+        TestUtilities.getFhirContext(), terminologyClientFactory, terminologyClient,
         mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
@@ -265,27 +264,9 @@ public class AggregateExecutorTest {
         .parseResource(getResourceAsStream(
             "txResponses/MemberOfFunctionTest-memberOfCoding-validate-code-positive.Bundle.json"));
 
-    // Create a mock FhirContextFactory, and make it return the mock terminology client.
-    FhirContext fhirContext = mock(FhirContext.class, Mockito.withSettings().serializable());
-    when(fhirContext
-        .newRestfulClient(TerminologyClient.class, terminologyServiceUrl))
-        .thenReturn(terminologyClient);
-    FhirContextFactory fhirContextFactory = mock(FhirContextFactory.class,
-        Mockito.withSettings().serializable());
-    when(fhirContextFactory.getFhirContext(FhirVersionEnum.R4)).thenReturn(fhirContext);
-
     // Mock out responses from the terminology server.
     when(terminologyClient.batch(any(Bundle.class)))
         .thenReturn(mockResponse);
-
-    // Create and configure a new AggregateExecutor.
-    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        TestUtilities.getFhirContext(), new FreshFhirContextFactory(),
-        terminologyClient, mockReader);
-    config.setWarehouseUrl(warehouseDirectory.toString());
-    config.setDatabaseName("test");
-
-    AggregateExecutor localExecutor = new AggregateExecutor(config);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
@@ -305,7 +286,7 @@ public class AggregateExecutorTest {
     request.getGroupings().add(grouping1);
 
     // Execute the query.
-    AggregateResponse response = localExecutor.execute(request);
+    AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();

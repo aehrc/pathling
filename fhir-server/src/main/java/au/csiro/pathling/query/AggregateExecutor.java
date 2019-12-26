@@ -6,8 +6,8 @@ package au.csiro.pathling.query;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.BOOLEAN;
 
-import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.AggregateRequest.Aggregation;
 import au.csiro.pathling.query.AggregateRequest.Grouping;
 import au.csiro.pathling.query.parsing.ExpressionParser;
@@ -43,7 +43,7 @@ public class AggregateExecutor {
   private static final Logger logger = LoggerFactory.getLogger(AggregateExecutor.class);
 
   private final FhirContext fhirContext;
-  private final FhirContextFactory fhirContextFactory;
+  private final TerminologyClientFactory terminologyClientFactory;
   private final SparkSession spark;
   private final ResourceReader resourceReader;
   private TerminologyClient terminologyClient;
@@ -52,7 +52,7 @@ public class AggregateExecutor {
     logger.info("Creating new AggregateExecutor: " + configuration);
     spark = configuration.getSparkSession();
     fhirContext = configuration.getFhirContext();
-    fhirContextFactory = configuration.getFhirContextFactory();
+    terminologyClientFactory = configuration.getTerminologyClientFactory();
     terminologyClient = configuration.getTerminologyClient();
     resourceReader = configuration.getResourceReader();
   }
@@ -85,8 +85,8 @@ public class AggregateExecutor {
           .map(Aggregation::getExpression).collect(
               Collectors.joining(",")) + "] groupings=[" + query.getGroupings().stream()
           .map(Grouping::getExpression).collect(
-              Collectors.joining(",")) + "] filters=[" + query.getFilters().stream().collect(
-          Collectors.joining(",")) + "]");
+              Collectors.joining(",")) + "] filters=[" + String.join(",", query.getFilters())
+          + "]");
 
       // Set up the subject resource dataset.
       ResourceType resourceType = query.getSubjectResource();
@@ -114,7 +114,7 @@ public class AggregateExecutor {
       // Gather dependencies for the execution of the expression parser.
       ExpressionParserContext context = new ExpressionParserContext();
       context.setFhirContext(fhirContext);
-      context.setFhirContextFactory(fhirContextFactory);
+      context.setTerminologyClientFactory(terminologyClientFactory);
       context.setTerminologyClient(terminologyClient);
       context.setSparkSession(spark);
       context.setResourceReader(resourceReader);

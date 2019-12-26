@@ -4,17 +4,17 @@
 
 package au.csiro.pathling.query.parsing;
 
-import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_8ee183e2;
-import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_9360820c;
-import static au.csiro.pathling.query.parsing.PatientListBuilder.allPatientsWithValue;
+import static au.csiro.pathling.query.parsing.PatientListBuilder.*;
 import static au.csiro.pathling.test.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.fhir.FreshFhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.ResourceReader;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.test.ParsedExpressionAssert;
@@ -57,14 +57,15 @@ public class ExpressionParserTest {
         .getOrCreate();
 
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
+    TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
+    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     mockReader = mock(ResourceReader.class);
 
     // Gather dependencies for the execution of the expression parser.
     parserContext = new ExpressionParserContext();
     parserContext.setFhirContext(TestUtilities.getFhirContext());
-    parserContext.setFhirContextFactory(new FreshFhirContextFactory());
+    parserContext.setTerminologyClientFactory(terminologyClientFactory);
     parserContext.setTerminologyClient(terminologyClient);
     parserContext.setSparkSession(spark);
     parserContext.setResourceReader(mockReader);
@@ -123,7 +124,6 @@ public class ExpressionParserTest {
         .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_8ee183e2, true));
   }
 
-
   @Test
   public void testInOperator() {
     assertThatResultOf("'Wuckert783' in name.family").isOfBooleanType().isSelection().selectResult()
@@ -131,6 +131,23 @@ public class ExpressionParserTest {
 
     assertThatResultOf("'MD' in name.suffix").isOfBooleanType().isSelection().selectResult()
         .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_8ee183e2, true));
+  }
+
+  @Test
+  public void testCodingOperations() {
+
+    // test unversioned
+    assertThatResultOf(
+        "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
+        .isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(true).withRow(PATIENT_ID_8ee183e2, false)
+            .withRow(PATIENT_ID_9360820c, false).withRow(PATIENT_ID_beff242e, false));
+
+    // test versioned
+    assertThatResultOf(
+        "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
+        .isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(true).withRow(PATIENT_ID_bbd33563, false));
   }
 
   @Test

@@ -9,11 +9,10 @@ import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.STRI
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoding.ValidateCodeResult;
-import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
-import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,6 +29,8 @@ import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
@@ -65,8 +66,8 @@ public class MemberOfFunction implements Function {
 
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
-    FhirContextFactory fhirContextFactory = input.getContext().getFhirContextFactory();
-    String terminologyServerUrl = input.getContext().getTerminologyClient().getServerBase();
+    TerminologyClientFactory terminologyClientFactory = input.getContext()
+        .getTerminologyClientFactory();
     FHIRDefinedType fhirType = inputResult.getFhirType();
     String valueSetUri = argument.getLiteralValue().toString();
 
@@ -75,7 +76,7 @@ public class MemberOfFunction implements Function {
     Dataset<Row> dataset;
     Dataset validateResults;
     ValidateCodeMapper validateCodeMapper = configuredMapper == null
-        ? new ValidateCodeMapper(fhirContextFactory, terminologyServerUrl, valueSetUri, fhirType)
+        ? new ValidateCodeMapper(terminologyClientFactory, valueSetUri, fhirType)
         : configuredMapper;
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
@@ -132,16 +133,14 @@ public class MemberOfFunction implements Function {
    */
   public static class ValidateCodeMapper implements MapPartitionsFunction<Row, ValidateCodeResult> {
 
-    private final FhirContextFactory fhirContextFactory;
-    private final String terminologyServerUrl;
+    private static final Logger logger = LoggerFactory.getLogger(ValidateCodeMapper.class);
+    private final TerminologyClientFactory terminologyClientFactory;
     private final String valueSetUri;
     private final FHIRDefinedType fhirType;
 
-    public ValidateCodeMapper(FhirContextFactory fhirContextFactory,
-        String terminologyServerUrl, String valueSetUri,
-        FHIRDefinedType fhirType) {
-      this.fhirContextFactory = fhirContextFactory;
-      this.terminologyServerUrl = terminologyServerUrl;
+    public ValidateCodeMapper(TerminologyClientFactory terminologyClientFactory,
+        String valueSetUri, FHIRDefinedType fhirType) {
+      this.terminologyClientFactory = terminologyClientFactory;
       this.valueSetUri = valueSetUri;
       this.fhirType = fhirType;
     }
@@ -153,9 +152,7 @@ public class MemberOfFunction implements Function {
       }
 
       // Create a terminology client.
-      TerminologyClient terminologyClient = fhirContextFactory
-          .getFhirContext(FhirVersionEnum.R4)
-          .newRestfulClient(TerminologyClient.class, terminologyServerUrl);
+      TerminologyClient terminologyClient = terminologyClientFactory.build(logger);
 
       // Create a Bundle to represent the batch of validate code requests.
       Bundle validateCodeBatch = new Bundle();
