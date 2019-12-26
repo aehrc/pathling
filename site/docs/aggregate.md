@@ -10,9 +10,9 @@ parent: Documentation
 Formal definition:
 [https://server.pathling.app/fhir/OperationDefinition/aggregate-0](https://server.pathling.app/fhir/OperationDefinition/aggregate-0)
 
-Pathling provides a [FHIR&reg; REST](https://www.hl7.org/fhir/http.html)
+Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and the `$aggregate` operation is an
-[extended operation](https://www.hl7.org/fhir/operations.html) defined on that
+[extended operation](https://hl7.org/fhir/R4/operations.html) defined on that
 interface.
 
 This operation allows a user to perform aggregate queries on data held within
