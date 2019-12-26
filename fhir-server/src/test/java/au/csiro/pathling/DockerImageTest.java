@@ -205,7 +205,6 @@ public class DockerImageTest {
       aggregationParam.getPart().add(aggregationLabel);
 
       // Add grouping, has the patient been diagnosed with a chronic disease?
-      // TODO: Re-enable this more complex query when memberOf has been completed and unit tested.
       ParametersParameterComponent groupingParam = new ParametersParameterComponent();
       groupingParam.setName("grouping");
       ParametersParameterComponent groupingExpression = new ParametersParameterComponent();
@@ -221,22 +220,6 @@ public class DockerImageTest {
       groupingLabel.setValue(new StringType("Diagnosed with chronic disease?"));
       groupingParam.getPart().add(groupingExpression);
       groupingParam.getPart().add(groupingLabel);
-
-      // Add grouping, condition code.
-      // ParametersParameterComponent groupingParam = new ParametersParameterComponent();
-      // groupingParam.setName("grouping");
-      // ParametersParameterComponent groupingExpression = new ParametersParameterComponent();
-      // groupingExpression.setName("expression");
-      // groupingExpression.setValue(new StringType(
-      //     "reverseResolve(Condition.subject)"
-      //         + ".code"
-      //         + ".coding"
-      //         + ".display"));
-      // ParametersParameterComponent groupingLabel = new ParametersParameterComponent();
-      // groupingLabel.setName("label");
-      // groupingLabel.setValue(new StringType("Diagnosed with chronic disease?"));
-      // groupingParam.getPart().add(groupingExpression);
-      // groupingParam.getPart().add(groupingLabel);
 
       // Add filter, females only.
       ParametersParameterComponent filterParam = new ParametersParameterComponent();
@@ -271,29 +254,29 @@ public class DockerImageTest {
               .isEqualTo(200);
         }
       }
+      assertThat(outParams).isNotNull();
 
       // Check the first grouping.
       ParametersParameterComponent firstGrouping = outParams.getParameter().get(0);
       Optional<ParametersParameterComponent> firstLabel = firstGrouping.getPart().stream()
           .filter(part -> part.getName().equals("label")).findFirst();
       assertThat(firstLabel.isPresent());
-      assertThat(firstLabel.get().getValue().equals(new StringType("Prediabetes")));
+      assertThat(((BooleanType) firstLabel.get().getValue()).booleanValue()).isFalse();
       Optional<ParametersParameterComponent> firstResult = firstGrouping.getPart().stream()
           .filter(part -> part.getName().equals("result")).findFirst();
       assertThat(firstResult.isPresent());
-      assertThat(firstResult.get().getValue().equals(new UnsignedIntType(3)));
+      assertThat(((UnsignedIntType) firstResult.get().getValue()).getValue()).isEqualTo(4);
 
       // Check the second grouping.
-      ParametersParameterComponent secondGrouping = outParams.getParameter().get(0);
+      ParametersParameterComponent secondGrouping = outParams.getParameter().get(1);
       Optional<ParametersParameterComponent> secondLabel = secondGrouping.getPart().stream()
           .filter(part -> part.getName().equals("label")).findFirst();
       assertThat(secondLabel.isPresent());
-      assertThat(
-          secondLabel.get().getValue().equals(new StringType("Fetus with unknown complication")));
+      assertThat(((BooleanType) secondLabel.get().getValue()).booleanValue()).isTrue();
       Optional<ParametersParameterComponent> secondResult = secondGrouping.getPart().stream()
           .filter(part -> part.getName().equals("result")).findFirst();
       assertThat(secondResult.isPresent());
-      assertThat(secondResult.get().getValue().equals(new UnsignedIntType(1)));
+      assertThat(((UnsignedIntType) secondResult.get().getValue()).getValue()).isEqualTo(3);
     } finally {
       stopContainer(dockerClient, fhirServerContainerId);
       fhirServerContainerId = null;
