@@ -46,7 +46,8 @@ public class AggregateExecutor {
   private final TerminologyClientFactory terminologyClientFactory;
   private final SparkSession spark;
   private final ResourceReader resourceReader;
-  private TerminologyClient terminologyClient;
+  private final TerminologyClient terminologyClient;
+  private final boolean explainQueries;
 
   public AggregateExecutor(@Nonnull AggregateExecutorConfiguration configuration) {
     logger.info("Creating new AggregateExecutor: " + configuration);
@@ -55,6 +56,7 @@ public class AggregateExecutor {
     terminologyClientFactory = configuration.getTerminologyClientFactory();
     terminologyClient = configuration.getTerminologyClient();
     resourceReader = configuration.getResourceReader();
+    explainQueries = configuration.isExplainQueries();
   }
 
   /**
@@ -66,6 +68,7 @@ public class AggregateExecutor {
       return false;
     }
     try {
+      logger.info("Getting terminology service capability statement to check service health");
       terminologyClient.getServerMetadata();
     } catch (Exception e) {
       logger.error("Readiness failure", e);
@@ -257,6 +260,10 @@ public class AggregateExecutor {
   private AggregateResponse buildResponse(@Nonnull Dataset<Row> dataset,
       @Nonnull List<ParsedExpression> parsedAggregations,
       @Nonnull List<ParsedExpression> parsedGroupings) {
+    if (explainQueries) {
+      logger.info("$aggregate query plan:");
+      dataset.explain(true);
+    }
     List<Row> rows = dataset.collectAsList();
 
     AggregateResponse queryResult = new AggregateResponse();

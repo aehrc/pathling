@@ -8,6 +8,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.client.api.IRestfulClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
+import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import java.util.List;
 import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ public interface TerminologyClient extends IRestfulClient {
       int socketTimeout, boolean verboseRequestLogging, Logger logger) {
     IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
     restfulClientFactory.setSocketTimeout(socketTimeout);
+    restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);
 
     TerminologyClient terminologyClient = restfulClientFactory
         .newClient(TerminologyClient.class, terminologyServerUrl);

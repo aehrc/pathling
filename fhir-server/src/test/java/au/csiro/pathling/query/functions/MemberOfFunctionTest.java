@@ -144,7 +144,8 @@ public class MemberOfFunctionTest {
     assertThat(result.getValueColumn()).isInstanceOf(Column.class);
 
     // Test the mapper.
-    ValidateCodeMapper validateCodingMapper = new ValidateCodeMapper(terminologyClientFactory,
+    ValidateCodeMapper validateCodingMapper = new ValidateCodeMapper("xyz",
+        terminologyClientFactory,
         myValueSetUrl, FHIRDefinedType.CODING);
     Row inputCodingRow1 = RowFactory.create(1, rowFromCoding(coding1));
     Row inputCodingRow2 = RowFactory.create(2, rowFromCoding(coding2));
@@ -286,7 +287,8 @@ public class MemberOfFunctionTest {
     assertThat(result.getValueColumn()).isInstanceOf(Column.class);
 
     // Test the mapper.
-    ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper(terminologyClientFactory,
+    ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper("xyz",
+        terminologyClientFactory,
         myValueSetUrl, FHIRDefinedType.CODEABLECONCEPT);
     Row inputCodeableConceptRow1 = RowFactory.create(1, rowFromCodeableConcept(codeableConcept1));
     Row inputCodeableConceptRow2 = RowFactory.create(2, rowFromCodeableConcept(codeableConcept2));

@@ -31,6 +31,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
@@ -76,7 +77,8 @@ public class MemberOfFunction implements Function {
     Dataset<Row> dataset;
     Dataset validateResults;
     ValidateCodeMapper validateCodeMapper = configuredMapper == null
-        ? new ValidateCodeMapper(terminologyClientFactory, valueSetUri, fhirType)
+        ? new ValidateCodeMapper(MDC.get("requestId"), terminologyClientFactory, valueSetUri,
+        fhirType)
         : configuredMapper;
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
@@ -134,12 +136,15 @@ public class MemberOfFunction implements Function {
   public static class ValidateCodeMapper implements MapPartitionsFunction<Row, ValidateCodeResult> {
 
     private static final Logger logger = LoggerFactory.getLogger(ValidateCodeMapper.class);
+    private final String requestId;
     private final TerminologyClientFactory terminologyClientFactory;
     private final String valueSetUri;
     private final FHIRDefinedType fhirType;
 
-    public ValidateCodeMapper(TerminologyClientFactory terminologyClientFactory,
+    public ValidateCodeMapper(String requestId,
+        TerminologyClientFactory terminologyClientFactory,
         String valueSetUri, FHIRDefinedType fhirType) {
+      this.requestId = requestId;
       this.terminologyClientFactory = terminologyClientFactory;
       this.valueSetUri = valueSetUri;
       this.fhirType = fhirType;
@@ -150,6 +155,10 @@ public class MemberOfFunction implements Function {
       if (!inputRows.hasNext()) {
         return Collections.emptyIterator();
       }
+
+      // Add the request ID to the logging context, so that we can track the logging for this
+      // request across all workers.
+      MDC.put("requestId", requestId);
 
       // Create a terminology client.
       TerminologyClient terminologyClient = terminologyClientFactory.build(logger);
@@ -212,6 +221,9 @@ public class MemberOfFunction implements Function {
       });
 
       // Execute the operation on the terminology server.
+      logger.info(
+          "Sending batch of $validate-code requests to terminology service, " + validateCodeBatch
+              .getEntry().size() + " concepts");
       Bundle validateCodeResult = terminologyClient.batch(validateCodeBatch);
 
       // Convert each result into a Row.

@@ -221,6 +221,7 @@ public class AnalyticsServerConfiguration {
         ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
         ", terminologySocketTimeout=" + terminologySocketTimeout +
         ", explainQueries=" + explainQueries +
+        ", verboseRequestLogging=" + verboseRequestLogging +
         ", shufflePartitions=" + shufflePartitions +
         ", awsAccessKeyId='" + awsAccessKeyId + '\'' +
         ", corsAllowedOrigins=" + corsAllowedOrigins +

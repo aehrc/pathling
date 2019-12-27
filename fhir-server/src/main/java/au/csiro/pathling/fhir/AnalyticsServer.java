@@ -194,9 +194,7 @@ public class AnalyticsServer extends RestfulServer {
     // Log the request duration following each successful request.
     LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
     loggingInterceptor.setLogger(logger);
-    loggingInterceptor.setMessageFormat(configuration.isVerboseRequestLogging()
-        ? "Request completed in ${processingTimeMillis} ms: ${requestBodyFhir}"
-        : "Request completed in ${processingTimeMillis} ms");
+    loggingInterceptor.setMessageFormat("Request completed in ${processingTimeMillis} ms");
     loggingInterceptor.setLogExceptions(false);
     registerInterceptor(loggingInterceptor);
   }
