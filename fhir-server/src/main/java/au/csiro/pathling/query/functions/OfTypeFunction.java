@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -50,6 +51,7 @@ public class OfTypeFunction implements Function {
     result.setDataset(dataset);
     result.setResource(true);
     result.setResourceType(resourceType);
+    result.setFhirType(FHIRDefinedType.fromCode(resourceType.toCode()));
     result.setHashedValue(idColumn, valueColumn);
 
     return result;

@@ -4,11 +4,11 @@
 
 package au.csiro.pathling.query.parsing;
 
-import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_8ee183e2;
-import static au.csiro.pathling.query.parsing.PatientListBuilder.PATIENT_ID_9360820c;
-import static au.csiro.pathling.query.parsing.PatientListBuilder.allPatientsWithValue;
+import static au.csiro.pathling.TestUtilities.getSparkSession;
 import static au.csiro.pathling.test.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThat;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_8ee183e2;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_9360820c;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWithValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -29,10 +29,9 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.assertj.core.api.Assertions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.StringType;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -46,25 +45,21 @@ public class ExpressionParserTest {
 
   private SparkSession spark;
   private ResourceReader mockReader;
-  private TerminologyClient terminologyClient;
-  private String terminologyServiceUrl = "https://r4.ontoserver.csiro.au/fhir";
-  private ExpressionParserContext parserContext;
   private ExpressionParser expressionParser;
 
   @Before
   public void setUp() throws IOException {
-    spark = SparkSession.builder().appName("pathling-test").config("spark.master", "local")
-        .config("spark.driver.host", "localhost").config("spark.sql.shuffle.partitions", "1")
-        .getOrCreate();
+    spark = getSparkSession();
 
-    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
+    TerminologyClient terminologyClient = mock(TerminologyClient.class,
+        Mockito.withSettings().serializable());
     TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     mockReader = mock(ResourceReader.class);
 
     // Gather dependencies for the execution of the expression parser.
-    parserContext = new ExpressionParserContext();
+    ExpressionParserContext parserContext = new ExpressionParserContext();
     parserContext.setFhirContext(TestUtilities.getFhirContext());
     parserContext.setTerminologyClientFactory(terminologyClientFactory);
     parserContext.setTerminologyClient(terminologyClient);
@@ -104,7 +99,7 @@ public class ExpressionParserTest {
       File parquetFile = new File(
           "src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
       URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
-      assertThat(parquetUrl).isNotNull();
+      Assertions.assertThat(parquetUrl).isNotNull();
       Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
       when(mockReader.read(resourceType)).thenReturn(dataset);
       when(mockReader.getAvailableResourceTypes())
@@ -118,41 +113,59 @@ public class ExpressionParserTest {
 
   @Test
   public void testContainsOperator() {
-    assertThatResultOf("name.family contains 'Wuckert783'").isOfBooleanType().isSelection()
-        .selectResult().hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_9360820c, true));
+    assertThatResultOf("name.family contains 'Wuckert783'")
+        .isOfBooleanType()
+        .isSelection()
+        .selectResult()
+        .hasRows(
+            allPatientsWithValue(false)
+                .changeValue(PATIENT_ID_9360820c, true)
+        );
 
-    assertThatResultOf("name.suffix contains 'MD'").isOfBooleanType().isSelection().selectResult()
-        .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_8ee183e2, true));
+    assertThatResultOf("name.suffix contains 'MD'")
+        .isOfBooleanType()
+        .isSelection()
+        .selectResult()
+        .hasRows(
+            allPatientsWithValue(false)
+                .changeValue(PATIENT_ID_8ee183e2, true)
+        );
   }
 
   @Test
   public void testInOperator() {
-    assertThatResultOf("'Wuckert783' in name.family").isOfBooleanType().isSelection().selectResult()
-        .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_9360820c, true));
+    assertThatResultOf("'Wuckert783' in name.family")
+        .isOfBooleanType()
+        .isSelection()
+        .selectResult()
+        .hasRows(
+            allPatientsWithValue(false)
+                .changeValue(PATIENT_ID_9360820c, true)
+        );
 
-    assertThatResultOf("'MD' in name.suffix").isOfBooleanType().isSelection().selectResult()
-        .hasRows(allPatientsWithValue(false).withRow(PATIENT_ID_8ee183e2, true));
+    assertThatResultOf("'MD' in name.suffix")
+        .isOfBooleanType()
+        .isSelection()
+        .selectResult()
+        .hasRows(
+            allPatientsWithValue(false)
+                .changeValue(PATIENT_ID_8ee183e2, true)
+        );
   }
 
   @Test
   public void testDateTimeLiterals() {
     // Full DateTime.
     ParsedExpression result = expressionParser.parse("@2015-02-04T14:34:28Z");
-    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.DATE_TIME);
-    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.DATETIME);
-    assertThat(result.getLiteralValue()).isInstanceOf(StringType.class);
-    assertThat(result.getLiteralValue().toString()).isEqualTo("2015-02-04T14:34:28Z");
-    assertThat(result.getJavaLiteralValue()).isEqualTo("2015-02-04T14:34:28Z");
-    assertThat(result.isSingular()).isTrue();
+    assertThat(result).isOfType(FHIRDefinedType.DATETIME, FhirPathType.DATE_TIME);
+    assertThat(result).isStringLiteral("2015-02-04T14:34:28Z");
+    assertThat(result).isSingular();
 
     // Date with no time component.
     result = expressionParser.parse("@2015-02-04");
-    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.DATE_TIME);
-    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.DATETIME);
-    assertThat(result.getLiteralValue()).isInstanceOf(StringType.class);
-    assertThat(result.getLiteralValue().toString()).isEqualTo("2015-02-04");
-    assertThat(result.getJavaLiteralValue()).isEqualTo("2015-02-04");
-    assertThat(result.isSingular()).isTrue();
+    assertThat(result).isOfType(FHIRDefinedType.DATETIME, FhirPathType.DATE_TIME);
+    assertThat(result).isStringLiteral("2015-02-04");
+    assertThat(result).isSingular();
   }
 
 
@@ -160,25 +173,15 @@ public class ExpressionParserTest {
   public void testTimeLiterals() {
     // Full Time.
     ParsedExpression result = expressionParser.parse("@T14:34:28Z");
-    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.TIME);
-    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.TIME);
-    assertThat(result.getLiteralValue()).isInstanceOf(StringType.class);
-    assertThat(result.getLiteralValue().toString()).isEqualTo("14:34:28Z");
-    assertThat(result.getJavaLiteralValue()).isEqualTo("14:34:28Z");
-    assertThat(result.isSingular()).isTrue();
+    assertThat(result).isOfType(FHIRDefinedType.TIME, FhirPathType.TIME);
+    assertThat(result).isStringLiteral("14:34:28Z");
+    assertThat(result).isSingular();
 
     // Hour only.
     result = expressionParser.parse("@T14");
-    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.TIME);
-    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.TIME);
-    assertThat(result.getLiteralValue()).isInstanceOf(StringType.class);
-    assertThat(result.getLiteralValue().toString()).isEqualTo("14");
-    assertThat(result.getJavaLiteralValue()).isEqualTo("14");
-    assertThat(result.isSingular()).isTrue();
+    assertThat(result).isOfType(FHIRDefinedType.TIME, FhirPathType.TIME);
+    assertThat(result).isStringLiteral("14");
+    assertThat(result).isSingular();
   }
 
-  @After
-  public void tearDown() {
-    spark.close();
-  }
 }

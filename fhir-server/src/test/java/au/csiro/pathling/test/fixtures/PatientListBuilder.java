@@ -2,18 +2,19 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.pathling.query.parsing;
+package au.csiro.pathling.test.fixtures;
 
-import au.csiro.pathling.test.RowListBuilder;
+import au.csiro.pathling.test.DatasetBuilder;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.spark.sql.types.DataTypes;
 
 
 /**
  * @author Piotr Szul
  */
 
-public class PatientListBuilder extends RowListBuilder {
+public class PatientListBuilder {
 
   public static final String PATIENT_ID_121503c8 = "Patient/121503c8-9564-4b48-9086-a22df717948e";
   public static final String PATIENT_ID_2b36c1e2 = "Patient/2b36c1e2-bbe1-45ae-8124-4adad2677702";
@@ -29,8 +30,10 @@ public class PatientListBuilder extends RowListBuilder {
       PATIENT_ID_2b36c1e2, PATIENT_ID_7001ad9c, PATIENT_ID_8ee183e2, PATIENT_ID_9360820c,
       PATIENT_ID_a7eb2ce7, PATIENT_ID_bbd33563, PATIENT_ID_beff242e, PATIENT_ID_e62e52ae);
 
-
-  public static RowListBuilder allPatientsWithValue(Object value) {
-    return allWithValue(value, PATIENT_ALL_IDS);
+  public static DatasetBuilder allPatientsWithValue(Object value) {
+    return new DatasetBuilder()
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.BooleanType)
+        .withIdsAndValue(value, PATIENT_ALL_IDS);
   }
 }

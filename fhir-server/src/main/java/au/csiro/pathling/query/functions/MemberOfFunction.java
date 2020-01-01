@@ -238,7 +238,6 @@ public class MemberOfFunction implements Function {
               resultValue.hasType("boolean") && ((BooleanType) resultValue).booleanValue();
           result.setResult(validated);
         } else {
-          // TODO: Investigate whether an unsuccessful response will raise a HAPI server error.
           result.setResult(false);
         }
       }

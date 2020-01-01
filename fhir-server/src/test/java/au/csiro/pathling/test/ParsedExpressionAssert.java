@@ -5,11 +5,14 @@
 package au.csiro.pathling.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 import au.csiro.pathling.query.functions.FunctionInput;
 import au.csiro.pathling.query.operators.BinaryOperatorInput;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.StringType;
 
 /**
  * @author Piotr Szul
@@ -25,6 +28,13 @@ public class ParsedExpressionAssert {
   public DatasetAssert selectResult() {
     return new DatasetAssert(parsedExpression.getDataset()
         .select(parsedExpression.getIdColumn(), parsedExpression.getValueColumn())
+        .orderBy(parsedExpression.getIdColumn()));
+  }
+
+  public DatasetAssert selectPolymorphicResult() {
+    return new DatasetAssert(parsedExpression.getDataset()
+        .select(parsedExpression.getIdColumn(), parsedExpression.getResourceTypeColumn(),
+            parsedExpression.getValueColumn())
         .orderBy(parsedExpression.getIdColumn()));
   }
 
@@ -84,10 +94,12 @@ public class ParsedExpressionAssert {
   }
 
 
-  public ParsedExpressionAssert isResource() {
+  public ParsedExpressionAssert isResourceOfType(Enumerations.ResourceType resourceType,
+      FHIRDefinedType fhirType) {
     assertThat(parsedExpression.isPrimitive()).isFalse();
     assertThat(parsedExpression.isResource()).isTrue();
-    assertThat(parsedExpression.getResourceType()).isNotNull();
+    assertThat(parsedExpression.getResourceType()).isEqualTo(resourceType);
+    assertThat(parsedExpression.getFhirType()).isEqualTo(fhirType);
     assertThat(parsedExpression.isSingular()).isTrue();
     return this;
   }
@@ -101,6 +113,46 @@ public class ParsedExpressionAssert {
 
   public ParsedExpressionAssert isSingular() {
     assertThat(parsedExpression.isSingular()).isTrue();
+    return this;
+  }
+
+  public ParsedExpressionAssert isNotSingular() {
+    assertThat(parsedExpression.isSingular()).isFalse();
+    return this;
+  }
+
+  public ParsedExpressionAssert isPolymorphic() {
+    assertThat(parsedExpression.isPolymorphic()).isTrue();
+    assertThat(parsedExpression.getResourceTypeColumn()).isNotNull();
+    return this;
+  }
+
+  public ParsedExpressionAssert isNotPolymorphic() {
+    assertThat(parsedExpression.isPolymorphic()).isFalse();
+    assertThat(parsedExpression.getResourceTypeColumn()).isNull();
+    return this;
+  }
+
+  public ParsedExpressionAssert hasFhirPath(String expected) {
+    assertThat(parsedExpression.getFhirPath()).isEqualTo(expected);
+    return this;
+  }
+
+  public ParsedExpressionAssert hasOrigin(ParsedExpression expected) {
+    assertThat(parsedExpression.getOrigin()).isEqualTo(expected);
+    return this;
+  }
+
+  public ParsedExpressionAssert hasDefinition() {
+    assertThat(parsedExpression.getDefinition()).isNotNull();
+    assertThat(parsedExpression.getElementDefinition()).isNotNull();
+    return this;
+  }
+
+  public ParsedExpressionAssert isStringLiteral(String value) {
+    assertThat(parsedExpression.getLiteralValue()).isInstanceOf(StringType.class);
+    assertThat(parsedExpression.getLiteralValue().toString()).isEqualTo(value);
+    assertThat(parsedExpression.getJavaLiteralValue()).isEqualTo(value);
     return this;
   }
 }

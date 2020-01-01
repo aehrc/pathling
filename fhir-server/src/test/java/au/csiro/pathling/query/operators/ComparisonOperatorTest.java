@@ -6,25 +6,17 @@ package au.csiro.pathling.query.operators;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.*;
 import static au.csiro.pathling.test.Assertions.assertThat;
+import static au.csiro.pathling.test.PrimitiveExpressionBuilder.*;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.pathling.test.FunctionTest;
-import au.csiro.pathling.test.PrimitiveRowFixture;
-import au.csiro.pathling.test.RowListBuilder;
+import au.csiro.pathling.test.PrimitiveExpressionBuilder;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.math.BigDecimal;
-import java.util.List;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.ChargeItem;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.FamilyMemberHistory;
-import org.hl7.fhir.r4.model.Patient;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -37,7 +29,7 @@ import org.junit.runners.Parameterized.Parameters;
  */
 @Category(au.csiro.pathling.UnitTest.class)
 @RunWith(Parameterized.class)
-public class ComparisonOperatorTest extends FunctionTest {
+public class ComparisonOperatorTest {
 
   @Parameters(name = "{0}")
   public static Object[] parameters() {
@@ -63,39 +55,36 @@ public class ComparisonOperatorTest extends FunctionTest {
 
   @Before
   public void setUp() {
-    super.setUp();
-    RowListBuilder rowListBuilder = new RowListBuilder();
-
     switch (dataType) {
       case "String":
-        buildStringExpressions(rowListBuilder);
+        buildStringExpressions();
         break;
       case "Integer":
-        buildIntegerExpressions(rowListBuilder);
+        buildIntegerExpressions();
         break;
       case "Decimal":
-        buildDecimalExpressions(rowListBuilder);
+        buildDecimalExpressions();
         break;
       case "DateTime":
-        buildDateTimeExpressions(rowListBuilder,
+        buildDateTimeExpressions(
             "2015-02-07T13:28:17-05:00",
             "2015-02-08T13:28:17-05:00",
             DATE_TIME, FHIRDefinedType.DATETIME);
         break;
       case "Date":
-        buildDateTimeExpressions(rowListBuilder,
+        buildDateTimeExpressions(
             "2015-02-07",
             "2015-02-08",
             DATE, FHIRDefinedType.DATE);
         break;
       case "Date (YYYY-MM)":
-        buildDateTimeExpressions(rowListBuilder,
+        buildDateTimeExpressions(
             "2015-02",
             "2015-03",
             DATE, FHIRDefinedType.DATE);
         break;
       case "Date (YYYY)":
-        buildDateTimeExpressions(rowListBuilder,
+        buildDateTimeExpressions(
             "2015",
             "2016",
             DATE, FHIRDefinedType.DATE);
@@ -105,10 +94,10 @@ public class ComparisonOperatorTest extends FunctionTest {
     }
   }
 
-  private void buildStringExpressions(RowListBuilder rowListBuilder) {
-    StructType schema = PrimitiveRowFixture
-        .createPrimitiveRowStruct(DataTypes.StringType);
-    List<Row> leftRows = rowListBuilder
+  private void buildStringExpressions() {
+    left = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, STRING)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.StringType)
         .withRow("abc1", "Evelyn")
         .withRow("abc2", "Evelyn")
         .withRow("abc3", "Jude")
@@ -116,8 +105,10 @@ public class ComparisonOperatorTest extends FunctionTest {
         .withRow("abc5", "Evelyn")
         .withRow("abc6", null)
         .build();
-    Dataset<Row> leftDataset = spark.createDataFrame(leftRows, schema);
-    List<Row> rightRows = rowListBuilder
+    left.setSingular(true);
+    right = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, STRING)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.StringType)
         .withRow("abc1", "Evelyn")
         .withRow("abc2", "Jude")
         .withRow("abc3", "Evelyn")
@@ -125,22 +116,14 @@ public class ComparisonOperatorTest extends FunctionTest {
         .withRow("abc5", null)
         .withRow("abc6", null)
         .build();
-    Dataset<Row> rightDataset = spark.createDataFrame(rightRows, schema);
-    left = createPrimitiveParsedExpression(leftDataset,
-        "name",
-        FamilyMemberHistory.class, STRING, FHIRDefinedType.STRING);
-    left.setSingular(true);
-    right = createPrimitiveParsedExpression(rightDataset,
-        "name",
-        FamilyMemberHistory.class, STRING, FHIRDefinedType.STRING);
     right.setSingular(true);
-    literal = createLiteralStringExpression("Evelyn");
+    literal = literalString("Evelyn");
   }
 
-  private void buildIntegerExpressions(RowListBuilder rowListBuilder) {
-    StructType schema = PrimitiveRowFixture
-        .createPrimitiveRowStruct(DataTypes.IntegerType);
-    List<Row> leftRows = rowListBuilder
+  private void buildIntegerExpressions() {
+    left = new PrimitiveExpressionBuilder(FHIRDefinedType.INTEGER, INTEGER)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.IntegerType)
         .withRow("abc1", 1)
         .withRow("abc2", 1)
         .withRow("abc3", 2)
@@ -148,8 +131,10 @@ public class ComparisonOperatorTest extends FunctionTest {
         .withRow("abc5", 1)
         .withRow("abc6", null)
         .build();
-    Dataset<Row> leftDataset = spark.createDataFrame(leftRows, schema);
-    List<Row> rightRows = rowListBuilder
+    left.setSingular(true);
+    right = new PrimitiveExpressionBuilder(FHIRDefinedType.INTEGER, INTEGER)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.IntegerType)
         .withRow("abc1", 1)
         .withRow("abc2", 2)
         .withRow("abc3", 1)
@@ -157,22 +142,14 @@ public class ComparisonOperatorTest extends FunctionTest {
         .withRow("abc5", null)
         .withRow("abc6", null)
         .build();
-    Dataset<Row> rightDataset = spark.createDataFrame(rightRows, schema);
-    left = createPrimitiveParsedExpression(leftDataset,
-        "multipleBirthInteger",
-        Patient.class, INTEGER, FHIRDefinedType.INTEGER);
-    left.setSingular(true);
-    right = createPrimitiveParsedExpression(rightDataset,
-        "multipleBirthInteger",
-        Patient.class, INTEGER, FHIRDefinedType.INTEGER);
     right.setSingular(true);
-    literal = createLiteralIntegerExpression(1);
+    literal = literalInteger(1);
   }
 
-  private void buildDecimalExpressions(RowListBuilder rowListBuilder) {
-    StructType schema = PrimitiveRowFixture
-        .createPrimitiveRowStruct(DataTypes.createDecimalType());
-    List<Row> leftRows = rowListBuilder
+  private void buildDecimalExpressions() {
+    left = new PrimitiveExpressionBuilder(FHIRDefinedType.DECIMAL, DECIMAL)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.createDecimalType())
         .withRow("abc1", new BigDecimal("1.0"))
         .withRow("abc2", new BigDecimal("1.0"))
         .withRow("abc3", new BigDecimal("2.0"))
@@ -180,8 +157,10 @@ public class ComparisonOperatorTest extends FunctionTest {
         .withRow("abc5", new BigDecimal("1.0"))
         .withRow("abc6", null)
         .build();
-    Dataset<Row> leftDataset = spark.createDataFrame(leftRows, schema);
-    List<Row> rightRows = rowListBuilder
+    left.setSingular(true);
+    right = new PrimitiveExpressionBuilder(FHIRDefinedType.DECIMAL, DECIMAL)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.createDecimalType())
         .withRow("abc1", new BigDecimal("1.0"))
         .withRow("abc2", new BigDecimal("2.0"))
         .withRow("abc3", new BigDecimal("1.0"))
@@ -189,24 +168,15 @@ public class ComparisonOperatorTest extends FunctionTest {
         .withRow("abc5", null)
         .withRow("abc6", null)
         .build();
-    Dataset<Row> rightDataset = spark.createDataFrame(rightRows, schema);
-    left = createPrimitiveParsedExpression(leftDataset,
-        "factorOverride",
-        ChargeItem.class, DECIMAL, FHIRDefinedType.DECIMAL);
-    left.setSingular(true);
-    right = createPrimitiveParsedExpression(rightDataset,
-        "factorOverride",
-        ChargeItem.class, DECIMAL, FHIRDefinedType.DECIMAL);
     right.setSingular(true);
-    literal = createLiteralDecimalExpression(new BigDecimal("1.0"));
+    literal = literalDecimal(new BigDecimal("1.0"));
   }
 
-  private void buildDateTimeExpressions(RowListBuilder rowListBuilder, String lesserDate,
-      String greaterDate, FhirPathType fhirPathType,
-      FHIRDefinedType fhirType) {
-    StructType schema = PrimitiveRowFixture
-        .createPrimitiveRowStruct(DataTypes.StringType);
-    List<Row> leftRows = rowListBuilder
+  private void buildDateTimeExpressions(String lesserDate, String greaterDate,
+      FhirPathType fhirPathType, FHIRDefinedType fhirType) {
+    left = new PrimitiveExpressionBuilder(fhirType, fhirPathType)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.StringType)
         .withRow("abc1", lesserDate)
         .withRow("abc2", lesserDate)
         .withRow("abc3", greaterDate)
@@ -214,8 +184,10 @@ public class ComparisonOperatorTest extends FunctionTest {
         .withRow("abc5", lesserDate)
         .withRow("abc6", null)
         .build();
-    Dataset<Row> leftDataset = spark.createDataFrame(leftRows, schema);
-    List<Row> rightRows = rowListBuilder
+    left.setSingular(true);
+    right = new PrimitiveExpressionBuilder(fhirType, fhirPathType)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.StringType)
         .withRow("abc1", lesserDate)
         .withRow("abc2", greaterDate)
         .withRow("abc3", lesserDate)
@@ -223,18 +195,10 @@ public class ComparisonOperatorTest extends FunctionTest {
         .withRow("abc5", null)
         .withRow("abc6", null)
         .build();
-    Dataset<Row> rightDataset = spark.createDataFrame(rightRows, schema);
-    left = createPrimitiveParsedExpression(leftDataset,
-        "factorOverride",
-        ChargeItem.class, fhirPathType, fhirType);
-    left.setSingular(true);
-    right = createPrimitiveParsedExpression(rightDataset,
-        "factorOverride",
-        ChargeItem.class, fhirPathType, fhirType);
     right.setSingular(true);
-    literal = fhirPathType == DATE_TIME
-        ? createLiteralDateTimeExpression(lesserDate)
-        : createLiteralDateExpression(lesserDate);
+    literal = (fhirPathType == DATE_TIME)
+        ? literalDateTime(lesserDate)
+        : literalDate(lesserDate);
   }
 
   @Test
@@ -544,8 +508,8 @@ public class ComparisonOperatorTest extends FunctionTest {
 
   @Test
   public void bothOperandsAreLiteral() {
-    ParsedExpression literalLeft = createLiteralIntegerExpression(1);
-    ParsedExpression literalRight = createLiteralIntegerExpression(1);
+    ParsedExpression literalLeft = literalInteger(1);
+    ParsedExpression literalRight = literalInteger(1);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(literalLeft);

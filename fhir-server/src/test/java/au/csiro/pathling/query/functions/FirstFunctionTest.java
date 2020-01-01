@@ -4,25 +4,28 @@
 
 package au.csiro.pathling.query.functions;
 
+import static au.csiro.pathling.TestUtilities.getSparkSession;
 import static au.csiro.pathling.test.Assertions.assertThat;
-import static au.csiro.pathling.test.StringPrimitiveRowFixture.*;
+import static au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture.*;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.query.parsing.ExpressionParserContext;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.pathling.test.FunctionTest;
-import au.csiro.pathling.test.PatientResourceRowFixture;
-import au.csiro.pathling.test.StringPrimitiveRowFixture;
+import au.csiro.pathling.test.PrimitiveExpressionBuilder;
+import au.csiro.pathling.test.ResourceExpressionBuilder;
+import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;
+import au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.HumanName;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -30,14 +33,23 @@ import org.junit.experimental.categories.Category;
  * @author Piotr Szul
  */
 @Category(au.csiro.pathling.UnitTest.class)
-public class FirstFunctionTest extends FunctionTest {
+public class FirstFunctionTest {
 
+  private SparkSession spark;
+
+  @Before
+  public void setUp() {
+    spark = getSparkSession();
+  }
 
   @Test
   public void testGetsFirstResourceCorrectly() {
     Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
     // Build up an input for the function.
-    ParsedExpression input = createResourceParsedExpression(dataset, ResourceType.PATIENT);
+    ParsedExpression input = new ResourceExpressionBuilder(ResourceType.PATIENT,
+        FHIRDefinedType.PATIENT)
+        .withDataset(dataset)
+        .build();
 
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);
@@ -49,7 +61,7 @@ public class FirstFunctionTest extends FunctionTest {
     assertThat(result)
         .isResultFor(firstInput)
         .hasSameTypeAs(input)
-        .isResource()
+        .isResourceOfType(ResourceType.PATIENT, FHIRDefinedType.PATIENT)
         .isSelection()
         .isAggregation();
     // Check that the correct rows were included in the result.
@@ -61,8 +73,10 @@ public class FirstFunctionTest extends FunctionTest {
     Dataset<Row> dataset = StringPrimitiveRowFixture.createCompleteDataset(spark);
 
     // Build up an input for the function.
-    ParsedExpression input = createPrimitiveParsedExpression(dataset, "name.family",
-        HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
+    ParsedExpression input = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
+        FhirPathType.STRING)
+        .withDataset(dataset)
+        .build();
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);
     firstInput.setExpression("name.family.first()");
@@ -92,8 +106,10 @@ public class FirstFunctionTest extends FunctionTest {
 
     Dataset<Row> dataset = StringPrimitiveRowFixture.createEmptyDataset(spark);
     // Build up an input for the function.
-    ParsedExpression input = createPrimitiveParsedExpression(dataset, "name.family",
-        HumanName.class, FhirPathType.STRING, FHIRDefinedType.STRING);
+    ParsedExpression input = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
+        FhirPathType.STRING)
+        .withDataset(dataset)
+        .build();
 
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);

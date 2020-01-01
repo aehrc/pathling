@@ -57,8 +57,7 @@ public class ResolveFunction implements Function {
       List<Dataset<Row>> referenceTypeDatasets = new ArrayList<>();
       for (ResourceType referenceType : referenceTypes) {
         if (resourceReader.getAvailableResourceTypes().contains(referenceType)) {
-          Dataset<Row> referenceTypeDataset = resourceReader
-              .read(referenceType);
+          Dataset<Row> referenceTypeDataset = resourceReader.read(referenceType);
           targetIdCol = referenceTypeDataset.col("id");
           targetTypeCol = lit(referenceType.toCode());
           referenceTypeDataset = referenceTypeDataset.select(targetIdCol, targetTypeCol);
@@ -100,8 +99,9 @@ public class ResolveFunction implements Function {
     } else {
       result.setHashedValue(inputIdCol, targetValueCol);
       result.setResource(true);
-      result.setResourceType(
-          ResourceType.fromCode(((ResourceType) referenceTypes.toArray()[0]).toCode()));
+      String resourceCode = ((ResourceType) referenceTypes.toArray()[0]).toCode();
+      result.setResourceType(ResourceType.fromCode(resourceCode));
+      result.setFhirType(FHIRDefinedType.fromCode(resourceCode));
     }
 
     return result;

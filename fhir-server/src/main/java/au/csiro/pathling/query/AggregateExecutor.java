@@ -142,8 +142,9 @@ public class AggregateExecutor {
       allExpressions.add(subjectResource);
       allExpressions.addAll(parsedFilters);
       allExpressions.addAll(parsedGroupings);
-      allExpressions.addAll(parsedAggregations.stream().map(ParsedExpression::getAggreationJoinable)
-          .collect(Collectors.toList()));
+      allExpressions
+          .addAll(parsedAggregations.stream().map(ParsedExpression::getAggregationJoinable)
+              .collect(Collectors.toList()));
       Set<Dataset<Row>> joinedDatasets = new HashSet<>();
       joinedDatasets.add(subjectResource.getDataset());
 
