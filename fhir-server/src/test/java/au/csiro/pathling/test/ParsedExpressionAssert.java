@@ -100,7 +100,6 @@ public class ParsedExpressionAssert {
     assertThat(parsedExpression.isResource()).isTrue();
     assertThat(parsedExpression.getResourceType()).isEqualTo(resourceType);
     assertThat(parsedExpression.getFhirType()).isEqualTo(fhirType);
-    assertThat(parsedExpression.isSingular()).isTrue();
     return this;
   }
 

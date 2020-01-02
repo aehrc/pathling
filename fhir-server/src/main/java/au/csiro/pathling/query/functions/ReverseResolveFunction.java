@@ -41,16 +41,17 @@ public class ReverseResolveFunction implements Function {
         resourceCol = argument.getOrigin().getValueColumn();
 
     // Create a new dataset by joining from the argument to the input dataset.
-    // TODO: Implement support for resolving references based upon identifier.
     Dataset<Row> dataset = inputDataset
         .join(argumentDataset, inputIdCol.equalTo(argumentValueCol.getField("reference")),
             "left_outer");
 
     // Construct a new parse result.
+    ResourceType originResourceType = argument.getOrigin().getResourceType();
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setResource(true);
-    result.setResourceType(argument.getOrigin().getResourceType());
+    result.setResourceType(originResourceType);
+    result.setFhirType(FHIRDefinedType.fromCode(originResourceType.toCode()));
     result.setDataset(dataset);
     result.setHashedValue(inputIdCol, resourceCol);
 

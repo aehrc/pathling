@@ -80,7 +80,6 @@ public class ResolveFunction implements Function {
     }
 
     // Create a new dataset by joining to the target resource dataset.
-    // TODO: Implement support for resolving references based upon identifier.
     Column equality = referenceCol.getField("reference").equalTo(targetIdCol);
     Dataset<Row> dataset = inputDataset.join(targetDataset, equality, "left_outer");
 

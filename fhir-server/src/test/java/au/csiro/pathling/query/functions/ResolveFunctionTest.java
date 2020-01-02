@@ -42,7 +42,7 @@ public class ResolveFunctionTest {
 
   @Test
   public void simpleResolve() {
-    // Build a dataset which represents the input to the function.
+    // Build an expression which represents the input to the function.
     BaseRuntimeChildDefinition childDefinition = getFhirContext()
         .getResourceDefinition("Encounter").getChildByName("episodeOfCare");
     Assertions.assertThat(childDefinition).isInstanceOf(RuntimeChildResourceDefinition.class);
