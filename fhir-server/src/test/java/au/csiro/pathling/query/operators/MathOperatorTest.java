@@ -8,25 +8,19 @@ import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.DECI
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.INTEGER;
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.STRING;
 import static au.csiro.pathling.test.Assertions.assertThat;
+import static au.csiro.pathling.test.PrimitiveExpressionBuilder.literalInteger;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
-import au.csiro.pathling.test.FunctionTest;
-import au.csiro.pathling.test.PrimitiveRowFixture;
-import au.csiro.pathling.test.RowListBuilder;
+import au.csiro.pathling.test.PrimitiveExpressionBuilder;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.ChargeItem;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Patient;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -39,7 +33,7 @@ import org.junit.runners.Parameterized.Parameters;
  */
 @Category(au.csiro.pathling.UnitTest.class)
 @RunWith(Parameterized.class)
-public class MathOperatorTest extends FunctionTest {
+public class MathOperatorTest {
 
   private static List<String> expressionTypes = Arrays
       .asList("Integer", "Decimal", "Integer (literal)", "Decimal (literal)");
@@ -70,7 +64,6 @@ public class MathOperatorTest extends FunctionTest {
 
   @Before
   public void setUp() {
-    super.setUp();
     left = getExpressionForType(leftType, true);
     right = getExpressionForType(rightType, false);
     leftOperandIsInteger = leftType.equals("Integer") || leftType.equals("Integer (literal)");
@@ -85,48 +78,38 @@ public class MathOperatorTest extends FunctionTest {
       case "Integer":
         return buildIntegerExpression(leftOperand);
       case "Integer (literal)":
-        return createLiteralIntegerExpression(4);
+        return literalInteger(4);
       case "Decimal":
         return buildDecimalExpression(leftOperand);
       case "Decimal (literal)":
-        return createLiteralDecimalExpression(new BigDecimal("4.0"));
+        return PrimitiveExpressionBuilder.literalDecimal(new BigDecimal("4.0"));
       default:
         throw new RuntimeException("Invalid data type");
     }
   }
 
   private ParsedExpression buildIntegerExpression(boolean leftOperand) {
-    RowListBuilder rowListBuilder = new RowListBuilder();
-    StructType schema = PrimitiveRowFixture
-        .createPrimitiveRowStruct(DataTypes.IntegerType);
-    List<Row> leftRows = rowListBuilder
+    ParsedExpression expression = new PrimitiveExpressionBuilder(FHIRDefinedType.INTEGER, INTEGER)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.IntegerType)
         .withRow("abc1", 4)
         .withRow("abc2", leftOperand ? null : 4)
         .withRow("abc3", leftOperand ? 4 : null)
         .withRow("abc4", null)
         .build();
-    Dataset<Row> leftDataset = spark.createDataFrame(leftRows, schema);
-    ParsedExpression expression = createPrimitiveParsedExpression(leftDataset,
-        "multipleBirthInteger",
-        Patient.class, INTEGER, FHIRDefinedType.INTEGER);
     expression.setSingular(true);
     return expression;
   }
 
   private ParsedExpression buildDecimalExpression(boolean leftOperand) {
-    RowListBuilder rowListBuilder = new RowListBuilder();
-    StructType schema = PrimitiveRowFixture
-        .createPrimitiveRowStruct(DataTypes.createDecimalType());
-    List<Row> leftRows = rowListBuilder
+    ParsedExpression expression = new PrimitiveExpressionBuilder(FHIRDefinedType.DECIMAL, DECIMAL)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.createDecimalType())
         .withRow("abc1", new BigDecimal("4.0"))
         .withRow("abc2", leftOperand ? null : new BigDecimal("4.0"))
         .withRow("abc3", leftOperand ? new BigDecimal("4.0") : null)
         .withRow("abc4", null)
         .build();
-    Dataset<Row> leftDataset = spark.createDataFrame(leftRows, schema);
-    ParsedExpression expression = createPrimitiveParsedExpression(leftDataset,
-        "factorOverride",
-        ChargeItem.class, DECIMAL, FHIRDefinedType.DECIMAL);
     expression.setSingular(true);
     return expression;
   }
@@ -294,8 +277,8 @@ public class MathOperatorTest extends FunctionTest {
 
   @Test
   public void bothOperandsAreLiteral() {
-    ParsedExpression literalLeft = createLiteralIntegerExpression(1);
-    ParsedExpression literalRight = createLiteralIntegerExpression(1);
+    ParsedExpression literalLeft = literalInteger(1);
+    ParsedExpression literalRight = literalInteger(1);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(literalLeft);

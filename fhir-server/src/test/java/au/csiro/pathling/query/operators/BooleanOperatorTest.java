@@ -5,22 +5,16 @@
 package au.csiro.pathling.query.operators;
 
 import static au.csiro.pathling.test.Assertions.assertThat;
+import static au.csiro.pathling.test.PrimitiveExpressionBuilder.literalBoolean;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.pathling.test.FunctionTest;
-import au.csiro.pathling.test.PrimitiveRowFixture;
-import au.csiro.pathling.test.RowListBuilder;
+import au.csiro.pathling.test.PrimitiveExpressionBuilder;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.List;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.FamilyMemberHistory;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -29,19 +23,16 @@ import org.junit.experimental.categories.Category;
  * @author John Grimes
  */
 @Category(au.csiro.pathling.UnitTest.class)
-public class BooleanOperatorTest extends FunctionTest {
+public class BooleanOperatorTest {
 
   private ParsedExpression left;
   private ParsedExpression right;
 
   @Before
   public void setUp() {
-    super.setUp();
-
-    StructType schema = PrimitiveRowFixture
-        .createPrimitiveRowStruct(DataTypes.BooleanType);
-    RowListBuilder rowListBuilder = new RowListBuilder();
-    List<Row> leftRows = rowListBuilder
+    left = new PrimitiveExpressionBuilder(FHIRDefinedType.BOOLEAN, FhirPathType.BOOLEAN)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.BooleanType)
         .withRow("abc1", true)
         .withRow("abc2", true)
         .withRow("abc3", false)
@@ -51,8 +42,12 @@ public class BooleanOperatorTest extends FunctionTest {
         .withRow("abc7", true)
         .withRow("abc8", null)
         .build();
-    Dataset<Row> leftDataset = spark.createDataFrame(leftRows, schema);
-    List<Row> rightRows = rowListBuilder
+    left.setSingular(true);
+    left.setFhirPath("estimatedAge");
+
+    right = new PrimitiveExpressionBuilder(FHIRDefinedType.BOOLEAN, FhirPathType.BOOLEAN)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.BooleanType)
         .withRow("abc1", false)
         .withRow("abc2", null)
         .withRow("abc3", true)
@@ -62,14 +57,8 @@ public class BooleanOperatorTest extends FunctionTest {
         .withRow("abc7", true)
         .withRow("abc8", null)
         .build();
-    Dataset<Row> rightDataset = spark.createDataFrame(rightRows, schema);
-
-    left = createPrimitiveParsedExpression(leftDataset, "estimatedAge",
-        FamilyMemberHistory.class, FhirPathType.BOOLEAN, FHIRDefinedType.BOOLEAN);
-    left.setSingular(true);
-    right = createPrimitiveParsedExpression(rightDataset, "deceasedBoolean",
-        FamilyMemberHistory.class, FhirPathType.BOOLEAN, FHIRDefinedType.BOOLEAN);
     right.setSingular(true);
+    right.setFhirPath("deceasedBoolean");
   }
 
   @Test
@@ -162,7 +151,7 @@ public class BooleanOperatorTest extends FunctionTest {
 
   @Test
   public void leftIsLiteral() {
-    ParsedExpression literalLeft = createLiteralBooleanExpression(true);
+    ParsedExpression literalLeft = literalBoolean(true);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(literalLeft);
@@ -186,7 +175,7 @@ public class BooleanOperatorTest extends FunctionTest {
 
   @Test
   public void rightIsLiteral() {
-    ParsedExpression literalRight = createLiteralBooleanExpression(true);
+    ParsedExpression literalRight = literalBoolean(true);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(left);
@@ -240,8 +229,8 @@ public class BooleanOperatorTest extends FunctionTest {
 
   @Test
   public void bothOperandsAreLiteral() {
-    ParsedExpression literalLeft = createLiteralBooleanExpression(true);
-    ParsedExpression literalRight = createLiteralBooleanExpression(true);
+    ParsedExpression literalLeft = literalBoolean(true);
+    ParsedExpression literalRight = literalBoolean(true);
 
     BinaryOperatorInput input = new BinaryOperatorInput();
     input.setLeft(literalLeft);

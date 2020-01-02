@@ -9,7 +9,7 @@ grand_parent: Documentation
 # Select search parameter
 
 This change will include the creation of a search parameter called `select` (see
-[Advanced Search](https://www.hl7.org/fhir/search.html#query)). This search
+[Advanced Search](https://hl7.org/fhir/R4/search.html#query)). This search
 parameter will take a set of FHIRPath expressions as parameters, and will return
 a Bundle of resources for which the expressions all evaluate to `true`.
 

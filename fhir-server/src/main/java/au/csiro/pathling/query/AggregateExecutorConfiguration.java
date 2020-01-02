@@ -4,8 +4,8 @@
 
 package au.csiro.pathling.query;
 
-import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
 import ca.uhn.fhir.context.FhirContext;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -30,13 +30,13 @@ public class AggregateExecutorConfiguration {
   private final FhirContext fhirContext;
 
   /**
-   * (REQUIRED) FHIR context factory for doing FHIR stuff on Spark workers.
+   * (REQUIRED) Terminology client factory for doing terminology stuff on Spark workers.
    */
   @Nonnull
-  private final FhirContextFactory fhirContextFactory;
+  private final TerminologyClientFactory terminologyClientFactory;
 
   /**
-   * (REQUIRED) FHIR terminology service client to use in satisfying terminology queries.
+   * (REQUIRED) FHIR terminology service client to use in satisfying terminology queries locally.
    */
   @Nonnull
   private final TerminologyClient terminologyClient;
@@ -88,11 +88,11 @@ public class AggregateExecutorConfiguration {
   private int loadPartitions;
 
   public AggregateExecutorConfiguration(@Nonnull SparkSession sparkSession,
-      @Nonnull FhirContext fhirContext, @Nonnull FhirContextFactory fhirContextFactory,
+      @Nonnull FhirContext fhirContext, @Nonnull TerminologyClientFactory terminologyClientFactory,
       @Nonnull TerminologyClient terminologyClient, @Nonnull ResourceReader resourceReader) {
     this.sparkSession = sparkSession;
     this.fhirContext = fhirContext;
-    this.fhirContextFactory = fhirContextFactory;
+    this.terminologyClientFactory = terminologyClientFactory;
     this.terminologyClient = terminologyClient;
     this.resourceReader = resourceReader;
     warehouseUrl = "file:///usr/share/warehouse";
@@ -114,8 +114,8 @@ public class AggregateExecutorConfiguration {
   }
 
   @Nonnull
-  public FhirContextFactory getFhirContextFactory() {
-    return fhirContextFactory;
+  public TerminologyClientFactory getTerminologyClientFactory() {
+    return terminologyClientFactory;
   }
 
   @Nonnull
@@ -191,7 +191,9 @@ public class AggregateExecutorConfiguration {
   @Override
   public String toString() {
     return "AggregateExecutorConfiguration{" +
-        "version='" + version + '\'' +
+        "terminologyClientFactory=" + terminologyClientFactory +
+        ", resourceReader=" + resourceReader +
+        ", version='" + version + '\'' +
         ", warehouseUrl='" + warehouseUrl + '\'' +
         ", databaseName='" + databaseName + '\'' +
         ", executorMemory='" + executorMemory + '\'' +

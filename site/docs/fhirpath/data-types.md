@@ -162,9 +162,9 @@ more details.
 
 ## Coding
 
-A [Coding](https://www.hl7.org/fhir/datatypes.html#Coding) is a representation
-of a defined concept using a symbol from a defined "code system" - see
-[Using Codes in resources](https://www.hl7.org/fhir/terminologies.html) for more
+A [Coding](https://hl7.org/fhir/R4/datatypes.html#Coding) is a representation of
+a defined concept using a symbol from a defined "code system" - see
+[Using Codes in resources](https://hl7.org/fhir/R4/terminologies.html) for more
 details.
 
 The Coding literal can take two forms:
@@ -174,6 +174,6 @@ The Coding literal can take two forms:
 
 Not all code systems require the use of a version to unambiguously specify a
 code - see
-[Versioning Code Systems](https://www.hl7.org/fhir/codesystem.html#versioning).
+[Versioning Code Systems](https://hl7.org/fhir/R4/codesystem.html#versioning).
 
 Next: [Operators](./operators.html)

@@ -4,8 +4,8 @@
 
 package au.csiro.pathling.query.parsing;
 
-import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
@@ -25,10 +25,10 @@ public class ExpressionParserContext {
   private FhirContext fhirContext;
 
   /**
-   * A factory for creating new FhirContext objects, which is needed within blocks of code that are
-   * run in parallel.
+   * A factory for creating new TerminologyClient objects, which is needed within blocks of code
+   * that are run in parallel.
    */
-  private FhirContextFactory fhirContextFactory;
+  private TerminologyClientFactory terminologyClientFactory;
 
   /**
    * The terminology client that should be used to resolve terminology queries within this
@@ -68,7 +68,7 @@ public class ExpressionParserContext {
 
   public ExpressionParserContext(ExpressionParserContext context) {
     this.fhirContext = context.fhirContext;
-    this.fhirContextFactory = context.fhirContextFactory;
+    this.terminologyClientFactory = context.terminologyClientFactory;
     this.terminologyClient = context.terminologyClient;
     this.sparkSession = context.sparkSession;
     this.resourceReader = context.resourceReader;
@@ -85,12 +85,12 @@ public class ExpressionParserContext {
     this.fhirContext = fhirContext;
   }
 
-  public FhirContextFactory getFhirContextFactory() {
-    return fhirContextFactory;
+  public TerminologyClientFactory getTerminologyClientFactory() {
+    return terminologyClientFactory;
   }
 
-  public void setFhirContextFactory(FhirContextFactory fhirContextFactory) {
-    this.fhirContextFactory = fhirContextFactory;
+  public void setTerminologyClientFactory(TerminologyClientFactory terminologyClientFactory) {
+    this.terminologyClientFactory = terminologyClientFactory;
   }
 
   public TerminologyClient getTerminologyClient() {

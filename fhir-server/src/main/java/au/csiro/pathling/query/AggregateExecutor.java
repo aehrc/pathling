@@ -6,8 +6,8 @@ package au.csiro.pathling.query;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.BOOLEAN;
 
-import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.AggregateRequest.Aggregation;
 import au.csiro.pathling.query.AggregateRequest.Grouping;
 import au.csiro.pathling.query.parsing.ExpressionParser;
@@ -43,18 +43,20 @@ public class AggregateExecutor {
   private static final Logger logger = LoggerFactory.getLogger(AggregateExecutor.class);
 
   private final FhirContext fhirContext;
-  private final FhirContextFactory fhirContextFactory;
+  private final TerminologyClientFactory terminologyClientFactory;
   private final SparkSession spark;
   private final ResourceReader resourceReader;
-  private TerminologyClient terminologyClient;
+  private final TerminologyClient terminologyClient;
+  private final boolean explainQueries;
 
   public AggregateExecutor(@Nonnull AggregateExecutorConfiguration configuration) {
     logger.info("Creating new AggregateExecutor: " + configuration);
     spark = configuration.getSparkSession();
     fhirContext = configuration.getFhirContext();
-    fhirContextFactory = configuration.getFhirContextFactory();
+    terminologyClientFactory = configuration.getTerminologyClientFactory();
     terminologyClient = configuration.getTerminologyClient();
     resourceReader = configuration.getResourceReader();
+    explainQueries = configuration.isExplainQueries();
   }
 
   /**
@@ -66,6 +68,7 @@ public class AggregateExecutor {
       return false;
     }
     try {
+      logger.info("Getting terminology service capability statement to check service health");
       terminologyClient.getServerMetadata();
     } catch (Exception e) {
       logger.error("Readiness failure", e);
@@ -85,8 +88,8 @@ public class AggregateExecutor {
           .map(Aggregation::getExpression).collect(
               Collectors.joining(",")) + "] groupings=[" + query.getGroupings().stream()
           .map(Grouping::getExpression).collect(
-              Collectors.joining(",")) + "] filters=[" + query.getFilters().stream().collect(
-          Collectors.joining(",")) + "]");
+              Collectors.joining(",")) + "] filters=[" + String.join(",", query.getFilters())
+          + "]");
 
       // Set up the subject resource dataset.
       ResourceType resourceType = query.getSubjectResource();
@@ -114,7 +117,7 @@ public class AggregateExecutor {
       // Gather dependencies for the execution of the expression parser.
       ExpressionParserContext context = new ExpressionParserContext();
       context.setFhirContext(fhirContext);
-      context.setFhirContextFactory(fhirContextFactory);
+      context.setTerminologyClientFactory(terminologyClientFactory);
       context.setTerminologyClient(terminologyClient);
       context.setSparkSession(spark);
       context.setResourceReader(resourceReader);
@@ -139,8 +142,9 @@ public class AggregateExecutor {
       allExpressions.add(subjectResource);
       allExpressions.addAll(parsedFilters);
       allExpressions.addAll(parsedGroupings);
-      allExpressions.addAll(parsedAggregations.stream().map(ParsedExpression::getAggreationJoinable)
-          .collect(Collectors.toList()));
+      allExpressions
+          .addAll(parsedAggregations.stream().map(ParsedExpression::getAggregationJoinable)
+              .collect(Collectors.toList()));
       Set<Dataset<Row>> joinedDatasets = new HashSet<>();
       joinedDatasets.add(subjectResource.getDataset());
 
@@ -257,6 +261,10 @@ public class AggregateExecutor {
   private AggregateResponse buildResponse(@Nonnull Dataset<Row> dataset,
       @Nonnull List<ParsedExpression> parsedAggregations,
       @Nonnull List<ParsedExpression> parsedGroupings) {
+    if (explainQueries) {
+      logger.info("$aggregate query plan:");
+      dataset.explain(true);
+    }
     List<Row> rows = dataset.collectAsList();
 
     AggregateResponse queryResult = new AggregateResponse();

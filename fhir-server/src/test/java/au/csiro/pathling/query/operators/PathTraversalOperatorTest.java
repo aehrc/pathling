@@ -4,21 +4,22 @@
 
 package au.csiro.pathling.query.operators;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static au.csiro.pathling.TestUtilities.getFhirContext;
+import static au.csiro.pathling.test.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.query.parsing.ExpressionParserContext;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.test.DatasetBuilder;
+import au.csiro.pathling.test.ResourceExpressionBuilder;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.Collections;
-import java.util.List;
-import org.apache.spark.sql.*;
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -28,43 +29,22 @@ import org.junit.experimental.categories.Category;
 @Category(au.csiro.pathling.UnitTest.class)
 public class PathTraversalOperatorTest {
 
-  private SparkSession spark;
-
-  @Before
-  public void setUp() {
-    spark = SparkSession.builder()
-        .appName("pathling-test")
-        .config("spark.master", "local")
-        .config("spark.driver.host", "localhost")
-        .getOrCreate();
-  }
-
   @Test
   public void simpleTraversal() {
-    Metadata metadata = new MetadataBuilder().build();
-    StructField genderColumn = new StructField("gender", DataTypes.StringType, true, metadata);
-    StructField activeColumn = new StructField("active", DataTypes.BooleanType, true, metadata);
-    StructType resourceStruct = new StructType(new StructField[]{genderColumn, activeColumn});
-    StructField id = new StructField("123abcd_id", DataTypes.StringType, false, metadata);
-    StructField resource = new StructField("123abcd", resourceStruct, false, metadata);
-    StructType rowStruct = new StructType(new StructField[]{id, resource});
-
-    Row row = RowFactory.create("abc", RowFactory.create("female", true));
-    Dataset<Row> dataset = spark.createDataFrame(Collections.singletonList(row), rowStruct);
-    Column idColumn = dataset.col(dataset.columns()[0]);
-    Column valueColumn = dataset.col(dataset.columns()[1]);
-
-    ParsedExpression left = new ParsedExpression();
-    left.setFhirPath("Patient");
-    left.setResourceType(ResourceType.PATIENT);
-    left.setResource(true);
+    // This needs to match the expectations we have about the subject resource used as within the
+    // expression parser context.
+    ParsedExpression left = new ResourceExpressionBuilder(ResourceType.PATIENT,
+        FHIRDefinedType.PATIENT)
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withStructColumn("gender", DataTypes.StringType)
+        .withStructColumn("active", DataTypes.BooleanType)
+        .withRow("abc", RowFactory.create("female", true))
+        .buildWithStructValue("123abcd");
+    left.setSingular(true);
     left.setOrigin(left);
-    left.setDataset(dataset);
-    left.setIdColumn(idColumn);
-    left.setValueColumn(valueColumn);
 
     ExpressionParserContext context = new ExpressionParserContext();
-    context.setFhirContext(TestUtilities.getFhirContext());
+    context.setFhirContext(getFhirContext());
 
     PathTraversalInput input = new PathTraversalInput();
     input.setLeft(left);
@@ -75,29 +55,30 @@ public class PathTraversalOperatorTest {
     PathTraversalOperator pathTraversalOperator = new PathTraversalOperator();
     ParsedExpression result = pathTraversalOperator.invoke(input);
 
-    assertThat(result.getFhirPath()).isEqualTo("gender");
-    assertThat(result.getFhirPathType()).isEqualTo(FhirPathType.STRING);
-    assertThat(result.getFhirType()).isEqualTo(FHIRDefinedType.CODE);
-    assertThat(result.isPrimitive()).isTrue();
-    assertThat(result.isSingular()).isFalse();
-    assertThat(result.getOrigin()).isEqualTo(left);
-    assertThat(result.getIdColumn()).isNotNull();
-    assertThat(result.getValueColumn()).isNotNull();
-    assertThat(result.getDefinition()).isNotNull();
+    assertThat(result).hasFhirPath("gender");
+    assertThat(result).isOfType(FHIRDefinedType.CODE, FhirPathType.STRING);
+    assertThat(result).isPrimitive();
+    assertThat(result).isSingular();
+    assertThat(result).hasOrigin(left);
+    assertThat(result).isSelection();
+    assertThat(result).hasDefinition();
 
-    Dataset<Row> resultDataset = result.getDataset()
-        .select(result.getIdColumn(), result.getValueColumn());
-    List<Row> resultRows = resultDataset.collectAsList();
-    assertThat(resultRows.size()).isEqualTo(1);
-    Row resultRow = resultRows.get(0);
-    assertThat(resultRow.getString(0)).isEqualTo("abc");
-    assertThat(resultRow.getString(1)).isEqualTo("female");
+    Dataset<Row> expectedDataset = new DatasetBuilder()
+        .withColumn("123abcd_id", DataTypes.StringType)
+        .withColumn("123abcd", DataTypes.StringType)
+        .withRow("abc", "female")
+        .build();
+    assertThat(result)
+        .selectResult()
+        .hasRows(expectedDataset);
   }
 
   @Test
   public void rejectsPolymorphicInput() {
-    ParsedExpression left = new ParsedExpression();
-    left.setFhirPath("Encounter.subject.resolve()");
+    ParsedExpression left = new ResourceExpressionBuilder(ResourceType.PATIENT,
+        FHIRDefinedType.PATIENT)
+        .build();
+    left.setFhirPath("subject.resolve()");
     left.setSingular(true);
     left.setPolymorphic(true);
 
@@ -107,18 +88,18 @@ public class PathTraversalOperatorTest {
 
     assertThatExceptionOfType(InvalidRequestException.class)
         .isThrownBy(() -> new PathTraversalOperator().invoke(input))
-        .withMessage("Attempt at path traversal on polymorphic input: Encounter.subject.resolve()");
+        .withMessage("Attempt at path traversal on polymorphic input: subject.resolve()");
   }
 
   @Test
   public void throwsErrorOnNonExistentChild() {
     ExpressionParserContext context = new ExpressionParserContext();
-    context.setFhirContext(TestUtilities.getFhirContext());
+    context.setFhirContext(getFhirContext());
 
-    ParsedExpression left = new ParsedExpression();
+    ParsedExpression left = new ResourceExpressionBuilder(ResourceType.ENCOUNTER,
+        FHIRDefinedType.ENCOUNTER)
+        .build();
     left.setFhirPath("Encounter");
-    left.setResourceType(ResourceType.ENCOUNTER);
-    left.setResource(true);
 
     PathTraversalInput input = new PathTraversalInput();
     input.setLeft(left);

@@ -45,6 +45,9 @@ public class FhirServerContainer {
     }});
     String explainQueries = System.getenv("PATHLING_EXPLAIN_QUERIES");
     config.setExplainQueries(explainQueries != null && explainQueries.equals("true"));
+    String verboseRequestLogging = System.getenv("PATHLING_VERBOSE_REQUEST_LOGGING");
+    config.setVerboseRequestLogging(
+        verboseRequestLogging != null && verboseRequestLogging.equals("true"));
     String shufflePartitions = System.getenv("PATHLING_SHUFFLE_PARTITIONS");
     if (shufflePartitions != null) {
       config.setShufflePartitions(Integer.parseInt(shufflePartitions));
@@ -52,6 +55,10 @@ public class FhirServerContainer {
     String corsAllowedOrigins = System.getenv("PATHLING_CORS_ALLOWED_ORIGINS");
     if (corsAllowedOrigins != null) {
       config.setCorsAllowedOrigins(Arrays.asList(corsAllowedOrigins.split(",")));
+    }
+    String terminologySocketTimeoutString = System.getenv("PATHLING_TERMINOLOGY_SOCKET_TIMEOUT");
+    if (terminologySocketTimeoutString != null) {
+      config.setTerminologySocketTimeout(Integer.parseInt(terminologySocketTimeoutString));
     }
 
     // This is required to force the use of the Woodstox StAX implementation. If you don't use

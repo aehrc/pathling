@@ -8,7 +8,6 @@ import au.csiro.pathling.bunsen.FhirEncoders;
 import au.csiro.pathling.fhir.AnalyticsServerConfiguration;
 import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.utilities.PersistenceScheme;
-import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -102,7 +101,7 @@ public class ImportProvider {
       }
       Dataset resources = jsonStrings
           .map((MapFunction<String, IBaseResource>) json -> localFhirContextFactory
-              .getFhirContext(FhirVersionEnum.R4).newJsonParser().parseResource(json), fhirEncoder);
+              .build().newJsonParser().parseResource(json), fhirEncoder);
 
       logger.info("Saving resources: " + resourceType.toCode());
       resourceWriter.write(resourceType, resources);

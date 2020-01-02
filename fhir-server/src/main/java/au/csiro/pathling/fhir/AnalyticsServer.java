@@ -13,6 +13,7 @@ import au.csiro.pathling.query.AggregateOperationProvider;
 import au.csiro.pathling.query.ResourceReader;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
@@ -124,8 +125,12 @@ public class AnalyticsServer extends RestfulServer {
 
   private void initializeTerminologyClient() {
     logger.info("Creating FHIR terminology client");
-    terminologyClient = getFhirContext()
-        .newRestfulClient(TerminologyClient.class, configuration.getTerminologyServerUrl());
+    terminologyClient = TerminologyClient.build(
+        getFhirContext(),
+        configuration.getTerminologyServerUrl(),
+        configuration.getTerminologySocketTimeout(),
+        configuration.isVerboseRequestLogging(),
+        logger);
   }
 
   private void initializeFhirEncoders() {
@@ -139,8 +144,12 @@ public class AnalyticsServer extends RestfulServer {
   private void initializeAggregateExecutor() throws IOException, URISyntaxException {
     ResourceReader resourceReader = new ResourceReader(spark, configuration.getWarehouseUrl(),
         configuration.getDatabaseName());
+    TerminologyClientFactory terminologyClientFactory = new TerminologyClientFactory(
+        FhirVersionEnum.R4, configuration.getTerminologyServerUrl(),
+        configuration.getTerminologySocketTimeout(), configuration.isVerboseRequestLogging());
+
     AggregateExecutorConfiguration executorConfig = new AggregateExecutorConfiguration(spark,
-        getFhirContext(), new FreshFhirContextFactory(), terminologyClient, resourceReader);
+        getFhirContext(), terminologyClientFactory, terminologyClient, resourceReader);
     copyStringProps(configuration, executorConfig,
         Arrays.asList("version", "warehouseUrl", "databaseName", "executorMemory"));
     executorConfig.setExplainQueries(configuration.isExplainQueries());
@@ -153,7 +162,7 @@ public class AnalyticsServer extends RestfulServer {
    * Declare the providers which will handle requests to this server.
    */
   private void declareProviders() {
-    FhirContextFactory fhirContextFactory = new FreshFhirContextFactory();
+    FhirContextFactory fhirContextFactory = new FhirContextFactory(FhirVersionEnum.R4);
     List<Object> providers = new ArrayList<>();
     providers.add(new AggregateOperationProvider(aggregateExecutor));
     providers.add(new ImportProvider(configuration, spark, fhirEncoders, fhirContextFactory));

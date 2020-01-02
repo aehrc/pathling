@@ -4,17 +4,14 @@
 
 package au.csiro.pathling.test;
 
+import au.csiro.pathling.test.fixtures.PrimitiveRowFixture;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.MetadataBuilder;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.*;
 
 /**
  * @author Piotr Szul
@@ -24,7 +21,7 @@ public class CodingRowFixture extends PrimitiveRowFixture {
 
   public static StructType createCodingStruct(Metadata metadata) {
     StructType codingStruct = new StructType(
-        new StructField[] {new StructField("id", DataTypes.StringType, true, metadata),
+        new StructField[]{new StructField("id", DataTypes.StringType, true, metadata),
             new StructField("system", DataTypes.StringType, true, metadata),
             new StructField("version", DataTypes.StringType, true, metadata),
             new StructField("code", DataTypes.StringType, true, metadata),
@@ -38,7 +35,7 @@ public class CodingRowFixture extends PrimitiveRowFixture {
     StructType codingStruct = createCodingStruct(metadata);
     StructField id = new StructField("123abcd_id", DataTypes.StringType, false, metadata);
     StructField codingField = new StructField("123abcd", codingStruct, false, metadata);
-    return new StructType(new StructField[] {id, codingField});
+    return new StructType(new StructField[]{id, codingField});
   }
 
   public static final StructType SCHEMA = createCodingRowStruct();

@@ -350,7 +350,7 @@ public class ParsedExpression implements Joinable {
   }
 
 
-  public Joinable getAggreationJoinable() {
+  public Joinable getAggregationJoinable() {
     return new Joinable() {
       @Override
       public Dataset<Row> getDataset() {
@@ -407,8 +407,12 @@ public class ParsedExpression implements Joinable {
         .map(clazz -> {
           String resourceCode;
           try {
-            resourceCode = clazz.getConstructor().newInstance().fhirType();
-            return Enumerations.ResourceType.fromCode(resourceCode);
+            if (clazz.getName().equals("org.hl7.fhir.instance.model.api.IAnyResource")) {
+              return Enumerations.ResourceType.RESOURCE;
+            } else {
+              resourceCode = clazz.getConstructor().newInstance().fhirType();
+              return Enumerations.ResourceType.fromCode(resourceCode);
+            }
           } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             throw new RuntimeException("Problem accessing resource types on element", e);
           }

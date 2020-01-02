@@ -34,12 +34,16 @@ public class DatasetAssert {
     return this;
   }
 
-  public DatasetAssert hasRows(RowListBuilder expected) {
-    return hasRows(expected.build());
+  public DatasetAssert hasRows(DatasetBuilder expected) {
+    return hasRows(expected.getRows());
   }
 
   public DatasetAssert hasRows(Row... expected) {
     return hasRows(Arrays.asList(expected));
+  }
+
+  public DatasetAssert hasRows(Dataset<Row> expected) {
+    return hasRows(expected.collectAsList());
   }
 
   public DatasetAssert debugSchema() {

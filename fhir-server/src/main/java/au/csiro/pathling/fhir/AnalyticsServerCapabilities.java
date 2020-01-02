@@ -19,6 +19,8 @@ import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.CapabilityStatement.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides a customised CapabilityStatement describing the functionality of the
@@ -29,6 +31,7 @@ import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 public class AnalyticsServerCapabilities implements
     IServerConformanceProvider<CapabilityStatement> {
 
+  private static final Logger logger = LoggerFactory.getLogger(AnalyticsServerCapabilities.class);
   private AnalyticsServerConfiguration configuration;
   private AggregateExecutor aggregateExecutor;
 
@@ -40,6 +43,7 @@ public class AnalyticsServerCapabilities implements
   @Metadata
   public CapabilityStatement getServerConformance(HttpServletRequest httpServletRequest,
       RequestDetails requestDetails) {
+    logger.info("Received request for server capabilities");
     checkServerHealth();
     CapabilityStatement capabilityStatement = new CapabilityStatement();
     Meta meta = new Meta();

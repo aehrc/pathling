@@ -79,7 +79,8 @@ module.exports = {
           : "style/[name].[contenthash:8].css"
     }),
     new HtmlWebpackPlugin({
-      template: path.resolve(__dirname, "src", "index.html")
+      template: path.resolve(__dirname, "src", "index.html"),
+      favicon: path.resolve(__dirname, "favicon.png")
     }),
     new MonacoEditorWebpackPlugin(),
     new BundleAnalyzerPlugin({ analyzerMode: "static", openAnalyzer: false })

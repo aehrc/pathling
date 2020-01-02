@@ -1,25 +1,18 @@
 package au.csiro.pathling.query.parsing;
 
+import static au.csiro.pathling.test.Assertions.assertThat;
+
+import au.csiro.pathling.TestUtilities;
+import au.csiro.pathling.test.CodingRowFixture;
+import au.csiro.pathling.test.DatasetAssert;
 import java.util.Arrays;
 import java.util.function.BiFunction;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.MetadataBuilder;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.*;
+import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.Coding;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import au.csiro.pathling.test.CodingRowFixture;
-import au.csiro.pathling.test.DatasetAssert;
-import static au.csiro.pathling.test.Assertions.*;
 
 @Category(au.csiro.pathling.UnitTest.class)
 public class CodingFhirPathTypeSqlHelperTest {
@@ -28,8 +21,7 @@ public class CodingFhirPathTypeSqlHelperTest {
 
   @Before
   public void setUp() {
-    spark = SparkSession.builder().appName("pathling-test").config("spark.master", "local")
-        .config("spark.driver.host", "localhost").getOrCreate();
+    spark = TestUtilities.getSparkSession();
   }
 
   private BiFunction<Column, Column, Column> equality =
@@ -45,7 +37,7 @@ public class CodingFhirPathTypeSqlHelperTest {
     Metadata metadata = new MetadataBuilder().build();
     StructType codingStruct = CodingRowFixture.createCodingStruct(metadata);
     StructType schema =
-        new StructType(new StructField[] {new StructField("left", codingStruct, true, metadata),
+        new StructType(new StructField[]{new StructField("left", codingStruct, true, metadata),
             new StructField("right", codingStruct, true, metadata)});
 
     Dataset<Row> trueDataset = spark.createDataFrame(
@@ -79,14 +71,13 @@ public class CodingFhirPathTypeSqlHelperTest {
   public void testLiteral() {
     Metadata metadata = new MetadataBuilder().build();
     StructType schema = new StructType(
-        new StructField[] {new StructField("id", DataTypes.StringType, true, metadata)});
+        new StructField[]{new StructField("id", DataTypes.StringType, true, metadata)});
     Dataset<Row> context = spark.createDataFrame(Arrays.asList(RowFactory.create("id")), schema);
 
     Coding emptyCoding = new Coding();
     Column emptyLitColumn = CodingFhirPathTypeSqlHelper.INSTANCE.getLiteralColumn(emptyCoding);
     assertThat(context.select(emptyLitColumn.alias("literal"))).isValue()
         .isEqualTo(RowFactory.create(null, null, null, null, null, false));
-
 
     Coding fullCoding = new Coding();
     fullCoding.setId("id");
@@ -100,8 +91,4 @@ public class CodingFhirPathTypeSqlHelperTest {
         .isEqualTo(RowFactory.create("id", "system", "version", "code", "display", true));
   }
 
-  @After
-  public void tearDown() {
-    spark.close();
-  }
 }

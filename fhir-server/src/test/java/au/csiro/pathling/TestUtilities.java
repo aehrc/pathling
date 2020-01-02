@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -30,6 +31,7 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import scala.Option;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
 
@@ -40,6 +42,19 @@ public abstract class TestUtilities {
 
   private static final FhirContext fhirContext = FhirContext.forR4();
   private static final IParser jsonParser = fhirContext.newJsonParser();
+
+  public static SparkSession getSparkSession() {
+    Option<SparkSession> activeSession = SparkSession.getActiveSession();
+    if (activeSession.isEmpty()) {
+      return SparkSession.builder()
+          .appName("pathling-test")
+          .config("spark.master", "local")
+          .config("spark.driver.host", "localhost")
+          .config("spark.sql.shuffle.partitions", "1")
+          .getOrCreate();
+    }
+    return activeSession.get();
+  }
 
   public static FhirContext getFhirContext() {
     return fhirContext;

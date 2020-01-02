@@ -4,11 +4,12 @@
 
 package au.csiro.pathling.update;
 
+import static au.csiro.pathling.TestUtilities.getSparkSession;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.bunsen.FhirEncoders;
 import au.csiro.pathling.fhir.AnalyticsServerConfiguration;
-import au.csiro.pathling.fhir.FreshFhirContextFactory;
+import au.csiro.pathling.fhir.FhirContextFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -19,7 +20,6 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -35,11 +35,7 @@ public class ImportProviderTest {
 
   @Before
   public void setUp() throws IOException {
-    spark = SparkSession.builder()
-        .appName("pathling-test")
-        .config("spark.master", "local")
-        .config("spark.driver.host", "localhost")
-        .getOrCreate();
+    spark = getSparkSession();
     Path warehouseDirectory = Files.createTempDirectory("pathling-test");
 
     AnalyticsServerConfiguration config = new AnalyticsServerConfiguration();
@@ -47,7 +43,7 @@ public class ImportProviderTest {
     config.setDatabaseName("test");
 
     importProvider = new ImportProvider(config, spark, FhirEncoders.forR4().getOrCreate(),
-        new FreshFhirContextFactory());
+        new FhirContextFactory());
   }
 
   @Test
@@ -79,10 +75,4 @@ public class ImportProviderTest {
     assertThat(issue.getDiagnostics()).isEqualTo("Data import completed successfully");
   }
 
-  @After
-  public void tearDown() {
-    if (spark != null) {
-      spark.close();
-    }
-  }
 }
