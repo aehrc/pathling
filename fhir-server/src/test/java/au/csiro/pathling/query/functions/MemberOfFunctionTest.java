@@ -6,6 +6,7 @@ package au.csiro.pathling.query.functions;
 
 import static au.csiro.pathling.TestUtilities.*;
 import static au.csiro.pathling.test.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -22,6 +23,7 @@ import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.test.ComplexExpressionBuilder;
 import au.csiro.pathling.test.PrimitiveExpressionBuilder;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -264,6 +266,61 @@ public class MemberOfFunctionTest {
     validateResult = results.get(4);
     Assertions.assertThat(validateResult.getHash()).isEqualTo(5);
     Assertions.assertThat(validateResult.isResult()).isEqualTo(false);
+  }
+
+  @Test
+  public void throwsErrorIfInputTypeIsUnsupported() {
+    ParsedExpression input = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
+        FhirPathType.STRING)
+        .build();
+    input.setFhirPath("onsetString");
+    ParsedExpression argument = PrimitiveExpressionBuilder.literalString(myValueSetUrl);
+
+    FunctionInput memberOfInput = new FunctionInput();
+    memberOfInput.setInput(input);
+    memberOfInput.getArguments().add(argument);
+
+    MemberOfFunction memberOfFunction = new MemberOfFunction();
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
+        .withMessage("Input to memberOf function is of unsupported type: onsetString");
+  }
+
+  @Test
+  public void throwsErrorIfArgumentIsNotString() {
+    ParsedExpression input = new ComplexExpressionBuilder(FHIRDefinedType.CODEABLECONCEPT)
+        .build();
+    ParsedExpression argument = PrimitiveExpressionBuilder.literalInteger(4);
+
+    FunctionInput memberOfInput = new FunctionInput();
+    memberOfInput.setInput(input);
+    memberOfInput.getArguments().add(argument);
+    memberOfInput.setExpression("memberOf(4)");
+
+    MemberOfFunction memberOfFunction = new MemberOfFunction();
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
+        .withMessage("memberOf function accepts one argument of type String: memberOf(4)");
+  }
+
+  @Test
+  public void throwsErrorIfMoreThanOneArgument() {
+    ParsedExpression input = new ComplexExpressionBuilder(FHIRDefinedType.CODEABLECONCEPT)
+        .build();
+    ParsedExpression argument1 = PrimitiveExpressionBuilder.literalString("foo"),
+        argument2 = PrimitiveExpressionBuilder.literalString("bar");
+
+    FunctionInput memberOfInput = new FunctionInput();
+    memberOfInput.setInput(input);
+    memberOfInput.getArguments().add(argument1);
+    memberOfInput.getArguments().add(argument2);
+    memberOfInput.setExpression("memberOf('foo', 'bar')");
+
+    MemberOfFunction memberOfFunction = new MemberOfFunction();
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
+        .withMessage(
+            "memberOf function accepts one argument of type String: memberOf('foo', 'bar')");
   }
 
 }

@@ -5,11 +5,15 @@
 package au.csiro.pathling.query.functions;
 
 import static au.csiro.pathling.test.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.PolymorphicExpressionBuilder;
+import au.csiro.pathling.test.PrimitiveExpressionBuilder;
 import au.csiro.pathling.test.ResourceExpressionBuilder;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -84,4 +88,61 @@ public class OfTypeFunctionTest {
         .selectResult()
         .hasRows(expectedDataset);
   }
+
+  @Test
+  public void throwsErrorIfInputNotPolymorphic() {
+    ParsedExpression input = new ResourceExpressionBuilder(ResourceType.PATIENT,
+        FHIRDefinedType.PATIENT)
+        .build();
+    ParsedExpression argument = new ResourceExpressionBuilder(ResourceType.PATIENT,
+        FHIRDefinedType.PATIENT)
+        .build();
+
+    FunctionInput ofTypeInput = new FunctionInput();
+    ofTypeInput.setInput(input);
+    ofTypeInput.getArguments().add(argument);
+
+    OfTypeFunction ofTypeFunction = new OfTypeFunction();
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> ofTypeFunction.invoke(ofTypeInput))
+        .withMessage("Input to ofType function must be polymorphic resource expression");
+  }
+
+  @Test
+  public void throwsErrorIfMoreThanOneArgument() {
+    ParsedExpression input = new PolymorphicExpressionBuilder().build();
+    ParsedExpression argument1 = new ResourceExpressionBuilder(ResourceType.PATIENT,
+        FHIRDefinedType.PATIENT)
+        .build(),
+        argument2 = new ResourceExpressionBuilder(ResourceType.CONDITION,
+            FHIRDefinedType.CONDITION)
+            .build();
+
+    FunctionInput ofTypeInput = new FunctionInput();
+    ofTypeInput.setInput(input);
+    ofTypeInput.getArguments().add(argument1);
+    ofTypeInput.getArguments().add(argument2);
+
+    OfTypeFunction ofTypeFunction = new OfTypeFunction();
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> ofTypeFunction.invoke(ofTypeInput))
+        .withMessage("ofType function must be provided with a single argument");
+  }
+
+  @Test
+  public void throwsErrorIfArgumentNotResource() {
+    ParsedExpression input = new PolymorphicExpressionBuilder().build();
+    ParsedExpression argument = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
+        FhirPathType.STRING).build();
+
+    FunctionInput ofTypeInput = new FunctionInput();
+    ofTypeInput.setInput(input);
+    ofTypeInput.getArguments().add(argument);
+
+    OfTypeFunction ofTypeFunction = new OfTypeFunction();
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> ofTypeFunction.invoke(ofTypeInput))
+        .withMessage("Argument to ofType function must be a resource type");
+  }
+
 }

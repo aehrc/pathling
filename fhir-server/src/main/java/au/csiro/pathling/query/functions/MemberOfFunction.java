@@ -121,7 +121,7 @@ public class MemberOfFunction implements Function {
           "Input to memberOf function is of unsupported type: " + inputResult.getFhirPath());
     }
 
-    if (input.getArguments().isEmpty()
+    if (input.getArguments().size() != 1
         || input.getArguments().get(0).getFhirPathType() != STRING) {
       throw new InvalidRequestException(
           "memberOf function accepts one argument of type String: " + input.getExpression());

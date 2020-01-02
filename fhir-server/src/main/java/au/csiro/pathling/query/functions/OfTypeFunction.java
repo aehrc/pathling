@@ -60,7 +60,7 @@ public class OfTypeFunction implements Function {
   private void validateInput(FunctionInput input) {
     if (!input.getInput().isPolymorphic()) {
       throw new InvalidRequestException(
-          "Input to ofType function must be polymorphic resource reference");
+          "Input to ofType function must be polymorphic resource expression");
     }
     if (input.getArguments().size() != 1) {
       throw new InvalidRequestException("ofType function must be provided with a single argument");
