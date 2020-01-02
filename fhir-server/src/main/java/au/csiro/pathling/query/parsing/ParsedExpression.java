@@ -384,7 +384,7 @@ public class ParsedExpression implements Joinable {
       }
       return fhirContext.getElementDefinition(fhirType.toCode()).getImplementingClass();
     } else {
-      return definition.getChildByName(definition.getElementName()).getImplementingClass();
+      return elementDefinition.getImplementingClass();
     }
   }
 

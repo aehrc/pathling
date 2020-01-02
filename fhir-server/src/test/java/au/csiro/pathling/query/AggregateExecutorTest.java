@@ -138,6 +138,35 @@ public class AggregateExecutorTest {
   }
 
   @Test
+  public void queryWithChoiceElement() throws IOException, JSONException {
+    mockResourceReader(ResourceType.PATIENT);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping = new Grouping();
+    grouping.setLabel("Multiple birth?");
+    grouping.setExpression("multipleBirthBoolean");
+    request.getGroupings().add(grouping);
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    String expectedJson = getResourceAsString(
+        "responses/AggregateExecutorTest-queryWithChoiceElement.Parameters.json");
+    JSONAssert.assertEquals(expectedJson, actualJson, false);
+  }
+
+  @Test
   public void queryWithDateComparison() throws IOException, JSONException {
     mockResourceReader(ResourceType.PATIENT);
 

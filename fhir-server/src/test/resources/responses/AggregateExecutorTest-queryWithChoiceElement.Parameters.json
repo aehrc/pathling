@@ -1,0 +1,18 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueBoolean": false
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 9
+        }
+      ]
+    }
+  ]
+}
