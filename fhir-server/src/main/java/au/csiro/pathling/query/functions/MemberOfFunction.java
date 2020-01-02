@@ -39,7 +39,7 @@ import org.slf4j.MDC;
  * URL.
  *
  * @author John Grimes
- * @see <a href="https://build.fhir.org/fhirpath.html#functions">https://build.fhir.org/fhirpath.html#functions</a>
+ * @see <a href="https://pathling.app/docs/fhirpath/functions.html#memberof">memberOf</a>
  */
 public class MemberOfFunction implements Function {
 

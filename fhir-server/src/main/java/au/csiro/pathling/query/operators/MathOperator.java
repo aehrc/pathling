@@ -25,7 +25,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * mod.
  *
  * @author John Grimes
- * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#math">http://hl7.org/fhirpath/2018Sep/index.html#math</a>
+ * @see <a href="https://pathling.app/docs/fhirpath/operators.html#math">Math</a>
  */
 public class MathOperator implements BinaryOperator {
 

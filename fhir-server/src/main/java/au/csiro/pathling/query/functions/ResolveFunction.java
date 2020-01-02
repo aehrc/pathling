@@ -25,6 +25,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * resource type.
  *
  * @author John Grimes
+ * @see <a href="https://pathling.app/docs/fhirpath/functions.html#resolve">resolve</a>
  */
 public class ResolveFunction implements Function {
 

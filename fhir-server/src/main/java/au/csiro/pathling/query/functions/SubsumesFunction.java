@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  * Codings or CodeableConcepts subsume one or more Codings or CodeableConcepts in the target set.
  *
  * @author John Grimes
- * @see <a href="https://hl7.org/fhir/fhirpath.html#functions">https://hl7.org/fhir/fhirpath.html#functions</a>
+ * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
  */
 public class SubsumesFunction implements Function {
 

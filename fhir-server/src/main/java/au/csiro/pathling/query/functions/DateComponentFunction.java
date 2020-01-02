@@ -29,7 +29,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * components from date types.
  *
  * @author John Grimes
- * @see <a href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/functions.html">https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/functions.html</a>
+ * @see <a href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/functions.html">functions</a>
  */
 public class DateComponentFunction implements Function {
 

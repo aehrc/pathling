@@ -21,7 +21,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * and implies.
  *
  * @author John Grimes
- * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#boolean-logic">http://hl7.org/fhirpath/2018Sep/index.html#boolean-logic</a>
+ * @see <a href="https://pathling.app/docs/fhirpath/operators.html#boolean-logic">Boolean logic</a>
  */
 public class BooleanOperator implements BinaryOperator {
 

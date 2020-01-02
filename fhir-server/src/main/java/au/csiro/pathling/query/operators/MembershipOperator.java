@@ -7,6 +7,7 @@ package au.csiro.pathling.query.operators;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.when;
+
 import au.csiro.pathling.query.parsing.FhirPathTypeSqlHelper;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
@@ -21,8 +22,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * An expression that tests whether a singular value is present within a collection.
  *
  * @author John Grimes
- * @see <a href=
- *      "http://hl7.org/fhirpath/2018Sep/index.html#collections-2">http://hl7.org/fhirpath/2018Sep/index.html#collections-2</a>
+ * @see <a href="https://pathling.app/docs/fhirpath/operators.html#membership">Membership</a>
  */
 public class MembershipOperator implements BinaryOperator {
 

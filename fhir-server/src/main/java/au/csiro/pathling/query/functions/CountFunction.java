@@ -18,31 +18,31 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * A function for aggregating data based on counting the number of rows within the result.
  *
  * @author John Grimes
- * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#count-integer">http://hl7.org/fhirpath/2018Sep/index.html#count-integer</a>
+ * @see <a href="https://pathling.app/docs/fhirpath/functions.html#count">count</a>
  */
 public class CountFunction implements Function {
   // TODO: Make count function work outside the context of an aggregation, e.g. name.given.count() = 3.
 
-	@Nonnull
-	@Override
-	public ParsedExpression invoke(@Nonnull FunctionInput input) {
-		validateInput(input);
-		ParsedExpression result = invokeAgg(input);
-		
-		Dataset<Row> aggDataset = result.getAggregationDataset();
-		// Apply the aggregate Spark SQL function to the grouping.
-		Column aggIdColumn = result.getAggregationIdColumn();
-		Column aggColumn = result.getAggregationColumn();
+  @Nonnull
+  @Override
+  public ParsedExpression invoke(@Nonnull FunctionInput input) {
+    validateInput(input);
+    ParsedExpression result = invokeAgg(input);
 
-		// First apply a grouping based upon the resource ID.
-		Dataset<Row> dataset = aggDataset.groupBy(aggIdColumn).agg(aggColumn);
-		Column idColumn = dataset.col(dataset.columns()[0]);
-		Column valueColumn = dataset.col(dataset.columns()[1]);
-		result.setDataset(dataset);
-		result.setHashedValue(idColumn, valueColumn);
-		return result;
-	}
-	
+    Dataset<Row> aggDataset = result.getAggregationDataset();
+    // Apply the aggregate Spark SQL function to the grouping.
+    Column aggIdColumn = result.getAggregationIdColumn();
+    Column aggColumn = result.getAggregationColumn();
+
+    // First apply a grouping based upon the resource ID.
+    Dataset<Row> dataset = aggDataset.groupBy(aggIdColumn).agg(aggColumn);
+    Column idColumn = dataset.col(dataset.columns()[0]);
+    Column valueColumn = dataset.col(dataset.columns()[1]);
+    result.setDataset(dataset);
+    result.setHashedValue(idColumn, valueColumn);
+    return result;
+  }
+
   @Nonnull
   public ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
     validateInput(input);

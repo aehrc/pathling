@@ -20,7 +20,7 @@ import org.apache.spark.sql.Row;
  * element currently in scope.
  *
  * @author John Grimes
- * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#wherecriteria-expression-collection">http://hl7.org/fhirpath/2018Sep/index.html#wherecriteria-expression-collection</a>
+ * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#wherecriteria-expression-collection">where</a>
  */
 public class WhereFunction implements Function {
 
