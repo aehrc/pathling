@@ -38,6 +38,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 
 /**
  * @author John Grimes
@@ -101,9 +102,8 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    String expectedJson = getResourceAsString(
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMultipleGroupings.Parameters.json");
-    JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
   @Test
@@ -132,9 +132,8 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    String expectedJson = getResourceAsString(
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithFilter.Parameters.json");
-    JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
   @Test
@@ -161,9 +160,8 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    String expectedJson = getResourceAsString(
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithIntegerGroupings.Parameters.json");
-    JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
   @Test
@@ -190,9 +188,8 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    String expectedJson = getResourceAsString(
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithChoiceElement.Parameters.json");
-    JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
   @Test
@@ -216,9 +213,8 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    String expectedJson = getResourceAsString(
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithDateComparison.Parameters.json");
-    JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
   @Test
@@ -245,9 +241,8 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    String expectedJson = getResourceAsString(
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithResolve.Parameters.json");
-    JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
   @Test
@@ -274,9 +269,8 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    String expectedJson = getResourceAsString(
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithPolymorphicResolve.Parameters.json");
-    JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
   @Test
@@ -303,9 +297,8 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    String expectedJson = getResourceAsString(
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithReverseResolve.Parameters.json");
-    JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
   @Test
@@ -342,9 +335,8 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    String expectedJson = getResourceAsString(
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json");
-    JSONAssert.assertEquals(expectedJson, actualJson, false);
   }
 
   private void mockResourceReader(ResourceType... resourceTypes) throws MalformedURLException {
@@ -358,6 +350,12 @@ public class AggregateExecutorTest {
       when(mockReader.getAvailableResourceTypes())
           .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
     }
+  }
+
+  private void checkExpectedJson(String actualJson, String expectedPath)
+      throws IOException, JSONException {
+    String expectedJson = getResourceAsString(expectedPath);
+    JSONAssert.assertEquals(expectedJson, actualJson, JSONCompareMode.NON_EXTENSIBLE);
   }
 
 }
