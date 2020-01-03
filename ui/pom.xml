@@ -154,7 +154,6 @@
         <configuration>
           <repository>${dockerRegistry}/pathling/ui</repository>
           <tag>${project.version}</tag>
-          <cacheFrom>${dockerRegistry}/pathling/ui:${project.version}</cacheFrom>
           <buildArgs>
             <VERSION>${project.version}</VERSION>
           </buildArgs>

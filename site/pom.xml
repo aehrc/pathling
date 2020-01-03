@@ -64,7 +64,6 @@
         <configuration>
           <repository>${dockerRegistry}/pathling/site</repository>
           <tag>${project.version}</tag>
-          <cacheFrom>${dockerRegistry}/pathling/site:${project.version}</cacheFrom>
         </configuration>
       </plugin>
     </plugins>

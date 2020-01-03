@@ -171,7 +171,6 @@
         <configuration>
           <repository>${dockerRegistry}/pathling/fhir-server</repository>
           <tag>${project.version}</tag>
-          <cacheFrom>${dockerRegistry}/pathling/fhir-server:${project.version}</cacheFrom>
           <buildArgs>
             <VERSION>${project.version}</VERSION>
             <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
