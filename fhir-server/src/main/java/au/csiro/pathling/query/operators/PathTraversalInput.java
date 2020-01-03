@@ -4,8 +4,8 @@
 
 package au.csiro.pathling.query.operators;
 
-import au.csiro.pathling.query.parsing.ExpressionParserContext;
 import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 
 /**
  * Used to represent the inputs to the FHIRPath path traversal operator.

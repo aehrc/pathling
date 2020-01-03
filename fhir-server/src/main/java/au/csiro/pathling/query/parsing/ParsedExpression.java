@@ -13,7 +13,6 @@ import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -59,12 +58,6 @@ public class ParsedExpression implements Joinable {
     put(FHIRDefinedType.INSTANT, Timestamp.class);
     // TODO: Data types not catered for: base64Binary, oid, uuid, enumeration of codes.
   }};
-
-  public static final SimpleDateFormat DATE_TIME_FORMAT = new SimpleDateFormat(
-      "yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-  public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
-      "yyyy-MM-dd");
-  static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("'T'HH:mm:ss.SSSXXX");
 
   /**
    * The FHIRPath representation of this expression.

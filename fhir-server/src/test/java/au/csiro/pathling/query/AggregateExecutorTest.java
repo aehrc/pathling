@@ -165,6 +165,34 @@ public class AggregateExecutorTest {
   }
 
   @Test
+  public void queryWithMathExpression() throws IOException, JSONException {
+    mockResourceReader(ResourceType.CLAIM);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.CLAIM);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of claims");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping = new Grouping();
+    grouping.setLabel("First claim item sequence + 1");
+    grouping.setExpression("item.sequence.first() + 1");
+    request.getGroupings().add(grouping);
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    checkExpectedJson(actualJson,
+        "responses/AggregateExecutorTest-queryWithMathExpression.Parameters.json");
+  }
+
+  @Test
   public void queryWithChoiceElement() throws IOException, JSONException {
     mockResourceReader(ResourceType.PATIENT);
 

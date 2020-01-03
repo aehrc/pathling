@@ -11,9 +11,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.query.ResourceReader;
-import au.csiro.pathling.query.parsing.ExpressionParserContext;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.ComplexExpressionBuilder;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.PrimitiveExpressionBuilder;

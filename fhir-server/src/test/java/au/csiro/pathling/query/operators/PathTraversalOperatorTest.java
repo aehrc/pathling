@@ -8,9 +8,9 @@ import static au.csiro.pathling.TestUtilities.getFhirContext;
 import static au.csiro.pathling.test.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import au.csiro.pathling.query.parsing.ExpressionParserContext;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ResourceExpressionBuilder;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;

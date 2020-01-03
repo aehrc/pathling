@@ -16,6 +16,8 @@ import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.ResourceReader;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.query.parsing.parser.ExpressionParser;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.ParsedExpressionAssert;
 import java.io.File;
 import java.io.IOException;

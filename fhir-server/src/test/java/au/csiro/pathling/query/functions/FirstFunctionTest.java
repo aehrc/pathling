@@ -10,9 +10,9 @@ import static au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture.*;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.query.parsing.ExpressionParserContext;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.PrimitiveExpressionBuilder;
 import au.csiro.pathling.test.ResourceExpressionBuilder;
 import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;

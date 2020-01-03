@@ -2,11 +2,12 @@
  * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
  */
 
-package au.csiro.pathling.query.parsing;
+package au.csiro.pathling.query.parsing.parser;
 
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.ResourceReader;
+import au.csiro.pathling.query.parsing.ParsedExpression;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.List;

@@ -4,8 +4,8 @@
 
 package au.csiro.pathling.query.functions;
 
-import au.csiro.pathling.query.parsing.ExpressionParserContext;
 import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import java.util.ArrayList;
 import java.util.List;
 
