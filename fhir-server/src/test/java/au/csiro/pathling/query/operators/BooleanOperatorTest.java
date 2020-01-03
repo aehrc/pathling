@@ -6,12 +6,10 @@ package au.csiro.pathling.query.operators;
 
 import static au.csiro.pathling.test.Assertions.assertThat;
 import static au.csiro.pathling.test.PrimitiveExpressionBuilder.literalBoolean;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.test.PrimitiveExpressionBuilder;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -195,52 +193,5 @@ public class BooleanOperatorTest {
         RowFactory.create("abc7", true),
         RowFactory.create("abc8", null)
     );
-  }
-
-  @Test
-  public void leftOperandIsNotSingular() {
-    left.setSingular(false);
-
-    BinaryOperatorInput input = new BinaryOperatorInput();
-    input.setLeft(left);
-    input.setRight(right);
-    input.setExpression("estimatedAge and deceasedBoolean");
-
-    BooleanOperator booleanOperator = new BooleanOperator(BooleanOperator.AND);
-    assertThatExceptionOfType(InvalidRequestException.class)
-        .isThrownBy(() -> booleanOperator.invoke(input))
-        .withMessage("Left operand to and operator must be singular Boolean: estimatedAge");
-  }
-
-  @Test
-  public void rightOperandIsNotSingular() {
-    right.setSingular(false);
-
-    BinaryOperatorInput input = new BinaryOperatorInput();
-    input.setLeft(left);
-    input.setRight(right);
-    input.setExpression("estimatedAge and deceasedBoolean");
-
-    BooleanOperator booleanOperator = new BooleanOperator(BooleanOperator.AND);
-    assertThatExceptionOfType(InvalidRequestException.class)
-        .isThrownBy(() -> booleanOperator.invoke(input))
-        .withMessage("Right operand to and operator must be singular Boolean: deceasedBoolean");
-  }
-
-  @Test
-  public void bothOperandsAreLiteral() {
-    ParsedExpression literalLeft = literalBoolean(true);
-    ParsedExpression literalRight = literalBoolean(true);
-
-    BinaryOperatorInput input = new BinaryOperatorInput();
-    input.setLeft(literalLeft);
-    input.setRight(literalRight);
-    input.setExpression("estimatedAge and deceasedBoolean");
-
-    BooleanOperator booleanOperator = new BooleanOperator(BooleanOperator.AND);
-    assertThatExceptionOfType(InvalidRequestException.class)
-        .isThrownBy(() -> booleanOperator.invoke(input))
-        .withMessage(
-            "Cannot have two literal operands to and operator: estimatedAge and deceasedBoolean");
   }
 }

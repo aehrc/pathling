@@ -6,14 +6,11 @@ package au.csiro.pathling.query.operators;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.DECIMAL;
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.INTEGER;
-import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.STRING;
 import static au.csiro.pathling.test.Assertions.assertThat;
 import static au.csiro.pathling.test.PrimitiveExpressionBuilder.literalInteger;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.test.PrimitiveExpressionBuilder;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -211,85 +208,4 @@ public class MathOperatorTest {
     );
   }
 
-  @Test
-  public void leftOperandIsNotCorrectType() {
-    left.setFhirPathType(STRING);
-
-    BinaryOperatorInput input = new BinaryOperatorInput();
-    input.setLeft(left);
-    input.setRight(right);
-
-    MathOperator mathOperator = new MathOperator(MathOperator.ADDITION);
-    assertThatExceptionOfType(InvalidRequestException.class)
-        .isThrownBy(() -> mathOperator.invoke(input))
-        .withMessage(
-            "Left operand to + operator is of unsupported type, or is not singular: " + left
-                .getFhirPath());
-  }
-
-  @Test
-  public void rightOperandIsNotCorrectType() {
-    right.setFhirPathType(STRING);
-
-    BinaryOperatorInput input = new BinaryOperatorInput();
-    input.setLeft(left);
-    input.setRight(right);
-
-    MathOperator mathOperator = new MathOperator(MathOperator.ADDITION);
-    assertThatExceptionOfType(InvalidRequestException.class)
-        .isThrownBy(() -> mathOperator.invoke(input))
-        .withMessage(
-            "Right operand to + operator is of unsupported type, or is not singular: "
-                + right
-                .getFhirPath());
-  }
-
-  @Test
-  public void leftOperandIsNotSingular() {
-    left.setSingular(false);
-
-    BinaryOperatorInput input = new BinaryOperatorInput();
-    input.setLeft(left);
-    input.setRight(right);
-
-    MathOperator mathOperator = new MathOperator(MathOperator.ADDITION);
-    assertThatExceptionOfType(InvalidRequestException.class)
-        .isThrownBy(() -> mathOperator.invoke(input))
-        .withMessage(
-            "Left operand to + operator is of unsupported type, or is not singular: " + left
-                .getFhirPath());
-  }
-
-  @Test
-  public void rightOperandIsNotSingular() {
-    right.setSingular(false);
-
-    BinaryOperatorInput input = new BinaryOperatorInput();
-    input.setLeft(left);
-    input.setRight(right);
-
-    MathOperator mathOperator = new MathOperator(MathOperator.ADDITION);
-    assertThatExceptionOfType(InvalidRequestException.class)
-        .isThrownBy(() -> mathOperator.invoke(input))
-        .withMessage(
-            "Right operand to + operator is of unsupported type, or is not singular: " + right
-                .getFhirPath());
-  }
-
-  @Test
-  public void bothOperandsAreLiteral() {
-    ParsedExpression literalLeft = literalInteger(1);
-    ParsedExpression literalRight = literalInteger(1);
-
-    BinaryOperatorInput input = new BinaryOperatorInput();
-    input.setLeft(literalLeft);
-    input.setRight(literalRight);
-    input.setExpression("1 + 1");
-
-    MathOperator mathOperator = new MathOperator(MathOperator.ADDITION);
-    assertThatExceptionOfType(InvalidRequestException.class)
-        .isThrownBy(() -> mathOperator.invoke(input))
-        .withMessage(
-            "Cannot have two literal operands to + operator: 1 + 1");
-  }
 }
