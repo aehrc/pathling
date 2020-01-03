@@ -358,9 +358,11 @@ public class ParsedExpression implements Joinable {
   }
 
   public Object getJavaLiteralValue() {
-    assert PrimitiveType.class.isAssignableFrom(literalValue.getClass()) :
-        "Encountered non-primitive literal value";
-    return ((PrimitiveType) literalValue).getValue();
+    if (PrimitiveType.class.isAssignableFrom(literalValue.getClass())) {
+      return ((PrimitiveType) literalValue).getValue();
+    } else {
+      return literalValue;
+    }
   }
 
   /**
@@ -466,7 +468,7 @@ public class ParsedExpression implements Joinable {
     CODING(Coding.class, "Coding");
 
     // See https://hl7.org/fhir/fhirpath.html#types.
-    private static final Map<FHIRDefinedType, FhirPathType> fhirTypeCodeToFhirPathType = new EnumMap<FHIRDefinedType, FhirPathType>(
+    private static final Map<FHIRDefinedType, FhirPathType> FHIR_TYPE_TO_FHIRPATH_TYPE = new EnumMap<FHIRDefinedType, FhirPathType>(
         FHIRDefinedType.class) {{
       put(FHIRDefinedType.BOOLEAN, BOOLEAN);
       put(FHIRDefinedType.STRING, STRING);
@@ -488,7 +490,7 @@ public class ParsedExpression implements Joinable {
       put(FHIRDefinedType.CODING, CODING);
     }};
 
-    private static final Set<FhirPathType> primitiveTypes = new HashSet<>(
+    private static final Set<FhirPathType> PRIMITIVE_TYPES = new HashSet<>(
         Arrays.asList(BOOLEAN, STRING, INTEGER, DECIMAL, DATE, DATE_TIME, TIME));
 
     // Java class that can be used for representing the value of this expression.
@@ -506,11 +508,11 @@ public class ParsedExpression implements Joinable {
 
     // Maps a FHIR type code to a FHIRPath data type.
     public static FhirPathType forFhirTypeCode(FHIRDefinedType fhirTypeCode) {
-      return fhirTypeCodeToFhirPathType.get(fhirTypeCode);
+      return FHIR_TYPE_TO_FHIRPATH_TYPE.get(fhirTypeCode);
     }
 
     public boolean isPrimitive() {
-      return primitiveTypes.contains(this);
+      return PRIMITIVE_TYPES.contains(this);
     }
 
     @Nonnull

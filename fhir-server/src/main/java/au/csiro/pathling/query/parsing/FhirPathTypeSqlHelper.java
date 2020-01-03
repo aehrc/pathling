@@ -1,12 +1,12 @@
 package au.csiro.pathling.query.parsing;
 
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import java.util.function.BiFunction;
 import org.apache.spark.sql.Column;
-import org.hl7.fhir.r4.model.Type;
-import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 
 public interface FhirPathTypeSqlHelper {
-  Column getLiteralColumn(Type litValue);
+
+  Column getLiteralColumn(ParsedExpression expression);
 
   BiFunction<Column, Column, Column> getEquality();
 

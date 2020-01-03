@@ -30,14 +30,12 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.assertj.core.api.Assertions;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -47,24 +45,16 @@ import org.junit.experimental.categories.Category;
 @Category(au.csiro.pathling.UnitTest.class)
 public class MemberOfFunctionTest {
 
-  private SparkSession spark;
-  private final String loincUrl = "http://loinc.org";
-  private final String snomedUrl = "http://snomed.info/sct";
-  private final String myValueSetUrl = "https://csiro.au/fhir/ValueSet/my-value-set";
-  private final String terminologyServiceUrl = "https://r4.ontoserver.csiro.au/fhir";
-
-  @Before
-  public void setUp() {
-    spark = getSparkSession();
-  }
+  private static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";
+  private static final String TERMINOLOGY_SERVICE_URL = "https://r4.ontoserver.csiro.au/fhir";
 
   @Test
   public void memberOfCoding() throws Exception {
-    Coding coding1 = new Coding(myValueSetUrl, "AMB", "ambulatory");
-    Coding coding2 = new Coding(myValueSetUrl, "EMER", null);
-    Coding coding3 = new Coding(myValueSetUrl, "IMP", "inpatient encounter");
-    Coding coding4 = new Coding(myValueSetUrl, "IMP", null);
-    Coding coding5 = new Coding(myValueSetUrl, "ACUTE", "inpatient acute");
+    Coding coding1 = new Coding(MY_VALUE_SET_URL, "AMB", "ambulatory");
+    Coding coding2 = new Coding(MY_VALUE_SET_URL, "EMER", null);
+    Coding coding3 = new Coding(MY_VALUE_SET_URL, "IMP", "inpatient encounter");
+    Coding coding4 = new Coding(MY_VALUE_SET_URL, "IMP", null);
+    Coding coding5 = new Coding(MY_VALUE_SET_URL, "ACUTE", "inpatient acute");
 
     ParsedExpression inputExpression = new ComplexExpressionBuilder(FHIRDefinedType.CODING)
         .withColumn("789wxyz_id", DataTypes.StringType)
@@ -76,13 +66,14 @@ public class MemberOfFunctionTest {
         .withRow("Encounter/xyz5", rowFromCoding(coding5))
         .buildWithStructValue("789wxyz");
     inputExpression.setSingular(true);
-    ParsedExpression argumentExpression = PrimitiveExpressionBuilder.literalString(myValueSetUrl);
+    ParsedExpression argumentExpression = PrimitiveExpressionBuilder
+        .literalString(MY_VALUE_SET_URL);
 
     // Create a mock terminology client.
     TerminologyClient terminologyClient = mock(TerminologyClient.class);
     ValidateCodingTxAnswerer validateCodingTxAnswerer = new ValidateCodingTxAnswerer(
         coding2, coding5);
-    when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
+    when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
     when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodingTxAnswerer);
 
     // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
@@ -102,7 +93,7 @@ public class MemberOfFunctionTest {
     parserContext.setTerminologyClientFactory(terminologyClientFactory);
 
     FunctionInput memberOfInput = new FunctionInput();
-    String inputFhirPath = "memberOf('" + myValueSetUrl + "')";
+    String inputFhirPath = "memberOf('" + MY_VALUE_SET_URL + "')";
     memberOfInput.setExpression(inputFhirPath);
     memberOfInput.setContext(parserContext);
     memberOfInput.setInput(inputExpression);
@@ -122,7 +113,7 @@ public class MemberOfFunctionTest {
     // Test the mapper.
     ValidateCodeMapper validateCodingMapper = new ValidateCodeMapper("xyz",
         terminologyClientFactory,
-        myValueSetUrl, FHIRDefinedType.CODING);
+        MY_VALUE_SET_URL, FHIRDefinedType.CODING);
     Row inputCodingRow1 = RowFactory.create(1, rowFromCoding(coding1));
     Row inputCodingRow2 = RowFactory.create(2, rowFromCoding(coding2));
     Row inputCodingRow3 = RowFactory.create(3, rowFromCoding(coding3));
@@ -155,13 +146,13 @@ public class MemberOfFunctionTest {
 
   @Test
   public void memberOfCodeableConcept() {
-    Coding coding1 = new Coding(loincUrl, "10337-4", "Procollagen type I [Mass/volume] in Serum");
-    Coding coding2 = new Coding(loincUrl, "10428-1",
+    Coding coding1 = new Coding(LOINC_URL, "10337-4", "Procollagen type I [Mass/volume] in Serum");
+    Coding coding2 = new Coding(LOINC_URL, "10428-1",
         "Varicella zoster virus immune globulin given [Volume]");
-    Coding coding3 = new Coding(loincUrl, "10555-1", null);
-    Coding coding4 = new Coding(loincUrl, "10665-8",
+    Coding coding3 = new Coding(LOINC_URL, "10555-1", null);
+    Coding coding4 = new Coding(LOINC_URL, "10665-8",
         "Fungus colony count [#/volume] in Unspecified specimen by Environmental culture");
-    Coding coding5 = new Coding(snomedUrl, "416399002",
+    Coding coding5 = new Coding(SNOMED_URL, "416399002",
         "Procollagen type I amino-terminal propeptide level");
 
     CodeableConcept codeableConcept1 = new CodeableConcept(coding1);
@@ -187,13 +178,14 @@ public class MemberOfFunctionTest {
         .getResourceDefinition("DiagnosticReport")
         .getChildByName("code");
     inputExpression.setDefinition(definition, "code");
-    ParsedExpression argumentExpression = PrimitiveExpressionBuilder.literalString(myValueSetUrl);
+    ParsedExpression argumentExpression = PrimitiveExpressionBuilder
+        .literalString(MY_VALUE_SET_URL);
 
     // Create a mock terminology client.
     TerminologyClient terminologyClient = mock(TerminologyClient.class);
     ValidateCodeableConceptTxAnswerer validateCodeableConceptTxAnswerer = new ValidateCodeableConceptTxAnswerer(
         codeableConcept1, codeableConcept3, codeableConcept4);
-    when(terminologyClient.getServerBase()).thenReturn(terminologyServiceUrl);
+    when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
     when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodeableConceptTxAnswerer);
 
     // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
@@ -213,7 +205,7 @@ public class MemberOfFunctionTest {
     parserContext.setTerminologyClientFactory(terminologyClientFactory);
 
     FunctionInput memberOfInput = new FunctionInput();
-    String inputFhirPath = "memberOf('" + myValueSetUrl + "')";
+    String inputFhirPath = "memberOf('" + MY_VALUE_SET_URL + "')";
     memberOfInput.setExpression(inputFhirPath);
     memberOfInput.setContext(parserContext);
     memberOfInput.setInput(inputExpression);
@@ -233,7 +225,7 @@ public class MemberOfFunctionTest {
     // Test the mapper.
     ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper("xyz",
         terminologyClientFactory,
-        myValueSetUrl, FHIRDefinedType.CODEABLECONCEPT);
+        MY_VALUE_SET_URL, FHIRDefinedType.CODEABLECONCEPT);
     Row inputCodeableConceptRow1 = RowFactory.create(1, rowFromCodeableConcept(codeableConcept1));
     Row inputCodeableConceptRow2 = RowFactory.create(2, rowFromCodeableConcept(codeableConcept2));
     Row inputCodeableConceptRow3 = RowFactory.create(3, rowFromCodeableConcept(codeableConcept3));
@@ -274,7 +266,7 @@ public class MemberOfFunctionTest {
         FhirPathType.STRING)
         .build();
     input.setFhirPath("onsetString");
-    ParsedExpression argument = PrimitiveExpressionBuilder.literalString(myValueSetUrl);
+    ParsedExpression argument = PrimitiveExpressionBuilder.literalString(MY_VALUE_SET_URL);
 
     FunctionInput memberOfInput = new FunctionInput();
     memberOfInput.setInput(input);

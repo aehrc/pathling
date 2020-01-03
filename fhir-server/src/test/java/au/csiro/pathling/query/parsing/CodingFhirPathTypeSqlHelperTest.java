@@ -5,7 +5,9 @@ import static au.csiro.pathling.test.Assertions.assertThat;
 import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.test.CodingRowFixture;
 import au.csiro.pathling.test.DatasetAssert;
+import au.csiro.pathling.test.PrimitiveExpressionBuilder;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.function.BiFunction;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.*;
@@ -72,9 +74,10 @@ public class CodingFhirPathTypeSqlHelperTest {
     Metadata metadata = new MetadataBuilder().build();
     StructType schema = new StructType(
         new StructField[]{new StructField("id", DataTypes.StringType, true, metadata)});
-    Dataset<Row> context = spark.createDataFrame(Arrays.asList(RowFactory.create("id")), schema);
+    Dataset<Row> context = spark
+        .createDataFrame(Collections.singletonList(RowFactory.create("id")), schema);
 
-    Coding emptyCoding = new Coding();
+    ParsedExpression emptyCoding = PrimitiveExpressionBuilder.literalCoding(new Coding());
     Column emptyLitColumn = CodingFhirPathTypeSqlHelper.INSTANCE.getLiteralColumn(emptyCoding);
     assertThat(context.select(emptyLitColumn.alias("literal"))).isValue()
         .isEqualTo(RowFactory.create(null, null, null, null, null, false));
@@ -86,7 +89,9 @@ public class CodingFhirPathTypeSqlHelperTest {
     fullCoding.setCode("code");
     fullCoding.setDisplay("display");
     fullCoding.setUserSelected(true);
-    Column fullLitCoding = CodingFhirPathTypeSqlHelper.INSTANCE.getLiteralColumn(fullCoding);
+    ParsedExpression fullCodingExpression = PrimitiveExpressionBuilder.literalCoding(fullCoding);
+    Column fullLitCoding = CodingFhirPathTypeSqlHelper.INSTANCE
+        .getLiteralColumn(fullCodingExpression);
     assertThat(context.select(fullLitCoding.alias("literal"))).isValue()
         .isEqualTo(RowFactory.create("id", "system", "version", "code", "display", true));
   }

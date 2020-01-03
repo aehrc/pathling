@@ -5,10 +5,11 @@
 package au.csiro.pathling.query.operators;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.*;
-import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.not;
 import static org.apache.spark.sql.functions.to_date;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.query.parsing.FhirPathTypeSqlHelper;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -37,12 +38,15 @@ public class EqualityOperator implements BinaryOperator {
       DECIMAL,
       BOOLEAN,
       DATE_TIME,
-      DATE
+      DATE,
+      CODING
   );
 
   private String operator;
 
   public EqualityOperator(String operator) {
+    assert operator.equals(EQUALS) || operator.equals(NOT_EQUALS) :
+        "Unsupported equality operator encountered: " + operator;
     this.operator = operator;
   }
 
@@ -53,15 +57,17 @@ public class EqualityOperator implements BinaryOperator {
     ParsedExpression left = input.getLeft();
     ParsedExpression right = input.getRight();
 
+    FhirPathTypeSqlHelper sqlHelper = FhirPathTypeSqlHelper.forType(left.getFhirPathType());
     String fhirPath =
         left.getFhirPath() + " " + operator + " " + right.getFhirPath();
 
     Dataset<Row> leftDataset = left.getDataset(),
         rightDataset = right.getDataset();
     Column leftIdColumn = left.getIdColumn(),
-        leftColumn = left.isLiteral() ? lit(left.getJavaLiteralValue()) : left.getValueColumn(),
+        leftColumn = left.isLiteral() ? sqlHelper.getLiteralColumn(left) : left.getValueColumn(),
         rightIdColumn = right.getIdColumn(),
-        rightColumn = right.isLiteral() ? lit(right.getJavaLiteralValue()) : right.getValueColumn();
+        rightColumn =
+            right.isLiteral() ? sqlHelper.getLiteralColumn(right) : right.getValueColumn();
 
     if (left.getFhirPathType() == DATE_TIME || left.getFhirPathType() == DATE) {
       leftColumn = to_date(leftColumn);
@@ -72,19 +78,13 @@ public class EqualityOperator implements BinaryOperator {
     // written to take account of the fact that an equality expression involving null will always
     // be null in Spark, whereas in FHIRPath { } = { } should be true and 'foo' = { } should be
     // false.
-    Column expression = null;
-    switch (operator) {
-      case EQUALS:
-        expression = when(leftColumn.isNull().or(rightColumn.isNull()), null)
-            .otherwise(leftColumn.equalTo(rightColumn));
-        break;
-      case NOT_EQUALS:
-        expression = when(leftColumn.isNull().or(rightColumn.isNull()), null)
-            .otherwise(leftColumn.notEqual(rightColumn));
-        break;
-      default:
-        assert false : "Unsupported equality operator encountered: " + operator;
+    Column nullTest = leftColumn.isNull().or(rightColumn.isNull()),
+        equalityTest = sqlHelper.getEquality().apply(leftColumn, rightColumn);
+    // Invert the test if the not equals operator has been invoked.
+    if (operator.equals(NOT_EQUALS)) {
+      equalityTest = not(equalityTest);
     }
+    Column expression = when(nullTest, null).otherwise(equalityTest);
 
     Dataset<Row> dataset;
     Column idColumn;

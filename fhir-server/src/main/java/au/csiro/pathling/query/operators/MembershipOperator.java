@@ -58,7 +58,8 @@ public class MembershipOperator implements BinaryOperator {
           "Operands are of incompatible types: " + input.getExpression());
     }
 
-    FhirPathTypeSqlHelper sqlHelper = FhirPathTypeSqlHelper.forType(element.getFhirPathType());
+    FhirPathTypeSqlHelper sqlHelper = FhirPathTypeSqlHelper
+        .forType(element.getFhirPathType());
 
     // Create a new dataset which joins left and right and aggregates on the resource ID based upon
     // whether the left expression is within the set of values in the right expression.
@@ -68,7 +69,7 @@ public class MembershipOperator implements BinaryOperator {
     Column collectionIdColumn = collection.getIdColumn();
     Column collectionColumn = collection.getValueColumn();
     Column elementColumn =
-        element.isLiteral() ? sqlHelper.getLiteralColumn(element.getLiteralValue())
+        element.isLiteral() ? sqlHelper.getLiteralColumn(element)
             : element.getValueColumn();
     Column elementIdColumn = element.getIdColumn();
 

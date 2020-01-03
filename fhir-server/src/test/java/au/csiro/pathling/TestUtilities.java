@@ -40,8 +40,10 @@ import scala.collection.mutable.Buffer;
  */
 public abstract class TestUtilities {
 
-  private static final FhirContext fhirContext = FhirContext.forR4();
-  private static final IParser jsonParser = fhirContext.newJsonParser();
+  private static final FhirContext FHIR_CONTEXT = FhirContext.forR4();
+  private static final IParser JSON_PARSER = FHIR_CONTEXT.newJsonParser();
+  public static final String LOINC_URL = "http://loinc.org";
+  public static final String SNOMED_URL = "http://snomed.info/sct";
 
   public static SparkSession getSparkSession() {
     Option<SparkSession> activeSession = SparkSession.getActiveSession();
@@ -57,12 +59,12 @@ public abstract class TestUtilities {
   }
 
   public static FhirContext getFhirContext() {
-    return fhirContext;
+    return FHIR_CONTEXT;
   }
 
   public static BaseRuntimeChildDefinition getChildDefinition(Class<? extends IBase> elementType,
       String childName) {
-    BaseRuntimeElementDefinition<?> elementDef = fhirContext.getElementDefinition(elementType);
+    BaseRuntimeElementDefinition<?> elementDef = FHIR_CONTEXT.getElementDefinition(elementType);
     if (RuntimeResourceDefinition.class.isAssignableFrom(elementDef.getClass())) {
       return ((RuntimeResourceDefinition) elementDef).getChildByName(childName);
     } else {
@@ -71,7 +73,7 @@ public abstract class TestUtilities {
   }
 
   public static IParser getJsonParser() {
-    return jsonParser;
+    return JSON_PARSER;
   }
 
   public static InputStream getResourceAsStream(String name) {
