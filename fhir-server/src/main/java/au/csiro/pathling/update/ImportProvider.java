@@ -7,10 +7,13 @@ package au.csiro.pathling.update;
 import au.csiro.pathling.bunsen.FhirEncoders;
 import au.csiro.pathling.fhir.AnalyticsServerConfiguration;
 import au.csiro.pathling.fhir.FhirContextFactory;
+import au.csiro.pathling.query.ResourceReader;
 import au.csiro.pathling.utilities.PersistenceScheme;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.spark.api.java.function.MapFunction;
@@ -42,14 +45,17 @@ public class ImportProvider {
   private final ResourceWriter resourceWriter;
   private final FhirEncoders fhirEncoders;
   private final FhirContextFactory fhirContextFactory;
+  private final ResourceReader resourceReader;
 
   public ImportProvider(AnalyticsServerConfiguration configuration, SparkSession spark,
-      FhirEncoders fhirEncoders, FhirContextFactory fhirContextFactory) {
+      FhirEncoders fhirEncoders, FhirContextFactory fhirContextFactory,
+      ResourceReader resourceReader) {
     this.spark = spark;
     this.resourceWriter = new ResourceWriter(configuration.getWarehouseUrl(),
         configuration.getDatabaseName());
     this.fhirEncoders = fhirEncoders;
     this.fhirContextFactory = fhirContextFactory;
+    this.resourceReader = resourceReader;
   }
 
   /**
@@ -62,7 +68,8 @@ public class ImportProvider {
    * once - multiple occurrences will result in the last input overwriting the previous ones.
    */
   @Operation(name = "$import")
-  public OperationOutcome importOperation(@ResourceParam Parameters inParams) {
+  public OperationOutcome importOperation(@ResourceParam Parameters inParams)
+      throws IOException, URISyntaxException {
     // Parse and validate the JSON request.
     List<ParametersParameterComponent> sourceParams = inParams.getParameter().stream()
         .filter(param -> param.getName().equals("source")).collect(Collectors.toList());
@@ -106,6 +113,10 @@ public class ImportProvider {
       logger.info("Saving resources: " + resourceType.toCode());
       resourceWriter.write(resourceType, resources);
     }
+
+    // Update the list of available resources within the resource reader.
+    logger.info("Updating available resource types");
+    resourceReader.updateAvailableResourceTypes();
 
     // We return 200, as this operation is currently synchronous.
     logger.info("Import complete");

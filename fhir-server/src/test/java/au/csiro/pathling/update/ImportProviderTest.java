@@ -6,11 +6,15 @@ package au.csiro.pathling.update;
 
 import static au.csiro.pathling.TestUtilities.getSparkSession;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import au.csiro.pathling.bunsen.FhirEncoders;
 import au.csiro.pathling.fhir.AnalyticsServerConfiguration;
 import au.csiro.pathling.fhir.FhirContextFactory;
+import au.csiro.pathling.query.ResourceReader;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,6 +36,7 @@ public class ImportProviderTest {
 
   private ImportProvider importProvider;
   private SparkSession spark;
+  private ResourceReader resourceReader;
 
   @Before
   public void setUp() throws IOException {
@@ -42,12 +47,13 @@ public class ImportProviderTest {
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
+    resourceReader = mock(ResourceReader.class);
     importProvider = new ImportProvider(config, spark, FhirEncoders.forR4().getOrCreate(),
-        new FhirContextFactory());
+        new FhirContextFactory(), resourceReader);
   }
 
   @Test
-  public void simpleImport() {
+  public void simpleImport() throws IOException, URISyntaxException {
     URL importUrl = Thread.currentThread().getContextClassLoader()
         .getResource("test-data/fhir/Patient.ndjson");
     assertThat(importUrl).isNotNull();
@@ -73,6 +79,7 @@ public class ImportProviderTest {
     assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.INFORMATION);
     assertThat(issue.getCode()).isEqualTo(IssueType.INFORMATIONAL);
     assertThat(issue.getDiagnostics()).isEqualTo("Data import completed successfully");
+    verify(resourceReader).updateAvailableResourceTypes();
   }
 
 }

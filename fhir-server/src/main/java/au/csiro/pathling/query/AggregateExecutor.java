@@ -77,6 +77,10 @@ public class AggregateExecutor {
     return true;
   }
 
+  public ResourceReader getResourceReader() {
+    return resourceReader;
+  }
+
   public Set<ResourceType> getAvailableResourceTypes() {
     return resourceReader.getAvailableResourceTypes();
   }
