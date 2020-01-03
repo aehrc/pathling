@@ -98,11 +98,12 @@ public class MathOperator implements BinaryOperator {
         // TODO: Implement smart multiplication for Quantity.
         break;
       case DIVISION:
-        expression = leftColumn.divide(rightColumn);
         // The result of the expression should always be decimal.
+        Column denominator = rightColumn;
         if (left.getFhirPathType() == INTEGER && right.getFhirPathType() == INTEGER) {
-          expression = expression.cast("decimal");
+          denominator = denominator.cast("decimal");
         }
+        expression = leftColumn.divide(denominator);
         fhirPathType = DECIMAL;
         fhirType = FHIRDefinedType.DECIMAL;
         break;

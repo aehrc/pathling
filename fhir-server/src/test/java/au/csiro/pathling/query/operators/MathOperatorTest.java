@@ -78,11 +78,12 @@ public class MathOperatorTest {
       case "Integer":
         return buildIntegerExpression(leftOperand);
       case "Integer (literal)":
-        return literalInteger(4);
+        return literalInteger(leftOperand ? 1 : 2);
       case "Decimal":
         return buildDecimalExpression(leftOperand);
       case "Decimal (literal)":
-        return PrimitiveExpressionBuilder.literalDecimal(new BigDecimal("4.0"));
+        return PrimitiveExpressionBuilder
+            .literalDecimal(new BigDecimal(leftOperand ? "1.0" : "2.0"));
       default:
         throw new RuntimeException("Invalid data type");
     }
@@ -92,9 +93,9 @@ public class MathOperatorTest {
     ParsedExpression expression = new PrimitiveExpressionBuilder(FHIRDefinedType.INTEGER, INTEGER)
         .withColumn("123abcd_id", DataTypes.StringType)
         .withColumn("123abcd", DataTypes.IntegerType)
-        .withRow("abc1", 4)
-        .withRow("abc2", leftOperand ? null : 4)
-        .withRow("abc3", leftOperand ? 4 : null)
+        .withRow("abc1", leftOperand ? 1 : 2)
+        .withRow("abc2", leftOperand ? null : 2)
+        .withRow("abc3", leftOperand ? 1 : null)
         .withRow("abc4", null)
         .build();
     expression.setSingular(true);
@@ -105,9 +106,9 @@ public class MathOperatorTest {
     ParsedExpression expression = new PrimitiveExpressionBuilder(FHIRDefinedType.DECIMAL, DECIMAL)
         .withColumn("123abcd_id", DataTypes.StringType)
         .withColumn("123abcd", DataTypes.createDecimalType())
-        .withRow("abc1", new BigDecimal("4.0"))
-        .withRow("abc2", leftOperand ? null : new BigDecimal("4.0"))
-        .withRow("abc3", leftOperand ? new BigDecimal("4.0") : null)
+        .withRow("abc1", new BigDecimal(leftOperand ? "1.0" : "2.0"))
+        .withRow("abc2", leftOperand ? null : new BigDecimal("2.0"))
+        .withRow("abc3", leftOperand ? new BigDecimal("1.0") : null)
         .withRow("abc4", null)
         .build();
     expression.setSingular(true);
@@ -123,8 +124,8 @@ public class MathOperatorTest {
     MathOperator mathOperator = new MathOperator(MathOperator.ADDITION);
     ParsedExpression result = mathOperator.invoke(input);
     Object value = leftOperandIsInteger
-        ? 8
-        : new BigDecimal("8.0");
+        ? 3
+        : new BigDecimal("3.0");
 
     assertThat(result).selectResult().hasRows(
         RowFactory.create("abc1", value),
@@ -143,8 +144,8 @@ public class MathOperatorTest {
     MathOperator mathOperator = new MathOperator(MathOperator.SUBTRACTION);
     ParsedExpression result = mathOperator.invoke(input);
     Object value = leftOperandIsInteger
-        ? 0
-        : new BigDecimal("0.0");
+        ? -1
+        : new BigDecimal("-1.0");
 
     assertThat(result).selectResult().hasRows(
         RowFactory.create("abc1", value),
@@ -163,8 +164,8 @@ public class MathOperatorTest {
     MathOperator mathOperator = new MathOperator(MathOperator.MULTIPLICATION);
     ParsedExpression result = mathOperator.invoke(input);
     Object value = leftOperandIsInteger
-        ? 16
-        : new BigDecimal("16.0");
+        ? 2
+        : new BigDecimal("2.0");
 
     assertThat(result).selectResult().hasRows(
         RowFactory.create("abc1", value),
@@ -182,7 +183,7 @@ public class MathOperatorTest {
 
     MathOperator mathOperator = new MathOperator(MathOperator.DIVISION);
     ParsedExpression result = mathOperator.invoke(input);
-    Object value = new BigDecimal("1.0");
+    Object value = new BigDecimal("0.5");
 
     assertThat(result).selectResult().hasRows(
         RowFactory.create("abc1", value),
@@ -200,7 +201,7 @@ public class MathOperatorTest {
 
     MathOperator mathOperator = new MathOperator(MathOperator.MODULUS);
     ParsedExpression result = mathOperator.invoke(input);
-    Object value = 0;
+    Object value = 1;
 
     assertThat(result).selectResult().hasRows(
         RowFactory.create("abc1", value),
