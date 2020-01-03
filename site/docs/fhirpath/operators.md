@@ -32,7 +32,10 @@ The `=` operator returns `true` if the left collection is equal to the right
 collection, and a `false` otherwise. The `!=` is the inverse of the `=`
 operator.
 
-<div class="callout warning">The equality operator in Pathling currently only supports singular, primitive operands of the same type.</div>
+The equality operators can accept operands of type String, Integer, Decimal, 
+Boolean, Date and DateTime. Both operands must be of the same type, and must 
+be singular. If one or both of the operands is an empty collection, the 
+operator will return an empty collection.
 
 ## Comparison
 
@@ -59,10 +62,6 @@ The following rules apply to the use of comparison operators:
   individual characters.
 
 All comparison operators return a Boolean value.
-
-<div class="callout warning">Comparison between Integer and Decimal expressions is not supported. Operands to comparison operators must always be of the same type.</div>
-
-<div class="callout warning">Comparison between Time expressions is not supported.</div>
 
 ## Math
 

@@ -79,8 +79,15 @@ class ExpressionVisitor extends FhirPathBaseVisitor<ParsedExpression> {
 
   @Override
   public ParsedExpression visitEqualityExpression(EqualityExpressionContext ctx) {
+    String operatorString = ctx.children.get(1).toString();
+    if (operatorString.equals("~")) {
+      throw new InvalidRequestException("Equivalent operator (~) is not supported");
+    }
+    if (operatorString.equals("!~")) {
+      throw new InvalidRequestException("Not equivalent operator (!~) is not supported");
+    }
     return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
+        operatorString);
   }
 
   @Override

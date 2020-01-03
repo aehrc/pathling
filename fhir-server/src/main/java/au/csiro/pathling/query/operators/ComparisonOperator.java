@@ -38,8 +38,7 @@ public class ComparisonOperator implements BinaryOperator {
       INTEGER,
       DECIMAL,
       DATE_TIME,
-      DATE,
-      TIME
+      DATE
   );
 
   private final String operator;
@@ -58,8 +57,6 @@ public class ComparisonOperator implements BinaryOperator {
     String fhirPath =
         left.getFhirPath() + " " + operator + " " + right.getFhirPath();
 
-    // Create a new dataset which joins left and right, using the given boolean operator within
-    // the condition.
     Dataset<Row> leftDataset = left.getDataset(),
         rightDataset = right.getDataset();
     Column leftIdColumn = left.getIdColumn(),
