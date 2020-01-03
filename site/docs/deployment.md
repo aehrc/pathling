@@ -34,7 +34,7 @@ The following variables can be used to configure a Pathling instance:
   `https://r4.ontoserver.csiro.au/fhir`) The endpoint of a
   [FHIR terminology service](https://hl7.org/fhir/R4/terminology-service.html)
   (R4) that the server can use to resolve terminology queries.
-- `PATHLINK_TERMINOLOGY_SOCKET_TIMEOUT` - (default: `60000`) The maximum period
+- `PATHLING_TERMINOLOGY_SOCKET_TIMEOUT` - (default: `60000`) The maximum period
   (in milliseconds) that the server should wait for incoming data from the
   terminology service.
 - `PATHLING_AWS_ACCESS_KEY_ID` - Authentication details for connecting to a
