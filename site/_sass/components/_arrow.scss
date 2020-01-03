@@ -28,4 +28,8 @@
 			position: relative;
 			width: 3rem;
 		}
+
+		&:focus {
+			outline: none;
+		}
 	}
