@@ -1,0 +1,291 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 1
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 268
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 2
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 180
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 3
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 72
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 5
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 12
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 4
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 27
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 6
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 5
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 22
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 21
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 20
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 19
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 18
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 17
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 16
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 15
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 14
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 13
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 12
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 11
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 10
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 9
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 8
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valuePositiveInt": 7
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    }
+  ]
+}
