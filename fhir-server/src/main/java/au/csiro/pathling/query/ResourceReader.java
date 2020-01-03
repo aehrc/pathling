@@ -7,6 +7,7 @@ package au.csiro.pathling.query;
 import static au.csiro.pathling.utilities.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.utilities.PersistenceScheme.fileNameForResource;
 
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -95,6 +96,11 @@ public class ResourceReader {
   }
 
   public Dataset<Row> read(ResourceType resourceType) {
+    if (!availableResourceTypes.contains(resourceType)) {
+      throw new ResourceNotFoundException(
+          "Requested resource type not available within selected database: " + resourceType
+              .toCode());
+    }
     String tableUrl = warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
     Dataset<Row> resources = spark.read().parquet(tableUrl);
     resources.cache();
