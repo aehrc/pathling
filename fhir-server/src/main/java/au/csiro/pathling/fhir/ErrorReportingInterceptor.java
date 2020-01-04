@@ -20,10 +20,19 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class ErrorReportingInterceptor {
 
+  private final String serverVersion;
+
+  public ErrorReportingInterceptor(String serverVersion) {
+    this.serverVersion = serverVersion;
+  }
+
   @Hook(Pointcut.SERVER_HANDLE_EXCEPTION)
   public void reportErrorToSentry(RequestDetails requestDetails,
       ServletRequestDetails servletRequestDetails, HttpServletRequest request,
       HttpServletResponse response, BaseServerResponseException exception) {
+    if (serverVersion != null) {
+      Sentry.getContext().addExtra("serverVersion", serverVersion);
+    }
     Sentry.capture(exception.getCause() == null
         ? exception
         : exception.getCause());
