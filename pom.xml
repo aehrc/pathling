@@ -171,6 +171,13 @@
         <version>1.7.25</version>
       </dependency>
 
+      <!-- Error monitoring -->
+      <dependency>
+        <groupId>io.sentry</groupId>
+        <artifactId>sentry</artifactId>
+        <version>1.7.27</version>
+      </dependency>
+
       <!-- Testing -->
       <dependency>
         <groupId>junit</groupId>

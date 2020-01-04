@@ -199,9 +199,8 @@ public class AggregateExecutor {
       logger.warn("Invalid request", e);
       throw e;
     } catch (Exception | AssertionError e) {
-      // All unexpected exceptions get logged and wrapped in a 500 for presenting back to the user.
-      logger.error("Exception occurred while executing query", e);
-      throw new InternalErrorException("Unexpected error occurred while executing query");
+      // All unexpected exceptions get wrapped in a 500 for presenting back to the user.
+      throw new InternalErrorException("Unexpected error occurred while executing query", e);
     }
   }
 

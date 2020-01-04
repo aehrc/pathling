@@ -55,6 +55,8 @@ The following variables can be used to configure a Pathling instance:
   server per the `Access-Control-Allow-Origin` header within the
   [Cross-Origin Resource Sharing](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
   specification.
+- `SENTRY_DSN` - If this variable is set, all errors will be reported to a
+  [Sentry](https://sentry.io) service.
 
 ## Apache Spark integration
 

@@ -8,6 +8,7 @@ import static au.csiro.pathling.utilities.Configuration.setStringPropsUsingEnvVa
 
 import au.csiro.pathling.fhir.AnalyticsServer;
 import au.csiro.pathling.fhir.AnalyticsServerConfiguration;
+import io.sentry.Sentry;
 import java.util.Arrays;
 import java.util.HashMap;
 import javax.annotation.Nonnull;
@@ -26,6 +27,9 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 public class FhirServerContainer {
 
   public static void main(String[] args) throws Exception {
+    // Initialise Sentry, for reporting errors when the `SENTRY_DSN` environment variable is set.
+    Sentry.init();
+
     AnalyticsServerConfiguration config = new AnalyticsServerConfiguration();
 
     String httpPortString = System.getenv("PATHLING_HTTP_PORT");

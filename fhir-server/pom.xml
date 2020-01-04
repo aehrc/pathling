@@ -99,6 +99,12 @@
       <version>${jettyVersion}</version>
     </dependency>
 
+    <!-- Error monitoring -->
+    <dependency>
+      <groupId>io.sentry</groupId>
+      <artifactId>sentry</artifactId>
+    </dependency>
+
     <!-- spring-web is required by CorsConfiguration, which is required by the CorsInterceptor -->
     <dependency>
       <groupId>org.springframework</groupId>

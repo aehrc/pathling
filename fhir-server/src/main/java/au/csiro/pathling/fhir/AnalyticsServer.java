@@ -82,6 +82,9 @@ public class AnalyticsServer extends RestfulServer {
       // Respond with HTML when asked.
       registerInterceptor(new ResponseHighlighterInterceptor());
 
+      // Report errors to Sentry, if configured.
+      registerInterceptor(new ErrorReportingInterceptor());
+
       // Initialise the capability statement.
       AnalyticsServerCapabilities serverCapabilities = new AnalyticsServerCapabilities(
           configuration);
