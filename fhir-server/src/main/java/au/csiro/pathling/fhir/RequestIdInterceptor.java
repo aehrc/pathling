@@ -8,6 +8,7 @@ import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import io.sentry.Sentry;
 import org.slf4j.MDC;
 
 /**
@@ -20,7 +21,9 @@ public class RequestIdInterceptor {
 
   @Hook(Pointcut.SERVER_INCOMING_REQUEST_PRE_HANDLED)
   public void addRequestIdToLoggingContext(RequestDetails requestDetails) {
-    MDC.put("requestId", requestDetails.getRequestId());
+    String requestId = requestDetails.getRequestId();
+    MDC.put("requestId", requestId);
+    Sentry.getContext().addExtra("requestId", requestId);
   }
 
 }
