@@ -1,15 +1,12 @@
 ---
 layout: page
 title: Data types
-nav_order: 1
+nav_order: 0
 parent: FHIRPath
 grand_parent: Documentation
 ---
 
 # Data types
-
-Source: [Literals](https://hl7.org/fhirpath/2018Sep/index.html#literals) and
-[Using FHIR types in expressions](https://hl7.org/fhir/R4/fhirpath.html#types)
 
 The FHIRPath implementation within Pathling supports the following types of
 literal expressions:
@@ -23,15 +20,12 @@ literal expressions:
 - [Time](#time)
 - [Coding](#coding)
 
-<div class="callout warning">The <code>Quantity</code> literal in the FHIRPath specification is not currently supported.</div>
-
-<div class="callout warning">The <code>Coding</code> literal is not within the FHIRPath specification, and is currently unique to the Pathling implementation.</div>
+See also: [Literals](https://hl7.org/fhirpath/2018Sep/index.html#literals) and
+[Using FHIR types in expressions](https://hl7.org/fhir/R4/fhirpath.html#types)
 
 ## Boolean
 
-The Boolean type represents the logical Boolean values true and false. These
-values are used as the result of comparisons, and can be combined using logical
-operators such as and and or.
+The Boolean type represents the logical Boolean values `true` and `false`.
 
 Examples:
 
@@ -68,8 +62,7 @@ Examples:
 
 ## Integer
 
-The Integer type represents whole numbers in the range -2<sup>31</sup> to
-2<sup>31</sup>-1.
+The Integer type represents whole numbers.
 
 Examples:
 
@@ -80,11 +73,7 @@ Examples:
 
 ## Decimal
 
-The Decimal type represents real values in the range
--10<sup>28</sup>-10<sup>-8</sup> to 10<sup>28</sup>-10<sup>-8</sup> with a step
-size of 10<sup>-8</sup>.
-
-Note that decimal literals cannot use exponential notation.
+The Decimal type represents real values.
 
 Examples:
 
@@ -95,18 +84,11 @@ Examples:
 
 ## Date
 
-The Date type represents date and partial date values in the range `@0001-01-01`
-to `@9999-12-31` with a 1 day step size.
+The Date type represents date and partial date values, without a time component.
 
-The Date literal is a subset of ISO8601:
-
-- It uses the `YYYY-MM-DD` format, though month and day parts are optional
-- Week dates and ordinal dates are not allowed
-- Years must be present (`-MM-DD` is not a valid Date in FHIRPath)
-- Months must be present if a day is present
-- The date may be followed by a time as described in the next section.
-- Consult the [formal grammar](https://hl7.org/fhirpath/2018Sep/grammar.html)
-  for more details.
+The Date literal is a subset of
+[ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). It uses the `YYYY-MM-DD`
+format, though month and day parts are optional.
 
 Examples:
 
@@ -118,10 +100,10 @@ Examples:
 
 ## Time
 
-The Time type represents time-of-day and partial time-of-day values in the range
-`@T00:00:00.0` to `@T23:59:59.999` with a step size of 1 millisecond.
+The Time type represents time-of-day and partial time-of-day values.
 
-The Time literal uses a subset of ISO8601:
+The Time literal uses a subset of
+[ISO 8601](https://en.wikipedia.org/wiki/ISO_8601):
 
 - A time begins with a `@T`
 - It uses the `Thh:mm:ss.ffff±hh:mm` format, though minute, second, millisecond
@@ -139,31 +121,23 @@ Examples:
 @T14
 ```
 
-Consult the [formal grammar](https://hl7.org/fhirpath/2018Sep/grammar.html) for
-more details.
-
 ## DateTime
 
-The DateTime type represents date/time and partial date/time values in the range
-`@0001-01-01T00:00:00.0` to `@9999-12-31T23:59:59.999` with a 1 millisecond step
-size.
+The DateTime literal combines the [Date](#date) and [Time](#time) literals and
+is a subset of [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). It uses the
+`YYYY-MM-DDThh:mm:ss.ffff±hh:mm` format.
 
-The DateTime literal combines the Date and Time literals and is a subset of
-ISO8601:
-
-- It uses the `YYYY-MM-DDThh:mm:ss.ffff±hh:mm` format
+Example:
 
 ```
 @2014-01-25T14:30:14.559
 ```
 
-Consult the [formal grammar](https://hl7.org/fhirpath/2018Sep/grammar.html) for
-more details.
-
 ## Coding
 
 A [Coding](https://hl7.org/fhir/R4/datatypes.html#Coding) is a representation of
-a defined concept using a symbol from a defined "code system" - see
+a defined concept using a symbol from a defined
+[code system](https://hl7.org/fhir/R4/codesystem.html) - see
 [Using Codes in resources](https://hl7.org/fhir/R4/terminologies.html) for more
 details.
 
@@ -175,5 +149,7 @@ The Coding literal can take two forms:
 Not all code systems require the use of a version to unambiguously specify a
 code - see
 [Versioning Code Systems](https://hl7.org/fhir/R4/codesystem.html#versioning).
+
+<div class="callout warning">The <code>Coding</code> literal is not within the FHIRPath specification, and is currently unique to the Pathling implementation.</div>
 
 Next: [Operators](./operators.html)

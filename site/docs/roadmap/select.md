@@ -11,7 +11,8 @@ grand_parent: Documentation
 This change will include the creation of a search parameter called `select` (see
 [Advanced Search](https://hl7.org/fhir/R4/search.html#query)). This search
 parameter will take a set of FHIRPath expressions as parameters, and will return
-a Bundle of resources for which the expressions all evaluate to `true`.
+a [Bundle](https://hl7.org/fhir/R4/bundle.html) of resources for which the
+expressions all evaluate to `true`.
 
 This will allow for the retrieval of individual resources using the FHIRPath
 syntax.

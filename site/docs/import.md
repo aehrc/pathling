@@ -1,23 +1,24 @@
 ---
 layout: page
 title: Import
-nav_order: 1
+nav_order: 0
 parent: Documentation
 ---
 
 # Import
 
-Formal definition:
-[https://server.pathling.app/fhir/OperationDefinition/import-0](https://server.pathling.app/fhir/OperationDefinition/import-0)
+[FHIR OperationDefinition](https://server.pathling.app/fhir/OperationDefinition/import-0)
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and the `$import` operation is an
 [extended operation](https://hl7.org/fhir/R4/operations.html) defined on that
 interface.
 
-This operation allows bulk FHIR [NDJSON](http://ndjson.org/) data to be imported
-into the server, making it available for query via other operations such as
-[aggregate](./aggregate.html).
+This operation allows FHIR R4 data to be imported into the server, making it
+available for query via other operations such as [aggregate](./aggregate.html).
+This operation accepts the [NDJSON](http://ndjson.org/) format, and links to
+retrieve that data are provided rather that sending the data inline within the
+request itself. This is to allow for large data sets to be imported efficiently.
 
 Currently Pathling supports retrieval of NDJSON files from
 [Amazon S3](https://aws.amazon.com/s3/) (`s3://`),
@@ -52,5 +53,8 @@ following parameters:
 The response from the `$import` operation is an
 [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html) resource,
 which will indicate success or a description of any errors that occurred.
+
+See also:
+[Example requests in Postman](https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d5f260da-7eca-4a19-83b2-a944491ba5a6)
 
 Next: [Aggregate](./aggregate.html)

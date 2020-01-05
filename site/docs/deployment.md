@@ -26,7 +26,7 @@ The following variables can be used to configure a Pathling instance:
   of an [Apache Spark](https://spark.apache.org/) cluster to use for processing
   data.
 - `PATHLING_DATABASE_NAME` - (default: `default`) The subdirectory within the
-  warehouse path in which data is read from and stored.
+  warehouse path used to read and write data.
 - `PATHLING_EXECUTOR_MEMORY` - (default: `1g`) The quantity of memory available
   for each child task to process data within, in the same format as JVM memory
   strings with a size unit suffix (`k`, `m`, `g` or `t`) (e.g. `512m`, `2g`).

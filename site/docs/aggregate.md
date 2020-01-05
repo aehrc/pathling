@@ -1,14 +1,13 @@
 ---
 layout: page
 title: Aggregate
-nav_order: 2
+nav_order: 1
 parent: Documentation
 ---
 
 # Aggregate
 
-Formal definition:
-[https://server.pathling.app/fhir/OperationDefinition/aggregate-0](https://server.pathling.app/fhir/OperationDefinition/aggregate-0)
+[FHIR OperationDefinition](https://server.pathling.app/fhir/OperationDefinition/aggregate-0)
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and the `$aggregate` operation is an
@@ -33,8 +32,8 @@ The request for the `$aggregate` operation is a
 following parameters:
 
 - `subjectResource [1..1]` - (code) The subject resource that the expressions
-  within this query are evaluated against. Code must be a member of
-  [http://hl7.org/fhir/ValueSet/resource-types](http://hl7.org/fhir/ValueSet/resource-types).
+  within this query are evaluated against. The code must be a member of
+  [http://hl7.org/fhir/ValueSet/resource-types](https://hl7.org/fhir/ValueSet/resource-types).
 - `aggregation [1..*]` - An expression which is used to calculate a summary
   value from each grouping.
   - `expression [1..1]` - (string) A FHIRPath expression that defines the
@@ -78,4 +77,7 @@ following parameters:
     within the query, and the type of each result will correspond to the type
     returned by the expression of the corresponding aggregation.
 
-Next: [Configuration and deployment](./deployment.html)
+See also:
+[Example requests in Postman](https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d4afec33-89d8-411c-8e4d-9169b9af42e0)
+
+Next: [FHIRPath](./fhirpath)

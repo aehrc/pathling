@@ -1,19 +1,17 @@
 ---
 layout: page
 title: Functions
-nav_order: 3
+nav_order: 2
 parent: FHIRPath
 grand_parent: Documentation
 ---
 
 # Functions
 
-Source: [Functions](https://hl7.org/fhirpath/2018Sep/index.html#functions-2)
-
 FHIRPath supports the notion of functions, which all take a collection of values
 as input and produce another collection as output and may take parameters.
 
-The following functions are currently supported by Pathling:
+The following functions are currently supported:
 
 - [resolve](#resolve)
 - [reverseResolve](#reverseresolve)
@@ -28,22 +26,18 @@ The notation used to describe the type signature of each function is as follows:
 [input type] -> [function name]([argument name]: [argument type], ...): [return type]
 ```
 
-<div class="callout warning">
-    Functions described within the FHIRPath specification that are not covered on this page are not currently supported 
-    within Pathling.
-</div>
+See also: [Functions](https://hl7.org/fhirpath/2018Sep/index.html#functions-2)
 
 ## resolve
-
-Source: [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
 
 ```
 Reference -> resolve(): collection<Resource>
 ```
 
 The `resolve` function is used to traverse references between FHIR resources.
-Given a collection of References, this function will return a collection of the
-resources to which they refer.
+Given a collection of
+[References](https://hl7.org/fhir/R4/references.html#Reference), this function
+will return a collection of the resources to which they refer.
 
 Example:
 
@@ -60,17 +54,22 @@ AllergyIntolerance.patient.resolve().gender
     Resolution of resources by identifier is not currently supported.
 </div>
 
+See also:
+[Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
+
 ## reverseResolve
 
 ```
-Resource -> reverseResolve(sourceReference: Reference): collection<Resource>
+collection<Resource> -> reverseResolve(sourceReference: Reference): collection<Resource>
 ```
 
 In FHIR, resource references are unidirectional, and often the source of the
 reference will be a resource type which is not the subject of the current path.
-The `reverseResolve` function takes a resource as input, and a Reference as the
-argument. It returns a collection of all the parent resources of the
-`sourceReference`s that resolve to the input resource.
+
+The `reverseResolve` function takes a collection of Resources as input, and a
+[Reference](https://hl7.org/fhir/R4/references.html#Reference) as the argument.
+It returns a collection of all the parent resources of the source References
+that resolve to the input resource.
 
 Example:
 
@@ -88,9 +87,6 @@ Patient.reverseResolve(Encounter.subject).reasonCode
 </div>
 
 ## ofType
-
-Source:
-[ofType](https://hl7.org/fhirpath/2018Sep/index.html#oftypetype-identifier-collection)
 
 ```
 collection -> ofType(type: Resource): collection
@@ -111,17 +107,17 @@ Condition.subject.resolve().ofType(Patient).gender
     Only resource types are currently supported by this function.
 </div>
 
-## count
+See also:
+[ofType](https://hl7.org/fhirpath/2018Sep/index.html#oftypetype-identifier-collection)
 
-Source: [count](https://hl7.org/fhirpath/2018Sep/index.html#count-integer)
+## count
 
 ```
 collection -> count() : Integer
 ```
 
-Returns a collection with a single value which is the integer count of the
-number of items in the input collection. Returns 0 when the input collection is
-empty.
+Returns the [Integer](./data-types.html#integer) count of the number of items in
+the input collection.
 
 Example:
 
@@ -135,22 +131,22 @@ Patient.name.given.count()
     <a href="../aggregate.html">aggregate operation</a>.
 </div>
 
-## first
+See also: [count](https://hl7.org/fhirpath/2018Sep/index.html#count-integer)
 
-Source: [first](https://hl7.org/fhirpath/2018Sep/index.html#first-collection)
+## first
 
 ```
 collection -> first() : collection
 ```
 
-Returns a collection with a single value which is the integer count of the
-number of items in the input collection. Returns 0 when the input collection is
-empty.
+Returns a collection containing only the first item in the input collection.
+This function will return an empty collection if the input collection has no
+items.
 
 Example:
 
 ```
-Patient.name.given.count()
+Patient.name.given.first()
 ```
 
 <div class="callout info">
@@ -159,21 +155,29 @@ Patient.name.given.count()
     <a href="../aggregate.html">aggregate operation</a>.
 </div>
 
-## memberOf
+See also: [first](https://hl7.org/fhirpath/2018Sep/index.html#first-collection)
 
-Source: [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
+## memberOf
 
 ```
 collection<Coding|CodeableConcept> -> memberOf() : collection<Boolean>
 ```
 
-The `memberOf` function can be invoked on a collection of `Coding` or
-`CodeableConcept` values, returning a collection of Boolean values based on
-whether the concept is a member of the ValueSet with the specified `url`.
+The `memberOf` function can be invoked on a collection of
+[Coding](./data-types.html#coding) or
+[CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept)
+values, returning a collection of [Boolean](./data-types.html#boolean) values
+based on whether the concept is a member of the
+[ValueSet](https://hl7.org/fhir/R4/valueset.html) with the specified
+[url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
 
 <div class="callout info">
     The <code>memberOf</code> function is an <em>terminology function</em>, which means that it requires a configured
-    terminology service. See <a href="../deployment.html">Configuration and deployment</a> for details.
+    <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
+    <a href="../deployment.html">Configuration and deployment</a> for details.
 </div>
 
-Next: [Import](../import.html)
+See also:
+[Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
+
+Next: [Configuration and deployment](../deployment.html)

@@ -8,8 +8,8 @@ grand_parent: Documentation
 
 # SMART Authorisation
 
-This change will introduce support for enforcing SMART authorisation within the
-Pathling server.
+This change will introduce support for enforcing
+[SMART](https://smarthealthit.org/) authorisation within the Pathling server.
 
 Additional use cases specific to authorisation for analytic use cases will need
 to be considered:
