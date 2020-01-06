@@ -21,7 +21,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @see <a href="https://pathling.app/docs/fhirpath/functions.html#count">count</a>
  */
 public class CountFunction implements Function {
-  // TODO: Make count function work outside the context of an aggregation, e.g. name.given.count() = 3.
+  // TODO: Make count function work outside the context of an aggregation, e.g. name.given.count() =
+  // 3.
 
   @Nonnull
   @Override
@@ -52,8 +53,7 @@ public class CountFunction implements Function {
     Column valueColumn = inputResult.getValueColumn();
 
     // Create new ID and value columns, based on the hash computed off the FHIRPath expression.
-    Column aggregationColumn = inputResult.isResource()
-        ? functions.countDistinct(valueColumn)
+    Column aggregationColumn = inputResult.isResource() ? functions.countDistinct(valueColumn)
         : functions.countDistinct(idColumn, valueColumn);
 
     // If the count is to be based upon an element, filter out any nulls so that they aren't
@@ -70,7 +70,7 @@ public class CountFunction implements Function {
     result.setPrimitive(true);
     result.setSingular(true);
     result.setAggregationDataset(dataset);
-    result.setAggregationIdColumn(dataset.col(dataset.columns()[0]));
+    result.setAggregationIdColumn(idColumn);
     result.setAggregationColumn(aggregationColumn);
 
     return result;

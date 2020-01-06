@@ -12,7 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
@@ -56,8 +55,8 @@ public class AggregateExecutorTest {
     spark = getSparkSession();
 
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
-        Mockito.withSettings().serializable());
+    TerminologyClientFactory terminologyClientFactory =
+        mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     Path warehouseDirectory = Files.createTempDirectory("pathling-test-");
@@ -65,8 +64,7 @@ public class AggregateExecutorTest {
 
     // Create and configure a new AggregateExecutor.
     AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
-        TestUtilities.getFhirContext(), terminologyClientFactory, terminologyClient,
-        mockReader);
+        TestUtilities.getFhirContext(), terminologyClientFactory, terminologyClient, mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
 
@@ -329,16 +327,45 @@ public class AggregateExecutorTest {
         "responses/AggregateExecutorTest-queryWithReverseResolve.Parameters.json");
   }
 
+
+  @Test
+  public void queryWithReverseResolveAndCounts() throws IOException, JSONException {
+    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Condition");
+    grouping1.setExpression("reverseResolve(Condition.subject).code.coding.count()");
+    request.getGroupings().add(grouping1);
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    System.out.println(actualJson);
+    checkExpectedJson(actualJson,
+        "responses/AggregateExecutorTest-queryWithReverseResolveAndCounts.Parameters.json");
+  }
+
+
   @Test
   public void queryWithMemberOf() throws IOException, JSONException {
     mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
-    Bundle mockResponse = (Bundle) TestUtilities.getJsonParser()
-        .parseResource(getResourceAsStream(
-            "txResponses/MemberOfFunctionTest-memberOfCoding-validate-code-positive.Bundle.json"));
+    Bundle mockResponse = (Bundle) TestUtilities.getJsonParser().parseResource(getResourceAsStream(
+        "txResponses/MemberOfFunctionTest-memberOfCoding-validate-code-positive.Bundle.json"));
 
     // Mock out responses from the terminology server.
-    when(terminologyClient.batch(any(Bundle.class)))
-        .thenReturn(mockResponse);
+    when(terminologyClient.batch(any(Bundle.class))).thenReturn(mockResponse);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
@@ -352,9 +379,8 @@ public class AggregateExecutorTest {
     Grouping grouping1 = new Grouping();
     grouping1.setLabel("Condition in ED diagnosis reference set?");
     String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
-    grouping1.setExpression("reverseResolve(Condition.subject)"
-        + ".code"
-        + ".memberOf('" + valueSetUrl + "'");
+    grouping1.setExpression(
+        "reverseResolve(Condition.subject)" + ".code" + ".memberOf('" + valueSetUrl + "'");
     request.getGroupings().add(grouping1);
 
     // Execute the query.
@@ -369,8 +395,8 @@ public class AggregateExecutorTest {
 
   private void mockResourceReader(ResourceType... resourceTypes) throws MalformedURLException {
     for (ResourceType resourceType : resourceTypes) {
-      File parquetFile = new File(
-          "src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
+      File parquetFile =
+          new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
       URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
       assertThat(parquetUrl).isNotNull();
       Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());

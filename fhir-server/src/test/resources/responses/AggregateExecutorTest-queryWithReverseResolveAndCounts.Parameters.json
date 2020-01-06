@@ -1,0 +1,97 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueUnsignedInt": 7
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 3
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueUnsignedInt": 6
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueUnsignedInt": 3
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueUnsignedInt": 10
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueUnsignedInt": 12
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueUnsignedInt": 5
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        }
+      ]
+    }
+  ]
+}
+
