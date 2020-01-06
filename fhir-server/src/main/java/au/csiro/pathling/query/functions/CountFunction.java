@@ -52,15 +52,17 @@ public class CountFunction implements Function {
     Column idColumn = inputResult.getIdColumn();
     Column valueColumn = inputResult.getValueColumn();
 
-    // Create new ID and value columns, based on the hash computed off the FHIRPath expression.
-    Column aggregationColumn = inputResult.isResource() ? functions.countDistinct(valueColumn)
-        : functions.countDistinct(idColumn, valueColumn);
+//    // Create new ID and value columns, based on the hash computed off the FHIRPath expression.
+//    Column aggregationColumn = inputResult.isResource() ? functions.countDistinct(valueColumn)
+//        : functions.countDistinct(idColumn, valueColumn);
 
-    // If the count is to be based upon an element, filter out any nulls so that they aren't
-    // counted.
-    if (!inputResult.isResource()) {
-      dataset = dataset.where(inputResult.getValueColumn().isNotNull());
-    }
+    Column aggregationColumn = functions.count(valueColumn);
+    
+//    // If the count is to be based upon an element, filter out any nulls so that they aren't
+//    // counted.
+//    if (!inputResult.isResource()) {
+//      dataset = dataset.where(inputResult.getValueColumn().isNotNull());
+//    }
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression();

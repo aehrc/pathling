@@ -145,7 +145,8 @@ public class AggregateExecutor {
       List<Joinable> allExpressions = new ArrayList<>();
       allExpressions.add(subjectResource);
       allExpressions.addAll(parsedFilters);
-      allExpressions.addAll(parsedGroupings);
+      allExpressions.addAll(parsedGroupings.stream().map(ParsedExpression::getGrouppingJoinable)
+          .collect(Collectors.toList()));
       allExpressions
           .addAll(parsedAggregations.stream().map(ParsedExpression::getAggregationJoinable)
               .collect(Collectors.toList()));

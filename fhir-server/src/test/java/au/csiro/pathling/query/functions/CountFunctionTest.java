@@ -106,11 +106,13 @@ public class CountFunctionTest {
         .isAggregation();
 
     // check results
-    assertThat(result).aggResult().isValue().isEqualTo(4L);
+    assertThat(result).aggResult().isValue().isEqualTo(5L);
     assertThat(result).aggByIdResult().hasRows(
         RowFactory.create("abc1", 1L),
         RowFactory.create("abc2", 2L),
-        RowFactory.create("abc4", 1L)
+        RowFactory.create("abc3", 0L),
+        RowFactory.create("abc4", 2L),
+        RowFactory.create("abc5", 0L)
     );
   }
 

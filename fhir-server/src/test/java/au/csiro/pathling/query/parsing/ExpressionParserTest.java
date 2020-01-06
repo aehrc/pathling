@@ -17,6 +17,7 @@ import au.csiro.pathling.query.ResourceReader;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.query.parsing.parser.ExpressionParser;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
+import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ParsedExpressionAssert;
 import java.io.File;
 import java.io.IOException;
@@ -177,15 +178,34 @@ public class ExpressionParserTest {
 
   @Test
   public void testCountWithReverseResolve() {
-    // Full DateTime.
+    
     assertThatResultOf("reverseResolve(Condition.subject).code.coding.count()").isSelection()
         .isPrimitive().isSingular().selectResult()
-        .hasRows(allPatientsWithValue(7L).changeValue(PATIENT_ID_121503c8, 10L)
+        .hasRows(allPatientsWithValue(8L).changeValue(PATIENT_ID_121503c8, 10L)
             .changeValue(PATIENT_ID_2b36c1e2, 3L).changeValue(PATIENT_ID_7001ad9c, 5L)
-            .changeValue(PATIENT_ID_9360820c, 12L).changeValue(PATIENT_ID_beff242e, 1L)
-            .changeValue(PATIENT_ID_e62e52ae, 6L));
+            .changeValue(PATIENT_ID_9360820c, 16L).changeValue(PATIENT_ID_beff242e, 3L)
+            .changeValue(PATIENT_ID_bbd33563, 10L));
 
   }
 
+  @Test
+  public void testCount() {    
+    
+    DatasetBuilder expectedCountResult =
+        allPatientsWithValue(1L).changeValue(PATIENT_ID_9360820c, 2L);
+    assertThatResultOf("name.count()").isSelection().selectResult().hasRows(expectedCountResult);
+
+    assertThatResultOf("name.family.count()").isSelection().selectResult()
+        .hasRows(expectedCountResult);
+
+    assertThatResultOf("name.family.count()").isAggregation().aggByIdResult()
+        .hasRows(expectedCountResult);
+    
+    assertThatResultOf("name.given.count()").isSelection().selectResult()
+        .hasRows(expectedCountResult);
+
+    assertThatResultOf("name.prefix.count()").isSelection().selectResult()
+      .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
+ }
 
 }

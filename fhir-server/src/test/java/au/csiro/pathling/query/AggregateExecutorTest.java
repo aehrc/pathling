@@ -96,7 +96,6 @@ public class AggregateExecutorTest {
 
     // Execute the query.
     AggregateResponse response = executor.execute(request);
-
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
@@ -352,11 +351,45 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    System.out.println(actualJson);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithReverseResolveAndCounts.Parameters.json");
   }
 
+  
+  @Test
+  public void queryMultipleGrouppingCounts() throws IOException, JSONException {
+    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Condition");
+    grouping1.setExpression("name.given");
+    request.getGroupings().add(grouping1);
+
+    Grouping grouping2 = new Grouping();
+    grouping2.setLabel("Condition");
+    grouping2.setExpression("name.prefix");
+    request.getGroupings().add(grouping2);
+
+    
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    checkExpectedJson(actualJson,
+        "responses/AggregateExecutorTest-queryMultipleGrouppingCounts.Parameters.json");
+  }
 
   @Test
   public void queryWithMemberOf() throws IOException, JSONException {
