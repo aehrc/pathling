@@ -33,9 +33,12 @@ public class ErrorReportingInterceptor {
     if (serverVersion != null) {
       Sentry.getContext().addExtra("serverVersion", serverVersion);
     }
-    Sentry.capture(exception.getCause() == null
-        ? exception
-        : exception.getCause());
+    boolean errorReportable = exception != null && exception.getStatusCode() / 100 == 5;
+    if (errorReportable) {
+      Sentry.capture(exception.getCause() == null
+          ? exception
+          : exception.getCause());
+    }
   }
 
 }
