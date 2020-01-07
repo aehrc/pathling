@@ -22,7 +22,8 @@ public class FirstFunction extends AbstractAggFunction {
 
   @Nonnull
   protected ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
-    return wrapSparkFunction(input, org.apache.spark.sql.functions::first, true);
+    // use the verion of `first` that ignores NULL values
+    return wrapSparkFunction(input, col -> org.apache.spark.sql.functions.first(col, true), true);
   }
 
   protected void validateInput(FunctionInput input) {

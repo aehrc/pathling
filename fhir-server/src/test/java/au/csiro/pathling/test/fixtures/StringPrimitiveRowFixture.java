@@ -25,6 +25,7 @@ public class StringPrimitiveRowFixture extends PrimitiveRowFixture {
   public final static Row STRING_2_SAMUEL = RowFactory.create(ROW_ID_2, "Samuel");
   public final static Row STRING_2_THOMAS = RowFactory.create(ROW_ID_2, "Thomas");
   public final static Row STRING_3_NULL = RowFactory.create(ROW_ID_3, null);
+  public final static Row STRING_4_NULL = RowFactory.create(ROW_ID_4, null);
   public final static Row STRING_4_ADAM = RowFactory.create(ROW_ID_4, "Adam");
   public final static Row STRING_5_NULL = RowFactory.create(ROW_ID_5, null);
 
@@ -32,7 +33,7 @@ public class StringPrimitiveRowFixture extends PrimitiveRowFixture {
       Arrays.asList(ROW_ID_1, ROW_ID_2, ROW_ID_3, ROW_ID_4, ROW_ID_5);
 
   public final static List<Row> STRING_ALL_ROWS = Arrays.asList(STRING_1_JUDE, STRING_2_SAMUEL,
-      STRING_2_THOMAS, STRING_3_NULL, STRING_4_ADAM, STRING_4_ADAM, STRING_5_NULL, STRING_5_NULL);
+      STRING_2_THOMAS, STRING_3_NULL, STRING_4_NULL, STRING_4_ADAM, STRING_4_ADAM, STRING_5_NULL, STRING_5_NULL);
 
   public final static List<Row> STRING_NULL_ROWS =
       Arrays.asList(STRING_3_NULL, STRING_5_NULL, STRING_5_NULL);

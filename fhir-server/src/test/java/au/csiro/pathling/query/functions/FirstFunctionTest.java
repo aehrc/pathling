@@ -90,30 +90,6 @@ public class FirstFunctionTest {
   }
 
   @Test
-  public void testProducesEmptyListFromEmptyListOfValues() {
-
-    Dataset<Row> dataset = StringPrimitiveRowFixture.createEmptyDataset(spark);
-    // Build up an input for the function.
-    ParsedExpression input =
-        new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, FhirPathType.STRING)
-            .withDataset(dataset).build();
-
-    FunctionInput firstInput = new FunctionInput();
-    firstInput.setInput(input);
-    firstInput.setExpression("name.family.first()");
-
-    ParsedExpression result = new FirstFunction().invoke(firstInput);
-
-    assertThat(result).isResultFor(firstInput).hasSameTypeAs(input).isPrimitive().isSingular()
-        .isSelection().isAggregation();
-
-    // Check that the correct rows were included in the result
-    assertThat(result).selectResult().isEmpty();
-    assertThat(result).aggByIdResult().isEmpty();
-    assertThat(result).aggResult().isValue().isNull();
-  }
-
-  @Test
   public void inputMustNotContainArguments() {
     // Build up an input for the function.
     ExpressionParserContext expressionParserContext = new ExpressionParserContext();
