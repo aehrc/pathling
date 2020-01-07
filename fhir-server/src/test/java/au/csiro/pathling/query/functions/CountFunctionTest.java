@@ -6,26 +6,29 @@ package au.csiro.pathling.query.functions;
 
 import static au.csiro.pathling.TestUtilities.getSparkSession;
 import static au.csiro.pathling.test.Assertions.assertThat;
+import static au.csiro.pathling.test.fixtures.PrimitiveRowFixture.ROW_ID_1;
+import static au.csiro.pathling.test.fixtures.PrimitiveRowFixture.ROW_ID_2;
+import static au.csiro.pathling.test.fixtures.PrimitiveRowFixture.ROW_ID_4;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
-
-import au.csiro.pathling.query.parsing.ParsedExpression;
-import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
-import au.csiro.pathling.test.PrimitiveExpressionBuilder;
-import au.csiro.pathling.test.ResourceExpressionBuilder;
-import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;
-import au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
+import au.csiro.pathling.test.DatasetBuilder;
+import au.csiro.pathling.test.PrimitiveExpressionBuilder;
+import au.csiro.pathling.test.ResourceExpressionBuilder;
+import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;
+import au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+
 
 /**
  * @author John Grimes
@@ -46,10 +49,9 @@ public class CountFunctionTest {
     // Build a Dataset with several rows in it.
     Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
     // Build up an input for the function.
-    ParsedExpression input = new ResourceExpressionBuilder(ResourceType.PATIENT,
-        FHIRDefinedType.PATIENT)
-        .withDataset(dataset)
-        .build();
+    ParsedExpression input =
+        new ResourceExpressionBuilder(ResourceType.PATIENT, FHIRDefinedType.PATIENT)
+            .withDataset(dataset).build();
 
     FunctionInput functionInput = new FunctionInput();
     functionInput.setInput(input);
@@ -59,21 +61,14 @@ public class CountFunctionTest {
     Function function = new CountFunction();
     ParsedExpression result = function.invoke(functionInput);
 
-    assertThat(result)
-        .isResultFor(functionInput)
-        .isOfType(FHIRDefinedType.UNSIGNEDINT, FhirPathType.INTEGER)
-        .isPrimitive()
-        .isSingular()
-        .isSelection()
-        .isAggregation();
+    assertThat(result).isResultFor(functionInput)
+        .isOfType(FHIRDefinedType.UNSIGNEDINT, FhirPathType.INTEGER).isPrimitive().isSingular()
+        .isSelection().isAggregation();
 
     // check results
     assertThat(result).aggResult().isValue().isEqualTo(3L);
-    assertThat(result).aggByIdResult().hasRows(
-        RowFactory.create("abc1", 1L),
-        RowFactory.create("abc2", 1L),
-        RowFactory.create("abc3", 1L)
-    );
+    assertThat(result).aggByIdResult().hasRows(PatientResourceRowFixture.allPatientsWithValue(1L));
+    assertThat(result).selectResult().hasRows(PatientResourceRowFixture.allPatientsWithValue(1L));
   }
 
   @Test
@@ -81,10 +76,9 @@ public class CountFunctionTest {
     Dataset<Row> dataset = StringPrimitiveRowFixture.createCompleteDataset(spark);
 
     // Build up an input for the function.
-    ParsedExpression input = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
-        FhirPathType.STRING)
-        .withDataset(dataset)
-        .build();
+    ParsedExpression input =
+        new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, FhirPathType.STRING)
+            .withDataset(dataset).build();
     FunctionInput functionInput = new FunctionInput();
     functionInput.setInput(input);
     functionInput.setExpression("name.family.count()");
@@ -97,23 +91,20 @@ public class CountFunctionTest {
     // Execute the fist function.
     ParsedExpression result = new CountFunction().invoke(functionInput);
 
-    assertThat(result)
-        .isResultFor(functionInput)
-        .isOfType(FHIRDefinedType.UNSIGNEDINT, FhirPathType.INTEGER)
-        .isPrimitive()
-        .isSingular()
-        .isSelection()
-        .isAggregation();
+    assertThat(result).isResultFor(functionInput)
+        .isOfType(FHIRDefinedType.UNSIGNEDINT, FhirPathType.INTEGER).isPrimitive().isSingular()
+        .isSelection().isAggregation();
 
-    // check results
+
+    DatasetBuilder expectedRows = StringPrimitiveRowFixture.allStringsWithValue(0L)
+        .changeValue(ROW_ID_1, 1L).changeValue(ROW_ID_2, 2L).changeValue(ROW_ID_4, 2L);
+
+    // check results of aggregation
     assertThat(result).aggResult().isValue().isEqualTo(5L);
-    assertThat(result).aggByIdResult().hasRows(
-        RowFactory.create("abc1", 1L),
-        RowFactory.create("abc2", 2L),
-        RowFactory.create("abc3", 0L),
-        RowFactory.create("abc4", 2L),
-        RowFactory.create("abc5", 0L)
-    );
+    assertThat(result).aggByIdResult().hasRows(expectedRows);
+
+    // check results of selection
+    assertThat(result).selectResult().hasRows(expectedRows);
   }
 
   @Test
