@@ -4,14 +4,8 @@
 
 package au.csiro.pathling.query.functions;
 
-import static org.apache.spark.sql.functions.first;
-
-import au.csiro.pathling.query.parsing.ParsedExpression;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import au.csiro.pathling.query.parsing.ParsedExpression;
 
 /**
  * This function allows the selection of only the first element of a collection.
@@ -19,54 +13,19 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  * @see <a href="https://pathling.app/docs/fhirpath/functions.html#first">first</a>
  */
-public class FirstFunction implements Function {
+public class FirstFunction extends AbstractAggFunction {
 
-  @Nonnull
-  @Override
-  public ParsedExpression invoke(@Nonnull FunctionInput input) {
-    validateInput(input);
-    ParsedExpression result = invokeAgg(input);
 
-    Dataset<Row> aggDataset = result.getAggregationDataset();
-    // Apply the aggregate Spark SQL function to the grouping.
-    Column aggIdColumn = result.getAggregationIdColumn();
-    Column aggColumn = result.getAggregationColumn();
-
-    // First apply a grouping based upon the resource ID.
-    Dataset<Row> dataset = aggDataset.groupBy(aggIdColumn).agg(aggColumn);
-    Column idColumn = dataset.col(dataset.columns()[0]);
-    Column valueColumn = dataset.col(dataset.columns()[1]);
-    result.setDataset(dataset);
-    result.setHashedValue(idColumn, valueColumn);
-    return result;
+  public FirstFunction() {
+    super("first");
   }
 
   @Nonnull
-  public ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
-    validateInput(input);
-    // Construct a new parse result.
-    // Should preserve most of the metadata such as types, definitions, etc.
-    ParsedExpression inputResult = input.getInput();
-    Column prevValueColumn = inputResult.getValueColumn();
-    Column prevIdColumn = inputResult.getIdColumn();
-
-    ParsedExpression result = new ParsedExpression(inputResult);
-    result.setFhirPath(input.getExpression());
-    result.setSingular(true);
-    result.setDataset(null);
-    result.setIdColumn(null);
-    result.setValueColumn(null);
-    result.setAggregationDataset(inputResult.getDataset());
-    result.setAggregationIdColumn(prevIdColumn);
-    result.setAggregationColumn(first(prevValueColumn));
-    return result;
+  protected ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
+    return wrapSparkFunction(input, org.apache.spark.sql.functions::first, true);
   }
 
-  private void validateInput(FunctionInput input) {
-    if (!input.getArguments().isEmpty()) {
-      throw new InvalidRequestException(
-          "Arguments can not be passed to first function: " + input.getExpression());
-    }
+  protected void validateInput(FunctionInput input) {
+    validateNoArgumentInput(input);
   }
-
 }
