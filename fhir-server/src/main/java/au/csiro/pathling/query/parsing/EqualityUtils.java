@@ -1,6 +1,11 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.pathling.query.parsing;
 
 import static org.apache.spark.sql.functions.when;
+
 import java.util.List;
 import java.util.function.BiFunction;
 import org.apache.spark.sql.Column;

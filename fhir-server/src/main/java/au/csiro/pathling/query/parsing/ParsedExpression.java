@@ -342,6 +342,21 @@ public class ParsedExpression implements Joinable {
     this.aggregationIdColumn = aggregationIdColumn;
   }
 
+  public Joinable getGroupingJoinable() {
+    return new Joinable() {
+      @Override
+      public Dataset<Row> getDataset() {
+        return ParsedExpression.this.getDataset().select(ParsedExpression.this.getIdColumn(),
+            ParsedExpression.this.getValueColumn()).distinct();
+      }
+
+      @Override
+      public Column getIdColumn() {
+        return ParsedExpression.this.getIdColumn();
+      }
+    };
+  }
+
 
   public Joinable getAggregationJoinable() {
     return new Joinable() {

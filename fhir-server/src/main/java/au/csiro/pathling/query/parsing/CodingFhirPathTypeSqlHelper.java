@@ -1,3 +1,7 @@
+/*
+ * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ */
+
 package au.csiro.pathling.query.parsing;
 
 import static org.apache.spark.sql.functions.lit;

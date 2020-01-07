@@ -9,7 +9,6 @@ import static au.csiro.pathling.test.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture.*;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
-
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
@@ -46,10 +45,9 @@ public class FirstFunctionTest {
   public void testGetsFirstResourceCorrectly() {
     Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
     // Build up an input for the function.
-    ParsedExpression input = new ResourceExpressionBuilder(ResourceType.PATIENT,
-        FHIRDefinedType.PATIENT)
-        .withDataset(dataset)
-        .build();
+    ParsedExpression input =
+        new ResourceExpressionBuilder(ResourceType.PATIENT, FHIRDefinedType.PATIENT)
+            .withDataset(dataset).build();
 
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);
@@ -58,11 +56,8 @@ public class FirstFunctionTest {
     // Execute the first function.
     FirstFunction firstFunction = new FirstFunction();
     ParsedExpression result = firstFunction.invoke(firstInput);
-    assertThat(result)
-        .isResultFor(firstInput)
-        .hasSameTypeAs(input)
-        .isResourceOfType(ResourceType.PATIENT, FHIRDefinedType.PATIENT)
-        .isSelection()
+    assertThat(result).isResultFor(firstInput).hasSameTypeAs(input)
+        .isResourceOfType(ResourceType.PATIENT, FHIRDefinedType.PATIENT).isSelection()
         .isAggregation();
     // Check that the correct rows were included in the result.
     assertThat(result).selectResult().hasRows(PatientResourceRowFixture.PATIENT_ALL_ROWS);
@@ -73,10 +68,9 @@ public class FirstFunctionTest {
     Dataset<Row> dataset = StringPrimitiveRowFixture.createCompleteDataset(spark);
 
     // Build up an input for the function.
-    ParsedExpression input = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
-        FhirPathType.STRING)
-        .withDataset(dataset)
-        .build();
+    ParsedExpression input =
+        new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, FhirPathType.STRING)
+            .withDataset(dataset).build();
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);
     firstInput.setExpression("name.family.first()");
@@ -85,50 +79,14 @@ public class FirstFunctionTest {
     ParsedExpression result = new FirstFunction().invoke(firstInput);
 
     // Check that the correct rows were included in the result.
-    assertThat(result)
-        .isResultFor(firstInput)
-        .hasSameTypeAs(input)
-        .isPrimitive()
-        .isSingular()
-        .isSelection()
-        .isAggregation();
+    assertThat(result).isResultFor(firstInput).hasSameTypeAs(input).isPrimitive().isSingular()
+        .isSelection().isAggregation();
 
-    List<Row> expectedRows = Arrays
-        .asList(STRING_1_JUDE, STRING_2_SAMUEL, STRING_3_NULL, STRING_4_ADAM,
-            STRING_5_NULL);
+    List<Row> expectedRows =
+        Arrays.asList(STRING_1_JUDE, STRING_2_SAMUEL, STRING_3_NULL, STRING_4_ADAM, STRING_5_NULL);
     assertThat(result).selectResult().hasRows(expectedRows);
     assertThat(result).aggByIdResult().hasRows(expectedRows);
     assertThat(result).aggResult().isValue().isEqualTo((STRING_1_JUDE.getString(1)));
-  }
-
-  @Test
-  public void testProducesEmptyListFromEmptyListOfValues() {
-
-    Dataset<Row> dataset = StringPrimitiveRowFixture.createEmptyDataset(spark);
-    // Build up an input for the function.
-    ParsedExpression input = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
-        FhirPathType.STRING)
-        .withDataset(dataset)
-        .build();
-
-    FunctionInput firstInput = new FunctionInput();
-    firstInput.setInput(input);
-    firstInput.setExpression("name.family.first()");
-
-    ParsedExpression result = new FirstFunction().invoke(firstInput);
-
-    assertThat(result)
-        .isResultFor(firstInput)
-        .hasSameTypeAs(input)
-        .isPrimitive()
-        .isSingular()
-        .isSelection()
-        .isAggregation();
-
-    // Check that the correct rows were included in the result
-    assertThat(result).selectResult().isEmpty();
-    assertThat(result).aggByIdResult().isEmpty();
-    assertThat(result).aggResult().isValue().isNull();
   }
 
   @Test

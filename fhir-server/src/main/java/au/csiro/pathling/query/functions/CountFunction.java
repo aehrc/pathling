@@ -6,12 +6,7 @@ package au.csiro.pathling.query.functions;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -20,67 +15,25 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://pathling.app/docs/fhirpath/functions.html#count">count</a>
  */
-public class CountFunction implements Function {
-  // TODO: Make count function work outside the context of an aggregation, e.g. name.given.count() =
-  // 3.
+public class CountFunction extends AbstractAggFunction {
 
-  @Nonnull
-  @Override
-  public ParsedExpression invoke(@Nonnull FunctionInput input) {
-    validateInput(input);
-    ParsedExpression result = invokeAgg(input);
-
-    Dataset<Row> aggDataset = result.getAggregationDataset();
-    // Apply the aggregate Spark SQL function to the grouping.
-    Column aggIdColumn = result.getAggregationIdColumn();
-    Column aggColumn = result.getAggregationColumn();
-
-    // First apply a grouping based upon the resource ID.
-    Dataset<Row> dataset = aggDataset.groupBy(aggIdColumn).agg(aggColumn);
-    Column idColumn = dataset.col(dataset.columns()[0]);
-    Column valueColumn = dataset.col(dataset.columns()[1]);
-    result.setDataset(dataset);
-    result.setHashedValue(idColumn, valueColumn);
-    return result;
+  public CountFunction() {
+    super("count");
   }
 
   @Nonnull
-  public ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
-    validateInput(input);
-    ParsedExpression inputResult = input.getInput();
-    Dataset<Row> dataset = inputResult.getDataset();
-    Column idColumn = inputResult.getIdColumn();
-    Column valueColumn = inputResult.getValueColumn();
-
-    // Create new ID and value columns, based on the hash computed off the FHIRPath expression.
-    Column aggregationColumn = inputResult.isResource() ? functions.countDistinct(valueColumn)
-        : functions.countDistinct(idColumn, valueColumn);
-
-    // If the count is to be based upon an element, filter out any nulls so that they aren't
-    // counted.
-    if (!inputResult.isResource()) {
-      dataset = dataset.where(inputResult.getValueColumn().isNotNull());
-    }
-
+  protected ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
     // Construct a new parse result.
-    ParsedExpression result = new ParsedExpression();
-    result.setFhirPath(input.getExpression());
+    ParsedExpression result =
+        wrapSparkFunction(input, org.apache.spark.sql.functions::count, false);
     result.setFhirPathType(FhirPathType.INTEGER);
     result.setFhirType(FHIRDefinedType.UNSIGNEDINT);
     result.setPrimitive(true);
-    result.setSingular(true);
-    result.setAggregationDataset(dataset);
-    result.setAggregationIdColumn(idColumn);
-    result.setAggregationColumn(aggregationColumn);
-
     return result;
   }
 
-  private void validateInput(FunctionInput input) {
-    if (!input.getArguments().isEmpty()) {
-      throw new InvalidRequestException(
-          "Arguments can not be passed to count function: " + input.getExpression());
-    }
+  protected void validateInput(FunctionInput input) {
+    validateNoArgumentInput(input);
   }
 
 }
