@@ -95,10 +95,6 @@ public class AggregateExecutor {
               Collectors.joining(",")) + "] filters=[" + String.join(",", query.getFilters())
           + "]");
 
-      if (1 == 1) {
-        throw new RuntimeException("bar");
-      }
-
       // Set up the subject resource dataset.
       ResourceType resourceType = query.getSubjectResource();
       String resourceCode = resourceType.toCode();
