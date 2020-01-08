@@ -12,7 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
@@ -34,6 +33,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.json.JSONException;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -391,6 +391,48 @@ public class AggregateExecutorTest {
         "responses/AggregateExecutorTest-queryMultipleGroupingCounts.Parameters.json");
   }
 
+
+
+  @Test
+  @Ignore
+  /**
+   * TODO: Make mulitple aggreations work without producing cartesian product of values to count (per resource) 
+   * @throws IOException
+   * @throws JSONException
+   */
+  public void queryMultipleCountAggreations() throws IOException, JSONException {
+    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patient names");
+    aggregation.setExpression("name.given.count()");
+    request.getAggregations().add(aggregation);
+
+    aggregation.setLabel("Number of patient prefixes");
+    aggregation.setExpression("identifier.count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Gender");
+    grouping1.setExpression("gender");
+    request.getGroupings().add(grouping1);
+
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+
+    checkExpectedJson(actualJson,
+        "responses/AggregateExecutorTest-queryMultipleCountAggreations.Parameters.json");
+  }
+    
   @Test
   public void queryWithMemberOf() throws IOException, JSONException {
     mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
