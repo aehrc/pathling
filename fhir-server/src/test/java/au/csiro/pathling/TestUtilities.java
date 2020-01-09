@@ -8,7 +8,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.encoding.ValidateCodeResult;
-import ca.uhn.fhir.context.*;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,7 +21,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
-import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryResponseComponent;
@@ -29,8 +28,11 @@ import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
+import org.json.JSONException;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import scala.Option;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
@@ -60,16 +62,6 @@ public abstract class TestUtilities {
 
   public static FhirContext getFhirContext() {
     return FHIR_CONTEXT;
-  }
-
-  public static BaseRuntimeChildDefinition getChildDefinition(Class<? extends IBase> elementType,
-      String childName) {
-    BaseRuntimeElementDefinition<?> elementDef = FHIR_CONTEXT.getElementDefinition(elementType);
-    if (RuntimeResourceDefinition.class.isAssignableFrom(elementDef.getClass())) {
-      return ((RuntimeResourceDefinition) elementDef).getChildByName(childName);
-    } else {
-      return ((RuntimeCompositeDatatypeDefinition) elementDef).getChildByName(childName);
-    }
   }
 
   public static IParser getJsonParser() {
@@ -120,7 +112,7 @@ public abstract class TestUtilities {
   public static Row rowFromCodeableConcept(CodeableConcept codeableConcept) {
     List<Row> codings = codeableConcept.getCoding().stream().map(TestUtilities::rowFromCoding)
         .collect(Collectors.toList());
-    Buffer buffer = JavaConversions.asScalaBuffer(codings);
+    Buffer<Row> buffer = JavaConversions.asScalaBuffer(codings);
     return new GenericRowWithSchema(
         new Object[]{codeableConcept.getId(), buffer.toList(), codeableConcept.getText()},
         codeableConceptStructType());
@@ -144,6 +136,12 @@ public abstract class TestUtilities {
       }
     }
     return Objects.equals(codeableConcept1.getText(), codeableConcept2.getText());
+  }
+
+  public static void checkExpectedJson(String actualJson, String expectedPath)
+      throws IOException, JSONException {
+    String expectedJson = getResourceAsString(expectedPath);
+    JSONAssert.assertEquals(expectedJson, actualJson, JSONCompareMode.NON_EXTENSIBLE);
   }
 
   /**

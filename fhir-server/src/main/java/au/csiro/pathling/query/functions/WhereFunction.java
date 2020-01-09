@@ -4,7 +4,7 @@
 
 package au.csiro.pathling.query.functions;
 
-import static au.csiro.pathling.utilities.Strings.md5Short;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
@@ -20,7 +20,7 @@ import org.apache.spark.sql.Row;
  * element currently in scope.
  *
  * @author John Grimes
- * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#wherecriteria-expression-collection">where</a>
+ * @see <a href="https://pathling.app/docs/fhirpath/functions.html#where">where</a>
  */
 public class WhereFunction implements Function {
 
@@ -30,26 +30,26 @@ public class WhereFunction implements Function {
     validateInput(input);
     ParsedExpression inputResult = input.getInput();
     ParsedExpression argument = input.getArguments().get(0);
-    String hash = md5Short(input.getExpression());
 
-    // Create a new dataset by performing an inner join from the input to the argument, based on
-    // whether the boolean value is true or not.
-    Dataset<Row> inputDataset = inputResult.getDataset();
-    Dataset<Row> argumentDataset = argument.getDataset();
-    Column inputIdCol = inputResult.getIdColumn();
-    Column inputValueCol = inputResult.getValueColumn();
-    Column argumentIdCol = argument.getIdColumn();
-    Column argumentValueCol = argument.getValueColumn();
-    Dataset<Row> dataset = inputDataset
-        .join(argumentDataset, inputIdCol.equalTo(argumentIdCol).and(argumentValueCol), "inner");
-
-    dataset = dataset.select(inputIdCol, inputValueCol);
+    Column idColumn,
+        inputValueCol = inputResult.getValueColumn();
+    Dataset<Row> dataset;
+    if (argument.isLiteral()) {
+      // Filter the input dataset based upon the literal value of the argument.
+      dataset = inputResult.getDataset().filter(lit(argument.getJavaLiteralValue()));
+      idColumn = inputResult.getIdColumn();
+    } else {
+      // Create a new dataset by performing an inner join from the input to the argument, based on
+      // whether the boolean value is true or not.
+      dataset = argument.getDataset().filter(argument.getValueColumn().equalTo(true));
+      idColumn = argument.getIdColumn();
+    }
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression(inputResult);
+    result.setFhirPath(input.getExpression());
     result.setDataset(dataset);
-    result.setIdColumn(inputIdCol);
-    result.setValueColumn(inputValueCol);
+    result.setHashedValue(idColumn, inputValueCol);
 
     return result;
   }
@@ -60,9 +60,9 @@ public class WhereFunction implements Function {
           "where function accepts one argument: " + input.getExpression());
     }
     ParsedExpression argument = input.getArguments().get(0);
-    if (argument.getFhirPathType() != FhirPathType.BOOLEAN) {
+    if (argument.getFhirPathType() != FhirPathType.BOOLEAN || !argument.isSingular()) {
       throw new InvalidRequestException(
-          "Argument to where function must be Boolean: " + argument.getFhirPath());
+          "Argument to where function must be a singular Boolean: " + argument.getFhirPath());
     }
   }
 

@@ -159,7 +159,7 @@ public class AggregateExecutor {
         Joinable current = allExpressions.get(i);
         if (i > 0 && !joinedDatasets.contains(current.getDataset())) {
           result = result.join(current.getDataset(),
-              previous.getIdColumn().equalTo(current.getIdColumn()));
+              previous.getIdColumn().equalTo(current.getIdColumn()), "inner");
           previous = current;
           joinedDatasets.add(current.getDataset());
         }

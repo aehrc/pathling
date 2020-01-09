@@ -32,7 +32,7 @@ public class EqualityOperator implements BinaryOperator {
   public static final String EQUALS = "=";
   public static final String NOT_EQUALS = "!=";
 
-  private static final Set<FhirPathType> supportedTypes = EnumSet.of(
+  private static final Set<FhirPathType> SUPPORTED_TYPES = EnumSet.of(
       STRING,
       INTEGER,
       DECIMAL,
@@ -122,12 +122,12 @@ public class EqualityOperator implements BinaryOperator {
           "Cannot have two literal operands to " + operator + " operator: " + input
               .getExpression());
     }
-    if (!supportedTypes.contains(left.getFhirPathType()) || !left.isSingular()) {
+    if (!SUPPORTED_TYPES.contains(left.getFhirPathType()) || !left.isSingular()) {
       throw new InvalidRequestException(
           "Left operand to " + operator + " operator is of unsupported type, or is not singular: "
               + left.getFhirPath());
     }
-    if (!supportedTypes.contains(right.getFhirPathType()) || !right.isSingular()) {
+    if (!SUPPORTED_TYPES.contains(right.getFhirPathType()) || !right.isSingular()) {
       throw new InvalidRequestException(
           "Right operand to " + operator + " operator is of unsupported type, or is not singular: "
               + right.getFhirPath());
@@ -138,4 +138,9 @@ public class EqualityOperator implements BinaryOperator {
               .getExpression());
     }
   }
+
+  public static Set<FhirPathType> getSupportedTypes() {
+    return SUPPORTED_TYPES;
+  }
+
 }

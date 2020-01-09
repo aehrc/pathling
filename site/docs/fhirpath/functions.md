@@ -18,6 +18,7 @@ The following functions are currently supported:
 - [ofType](#oftype)
 - [count](#count)
 - [first](#first)
+- [where](#where)
 - [memberOf](#memberof)
 
 The notation used to describe the type signature of each function is as follows:
@@ -156,6 +157,29 @@ Patient.name.given.first()
 </div>
 
 See also: [first](https://hl7.org/fhirpath/2018Sep/index.html#first-collection)
+
+## where
+
+```
+collection -> where(criteria: expression) : collection
+```
+
+Returns a collection containing only those elements in the input collection for
+which the `criteria` expression evaluates to `true`. Elements for which the
+expression evaluates to `false` or an empty collection will not be included in
+the result.
+
+The `$this` keyword is used within the criteria expression to refer to the item
+from the input collection currently under evaluation.
+
+Example:
+
+```
+Patient.reverseResolve(Condition.subject).where($this.recordedDate > @1960).severity
+```
+
+See also:
+[where](https://hl7.org/fhirpath/2018Sep/index.html#wherecriteria-expression-collection)
 
 ## memberOf
 

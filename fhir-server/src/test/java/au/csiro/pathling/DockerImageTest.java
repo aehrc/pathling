@@ -4,6 +4,7 @@
 
 package au.csiro.pathling;
 
+import static au.csiro.pathling.TestUtilities.checkExpectedJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -21,19 +22,25 @@ import com.github.dockerjava.core.DockerClientConfig;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
+import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -157,7 +164,7 @@ public class DockerImageTest {
   }
 
   @Test
-  public void importDataAndQuery() throws IOException {
+  public void importDataAndQuery() throws IOException, JSONException {
     try {
       // Create a request to the $import operation, referencing the NDJSON files we have loaded into
       // the staging area.
@@ -245,7 +252,10 @@ public class DockerImageTest {
         int statusCode = response.getStatusLine().getStatusCode();
         InputStream queryResponseStream = response.getEntity().getContent();
         if (statusCode == 200) {
-          outParams = (Parameters) jsonParser.parseResource(queryResponseStream);
+          StringWriter writer = new StringWriter();
+          IOUtils.copy(queryResponseStream, writer, StandardCharsets.UTF_8);
+          checkExpectedJson(writer.toString(),
+              "responses/DockerImageTest-importDataAndQuery.Parameters.json");
         } else {
           OperationOutcome opOutcome = (OperationOutcome) jsonParser
               .parseResource(queryResponseStream);
@@ -254,29 +264,7 @@ public class DockerImageTest {
               .isEqualTo(200);
         }
       }
-      assertThat(outParams).isNotNull();
 
-      // Check the first grouping.
-      ParametersParameterComponent firstGrouping = outParams.getParameter().get(0);
-      Optional<ParametersParameterComponent> firstLabel = firstGrouping.getPart().stream()
-          .filter(part -> part.getName().equals("label")).findFirst();
-      assertThat(firstLabel.isPresent());
-      assertThat(((BooleanType) firstLabel.get().getValue()).booleanValue()).isFalse();
-      Optional<ParametersParameterComponent> firstResult = firstGrouping.getPart().stream()
-          .filter(part -> part.getName().equals("result")).findFirst();
-      assertThat(firstResult.isPresent());
-      assertThat(((UnsignedIntType) firstResult.get().getValue()).getValue()).isEqualTo(4);
-
-      // Check the second grouping.
-      ParametersParameterComponent secondGrouping = outParams.getParameter().get(1);
-      Optional<ParametersParameterComponent> secondLabel = secondGrouping.getPart().stream()
-          .filter(part -> part.getName().equals("label")).findFirst();
-      assertThat(secondLabel.isPresent());
-      assertThat(((BooleanType) secondLabel.get().getValue()).booleanValue()).isTrue();
-      Optional<ParametersParameterComponent> secondResult = secondGrouping.getPart().stream()
-          .filter(part -> part.getName().equals("result")).findFirst();
-      assertThat(secondResult.isPresent());
-      assertThat(((UnsignedIntType) secondResult.get().getValue()).getValue()).isEqualTo(3);
     } finally {
       stopContainer(dockerClient, fhirServerContainerId);
       fhirServerContainerId = null;

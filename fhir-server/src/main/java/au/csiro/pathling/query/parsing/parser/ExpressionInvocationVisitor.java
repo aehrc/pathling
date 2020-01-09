@@ -129,6 +129,9 @@ class ExpressionInvocationVisitor extends FhirPathBaseVisitor<ParsedExpression> 
       ExpressionParserContext argumentContext = new ExpressionParserContext(context);
       ParsedExpression thisResult = new ParsedExpression(invoker);
       thisResult.setFhirPath("$this");
+      // The $this expression is treated as singular, as it represents each item in the input
+      // collection.
+      thisResult.setSingular(true);
       argumentContext.setThisContext(thisResult);
       // Parse each of the expressions passed as arguments to the function.
       arguments = paramList.expression().stream()
