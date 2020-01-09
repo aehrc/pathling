@@ -4,6 +4,7 @@
 
 package au.csiro.pathling.query;
 
+import static au.csiro.pathling.TestUtilities.checkExpectedJson;
 import static au.csiro.pathling.TestUtilities.getJsonParser;
 import static au.csiro.pathling.TestUtilities.getResourceAsStream;
 import static au.csiro.pathling.TestUtilities.getSparkSession;
@@ -11,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
@@ -98,7 +100,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMultipleGroupings.Parameters.json");
   }
 
@@ -128,7 +130,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithFilter.Parameters.json");
   }
 
@@ -156,7 +158,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithIntegerGroupings.Parameters.json");
   }
 
@@ -184,7 +186,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMathExpression.Parameters.json");
   }
 
@@ -212,7 +214,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithChoiceElement.Parameters.json");
   }
 
@@ -237,7 +239,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithDateComparison.Parameters.json");
   }
 
@@ -265,7 +267,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithResolve.Parameters.json");
   }
 
@@ -293,7 +295,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithPolymorphicResolve.Parameters.json");
   }
 
@@ -321,7 +323,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithReverseResolve.Parameters.json");
   }
 
@@ -350,7 +352,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithReverseResolveAndCounts.Parameters.json");
   }
 
@@ -383,10 +385,9 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryMultipleGroupingCounts.Parameters.json");
   }
-
 
 
   @Test
@@ -396,7 +397,7 @@ public class AggregateExecutorTest {
    * @throws IOException
    * @throws JSONException
    */
-  public void queryMultipleCountAggreations() throws IOException, JSONException {
+  public void queryMultipleCountAggregations() throws IOException, JSONException {
     mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
 
     // Build a AggregateRequest to pass to the executor.
@@ -417,7 +418,6 @@ public class AggregateExecutorTest {
     grouping1.setExpression("gender");
     request.getGroupings().add(grouping1);
 
-
     // Execute the query.
     AggregateResponse response = executor.execute(request);
 
@@ -426,9 +426,9 @@ public class AggregateExecutorTest {
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
 
     checkExpectedJson(actualJson,
-        "responses/AggregateExecutorTest-queryMultipleCountAggreations.Parameters.json");
+        "responses/AggregateExecutorTest-queryMultipleCountAggregations.Parameters.json");
   }
-    
+
   @Test
   public void queryWithWhere() throws IOException, JSONException {
     mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
@@ -454,7 +454,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithWhere.Parameters.json");
   }
 
@@ -489,7 +489,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    TestUtilities.checkExpectedJson(actualJson,
+    checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json");
   }
 
