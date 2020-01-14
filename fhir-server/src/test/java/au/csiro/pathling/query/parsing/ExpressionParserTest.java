@@ -254,4 +254,9 @@ public class ExpressionParserTest {
         .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
   }
 
+  @Test
+  public void testSubsumes() {
+    assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(http://snomed.info/sct|444814009)").selectResult().debugAllRows();
+  }
+
 }

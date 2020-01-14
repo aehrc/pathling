@@ -23,6 +23,17 @@ public class Mapping implements Serializable {
 
   private String equivalence;
 
+  public Mapping(String sourceSystem, String sourceCode, String targetSystem, String targetCode, String equivalence) {
+    this.sourceSystem = sourceSystem;
+    this.sourceCode = sourceCode;
+    this.targetSystem = targetSystem;
+    this.targetCode = targetCode;
+    this.equivalence = equivalence;
+  }
+  
+  public Mapping() {
+  }
+
   public String getSourceSystem() {
     return sourceSystem;
   }

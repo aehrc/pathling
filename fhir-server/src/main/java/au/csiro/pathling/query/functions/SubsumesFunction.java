@@ -24,10 +24,71 @@ import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.r4.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+
+
+class ClosureService {
+  private final String seed;
+  private final TerminologyClient terminologyClient;
+  
+  public ClosureService(String seed, TerminologyClient terminologyClient) {
+    this.seed = seed;
+    this.terminologyClient = terminologyClient;
+  }
+  
+  TransitiveTable getClosure(String system, List<String> codes) {
+    String closureName = md5Short(seed + system);
+    // Execute the closure operation against the terminology server.
+    terminologyClient.closure(new StringType(closureName), null, null);
+    ConceptMap closure = terminologyClient.closure(new StringType(closureName), toCodesList(system, codes), null);  
+    return fromConceptMap(closure);
+  }
+  
+  static List<Coding> toCodesList(final String system, List<String> codes) {
+    return codes.stream().map(code -> new Coding(system, code, null)).collect(Collectors.toList());
+  }
+  
+  static TransitiveTable fromConceptMap(ConceptMap conceptMap) {
+    // Extract the mappings from the closure result into a set of Mapping objects.
+    List<ConceptMapGroupComponent> groups = conceptMap.getGroup();
+    if (groups.size() == 1) {
+      ConceptMapGroupComponent group = groups.get(0);
+      String sourceSystem = group.getSource();
+      String targetSystem = group.getTarget();
+      List<SourceElementComponent> elements = group.getElement();
+      for (SourceElementComponent element : elements) {
+        for (TargetElementComponent target : element.getTarget()) {
+          Mapping mapping = new Mapping();
+          mapping.setSourceSystem(sourceSystem);
+          mapping.setSourceCode(element.getCode());
+          mapping.setTargetSystem(targetSystem);
+          mapping.setTargetCode(target.getCode());
+          mapping.setEquivalence(target.getEquivalence().toCode());
+          mappings.add(mapping);
+        }
+      }
+    }
+}
+
+
+
+class TransitiveTable {
+  
+  private final List<Mapping> mappings = new ArrayList<Mapping>();
+  
+  void addMapping(Coding source, Coding target, ConceptMapEquivalence equivalence) {
+      mappings.add(new Mapping(source.getSystem(), source.getCode(), target.getSystem(), target.getCode(), equivalence.toCode())); 
+  }
+}
+
+
+
+
 
 /**
  * Describes a function which returns a boolean value based upon whether any of the input set of
@@ -60,30 +121,55 @@ public class SubsumesFunction implements Function {
           "One argument must be passed to " + functionName + " function");
     }
 
+    // we at least need to evaluate the argument to the unique list of code/system pairs that we can 
+    // broadcast for the execution
+    
+    
+    List<SimpleCode> argumentCodes = collectCodes(input.getArguments().get(0));
+    System.out.println(argumentCodes);
+    
+    List<SimpleCode> inputCodes = collectCodes(input.getInput());
+    System.out.println(inputCodes);
+
+    
+    Map<String, List<SimpleCode> > codesBySystem  = inputCodes.stream().collect(Collectors.groupingBy(SimpleCode::getSystem));
+    
+    System.out.println(codesBySystem);
+    
+    
+    
+    
+    
+    System.exit(0);
+    
     SparkSession spark = input.getContext().getSparkSession();
     ParsedExpression inputResult = validateInput(input);
     ParsedExpression argument = validateArgument(input);
 
+    
+    //inputResult.getDataset().mapPartitionsInR(func, packageNames, broadcastVars, schema)
+    
     // Create a dataset to represent the input expression.
-    Dataset<Coding> inputDataset;
-    inputDataset = inputResult.getDataset().as(Encoders.bean(Coding.class));
+    Dataset<SimpleCode> inputDataset =  inputResult.getDataset()
+          .select(inputResult.getValueColumn().getField("system").alias("system"), inputResult.getValueColumn().getField("code").alias("code")).as(Encoders.bean(SimpleCode.class));
+    //inputDataset = inputResult.getDataset().as(Encoders.bean(Coding.class));
 
     // Create a dataset to represent the argument expression.
-    Dataset<Coding> argumentDataset;
+    Dataset<SimpleCode> argumentDataset;
     if (argument.getLiteralValue() == null) {
-      argumentDataset = argument.getDataset().as(Encoders.bean(Coding.class));
+      argumentDataset = argument.getDataset().as(Encoders.bean(SimpleCode.class));
     } else {
       // If the argument is a literal value, we create a dataset with a single Coding.
       assert argument.getLiteralValue().fhirType().equals("Coding");
-      List<Coding> codings = Collections.singletonList((Coding) argument.getLiteralValue());
-      argumentDataset = spark.createDataset(codings, Encoders.bean(Coding.class));
+      List<SimpleCode> codings = Collections.singletonList(new SimpleCode((Coding)argument.getLiteralValue()));
+      argumentDataset = spark.createDataset(codings, Encoders.bean(SimpleCode.class));
     }
 
     Column inputIdCol = inputResult.getIdColumn();
     Column inputSystemCol = inputResult.getValueColumn().getField("system");
     Column inputCodeCol = inputResult.getValueColumn().getField("code");
-    Column argumentSystemCol = argument.getValueColumn().getField("system");
-    Column argumentCodeCol = argument.getValueColumn().getField("code");
+    Column argumentSystemCol = argumentDataset.col("system");
+    Column argumentCodeCol = argumentDataset.col("code");
 
     // Build a closure table dataset.
     Dataset<Mapping> closureTable = buildClosureTable(input, inputResult, argument);
@@ -132,6 +218,21 @@ public class SubsumesFunction implements Function {
     result.setIdColumn(inputIdCol);
     result.setValueColumn(equivalenceMatch);
     return result;
+  }
+
+  private List<SimpleCode> collectCodes(ParsedExpression parsedExpression) {
+    List<SimpleCode> codings = null;
+    if (parsedExpression.getLiteralValue() != null) {
+      SimpleCode literalValue = new SimpleCode((Coding) parsedExpression.getLiteralValue());
+      codings = Collections.singletonList(literalValue);
+    } else {
+      Dataset<SimpleCode> inputDataset =  parsedExpression.getDataset()
+          .select(parsedExpression.getValueColumn().getField("system").alias("system"), parsedExpression.getValueColumn().getField("code").alias("code"))
+          .distinct()
+          .as(Encoders.bean(SimpleCode.class));
+      codings = inputDataset.collectAsList();
+    }      
+    return codings;
   }
 
   /**
