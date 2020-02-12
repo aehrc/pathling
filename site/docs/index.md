@@ -25,7 +25,7 @@ within a "FHIR Analytics Server". Pathling has currently only implemented the
 [import](./import.html) and [aggregate](./aggregate.html) operations - but this
 serves to give you an idea of the bigger picture that we are working towards.
 
-See [Roadmap](./roadmap.html) for more information about new features that are
+See [Roadmap](./roadmap) for more information about new features that are
 currently under development.
 
 <img src="/images/analytics-api.png" 
