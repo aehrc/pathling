@@ -46,9 +46,14 @@ public class FhirServerContainer {
       put("PATHLING_TERMINOLOGY_SERVER_URL", "terminologyServerUrl");
       put("PATHLING_AWS_ACCESS_KEY_ID", "awsAccessKeyId");
       put("PATHLING_AWS_SECRET_ACCESS_KEY", "awsSecretAccessKey");
+      put("PATHLING_AUTH_JWKS_URL", "authJwksUrl");
+      put("PATHLING_AUTH_ISSUER", "authIssuer");
+      put("PATHLING_AUTH_AUDIENCE", "authAudience");
     }});
     String explainQueries = System.getenv("PATHLING_EXPLAIN_QUERIES");
     config.setExplainQueries(explainQueries != null && explainQueries.equals("true"));
+    String authEnabled = System.getenv("PATHLING_AUTH");
+    config.setAuthEnabled(authEnabled != null && authEnabled.equals("true"));
     String verboseRequestLogging = System.getenv("PATHLING_VERBOSE_REQUEST_LOGGING");
     config.setVerboseRequestLogging(
         verboseRequestLogging != null && verboseRequestLogging.equals("true"));

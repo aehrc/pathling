@@ -87,6 +87,29 @@ public class AnalyticsServerConfiguration {
    */
   private List<String> corsAllowedOrigins;
 
+  /**
+   * (OPTIONAL) Enables SMART authorisation on all requests.
+   */
+  private boolean authEnabled;
+
+  /**
+   * (REQUIRED if authEnabled) The URL of the JSON Web Key set containing the public key used to
+   * verify incoming bearer tokens.
+   */
+  private String authJwksUrl;
+
+  /**
+   * (REQUIRED if authEnabled) The value of the issuer claim expected within incoming bearer
+   * tokens.
+   */
+  private String authIssuer;
+
+  /**
+   * (REQUIRED if authEnabled) The value of the audience claim expected within incoming bearer
+   * tokens.
+   */
+  private String authAudience;
+
   public AnalyticsServerConfiguration() {
     sparkMasterUrl = "local[*]";
     warehouseUrl = "file:///usr/share/warehouse";
@@ -210,6 +233,38 @@ public class AnalyticsServerConfiguration {
     this.corsAllowedOrigins = corsAllowedOrigins;
   }
 
+  public boolean isAuthEnabled() {
+    return authEnabled;
+  }
+
+  public void setAuthEnabled(boolean authEnabled) {
+    this.authEnabled = authEnabled;
+  }
+
+  public String getAuthJwksUrl() {
+    return authJwksUrl;
+  }
+
+  public void setAuthJwksUrl(String authJwksUrl) {
+    this.authJwksUrl = authJwksUrl;
+  }
+
+  public String getAuthIssuer() {
+    return authIssuer;
+  }
+
+  public void setAuthIssuer(String authIssuer) {
+    this.authIssuer = authIssuer;
+  }
+
+  public String getAuthAudience() {
+    return authAudience;
+  }
+
+  public void setAuthAudience(String authAudience) {
+    this.authAudience = authAudience;
+  }
+
   @Override
   public String toString() {
     return "AnalyticsServerConfiguration{" +
@@ -225,6 +280,10 @@ public class AnalyticsServerConfiguration {
         ", shufflePartitions=" + shufflePartitions +
         ", awsAccessKeyId='" + awsAccessKeyId + '\'' +
         ", corsAllowedOrigins=" + corsAllowedOrigins +
+        ", authEnabled=" + authEnabled +
+        ", authJwksUrl='" + authJwksUrl + '\'' +
+        ", authIssuer='" + authIssuer + '\'' +
+        ", authAudience='" + authAudience + '\'' +
         '}';
   }
 

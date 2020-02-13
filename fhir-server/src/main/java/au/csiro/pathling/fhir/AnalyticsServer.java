@@ -20,6 +20,7 @@ import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,6 +79,7 @@ public class AnalyticsServer extends RestfulServer {
       declareProviders();
       defineCorsConfiguration();
       configureRequestLogging();
+      configureAuthorisation();
 
       // Respond with HTML when asked.
       registerInterceptor(new ResponseHighlighterInterceptor());
@@ -202,6 +204,18 @@ public class AnalyticsServer extends RestfulServer {
     loggingInterceptor.setMessageFormat("Request completed in ${processingTimeMillis} ms");
     loggingInterceptor.setLogExceptions(false);
     registerInterceptor(loggingInterceptor);
+  }
+
+  private void configureAuthorisation() throws MalformedURLException {
+    if (configuration.isAuthEnabled()) {
+      if (configuration.getAuthJwksUrl() == null || configuration.getAuthIssuer() == null
+          || configuration.getAuthAudience() == null) {
+        throw new RuntimeException(
+            "Must configure JWKS URL, issuer and audience if authorisation is enabled");
+      }
+      registerInterceptor(new AuthorisationInterceptor(configuration.getAuthJwksUrl(),
+          configuration.getAuthIssuer(), configuration.getAuthAudience()));
+    }
   }
 
   @Override
