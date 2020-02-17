@@ -34,6 +34,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.assertj.core.api.Assertions;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.Before;
@@ -50,12 +51,13 @@ public class ExpressionParserTest {
   private SparkSession spark;
   private ResourceReader mockReader;
   private ExpressionParser expressionParser;
+  private TerminologyClient terminologyClient;
 
   @Before
   public void setUp() throws IOException {
     spark = getSparkSession();
 
-    TerminologyClient terminologyClient =
+    terminologyClient =
         mock(TerminologyClient.class, Mockito.withSettings().serializable());
     TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
@@ -237,16 +239,14 @@ public class ExpressionParserTest {
 
   @Test
   public void testSubsumes() throws Exception {
-    
-    BeanInfo bi = java.beans.Introspector.getBeanInfo(SystemAndCode.class);
-    Stream.of(bi.getPropertyDescriptors()).forEach(System.out::println);
-    System.out.println();
+    ConceptMap emptyConceptMap = new ConceptMap();    
+    when(terminologyClient.closure(any(), any(),any())).thenReturn(emptyConceptMap);
     
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|444814009)")
             .selectResult().debugAllRows();
 
-    //assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)").selectResult().debugSchema().debugAllRows();
+    assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)").selectResult().debugSchema().debugAllRows();
     // //
     // assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(http://snomed.info/sct|444814009)").selectResult().debugAllRows();
     // assertThatResultOf("reverseResolve(Condition.subject).code.coding").selectResult().debugSchema().debugAllRows();
