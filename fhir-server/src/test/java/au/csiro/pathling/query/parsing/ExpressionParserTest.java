@@ -68,7 +68,7 @@ public class ExpressionParserTest {
     parserContext.setResourceReader(mockReader);
     parserContext.setSubjectContext(null);
     expressionParser = new ExpressionParser(parserContext);
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
+    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER, ResourceType.PROCEDURE);
 
     ResourceType resourceType = ResourceType.PATIENT;
     Dataset<Row> subject = mockReader.read(resourceType);
@@ -256,7 +256,12 @@ public class ExpressionParserTest {
 
   @Test
   public void testSubsumes() {
-    assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(http://snomed.info/sct|444814009)").selectResult().debugAllRows();
+    assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)").selectResult().debugSchema().debugAllRows();
+    //assertThatResultOf("reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|444814009)").selectResult().debugAllRows();
+    // assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(http://snomed.info/sct|444814009)").selectResult().debugAllRows();
+    //assertThatResultOf("reverseResolve(Condition.subject).code.coding").selectResult().debugSchema().debugAllRows();
+    //assertThatResultOf("Patient.reverseResolve(Encounter.subject).reverseResolve(Procedure.encounter).reasonCode.coding").selectResult().debugSchema().debugAllRows();
+    //assertThatResultOf("http://snomed.info/sct|444814009").selectResult().debugSchema().debugAllRows();
   }
 
 }

@@ -3,7 +3,7 @@ package au.csiro.pathling.query.functions;
 import java.io.Serializable;
 import org.hl7.fhir.r4.model.Coding;
 
-public class SimpleCode implements Serializable {
+public class SystemAndCode implements Serializable {
   /**
    * 
    */
@@ -12,10 +12,10 @@ public class SimpleCode implements Serializable {
   private String system;
   private String code;
   
-  public SimpleCode() {
+  public SystemAndCode() {
   }
   
-  protected SimpleCode(Coding coding) {
+  protected SystemAndCode(Coding coding) {
     super();
     this.system = coding.getSystem();
     this.code = coding.getCode();
@@ -57,7 +57,7 @@ public class SimpleCode implements Serializable {
       return false;
     if (getClass() != obj.getClass())
       return false;
-    SimpleCode other = (SimpleCode) obj;
+    SystemAndCode other = (SystemAndCode) obj;
     if (code == null) {
       if (other.code != null)
         return false;

@@ -27,7 +27,7 @@ public class ParsedExpressionAssert {
 
   public DatasetAssert selectResult() {
     return new DatasetAssert(parsedExpression.getDataset()
-        .select(parsedExpression.getIdColumn(), parsedExpression.getValueColumn())
+        .select(parsedExpression.getIdColumn(), parsedExpression.getLiteralOrValueColumn())
         .orderBy(parsedExpression.getIdColumn()));
   }
 

@@ -7,18 +7,28 @@ package au.csiro.pathling.query.functions;
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.CODING;
 import static au.csiro.pathling.utilities.Strings.md5Short;
 import static org.apache.spark.sql.functions.max;
-
+import static org.apache.spark.sql.functions.explode;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.isnull;
+import static org.apache.spark.sql.functions.not;
 import au.csiro.pathling.encoding.Mapping;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.query.operators.PathTraversalInput;
 import au.csiro.pathling.query.operators.PathTraversalOperator;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.*;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.MetadataBuilder;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
@@ -32,29 +42,44 @@ import org.slf4j.LoggerFactory;
 
 
 
+class TransitiveTable {
+
+  private final List<Mapping> mappings = new ArrayList<Mapping>();
+
+  void addMapping(Coding source, Coding target, ConceptMapEquivalence equivalence) {
+    mappings.add(new Mapping(source.getSystem(), source.getCode(), target.getSystem(),
+        target.getCode(), equivalence.toCode()));
+  }
+}
+
+
 class ClosureService {
   private final String seed;
   private final TerminologyClient terminologyClient;
-  
+
   public ClosureService(String seed, TerminologyClient terminologyClient) {
     this.seed = seed;
     this.terminologyClient = terminologyClient;
   }
-  
+
   TransitiveTable getClosure(String system, List<String> codes) {
     String closureName = md5Short(seed + system);
     // Execute the closure operation against the terminology server.
     terminologyClient.closure(new StringType(closureName), null, null);
-    ConceptMap closure = terminologyClient.closure(new StringType(closureName), toCodesList(system, codes), null);  
+    ConceptMap closure =
+        terminologyClient.closure(new StringType(closureName), toCodesList(system, codes), null);
     return fromConceptMap(closure);
   }
-  
+
   static List<Coding> toCodesList(final String system, List<String> codes) {
     return codes.stream().map(code -> new Coding(system, code, null)).collect(Collectors.toList());
   }
-  
+
   static TransitiveTable fromConceptMap(ConceptMap conceptMap) {
     // Extract the mappings from the closure result into a set of Mapping objects.
+
+    TransitiveTable result = new TransitiveTable();
+
     List<ConceptMapGroupComponent> groups = conceptMap.getGroup();
     if (groups.size() == 1) {
       ConceptMapGroupComponent group = groups.get(0);
@@ -69,24 +94,14 @@ class ClosureService {
           mapping.setTargetSystem(targetSystem);
           mapping.setTargetCode(target.getCode());
           mapping.setEquivalence(target.getEquivalence().toCode());
-          mappings.add(mapping);
+          // TODO: add actual mappings
+          // mappings.add(mapping);
         }
       }
     }
-}
-
-
-
-class TransitiveTable {
-  
-  private final List<Mapping> mappings = new ArrayList<Mapping>();
-  
-  void addMapping(Coding source, Coding target, ConceptMapEquivalence equivalence) {
-      mappings.add(new Mapping(source.getSystem(), source.getCode(), target.getSystem(), target.getCode(), equivalence.toCode())); 
+    return result;
   }
 }
-
-
 
 
 
@@ -103,8 +118,7 @@ public class SubsumesFunction implements Function {
   private boolean inverted = false;
   private String functionName = "subsumes";
 
-  public SubsumesFunction() {
-  }
+  public SubsumesFunction() {}
 
   public SubsumesFunction(boolean inverted) {
     this.inverted = inverted;
@@ -121,117 +135,222 @@ public class SubsumesFunction implements Function {
           "One argument must be passed to " + functionName + " function");
     }
 
-    // we at least need to evaluate the argument to the unique list of code/system pairs that we can 
+   
+    
+    // TODO: check
+    // both dataset and argument must be of the same type (the id must match)
+    // as we only can subsume within the same resource
+    
+    // the transitive closure table though can be build globally -
+    // this may however produce a very large transitive closure table that includes potentially irrelevant entries
+    
+    // let's to do it this way however first
+    
+    
+ 
+    // we at least need to evaluate the argument to the unique list of code/system pairs that we
+    // can
     // broadcast for the execution
-    
-    
-    List<SimpleCode> argumentCodes = collectCodes(input.getArguments().get(0));
-    System.out.println(argumentCodes);
-    
-    List<SimpleCode> inputCodes = collectCodes(input.getInput());
-    System.out.println(inputCodes);
 
     
-    Map<String, List<SimpleCode> > codesBySystem  = inputCodes.stream().collect(Collectors.groupingBy(SimpleCode::getSystem));
-    
-    System.out.println(codesBySystem);
-    
+ 
+    // So the first step is to depending on the type of the input create an ID based set of system/id objects
     
     
+    Dataset<Row> inputSystemAndCodeDataset = toSystemAndCodeDataset(input.getInput());
+    
+    inputSystemAndCodeDataset.printSchema();
+    inputSystemAndCodeDataset.show();
     
     
-    System.exit(0);
-    
-    SparkSession spark = input.getContext().getSparkSession();
-    ParsedExpression inputResult = validateInput(input);
-    ParsedExpression argument = validateArgument(input);
+    Dataset<Row> argSystemAndCodeDataset = toSystemAndCodeDataset(input.getArguments().get(0));
 
+    argSystemAndCodeDataset.printSchema();
+    argSystemAndCodeDataset.show();
     
-    //inputResult.getDataset().mapPartitionsInR(func, packageNames, broadcastVars, schema)
+    // now I literally need to produce a transitive closure table for all elements in combination of these two datasets
+    // and I should get 
     
-    // Create a dataset to represent the input expression.
-    Dataset<SimpleCode> inputDataset =  inputResult.getDataset()
-          .select(inputResult.getValueColumn().getField("system").alias("system"), inputResult.getValueColumn().getField("code").alias("code")).as(Encoders.bean(SimpleCode.class));
-    //inputDataset = inputResult.getDataset().as(Encoders.bean(Coding.class));
-
-    // Create a dataset to represent the argument expression.
-    Dataset<SimpleCode> argumentDataset;
-    if (argument.getLiteralValue() == null) {
-      argumentDataset = argument.getDataset().as(Encoders.bean(SimpleCode.class));
-    } else {
-      // If the argument is a literal value, we create a dataset with a single Coding.
-      assert argument.getLiteralValue().fhirType().equals("Coding");
-      List<SimpleCode> codings = Collections.singletonList(new SimpleCode((Coding)argument.getLiteralValue()));
-      argumentDataset = spark.createDataset(codings, Encoders.bean(SimpleCode.class));
-    }
-
-    Column inputIdCol = inputResult.getIdColumn();
-    Column inputSystemCol = inputResult.getValueColumn().getField("system");
-    Column inputCodeCol = inputResult.getValueColumn().getField("code");
-    Column argumentSystemCol = argumentDataset.col("system");
-    Column argumentCodeCol = argumentDataset.col("code");
-
-    // Build a closure table dataset.
-    Dataset<Mapping> closureTable = buildClosureTable(input, inputResult, argument);
-    Column closureSourceSystem = closureTable.col("sourceSystem");
-    Column closureSourceCode = closureTable.col("sourceCode");
-    Column closureTargetSystem = closureTable.col("targetSystem");
-    Column closureTargetCode = closureTable.col("targetCode");
-    Column closureEquivalence = closureTable.col("equivalence");
-
-    // Create a new dataset which contains a boolean value for each input coding, which indicates
-    // whether the coding subsumes (or is subsumed by) any of the codings within the argument
-    // dataset.
-    Column inputSystemMatch = inverted
-        ? inputSystemCol.equalTo(closureSourceSystem)
-        : inputSystemCol.equalTo(closureTargetSystem);
-    Column inputCodeMatch = inverted
-        ? inputCodeCol.equalTo(closureSourceCode)
-        : inputCodeCol.equalTo(closureTargetCode);
-    Column argumentSystemMatch = inverted
-        ? argumentSystemCol.equalTo(closureTargetSystem)
-        : argumentSystemCol.equalTo(closureSourceSystem);
-    Column argumentCodeMatch = inverted
-        ? argumentCodeCol.equalTo(closureTargetCode)
-        : argumentCodeCol.equalTo(closureSourceCode);
-    Column equivalenceMatch = inverted
-        ? closureEquivalence.equalTo("specializes")
-        : closureEquivalence.equalTo("subsumes");
-    Column joinCondition = inputSystemMatch.and(inputCodeMatch);
-    joinCondition = joinCondition.and(argumentSystemMatch.and(argumentCodeMatch));
-    Dataset<Row> dataset = inputDataset
-        .join(argumentDataset, joinCondition)
-        .select(inputIdCol, equivalenceMatch);
-    dataset = dataset
-        .groupBy(inputIdCol)
-        .agg(max(equivalenceMatch));
-    dataset = dataset.select(inputIdCol, equivalenceMatch);
-
-    // Construct a new parse result.
+    
+    Dataset<Row> transitiveClosureTable = createTransitiveClosureTable(input.getContext(), inputSystemAndCodeDataset, argSystemAndCodeDataset);
+    // The transitiveClosureTable should have the following schema and 
+    // represent the subsumes relation from the src to dst 
+    // (srcSystem STRING, srcCode STRING, dstCode STRING, dstCode STRING)
+    
+    
+    System.out.println("Transitive closure table");
+    transitiveClosureTable.printSchema();
+    transitiveClosureTable.show();   
+    
+    // So now we can create the join condition
+    // we actually need to join three tables
+    // inputSystemAndCodeDataset and  argSystemAndCodeDataset by ID
+    // and also    inputSystemAndCodeDataset.code = transitiveClosureTablr.srcCode and transitiveClosureTable.dstCode = argSystemAndCodeDataset.code
+    
+    Dataset<Row> joinedDataset = inputSystemAndCodeDataset.join(transitiveClosureTable, inputSystemAndCodeDataset.col("system")
+        .equalTo(transitiveClosureTable.col("srcSystem")).and(inputSystemAndCodeDataset.col("code")
+            .equalTo(transitiveClosureTable.col("srcCode"))), "left_outer")
+      .join(argSystemAndCodeDataset, argSystemAndCodeDataset.col("id").equalTo(inputSystemAndCodeDataset.col("id")).and(argSystemAndCodeDataset.col("system")
+          .equalTo(transitiveClosureTable.col("dstSystem")).and(argSystemAndCodeDataset.col("code")
+              .equalTo(transitiveClosureTable.col("dstCode")))), "left_outer");
+    
+    joinedDataset.printSchema();
+    joinedDataset.show();
+    
+    System.out.println("Result dataset");
+    Dataset<Row> resultDataset = joinedDataset
+        .groupBy(inputSystemAndCodeDataset.col("id"))
+        .agg(max(not(isnull(argSystemAndCodeDataset.col("id")))).alias("subsumes"));
+    resultDataset.printSchema();
+    resultDataset.show();  
+ 
+    
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setFhirPathType(FhirPathType.BOOLEAN);
     result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);
-    result.setSingular(inputResult.isSingular());
-    result.setDataset(dataset);
-    result.setIdColumn(inputIdCol);
-    result.setValueColumn(equivalenceMatch);
+    result.setSingular(input.getInput().isSingular());
+    result.setDataset(resultDataset);
+    result.setHashedValue(resultDataset.col("id"), resultDataset.col("subsumes"));
     return result;
+    
+    
+    
+//    
+//    
+//    
+//    
+//    List<SystemAndCode> argumentCodes = collectCodes(input.getArguments().get(0));
+//    System.out.println(argumentCodes);
+//
+//    List<SystemAndCode> inputCodes = collectCodes(input.getInput());
+//    System.out.println(inputCodes);
+//
+//
+//    Map<String, List<SystemAndCode>> codesBySystem =
+//        inputCodes.stream().collect(Collectors.groupingBy(SystemAndCode::getSystem));
+//
+//    System.out.println(codesBySystem);
+//
+//
+//
+//
+//    SparkSession spark = input.getContext().getSparkSession();
+//    ParsedExpression inputResult = validateInput(input);
+//    ParsedExpression argument = validateArgument(input);
+//
+//
+//    // inputResult.getDataset().mapPartitionsInR(func, packageNames, broadcastVars, schema)
+//
+//    // Create a dataset to represent the input expression.
+//    Dataset<SystemAndCode> inputDataset = inputResult.getDataset()
+//        .select(inputResult.getValueColumn().getField("system").alias("system"),
+//            inputResult.getValueColumn().getField("code").alias("code"))
+//        .as(Encoders.bean(SystemAndCode.class));
+//    // inputDataset = inputResult.getDataset().as(Encoders.bean(Coding.class));
+//
+//    // Create a dataset to represent the argument expression.
+//    Dataset<SystemAndCode> argumentDataset;
+//    if (argument.getLiteralValue() == null) {
+//      argumentDataset = argument.getDataset().as(Encoders.bean(SystemAndCode.class));
+//    } else {
+//      // If the argument is a literal value, we create a dataset with a single Coding.
+//      assert argument.getLiteralValue().fhirType().equals("Coding");
+//      List<SystemAndCode> codings =
+//          Collections.singletonList(new SystemAndCode((Coding) argument.getLiteralValue()));
+//      argumentDataset = spark.createDataset(codings, Encoders.bean(SystemAndCode.class));
+//    }
+//
+//    Column inputIdCol = inputResult.getIdColumn();
+//    Column inputSystemCol = inputResult.getValueColumn().getField("system");
+//    Column inputCodeCol = inputResult.getValueColumn().getField("code");
+//    Column argumentSystemCol = argumentDataset.col("system");
+//    Column argumentCodeCol = argumentDataset.col("code");
+//
+//    // Build a closure table dataset.
+//    Dataset<Mapping> closureTable = buildClosureTable(input, inputResult, argument);
+//    Column closureSourceSystem = closureTable.col("sourceSystem");
+//    Column closureSourceCode = closureTable.col("sourceCode");
+//    Column closureTargetSystem = closureTable.col("targetSystem");
+//    Column closureTargetCode = closureTable.col("targetCode");
+//    Column closureEquivalence = closureTable.col("equivalence");
+//
+//    // Create a new dataset which contains a boolean value for each input coding, which indicates
+//    // whether the coding subsumes (or is subsumed by) any of the codings within the argument
+//    // dataset.
+//    Column inputSystemMatch = inverted ? inputSystemCol.equalTo(closureSourceSystem)
+//        : inputSystemCol.equalTo(closureTargetSystem);
+//    Column inputCodeMatch = inverted ? inputCodeCol.equalTo(closureSourceCode)
+//        : inputCodeCol.equalTo(closureTargetCode);
+//    Column argumentSystemMatch = inverted ? argumentSystemCol.equalTo(closureTargetSystem)
+//        : argumentSystemCol.equalTo(closureSourceSystem);
+//    Column argumentCodeMatch = inverted ? argumentCodeCol.equalTo(closureTargetCode)
+//        : argumentCodeCol.equalTo(closureSourceCode);
+//    Column equivalenceMatch = inverted ? closureEquivalence.equalTo("specializes")
+//        : closureEquivalence.equalTo("subsumes");
+//    Column joinCondition = inputSystemMatch.and(inputCodeMatch);
+//    joinCondition = joinCondition.and(argumentSystemMatch.and(argumentCodeMatch));
+//    Dataset<Row> dataset =
+//        inputDataset.join(argumentDataset, joinCondition).select(inputIdCol, equivalenceMatch);
+//    dataset = dataset.groupBy(inputIdCol).agg(max(equivalenceMatch));
+//    dataset = dataset.select(inputIdCol, equivalenceMatch);
+
   }
 
-  private List<SimpleCode> collectCodes(ParsedExpression parsedExpression) {
-    List<SimpleCode> codings = null;
+  private Dataset<Row> createTransitiveClosureTable(ExpressionParserContext expressionParserContext, Dataset<Row> inputSystemAndCodeDataset,
+      Dataset<Row> argSystemAndCodeDataset) {
+
+    
+    // per minium each code should subsume itself
+    
+    
+    Dataset<Row> codes = getCodes(inputSystemAndCodeDataset.union(argSystemAndCodeDataset));
+    
+    return codes.select(codes.col("system").alias("srcSystem"),codes.col("code").alias("srcCode"), codes.col("system").alias("dstSystem"), codes.col("code").alias("dstCode"));
+    
+//    SparkSession spark = inputSystemAndCodeDataset.sparkSession();
+//    Metadata metadata = new MetadataBuilder().build();
+//    StructType closureTableStruct = new StructType(new StructField[] {
+//        new StructField("srcSystem", DataTypes.StringType, true, metadata),
+//        new StructField("srcCode", DataTypes.StringType, true, metadata),
+//        new StructField("dstSystem", DataTypes.StringType, true, metadata),
+//        new StructField("dstCode", DataTypes.StringType, true, metadata),
+//    });  
+//    return spark.createDataFrame(Collections.emptyList(), closureTableStruct);
+  }
+
+  private Dataset<Row> toSystemAndCodeDataset(ParsedExpression inputExpression) {
+    
+    //TODO: Add support for literal coding values
+    FHIRDefinedType inputType = inputExpression.getFhirType();
+    Dataset<Row> inputDst= inputExpression.getDataset();
+    Dataset<Row> codingDataset = null;
+    if (FHIRDefinedType.CODING.equals(inputType)) {
+      codingDataset = inputDst.select(inputExpression.getIdColumn().alias("id"),
+          inputExpression.getValueColumn().getField("system").alias("system"), inputExpression.getValueColumn().getField("code").alias("code"));
+    } else if (FHIRDefinedType.CODEABLECONCEPT.equals(inputType)) {
+      codingDataset = inputDst.select(inputExpression.getIdColumn(), explode(inputExpression.getValueColumn().getField("coding")).alias("coding")).
+          select(inputExpression.getIdColumn().alias("id"),
+              col("coding").getField("system").alias("system"),  col("coding").getField("code").alias("code"));
+    } else {
+      throw new IllegalArgumentException("Cannot extract codings from element of type: " + inputType);
+    }
+    return codingDataset;
+  }
+
+  private List<SystemAndCode> collectCodes(ParsedExpression parsedExpression) {
+    List<SystemAndCode> codings = null;
     if (parsedExpression.getLiteralValue() != null) {
-      SimpleCode literalValue = new SimpleCode((Coding) parsedExpression.getLiteralValue());
+      SystemAndCode literalValue = new SystemAndCode((Coding) parsedExpression.getLiteralValue());
       codings = Collections.singletonList(literalValue);
     } else {
-      Dataset<SimpleCode> inputDataset =  parsedExpression.getDataset()
-          .select(parsedExpression.getValueColumn().getField("system").alias("system"), parsedExpression.getValueColumn().getField("code").alias("code"))
-          .distinct()
-          .as(Encoders.bean(SimpleCode.class));
+      Dataset<SystemAndCode> inputDataset = parsedExpression.getDataset()
+          .select(parsedExpression.getValueColumn().getField("system").alias("system"),
+              parsedExpression.getValueColumn().getField("code").alias("code"))
+          .distinct().as(Encoders.bean(SystemAndCode.class));
       codings = inputDataset.collectAsList();
-    }      
+    }
     return codings;
   }
 
@@ -253,7 +372,7 @@ public class SubsumesFunction implements Function {
       List<Coding> codings = Collections.singletonList(literalValue);
       codingsBySystem.put(literalValue.getSystem(), codings);
     } else {
-      inputCodes = getCodes(inputResult);
+      inputCodes = getCodes(inputResult.getDataset());
     }
     // If the argument is a literal, harvest the code - otherwise we need to query for the codes.
     if (argument.getLiteralValue() != null) {
@@ -265,32 +384,30 @@ public class SubsumesFunction implements Function {
         codingsBySystem.get(literalValue.getSystem()).addAll(codings);
       }
     } else {
-      argumentCodes = getCodes(argument);
+      argumentCodes = getCodes(argument.getDataset());
     }
     // The query will be a union if we need to query for both the input and argument codes.
     Dataset<Row> allCodes =
-        inputCodes != null && argumentCodes != null
-            ? inputCodes.union(argumentCodes)
-            : inputCodes != null
-                ? inputCodes : argumentCodes;
+        inputCodes != null && argumentCodes != null ? inputCodes.union(argumentCodes)
+            : inputCodes != null ? inputCodes : argumentCodes;
 
     // If needed, execute the query to get the codes.
     if (inputCodes != null || argumentCodes != null) {
       // Get the list of distinct code systems.
-      List<Row> distinctCodeSystemRows = allCodes.select(allCodes.col("system")).distinct()
-          .collectAsList();
-      List<String> distinctCodeSystems = distinctCodeSystemRows.stream()
-          .map(row -> row.getString(0))
-          .collect(Collectors.toList());
+      List<Row> distinctCodeSystemRows =
+          allCodes.select(allCodes.col("system")).distinct().collectAsList();
+      List<String> distinctCodeSystems =
+          distinctCodeSystemRows.stream().map(row -> row.getString(0)).collect(Collectors.toList());
 
-      // Query for the codings from each distinct code system within the result, and add the codings
+      // Query for the codings from each distinct code system within the result, and add the
+      // codings
       // to the map.
       for (String codeSystem : distinctCodeSystems) {
         Column systemCol = allCodes.col("system");
         List<Row> codeResults = allCodes.filter(systemCol.equalTo(codeSystem)).collectAsList();
-        List<Coding> codings = codeResults.stream()
-            .map(row -> new Coding(row.getString(0), row.getString(1), null))
-            .collect(Collectors.toList());
+        List<Coding> codings =
+            codeResults.stream().map(row -> new Coding(row.getString(0), row.getString(1), null))
+                .collect(Collectors.toList());
         if (codingsBySystem.get(codeSystem) == null) {
           codingsBySystem.put(codeSystem, codings);
         } else {
@@ -306,10 +423,11 @@ public class SubsumesFunction implements Function {
       // Get the codings for this code system.
       List<Coding> codings = codingsBySystem.get(codeSystem);
 
-      // Create a unique name for the closure table for this code system, based upon the expressions
+      // Create a unique name for the closure table for this code system, based upon the
+      // expressions
       // of the input, argument and the CodeSystem URI.
-      String closureName = md5Short(
-          inputResult.getFhirPath() + argument.getFhirPath() + codeSystem);
+      String closureName =
+          md5Short(inputResult.getFhirPath() + argument.getFhirPath() + codeSystem);
 
       // Execute the closure operation against the terminology server.
       terminologyClient.closure(new StringType(closureName), null, null);
@@ -346,19 +464,16 @@ public class SubsumesFunction implements Function {
     ParsedExpression inputResult = input.getInput();
     String inputFhirPath = inputResult.getFhirPath();
     if (inputResult.getLiteralValue() != null) {
-      throw new InvalidRequestException(
-          "Input to " + functionName + " function cannot be a literal value: " + inputResult
-              .getFhirPath());
+      throw new InvalidRequestException("Input to " + functionName
+          + " function cannot be a literal value: " + inputResult.getFhirPath());
     }
     if (inputResult.getFhirPathType() == CODING) {
       return inputResult;
     }
     FHIRDefinedType typeCode = inputResult.getFhirType();
     if (!typeCode.equals(FHIRDefinedType.CODEABLECONCEPT)) {
-      throw new InvalidRequestException(
-          "Input to " + functionName + " function must be Coding or CodeableConcept: "
-              + inputResult
-              .getFhirPath());
+      throw new InvalidRequestException("Input to " + functionName
+          + " function must be Coding or CodeableConcept: " + inputResult.getFhirPath());
     } else {
       // If this is a CodeableConcept, we need to traverse to the `coding` member first.
       PathTraversalInput pathTraversalInput = new PathTraversalInput();
@@ -380,9 +495,8 @@ public class SubsumesFunction implements Function {
     }
     FHIRDefinedType typeCode = argument.getFhirType();
     if (!typeCode.equals(FHIRDefinedType.CODEABLECONCEPT)) {
-      throw new InvalidRequestException(
-          "Argument to " + functionName + " function must be Coding or CodeableConcept: " + argument
-              .getFhirPath());
+      throw new InvalidRequestException("Argument to " + functionName
+          + " function must be Coding or CodeableConcept: " + argument.getFhirPath());
     } else {
       // If this is a CodeableConcept, we need to traverse to the `coding` member first.
       PathTraversalInput pathTraversalInput = new PathTraversalInput();
@@ -397,8 +511,7 @@ public class SubsumesFunction implements Function {
   }
 
   @Nonnull
-  private Dataset<Row> getCodes(ParsedExpression result) {
-    Dataset<Row> source = result.getDataset();
+  private Dataset<Row> getCodes(Dataset<Row> source) {
     Column systemCol = source.col("system");
     Column codeCol = source.col("code");
 
@@ -408,5 +521,4 @@ public class SubsumesFunction implements Function {
 
     return codes;
   }
-
 }

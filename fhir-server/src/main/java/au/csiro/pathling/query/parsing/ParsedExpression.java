@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import static org.apache.spark.sql.functions.lit;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -310,6 +311,15 @@ public class ParsedExpression implements Joinable {
     this.valueColumn = valueColumn;
   }
 
+  public Column getLiteralOrValueColumn() {
+    if (isLiteral()) {
+      return FhirPathTypeSqlHelper.forType(getFhirPathType()).getLiteralColumn(this);
+    } else {
+      return getValueColumn();
+    }
+  }
+  
+  
   public Column getResourceTypeColumn() {
     return resourceTypeColumn;
   }

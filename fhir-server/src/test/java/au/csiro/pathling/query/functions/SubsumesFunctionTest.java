@@ -41,8 +41,8 @@ public class SubsumesFunctionTest {
   public void testGetsFirstResourceCorrectly() {
     
     
-    List<SimpleCode> codings = Collections.singletonList(new SimpleCode());
-    Dataset<SimpleCode> argumentDataset = spark.createDataset(codings, Encoders.bean(SimpleCode.class));
+    List<SystemAndCode> codings = Collections.singletonList(new SystemAndCode());
+    Dataset<SystemAndCode> argumentDataset = spark.createDataset(codings, Encoders.bean(SystemAndCode.class));
     //List<Coding> codings = Collections.singletonList(new Coding());
     //Dataset<CodingBean> argumentDataset = spark.createDataset(codings, FhirEncoders.forR4().getOrCreate().of(Coding.class));
     
