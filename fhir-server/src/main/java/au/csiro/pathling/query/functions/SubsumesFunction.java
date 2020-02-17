@@ -44,35 +44,35 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 
 
 class Relation {
-  
-  private static final Logger logger = LoggerFactory.getLogger(Relation.class);
-  
-  final Dataset<Mapping> mappingTable;
 
+  final Dataset<Mapping> mappingTable;
+  
   public Relation(Dataset<Mapping> mappingTable) {
     this.mappingTable = mappingTable;
   }
- 
+
   public Dataset<Row> apply(Dataset<Row> from, Dataset<Row> to) {
-    Dataset<Row> joinedDataset = from.join(mappingTable, from.col("coding")
-        .equalTo(mappingTable.col("from")), "left_outer")
-      .join(to, to.col("id").equalTo(from.col("id")).and(to.col("coding")
-          .equalTo(mappingTable.col("to"))), "left_outer");
-    
-    return joinedDataset
-        .groupBy(from.col("id"))
-        .agg(max(not(isnull(to.col("id")))).alias("subsumes"));  
+    Dataset<Row> joinedDataset =
+        from.join(mappingTable, from.col("coding").equalTo(mappingTable.col("from")), "left_outer")
+            .join(to, to.col("id").equalTo(from.col("id"))
+                .and(to.col("coding").equalTo(mappingTable.col("to"))), "left_outer");
+
+    return joinedDataset.groupBy(from.col("id"))
+        .agg(max(not(isnull(to.col("id")))).alias("subsumes"));
   }
-  
+
   public Relation union(Relation other) {
     return new Relation(mappingTable.union(other.mappingTable));
   }
-  
+
   /**
    * Creates equivalence relation from given codes
+   * 
    * @param codes
    */
   public static Relation createEquivalence(Dataset<SystemAndCode> codes) {
+    
+    //TODO: Maybe rewrite as select
     Dataset<Mapping> mappingDataset = codes.map(new MapFunction<SystemAndCode, Mapping>() {
 
       private static final long serialVersionUID = 1L;
@@ -80,20 +80,58 @@ class Relation {
       @Override
       public Mapping call(SystemAndCode value) throws Exception {
         return new Mapping(value, value);
-      }}, Encoders.bean(Mapping.class));
+      }
+    }, Encoders.bean(Mapping.class));
     return new Relation(mappingDataset);
   }
- 
-  //TODO: move somewhere else
-  public static Relation fromConceptMap(@NotNull ConceptMap conceptMap, SparkSession spark) {
+}
+
+
+class ClosureService {
+  private static final Logger logger = LoggerFactory.getLogger(ClosureService.class);
+
+  private final String seed;
+  private final TerminologyClient terminologyClient;
+
+  public ClosureService(String seed, TerminologyClient terminologyClient) {
+    this.seed = seed;
+    this.terminologyClient = terminologyClient;
+  }
+
+  public Relation getClosure(Dataset<SystemAndCode> codingsDataset) {
+    // need
+
+    Map<String, List<SystemAndCode>> codingsBySystem = codingsDataset.collectAsList().stream()
+        .collect(Collectors.groupingBy(SystemAndCode::getSystem));
+
+    Relation result = Relation.createEquivalence(codingsDataset);
+
+    for (String codeSystem : codingsBySystem.keySet()) {
+      // Get the codings for this code system.
+      List<Coding> codings = codingsBySystem.get(codeSystem).stream().map(SystemAndCode::toCoding)
+          .collect(Collectors.toList());
+
+      // Create a unique name for the closure table for this code system, based upon the
+      // expressions of the input, argument and the CodeSystem URI.
+      String closureName = md5Short(seed + codeSystem);
+      // Execute the closure operation against the terminology server.
+      terminologyClient.closure(new StringType(closureName), null, null);
+      ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
+      // TODO: try to rewrite as reduce/fold
+      result = result.union(conceptMapToRelation(closure, codingsDataset.sparkSession()));
+    }
+    return result;
+  }
+
+  public static Relation conceptMapToRelation(@NotNull ConceptMap conceptMap, SparkSession spark) {
 
     List<Mapping> mappings = new ArrayList<Mapping>();
     if (conceptMap.hasGroup()) {
       List<ConceptMapGroupComponent> groups = conceptMap.getGroup();
-      // TODO: check with JOHN 
+      // TODO: check with JOHN
       // how to handle this
       if (groups.size() > 1) {
-        logger.warn("Encountered closure response with more than one group");       
+        logger.warn("Encountered closure response with more than one group");
       }
       assert groups.size() <= 1 : "At most one group expected";
       // logger.warn("Encountered closure response with more than one group");
@@ -104,8 +142,9 @@ class Relation {
         List<SourceElementComponent> elements = group.getElement();
         for (SourceElementComponent source : elements) {
           for (TargetElementComponent target : source.getTarget()) {
-            //TODO: handle different direction returned by in eqivalence
-            mappings.add(new Mapping(sourceSystem, source.getCode(), targetSystem, target.getCode()));
+            // TODO: handle different direction returned by in eqivalence
+            mappings
+                .add(new Mapping(sourceSystem, source.getCode(), targetSystem, target.getCode()));
           }
         }
       }
@@ -114,41 +153,6 @@ class Relation {
   }
 }
 
-
-class ClosureService {
-  private final String seed;
-  private final TerminologyClient terminologyClient;
-
-  public ClosureService(String seed, TerminologyClient terminologyClient) {
-    this.seed = seed;
-    this.terminologyClient = terminologyClient;
-  }
-
-  Relation getClosure(Dataset<SystemAndCode> codingsDataset) {
-    // need 
-    
-    Map<String, List<SystemAndCode>> codingsBySystem = codingsDataset
-        .collectAsList().stream()
-        .collect(Collectors.groupingBy(SystemAndCode::getSystem));
-    
-    Relation result = Relation.createEquivalence(codingsDataset);
-    
-    for (String codeSystem : codingsBySystem.keySet()) {
-      // Get the codings for this code system.
-      List<Coding> codings = codingsBySystem.get(codeSystem).stream().map(SystemAndCode::toCoding).collect(Collectors.toList());
-
-      // Create a unique name for the closure table for this code system, based upon the
-      // expressions of the input, argument and the CodeSystem URI.
-      String closureName = md5Short(seed + codeSystem);
-      // Execute the closure operation against the terminology server.
-      terminologyClient.closure(new StringType(closureName), null, null);
-      ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
-      //TODO: try to rewrite as reduce/fold
-      result = result.union(Relation.fromConceptMap(closure, codingsDataset.sparkSession()));
-    }
-    return result;
-  }
-}
 
 /**
  * Describes a function which returns a boolean value based upon whether any of the input set of
@@ -160,13 +164,13 @@ class ClosureService {
 public class SubsumesFunction implements Function {
 
   private static final Logger logger = LoggerFactory.getLogger(SubsumesFunction.class);
-  
+
   private static void debugDataset(Dataset<?> dataset, String msg) {
     System.out.println(msg);
     dataset.printSchema();
     dataset.show();
   }
-  
+
   private boolean inverted = false;
   private String functionName = "subsumes";
 
@@ -184,34 +188,39 @@ public class SubsumesFunction implements Function {
   public ParsedExpression invoke(@Nonnull FunctionInput input) {
 
     validateInput(input);
-    
+
     // the transitive closure table though can be build globally -
-    // this may however produce a very large transitive closure table that includes potentially irrelevant entries
-    
+    // this may however produce a very large transitive closure table that includes potentially
+    // irrelevant entries
+
     // let's to do it this way however first
-    // So the first step is to depending on the type of the input create an ID based set of system/id objects
-    
+    // So the first step is to depending on the type of the input create an ID based set of
+    // system/id objects
+
     // Find the context expression (the non literal one)
-    
+
     ParsedExpression inputExpression = input.getInput();
     ParsedExpression argExpression = input.getArguments().get(0);
-    ParsedExpression contextExpression = !inputExpression.isLiteral()? inputExpression : (!argExpression.isLiteral()?argExpression:null);
-    assert(contextExpression != null) : "Context expression is not null";
-    
-    Dataset<Row> inputSystemAndCodeDataset = toSystemAndCodeDataset(inputExpression, contextExpression);    
+    ParsedExpression contextExpression = !inputExpression.isLiteral() ? inputExpression
+        : (!argExpression.isLiteral() ? argExpression : null);
+    assert (contextExpression != null) : "Context expression is not null";
+
+    Dataset<Row> inputSystemAndCodeDataset =
+        toSystemAndCodeDataset(inputExpression, contextExpression);
     Dataset<Row> argSystemAndCodeDataset = toSystemAndCodeDataset(argExpression, contextExpression);
-    
+
     debugDataset(inputSystemAndCodeDataset, "Input SystemAndCode");
     debugDataset(argSystemAndCodeDataset, "Argument SystemAndCode");
-      
+
     String seed = (inputExpression.getFhirPath() + inputExpression.getFhirPath());
-    Relation relation = createTransitiveClosureTable(seed, input.getContext(), inputSystemAndCodeDataset, argSystemAndCodeDataset);
-    
+    Relation relation = createTransitiveClosureTable(seed, input.getContext(),
+        inputSystemAndCodeDataset, argSystemAndCodeDataset);
+
     debugDataset(relation.mappingTable, " RelationTable");
-    
+
     Dataset<Row> resultDataset = relation.apply(inputSystemAndCodeDataset, argSystemAndCodeDataset);
     debugDataset(resultDataset, "Result dataset:");
-    
+
     // Construct the final result
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
@@ -224,27 +233,40 @@ public class SubsumesFunction implements Function {
     return result;
   }
 
-  private Relation createTransitiveClosureTable(String seed, 
-      ExpressionParserContext expressionParserContext,
-      Dataset<Row> inputSystemAndCodeDataset,
-      Dataset<Row> argSystemAndCodeDataset) {
-    
-    ClosureService closureService = new ClosureService(seed, expressionParserContext.getTerminologyClient());
-    return closureService.getClosure(getCodes(inputSystemAndCodeDataset.union(argSystemAndCodeDataset)));
-  }
 
-  private Dataset<Row> toSystemAndCodeDataset(ParsedExpression inputExpression, ParsedExpression contextExpression) {
+  @Nonnull
+  private Relation createTransitiveClosureTable(String seed,
+      ExpressionParserContext expressionParserContext, Dataset<Row> inputSystemAndCodeDataset,
+      Dataset<Row> argSystemAndCodeDataset) {
+
+    ClosureService closureService =
+        new ClosureService(seed, expressionParserContext.getTerminologyClient());
+    return closureService
+        .getClosure(getCodes(inputSystemAndCodeDataset.union(argSystemAndCodeDataset)));
+  }
+  
+  @Nonnull
+  private Dataset<SystemAndCode> getCodes(Dataset<Row> source) {
+    Column systemCol = source.col("coding").getField("system").alias("system");
+    Column codeCol = source.col("coding").getField("code").alias("code");
+    Dataset<Row> codes = source.select(codeCol, systemCol);
+    return codes.where(systemCol.isNotNull().and(codeCol.isNotNull())).distinct()
+        .as(Encoders.bean(SystemAndCode.class));
+  }
+  
+  @Nonnull
+  private Dataset<Row> toSystemAndCodeDataset(ParsedExpression inputExpression,
+      ParsedExpression contextExpression) {
 
     System.out.println("Converting experession");
     System.out.println(ToStringBuilder.reflectionToString(inputExpression));
-    
-    //TODO: Add support for literal coding values
+
     FHIRDefinedType inputType = inputExpression.getFhirType();
     Dataset<Row> inputDataset = inputExpression.getDataset();
     Dataset<Row> codingDataset = null;
-    
-    //TODO: RECONSIDER
-    //Perhaps the travelsal should be done with the follwing code
+
+    // TODO: RECONSIDER
+    // Perhaps the travelsal should be done with the follwing code
     // If this is a CodeableConcept, we need to traverse to the `coding` member first.
     // PathTraversalInput pathTraversalInput = new PathTraversalInput();
     // pathTraversalInput.setContext(input.getContext());
@@ -254,31 +276,39 @@ public class SubsumesFunction implements Function {
     // argument = new PathTraversalOperator().invoke(pathTraversalInput);
     // argument.setFhirPath(argumentFhirPath + ".coding");
     // return argument;
-    
+
     if (FHIRDefinedType.CODING.equals(inputType)) {
       // do the literal magic here
-      ParsedExpression idExpression = (!inputExpression.isLiteral())?inputExpression:contextExpression; 
+      ParsedExpression idExpression =
+          (!inputExpression.isLiteral()) ? inputExpression : contextExpression;
       codingDataset = idExpression.getDataset().select(idExpression.getIdColumn().alias("id"),
-          inputExpression.getLiteralOrValueColumn().getField("system").alias("system"), inputExpression.getLiteralOrValueColumn().getField("code").alias("code"));
+          inputExpression.getLiteralOrValueColumn().getField("system").alias("system"),
+          inputExpression.getLiteralOrValueColumn().getField("code").alias("code"));
     } else if (FHIRDefinedType.CODEABLECONCEPT.equals(inputType)) {
-      codingDataset = inputDataset.select(inputExpression.getIdColumn(), explode(inputExpression.getValueColumn().getField("coding")).alias("coding")).
-          select(inputExpression.getIdColumn().alias("id"),
-              col("coding").getField("system").alias("system"),  col("coding").getField("code").alias("code"));
+      codingDataset = inputDataset
+          .select(inputExpression.getIdColumn(),
+              explode(inputExpression.getValueColumn().getField("coding")).alias("coding"))
+          .select(inputExpression.getIdColumn().alias("id"),
+              col("coding").getField("system").alias("system"),
+              col("coding").getField("code").alias("code"));
     } else {
-      throw new IllegalArgumentException("Cannot extract codings from element of type: " + inputType + "in expression: " + inputExpression);
+      throw new IllegalArgumentException("Cannot extract codings from element of type: " + inputType
+          + "in expression: " + inputExpression);
     }
     // TODO: add filtering on non empty system and code
-    // Note: the struct needs to be (code, system) as this is the order in which SystemAndCode is encoded.
-    return codingDataset.select(codingDataset.col("id"), struct(codingDataset.col("code"), codingDataset.col("system")).alias("coding"));
+    // Note: the struct needs to be (code, system) as this is the order in which SystemAndCode is
+    // encoded.
+    return codingDataset.select(codingDataset.col("id"),
+        struct(codingDataset.col("code"), codingDataset.col("system")).alias("coding"));
   }
 
   private void validateInput(FunctionInput input) {
-    
+
     if (input.getArguments().size() != 1) {
       throw new InvalidRequestException(
           "Exactly one argument must be passed to " + functionName + " function");
     }
- 
+
     ParsedExpression inputExpression = input.getInput();
     ParsedExpression argExpression = input.getArguments().get(0);
     validateExpressionType(inputExpression, "Input");
@@ -290,28 +320,21 @@ public class SubsumesFunction implements Function {
     }
     // if both are not literals than they must be based on the same resource
     // otherwise the literal will inherit the resource from the non literal
-    
-    //TODO: check
-//    if (!inputExpression.isLiteral() && !argExpression.isLiteral() 
-//        && !inputExpression.getResourceType().equals(argExpression.getResourceType())) {
-//      throw new InvalidRequestException(
-//          "Input and argument are based on different resources in  " + functionName + " function");
-//    }
+
+    // TODO: check
+    // if (!inputExpression.isLiteral() && !argExpression.isLiteral()
+    // && !inputExpression.getResourceType().equals(argExpression.getResourceType())) {
+    // throw new InvalidRequestException(
+    // "Input and argument are based on different resources in " + functionName + " function");
+    // }
   }
 
   private void validateExpressionType(ParsedExpression inputResult, String expressionRole) {
     FHIRDefinedType typeCode = inputResult.getFhirType();
-    if (!FHIRDefinedType.CODING.equals(typeCode) && !FHIRDefinedType.CODEABLECONCEPT.equals(typeCode)) {
+    if (!FHIRDefinedType.CODING.equals(typeCode)
+        && !FHIRDefinedType.CODEABLECONCEPT.equals(typeCode)) {
       throw new InvalidRequestException(expressionRole + " to " + functionName
           + " function must be Coding or CodeableConcept: " + inputResult.getFhirPath());
     }
-  }
-
-  @Nonnull
-  private Dataset<SystemAndCode> getCodes(Dataset<Row> source) {
-    Column systemCol = source.col("coding").getField("system").alias("system");
-    Column codeCol = source.col("coding").getField("code").alias("code");
-    Dataset<Row> codes = source.select(codeCol, systemCol);
-    return codes.where(systemCol.isNotNull().and(codeCol.isNotNull())).distinct().as(Encoders.bean(SystemAndCode.class));
   }
 }
