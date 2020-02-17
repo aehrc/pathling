@@ -42,6 +42,7 @@ class ExpressionLiteralTermVisitor extends FhirPathBaseVisitor<ParsedExpression>
   public ParsedExpression visitCodingLiteral(CodingLiteralContext ctx) {
     ParsedExpression result = new ParsedExpression();
     result.setFhirPathType(CODING);
+    result.setFhirType(FHIRDefinedType.CODING);
     result.setFhirPath(ctx.getText());
     LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(ctx.getText().split("\\|")));
     Coding literalValue;

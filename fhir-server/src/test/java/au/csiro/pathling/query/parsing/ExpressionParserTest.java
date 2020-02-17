@@ -10,7 +10,6 @@ import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import au.csiro.pathling.TestUtilities;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
@@ -31,6 +30,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.assertj.core.api.Assertions;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.Before;
@@ -68,7 +68,8 @@ public class ExpressionParserTest {
     parserContext.setResourceReader(mockReader);
     parserContext.setSubjectContext(null);
     expressionParser = new ExpressionParser(parserContext);
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER, ResourceType.PROCEDURE);
+    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
+        ResourceType.PROCEDURE);
 
     ResourceType resourceType = ResourceType.PATIENT;
     Dataset<Row> subject = mockReader.read(resourceType);
@@ -114,44 +115,20 @@ public class ExpressionParserTest {
 
   @Test
   public void testContainsOperator() {
-    assertThatResultOf("name.family contains 'Wuckert783'")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(false)
-                .changeValue(PATIENT_ID_9360820c, true)
-        );
+    assertThatResultOf("name.family contains 'Wuckert783'").isOfBooleanType().isSelection()
+        .selectResult().hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
 
-    assertThatResultOf("name.suffix contains 'MD'")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(false)
-                .changeValue(PATIENT_ID_8ee183e2, true)
-        );
+    assertThatResultOf("name.suffix contains 'MD'").isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
   }
 
   @Test
   public void testInOperator() {
-    assertThatResultOf("'Wuckert783' in name.family")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(false)
-                .changeValue(PATIENT_ID_9360820c, true)
-        );
+    assertThatResultOf("'Wuckert783' in name.family").isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
 
-    assertThatResultOf("'MD' in name.suffix")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(false)
-                .changeValue(PATIENT_ID_8ee183e2, true)
-        );
+    assertThatResultOf("'MD' in name.suffix").isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
   }
 
   @Test
@@ -159,26 +136,15 @@ public class ExpressionParserTest {
     // test unversioned
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(true)
-                .changeValue(PATIENT_ID_8ee183e2, false)
-                .changeValue(PATIENT_ID_9360820c, false)
-                .changeValue(PATIENT_ID_beff242e, false)
-        );
+            .isOfBooleanType().isSelection().selectResult()
+            .hasRows(allPatientsWithValue(true).changeValue(PATIENT_ID_8ee183e2, false)
+                .changeValue(PATIENT_ID_9360820c, false).changeValue(PATIENT_ID_beff242e, false));
 
     // test versioned
     assertThatResultOf(
         "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(true)
-                .changeValue(PATIENT_ID_bbd33563, false)
-        );
+            .isOfBooleanType().isSelection().selectResult()
+            .hasRows(allPatientsWithValue(true).changeValue(PATIENT_ID_bbd33563, false));
   }
 
   @Test
@@ -212,6 +178,29 @@ public class ExpressionParserTest {
     assertThat(result).isSingular();
   }
 
+
+  @Test
+  public void testCodingLiterals() {
+
+    // Coding literal form [system]|[code]
+    final Coding expectedCoding =
+        new Coding("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "S", null);
+    assertThatResultOf("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
+        .isOfType(FHIRDefinedType.CODING, FhirPathType.CODING).isSingular()
+        .isTypeLiteral(expectedCoding);
+
+    // Coding literal form [system]|[version]|[code]
+
+    final Coding expectedCodingWithVersion =
+        new Coding("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "S", null);
+    expectedCodingWithVersion.setVersion("v1");
+    assertThatResultOf("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|v1|S")
+        .isOfType(FHIRDefinedType.CODING, FhirPathType.CODING).isSingular()
+        .isTypeLiteral(expectedCodingWithVersion);
+
+  }
+
+
   @Test
   public void testCountWithReverseResolve() {
 
@@ -228,40 +217,33 @@ public class ExpressionParserTest {
   public void testCount() {
     DatasetBuilder expectedCountResult =
         allPatientsWithValue(1L).changeValue(PATIENT_ID_9360820c, 2L);
-    assertThatResultOf("name.count()")
-        .isSelection()
-        .selectResult()
+    assertThatResultOf("name.count()").isSelection().selectResult().hasRows(expectedCountResult);
+
+    assertThatResultOf("name.family.count()").isSelection().selectResult()
         .hasRows(expectedCountResult);
 
-    assertThatResultOf("name.family.count()")
-        .isSelection()
-        .selectResult()
+    assertThatResultOf("name.family.count()").isAggregation().aggByIdResult()
         .hasRows(expectedCountResult);
 
-    assertThatResultOf("name.family.count()")
-        .isAggregation()
-        .aggByIdResult()
+    assertThatResultOf("name.given.count()").isSelection().selectResult()
         .hasRows(expectedCountResult);
 
-    assertThatResultOf("name.given.count()")
-        .isSelection()
-        .selectResult()
-        .hasRows(expectedCountResult);
-
-    assertThatResultOf("name.prefix.count()")
-        .isSelection()
-        .selectResult()
+    assertThatResultOf("name.prefix.count()").isSelection().selectResult()
         .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
   }
 
   @Test
   public void testSubsumes() {
-    assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)").selectResult().debugSchema().debugAllRows();
-    //assertThatResultOf("reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|444814009)").selectResult().debugAllRows();
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|444814009)")
+            .selectResult().debugAllRows();
+
+    // assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)").selectResult().debugSchema().debugAllRows();
+    // //
     // assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(http://snomed.info/sct|444814009)").selectResult().debugAllRows();
-    //assertThatResultOf("reverseResolve(Condition.subject).code.coding").selectResult().debugSchema().debugAllRows();
-    //assertThatResultOf("Patient.reverseResolve(Encounter.subject).reverseResolve(Procedure.encounter).reasonCode.coding").selectResult().debugSchema().debugAllRows();
-    //assertThatResultOf("http://snomed.info/sct|444814009").selectResult().debugSchema().debugAllRows();
+    // assertThatResultOf("reverseResolve(Condition.subject).code.coding").selectResult().debugSchema().debugAllRows();
+    // assertThatResultOf("Patient.reverseResolve(Encounter.subject).reverseResolve(Procedure.encounter).reasonCode.coding").selectResult().debugSchema().debugAllRows();
+    // assertThatResultOf("http://snomed.info/sct|444814009").selectResult().debugSchema().debugAllRows();
   }
 
 }

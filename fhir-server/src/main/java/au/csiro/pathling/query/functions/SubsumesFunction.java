@@ -6,29 +6,24 @@ package au.csiro.pathling.query.functions;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.CODING;
 import static au.csiro.pathling.utilities.Strings.md5Short;
-import static org.apache.spark.sql.functions.max;
-import static org.apache.spark.sql.functions.explode;
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.explode;
 import static org.apache.spark.sql.functions.isnull;
+import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.not;
-import au.csiro.pathling.encoding.Mapping;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.query.operators.PathTraversalInput;
-import au.csiro.pathling.query.operators.PathTraversalOperator;
-import au.csiro.pathling.query.parsing.ParsedExpression;
-import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.*;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.MetadataBuilder;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.CodeableConcept;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
@@ -39,6 +34,14 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import au.csiro.pathling.encoding.Mapping;
+import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.query.operators.PathTraversalInput;
+import au.csiro.pathling.query.operators.PathTraversalOperator;
+import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 
 
 
@@ -321,6 +324,9 @@ public class SubsumesFunction implements Function {
   }
 
   private Dataset<Row> toSystemAndCodeDataset(ParsedExpression inputExpression) {
+
+    System.out.println("Converting experession");
+    System.out.println(ToStringBuilder.reflectionToString(inputExpression));
     
     //TODO: Add support for literal coding values
     FHIRDefinedType inputType = inputExpression.getFhirType();
@@ -334,7 +340,7 @@ public class SubsumesFunction implements Function {
           select(inputExpression.getIdColumn().alias("id"),
               col("coding").getField("system").alias("system"),  col("coding").getField("code").alias("code"));
     } else {
-      throw new IllegalArgumentException("Cannot extract codings from element of type: " + inputType);
+      throw new IllegalArgumentException("Cannot extract codings from element of type: " + inputType + "in expression: " + inputExpression);
     }
     return codingDataset;
   }
