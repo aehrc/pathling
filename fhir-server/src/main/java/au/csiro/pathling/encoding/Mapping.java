@@ -13,65 +13,77 @@ import java.io.Serializable;
  */
 public class Mapping implements Serializable {
 
-  private String sourceSystem;
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
 
-  private String sourceCode;
-
-  private String targetSystem;
-
-  private String targetCode;
-
-  private String equivalence;
-
-  public Mapping(String sourceSystem, String sourceCode, String targetSystem, String targetCode, String equivalence) {
-    this.sourceSystem = sourceSystem;
-    this.sourceCode = sourceCode;
-    this.targetSystem = targetSystem;
-    this.targetCode = targetCode;
-    this.equivalence = equivalence;
+  private SystemAndCode from;
+  private SystemAndCode to;
+    
+  public Mapping(String sourceSystem, String sourceCode, String targetSystem, String targetCode) {
+    this.from = new SystemAndCode(sourceSystem, sourceCode);
+    this.to = new SystemAndCode(targetSystem, targetCode);
   }
   
   public Mapping() {
   }
 
-  public String getSourceSystem() {
-    return sourceSystem;
+  public Mapping(SystemAndCode from, SystemAndCode to) {
+    this.from = from;
+    this.to = to;
   }
 
-  public void setSourceSystem(String sourceSystem) {
-    this.sourceSystem = sourceSystem;
+  public SystemAndCode getFrom() {
+    return from;
   }
 
-  public String getSourceCode() {
-    return sourceCode;
+  public void setFrom(SystemAndCode from) {
+    this.from = from;
   }
 
-  public void setSourceCode(String sourceCode) {
-    this.sourceCode = sourceCode;
+  public SystemAndCode getTo() {
+    return to;
   }
 
-  public String getTargetSystem() {
-    return targetSystem;
+  public void setTo(SystemAndCode to) {
+    this.to = to;
   }
 
-  public void setTargetSystem(String targetSystem) {
-    this.targetSystem = targetSystem;
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((from == null) ? 0 : from.hashCode());
+    result = prime * result + ((to == null) ? 0 : to.hashCode());
+    return result;
   }
 
-  public String getTargetCode() {
-    return targetCode;
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    Mapping other = (Mapping) obj;
+    if (from == null) {
+      if (other.from != null)
+        return false;
+    } else if (!from.equals(other.from))
+      return false;
+    if (to == null) {
+      if (other.to != null)
+        return false;
+    } else if (!to.equals(other.to))
+      return false;
+    return true;
   }
 
-  public void setTargetCode(String targetCode) {
-    this.targetCode = targetCode;
+  @Override
+  public String toString() {
+    return "Mapping [from=" + from + ", to=" + to + "]";
   }
-
-  public String getEquivalence() {
-    return equivalence;
-  }
-
-  public void setEquivalence(String equivalence) {
-    this.equivalence = equivalence;
-  }
-
+ 
 }

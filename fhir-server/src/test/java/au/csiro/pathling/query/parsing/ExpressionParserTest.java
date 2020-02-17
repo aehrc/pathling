@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import au.csiro.pathling.TestUtilities;
+import au.csiro.pathling.encoding.SystemAndCode;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.ResourceReader;
@@ -19,12 +20,14 @@ import au.csiro.pathling.query.parsing.parser.ExpressionParser;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ParsedExpressionAssert;
+import java.beans.BeanInfo;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -233,12 +236,17 @@ public class ExpressionParserTest {
   }
 
   @Test
-  public void testSubsumes() {
+  public void testSubsumes() throws Exception {
+    
+    BeanInfo bi = java.beans.Introspector.getBeanInfo(SystemAndCode.class);
+    Stream.of(bi.getPropertyDescriptors()).forEach(System.out::println);
+    System.out.println();
+    
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|444814009)")
             .selectResult().debugAllRows();
 
-    // assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)").selectResult().debugSchema().debugAllRows();
+    //assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)").selectResult().debugSchema().debugAllRows();
     // //
     // assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(http://snomed.info/sct|444814009)").selectResult().debugAllRows();
     // assertThatResultOf("reverseResolve(Condition.subject).code.coding").selectResult().debugSchema().debugAllRows();

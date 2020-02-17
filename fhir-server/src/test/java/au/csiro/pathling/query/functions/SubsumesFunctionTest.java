@@ -19,6 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import au.csiro.pathling.bunsen.FhirEncoders;
+import au.csiro.pathling.encoding.SystemAndCode;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.CodingRowFixture;

@@ -1,4 +1,4 @@
-package au.csiro.pathling.query.functions;
+package au.csiro.pathling.encoding;
 
 import java.io.Serializable;
 import org.hl7.fhir.r4.model.Coding;
@@ -12,10 +12,15 @@ public class SystemAndCode implements Serializable {
   private String system;
   private String code;
   
+  public SystemAndCode(String system, String code) {
+    this.system = system;
+    this.code = code;
+  }
+  
   public SystemAndCode() {
   }
   
-  protected SystemAndCode(Coding coding) {
+  public SystemAndCode(Coding coding) {
     super();
     this.system = coding.getSystem();
     this.code = coding.getCode();
@@ -33,6 +38,9 @@ public class SystemAndCode implements Serializable {
     this.code = code;
   }
 
+  public Coding toCoding() {
+    return new Coding(system, code, null);
+  }
   
   
   @Override
