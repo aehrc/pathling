@@ -49,7 +49,7 @@ public class Mapping implements Serializable {
   public void setTo(SystemAndCode to) {
     this.to = to;
   }
-
+  
   @Override
   public int hashCode() {
     final int prime = 31;

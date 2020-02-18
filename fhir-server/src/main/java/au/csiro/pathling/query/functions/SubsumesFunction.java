@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import javax.validation.constraints.NotNull;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Column;
@@ -46,16 +45,26 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 class Relation {
 
   final Dataset<Mapping> mappingTable;
+  final boolean inverted;
+  
+  public Relation(Dataset<Mapping> mappingTable, boolean inverted) {
+    this.mappingTable = mappingTable;
+    this.inverted = inverted;
+  }
   
   public Relation(Dataset<Mapping> mappingTable) {
-    this.mappingTable = mappingTable;
+    this(mappingTable, false);
   }
 
   public Dataset<Row> apply(Dataset<Row> from, Dataset<Row> to) {
+    
+    Column srcCol = !inverted?mappingTable.col("from"):mappingTable.col("to");
+    Column dstCol = !inverted?mappingTable.col("to"):mappingTable.col("from");
+    
     Dataset<Row> joinedDataset =
-        from.join(mappingTable, from.col("coding").equalTo(mappingTable.col("from")), "left_outer")
+        from.join(mappingTable, from.col("coding").equalTo(srcCol), "left_outer")
             .join(to, to.col("id").equalTo(from.col("id"))
-                .and(to.col("coding").equalTo(mappingTable.col("to"))), "left_outer");
+                .and(to.col("coding").equalTo(dstCol)), "left_outer");
 
     return joinedDataset.groupBy(from.col("id"))
         .agg(max(not(isnull(to.col("id")))).alias("subsumes"));
@@ -65,6 +74,11 @@ class Relation {
     return new Relation(mappingTable.union(other.mappingTable));
   }
 
+  public Relation invert() {
+    return new Relation(mappingTable, !inverted);
+  }
+  
+  
   /**
    * Creates equivalence relation from given codes
    * 
@@ -123,7 +137,7 @@ class ClosureService {
     return result;
   }
 
-  public static Relation conceptMapToRelation(@NotNull ConceptMap conceptMap, SparkSession spark) {
+  public static Relation conceptMapToRelation(ConceptMap conceptMap, SparkSession spark) {
 
     List<Mapping> mappings = new ArrayList<Mapping>();
     if (conceptMap.hasGroup()) {
@@ -241,8 +255,10 @@ public class SubsumesFunction implements Function {
 
     ClosureService closureService =
         new ClosureService(seed, expressionParserContext.getTerminologyClient());
-    return closureService
+    Relation subsumesRelation =  closureService
         .getClosure(getCodes(inputSystemAndCodeDataset.union(argSystemAndCodeDataset)));
+    
+    return (!inverted)? subsumesRelation : subsumesRelation.invert();
   }
   
   @Nonnull

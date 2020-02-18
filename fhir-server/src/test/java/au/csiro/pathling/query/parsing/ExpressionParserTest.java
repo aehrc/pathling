@@ -6,28 +6,23 @@ package au.csiro.pathling.query.parsing;
 
 import static au.csiro.pathling.TestUtilities.getSparkSession;
 import static au.csiro.pathling.test.Assertions.assertThat;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_121503c8;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_2b36c1e2;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_7001ad9c;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_8ee183e2;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_9360820c;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_bbd33563;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_beff242e;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWithValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import au.csiro.pathling.TestUtilities;
-import au.csiro.pathling.encoding.SystemAndCode;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
-import au.csiro.pathling.query.ResourceReader;
-import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
-import au.csiro.pathling.query.parsing.parser.ExpressionParser;
-import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
-import au.csiro.pathling.test.DatasetBuilder;
-import au.csiro.pathling.test.ParsedExpressionAssert;
-import java.beans.BeanInfo;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -41,6 +36,17 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import au.csiro.pathling.TestUtilities;
+import au.csiro.pathling.encoding.Mapping;
+import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.query.ResourceReader;
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.query.parsing.parser.ExpressionParser;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
+import au.csiro.pathling.test.DatasetBuilder;
+import au.csiro.pathling.test.ParsedExpressionAssert;
+import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
 
 /**
  * @author Piotr Szul
@@ -57,8 +63,7 @@ public class ExpressionParserTest {
   public void setUp() throws IOException {
     spark = getSparkSession();
 
-    terminologyClient =
-        mock(TerminologyClient.class, Mockito.withSettings().serializable());
+    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
     TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
@@ -238,20 +243,44 @@ public class ExpressionParserTest {
   }
 
   @Test
-  public void testSubsumes() throws Exception {
-    ConceptMap emptyConceptMap = new ConceptMap();    
-    when(terminologyClient.closure(any(), any(),any())).thenReturn(emptyConceptMap);
-    
+  public void testSubsumesAndSubsumedBy() throws Exception {
+
+    // Setup mock terminology client
+    when(terminologyClient.closure(any(), any(), any()))
+        .thenReturn(ConceptMapFixtures.CM_EMPTY);
+
+    // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
+    // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
+    // Chronic sinusitis (disorder) = http://snomed.info/sct|40055000 in (PATIENT_ID_7001ad9c)
+
+    // With empty concept map subsume should work as member of
     assertThatResultOf(
-        "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|444814009)")
-            .selectResult().debugAllRows();
+        "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
+            .isSelection().isOfBooleanType().selectResult()
+            .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
 
-    assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)").selectResult().debugSchema().debugAllRows();
-    // //
-    // assertThatResultOf("reverseResolve(Condition.subject).code.coding.subsumes(http://snomed.info/sct|444814009)").selectResult().debugAllRows();
-    // assertThatResultOf("reverseResolve(Condition.subject).code.coding").selectResult().debugSchema().debugAllRows();
-    // assertThatResultOf("Patient.reverseResolve(Encounter.subject).reverseResolve(Procedure.encounter).reasonCode.coding").selectResult().debugSchema().debugAllRows();
-    // assertThatResultOf("http://snomed.info/sct|444814009").selectResult().debugSchema().debugAllRows();
+
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
+            .isSelection().isOfBooleanType().selectResult()
+            .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
+
+    // on the same collection should return all True (even though one is CodeableConcept)
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)")
+            .isSelection().isOfBooleanType().selectResult().hasRows(allPatientsWithValue(true));
+
+    // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
+    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_SNOWMED_444814009_SUBSUMES_40055000);
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
+            .isSelection().isOfBooleanType().selectResult().hasRows(allPatientsWithValue(true)
+                .changeValue(PATIENT_ID_2b36c1e2, false).changeValue(PATIENT_ID_bbd33563, false));
+
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
+            .isSelection().isOfBooleanType().selectResult()
+            .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
+
   }
-
 }
