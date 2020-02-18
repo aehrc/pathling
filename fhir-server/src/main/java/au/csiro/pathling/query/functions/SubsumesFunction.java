@@ -6,7 +6,7 @@ package au.csiro.pathling.query.functions;
 
 import static au.csiro.pathling.utilities.Strings.md5Short;
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.explode;
+import static org.apache.spark.sql.functions.explode_outer;
 import static org.apache.spark.sql.functions.isnull;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.not;
@@ -241,7 +241,7 @@ public class SubsumesFunction implements Function {
     result.setFhirPathType(FhirPathType.BOOLEAN);
     result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);
-    result.setSingular(input.getInput().isSingular());
+    result.setSingular(true);
     result.setDataset(resultDataset);
     result.setHashedValue(resultDataset.col("id"), resultDataset.col("subsumes"));
     return result;
@@ -303,7 +303,7 @@ public class SubsumesFunction implements Function {
     } else if (FHIRDefinedType.CODEABLECONCEPT.equals(inputType)) {
       codingDataset = inputDataset
           .select(inputExpression.getIdColumn(),
-              explode(inputExpression.getValueColumn().getField("coding")).alias("coding"))
+              explode_outer(inputExpression.getValueColumn().getField("coding")).alias("coding"))
           .select(inputExpression.getIdColumn().alias("id"),
               col("coding").getField("system").alias("system"),
               col("coding").getField("code").alias("code"));
@@ -322,7 +322,7 @@ public class SubsumesFunction implements Function {
 
     if (input.getArguments().size() != 1) {
       throw new InvalidRequestException(
-          "Exactly one argument must be passed to " + functionName + " function");
+          functionName + " function accepts one argument of type Coding|CodeableConcept: " + input.getExpression());
     }
 
     ParsedExpression inputExpression = input.getInput();

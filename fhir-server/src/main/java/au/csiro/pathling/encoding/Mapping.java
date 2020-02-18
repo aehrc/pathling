@@ -5,6 +5,7 @@
 package au.csiro.pathling.encoding;
 
 import java.io.Serializable;
+import org.hl7.fhir.r4.model.Coding;
 
 /**
  * Used to represent the results of $translate and $closure operations.
@@ -86,4 +87,8 @@ public class Mapping implements Serializable {
     return "Mapping [from=" + from + ", to=" + to + "]";
   }
  
+  public static Mapping of(Coding from, Coding to) {
+    return new Mapping(from.getSystem(), from.getCode(), to.getSystem(), to.getCode());
+  }
+  
 }
