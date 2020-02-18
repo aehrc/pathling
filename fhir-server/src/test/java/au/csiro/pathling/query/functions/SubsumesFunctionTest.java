@@ -53,6 +53,8 @@ public class SubsumesFunctionTest {
   private static final Coding CODING_OTHER1 = new Coding(TEST_SYSTEM, "OTHER1", null);
   private static final Coding CODING_OTHER2 = new Coding(TEST_SYSTEM, "OTHER2", null);
   private static final Coding CODING_OTHER3 = new Coding(TEST_SYSTEM, "OTHER3", null);
+  private static final Coding CODING_OTHER4 = new Coding(TEST_SYSTEM, "OTHER4", null);
+  private static final Coding CODING_OTHER5 = new Coding(TEST_SYSTEM, "OTHER5", null);
 
   private static final String RES_ID1 = "Encounter/xyz1";
   private static final String RES_ID2 = "Encounter/xyz2";
@@ -72,7 +74,7 @@ public class SubsumesFunctionTest {
   }
 
   private static Row codeableConceptRowFromCoding(Coding coding) {
-    return rowFromCodeableConcept(new CodeableConcept(coding).addCoding(CODING_OTHER3));
+    return rowFromCodeableConcept(new CodeableConcept(coding).addCoding(CODING_OTHER4));
   }
 
   @Before
@@ -80,65 +82,46 @@ public class SubsumesFunctionTest {
     when(terminologyClient.closure(any(), any(), any())).thenReturn(MAP_LARGE_MEDIUM_SMALL);
   }
 
-  private ParsedExpressionAssert assertCallSuccess(Function function,
-      ParsedExpression inputExpression, ParsedExpression argumentExpression) {
-    // Prepare the inputs to the function.
-    ExpressionParserContext parserContext = new ExpressionParserContext();
-    parserContext.setTerminologyClient(terminologyClient);
-    // parserContext.setTerminologyClientFactory(terminologyClientFactory);
-
-    FunctionInput functionInput = new FunctionInput();
-    String inputFhirPath = "subsumes(" + TEST_SYSTEM + "|" + "MEDIUM" + ")";
-    functionInput.setExpression(inputFhirPath);
-    functionInput.setContext(parserContext);
-    functionInput.setInput(inputExpression);
-    functionInput.getArguments().add(argumentExpression);
-
-    ParsedExpression result = function.invoke(functionInput);
-    return assertThat(result).isSelection().isOfBooleanType().isSingular();
-  }
-
-  @Test
-  public void testSubsumesCodingWithLiteralCorrectly() throws Exception {
-
+  private static ParsedExpression createCodingInput() {
     ParsedExpression inputExpression = new ComplexExpressionBuilder(FHIRDefinedType.CODING)
         .withColumn("789wxyz_id", DataTypes.StringType).withStructTypeColumns(codingStructType())
         .withRow(RES_ID1, rowFromCoding(CODING_SMALL))
         .withRow(RES_ID2, rowFromCoding(CODING_MEDIUM))
         .withRow(RES_ID3, rowFromCoding(CODING_LARGE))
-        .withRow(RES_ID4, rowFromCoding(CODING_OTHER1)).withRow(RES_ID5, null)
+        .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
+        .withRow(RES_ID5, null /* NULL coding value */)
         .withRow(RES_ID1, rowFromCoding(CODING_OTHER2))
         .withRow(RES_ID2, rowFromCoding(CODING_OTHER2))
         .withRow(RES_ID3, rowFromCoding(CODING_OTHER2))
         .withRow(RES_ID4, rowFromCoding(CODING_OTHER2)).buildWithStructValue("789wxyz");
     inputExpression.setSingular(false);
+    return inputExpression;
+  }
 
+  private static ParsedExpression createCodeableConceptInput() {
+    ParsedExpression inputExpression = new ComplexExpressionBuilder(FHIRDefinedType.CODEABLECONCEPT)
+        .withColumn("789wxyz_id", DataTypes.StringType)
+        .withStructTypeColumns(codeableConceptStructType())
+        .withRow(RES_ID1, codeableConceptRowFromCoding(CODING_SMALL))
+        .withRow(RES_ID2, codeableConceptRowFromCoding(CODING_MEDIUM))
+        .withRow(RES_ID3, codeableConceptRowFromCoding(CODING_LARGE))
+        .withRow(RES_ID4, codeableConceptRowFromCoding(CODING_OTHER1))
+        .withRow(RES_ID5, null /* NULL codeable cocept value */)
+        .withRow(RES_ID1, codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID2, codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID3, codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID4, codeableConceptRowFromCoding(CODING_OTHER2))
+        .buildWithStructValue("789wxyz");
+    inputExpression.setSingular(false);
+    return inputExpression;
+  }
+
+  private static ParsedExpression createLiteralArg() {
     ParsedExpression argumentExpression = PrimitiveExpressionBuilder.literalCoding(CODING_MEDIUM);
-
-    assertCallSuccess(new SubsumesFunction(), inputExpression, argumentExpression).selectResult()
-        .hasRows(allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID3)));
-
-    assertCallSuccess(new SubsumesFunction(true), inputExpression, argumentExpression)
-        .selectResult().hasRows(allFalse().changeValues(true, Arrays.asList(RES_ID1, RES_ID2)));
-
+    return argumentExpression;
   }
 
-  @Test
-  public void testSubsumesCodingWithCodingCorrectly() throws Exception {
-
-    ParsedExpression inputExpression = new ComplexExpressionBuilder(FHIRDefinedType.CODING)
-        .withColumn("789wxyz_id", DataTypes.StringType).withStructTypeColumns(codingStructType())
-        .withRow(RES_ID1, rowFromCoding(CODING_SMALL))
-        .withRow(RES_ID2, rowFromCoding(CODING_MEDIUM))
-        .withRow(RES_ID3, rowFromCoding(CODING_LARGE))
-        .withRow(RES_ID4, rowFromCoding(CODING_OTHER1)).withRow(RES_ID5, null)
-        .withRow(RES_ID1, rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID2, rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID3, rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID4, rowFromCoding(CODING_OTHER2)).buildWithStructValue("789wxyz");
-    inputExpression.setSingular(false);
-
-
+  private static ParsedExpression createCodingArg() {
     final ExpressionBuilder argExpressionBuilder =
         new ComplexExpressionBuilder(FHIRDefinedType.CODING)
             .withColumn("123wxyz_id", DataTypes.StringType)
@@ -150,39 +133,65 @@ public class SubsumesFunctionTest {
     });
 
     ParsedExpression argumentExpression = argExpressionBuilder.buildWithStructValue("123wxyz");
+    return argumentExpression;
+  }
 
+  private ParsedExpressionAssert assertCallSuccess(Function function,
+      ParsedExpression inputExpression, ParsedExpression argumentExpression) {
+    // Prepare the inputs to the function.
+    ExpressionParserContext parserContext = new ExpressionParserContext();
+    parserContext.setTerminologyClient(terminologyClient);
+
+    FunctionInput functionInput = new FunctionInput();
+    // TODO: change to some random string - does not really matter here what it is
+    String inputFhirPath = "subsumes(" + TEST_SYSTEM + "|" + "MEDIUM" + ")";
+    functionInput.setExpression(inputFhirPath);
+    functionInput.setContext(parserContext);
+    functionInput.setInput(inputExpression);
+    functionInput.getArguments().add(argumentExpression);
+
+    ParsedExpression result = function.invoke(functionInput);
+    return assertThat(result).isSelection().isOfBooleanType().isSingular()
+        .isResultFor(functionInput);
+  }
+
+  private void assertSubsumesSuccess(ParsedExpression inputExpression,
+      ParsedExpression argumentExpression) {
     assertCallSuccess(new SubsumesFunction(), inputExpression, argumentExpression).selectResult()
         .hasRows(allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID3)));
+  }
 
-    assertCallSuccess(new SubsumesFunction(true), inputExpression, argumentExpression)
-        .selectResult().hasRows(allFalse().changeValues(true, Arrays.asList(RES_ID1, RES_ID2)));
+  private void assertSubsumedBySuccess(ParsedExpression inputExpression,
+      ParsedExpression argumentExpression) {
+    assertCallSuccess(new SubsumesFunction(true), inputExpression, argumentExpression).selectResult()
+        .hasRows(allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID1)));
   }
 
   @Test
-  public void testSubsumesCodeableConceptWithLiteralCorrectly() throws Exception {
-    ParsedExpression inputExpression = new ComplexExpressionBuilder(FHIRDefinedType.CODEABLECONCEPT)
-        .withColumn("789wxyz_id", DataTypes.StringType)
-        .withStructTypeColumns(codeableConceptStructType())
-        .withRow(RES_ID1, codeableConceptRowFromCoding(CODING_SMALL))
-        .withRow(RES_ID2, codeableConceptRowFromCoding(CODING_MEDIUM))
-        .withRow(RES_ID3, codeableConceptRowFromCoding(CODING_LARGE))
-        .withRow(RES_ID4, codeableConceptRowFromCoding(CODING_OTHER1)).withRow(RES_ID5, null)
-        .withRow(RES_ID1, codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID2, codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID3, codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID4, codeableConceptRowFromCoding(CODING_OTHER2))
-        .buildWithStructValue("789wxyz");
-    inputExpression.setSingular(false);
-
-    ParsedExpression argumentExpression = PrimitiveExpressionBuilder.literalCoding(CODING_MEDIUM);
-
-    assertCallSuccess(new SubsumesFunction(), inputExpression, argumentExpression).selectResult()
-        .hasRows(allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID3)));
-
-    assertCallSuccess(new SubsumesFunction(true), inputExpression, argumentExpression)
-        .selectResult().hasRows(allFalse().changeValues(true, Arrays.asList(RES_ID1, RES_ID2)));
+  public void testSubsumesCodingWithLiteralCorrectly() throws Exception {
+    assertSubsumesSuccess(createCodingInput(), createLiteralArg());
   }
 
+  @Test
+  public void testSubsumesCodeableConceptWithCodingCorrectly() throws Exception {
+    assertSubsumesSuccess(createCodeableConceptInput(), createCodingArg());
+  }
+
+  
+  @Test
+  public void testSubsumedByCodingWithCodeableConceptCorrectly() throws Exception {
+      assertSubsumedBySuccess(createCodingInput(), createLiteralArg());
+  }
+
+  
+  @Test
+  public void testSubsumedByListeralWithCodingtCorrectly() throws Exception {
+    // TODO: whiy is this passing?
+    // call subsumes but expect subsumedByResult
+    assertSubsumedBySuccess(createLiteralArg(), createCodingInput());
+  }
+
+  
   // @Test
   // public void throwsErrorIfInputTypeIsUnsupported() {
   // ParsedExpression input = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,

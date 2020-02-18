@@ -9,6 +9,7 @@ import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.r4.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import au.csiro.pathling.encoding.Mapping;
 
 public interface ConceptMapFixtures {
@@ -39,6 +40,7 @@ public interface ConceptMapFixtures {
         sourceElement.setCode(m.getFrom().getCode());
         TargetElementComponent targetElemnt = sourceElement.addTarget();
         targetElemnt.setCode(m.getTo().getCode());
+        targetElemnt.setEquivalence(ConceptMapEquivalence.SUBSUMES);
       });
     });
     return result;
