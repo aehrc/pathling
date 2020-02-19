@@ -29,6 +29,7 @@ import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.ComplexExpressionBuilder;
+import au.csiro.pathling.test.DatasetAssert;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ExpressionBuilder;
 import au.csiro.pathling.test.ParsedExpressionAssert;
@@ -68,10 +69,6 @@ public class SubsumesFunctionTest {
 
   public static final List<String> ALL_RES_IDS =
       Arrays.asList(RES_ID1, RES_ID2, RES_ID3, RES_ID4, RES_ID5);
-
-  private static DatasetBuilder allFalse() {
-    return new DatasetBuilder().withIdsAndValue(false, ALL_RES_IDS);
-  }
 
   private static Row codeableConceptRowFromCoding(Coding coding) {
     return rowFromCodeableConcept(new CodeableConcept(coding).addCoding(CODING_OTHER4));
@@ -136,6 +133,18 @@ public class SubsumesFunctionTest {
     return argumentExpression;
   }
 
+  private static DatasetBuilder allFalse() {
+    return new DatasetBuilder().withIdsAndValue(false, ALL_RES_IDS);
+  }
+
+  private static DatasetBuilder expectedSubsumes() {
+    return allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID3));
+  }
+
+  private static DatasetBuilder expectedSubsumedBy() {
+    return allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID1));
+  }
+
   private ParsedExpressionAssert assertCallSuccess(Function function,
       ParsedExpression inputExpression, ParsedExpression argumentExpression) {
     // Prepare the inputs to the function.
@@ -155,43 +164,41 @@ public class SubsumesFunctionTest {
         .isResultFor(functionInput);
   }
 
-  private void assertSubsumesSuccess(ParsedExpression inputExpression,
+  private DatasetAssert assertSubsumesSuccess(ParsedExpression inputExpression,
       ParsedExpression argumentExpression) {
-    assertCallSuccess(new SubsumesFunction(), inputExpression, argumentExpression).selectResult()
-        .hasRows(allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID3)));
+    return assertCallSuccess(new SubsumesFunction(), inputExpression, argumentExpression)
+        .selectResult();
   }
 
-  private void assertSubsumedBySuccess(ParsedExpression inputExpression,
+  private DatasetAssert assertSubsumedBySuccess(ParsedExpression inputExpression,
       ParsedExpression argumentExpression) {
-    assertCallSuccess(new SubsumesFunction(true), inputExpression, argumentExpression).selectResult()
-        .hasRows(allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID1)));
+    return assertCallSuccess(new SubsumesFunction(true), inputExpression, argumentExpression)
+        .selectResult();
   }
 
   @Test
   public void testSubsumesCodingWithLiteralCorrectly() throws Exception {
-    assertSubsumesSuccess(createCodingInput(), createLiteralArg());
+    assertSubsumesSuccess(createCodingInput(), createLiteralArg()).hasRows(expectedSubsumes());
   }
 
   @Test
   public void testSubsumesCodeableConceptWithCodingCorrectly() throws Exception {
-    assertSubsumesSuccess(createCodeableConceptInput(), createCodingArg());
+    assertSubsumesSuccess(createCodeableConceptInput(), createCodingArg())
+        .hasRows(expectedSubsumes());
   }
 
-  
   @Test
   public void testSubsumedByCodingWithCodeableConceptCorrectly() throws Exception {
-      assertSubsumedBySuccess(createCodingInput(), createLiteralArg());
+    assertSubsumedBySuccess(createCodingInput(), createLiteralArg()).hasRows(expectedSubsumedBy());
   }
 
-  
   @Test
   public void testSubsumedByListeralWithCodingtCorrectly() throws Exception {
-    // TODO: whiy is this passing?
-    // call subsumes but expect subsumedByResult
-    assertSubsumedBySuccess(createLiteralArg(), createCodingInput());
+    // call subsumedBy but expect subsumes reuslts
+    // because input is switched with argument
+    assertSubsumedBySuccess(createLiteralArg(), createCodingInput()).hasRows(expectedSubsumes());
   }
 
-  
   // @Test
   // public void throwsErrorIfInputTypeIsUnsupported() {
   // ParsedExpression input = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
