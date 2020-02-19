@@ -19,5 +19,9 @@ public class ComplexExpressionBuilder extends ExpressionBuilder {
       expression.setFhirPathType(FhirPathType.CODING);
     }
   }
+  
+  public static ComplexExpressionBuilder of(FHIRDefinedType complexType) {
+    return new ComplexExpressionBuilder(complexType);
+  }
 
 }

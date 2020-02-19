@@ -327,12 +327,12 @@ public class SubsumesFunction implements Function {
 
     ParsedExpression inputExpression = input.getInput();
     ParsedExpression argExpression = input.getArguments().get(0);
-    validateExpressionType(inputExpression, "Input");
-    validateExpressionType(argExpression, "Argument");
+    validateExpressionType(inputExpression, "input");
+    validateExpressionType(argExpression, "argument");
     // at least one expression must not be a literal
     if (inputExpression.isLiteral() && argExpression.isLiteral()) {
       throw new InvalidRequestException(
-          "Input and argument cannot be both literals for " + functionName + " function");
+          "Input and argument cannot be both literals for " + functionName + " function: " + input.getExpression());
     }
     // if both are not literals than they must be based on the same resource
     // otherwise the literal will inherit the resource from the non literal
@@ -349,8 +349,8 @@ public class SubsumesFunction implements Function {
     FHIRDefinedType typeCode = inputResult.getFhirType();
     if (!FHIRDefinedType.CODING.equals(typeCode)
         && !FHIRDefinedType.CODEABLECONCEPT.equals(typeCode)) {
-      throw new InvalidRequestException(expressionRole + " to " + functionName
-          + " function must be Coding or CodeableConcept: " + inputResult.getFhirPath());
+      throw new InvalidRequestException(functionName 
+          + " function accepts " + expressionRole + " of type Coding or CodeableConcept: " + inputResult.getFhirPath());
     }
   }
 }

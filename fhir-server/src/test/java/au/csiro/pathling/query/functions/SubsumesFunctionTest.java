@@ -31,7 +31,6 @@ import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.ComplexExpressionBuilder;
 import au.csiro.pathling.test.DatasetAssert;
 import au.csiro.pathling.test.DatasetBuilder;
-import au.csiro.pathling.test.ExpressionBuilder;
 import au.csiro.pathling.test.ParsedExpressionAssert;
 import au.csiro.pathling.test.PrimitiveExpressionBuilder;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
@@ -71,7 +70,11 @@ public class SubsumesFunctionTest {
       Arrays.asList(RES_ID1, RES_ID2, RES_ID3, RES_ID4, RES_ID5);
 
   private static Row codeableConceptRowFromCoding(Coding coding) {
-    return rowFromCodeableConcept(new CodeableConcept(coding).addCoding(CODING_OTHER4));
+    return codeableConceptRowFromCoding(coding, CODING_OTHER4);
+  }
+
+  private static Row codeableConceptRowFromCoding(Coding coding, Coding otherCoding) {
+    return rowFromCodeableConcept(new CodeableConcept(coding).addCoding(otherCoding));
   }
 
   @Before
@@ -119,22 +122,35 @@ public class SubsumesFunctionTest {
   }
 
   private static ParsedExpression createCodingArg() {
-    final ExpressionBuilder argExpressionBuilder =
-        new ComplexExpressionBuilder(FHIRDefinedType.CODING)
-            .withColumn("123wxyz_id", DataTypes.StringType)
-            .withStructTypeColumns(codingStructType());
+    return ComplexExpressionBuilder.of(FHIRDefinedType.CODING)
+        .withColumn("123wxyz_id", DataTypes.StringType).withStructTypeColumns(codingStructType())
+        .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_MEDIUM))
+        .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_OTHER3))
+        .buildWithStructValue("123wxyz");
+  }
 
-    ALL_RES_IDS.forEach(id -> {
-      argExpressionBuilder.withRow(id, rowFromCoding(CODING_MEDIUM)).withRow(id,
-          rowFromCoding(CODING_OTHER3));
-    });
+  private static ParsedExpression createCodeableConceptArg() {
+    return ComplexExpressionBuilder.of(FHIRDefinedType.CODEABLECONCEPT)
+        .withColumn("123wxyz_id", DataTypes.StringType)
+        .withStructTypeColumns(codeableConceptStructType())
+        .withIdValueRows(ALL_RES_IDS, id -> codeableConceptRowFromCoding(CODING_MEDIUM))
+        .withIdValueRows(ALL_RES_IDS,
+            id -> codeableConceptRowFromCoding(CODING_OTHER3, CODING_OTHER5))
+        .buildWithStructValue("123wxyz");
+  }
 
-    ParsedExpression argumentExpression = argExpressionBuilder.buildWithStructValue("123wxyz");
-    return argumentExpression;
+  private static ParsedExpression createNullCodingArg() {
+    return ComplexExpressionBuilder.of(FHIRDefinedType.CODING)
+        .withColumn("123wxyz_id", DataTypes.StringType).withStructTypeColumns(codingStructType())
+        .withIdValueRows(ALL_RES_IDS, id -> null).buildWithStructValue("123wxyz");
   }
 
   private static DatasetBuilder allFalse() {
     return new DatasetBuilder().withIdsAndValue(false, ALL_RES_IDS);
+  }
+
+  private static DatasetBuilder allTrue() {
+    return new DatasetBuilder().withIdsAndValue(true, ALL_RES_IDS);
   }
 
   private static DatasetBuilder expectedSubsumes() {
@@ -176,6 +192,10 @@ public class SubsumesFunctionTest {
         .selectResult();
   }
 
+  //
+  // Test subsumes on selected pairs of argument types
+  // (Coding, CodingLiteral) && (CodeableConcept, Coding) && (Literal, CodeableConcept)
+  //
   @Test
   public void testSubsumesCodingWithLiteralCorrectly() throws Exception {
     assertSubsumesSuccess(createCodingInput(), createLiteralArg()).hasRows(expectedSubsumes());
@@ -188,51 +208,111 @@ public class SubsumesFunctionTest {
   }
 
   @Test
+  public void testSubsumesLiteralWithCodeableConcepCorrectly() throws Exception {
+    // call subsumes but expect subsumedBy result
+    // because input is switched with argument
+    assertSubsumesSuccess(createLiteralArg(), createCodeableConceptInput())
+        .hasRows(expectedSubsumedBy());
+  }
+  //
+  // Test subsumedBy on selected pairs of argument types
+  // (Coding, CodeableConcept) && (CodeableConcept, Literal) && (Literal, Coding)
+  //
+
+  @Test
   public void testSubsumedByCodingWithCodeableConceptCorrectly() throws Exception {
-    assertSubsumedBySuccess(createCodingInput(), createLiteralArg()).hasRows(expectedSubsumedBy());
+    assertSubsumedBySuccess(createCodingInput(), createCodeableConceptArg())
+        .hasRows(expectedSubsumedBy());
   }
 
   @Test
-  public void testSubsumedByListeralWithCodingtCorrectly() throws Exception {
-    // call subsumedBy but expect subsumes reuslts
+  public void testSubsumedByCodeableConceptWithLiteralCorrectly() throws Exception {
+    assertSubsumedBySuccess(createCodeableConceptInput(), createLiteralArg())
+        .hasRows(expectedSubsumedBy());
+  }
+
+  @Test
+  public void testSubsumedByLiteralWithCodingtCorrectly() throws Exception {
+    // call subsumedBy but expect subsumes result
     // because input is switched with argument
     assertSubsumedBySuccess(createLiteralArg(), createCodingInput()).hasRows(expectedSubsumes());
   }
 
-  // @Test
-  // public void throwsErrorIfInputTypeIsUnsupported() {
-  // ParsedExpression input = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
-  // FhirPathType.STRING)
-  // .build();
-  // input.setFhirPath("onsetString");
-  // ParsedExpression argument = PrimitiveExpressionBuilder.literalString(MY_VALUE_SET_URL);
   //
-  // FunctionInput memberOfInput = new FunctionInput();
-  // memberOfInput.setInput(input);
-  // memberOfInput.getArguments().add(argument);
+  // Test agains nulls
   //
-  // MemberOfFunction memberOfFunction = new MemberOfFunction();
-  // assertThatExceptionOfType(InvalidRequestException.class)
-  // .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
-  // .withMessage("Input to memberOf function is of unsupported type: onsetString");
-  // }
+
+  @Test
+  public void testAllFalseWhenSubsumesNullCoding() throws Exception {
+    // call subsumedBy but expect subsumes result
+    // because input is switched with argument
+    assertSubsumesSuccess(createCodingInput(), createNullCodingArg()).hasRows(allFalse());
+    assertSubsumedBySuccess(createCodeableConceptInput(), createNullCodingArg())
+        .hasRows(allFalse());
+  }
+
+
+
+  @Test
+  public void testAllNonNullTrueWhenSubsumesItself() throws Exception {
+    assertSubsumesSuccess(createCodingInput(), createCodeableConceptInput())
+        .hasRows(allTrue().changeValue(RES_ID5, false));
+    assertSubsumedBySuccess(createCodingInput(), createCodeableConceptInput())
+        .hasRows(allTrue().changeValue(RES_ID5, false));
+  }
+
   //
-  // @Test
-  // public void throwsErrorIfArgumentIsNotString() {
-  // ParsedExpression input = new ComplexExpressionBuilder(FHIRDefinedType.CODEABLECONCEPT)
-  // .build();
-  // ParsedExpression argument = PrimitiveExpressionBuilder.literalInteger(4);
+  // Test for various validation errors
   //
-  // FunctionInput memberOfInput = new FunctionInput();
-  // memberOfInput.setInput(input);
-  // memberOfInput.getArguments().add(argument);
-  // memberOfInput.setExpression("memberOf(4)");
-  //
-  // MemberOfFunction memberOfFunction = new MemberOfFunction();
-  // assertThatExceptionOfType(InvalidRequestException.class)
-  // .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
-  // .withMessage("memberOf function accepts one argument of type String: memberOf(4)");
-  // }
+
+  @Test
+  public void throwsErrorIfInputTypeIsUnsupprted() {
+    ParsedExpression input = PrimitiveExpressionBuilder.literalString("stringLiteral");
+    ParsedExpression argument =
+        new ComplexExpressionBuilder(FHIRDefinedType.CODEABLECONCEPT).build();
+
+    FunctionInput functionInput = new FunctionInput();
+    functionInput.setInput(input);
+    functionInput.getArguments().add(argument);
+    functionInput.setExpression("'stringLiteral'.subsumes(Some.coding)");
+
+    SubsumesFunction subsumesFunction = new SubsumesFunction(true);
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> subsumesFunction.invoke(functionInput)).withMessage(
+            "subsumedBy function accepts input of type Coding or CodeableConcept: 'stringLiteral'");
+  }
+
+  @Test
+  public void throwsErrorIfArgumentTypeIsUnsupprted() {
+    ParsedExpression input = new ComplexExpressionBuilder(FHIRDefinedType.CODEABLECONCEPT).build();
+    ParsedExpression argument = PrimitiveExpressionBuilder.literalString("str");
+
+    FunctionInput functionInput = new FunctionInput();
+    functionInput.setInput(input);
+    functionInput.getArguments().add(argument);
+    functionInput.setExpression("subsumes('str')");
+
+    SubsumesFunction subsumesFunction = new SubsumesFunction();
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> subsumesFunction.invoke(functionInput))
+        .withMessage("subsumes function accepts argument of type Coding or CodeableConcept: 'str'");
+  }
+
+  @Test
+  public void throwsErrorIfBothArgumentsAreLiterals() {
+    ParsedExpression input = PrimitiveExpressionBuilder.literalCoding(new Coding());
+    ParsedExpression argument = PrimitiveExpressionBuilder.literalCoding(new Coding());
+
+    FunctionInput functionInput = new FunctionInput();
+    functionInput.setInput(input);
+    functionInput.getArguments().add(argument);
+    functionInput.setExpression("subsumedBy(uuid:1|a)");
+
+    SubsumesFunction subsumesFunction = new SubsumesFunction(true);
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> subsumesFunction.invoke(functionInput)).withMessage(
+            "Input and argument cannot be both literals for subsumedBy function: subsumedBy(uuid:1|a)");
+  }
 
   @Test
   public void throwsErrorIfMoreThanOneArgument() {
