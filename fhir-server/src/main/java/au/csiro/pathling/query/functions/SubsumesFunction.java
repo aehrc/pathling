@@ -41,7 +41,15 @@ import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 
 
-
+/**
+ * Represents a relation defined by a transitive closure table The closure table should have the
+ * schema compliant with the Mapping bean. The relation between `from` and `to` is defined as `from`
+ * -- relation --> `to` E.g. if the relation is subsumes: `from` -- subsumes --> `to` means that
+ * `from` is more general.
+ * 
+ * @author szu004
+ *
+ */
 class Relation {
 
   final Dataset<Mapping> mappingTable;
@@ -80,7 +88,8 @@ class Relation {
 
 
   /**
-   * Creates equivalence relation from given codes
+   * Creates equivalence relation from given codes, that one where each code is relation with
+   * itself.
    * 
    * @param codes
    */
@@ -101,6 +110,12 @@ class Relation {
 }
 
 
+/**
+ * Helper class to encapsulate creation of subsumes Relation for a set of Codings.
+ * 
+ * @author szu004
+ *
+ */
 class ClosureService {
   private static final Logger logger = LoggerFactory.getLogger(ClosureService.class);
 
@@ -112,7 +127,7 @@ class ClosureService {
     this.terminologyClient = terminologyClient;
   }
 
-  public Relation getSubsumesClosure(Dataset<SystemAndCode> codingsDataset) {
+  public Relation getSubumesRelation(Dataset<SystemAndCode> codingsDataset) {
 
     Map<String, List<SystemAndCode>> codingsBySystem = codingsDataset.collectAsList().stream()
         .collect(Collectors.groupingBy(SystemAndCode::getSystem));
@@ -135,14 +150,10 @@ class ClosureService {
     return result;
   }
 
-
   /**
    * According to the specification the only valid equivalences in the response are: equal,
    * specializes, subsumes and unmatched
    * 
-   * @param source
-   * @param target
-   * @param equivalence
    * @return Mapping for subsumes relation i.e from -- subsumes --> to
    */
   public static Mapping equivalenceToSubsumesMapping(SystemAndCode source, SystemAndCode target,
@@ -203,11 +214,11 @@ public class SubsumesFunction implements Function {
 
   private static final Logger logger = LoggerFactory.getLogger(SubsumesFunction.class);
 
-  private static void debugDataset(Dataset<?> dataset, String msg) {
-    System.out.println(msg);
-    dataset.printSchema();
-    dataset.show();
-  }
+//  private static void debugDataset(Dataset<?> dataset, String msg) {
+//    System.out.println(msg);
+//    dataset.printSchema();
+//    dataset.show();
+//  }
 
   private boolean inverted = false;
   private String functionName = "subsumes";
@@ -227,18 +238,13 @@ public class SubsumesFunction implements Function {
 
     validateInput(input);
 
-    // the transitive closure table though can be build globally -
-    // this may however produce a very large transitive closure table that includes potentially
-    // irrelevant entries
-
-    // let's to do it this way however first
-    // So the first step is to depending on the type of the input create an ID based set of
-    // system/id objects
-
-    // Find the context expression (the non literal one)
-
     ParsedExpression inputExpression = input.getInput();
     ParsedExpression argExpression = input.getArguments().get(0);
+
+    //
+    // contexExpression is a non literal expression that can be used to provide id column
+    // for a liter expression.
+    //
     ParsedExpression contextExpression = !inputExpression.isLiteral() ? inputExpression
         : (!argExpression.isLiteral() ? argExpression : null);
     assert (contextExpression != null) : "Context expression is not null";
@@ -249,18 +255,11 @@ public class SubsumesFunction implements Function {
     Dataset<Row> argSystemAndCodeDataset =
         toSystemAndCodeDataset(normalizeToCoding(argExpression, parserContext), contextExpression);
 
-    debugDataset(inputSystemAndCodeDataset, "Input SystemAndCode");
-    debugDataset(argSystemAndCodeDataset, "Argument SystemAndCode");
-
     String seed = (inputExpression.getFhirPath() + inputExpression.getFhirPath());
     Relation relation = createTransitiveClosureTable(seed, input.getContext(),
         inputSystemAndCodeDataset, argSystemAndCodeDataset);
 
-    debugDataset(relation.mappingTable, " RelationTable");
-
     Dataset<Row> resultDataset = relation.apply(inputSystemAndCodeDataset, argSystemAndCodeDataset);
-    debugDataset(resultDataset, "Result dataset:");
-
     // Construct the final result
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
@@ -282,7 +281,7 @@ public class SubsumesFunction implements Function {
     ClosureService closureService =
         new ClosureService(seed, expressionParserContext.getTerminologyClient());
     Relation subsumesRelation = closureService
-        .getSubsumesClosure(getCodes(inputSystemAndCodeDataset.union(argSystemAndCodeDataset)));
+        .getSubumesRelation(getCodes(inputSystemAndCodeDataset.union(argSystemAndCodeDataset)));
 
     return (!inverted) ? subsumesRelation : subsumesRelation.invert();
   }
