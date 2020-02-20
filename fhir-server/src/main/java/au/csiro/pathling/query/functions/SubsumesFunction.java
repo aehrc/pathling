@@ -5,8 +5,6 @@
 package au.csiro.pathling.query.functions;
 
 import static au.csiro.pathling.utilities.Strings.md5Short;
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.explode_outer;
 import static org.apache.spark.sql.functions.isnull;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.not;
@@ -35,6 +33,8 @@ import org.slf4j.LoggerFactory;
 import au.csiro.pathling.encoding.Mapping;
 import au.csiro.pathling.encoding.SystemAndCode;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.query.operators.PathTraversalInput;
+import au.csiro.pathling.query.operators.PathTraversalOperator;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
@@ -243,9 +243,11 @@ public class SubsumesFunction implements Function {
         : (!argExpression.isLiteral() ? argExpression : null);
     assert (contextExpression != null) : "Context expression is not null";
 
-    Dataset<Row> inputSystemAndCodeDataset =
-        toSystemAndCodeDataset(inputExpression, contextExpression);
-    Dataset<Row> argSystemAndCodeDataset = toSystemAndCodeDataset(argExpression, contextExpression);
+    ExpressionParserContext parserContext = input.getContext();
+    Dataset<Row> inputSystemAndCodeDataset = toSystemAndCodeDataset(
+        normalizeToCoding(inputExpression, parserContext), contextExpression);
+    Dataset<Row> argSystemAndCodeDataset =
+        toSystemAndCodeDataset(normalizeToCoding(argExpression, parserContext), contextExpression);
 
     debugDataset(inputSystemAndCodeDataset, "Input SystemAndCode");
     debugDataset(argSystemAndCodeDataset, "Argument SystemAndCode");
@@ -294,44 +296,44 @@ public class SubsumesFunction implements Function {
         .as(Encoders.bean(SystemAndCode.class));
   }
 
+
+  private ParsedExpression normalizeToCoding(ParsedExpression expression,
+      ExpressionParserContext parserContext) {
+
+    FHIRDefinedType expressionType = expression.getFhirType();
+    // If this is a CodeableConcept, we need to traverse to the `coding` member first.
+    if (FHIRDefinedType.CODING.equals(expressionType)) {
+      return expression;
+    } else if (FHIRDefinedType.CODEABLECONCEPT.equals(expressionType)) {
+      PathTraversalInput pathTraversalInput = new PathTraversalInput();
+      pathTraversalInput.setContext(parserContext);
+      pathTraversalInput.setLeft(expression);
+      pathTraversalInput.setExpression("coding");
+      pathTraversalInput.setRight("coding");
+      ParsedExpression codingExpresion = new PathTraversalOperator().invoke(pathTraversalInput);
+      codingExpresion.setFhirPath(expression.getFhirPath() + ".coding");
+      return codingExpresion;
+    } else {
+      throw new IllegalArgumentException("Cannot extract codings from element of type: "
+          + expressionType + "in expression: " + expression);
+    }
+  }
+
   @Nonnull
   private Dataset<Row> toSystemAndCodeDataset(ParsedExpression inputExpression,
       ParsedExpression contextExpression) {
 
     FHIRDefinedType inputType = inputExpression.getFhirType();
-    Dataset<Row> inputDataset = inputExpression.getDataset();
-    Dataset<Row> codingDataset = null;
+    assert FHIRDefinedType.CODING.equals(inputType) : "Expression of CODING type expected";
 
-    // TODO: RECONSIDER
-    // Perhaps the travelsal should be done with the follwing code
-    // If this is a CodeableConcept, we need to traverse to the `coding` member first.
-    // PathTraversalInput pathTraversalInput = new PathTraversalInput();
-    // pathTraversalInput.setContext(input.getContext());
-    // pathTraversalInput.setLeft(argument);
-    // pathTraversalInput.setExpression("coding");
-    // pathTraversalInput.setRight("coding");
-    // argument = new PathTraversalOperator().invoke(pathTraversalInput);
-    // argument.setFhirPath(argumentFhirPath + ".coding");
-    // return argument;
 
-    if (FHIRDefinedType.CODING.equals(inputType)) {
-      // do the literal magic here
-      ParsedExpression idExpression =
-          (!inputExpression.isLiteral()) ? inputExpression : contextExpression;
-      codingDataset = idExpression.getDataset().select(idExpression.getIdColumn().alias("id"),
-          inputExpression.getLiteralOrValueColumn().getField("system").alias("system"),
-          inputExpression.getLiteralOrValueColumn().getField("code").alias("code"));
-    } else if (FHIRDefinedType.CODEABLECONCEPT.equals(inputType)) {
-      codingDataset = inputDataset
-          .select(inputExpression.getIdColumn(),
-              explode_outer(inputExpression.getValueColumn().getField("coding")).alias("coding"))
-          .select(inputExpression.getIdColumn().alias("id"),
-              col("coding").getField("system").alias("system"),
-              col("coding").getField("code").alias("code"));
-    } else {
-      throw new IllegalArgumentException("Cannot extract codings from element of type: " + inputType
-          + "in expression: " + inputExpression);
-    }
+    // do the literal magic here
+    ParsedExpression idExpression =
+        (!inputExpression.isLiteral()) ? inputExpression : contextExpression;
+    Dataset<Row> codingDataset =
+        idExpression.getDataset().select(idExpression.getIdColumn().alias("id"),
+            inputExpression.getLiteralOrValueColumn().getField("system").alias("system"),
+            inputExpression.getLiteralOrValueColumn().getField("code").alias("code"));
     // TODO: add filtering on non empty system and code
     // Note: the struct needs to be (code, system) as this is the order in which SystemAndCode is
     // encoded.

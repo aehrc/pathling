@@ -20,11 +20,12 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import au.csiro.pathling.encoding.Mapping;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
@@ -57,15 +58,16 @@ public class SubsumesFunctionTest {
   private static final Coding CODING_OTHER4 = new Coding(TEST_SYSTEM, "OTHER4", null);
   private static final Coding CODING_OTHER5 = new Coding(TEST_SYSTEM, "OTHER5", null);
 
-  private static final String RES_ID1 = "Encounter/xyz1";
-  private static final String RES_ID2 = "Encounter/xyz2";
-  private static final String RES_ID3 = "Encounter/xyz3";
-  private static final String RES_ID4 = "Encounter/xyz4";
-  private static final String RES_ID5 = "Encounter/xyz5";
+  private static final String RES_ID1 = "Condition/xyz1";
+  private static final String RES_ID2 = "Condition/xyz2";
+  private static final String RES_ID3 = "Condition/xyz3";
+  private static final String RES_ID4 = "Condition/xyz4";
+  private static final String RES_ID5 = "Condition/xyz5";
 
   // coding_large -- subsumes --> coding_medium --> subsumes --> coding_small
-  private static final ConceptMap MAP_LARGE_MEDIUM_SMALL = ConceptMapFixtures.createConceptMap(
-      ConceptMapEntry.subsumesOf(CODING_MEDIUM,CODING_LARGE), ConceptMapEntry.specializesOf(CODING_MEDIUM, CODING_SMALL));
+  private static final ConceptMap MAP_LARGE_MEDIUM_SMALL =
+      ConceptMapFixtures.createConceptMap(ConceptMapEntry.subsumesOf(CODING_MEDIUM, CODING_LARGE),
+          ConceptMapEntry.specializesOf(CODING_MEDIUM, CODING_SMALL));
 
   public static final List<String> ALL_RES_IDS =
       Arrays.asList(RES_ID1, RES_ID2, RES_ID3, RES_ID4, RES_ID5);
@@ -101,6 +103,7 @@ public class SubsumesFunctionTest {
 
   private static ParsedExpression createCodeableConceptInput() {
     ParsedExpression inputExpression = new ComplexExpressionBuilder(FHIRDefinedType.CODEABLECONCEPT)
+        .withDefinitionFromResource(Condition.class, "code")
         .withColumn("789wxyz_id", DataTypes.StringType)
         .withStructTypeColumns(codeableConceptStructType())
         .withRow(RES_ID1, codeableConceptRowFromCoding(CODING_SMALL))
@@ -132,6 +135,7 @@ public class SubsumesFunctionTest {
 
   private static ParsedExpression createCodeableConceptArg() {
     return ComplexExpressionBuilder.of(FHIRDefinedType.CODEABLECONCEPT)
+        .withDefinitionFromResource(Condition.class, "code")
         .withColumn("123wxyz_id", DataTypes.StringType)
         .withStructTypeColumns(codeableConceptStructType())
         .withIdValueRows(ALL_RES_IDS, id -> codeableConceptRowFromCoding(CODING_MEDIUM))
@@ -169,7 +173,8 @@ public class SubsumesFunctionTest {
     parserContext.setTerminologyClient(terminologyClient);
 
     FunctionInput functionInput = new FunctionInput();
-    String inputFhirPath = "#"+inputExpression.hashCode() + ".subsumes(" + "#"+argumentExpression.hashCode() + ")";
+    String inputFhirPath =
+        "#" + inputExpression.hashCode() + ".subsumes(" + "#" + argumentExpression.hashCode() + ")";
     functionInput.setExpression(inputFhirPath);
     functionInput.setContext(parserContext);
     functionInput.setInput(inputExpression);
