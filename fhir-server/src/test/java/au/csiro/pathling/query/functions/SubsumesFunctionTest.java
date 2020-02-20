@@ -33,6 +33,7 @@ import au.csiro.pathling.test.DatasetAssert;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ParsedExpressionAssert;
 import au.csiro.pathling.test.PrimitiveExpressionBuilder;
+import au.csiro.pathling.test.fixtures.ConceptMapEntry;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 
@@ -64,7 +65,7 @@ public class SubsumesFunctionTest {
 
   // coding_large -- subsumes --> coding_medium --> subsumes --> coding_small
   private static final ConceptMap MAP_LARGE_MEDIUM_SMALL = ConceptMapFixtures.createConceptMap(
-      Mapping.of(CODING_LARGE, CODING_MEDIUM), Mapping.of(CODING_MEDIUM, CODING_SMALL));
+      ConceptMapEntry.subsumesOf(CODING_MEDIUM,CODING_LARGE), ConceptMapEntry.specializesOf(CODING_MEDIUM, CODING_SMALL));
 
   public static final List<String> ALL_RES_IDS =
       Arrays.asList(RES_ID1, RES_ID2, RES_ID3, RES_ID4, RES_ID5);
@@ -168,8 +169,7 @@ public class SubsumesFunctionTest {
     parserContext.setTerminologyClient(terminologyClient);
 
     FunctionInput functionInput = new FunctionInput();
-    // TODO: change to some random string - does not really matter here what it is
-    String inputFhirPath = "subsumes(" + TEST_SYSTEM + "|" + "MEDIUM" + ")";
+    String inputFhirPath = "#"+inputExpression.hashCode() + ".subsumes(" + "#"+argumentExpression.hashCode() + ")";
     functionInput.setExpression(inputFhirPath);
     functionInput.setContext(parserContext);
     functionInput.setInput(inputExpression);

@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -28,6 +27,7 @@ import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.r4.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
 import org.slf4j.Logger;
@@ -46,25 +46,25 @@ class Relation {
 
   final Dataset<Mapping> mappingTable;
   final boolean inverted;
-  
+
   public Relation(Dataset<Mapping> mappingTable, boolean inverted) {
     this.mappingTable = mappingTable;
     this.inverted = inverted;
   }
-  
+
   public Relation(Dataset<Mapping> mappingTable) {
     this(mappingTable, false);
   }
 
   public Dataset<Row> apply(Dataset<Row> from, Dataset<Row> to) {
-    
-    Column srcCol = !inverted?mappingTable.col("from"):mappingTable.col("to");
-    Column dstCol = !inverted?mappingTable.col("to"):mappingTable.col("from");
-    
+
+    Column srcCol = !inverted ? mappingTable.col("from") : mappingTable.col("to");
+    Column dstCol = !inverted ? mappingTable.col("to") : mappingTable.col("from");
+
     Dataset<Row> joinedDataset =
-        from.join(mappingTable, from.col("coding").equalTo(srcCol), "left_outer")
-            .join(to, to.col("id").equalTo(from.col("id"))
-                .and(to.col("coding").equalTo(dstCol)), "left_outer");
+        from.join(mappingTable, from.col("coding").equalTo(srcCol), "left_outer").join(to,
+            to.col("id").equalTo(from.col("id")).and(to.col("coding").equalTo(dstCol)),
+            "left_outer");
 
     return joinedDataset.groupBy(from.col("id"))
         .agg(max(not(isnull(to.col("id")))).alias("subsumes"));
@@ -77,16 +77,16 @@ class Relation {
   public Relation invert() {
     return new Relation(mappingTable, !inverted);
   }
-  
-  
+
+
   /**
    * Creates equivalence relation from given codes
    * 
    * @param codes
    */
   public static Relation createEquivalence(Dataset<SystemAndCode> codes) {
-    
-    //TODO: Maybe rewrite as select
+
+    // TODO: Maybe rewrite as select
     Dataset<Mapping> mappingDataset = codes.map(new MapFunction<SystemAndCode, Mapping>() {
 
       private static final long serialVersionUID = 1L;
@@ -112,8 +112,7 @@ class ClosureService {
     this.terminologyClient = terminologyClient;
   }
 
-  public Relation getClosure(Dataset<SystemAndCode> codingsDataset) {
-    // need
+  public Relation getSubsumesClosure(Dataset<SystemAndCode> codingsDataset) {
 
     Map<String, List<SystemAndCode>> codingsBySystem = codingsDataset.collectAsList().stream()
         .collect(Collectors.groupingBy(SystemAndCode::getSystem));
@@ -131,34 +130,58 @@ class ClosureService {
       // Execute the closure operation against the terminology server.
       terminologyClient.closure(new StringType(closureName), null, null);
       ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
-      // TODO: try to rewrite as reduce/fold
-      result = result.union(conceptMapToRelation(closure, codingsDataset.sparkSession()));
+      result = result.union(conceptMapToSubsumesRelation(closure, codingsDataset.sparkSession()));
     }
     return result;
   }
 
-  public static Relation conceptMapToRelation(ConceptMap conceptMap, SparkSession spark) {
 
+  /**
+   * According to the specification the only valid equivalences in the response are: equal,
+   * specializes, subsumes and unmatched
+   * 
+   * @param source
+   * @param target
+   * @param equivalence
+   * @return Mapping for subsumes relation i.e from -- subsumes --> to
+   */
+  public static Mapping equivalenceToSubsumesMapping(SystemAndCode source, SystemAndCode target,
+      ConceptMapEquivalence equivalence) {
+    Mapping result = null;
+    switch (equivalence) {
+      case SUBSUMES:
+        result = new Mapping(target, source);
+        break;
+      case SPECIALIZES:
+        result = new Mapping(source, target);
+        break;
+      case EQUAL:
+        result = new Mapping(source, target);
+        break;
+      case UNMATCHED:
+        break;
+      default:
+        logger.warn("Ignoring unexpected equivalence: " + equivalence + " source: " + source
+            + " target: " + target);
+        break;
+    }
+    return result;
+  }
+
+  public static Relation conceptMapToSubsumesRelation(ConceptMap conceptMap, SparkSession spark) {
     List<Mapping> mappings = new ArrayList<Mapping>();
     if (conceptMap.hasGroup()) {
       List<ConceptMapGroupComponent> groups = conceptMap.getGroup();
-      // TODO: check with JOHN
-      // how to handle this
-      if (groups.size() > 1) {
-        logger.warn("Encountered closure response with more than one group");
-      }
-      assert groups.size() <= 1 : "At most one group expected";
-      // logger.warn("Encountered closure response with more than one group");
-      if (groups.size() > 0) {
-        ConceptMapGroupComponent group = groups.get(0);
-        String sourceSystem = group.getSource();
-        String targetSystem = group.getTarget();
+      for (ConceptMapGroupComponent group : groups) {
         List<SourceElementComponent> elements = group.getElement();
         for (SourceElementComponent source : elements) {
           for (TargetElementComponent target : source.getTarget()) {
-            // TODO: handle different direction returned by in eqivalence
-            mappings
-                .add(new Mapping(sourceSystem, source.getCode(), targetSystem, target.getCode()));
+            Mapping subsumesMapping = equivalenceToSubsumesMapping(
+                new SystemAndCode(group.getSource(), source.getCode()),
+                new SystemAndCode(group.getTarget(), target.getCode()), target.getEquivalence());
+            if (subsumesMapping != null) {
+              mappings.add(subsumesMapping);
+            }
           }
         }
       }
@@ -173,6 +196,7 @@ class ClosureService {
  * Codings or CodeableConcepts subsume one or more Codings or CodeableConcepts in the target set.
  *
  * @author John Grimes
+ * @author Piotr Szul
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
  */
 public class SubsumesFunction implements Function {
@@ -255,12 +279,12 @@ public class SubsumesFunction implements Function {
 
     ClosureService closureService =
         new ClosureService(seed, expressionParserContext.getTerminologyClient());
-    Relation subsumesRelation =  closureService
-        .getClosure(getCodes(inputSystemAndCodeDataset.union(argSystemAndCodeDataset)));
-    
-    return (!inverted)? subsumesRelation : subsumesRelation.invert();
+    Relation subsumesRelation = closureService
+        .getSubsumesClosure(getCodes(inputSystemAndCodeDataset.union(argSystemAndCodeDataset)));
+
+    return (!inverted) ? subsumesRelation : subsumesRelation.invert();
   }
-  
+
   @Nonnull
   private Dataset<SystemAndCode> getCodes(Dataset<Row> source) {
     Column systemCol = source.col("coding").getField("system").alias("system");
@@ -269,13 +293,10 @@ public class SubsumesFunction implements Function {
     return codes.where(systemCol.isNotNull().and(codeCol.isNotNull())).distinct()
         .as(Encoders.bean(SystemAndCode.class));
   }
-  
+
   @Nonnull
   private Dataset<Row> toSystemAndCodeDataset(ParsedExpression inputExpression,
       ParsedExpression contextExpression) {
-
-    System.out.println("Converting experession");
-    System.out.println(ToStringBuilder.reflectionToString(inputExpression));
 
     FHIRDefinedType inputType = inputExpression.getFhirType();
     Dataset<Row> inputDataset = inputExpression.getDataset();
@@ -322,7 +343,8 @@ public class SubsumesFunction implements Function {
 
     if (input.getArguments().size() != 1) {
       throw new InvalidRequestException(
-          functionName + " function accepts one argument of type Coding|CodeableConcept: " + input.getExpression());
+          functionName + " function accepts one argument of type Coding|CodeableConcept: "
+              + input.getExpression());
     }
 
     ParsedExpression inputExpression = input.getInput();
@@ -331,8 +353,8 @@ public class SubsumesFunction implements Function {
     validateExpressionType(argExpression, "argument");
     // at least one expression must not be a literal
     if (inputExpression.isLiteral() && argExpression.isLiteral()) {
-      throw new InvalidRequestException(
-          "Input and argument cannot be both literals for " + functionName + " function: " + input.getExpression());
+      throw new InvalidRequestException("Input and argument cannot be both literals for "
+          + functionName + " function: " + input.getExpression());
     }
     // if both are not literals than they must be based on the same resource
     // otherwise the literal will inherit the resource from the non literal
@@ -349,8 +371,8 @@ public class SubsumesFunction implements Function {
     FHIRDefinedType typeCode = inputResult.getFhirType();
     if (!FHIRDefinedType.CODING.equals(typeCode)
         && !FHIRDefinedType.CODEABLECONCEPT.equals(typeCode)) {
-      throw new InvalidRequestException(functionName 
-          + " function accepts " + expressionRole + " of type Coding or CodeableConcept: " + inputResult.getFhirPath());
+      throw new InvalidRequestException(functionName + " function accepts " + expressionRole
+          + " of type Coding or CodeableConcept: " + inputResult.getFhirPath());
     }
   }
 }

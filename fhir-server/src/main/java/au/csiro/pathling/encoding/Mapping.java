@@ -11,12 +11,10 @@ import org.hl7.fhir.r4.model.Coding;
  * Used to represent the results of $translate and $closure operations.
  *
  * @author John Grimes
+ * @author Pior Szul
  */
 public class Mapping implements Serializable {
 
-  /**
-   * 
-   */
   private static final long serialVersionUID = 1L;
 
   private SystemAndCode from;
