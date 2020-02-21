@@ -129,26 +129,20 @@ class ClosureService {
 
   public Relation getSubumesRelation(Dataset<SystemAndCode> codingsDataset) {
 
-    Map<String, List<SystemAndCode>> codingsBySystem = codingsDataset.collectAsList().stream()
-        .collect(Collectors.groupingBy(SystemAndCode::getSystem));
-
-    Relation result = Relation.createEquivalence(codingsDataset);
-
-    for (String codeSystem : codingsBySystem.keySet()) {
-      // Get the codings for this code system.
-      List<Coding> codings = codingsBySystem.get(codeSystem).stream().map(SystemAndCode::toCoding)
-          .collect(Collectors.toList());
-
-      // Create a unique name for the closure table for this code system, based upon the
-      // expressions of the input, argument and the CodeSystem URI.
-      String closureName = md5Short(seed + codeSystem);
-      // Execute the closure operation against the terminology server.
-      terminologyClient.closure(new StringType(closureName), null, null);
-      logger.info("Sending $closure requests to terminology service for codings: " + codings);
-      ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
-      result = result.union(conceptMapToSubsumesRelation(closure, codingsDataset.sparkSession()));
-    }
-    return result;
+    List<SystemAndCode> systemAndCodes = codingsDataset.collectAsList();
+    List<Coding> codings = systemAndCodes.stream().map(SystemAndCode::toCoding)
+        .collect(Collectors.toList());
+    // recreate the systemAndCodes dataset from the list not to execute the query again.
+    Relation result = Relation.createEquivalence(codingsDataset.sparkSession().createDataset(systemAndCodes, Encoders.bean(SystemAndCode.class)));
+    // Create a unique name for the closure table for this code system, based upon the
+    // expressions of the input, argument and the CodeSystem URI.
+    logger.debug("Sending $closure requests to terminology service for codings: " + systemAndCodes);
+    String closureName = md5Short(seed + codings.hashCode());
+    // Execute the closure operation against the terminology server.
+    //TODO: add validatoin checks for the response
+    terminologyClient.closure(new StringType(closureName), null, null);
+    ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
+    return result.union(conceptMapToSubsumesRelation(closure, codingsDataset.sparkSession()));
   }
 
   /**
