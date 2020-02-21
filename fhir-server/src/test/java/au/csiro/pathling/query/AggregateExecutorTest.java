@@ -12,12 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import au.csiro.pathling.TestUtilities;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
-import au.csiro.pathling.query.AggregateRequest.Aggregation;
-import au.csiro.pathling.query.AggregateRequest.Grouping;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -30,6 +24,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.json.JSONException;
@@ -38,6 +33,11 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import au.csiro.pathling.TestUtilities;
+import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.query.AggregateRequest.Aggregation;
+import au.csiro.pathling.query.AggregateRequest.Grouping;
 
 /**
  * @author John Grimes
@@ -393,7 +393,9 @@ public class AggregateExecutorTest {
   @Test
   @Ignore
   /**
-   * TODO: Make mulitple aggreations work without producing cartesian product of values to count (per resource) 
+   * TODO: Make mulitple aggreations work without producing cartesian product of values to count
+   * (per resource)
+   * 
    * @throws IOException
    * @throws JSONException
    */
@@ -454,8 +456,7 @@ public class AggregateExecutorTest {
     // Check the response against an expected response.
     Parameters responseParameters = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
-    checkExpectedJson(actualJson,
-        "responses/AggregateExecutorTest-queryWithWhere.Parameters.json");
+    checkExpectedJson(actualJson, "responses/AggregateExecutorTest-queryWithWhere.Parameters.json");
   }
 
   @Test
@@ -491,6 +492,53 @@ public class AggregateExecutorTest {
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json");
+  }
+
+
+  /**
+   * Patient/121503c8-9564-4b48-9086-a22df717948e has Condition with Coding:
+   * http://snomed.info/sct|363406005 (Malignant tumor of colon)
+   * Patient/9360820c-8602-4335-8b50-c88d627a0c20 has Condition with Coding:
+   * http://snomed.info/sct|94260004 (Secondary malignant neoplasm of colon)
+   * 
+   * http://snomed.info/sct|363406005 -- subsumes --> http://snomed.info/sct|94260004
+   * 
+   * @throws IOException
+   * @throws JSONException
+   */
+  @Test
+  public void queryWithSubsumes() throws IOException, JSONException {
+    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+    ConceptMap mockResponse = (ConceptMap) TestUtilities.getJsonParser().parseResource(
+        getResourceAsStream("txResponses//SubsumesFunctionTest-closure.ConceptMap.json"));
+
+    // Mock out responses from the terminology server.
+    when(terminologyClient.closure(any(), any(), any())).thenReturn(mockResponse);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Condition subsumes http://snomed.info/sct|94260004");
+    grouping1.setExpression(
+        "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|94260004)");
+    request.getGroupings().add(grouping1);
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    Parameters responseParameters = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    System.out.println(actualJson);
+    checkExpectedJson(actualJson,
+        "responses/AggregateExecutorTest-queryWithSubsumes.Parameters.json");
   }
 
   private void mockResourceReader(ResourceType... resourceTypes) throws MalformedURLException {

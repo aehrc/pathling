@@ -144,6 +144,7 @@ class ClosureService {
       String closureName = md5Short(seed + codeSystem);
       // Execute the closure operation against the terminology server.
       terminologyClient.closure(new StringType(closureName), null, null);
+      logger.info("Sending $closure requests to terminology service for codings: " + codings);
       ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
       result = result.union(conceptMapToSubsumesRelation(closure, codingsDataset.sparkSession()));
     }
@@ -214,11 +215,11 @@ public class SubsumesFunction implements Function {
 
   private static final Logger logger = LoggerFactory.getLogger(SubsumesFunction.class);
 
-//  private static void debugDataset(Dataset<?> dataset, String msg) {
-//    System.out.println(msg);
-//    dataset.printSchema();
-//    dataset.show();
-//  }
+  // private static void debugDataset(Dataset<?> dataset, String msg) {
+  // System.out.println(msg);
+  // dataset.printSchema();
+  // dataset.show();
+  // }
 
   private boolean inverted = false;
   private String functionName = "subsumes";
