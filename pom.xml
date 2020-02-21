@@ -311,6 +311,13 @@
                   </licenseMerges>
                 </configuration>
               </execution>
+              <execution>
+                <id>aggregate-download-licenses</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>aggregate-download-licenses</goal>
+                </goals>
+              </execution>
             </executions>
           </plugin>
         </plugins>

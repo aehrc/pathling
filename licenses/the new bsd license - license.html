@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Jodd | Jodd License</title>
+	
+	<meta charset="utf-8">
+	<meta name="description" content="Jodd is set of Java micro frameworks, tools and utilities.">
+	<meta name="author" content="Jodd">
+	<meta name="ROBOTS" content="ALL" />
+	<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+	<link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+	<link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+	<link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+	<link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+	<link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+	<link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/manifest.json">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff">
+
+	<!--link href="http://fonts.googleapis.com/css?family=Fjalla+One|Lato:300|Open+Sans+Condensed:300|Source+Sans+Pro:700,400|Inconsolata:300" rel="stylesheet" type="text/css"-->
+	<link href="/assets/css/style.css" media="screen, projection" rel="stylesheet" type="text/css" />
+	<link href="/assets/css/fonts.css" media="screen, projection" rel="stylesheet" type="text/css" />
+	<link href="/assets/css/font-awesome.css" media="screen, projection" rel="stylesheet" type="text/css" />
+	<link href="/assets/css/heart.css" media="screen, projection" rel="stylesheet" type="text/css" />
+
+	<!--[if IE]>
+		<link href="/css/ie.css" media="screen, projection" rel="stylesheet" type="text/css" />
+		<link rel="shortcut icon" href="favicon.ico"/>
+	<![endif]-->
+	<script src="/assets/js/jquery-2.1.3.min.js"></script>
+	<script src="/assets/js/list.min.js"></script>
+	<script>
+$(function() {
+	fix();
+});
+$(window).on('resize', fix);
+
+function fix() {
+	var $article = $('#content article');
+	var $aside = $('#content aside');
+
+	if ($article) {
+		if ($aside.css('position') !== 'static') {
+			var h1 = $article.height();
+			var h2 = $aside.height();
+			if (h2 > h1) {
+				$article.height(h2);
+			}
+		}
+	}
+}
+	</script>
+	<script>
+$(window).scroll(function () {
+	if ($(window).scrollTop() > 180) {
+		$("#xtoc").addClass("fixed");
+		$('#content aside').css('padding-top', $("#xtoc").height());
+	} else {
+		$("#xtoc").removeClass("fixed");
+		$('#content aside').css('padding-top', '0');
+	}
+});
+	</script>
+</head>
+<body>
+	
+	<div class="search-wrapper dosearch">
+	<div class="search-form" id="lista">
+	    <input type="text" class="search-field fuzzy-search" placeholder="Search...">
+	    <i class="fa fa-times-circle" id="search-cancel"></i>
+	    <ul class="search-list"></ul>
+  	</div>
+</div>
+	<section id="intro">
+				<header>
+			<div id="top">
+				<a href="/" id="logo"><img src="/jodd-pp-32.png" class="rotateInUpRight"/><span>Jodd</span></a>
+				<nav>
+					<a href="/download">Download</a>
+					<a href="/documentation">Documentation</a>
+					<a href="/contact">Contact</a>
+				</nav>
+			</div>
+		</header>
+
+
+		<div id="title-doc">&nbsp;</div>
+	</section>
+
+	<section id="content"><div class="inner">
+
+			<nav id="social">
+		<a href="http://github.com/oblac/jodd" class="fa fa-github" target="_blank"><span>Github</span></a>
+		<a href="http://stackoverflow.com/tags/jodd" class="fa fa-stack-overflow" target="_blank"><span>Stack Overflow</span></a>
+		<a href="/contact" class="fa fa-envelope-o"><span>Contact us</span></a>
+		<a href="/love.html" class="fa fa-heart-o"><span>Users</span></a>
+		<a id="search" href="#"><i class="fa fa-search"><span>Search</span></i></a>
+	</nav>
+
+
+		<article>
+			
+
+			<h1 id="jodd-license">Jodd License</h1>
+
+<p><em class="jodd">Jodd</em> software is released under <strong>Simplified BSD License</strong>.</p>
+
+<p><br /></p>
+
+<hr />
+
+<p><br /></p>
+
+<p>Copyright (c) 2003-2020, Jodd Team
+All rights reserved.</p>
+
+<p>Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:</p>
+
+<ol>
+  <li>
+    <p>Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.</p>
+  </li>
+  <li>
+    <p>Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.</p>
+  </li>
+</ol>
+
+<p>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
+
+<p><br /></p>
+
+<hr />
+
+
+			
+
+			
+<div id="github_edit">
+<a href="https://github.com/oblac/jodd-site/edit/master/content/license.md" target="_new"><i class="fa fa-pencil-square"></i> Edit this page on Github</a>
+</div>
+
+		</article>
+		<aside>
+					
+
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+
+		<h2>Documentation&nbsp;&nbsp;<i class="fa fa-book"></i></h2>
+		<ul>
+			<li><a href="/documentation/">Jodd in Action</a></li>
+			<li><a href="http://joddframework.org">Tutorial</a></li>
+		</ul>
+		<h3>Jodd tools and utils</h3>
+		<ul class="float">
+			<li><a href="/beanutil">BeanUtil</a> &middot; </li>
+			<li><a href="/props">Props</a> &middot; </li>
+			<li><a href="/email">Email</a> &middot; </li>
+			<li><a href="/http">HTTP</a> &middot; </li>
+			<li><a href="/documentation/">and more...</a> &middot; </li>
+		</ul>
+		<h3>Jodd micro-frameworks</h3>
+		<ul class="float">
+			<li><a href="/madvoc">Madvoc</a> &middot; </li>
+			<li><a href="/petite">Petite</a> &middot; </li>
+			<li><a href="/proxetta">Proxetta</a> &middot; </li>
+			<li><a href="/db">Db &amp; DbOom</a> &middot; </li>
+			<li><a href="/json">Json</a> &middot; </li>
+			<li><a href="/jtx">JTX</a> &middot; </li>
+			<li><a href="/paramo">Paramo</a> &middot; </li>
+			<li><a href="/vtor">VTor</a> &middot; </li>
+			<li><a href="/lagarto">Lagarto</a> &middot; </li>
+			<li><a href="/decora">Decora</a> &middot; </li>
+			<li><a href="/jerry">Jerry</a> &middot; </li>
+			<li><a href="/joy">Joy!</a> &middot; </li>
+			<li><a href="/documentation/">and more...</a> &middot; </li>
+		</ul>
+		<h3>Reports</h3>
+		<ul>
+			<li><a href="http://oblac.github.io/jodd-site/javadoc/">Javadoc API</a></li>
+			<li><a href="https://travis-ci.org/oblac/jodd">Test results</a></li>
+			<li><a href="https://codecov.io/gh/oblac/jodd">Coverage report</a></li>
+		</ul>
+
+		<div id="ohloh">
+<script type="text/javascript" src="https://www.ohloh.net/p/90331/widgets/project_thin_badge.js"></script>
+</div>
+
+		</aside>
+	</div></section>
+
+		<footer>
+		<div id="support">
+			<div class="inner">
+				<div class="text-center">
+					<h2>Need help?</h2>
+
+					Commercial support is available in form of <br>
+					training, consulting and development hours.<br>
+					Please <a href="/contact">contact us</a> for further information.
+				</div>
+			</div>
+		</div>
+		<div id="overview">
+			<div class="inner">
+				<div id="share">
+					<a href="https://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Fjodd.org&title=Jodd%20-%20microframeworks&source=http%3A%2F%2Fjodd.org
+	"><i class="fa fa-linkedin-square" aria-hidden="true" target="_blank"></i></a>
+					<a href="https://twitter.com/intent/tweet?source=webclient&text=Check%20out%20Jodd%2C%20Java%20microframeworks%20and%20utilities%20%28http%3A%2F%2Fjodd.org%29" target="_blank"><i class="fa fa-twitter-square" aria-hidden="true"></i></a>
+					<a href="https://stackoverflow.com/questions/tagged/jodd" target="_blank"><i class="fa fa-stack-overflow" aria-hidden="true"></i></a>
+					<a href="https://github.com/oblac/jodd" target="_blank"><i class="fa fa-github-square" aria-hidden="true"></i></a>
+					<a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Fjodd.org" target="_blank"><i class="fa fa-facebook-square" aria-hidden="true"></i></a>
+					<a href="https://www.reddit.com/submit?url=http%3A%2F%2Fjodd.org" target="_blank"><i class="fa fa-reddit-square" aria-hidden="true"></i></a>
+				</div>
+
+
+				© 2020 Igor Spasić and the Jodd Team, with &nbsp;<span class="heartbeat"></span>.<br>
+				<br>
+				<b>Jodd</b> is free software, released under the terms of the <a href="https://github.com/oblac/jodd/blob/master/LICENSE" target="_blank" style="color: #fff">BSD License</a>.<br>
+				<a href="https://github.com/oblac/jodd/blob/master/CODE_OF_CONDUCT.md" target="_blank" style="color: #eee">Code of conduct</a>
+			</div>
+		</div>
+	</footer>
+
+	<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-153514-4', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>
