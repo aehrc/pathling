@@ -61,7 +61,7 @@ The following variables can be used to configure a Pathling instance:
 ## Apache Spark integration
 
 Pathling can optionally connect to, or run within, an
-[Apache Spark](https://spark.apache.org/) cluster. Pathling runs Spark 2.4.4
+[Apache Spark](https://spark.apache.org/) cluster. Pathling runs Spark 2.4.5
 (Scala 2.11), with Hadoop version 2.7.7.
 
 Next: [Roadmap](./roadmap)

@@ -1,17 +1,19 @@
 /*
- * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
  */
 
 package au.csiro.pathling.fhir;
 
-import au.csiro.pathling.bunsen.FhirEncoders;
+import au.csiro.pathling.encoders.FhirEncoders;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.Serializable;
 import org.slf4j.Logger;
 
 /**
- * Uses the FhirEncoders class from Bunsen to create a FhirContext, then creates a TerminologyClient
- * with some configuration. Used for code that runs on Spark workers.
+ * Uses the FhirEncoders class to create a FhirContext, then creates a TerminologyClient with some
+ * configuration. Used for code that runs on Spark workers.
  *
  * @author John Grimes
  */

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+  ~ Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+  ~ Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+  ~ Software Licence Agreement.
   -->
 
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -62,7 +64,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry}/pathling/site</repository>
+          <repository>pathling/site</repository>
           <tag>${project.version}</tag>
         </configuration>
       </plugin>

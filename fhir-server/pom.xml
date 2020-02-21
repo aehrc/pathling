@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+  ~ Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+  ~ Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+  ~ Software Licence Agreement.
   -->
 
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -20,6 +22,7 @@
   <properties>
     <jettyVersion>9.4.14.v20181114</jettyVersion>
     <antlrVersion>4.7.2</antlrVersion>
+    <dockerRepository>aehrc/pathling</dockerRepository>
   </properties>
 
   <dependencies>
@@ -60,14 +63,14 @@
       <artifactId>hadoop-aws</artifactId>
     </dependency>
 
-    <!-- Bunsen -->
+    <!-- Encoders -->
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>bunsen-core</artifactId>
+      <artifactId>encoders-core</artifactId>
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>bunsen-r4</artifactId>
+      <artifactId>encoders-r4</artifactId>
     </dependency>
 
     <!-- Logging -->
@@ -187,7 +190,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRegistry}/pathling/fhir-server</repository>
+          <repository>${dockerRepository}</repository>
           <tag>${project.version}</tag>
           <buildArgs>
             <VERSION>${project.version}</VERSION>
@@ -224,7 +227,7 @@
           <systemPropertyVariables>
             <version>${project.version}</version>
             <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
-            <dockerRegistry>${dockerRegistry}</dockerRegistry>
+            <dockerRepository>${dockerRepository}</dockerRepository>
           </systemPropertyVariables>
         </configuration>
       </plugin>

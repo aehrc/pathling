@@ -1,5 +1,7 @@
 /*
- * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
  */
 
 package au.csiro.pathling.update;
@@ -9,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import au.csiro.pathling.bunsen.FhirEncoders;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.AnalyticsServerConfiguration;
 import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.query.ResourceReader;

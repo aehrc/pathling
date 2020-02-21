@@ -1,16 +1,15 @@
 /*
- * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
  */
 
 package au.csiro.pathling.fhir;
 
 import static au.csiro.pathling.utilities.Configuration.copyStringProps;
 
-import au.csiro.pathling.bunsen.FhirEncoders;
-import au.csiro.pathling.query.AggregateExecutor;
-import au.csiro.pathling.query.AggregateExecutorConfiguration;
-import au.csiro.pathling.query.AggregateOperationProvider;
-import au.csiro.pathling.query.ResourceReader;
+import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.query.*;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -171,6 +170,7 @@ public class AnalyticsServer extends RestfulServer {
     FhirContextFactory fhirContextFactory = new FhirContextFactory(FhirVersionEnum.R4);
     List<Object> providers = new ArrayList<>();
     providers.add(new AggregateOperationProvider(aggregateExecutor));
+    providers.add(new SelectProvider());
     providers.add(new ImportProvider(configuration, spark, fhirEncoders, fhirContextFactory,
         aggregateExecutor.getResourceReader()));
     providers.add(new StructureDefinitionProvider(getFhirContext()));

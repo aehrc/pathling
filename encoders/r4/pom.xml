@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ This is a modified version of the Bunsen library, originally published at
+  ~ https://github.com/cerner/bunsen.
+  ~
+  ~ Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
+  ~ the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+  ~
+  ~ These modifications are copyright © 2018-2020, Commonwealth Scientific
+  ~ and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
+  ~ under the CSIRO Open Source Software Licence Agreement.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>encoders</artifactId>
+    <groupId>au.csiro.pathling</groupId>
+    <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>encoders-r4</artifactId>
+  <packaging>jar</packaging>
+
+  <dependencies>
+    <!-- Encoders -->
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>encoders-core</artifactId>
+    </dependency>
+
+    <!-- Apache Spark -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_${sparkScalaVersion}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-hive_${sparkScalaVersion}</artifactId>
+    </dependency>
+
+    <!-- HAPI FHIR R4 -->
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-validation-resources-r4</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
+    </dependency>
+
+    <!-- Logging -->
+    <dependency>
+      <artifactId>logback-classic</artifactId>
+      <groupId>ch.qos.logback</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Testing -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>

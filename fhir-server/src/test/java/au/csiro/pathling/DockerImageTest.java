@@ -1,5 +1,7 @@
 /*
- * Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
  */
 
 package au.csiro.pathling;
@@ -63,9 +65,8 @@ public class DockerImageTest {
 
   // These two system properties need to be set.
   private static final String VERSION = System.getProperty("version");
-  private static final String TERMINOLOGY_SERVICE_URL = System
-      .getProperty("terminologyServiceUrl");
-  private static final String DOCKER_REGISTRY = System.getProperty("dockerRegistry");
+  private static final String TERMINOLOGY_SERVICE_URL = System.getProperty("terminologyServiceUrl");
+  private static final String DOCKER_REPOSITORY = System.getProperty("dockerRepository");
 
   private final DockerClient dockerClient;
   private final HttpClient httpClient;
@@ -107,8 +108,7 @@ public class DockerImageTest {
       HostConfig fhirServerHostConfig = new HostConfig();
       fhirServerHostConfig.withPortBindings(fhirServerPortBinding);
       CreateContainerResponse fhirServerContainer = dockerClient
-          .createContainerCmd(
-              DOCKER_REGISTRY + "/pathling/fhir-server:" + VERSION)
+          .createContainerCmd(DOCKER_REPOSITORY + ":" + VERSION)
           .withExposedPorts(fhirServerPort)
           .withHostConfig(fhirServerHostConfig)
           .withEnv(

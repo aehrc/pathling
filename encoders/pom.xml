@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ This is a modified version of the Bunsen library, originally published at
+  ~ https://github.com/cerner/bunsen.
+  ~
+  ~ Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
+  ~ the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+  ~
+  ~ These modifications are copyright © 2018-2020, Commonwealth Scientific
+  ~ and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
+  ~ under the CSIRO Open Source Software Licence Agreement.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>encoders</artifactId>
+  <packaging>pom</packaging>
+
+  <modules>
+    <module>core</module>
+    <module>r4</module>
+  </modules>
+
+  <developers>
+    <developer>
+      <id>RB4106</id>
+      <name>Ryan Brush</name>
+      <email>rbrush@cerner.com</email>
+      <url>https://github.com/rbrush</url>
+      <roles>
+        <role>architect</role>
+        <role>developer</role>
+      </roles>
+      <timezone>-6</timezone>
+    </developer>
+    <developer>
+      <name>John Grimes</name>
+      <email>John.Grimes@csiro.au</email>
+    </developer>
+  </developers>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>au.csiro.pathling.bunsen</groupId>
+        <artifactId>bunsen-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling.bunsen</groupId>
+        <artifactId>bunsen-r4</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.parquet</groupId>
+        <artifactId>parquet-avro</artifactId>
+        <version>1.7.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>2.4</version>
+        </plugin>
+        <plugin>
+          <groupId>net.alchim31.maven</groupId>
+          <artifactId>scala-maven-plugin</artifactId>
+          <version>3.3.2</version>
+          <executions>
+            <execution>
+              <id>scala-compile-first</id>
+              <phase>process-resources</phase>
+              <goals>
+                <goal>add-source</goal>
+                <goal>compile</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>scala-test-compile</id>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>testCompile</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>
