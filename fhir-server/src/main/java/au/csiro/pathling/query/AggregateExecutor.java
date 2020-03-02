@@ -8,25 +8,27 @@ package au.csiro.pathling.query;
 
 import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.BOOLEAN;
 
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.AggregateRequest.Aggregation;
 import au.csiro.pathling.query.AggregateRequest.Grouping;
 import au.csiro.pathling.query.parsing.Joinable;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.parser.ExpressionParser;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.RelationalGroupedDataset;
+import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumeration;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -40,25 +42,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author John Grimes
  */
-public class AggregateExecutor {
+public class AggregateExecutor extends QueryExecutor {
 
   private static final Logger logger = LoggerFactory.getLogger(AggregateExecutor.class);
 
-  private final FhirContext fhirContext;
-  private final TerminologyClientFactory terminologyClientFactory;
-  private final SparkSession spark;
-  private final ResourceReader resourceReader;
-  private final TerminologyClient terminologyClient;
-  private final boolean explainQueries;
-
-  public AggregateExecutor(@Nonnull AggregateExecutorConfiguration configuration) {
-    logger.info("Creating new AggregateExecutor: " + configuration);
-    spark = configuration.getSparkSession();
-    fhirContext = configuration.getFhirContext();
-    terminologyClientFactory = configuration.getTerminologyClientFactory();
-    terminologyClient = configuration.getTerminologyClient();
-    resourceReader = configuration.getResourceReader();
-    explainQueries = configuration.isExplainQueries();
+  public AggregateExecutor(@Nonnull ExecutorConfiguration configuration) {
+    super(configuration);
   }
 
   /**
@@ -66,12 +55,9 @@ public class AggregateExecutor {
    * dependencies.
    */
   public boolean isReady() {
-    if (spark == null || terminologyClient == null) {
-      return false;
-    }
     try {
       logger.info("Getting terminology service capability statement to check service health");
-      terminologyClient.getServerMetadata();
+      configuration.getTerminologyClient().getServerMetadata();
     } catch (Exception e) {
       logger.error("Readiness failure", e);
       return false;
@@ -80,11 +66,11 @@ public class AggregateExecutor {
   }
 
   public ResourceReader getResourceReader() {
-    return resourceReader;
+    return configuration.getResourceReader();
   }
 
   public Set<ResourceType> getAvailableResourceTypes() {
-    return resourceReader.getAvailableResourceTypes();
+    return configuration.getResourceReader().getAvailableResourceTypes();
   }
 
   public AggregateResponse execute(AggregateRequest query) throws InvalidRequestException {
@@ -97,40 +83,9 @@ public class AggregateExecutor {
               Collectors.joining(",")) + "] filters=[" + String.join(",", query.getFilters())
           + "]");
 
-      // Set up the subject resource dataset.
-      ResourceType resourceType = query.getSubjectResource();
-      String resourceCode = resourceType.toCode();
-      Dataset<Row> subject = resourceReader.read(resourceType);
-      String firstColumn = subject.columns()[0];
-      String[] remainingColumns = Arrays
-          .copyOfRange(subject.columns(), 1, subject.columns().length);
-      Column idColumn = subject.col("id");
-      subject = subject.withColumn("resource",
-          org.apache.spark.sql.functions.struct(firstColumn, remainingColumns));
-      Column valueColumn = subject.col("resource");
-      subject = subject.select(idColumn, valueColumn);
-
-      // Create an expression for the subject resource.
-      ParsedExpression subjectResource = new ParsedExpression();
-      subjectResource.setFhirPath(resourceCode);
-      subjectResource.setDataset(subject);
-      subjectResource.setResource(true);
-      subjectResource.setResourceType(resourceType);
-      subjectResource.setSingular(true);
-      subjectResource.setOrigin(subjectResource);
-      subjectResource.setHashedValue(idColumn, valueColumn);
-
-      // Gather dependencies for the execution of the expression parser.
-      ExpressionParserContext context = new ExpressionParserContext();
-      context.setFhirContext(fhirContext);
-      context.setTerminologyClientFactory(terminologyClientFactory);
-      context.setTerminologyClient(terminologyClient);
-      context.setSparkSession(spark);
-      context.setResourceReader(resourceReader);
-      context.setSubjectContext(subjectResource);
-
       // Build a new expression parser, and parse all of the filter and grouping expressions within
       // the query.
+      ExpressionParserContext context = buildParserContext(query.getSubjectResource());
       ExpressionParser expressionParser = new ExpressionParser(context);
       List<ParsedExpression> parsedFilters = parseFilters(expressionParser,
           query.getFilters());
@@ -143,7 +98,7 @@ public class AggregateExecutor {
           query.getAggregations());
 
       // Gather all expressions into a single list.
-      Dataset<Row> result = subjectResource.getDataset();
+      ParsedExpression subjectResource = context.getSubjectContext();
       List<Joinable> allExpressions = new ArrayList<>();
       allExpressions.add(subjectResource);
       allExpressions.addAll(parsedFilters);
@@ -152,28 +107,10 @@ public class AggregateExecutor {
       allExpressions
           .addAll(parsedAggregations.stream().map(ParsedExpression::getAggregationJoinable)
               .collect(Collectors.toList()));
-      Set<Dataset<Row>> joinedDatasets = new HashSet<>();
-      joinedDatasets.add(subjectResource.getDataset());
-
-      // Join all datasets together, omitting any duplicates.
-      Joinable previous = subjectResource;
-      for (int i = 0; i < allExpressions.size(); i++) {
-        Joinable current = allExpressions.get(i);
-        if (i > 0 && !joinedDatasets.contains(current.getDataset())) {
-          result = result.join(current.getDataset(),
-              previous.getIdColumn().equalTo(current.getIdColumn()), "inner");
-          previous = current;
-          joinedDatasets.add(current.getDataset());
-        }
-      }
+      Dataset<Row> result = joinExpressions(allExpressions);
 
       // Apply filters.
-      Optional<Column> filterCondition = parsedFilters.stream()
-          .map(ParsedExpression::getValueColumn)
-          .reduce(Column::and);
-      if (filterCondition.isPresent()) {
-        result = result.filter(filterCondition.get());
-      }
+      result = applyFilters(result, parsedFilters);
 
       // Apply groupings.
       Column[] groupingCols = parsedGroupings.stream()
@@ -267,7 +204,7 @@ public class AggregateExecutor {
   private AggregateResponse buildResponse(@Nonnull Dataset<Row> dataset,
       @Nonnull List<ParsedExpression> parsedAggregations,
       @Nonnull List<ParsedExpression> parsedGroupings) {
-    if (explainQueries) {
+    if (configuration.isExplainQueries()) {
       logger.info("$aggregate query plan:");
       dataset.explain(true);
     }
@@ -318,7 +255,7 @@ public class AggregateExecutor {
       assert
           parsedExpression.getFhirType() != null :
           "Parse result encountered with missing FHIR type: " + parsedExpression;
-      Class hapiClass = parsedExpression.getImplementingClass(fhirContext);
+      Class hapiClass = parsedExpression.getImplementingClass(configuration.getFhirContext());
       if (hapiClass == Enumeration.class) {
         hapiClass = CodeType.class;
       }

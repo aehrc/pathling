@@ -29,10 +29,8 @@ RUN mkdir -p /usr/share/staging/test
 ARG VERSION
 ENV PATHLING_FHIR_SERVER_VERSION=$VERSION
 
-#CMD ["java", "-ea", "-cp", "/fhir-server.jar:/usr/share/fhir-server/lib/*", \
-#  "-Djava.library.path=/opt/hadoop/lib/native", "au.csiro.pathling.FhirServerContainer"]
 CMD ["java", "-ea", "-cp", "/fhir-server.jar:/usr/share/fhir-server/lib/*", \
-  "au.csiro.pathling.FhirServerContainer"]
+  "-Djava.library.path=/opt/hadoop/lib/native", "au.csiro.pathling.FhirServerContainer"]
 
 HEALTHCHECK --interval=10s --timeout=1s --start-period=25s --retries=3 \
     CMD curl -v --fail http://localhost:8080/fhir/metadata || exit 1

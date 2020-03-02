@@ -55,7 +55,8 @@ public class MembershipOperator implements BinaryOperator {
     }
 
     // check that left and right have the same type
-    if (!collection.getFhirPathType().equals(element.getFhirPathType())) {
+    if (collection.getFhirPathType() == null || element.getFhirPathType() == null || !collection
+        .getFhirPathType().equals(element.getFhirPathType())) {
       throw new InvalidRequestException(
           "Operands are of incompatible types: " + input.getExpression());
     }

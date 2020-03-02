@@ -9,8 +9,6 @@ package au.csiro.pathling.query;
 import static au.csiro.pathling.TestUtilities.checkExpectedJson;
 import static au.csiro.pathling.TestUtilities.getJsonParser;
 import static au.csiro.pathling.TestUtilities.getResourceAsStream;
-import static au.csiro.pathling.TestUtilities.getSparkSession;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -20,17 +18,9 @@ import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.AggregateRequest.Aggregation;
 import au.csiro.pathling.query.AggregateRequest.Grouping;
-import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.HashSet;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
@@ -45,27 +35,23 @@ import org.mockito.Mockito;
  * @author John Grimes
  */
 @Category(au.csiro.pathling.UnitTest.class)
-public class AggregateExecutorTest {
+public class AggregateExecutorTest extends ExecutorTest {
 
   private AggregateExecutor executor;
-  private SparkSession spark;
-  private ResourceReader mockReader;
   private TerminologyClient terminologyClient;
 
   @Before
-  public void setUp() throws IOException {
-    spark = getSparkSession();
+  public void setUp() throws Exception {
+    super.setUp();
 
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
     TerminologyClientFactory terminologyClientFactory =
         mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
-    Path warehouseDirectory = Files.createTempDirectory("pathling-test-");
-    mockReader = mock(ResourceReader.class);
-
     // Create and configure a new AggregateExecutor.
-    AggregateExecutorConfiguration config = new AggregateExecutorConfiguration(spark,
+    Path warehouseDirectory = Files.createTempDirectory("pathling-test-");
+    ExecutorConfiguration config = new ExecutorConfiguration(spark,
         TestUtilities.getFhirContext(), terminologyClientFactory, terminologyClient, mockReader);
     config.setWarehouseUrl(warehouseDirectory.toString());
     config.setDatabaseName("test");
@@ -493,19 +479,6 @@ public class AggregateExecutorTest {
     String actualJson = getJsonParser().encodeResourceToString(responseParameters);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json");
-  }
-
-  private void mockResourceReader(ResourceType... resourceTypes) throws MalformedURLException {
-    for (ResourceType resourceType : resourceTypes) {
-      File parquetFile =
-          new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
-      URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
-      assertThat(parquetUrl).isNotNull();
-      Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-      when(mockReader.read(resourceType)).thenReturn(dataset);
-      when(mockReader.getAvailableResourceTypes())
-          .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
-    }
   }
 
 }

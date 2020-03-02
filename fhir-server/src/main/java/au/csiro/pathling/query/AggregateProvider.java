@@ -15,11 +15,11 @@ import org.hl7.fhir.r4.model.Parameters;
  *
  * @author John Grimes
  */
-public class AggregateOperationProvider {
+public class AggregateProvider {
 
   private final AggregateExecutor aggregateExecutor;
 
-  public AggregateOperationProvider(AggregateExecutor aggregateExecutor) {
+  public AggregateProvider(AggregateExecutor aggregateExecutor) {
     assert aggregateExecutor != null : "Must supply aggregate executor";
 
     this.aggregateExecutor = aggregateExecutor;

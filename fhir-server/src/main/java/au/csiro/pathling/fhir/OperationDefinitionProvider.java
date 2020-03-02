@@ -29,8 +29,9 @@ public class OperationDefinitionProvider implements IResourceProvider {
 
   private final IParser jsonParser;
   private static final Map<String, String> idToResourcePath = new HashMap<String, String>() {{
-    put("OperationDefinition/aggregate-0", "fhir/aggregate.OperationDefinition.json");
-    put("OperationDefinition/import-0", "fhir/import.OperationDefinition.json");
+    put("OperationDefinition/aggregate-1", "fhir/aggregate.OperationDefinition.json");
+    put("OperationDefinition/import-1", "fhir/import.OperationDefinition.json");
+    put("OperationDefinition/search-1", "fhir/search.OperationDefinition.json");
   }};
   private static final Map<String, OperationDefinition> resourceCache = new HashMap<>();
 

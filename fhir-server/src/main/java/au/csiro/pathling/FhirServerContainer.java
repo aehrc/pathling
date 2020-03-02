@@ -54,7 +54,7 @@ public class FhirServerContainer {
     }});
     String explainQueries = System.getenv("PATHLING_EXPLAIN_QUERIES");
     config.setExplainQueries(explainQueries != null && explainQueries.equals("true"));
-    String authEnabled = System.getenv("PATHLING_AUTH");
+    String authEnabled = System.getenv("PATHLING_AUTH_ENABLED");
     config.setAuthEnabled(authEnabled != null && authEnabled.equals("true"));
     String verboseRequestLogging = System.getenv("PATHLING_VERBOSE_REQUEST_LOGGING");
     config.setVerboseRequestLogging(

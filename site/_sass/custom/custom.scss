@@ -147,20 +147,32 @@ $link-color: #2ca0b6;
   margin-bottom: 1em;
 }
 
+.navigation-list-item.active {
+  > .navigation-list-child-list {
+    display: block !important;
+  }
+}
+
 .navigation-list-item {
   .active {
     > .navigation-list-link {
       font-weight: 700;
     }
   }
+
+  > .navigation-list-child-list {
+    display: none !important;
+  }
 }
 
 .callout {
   padding: 0.75rem;
   margin: 0.75rem 0;
+
   &.warning {
     background-color: #faecdf;
   }
+
   &.info {
     background-color: #dbebf5;
   }

@@ -6,15 +6,12 @@
 
 package au.csiro.pathling.fhir;
 
-import au.csiro.pathling.query.AggregateExecutor;
+import au.csiro.pathling.query.ResourceReader;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IServerConformanceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
-import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import org.hl7.fhir.r4.model.*;
@@ -34,11 +31,13 @@ public class AnalyticsServerCapabilities implements
     IServerConformanceProvider<CapabilityStatement> {
 
   private static final Logger logger = LoggerFactory.getLogger(AnalyticsServerCapabilities.class);
-  private AnalyticsServerConfiguration configuration;
-  private AggregateExecutor aggregateExecutor;
+  private final AnalyticsServerConfiguration configuration;
+  private final ResourceReader resourceReader;
 
-  public AnalyticsServerCapabilities(AnalyticsServerConfiguration configuration) {
+  public AnalyticsServerCapabilities(AnalyticsServerConfiguration configuration,
+      ResourceReader resourceReader) {
     this.configuration = configuration;
+    this.resourceReader = resourceReader;
   }
 
   @Override
@@ -46,22 +45,17 @@ public class AnalyticsServerCapabilities implements
   public CapabilityStatement getServerConformance(HttpServletRequest httpServletRequest,
       RequestDetails requestDetails) {
     logger.info("Received request for server capabilities");
-    checkServerHealth();
     CapabilityStatement capabilityStatement = new CapabilityStatement();
-    Meta meta = new Meta();
-    meta.addProfile(
-        "https://server.pathling.app/fhir/StructureDefinition/fhir-server-capabilities-0");
-    capabilityStatement.setMeta(meta);
     capabilityStatement
-        .setUrl("https://server.pathling.app/fhir/CapabilityStatement/pathling-fhir-api-0");
-    capabilityStatement.setVersion("0.0.0");
+        .setUrl("https://server.pathling.app/fhir/CapabilityStatement/pathling-fhir-api-1");
+    capabilityStatement.setVersion("1.0.0");
     capabilityStatement.setTitle("Pathling FHIR API");
     capabilityStatement.setName("pathling-fhir-api");
-    capabilityStatement.setStatus(PublicationStatus.DRAFT);
+    capabilityStatement.setStatus(PublicationStatus.ACTIVE);
     capabilityStatement.setExperimental(true);
     capabilityStatement.setPublisher("Australian e-Health Research Centre, CSIRO");
     capabilityStatement.setCopyright(
-        "Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.");
+        "Dedicated to the public domain via CC0: https://creativecommons.org/publicdomain/zero/1.0/");
     capabilityStatement.setKind(CapabilityStatementKind.CAPABILITY);
     CapabilityStatementSoftwareComponent software = new CapabilityStatementSoftwareComponent(
         new StringType("Pathling FHIR Server"));
@@ -71,13 +65,6 @@ public class AnalyticsServerCapabilities implements
     capabilityStatement.setFormat(Arrays.asList(new CodeType("json"), new CodeType("xml")));
     capabilityStatement.setRest(buildRestComponent());
     return capabilityStatement;
-  }
-
-  private void checkServerHealth() {
-    if (aggregateExecutor == null || !aggregateExecutor.isReady()) {
-      throw new UnclassifiedServerFailureException(503,
-          "Server is not currently available for query, check with your server administrator");
-    }
   }
 
   @Nonnull
@@ -93,16 +80,35 @@ public class AnalyticsServerCapabilities implements
 
   private List<CapabilityStatementRestResourceComponent> buildResources() {
     List<CapabilityStatementRestResourceComponent> resources = new ArrayList<>();
-    CapabilityStatementRestResourceComponent strucDefResource = new CapabilityStatementRestResourceComponent(
-        new CodeType("StructureDefinition"));
+    CapabilityStatementRestResourceComponent opDefResource = null;
+    Set<Enumerations.ResourceType> availableResourceTypes = EnumSet
+        .copyOf(resourceReader.getAvailableResourceTypes());
+    availableResourceTypes.add(Enumerations.ResourceType.OPERATIONDEFINITION);
+
+    for (Enumerations.ResourceType resourceType : availableResourceTypes) {
+      // Add the `fhirPath` search parameter to all resources.
+      CapabilityStatementRestResourceComponent resource = new CapabilityStatementRestResourceComponent(
+          new CodeType(resourceType.toCode()));
+      CapabilityStatementRestResourceOperationComponent searchOperation = new CapabilityStatementRestResourceOperationComponent();
+      searchOperation.setName("fhirPath");
+      searchOperation
+          .setDefinition("https://server.pathling.app/fhir/OperationDefinition/search-1");
+      resource.addOperation(searchOperation);
+      resources.add(resource);
+
+      // Save away the OperationDefinition resource, so that we can later add the read operation to
+      // it.
+      if (resourceType.toCode().equals("OperationDefinition")) {
+        opDefResource = resource;
+      }
+    }
+
+    // Add the read operation to the StructureDefinition and OperationDefinition resources.
+    assert opDefResource != null;
     ResourceInteractionComponent readInteraction = new ResourceInteractionComponent();
     readInteraction.setCode(TypeRestfulInteraction.READ);
-    strucDefResource.addInteraction(readInteraction);
-    CapabilityStatementRestResourceComponent opDefResource = new CapabilityStatementRestResourceComponent(
-        new CodeType("OperationDefinition"));
     opDefResource.addInteraction(readInteraction);
-    resources.add(strucDefResource);
-    resources.add(opDefResource);
+
     return resources;
   }
 
@@ -110,19 +116,12 @@ public class AnalyticsServerCapabilities implements
     List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
 
     CanonicalType aggregateOperationUri = new CanonicalType(
-        "https://server.pathling.app/fhir/OperationDefinition/aggregate-0");
+        "https://server.pathling.app/fhir/OperationDefinition/aggregate-1");
     CapabilityStatementRestResourceOperationComponent aggregateOperation = new CapabilityStatementRestResourceOperationComponent(
         new StringType("aggregate"), aggregateOperationUri);
-    for (Enumerations.ResourceType resourceType : aggregateExecutor.getAvailableResourceTypes()) {
-      Extension extension = new Extension();
-      extension
-          .setUrl("https://server.pathling.app/fhir/StructureDefinition/available-resource-type-0");
-      extension.setValue(new CodeType(resourceType.toCode()));
-      aggregateOperation.addExtension(extension);
-    }
 
     CanonicalType importOperationUri = new CanonicalType(
-        "https://server.pathling.app/fhir/OperationDefinition/import-0");
+        "https://server.pathling.app/fhir/OperationDefinition/import-1");
     CapabilityStatementRestResourceOperationComponent importOperation = new CapabilityStatementRestResourceOperationComponent(
         new StringType("import"), importOperationUri);
 
@@ -133,10 +132,6 @@ public class AnalyticsServerCapabilities implements
 
   @Override
   public void setRestfulServer(RestfulServer restfulServer) {
-  }
-
-  public void setAggregateExecutor(AggregateExecutor aggregateExecutor) {
-    this.aggregateExecutor = aggregateExecutor;
   }
 
 }

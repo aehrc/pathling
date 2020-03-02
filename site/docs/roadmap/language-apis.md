@@ -1,7 +1,7 @@
 ---
 layout: page
 title: APIs for Python and R
-nav_order: 4
+nav_order: 3
 parent: Roadmap
 grand_parent: Documentation
 ---
@@ -25,4 +25,4 @@ It will be important for these libraries to be able to be installed into a local
 environment using language-native package management utilities, i.e.
 [pip](https://pypi.org/project/pip/) and [CRAN](https://cran.r-project.org/).
 
-Next: [SMART Authorisation](./smart.html)
+Next: [Authorisation enhancements](./smart.html)

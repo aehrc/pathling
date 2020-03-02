@@ -10,10 +10,13 @@ import static au.csiro.pathling.utilities.Configuration.copyStringProps;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.query.*;
+import au.csiro.pathling.update.ImportExecutor;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.api.EncodingEnum;
+import ca.uhn.fhir.rest.server.FifoMemoryPagingProvider;
+import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
@@ -30,6 +33,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.cors.CorsConfiguration;
@@ -42,12 +47,12 @@ import org.springframework.web.cors.CorsConfiguration;
  */
 public class AnalyticsServer extends RestfulServer {
 
+  private static final int DEFAULT_PAGE_SIZE = 100;
+  private static final int MAX_PAGE_SIZE = Integer.MAX_VALUE;
+  private static final int SEARCH_MAP_SIZE = 10;
+
   private static final Logger logger = LoggerFactory.getLogger(AnalyticsServer.class);
   private final AnalyticsServerConfiguration configuration;
-  private SparkSession spark;
-  private TerminologyClient terminologyClient;
-  private FhirEncoders fhirEncoders;
-  private AggregateExecutor aggregateExecutor;
 
   public AnalyticsServer(@Nonnull AnalyticsServerConfiguration configuration) {
     super(buildFhirContext());
@@ -69,19 +74,47 @@ public class AnalyticsServer extends RestfulServer {
       // Set default response encoding to JSON.
       setDefaultResponseEncoding(EncodingEnum.JSON);
 
-      printLogo();
-      initializeSpark();
+      printLogo(logger);
 
-      initializeTerminologyClient();
-      initializeFhirEncoders();
-      initializeAggregateExecutor();
-      declareProviders();
+      logger.info("Initializing Spark session");
+      SparkSession spark = buildSpark(configuration);
+      ResourceReader resourceReader = buildResourceReader(configuration, spark);
+
+      logger.info("Creating R4 FHIR encoders");
+      FhirEncoders fhirEncoders = buildFhirEncoders();
+
+      logger.info("Creating FHIR terminology client: " + configuration.getTerminologyServerUrl());
+      TerminologyClient terminologyClient = buildTerminologyClient(configuration, getFhirContext(),
+          logger);
+      ExecutorConfiguration executorConfig = buildExecutorConfiguration(configuration,
+          spark, getFhirContext(), fhirEncoders, resourceReader, terminologyClient);
+
+      // Register the import provider.
+      FhirContextFactory fhirContextFactory = new FhirContextFactory(FhirVersionEnum.R4);
+      ImportExecutor importExecutor = new ImportExecutor(configuration, spark, fhirEncoders,
+          fhirContextFactory, executorConfig.getResourceReader());
+      ImportProvider importProvider = new ImportProvider(importExecutor);
+      registerProvider(importProvider);
+
+      // Register query providers.
+      List<Object> queryProviders = buildQueryProviders(executorConfig);
+      registerProviders(queryProviders);
+
+      // Register resource providers.
+      List<Object> resourceProviders = buildResourceProviders();
+      registerProviders(resourceProviders);
+
+      // Configure interceptors.
       defineCorsConfiguration();
       configureRequestLogging();
       configureAuthorisation();
-
-      // Respond with HTML when asked.
       registerInterceptor(new ResponseHighlighterInterceptor());
+
+      // Configure paging.
+      FifoMemoryPagingProvider pagingProvider = new FifoMemoryPagingProvider(SEARCH_MAP_SIZE);
+      pagingProvider.setDefaultPageSize(DEFAULT_PAGE_SIZE);
+      pagingProvider.setMaximumPageSize(MAX_PAGE_SIZE);
+      setPagingProvider(pagingProvider);
 
       // Report errors to Sentry, if configured.
       registerInterceptor(
@@ -89,8 +122,7 @@ public class AnalyticsServer extends RestfulServer {
 
       // Initialise the capability statement.
       AnalyticsServerCapabilities serverCapabilities = new AnalyticsServerCapabilities(
-          configuration);
-      serverCapabilities.setAggregateExecutor(aggregateExecutor);
+          configuration, resourceReader);
       setServerConformanceProvider(serverCapabilities);
 
       logger.info("Ready for query");
@@ -99,7 +131,7 @@ public class AnalyticsServer extends RestfulServer {
     }
   }
 
-  private void printLogo() {
+  private static void printLogo(Logger logger) {
     logger.info("    ____        __  __    ___            ");
     logger.info("   / __ \\____ _/ /_/ /_  / (_)___  ____ _");
     logger.info("  / /_/ / __ `/ __/ __ \\/ / / __ \\/ __ `/");
@@ -108,9 +140,8 @@ public class AnalyticsServer extends RestfulServer {
     logger.info("                                /____/");
   }
 
-  private void initializeSpark() {
-    logger.info("Initializing Spark session");
-    spark = SparkSession.builder()
+  private static SparkSession buildSpark(AnalyticsServerConfiguration configuration) {
+    SparkSession spark = SparkSession.builder()
         .appName("pathling-server")
         .config("spark.master", configuration.getSparkMasterUrl())
         .config("spark.executor.memory", configuration.getExecutorMemory())
@@ -126,56 +157,73 @@ public class AnalyticsServer extends RestfulServer {
       hadoopConfiguration.set("fs.s3a.access.key", configuration.getAwsAccessKeyId());
       hadoopConfiguration.set("fs.s3a.secret.key", configuration.getAwsSecretAccessKey());
     }
+    return spark;
   }
 
-  private void initializeTerminologyClient() {
-    logger.info("Creating FHIR terminology client");
-    terminologyClient = TerminologyClient.build(
-        getFhirContext(),
+  private static TerminologyClient buildTerminologyClient(
+      AnalyticsServerConfiguration configuration, FhirContext fhirContext, Logger logger) {
+    return TerminologyClient.build(
+        fhirContext,
         configuration.getTerminologyServerUrl(),
         configuration.getTerminologySocketTimeout(),
         configuration.isVerboseRequestLogging(),
         logger);
   }
 
-  private void initializeFhirEncoders() {
-    logger.info("Creating R4 FHIR encoders");
-    fhirEncoders = FhirEncoders.forR4().getOrCreate();
+  private static FhirEncoders buildFhirEncoders() {
+    return FhirEncoders.forR4().getOrCreate();
   }
 
-  /**
-   * Initialise a new aggregate executor, and pass through the relevant configuration parameters.
-   */
-  private void initializeAggregateExecutor() throws IOException, URISyntaxException {
-    ResourceReader resourceReader = new ResourceReader(spark, configuration.getWarehouseUrl(),
-        configuration.getDatabaseName());
+  private static ExecutorConfiguration buildExecutorConfiguration(
+      AnalyticsServerConfiguration configuration, SparkSession spark, FhirContext fhirContext,
+      FhirEncoders fhirEncoders, ResourceReader resourceReader,
+      TerminologyClient terminologyClient) {
     TerminologyClientFactory terminologyClientFactory = new TerminologyClientFactory(
         FhirVersionEnum.R4, configuration.getTerminologyServerUrl(),
         configuration.getTerminologySocketTimeout(), configuration.isVerboseRequestLogging());
 
-    AggregateExecutorConfiguration executorConfig = new AggregateExecutorConfiguration(spark,
-        getFhirContext(), terminologyClientFactory, terminologyClient, resourceReader);
+    ExecutorConfiguration executorConfig = new ExecutorConfiguration(spark,
+        fhirContext, terminologyClientFactory, terminologyClient, resourceReader);
+    executorConfig.setFhirEncoders(fhirEncoders);
+
     copyStringProps(configuration, executorConfig,
         Arrays.asList("version", "warehouseUrl", "databaseName", "executorMemory"));
     executorConfig.setExplainQueries(configuration.isExplainQueries());
     executorConfig.setShufflePartitions(configuration.getShufflePartitions());
 
-    aggregateExecutor = new AggregateExecutor(executorConfig);
+    return executorConfig;
   }
 
-  /**
-   * Declare the providers which will handle requests to this server.
-   */
-  private void declareProviders() {
-    FhirContextFactory fhirContextFactory = new FhirContextFactory(FhirVersionEnum.R4);
+  private static ResourceReader buildResourceReader(AnalyticsServerConfiguration configuration,
+      SparkSession spark) throws IOException, URISyntaxException {
+    return new ResourceReader(spark, configuration.getWarehouseUrl(),
+        configuration.getDatabaseName());
+  }
+
+  private List<Object> buildQueryProviders(ExecutorConfiguration executorConfiguration) {
+    AggregateExecutor aggregateExecutor = new AggregateExecutor(executorConfiguration);
     List<Object> providers = new ArrayList<>();
-    providers.add(new AggregateOperationProvider(aggregateExecutor));
-    providers.add(new SelectProvider());
-    providers.add(new ImportProvider(configuration, spark, fhirEncoders, fhirContextFactory,
-        aggregateExecutor.getResourceReader()));
-    providers.add(new StructureDefinitionProvider(getFhirContext()));
+    providers.add(new AggregateProvider(aggregateExecutor));
+    providers.addAll(buildSearchProviders(executorConfiguration));
+    return providers;
+  }
+
+  private List<IResourceProvider> buildSearchProviders(
+      ExecutorConfiguration executorConfiguration) {
+    List<IResourceProvider> providers = new ArrayList<>();
+    for (ResourceType resourceType : ResourceType.values()) {
+      Class<? extends IBaseResource> resourceTypeClass = getFhirContext()
+          .getResourceDefinition(resourceType.name()).getImplementingClass();
+      //noinspection unchecked
+      providers.add(new SearchProvider(executorConfiguration, resourceTypeClass));
+    }
+    return providers;
+  }
+
+  private List<Object> buildResourceProviders() {
+    List<Object> providers = new ArrayList<>();
     providers.add(new OperationDefinitionProvider(getFhirContext()));
-    registerProviders(providers);
+    return providers;
   }
 
   /**

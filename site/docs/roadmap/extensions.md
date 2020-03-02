@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Extension content
-nav_order: 6
+nav_order: 5
 parent: Roadmap
 grand_parent: Documentation
 ---
@@ -16,3 +16,5 @@ This change will update the [import](../import.html) to capture extension
 content within databases, and implement the `extension` FHIRPath function (see
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)), to
 facilitate the use of extensions within expressions.
+
+Next: [Known issues](../known-issues.html)

@@ -79,6 +79,7 @@ public class ResourceReader {
         })
         .collect(Collectors.toSet());
     availableResourceTypes = Collections.unmodifiableSet(availableResourceTypes);
+    logger.info("Available resources: " + availableResourceTypes);
   }
 
   public SparkSession getSpark() {

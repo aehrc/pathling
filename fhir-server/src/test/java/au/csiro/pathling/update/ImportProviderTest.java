@@ -50,8 +50,9 @@ public class ImportProviderTest {
     config.setDatabaseName("test");
 
     resourceReader = mock(ResourceReader.class);
-    importProvider = new ImportProvider(config, spark, FhirEncoders.forR4().getOrCreate(),
+    ImportExecutor importExecutor = new ImportExecutor(config, spark, FhirEncoders.forR4().getOrCreate(),
         new FhirContextFactory(), resourceReader);
+    importProvider = new ImportProvider(importExecutor);
   }
 
   @Test

@@ -70,14 +70,14 @@ public class ExpressionParserContext {
   }
 
   public ExpressionParserContext(ExpressionParserContext context) {
-    this.fhirContext = context.fhirContext;
-    this.terminologyClientFactory = context.terminologyClientFactory;
-    this.terminologyClient = context.terminologyClient;
-    this.sparkSession = context.sparkSession;
-    this.resourceReader = context.resourceReader;
-    this.subjectContext = context.subjectContext;
-    this.thisContext = context.thisContext;
-    this.groupings.addAll(context.groupings);
+    fhirContext = context.fhirContext;
+    terminologyClientFactory = context.terminologyClientFactory;
+    terminologyClient = context.terminologyClient;
+    sparkSession = context.sparkSession;
+    resourceReader = context.resourceReader;
+    subjectContext = context.subjectContext;
+    thisContext = context.thisContext;
+    groupings.addAll(context.groupings);
   }
 
   public FhirContext getFhirContext() {

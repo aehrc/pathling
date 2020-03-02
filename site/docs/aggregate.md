@@ -1,13 +1,13 @@
 ---
 layout: page
 title: Aggregate
-nav_order: 1
+nav_order: 2
 parent: Documentation
 ---
 
 # Aggregate
 
-[FHIR OperationDefinition](https://server.pathling.app/fhir/OperationDefinition/aggregate-0)
+[FHIR OperationDefinition](https://server.pathling.app/fhir/OperationDefinition/aggregate-1)
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and the `$aggregate` operation is an
@@ -77,7 +77,9 @@ following parameters:
     within the query, and the type of each result will correspond to the type
     returned by the expression of the corresponding aggregation.
 
-See also:
-[Example requests in Postman](https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d4afec33-89d8-411c-8e4d-9169b9af42e0)
+## Examples
+
+See
+[Example \$aggregate requests in Postman](https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d4afec33-89d8-411c-8e4d-9169b9af42e0).
 
 Next: [FHIRPath](./fhirpath)

@@ -50,7 +50,7 @@ public class AnalyticsServerConfiguration {
   /**
    * (OPTIONAL) URL of a FHIR terminology service to use in satisfying terminology queries.
    */
-  @Nonnull
+  @Nullable
   private String terminologyServerUrl;
 
   /**

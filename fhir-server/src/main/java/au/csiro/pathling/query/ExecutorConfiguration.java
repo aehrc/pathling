@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.query;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -17,7 +18,7 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
-public class AggregateExecutorConfiguration {
+public class ExecutorConfiguration {
 
   /**
    * (REQUIRED) The Apache Spark session this server should use for import and query.
@@ -32,15 +33,21 @@ public class AggregateExecutorConfiguration {
   private final FhirContext fhirContext;
 
   /**
-   * (REQUIRED) Terminology client factory for doing terminology stuff on Spark workers.
+   * (OPTIONAL) FHIR encoders for returning data as FHIR resources.
    */
-  @Nonnull
+  @Nullable
+  private FhirEncoders fhirEncoders;
+
+  /**
+   * (OPTIONAL) Terminology client factory for doing terminology stuff on Spark workers.
+   */
+  @Nullable
   private final TerminologyClientFactory terminologyClientFactory;
 
   /**
-   * (REQUIRED) FHIR terminology service client to use in satisfying terminology queries locally.
+   * (OPTIONAL) FHIR terminology service client to use in satisfying terminology queries locally.
    */
-  @Nonnull
+  @Nullable
   private final TerminologyClient terminologyClient;
 
   /**
@@ -89,9 +96,9 @@ public class AggregateExecutorConfiguration {
    */
   private int loadPartitions;
 
-  public AggregateExecutorConfiguration(@Nonnull SparkSession sparkSession,
-      @Nonnull FhirContext fhirContext, @Nonnull TerminologyClientFactory terminologyClientFactory,
-      @Nonnull TerminologyClient terminologyClient, @Nonnull ResourceReader resourceReader) {
+  public ExecutorConfiguration(@Nonnull SparkSession sparkSession,
+      @Nonnull FhirContext fhirContext, @Nullable TerminologyClientFactory terminologyClientFactory,
+      @Nullable TerminologyClient terminologyClient, @Nonnull ResourceReader resourceReader) {
     this.sparkSession = sparkSession;
     this.fhirContext = fhirContext;
     this.terminologyClientFactory = terminologyClientFactory;
@@ -115,12 +122,21 @@ public class AggregateExecutorConfiguration {
     return fhirContext;
   }
 
-  @Nonnull
+  @Nullable
+  public FhirEncoders getFhirEncoders() {
+    return fhirEncoders;
+  }
+
+  public void setFhirEncoders(@Nullable FhirEncoders fhirEncoders) {
+    this.fhirEncoders = fhirEncoders;
+  }
+
+  @Nullable
   public TerminologyClientFactory getTerminologyClientFactory() {
     return terminologyClientFactory;
   }
 
-  @Nonnull
+  @Nullable
   public TerminologyClient getTerminologyClient() {
     return terminologyClient;
   }
@@ -192,7 +208,7 @@ public class AggregateExecutorConfiguration {
 
   @Override
   public String toString() {
-    return "AggregateExecutorConfiguration{" +
+    return "ExecutorConfiguration{" +
         "terminologyClientFactory=" + terminologyClientFactory +
         ", resourceReader=" + resourceReader +
         ", version='" + version + '\'' +

@@ -310,8 +310,8 @@
       }
 
       > .content {
-        height: 100vh;
         max-width: none;
+        height: 100vh;
       }
 
       @include breakpoint("<=medium") {

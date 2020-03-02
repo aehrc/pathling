@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Summarise operation
-nav_order: 3
+nav_order: 2
 parent: Roadmap
 grand_parent: Documentation
 ---
