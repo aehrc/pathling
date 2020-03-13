@@ -4,11 +4,7 @@
 
 package au.csiro.pathling.query.functions;
 
-import static au.csiro.pathling.utilities.Strings.md5Short;
 import static org.apache.spark.sql.functions.collect_set;
-import static org.apache.spark.sql.functions.isnull;
-import static org.apache.spark.sql.functions.max;
-import static org.apache.spark.sql.functions.not;
 import static org.apache.spark.sql.functions.struct;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,13 +16,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
@@ -34,6 +28,7 @@ import org.hl7.fhir.r4.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.StringType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +46,11 @@ import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 
+/**
+ * Represents a relation defined by a transitive closure table
+ * 
+ * @author szu004
+ */
 class Closure {
   private final Map<SystemAndCode, List<SystemAndCode>> mappings;
 
@@ -96,76 +96,6 @@ class Closure {
   }
 }
 
-
-/**
- * Represents a relation defined by a transitive closure table The closure table should have the
- * schema compliant with the Mapping bean. The relation between `from` and `to` is defined as `from`
- * -- relation --> `to` E.g. if the relation is subsumes: `from` -- subsumes --> `to` means that
- * `from` is more general.
- * 
- * @author szu004
- *
- */
-class Relation {
-
-  final Dataset<Mapping> mappingTable;
-  final boolean inverted;
-
-  public Relation(Dataset<Mapping> mappingTable, boolean inverted) {
-    this.mappingTable = mappingTable;
-    this.inverted = inverted;
-  }
-
-  public Relation(Dataset<Mapping> mappingTable) {
-    this(mappingTable, false);
-  }
-
-  public Dataset<Row> apply(Dataset<Row> from, Dataset<Row> to) {
-
-    Column srcCol = !inverted ? mappingTable.col("from") : mappingTable.col("to");
-    Column dstCol = !inverted ? mappingTable.col("to") : mappingTable.col("from");
-
-    Dataset<Row> joinedDataset =
-        from.join(mappingTable, from.col("coding").equalTo(srcCol), "left_outer").join(to,
-            to.col("id").equalTo(from.col("id")).and(to.col("coding").equalTo(dstCol)),
-            "left_outer");
-
-    return joinedDataset.groupBy(from.col("id"))
-        .agg(max(not(isnull(to.col("id")))).alias("subsumes"));
-  }
-
-  public Relation union(Relation other) {
-    return new Relation(mappingTable.union(other.mappingTable));
-  }
-
-  public Relation invert() {
-    return new Relation(mappingTable, !inverted);
-  }
-
-
-  /**
-   * Creates equivalence relation from given codes, that one where each code is relation with
-   * itself.
-   * 
-   * @param codes
-   */
-  public static Relation createEquivalence(Dataset<SystemAndCode> codes) {
-
-    // TODO: Maybe rewrite as select
-    Dataset<Mapping> mappingDataset = codes.map(new MapFunction<SystemAndCode, Mapping>() {
-
-      private static final long serialVersionUID = 1L;
-
-      @Override
-      public Mapping call(SystemAndCode value) throws Exception {
-        return new Mapping(value, value);
-      }
-    }, Encoders.bean(Mapping.class));
-    return new Relation(mappingDataset);
-  }
-}
-
-
 /**
  * Helper class to encapsulate creation of subsumes Relation for a set of Codings.
  * 
@@ -175,48 +105,43 @@ class Relation {
 class ClosureService {
   private static final Logger logger = LoggerFactory.getLogger(ClosureService.class);
 
-  private final String seed;
   private final TerminologyClient terminologyClient;
 
-  public ClosureService(String seed, TerminologyClient terminologyClient) {
-    this.seed = seed;
+  public ClosureService(TerminologyClient terminologyClient) {
     this.terminologyClient = terminologyClient;
   }
 
-  public Closure getSubumesRelationInt(Collection<SystemAndCode> systemAndCodes) {
-
+  public Closure getSubumesRelation(Collection<SystemAndCode> systemAndCodes) {
     List<Coding> codings =
         systemAndCodes.stream().map(SystemAndCode::toCoding).collect(Collectors.toList());
     // recreate the systemAndCodes dataset from the list not to execute the query again.
     // Create a unique name for the closure table for this code system, based upon the
     // expressions of the input, argument and the CodeSystem URI.
-    logger.info("Sending $closure requests to terminology service for codings: " + systemAndCodes);
-    String closureName = md5Short(seed + codings.hashCode());
+    String closureName = UUID.randomUUID().toString();
+    logger.info("Sending $closure requests to terminology service with name '{}' and {} codinings",
+        closureName, codings.size());
     // Execute the closure operation against the terminology server.
-    // TODO: add validatoin checks for the response
-    terminologyClient.closure(new StringType(closureName), null, null);
-    ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
-    return Closure.fromMappings(conceptMapToMappings(closure));
+    // TODO: add validation checks for the response
+    ConceptMap initialResponse = terminologyClient.closure(new StringType(closureName), null, null);
+    validateConceptMap(initialResponse, closureName, "1");
+    ConceptMap closureResponse =
+        terminologyClient.closure(new StringType(closureName), codings, null);
+    validateConceptMap(closureResponse, closureName, "2");
+    return Closure.fromMappings(conceptMapToMappings(closureResponse));
   }
 
-
-  public Relation getSubumesRelation(Dataset<SystemAndCode> codingsDataset) {
-
-    List<SystemAndCode> systemAndCodes = codingsDataset.collectAsList();
-    List<Coding> codings =
-        systemAndCodes.stream().map(SystemAndCode::toCoding).collect(Collectors.toList());
-    // recreate the systemAndCodes dataset from the list not to execute the query again.
-    Relation result = Relation.createEquivalence(codingsDataset.sparkSession()
-        .createDataset(systemAndCodes, Encoders.bean(SystemAndCode.class)));
-    // Create a unique name for the closure table for this code system, based upon the
-    // expressions of the input, argument and the CodeSystem URI.
-    logger.debug("Sending $closure requests to terminology service for codings: " + systemAndCodes);
-    String closureName = md5Short(seed + codings.hashCode());
-    // Execute the closure operation against the terminology server.
-    // TODO: add validatoin checks for the response
-    terminologyClient.closure(new StringType(closureName), null, null);
-    ConceptMap closure = terminologyClient.closure(new StringType(closureName), codings, null);
-    return result.union(conceptMapToSubsumesRelation(closure, codingsDataset.sparkSession()));
+  private void validateConceptMap(ConceptMap conceptMap, String closureName, String version) {
+    if (!PublicationStatus.ACTIVE.equals(conceptMap.getStatus())) {
+      throw new RuntimeException(
+          "Expected ConceptMap with status: ACTIVE, got: " + conceptMap.getStatus());
+    }
+    // TODO: Uncomment when testing is done
+    // if (!closureName.equals(conceptMap.getName())) {
+    // throw new RuntimeException("");
+    // }
+    // if (!version.equals(conceptMap.getVersion())) {
+    // throw new RuntimeException("");
+    // }
   }
 
   /**
@@ -268,27 +193,6 @@ class ClosureService {
     }
     return mappings;
   }
-
-  public static Relation conceptMapToSubsumesRelation(ConceptMap conceptMap, SparkSession spark) {
-    List<Mapping> mappings = new ArrayList<Mapping>();
-    if (conceptMap.hasGroup()) {
-      List<ConceptMapGroupComponent> groups = conceptMap.getGroup();
-      for (ConceptMapGroupComponent group : groups) {
-        List<SourceElementComponent> elements = group.getElement();
-        for (SourceElementComponent source : elements) {
-          for (TargetElementComponent target : source.getTarget()) {
-            Mapping subsumesMapping = equivalenceToSubsumesMapping(
-                new SystemAndCode(group.getSource(), source.getCode()),
-                new SystemAndCode(group.getTarget(), target.getCode()), target.getEquivalence());
-            if (subsumesMapping != null) {
-              mappings.add(subsumesMapping);
-            }
-          }
-        }
-      }
-    }
-    return new Relation(spark.createDataset(mappings, Encoders.bean(Mapping.class)));
-  }
 }
 
 
@@ -301,7 +205,6 @@ class ClosureService {
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
  */
 public class SubsumesFunction implements Function {
-
 
   public static class SubsumptionMapper
       implements MapPartitionsFunction<IdAndCodingSets, IdAndBoolean> {
@@ -317,40 +220,27 @@ public class SubsumesFunction implements Function {
 
     @Override
     public Iterator<IdAndBoolean> call(Iterator<IdAndCodingSets> input) throws Exception {
-      // the expected structure of the rows is
-      // id, array<coding>, array<coding>
-      // there are two parts here:
-      // 1) we need to collect all the IDs for closure construction
-      // 2) we need to cache the actual data also so that later we can resolve each id
-      // NOTE: NULL codings is present will be represented as SystemAndCode with null values for
-      // system and code.
-      // in the array
-      logger.info("Processing partition iterator: {}", input);
       List<IdAndCodingSets> entries = Streams.stream(input).collect(Collectors.toList());
-      logger.info("Collected entries: {}", entries.size());
       // collect distinct tokens
       Set<SystemAndCode> entrySet = entries.stream()
           .flatMap(r -> Streams.concat(r.getLeftCodings().stream(), r.getRightCodings().stream()))
           .filter(SystemAndCode::isNotNull).collect(Collectors.toSet());
-      logger.info("Collected left sets: {}", entrySet);
-      String seed = UUID.randomUUID().toString();
-      ClosureService cs = new ClosureService(seed, terminologyClientFactory.build(logger));
-      final Closure cl = cs.getSubumesRelationInt(entrySet);
-      logger.info("Closure mappins are: {}", cl);
-      return entries.stream().map(
-          r -> IdAndBoolean.of(r.getId(), cl.anyRelates(r.getLeftCodings(), r.getRightCodings())))
-          .iterator();
+      ClosureService closureService = new ClosureService(terminologyClientFactory.build(logger));
+      final Closure subsumeClosure = closureService.getSubumesRelation(entrySet);
+      return entries.stream().map(r -> IdAndBoolean.of(r.getId(),
+          subsumeClosure.anyRelates(r.getLeftCodings(), r.getRightCodings()))).iterator();
     }
   }
 
+  private static final String COL_ID = "id";
+  private static final String COL_CODE = "code";
+  private static final String COL_SYSTEM = "system";
+  private static final String COL_CODING = "coding";
+  private static final String COL_CODING_SET = "codingSet";
+  private static final String COL_LEFT_CODINGS = "leftCodings";
+  private static final String COL_RIGHT_CODINGS = "rightCodings";
 
   private static final Logger logger = LoggerFactory.getLogger(SubsumesFunction.class);
-
-  // private static void debugDataset(Dataset<?> dataset, String msg) {
-  // System.out.println(msg);
-  // dataset.printSchema();
-  // dataset.show();
-  // }
 
   private boolean inverted = false;
   private String functionName = "subsumes";
@@ -406,19 +296,17 @@ public class SubsumesFunction implements Function {
 
   private Dataset<Row> createSubsumesResult(ExpressionParserContext ctx,
       Dataset<Row> inputSystemAndCodeDataset, Dataset<Row> argSystemAndCodeDataset) {
-    Dataset<Row> inputCodingSet =
-        inputSystemAndCodeDataset.groupBy(inputSystemAndCodeDataset.col("id"))
-            .agg(collect_set(inputSystemAndCodeDataset.col("coding")).alias("coding_set"));
+    Dataset<Row> inputCodingSet = toCodingSetsDataset(inputSystemAndCodeDataset);
+    Dataset<Row> argCodingSet = toCodingSetsDataset(argSystemAndCodeDataset);
 
-    Dataset<Row> argCodingSet = argSystemAndCodeDataset.groupBy(argSystemAndCodeDataset.col("id"))
-        .agg(collect_set(argSystemAndCodeDataset.col("coding")).alias("coding_set"));
+    // JOIN the input args datasets
+    Dataset<Row> joinedCodingSets = inputCodingSet.join(argCodingSet,
+        inputCodingSet.col(COL_ID).equalTo(argCodingSet.col(COL_ID)), "left_outer")
+        .select(inputCodingSet.col(COL_ID).alias(COL_ID),
+            inputCodingSet.col(COL_CODING_SET).alias(COL_LEFT_CODINGS),
+            argCodingSet.col(COL_CODING_SET).alias(COL_RIGHT_CODINGS));
 
-    Dataset<Row> joinedCodingSets = inputCodingSet
-        .join(argCodingSet, inputCodingSet.col("id").equalTo(argCodingSet.col("id")), "left_outer")
-        .select(inputCodingSet.col("id").alias("id"),
-            inputCodingSet.col("coding_set").alias("leftCodings"),
-            argCodingSet.col("coding_set").alias("rightCodings"));
-
+    // apply subsumption relation per partition
     Dataset<Row> resultDataset = joinedCodingSets.as(Encoders.bean(IdAndCodingSets.class))
         .mapPartitions(new SubsumptionMapper(ctx.getTerminologyClientFactory()),
             Encoders.bean(IdAndBoolean.class))
@@ -426,29 +314,14 @@ public class SubsumesFunction implements Function {
     return resultDataset;
   }
 
-
-  @Nonnull
-  private Relation createTransitiveClosureTable(String seed,
-      ExpressionParserContext expressionParserContext, Dataset<Row> inputSystemAndCodeDataset,
-      Dataset<Row> argSystemAndCodeDataset) {
-
-    ClosureService closureService =
-        new ClosureService(seed, expressionParserContext.getTerminologyClient());
-    Relation subsumesRelation = closureService
-        .getSubumesRelation(getCodes(inputSystemAndCodeDataset.union(argSystemAndCodeDataset)));
-
-    return (!inverted) ? subsumesRelation : subsumesRelation.invert();
-  }
-
   @Nonnull
   private Dataset<SystemAndCode> getCodes(Dataset<Row> source) {
-    Column systemCol = source.col("coding").getField("system").alias("system");
-    Column codeCol = source.col("coding").getField("code").alias("code");
+    Column systemCol = source.col(COL_CODING).getField(COL_SYSTEM).alias(COL_SYSTEM);
+    Column codeCol = source.col(COL_CODING).getField(COL_CODE).alias(COL_CODE);
     Dataset<Row> codes = source.select(codeCol, systemCol);
     return codes.where(systemCol.isNotNull().and(codeCol.isNotNull())).distinct()
         .as(Encoders.bean(SystemAndCode.class));
   }
-
 
   private ParsedExpression normalizeToCoding(ParsedExpression expression,
       ExpressionParserContext parserContext) {
@@ -472,6 +345,11 @@ public class SubsumesFunction implements Function {
     }
   }
 
+  /**
+   * @param inputExpression
+   * @param contextExpression
+   * @return Dataframe with schema: "STRING id, STRUCT (STRING system, STRING code) coding"
+   */
   @Nonnull
   private Dataset<Row> toSystemAndCodeDataset(ParsedExpression inputExpression,
       ParsedExpression contextExpression) {
@@ -479,19 +357,27 @@ public class SubsumesFunction implements Function {
     FHIRDefinedType inputType = inputExpression.getFhirType();
     assert FHIRDefinedType.CODING.equals(inputType) : "Expression of CODING type expected";
 
-
     // do the literal magic here
     ParsedExpression idExpression =
         (!inputExpression.isLiteral()) ? inputExpression : contextExpression;
     Dataset<Row> codingDataset =
-        idExpression.getDataset().select(idExpression.getIdColumn().alias("id"),
-            inputExpression.getLiteralOrValueColumn().getField("system").alias("system"),
-            inputExpression.getLiteralOrValueColumn().getField("code").alias("code"));
-    // TODO: add filtering on non empty system and code
-    // Note: the struct needs to be (code, system) as this is the order in which SystemAndCode is
-    // encoded.
-    return codingDataset.select(codingDataset.col("id"),
-        struct(codingDataset.col("code"), codingDataset.col("system")).alias("coding"));
+        idExpression.getDataset().select(idExpression.getIdColumn().alias(COL_ID),
+            inputExpression.getLiteralOrValueColumn().getField(COL_SYSTEM).alias(COL_SYSTEM),
+            inputExpression.getLiteralOrValueColumn().getField(COL_CODE).alias(COL_CODE));
+    return codingDataset.select(codingDataset.col(COL_ID),
+        struct(codingDataset.col(COL_CODE), codingDataset.col(COL_SYSTEM)).alias(COL_CODING));
+  }
+
+  /**
+   * Groups all coding for each into an array column.
+   * 
+   * @param systemAndCodeDataset
+   * @return Dataframe with schema "STRING id ARRAY(STRUCT(STRING system, STRING code)) codingSet"
+   */
+  @Nonnull
+  private Dataset<Row> toCodingSetsDataset(Dataset<Row> systemAndCodeDataset) {
+    return systemAndCodeDataset.groupBy(systemAndCodeDataset.col(COL_ID))
+        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_CODING_SET));
   }
 
   private void validateInput(FunctionInput input) {

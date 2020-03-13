@@ -10,10 +10,11 @@ import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.r4.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
+import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 
 public interface ConceptMapFixtures {
 
-  public static final ConceptMap CM_EMPTY = new ConceptMap();
+  public static final ConceptMap CM_EMPTY = creatEmptyConceptMap();
 
   // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
   public static final ConceptMap CM_SNOWMED_444814009_SUBSUMES_40055000 =
@@ -25,12 +26,19 @@ public interface ConceptMapFixtures {
     return Pair.of(mapping.getSource().getSystem(), mapping.getTarget().getSystem());
   }
 
+  
+  public static ConceptMap creatEmptyConceptMap() {
+    final ConceptMap result = new ConceptMap();
+    result.setStatus(PublicationStatus.ACTIVE);
+    return result;
+  }
+  
   public static ConceptMap createConceptMap(ConceptMapEntry... mappings) {
 
     Map<Pair<String, String>, List<ConceptMapEntry>> mappingsBySystem =
         Stream.of(mappings).collect(Collectors.groupingBy(ConceptMapFixtures::getSystems));
 
-    final ConceptMap result = new ConceptMap();
+    final ConceptMap result = creatEmptyConceptMap();
     mappingsBySystem.forEach((srcAndTarget, systemMappins) -> {
       final ConceptMapGroupComponent group = result.addGroup();
       group.setSource(srcAndTarget.getLeft());
