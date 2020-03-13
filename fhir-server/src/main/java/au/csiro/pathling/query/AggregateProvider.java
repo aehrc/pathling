@@ -8,7 +8,6 @@ package au.csiro.pathling.query;
 
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
 import org.hl7.fhir.r4.model.Parameters;
 
 /**
@@ -27,9 +26,8 @@ public class AggregateProvider {
   }
 
   @Operation(name = "$aggregate", idempotent = true)
-  public Parameters aggregate(@ResourceParam Parameters parameters, RequestDetails requestDetails) {
-    /* TODO: Remove the passing down of the FHIR server base, if its not needed. */
-    AggregateRequest query = new AggregateRequest(parameters, requestDetails.getFhirServerBase());
+  public Parameters aggregate(@ResourceParam Parameters parameters) {
+    AggregateRequest query = new AggregateRequest(parameters);
     AggregateResponse result = aggregateExecutor.execute(query);
     return result.toParameters();
   }

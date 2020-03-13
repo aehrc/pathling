@@ -38,10 +38,6 @@ public class AggregateRequest {
 
   private ResourceType subjectResource;
 
-  // This is used to store the server base for the request, for use when putting search URLs into
-  // responses.
-  private String serverBase;
-
   public AggregateRequest() {
   }
 
@@ -50,7 +46,7 @@ public class AggregateRequest {
    * `aggregate` OperationDefinition) and populates the values into a new AggregateQuery
    * object.
    */
-  public AggregateRequest(Parameters parameters, String serverBase) {
+  public AggregateRequest(Parameters parameters) {
     // Get subject resource.
     Stream<ParametersParameterComponent> subjectResourceParams = parameters.getParameter().stream()
         .filter(param -> param.getName().equals("subjectResource"));
@@ -138,9 +134,6 @@ public class AggregateRequest {
           return param.getValue().toString();
         })
         .collect(Collectors.toList()));
-
-    // Save the server base for the request.
-    this.serverBase = serverBase;
   }
 
   @Nonnull
@@ -165,14 +158,6 @@ public class AggregateRequest {
   @Nonnull
   public List<String> getFilters() {
     return filters;
-  }
-
-  public String getServerBase() {
-    return serverBase;
-  }
-
-  public void setServerBase(String serverBase) {
-    this.serverBase = serverBase;
   }
 
   public static class Aggregation {
