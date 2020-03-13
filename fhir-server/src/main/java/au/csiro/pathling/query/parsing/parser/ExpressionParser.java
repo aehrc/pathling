@@ -32,6 +32,11 @@ public class ExpressionParser {
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     FhirPathParser parser = new FhirPathParser(tokens);
 
+    // Remove the default console error reporter, and add a listener that wraps each parse error in
+    // an invalid request exception.
+    parser.removeErrorListeners();
+    parser.addErrorListener(new ExpressionParserErrorListener());
+
     ExpressionVisitor expressionVisitor = new ExpressionVisitor(context);
     return expressionVisitor.visit(parser.expression());
   }

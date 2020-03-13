@@ -194,4 +194,18 @@ public class TestData {
 
     return medReq;
   }
+
+  /**
+   * Returns a FHIR Coverage resource for testing purposes.
+   */
+  public static Encounter newEncounter() {
+    Encounter encounter = new Encounter();
+
+    Coding classCoding = new Coding();
+    classCoding.setSystem("http://terminology.hl7.org/CodeSystem/v3-ActCode");
+    classCoding.setCode("AMB");
+    encounter.setClass_(classCoding);
+
+    return encounter;
+  }
 }

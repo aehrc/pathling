@@ -43,20 +43,18 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   private Dataset<Row> result;
   private Integer count;
 
-  /* TODO: Write tests for SearchExecutor. */
-
   public SearchExecutor(ExecutorConfiguration configuration, ResourceType subjectResource,
       StringAndListParam filters) {
     super(configuration);
     this.subjectResource = subjectResource;
     this.filters = filters;
     String filterStrings = filters == null
-        ? "null"
-        : filters.getValuesAsQueryTokens().stream()
-            .map(andParam -> andParam.getValuesAsQueryTokens().stream()
-                .map(StringParam::getValue)
-                .collect(Collectors.joining(",")))
-            .collect(Collectors.joining(" & "));
+                           ? "null"
+                           : filters.getValuesAsQueryTokens().stream()
+                               .map(andParam -> andParam.getValuesAsQueryTokens().stream()
+                                   .map(StringParam::getValue)
+                                   .collect(Collectors.joining(",")))
+                               .collect(Collectors.joining(" & "));
     logger.info("Received search request: filters=[" + filterStrings + "]");
     initializeDataset();
   }
@@ -107,7 +105,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Override
   public Integer size() {
     if (count == null) {
-        count = Math.toIntExact(result.count());
+      count = Math.toIntExact(result.count());
     }
     return count;
   }
@@ -132,8 +130,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           ParsedExpression expression = expressionParser.parse(param.getValue());
           filterExpressions.add(expression);
           innerColumn = innerColumn == null
-              ? expression.getValueColumn()
-              : innerColumn.or(expression.getValueColumn());
+                        ? expression.getValueColumn()
+                        : innerColumn.or(expression.getValueColumn());
           // We save away the first encountered ID column so that we can use it later to join the
           // subject resource dataset with the joined filter datasets.
           if (idColumn == null) {
@@ -141,8 +139,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           }
         }
         filterColumn = filterColumn == null
-            ? innerColumn
-            : filterColumn.and(innerColumn);
+                       ? innerColumn
+                       : filterColumn.and(innerColumn);
 
         // Join all of the datasets from the parsed filter expressions together.
         Dataset<Row> filterDataset = joinExpressions(filterExpressions).where(filterColumn);

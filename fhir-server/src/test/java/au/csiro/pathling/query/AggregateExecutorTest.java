@@ -9,22 +9,32 @@ package au.csiro.pathling.query;
 import static au.csiro.pathling.TestUtilities.checkExpectedJson;
 import static au.csiro.pathling.TestUtilities.getJsonParser;
 import static au.csiro.pathling.TestUtilities.getResourceAsStream;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.TestUtilities;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.AggregateRequest.Aggregation;
 import au.csiro.pathling.query.AggregateRequest.Grouping;
+import ca.uhn.fhir.rest.param.StringAndListParam;
+import ca.uhn.fhir.rest.param.StringParam;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
 import org.json.JSONException;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -39,6 +49,9 @@ public class AggregateExecutorTest extends ExecutorTest {
 
   private AggregateExecutor executor;
   private TerminologyClient terminologyClient;
+  private Parameters response;
+  private ExecutorConfiguration configuration;
+  private ResourceType subjectResource;
 
   @Before
   public void setUp() throws Exception {
@@ -51,21 +64,51 @@ public class AggregateExecutorTest extends ExecutorTest {
 
     // Create and configure a new AggregateExecutor.
     Path warehouseDirectory = Files.createTempDirectory("pathling-test-");
-    ExecutorConfiguration config = new ExecutorConfiguration(spark,
+    configuration = new ExecutorConfiguration(spark,
         TestUtilities.getFhirContext(), terminologyClientFactory, terminologyClient, mockReader);
-    config.setWarehouseUrl(warehouseDirectory.toString());
-    config.setDatabaseName("test");
+    configuration.setWarehouseUrl(warehouseDirectory.toString());
+    configuration.setDatabaseName("test");
+    configuration.setFhirEncoders(FhirEncoders.forR4().getOrCreate());
 
-    executor = new AggregateExecutor(config);
+    executor = new AggregateExecutor(configuration);
+  }
+
+  /**
+   * Test that the drill down expression from the first grouping from each aggregate result can be
+   * successfully executed using the FHIRPath search.
+   */
+  @After
+  public void runFirstGroupingThroughSearch() {
+    Optional<ParametersParameterComponent> firstGroupingOptional = response.getParameter().stream()
+        .filter(param -> param.getName().equals("grouping"))
+        .findFirst();
+    assertThat(firstGroupingOptional).isPresent();
+    ParametersParameterComponent firstGrouping = firstGroupingOptional.get();
+
+    Optional<ParametersParameterComponent> drillDownOptional = firstGrouping.getPart().stream()
+        .filter(param -> param.getName().equals("drillDown"))
+        .findFirst();
+    assertThat(drillDownOptional).isPresent();
+    ParametersParameterComponent drillDown = drillDownOptional.get();
+    String drillDownString = ((StringType) drillDown.getValue()).getValue();
+
+    StringAndListParam filters = new StringAndListParam();
+    filters.addAnd(new StringParam(drillDownString));
+    SearchExecutor searchExecutor = new SearchExecutor(configuration, subjectResource,
+        filters);
+    List<IBaseResource> resources = searchExecutor.getResources(0, 100);
+    assertThat(resources.size()).isGreaterThan(0);
   }
 
   @Test
   public void queryWithMultipleGroupings() throws IOException, JSONException {
-    mockResourceReader(ResourceType.ENCOUNTER);
+
+    subjectResource = ResourceType.ENCOUNTER;
+    mockResourceReader(subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.ENCOUNTER);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of encounters");
@@ -86,15 +129,16 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMultipleGroupings.Parameters.json");
   }
 
   @Test
   public void queryWithFilter() throws IOException, JSONException {
-    mockResourceReader(ResourceType.PATIENT);
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
@@ -116,19 +160,20 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithFilter.Parameters.json");
   }
 
   @Test
   public void queryWithIntegerGroupings() throws IOException, JSONException {
-    mockResourceReader(ResourceType.CLAIM);
+    subjectResource = ResourceType.CLAIM;
+    mockResourceReader(subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.CLAIM);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of claims");
@@ -144,19 +189,20 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithIntegerGroupings.Parameters.json");
   }
 
   @Test
   public void queryWithMathExpression() throws IOException, JSONException {
-    mockResourceReader(ResourceType.CLAIM);
+    subjectResource = ResourceType.CLAIM;
+    mockResourceReader(subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.CLAIM);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of claims");
@@ -172,19 +218,20 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMathExpression.Parameters.json");
   }
 
   @Test
   public void queryWithChoiceElement() throws IOException, JSONException {
-    mockResourceReader(ResourceType.PATIENT);
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.PATIENT);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of patients");
@@ -200,19 +247,20 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithChoiceElement.Parameters.json");
   }
 
   @Test
   public void queryWithDateComparison() throws IOException, JSONException {
-    mockResourceReader(ResourceType.PATIENT);
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.PATIENT);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of patients");
@@ -225,19 +273,20 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithDateComparison.Parameters.json");
   }
 
   @Test
   public void queryWithResolve() throws IOException, JSONException {
-    mockResourceReader(ResourceType.ALLERGYINTOLERANCE, ResourceType.PATIENT);
+    subjectResource = ResourceType.ALLERGYINTOLERANCE;
+    mockResourceReader(subjectResource, ResourceType.PATIENT);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.ALLERGYINTOLERANCE);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of allergies");
@@ -253,19 +302,20 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithResolve.Parameters.json");
   }
 
   @Test
   public void queryWithPolymorphicResolve() throws IOException, JSONException {
-    mockResourceReader(ResourceType.DIAGNOSTICREPORT, ResourceType.PATIENT);
+    subjectResource = ResourceType.DIAGNOSTICREPORT;
+    mockResourceReader(subjectResource, ResourceType.PATIENT);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.DIAGNOSTICREPORT);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of reports");
@@ -281,19 +331,20 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithPolymorphicResolve.Parameters.json");
   }
 
   @Test
   public void queryWithReverseResolve() throws IOException, JSONException {
-    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.PATIENT);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of patients");
@@ -309,8 +360,8 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithReverseResolve.Parameters.json");
   }
@@ -318,11 +369,12 @@ public class AggregateExecutorTest extends ExecutorTest {
 
   @Test
   public void queryWithReverseResolveAndCounts() throws IOException, JSONException {
-    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.PATIENT);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of patients");
@@ -338,19 +390,20 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithReverseResolveAndCounts.Parameters.json");
   }
 
   @Test
   public void queryMultipleGroupingCounts() throws IOException, JSONException {
-    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.PATIENT);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of patients");
@@ -371,8 +424,8 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryMultipleGroupingCounts.Parameters.json");
   }
@@ -381,11 +434,12 @@ public class AggregateExecutorTest extends ExecutorTest {
   @Test
   @Ignore
   public void queryMultipleCountAggregations() throws IOException, JSONException {
-    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.PATIENT);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation1 = new Aggregation();
     aggregation1.setLabel("Number of patient given names");
@@ -406,8 +460,8 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
 
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryMultipleCountAggregations.Parameters.json");
@@ -415,11 +469,12 @@ public class AggregateExecutorTest extends ExecutorTest {
 
   @Test
   public void queryWithWhere() throws IOException, JSONException {
-    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.PATIENT);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of patients");
@@ -436,15 +491,16 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithWhere.Parameters.json");
   }
 
   @Test
   public void queryWithMemberOf() throws IOException, JSONException {
-    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.CONDITION, subjectResource);
     Bundle mockResponse = (Bundle) TestUtilities.getJsonParser().parseResource(getResourceAsStream(
         "txResponses/MemberOfFunctionTest-memberOfCoding-validate-code-positive.Bundle.json"));
 
@@ -453,7 +509,7 @@ public class AggregateExecutorTest extends ExecutorTest {
 
     // Build a AggregateRequest to pass to the executor.
     AggregateRequest request = new AggregateRequest();
-    request.setSubjectResource(ResourceType.PATIENT);
+    request.setSubjectResource(subjectResource);
 
     Aggregation aggregation = new Aggregation();
     aggregation.setLabel("Number of patients");
@@ -464,15 +520,15 @@ public class AggregateExecutorTest extends ExecutorTest {
     grouping1.setLabel("Condition in ED diagnosis reference set?");
     String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
     grouping1.setExpression(
-        "reverseResolve(Condition.subject)" + ".code" + ".memberOf('" + valueSetUrl + "'");
+        "reverseResolve(Condition.subject)" + ".code" + ".memberOf('" + valueSetUrl + "')");
     request.getGroupings().add(grouping1);
 
     // Execute the query.
     AggregateResponse response = executor.execute(request);
 
     // Check the response against an expected response.
-    Parameters responseParameters = response.toParameters();
-    String actualJson = getJsonParser().encodeResourceToString(responseParameters);
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json");
   }

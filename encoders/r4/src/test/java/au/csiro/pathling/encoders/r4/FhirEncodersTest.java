@@ -57,6 +57,10 @@ public class FhirEncodersTest {
   private static Dataset<MedicationRequest> medDataset;
   private static MedicationRequest decodedMedRequest;
 
+  private static Encounter encounter = TestData.newEncounter();
+  private static Dataset<Encounter> encounterDataset;
+  private static Encounter decodedEncounter;
+
   /**
    * Set up Spark.
    */
@@ -81,8 +85,11 @@ public class FhirEncodersTest {
 
     medDataset = spark.createDataset(ImmutableList.of(medRequest),
         encoders.of(MedicationRequest.class, Medication.class, Provenance.class));
-
     decodedMedRequest = medDataset.head();
+
+    encounterDataset = spark
+        .createDataset(ImmutableList.of(encounter), encoders.of(Encounter.class));
+    decodedEncounter = encounterDataset.head();
   }
 
   /**
@@ -335,5 +342,12 @@ public class FhirEncodersTest {
 
     Assert.assertSame(encoders.of(Patient.class),
         encoders.of(Patient.class));
+  }
+
+  @Test
+  public void testPrimitiveClassDecoding() {
+    Assert.assertEquals(encounter.getClass_().getCode(),
+        encounterDataset.select("class.code").head().get(0));
+    Assert.assertEquals(encounter.getClass_().getCode(), decodedEncounter.getClass_().getCode());
   }
 }

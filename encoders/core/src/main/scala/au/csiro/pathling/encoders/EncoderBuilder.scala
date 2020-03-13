@@ -153,8 +153,11 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       !field.isInstanceOf[RuntimeChildPrimitiveEnumerationDatatypeDefinition] &&
       field.getMax == 1 && field.getElementName != "div")
       "set" + field.getElementName.capitalize + "Element"
-    else
+    else if (field.getElementName.equals("class")) {
+      "set" + field.getElementName.capitalize + "_"
+    } else {
       "set" + field.getElementName.capitalize
+    }
   }
 
   /**

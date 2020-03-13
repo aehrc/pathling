@@ -8,7 +8,7 @@
         { "name": "result", "valueUnsignedInt": 9 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'<missing ')'> contains false"
+          "valueString": "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109') contains false"
         }
       ]
     },
@@ -19,7 +19,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'<missing ')'> contains true"
+          "valueString": "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109') contains true"
         }
       ]
     }

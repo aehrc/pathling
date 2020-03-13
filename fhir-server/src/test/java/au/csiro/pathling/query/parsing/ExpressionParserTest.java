@@ -9,6 +9,7 @@ package au.csiro.pathling.query.parsing;
 import static au.csiro.pathling.TestUtilities.getSparkSession;
 import static au.csiro.pathling.test.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -22,6 +23,7 @@ import au.csiro.pathling.query.parsing.parser.ExpressionParser;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ParsedExpressionAssert;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -256,4 +258,11 @@ public class ExpressionParserTest {
         .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
   }
 
+  @Test
+  public void parserErrorThrows() {
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> expressionParser.parse(
+            "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"))
+        .withMessage("Error parsing FHIRPath expression: missing ')' at '<EOF>'");
+  }
 }
