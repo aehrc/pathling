@@ -26,7 +26,9 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.ComplexExpressionBuilder;
@@ -44,8 +46,8 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 @Category(au.csiro.pathling.UnitTest.class)
 public class SubsumesFunctionTest {
 
-  private TerminologyClient terminologyClient = mock(TerminologyClient.class);
-
+  private TerminologyClient terminologyClient;
+  private TerminologyClientFactory terminologyClientFactory;
 
   private static final String TEST_SYSTEM = "uuid:1";
 
@@ -82,6 +84,11 @@ public class SubsumesFunctionTest {
 
   @Before
   public void setUp() {
+    // NOTE: We need to make TerminologyClient mock serializable so that the TerminologyClientFactory
+    // mock is serializable too.
+    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
+    terminologyClientFactory = mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
+    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
     when(terminologyClient.closure(any(), any(), any())).thenReturn(MAP_LARGE_MEDIUM_SMALL);
   }
 
@@ -171,6 +178,7 @@ public class SubsumesFunctionTest {
     // Prepare the inputs to the function.
     ExpressionParserContext parserContext = new ExpressionParserContext();
     parserContext.setTerminologyClient(terminologyClient);
+    parserContext.setTerminologyClientFactory(terminologyClientFactory);
 
     FunctionInput functionInput = new FunctionInput();
     String inputFhirPath =

@@ -13,8 +13,19 @@ import java.io.Serializable;
  */
 public class IdAndBoolean implements Serializable {
 
+  private static final long serialVersionUID = 1L;
+  
   private String id;
   private boolean value;
+
+  public IdAndBoolean(String id, boolean value) {
+    this.id = id;
+    this.value = value;
+  }
+
+  public IdAndBoolean() {
+    this(null, false);
+  }
 
   public String getId() {
     return id;
@@ -30,6 +41,10 @@ public class IdAndBoolean implements Serializable {
 
   public void setValue(boolean value) {
     this.value = value;
+  }
+  
+  public static IdAndBoolean of(String id, boolean value) {
+    return new IdAndBoolean(id, value);
   }
 
 }

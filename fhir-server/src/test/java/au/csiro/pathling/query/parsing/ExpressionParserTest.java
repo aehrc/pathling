@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.UUID;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -48,6 +49,9 @@ import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ParsedExpressionAssert;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
 
+
+import static org.apache.spark.sql.functions.*;
+
 /**
  * @author Piotr Szul
  */
@@ -64,7 +68,8 @@ public class ExpressionParserTest {
     spark = getSparkSession();
 
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
+    TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
+          Mockito.withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     mockReader = mock(ResourceReader.class);
@@ -283,5 +288,4 @@ public class ExpressionParserTest {
             .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
 
   }
-  
 }

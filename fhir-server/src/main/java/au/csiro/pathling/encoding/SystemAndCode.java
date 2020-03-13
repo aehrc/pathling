@@ -43,6 +43,14 @@ public class SystemAndCode implements Serializable {
   }
   
   
+  public boolean isNull() {
+    return system == null && code == null;
+  }
+
+  public boolean isNotNull() {
+    return !isNull();
+  }
+  
   @Override
   public String toString() {
     return "SimpleCode [system=" + system + ", code=" + code + "]";
