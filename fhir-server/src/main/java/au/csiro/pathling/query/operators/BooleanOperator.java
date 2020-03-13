@@ -27,6 +27,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class BooleanOperator implements BinaryOperator {
 
+  /* TODO: Make sure boolean operators work with aggregate function operands. */
+
   public static final String AND = "and";
   public static final String OR = "or";
   public static final String XOR = "xor";

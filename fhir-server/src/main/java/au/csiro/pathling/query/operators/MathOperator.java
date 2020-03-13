@@ -31,6 +31,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class MathOperator implements BinaryOperator {
 
+  /* TODO: Make sure math operators work with aggregate function operands. */
+
   private static final Set<FhirPathType> supportedTypes = new HashSet<FhirPathType>() {{
     add(INTEGER);
     add(DECIMAL);
@@ -97,7 +99,6 @@ public class MathOperator implements BinaryOperator {
         }
         fhirPathType = left.getFhirPathType();
         fhirType = left.getFhirType();
-        // TODO: Implement smart multiplication for Quantity.
         break;
       case DIVISION:
         // The result of the expression should always be decimal.

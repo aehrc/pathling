@@ -83,7 +83,7 @@
       "use": "in",
       "min": 0,
       "max": "*",
-      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine whether it is included within the result. The context is an individual resource of the type specified in the subjectResource parameter. The expression must evaluate to a Boolean value. Multiple filters are combined using AND logic.",
+      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine whether it is included within the result. The context is an individual resource of the type specified in the subjectResource parameter. The expression must evaluate to a singular Boolean value. Multiple filters are combined using AND logic.",
       "type": "string"
     },
     {
@@ -108,6 +108,14 @@
           "max": "*",
           "documentation": "The set of values that resulted from the execution of the aggregations that were requested in the query. There will be one result for each aggregation within the query, and the type of each result will correspond to the type returned by the expression of the corresponding aggregation.",
           "type": "Type"
+        },
+        {
+          "name": "drillDown",
+          "use": "out",
+          "min": 1,
+          "max": "1",
+          "documentation": "A FHIRPath expression that can be used as a filter to retrieve the set of resources that are members of this grouping.",
+          "type": "string"
         }
       ]
     }

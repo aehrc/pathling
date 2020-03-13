@@ -25,6 +25,7 @@ public interface Function {
     put("where", new WhereFunction());
     put("count", new CountFunction());
     put("first", new FirstFunction());
+    put("empty", new EmptyFunction());
     put("memberOf", new MemberOfFunction());
     put("subsumes", new SubsumesFunction());
     put("subsumedBy", new SubsumesFunction(true));

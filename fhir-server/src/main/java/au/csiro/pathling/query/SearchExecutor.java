@@ -41,6 +41,9 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   private final ResourceType subjectResource;
   private final StringAndListParam filters;
   private Dataset<Row> result;
+  private Integer count;
+
+  /* TODO: Write tests for SearchExecutor. */
 
   public SearchExecutor(ExecutorConfiguration configuration, ResourceType subjectResource,
       StringAndListParam filters) {
@@ -103,7 +106,10 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Nullable
   @Override
   public Integer size() {
-    return Math.toIntExact(result.count());
+    if (count == null) {
+        count = Math.toIntExact(result.count());
+    }
+    return count;
   }
 
   private void initializeDataset() {
@@ -143,6 +149,9 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         // Get the full resources which are present in the filtered dataset.
         result = subjectDataset.alias("subject").join(filterDataset,
             subjectDataset.col("id").equalTo(idColumn), "left_semi");
+        // We cache the dataset because we know it will be accessed for both the total and the
+        // record retrieval.
+        result.cache();
       }
     }
   }

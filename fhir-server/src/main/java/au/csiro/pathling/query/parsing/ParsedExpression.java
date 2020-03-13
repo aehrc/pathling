@@ -58,7 +58,6 @@ public class ParsedExpression implements Joinable {
     put(FHIRDefinedType.POSITIVEINT, int.class);
     put(FHIRDefinedType.BOOLEAN, Boolean.class);
     put(FHIRDefinedType.INSTANT, Timestamp.class);
-    // TODO: Data types not catered for: base64Binary, oid, uuid, enumeration of codes.
   }};
 
   /**

@@ -4,26 +4,22 @@
     {
       "name": "grouping",
       "part": [
+        { "name": "label", "valueCode": "female" },
+        { "name": "result", "valueUnsignedInt": 1 },
         {
-          "name": "label",
-          "valueCode": "female"
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 1
+          "name": "drillDown",
+          "valueString": "patient.resolve().gender = 'female'"
         }
       ]
     },
     {
       "name": "grouping",
       "part": [
+        { "name": "label", "valueCode": "male" },
+        { "name": "result", "valueUnsignedInt": 2 },
         {
-          "name": "label",
-          "valueCode": "male"
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 2
+          "name": "drillDown",
+          "valueString": "patient.resolve().gender = 'male'"
         }
       ]
     }

@@ -36,10 +36,6 @@ public class CodingFhirPathTypeSqlHelper implements FhirPathTypeSqlHelper {
   public BiFunction<Column, Column, Column> getEquality() {
     // When comparing Codings, we base the comparison on the highest common level of precision,
     // i.e. if both Codings have a version, we compare them - otherwise, we ignore the version.
-    //
-    // TODO: Think about whether a future version of this implementation could benefit from
-    //   looking up the versionNeeded flag against each distinct CodeSystem encountered within the
-    //   data.
     return (left, right) -> {
       Column incompleteCodingTest = left.getField("system").isNull()
           .or(left.getField("code").isNull())

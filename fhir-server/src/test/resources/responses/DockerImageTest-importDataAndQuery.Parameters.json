@@ -4,27 +4,15 @@
     {
       "name": "grouping",
       "part": [
-        {
-          "name": "label",
-          "valueBoolean": true
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 3
-        }
+        { "name": "label", "valueBoolean": true },
+        { "name": "result", "valueUnsignedInt": 3 }
       ]
     },
     {
       "name": "grouping",
       "part": [
-        {
-          "name": "label",
-          "valueBoolean": false
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 4
-        }
+        { "name": "label", "valueBoolean": false },
+        { "name": "result", "valueUnsignedInt": 4 }
       ]
     }
   ]

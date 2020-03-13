@@ -4,35 +4,19 @@
     {
       "name": "grouping",
       "part": [
-        {
-          "name": "label",
-          "valueCode": "male"
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 5
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 23
-        }
+        { "name": "label", "valueCode": "male" },
+        { "name": "result", "valueUnsignedInt": 5 },
+        { "name": "result", "valueUnsignedInt": 4 },
+        { "name": "drillDown", "valueString": "gender = 'male'" }
       ]
     },
     {
       "name": "grouping",
       "part": [
-        {
-          "name": "label",
-          "valueCode": "female"
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 5
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 20
-        }
+        { "name": "label", "valueCode": "female" },
+        { "name": "result", "valueUnsignedInt": 7 },
+        { "name": "result", "valueUnsignedInt": 7 },
+        { "name": "drillDown", "valueString": "gender = 'female'" }
       ]
     }
   ]

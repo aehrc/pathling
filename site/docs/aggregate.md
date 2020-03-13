@@ -76,6 +76,8 @@ following parameters:
     were requested in the query. There will be one result for each aggregation
     within the query, and the type of each result will correspond to the type
     returned by the expression of the corresponding aggregation.
+  - `drillDown [1..1]` - (string) A FHIRPath expression that can be used as a
+    filter to retrieve the set of resources that are members of this grouping.
 
 ## Examples
 

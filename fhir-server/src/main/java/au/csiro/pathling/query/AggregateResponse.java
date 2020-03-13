@@ -11,11 +11,12 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents the information to be provided as the result of the invocation of the
- * `aggregate-query` operation.
+ * `aggregate` operation.
  *
  * @author John Grimes
  */
@@ -31,7 +32,7 @@ public class AggregateResponse {
 
   /**
    * This constructor populates a Parameters resource with the values from this object, based on the
-   * definition of the result of the `aggregate-query` operation within the OperationDefinition.
+   * definition of the result of the `aggregate` operation within the OperationDefinition.
    */
   public Parameters toParameters() {
     Parameters parameters = new Parameters();
@@ -52,6 +53,10 @@ public class AggregateResponse {
             resultPart.setValue(result);
             groupingParameter.getPart().add(resultPart);
           });
+      ParametersParameterComponent drillDownPart = new ParametersParameterComponent();
+      drillDownPart.setName("drillDown");
+      drillDownPart.setValue(grouping.getDrillDown());
+      groupingParameter.getPart().add(drillDownPart);
       parameters.getParameter().add(groupingParameter);
     });
     return parameters;
@@ -66,6 +71,9 @@ public class AggregateResponse {
     private final List<Type> results = new ArrayList<>();
 
     @Nonnull
+    private StringType drillDown;
+
+    @Nonnull
     public List<Type> getLabels() {
       return labels;
     }
@@ -73,6 +81,15 @@ public class AggregateResponse {
     @Nonnull
     public List<Type> getResults() {
       return results;
+    }
+
+    @Nonnull
+    public StringType getDrillDown() {
+      return drillDown;
+    }
+
+    public void setDrillDown(@Nonnull StringType drillDown) {
+      this.drillDown = drillDown;
     }
   }
 

@@ -4,14 +4,9 @@
     {
       "name": "grouping",
       "part": [
-        {
-          "name": "label",
-          "valueCode": "female"
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 4
-        }
+        { "name": "label", "valueCode": "female" },
+        { "name": "result", "valueUnsignedInt": 4 },
+        { "name": "drillDown", "valueString": "gender = 'female'" }
       ]
     }
   ]

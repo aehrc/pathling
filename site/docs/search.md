@@ -26,7 +26,11 @@ search parameter and delimited by commas to achieve OR logic. Composite search
 parameters (using the `$` notation) are not currently supported.
 
 ```
-POST [FHIR endpoint]/[resource type]?_query=fhirPath&filter=[FHIRPath expression]...
+GET [FHIR endpoint]/[resource type]?_query=fhirPath&filter=[FHIRPath expression]...
+```
+
+```
+POST [FHIR endpoint]/[resource type]/_search
 ```
 
 ## Request
@@ -37,6 +41,13 @@ The `fhirPath` named search query defines a single parameter:
   each resource in the data set to determine whether it is included within the
   result. The context is an individual resource of the type that the search is
   being invoked against. The expression must evaluate to a Boolean value.
+
+The named query is invoked using a parameter of `_query` with a value of
+`fhirPath`.
+
+Parameters are passed in the query portion of the URL for GET requests, and can
+be passed either in the URL or in a `application/x-www-form-urlencoded` for POST
+requests.
 
 ## Response
 

@@ -11,6 +11,7 @@ import static au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType.BOOL
 import au.csiro.pathling.query.AggregateRequest.Aggregation;
 import au.csiro.pathling.query.AggregateRequest.Grouping;
 import au.csiro.pathling.query.parsing.Joinable;
+import au.csiro.pathling.query.parsing.LiteralComposer;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.parser.ExpressionParser;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
@@ -20,6 +21,7 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -32,6 +34,7 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumeration;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +56,8 @@ public class AggregateExecutor extends QueryExecutor {
   /**
    * Check that the aggregate executor is ready to execute a query by checking the readiness of all
    * dependencies.
+   * <p>
+   * TODO: Remove this in favour of a more general readiness check within the capability statement.
    */
   public boolean isReady() {
     try {
@@ -128,12 +133,11 @@ public class AggregateExecutor extends QueryExecutor {
           .map(ParsedExpression::getAggregationColumn)
           .toArray(Column[]::new);
       result = groupingCols.length > 0
-          ? groupedResult.agg(firstAggregation, remainingAggregations)
-          : result.agg(firstAggregation, remainingAggregations);
+               ? groupedResult.agg(firstAggregation, remainingAggregations)
+               : result.agg(firstAggregation, remainingAggregations);
 
       // Translate the result into a response object to be passed back to the user.
-      return buildResponse(result, parsedAggregations, parsedGroupings);
-
+      return buildResponse(result, parsedAggregations, parsedGroupings, parsedFilters);
     } catch (BaseServerResponseException e) {
       // Errors relating to invalid input are re-raised, to be dealt with by HAPI.
       logger.warn("Invalid request", e);
@@ -203,7 +207,9 @@ public class AggregateExecutor extends QueryExecutor {
    */
   private AggregateResponse buildResponse(@Nonnull Dataset<Row> dataset,
       @Nonnull List<ParsedExpression> parsedAggregations,
-      @Nonnull List<ParsedExpression> parsedGroupings) {
+      @Nonnull List<ParsedExpression> parsedGroupings,
+      @Nonnull List<ParsedExpression> parsedFilters
+  ) {
     if (configuration.isExplainQueries()) {
       logger.info("$aggregate query plan:");
       dataset.explain(true);
@@ -213,7 +219,7 @@ public class AggregateExecutor extends QueryExecutor {
     AggregateResponse queryResult = new AggregateResponse();
 
     List<AggregateResponse.Grouping> groupings = rows.stream()
-        .map(mapRowToGrouping(parsedAggregations, parsedGroupings))
+        .map(mapRowToGrouping(parsedAggregations, parsedGroupings, parsedFilters))
         .collect(Collectors.toList());
     queryResult.getGroupings().addAll(groupings);
 
@@ -226,7 +232,8 @@ public class AggregateExecutor extends QueryExecutor {
    */
   private Function<Row, AggregateResponse.Grouping> mapRowToGrouping(
       @Nonnull List<ParsedExpression> parsedAggregations,
-      @Nonnull List<ParsedExpression> parsedGroupings) {
+      @Nonnull List<ParsedExpression> parsedGroupings,
+      List<ParsedExpression> parsedFilters) {
     return row -> {
       AggregateResponse.Grouping grouping = new AggregateResponse.Grouping();
 
@@ -242,6 +249,9 @@ public class AggregateExecutor extends QueryExecutor {
         grouping.getResults().add(value);
       }
 
+      String drillDown = buildDrillDown(parsedGroupings, parsedFilters, grouping);
+      grouping.setDrillDown(new StringType(drillDown));
+
       return grouping;
     };
   }
@@ -250,6 +260,7 @@ public class AggregateExecutor extends QueryExecutor {
    * Extract a value from the specified column within a row, using the supplied data type. Note that
    * this method may return null where the value is actually null within the Dataset.
    */
+  @SuppressWarnings("rawtypes")
   private Type getValueFromRow(Row row, int columnNumber, ParsedExpression parsedExpression) {
     try {
       assert
@@ -262,11 +273,53 @@ public class AggregateExecutor extends QueryExecutor {
       Class javaClass = parsedExpression.getJavaClass();
       @SuppressWarnings("unchecked") Constructor constructor = hapiClass.getConstructor(javaClass);
       Object value = row.get(columnNumber);
-      return value == null ? null : (Type) constructor.newInstance(value);
+      return value == null
+             ? null
+             : (Type) constructor.newInstance(value);
     } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
       logger.error("Failed to access value from row: " + e.getMessage());
       return null;
     }
   }
 
+  /**
+   * Builds a URL for drilling down from an aggregate grouping to a list of resources.
+   */
+  private static String buildDrillDown(@Nonnull List<ParsedExpression> parsedGroupings,
+      List<ParsedExpression> parsedFilters, AggregateResponse.Grouping grouping) {
+    // We use a Set here to avoid situations where we needlessly have the same condition in the
+    // expression more than once.
+    Set<String> fhirPaths = new HashSet<>();
+
+    // Add each of the grouping expressions, along with either equality or contains against the
+    // group value to convert it in to a Boolean expression.
+    for (int i = 0; i < parsedGroupings.size(); i++) {
+      ParsedExpression parsedGrouping = parsedGroupings.get(i);
+      Type label = grouping.getLabels().get(i);
+      if (label == null) {
+        fhirPaths.add(parsedGrouping.getFhirPath() + ".empty()");
+      } else {
+        String literal = LiteralComposer.getFhirPathForType(label);
+        String equality = parsedGrouping.isSingular()
+                          ? " = "
+                          : " contains ";
+        fhirPaths.add(parsedGrouping.getFhirPath() + equality + literal);
+      }
+    }
+
+    // Add each of the filter expressions.
+    List<String> filterFhirPaths = parsedFilters.stream()
+        .map(ParsedExpression::getFhirPath)
+        .collect(Collectors.toList());
+    fhirPaths.addAll(filterFhirPaths);
+
+    // If there is more than one expression, wrap each expression in parentheses before joining
+    // together with Boolean AND operators.
+    if (fhirPaths.size() > 1) {
+      fhirPaths = fhirPaths.stream()
+          .map(fhirPath -> "(" + fhirPath + ")")
+          .collect(Collectors.toSet());
+    }
+    return String.join(" and ", fhirPaths);
+  }
 }

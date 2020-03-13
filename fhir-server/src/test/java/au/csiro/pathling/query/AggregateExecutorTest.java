@@ -380,11 +380,6 @@ public class AggregateExecutorTest extends ExecutorTest {
 
   @Test
   @Ignore
-  /**
-   * TODO: Make mulitple aggreations work without producing cartesian product of values to count (per resource) 
-   * @throws IOException
-   * @throws JSONException
-   */
   public void queryMultipleCountAggregations() throws IOException, JSONException {
     mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
 
@@ -392,14 +387,15 @@ public class AggregateExecutorTest extends ExecutorTest {
     AggregateRequest request = new AggregateRequest();
     request.setSubjectResource(ResourceType.PATIENT);
 
-    Aggregation aggregation = new Aggregation();
-    aggregation.setLabel("Number of patient names");
-    aggregation.setExpression("name.given.count()");
-    request.getAggregations().add(aggregation);
+    Aggregation aggregation1 = new Aggregation();
+    aggregation1.setLabel("Number of patient given names");
+    aggregation1.setExpression("name.given.count()");
+    request.getAggregations().add(aggregation1);
 
-    aggregation.setLabel("Number of patient prefixes");
-    aggregation.setExpression("identifier.count()");
-    request.getAggregations().add(aggregation);
+    Aggregation aggregation2 = new Aggregation();
+    aggregation2.setLabel("Number of patient prefixes");
+    aggregation2.setExpression("name.prefix.count()");
+    request.getAggregations().add(aggregation2);
 
     Grouping grouping1 = new Grouping();
     grouping1.setLabel("Gender");

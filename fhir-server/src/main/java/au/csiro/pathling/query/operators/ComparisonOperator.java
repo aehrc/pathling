@@ -30,6 +30,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class ComparisonOperator implements BinaryOperator {
 
+  /* TODO: Make sure comparison operators work with aggregate function operands. */
+
   public static final String LESS_THAN_OR_EQUAL_TO = "<=";
   public static final String LESS_THAN = "<";
   public static final String GREATER_THAN_OR_EQUAL_TO = ">=";

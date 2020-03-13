@@ -4,26 +4,22 @@
     {
       "name": "grouping",
       "part": [
+        { "name": "label", "valueBoolean": false },
+        { "name": "result", "valueUnsignedInt": 9 },
         {
-          "name": "label",
-          "valueBoolean": false
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 9
+          "name": "drillDown",
+          "valueString": "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'<missing ')'> contains false"
         }
       ]
     },
     {
       "name": "grouping",
       "part": [
+        { "name": "label", "valueBoolean": true },
+        { "name": "result", "valueUnsignedInt": 1 },
         {
-          "name": "label",
-          "valueBoolean": true
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 1
+          "name": "drillDown",
+          "valueString": "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'<missing ')'> contains true"
         }
       ]
     }

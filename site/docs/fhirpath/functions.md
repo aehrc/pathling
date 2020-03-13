@@ -20,6 +20,7 @@ The following functions are currently supported:
 - [first](#first)
 - [where](#where)
 - [memberOf](#memberof)
+- [empty](#empty)
 
 The notation used to describe the type signature of each function is as follows:
 
@@ -196,12 +197,22 @@ based on whether the concept is a member of the
 [url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
 
 <div class="callout info">
-    The <code>memberOf</code> function is an <em>terminology function</em>, which means that it requires a configured
+    The <code>memberOf</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
     <a href="../deployment.html">Configuration and deployment</a> for details.
 </div>
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
+
+## empty
+
+```
+collection -> empty() : Boolean
+```
+
+Returns `true` if the input collection is empty, and `false` otherwise.
+
+See also: [empty](https://hl7.org/fhirpath/2018Sep/index.html#empty-boolean)
 
 Next: [Configuration and deployment](../deployment.html)

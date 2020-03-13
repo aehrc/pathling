@@ -31,6 +31,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class EqualityOperator implements BinaryOperator {
 
+  /* TODO: Make sure equality operators work with aggregate function operands. */
+
   public static final String EQUALS = "=";
   public static final String NOT_EQUALS = "!=";
 
