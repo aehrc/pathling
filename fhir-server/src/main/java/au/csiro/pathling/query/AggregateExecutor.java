@@ -53,23 +53,6 @@ public class AggregateExecutor extends QueryExecutor {
     super(configuration);
   }
 
-  /**
-   * Check that the aggregate executor is ready to execute a query by checking the readiness of all
-   * dependencies.
-   * <p>
-   * TODO: Remove this in favour of a more general readiness check within the capability statement.
-   */
-  public boolean isReady() {
-    try {
-      logger.info("Getting terminology service capability statement to check service health");
-      configuration.getTerminologyClient().getServerMetadata();
-    } catch (Exception e) {
-      logger.error("Readiness failure", e);
-      return false;
-    }
-    return true;
-  }
-
   public ResourceReader getResourceReader() {
     return configuration.getResourceReader();
   }
