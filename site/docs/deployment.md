@@ -94,6 +94,20 @@ forms are configured in the same way, through environment variables.
   [Sentry](https://sentry.io) service, e.g.
   `https://abc123@sentry.io/123456?servername=server.pathling.app`.
 
+## Server base
+
+There are a number of operations within the Pathling FHIR API that pass back
+URLs referring back to API endpoints. The host and protocol components of these
+URLs are automatically detected based upon the details of the incoming request.
+
+In some cases it might be desirable to override the hostname and protocol,
+particularly where Pathling is being hosted behind some sort of proxy. To
+account for this, Pathling also supports the use of the
+[X-Forwarded-Host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host)
+and
+[X-Forwarded-Proto](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto)
+headers to override the hostname and protocol within URLs sent back by the API.
+
 ## Authorisation
 
 Pathling can perform the role of a resource server within the

@@ -15,6 +15,7 @@ import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.rest.api.EncodingEnum;
+import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
 import ca.uhn.fhir.rest.server.FifoMemoryPagingProvider;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
@@ -88,6 +89,10 @@ public class AnalyticsServer extends RestfulServer {
           logger);
       ExecutorConfiguration executorConfig = buildExecutorConfiguration(configuration,
           spark, getFhirContext(), fhirEncoders, resourceReader, terminologyClient);
+
+      // Use a proxy address strategy, which allows proxies to control the server base address with
+      // the use of the X-Forwarded-Host and X-Forwarded-Proto headers.
+      setServerAddressStrategy(ApacheProxyAddressStrategy.forHttp());
 
       // Register the import provider.
       FhirContextFactory fhirContextFactory = new FhirContextFactory(FhirVersionEnum.R4);
