@@ -10,7 +10,9 @@ import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import javax.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * This function returns true if the input collection is empty.
@@ -29,7 +31,12 @@ public class EmptyFunction extends AbstractAggFunction {
   @Nonnull
   protected ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
     // "Empty" means that the group contains only null values.
-    return wrapSparkFunction(input, col -> when(max(col).isNull(), true).otherwise(false), true);
+    ParsedExpression result = wrapSparkFunction(input,
+        col -> when(max(col).isNull(), true).otherwise(false), true);
+    result.setFhirPathType(FhirPathType.BOOLEAN);
+    result.setFhirType(FHIRDefinedType.BOOLEAN);
+    result.setPrimitive(true);
+    return result;
   }
 
   protected void validateInput(FunctionInput input) {

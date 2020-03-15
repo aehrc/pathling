@@ -87,7 +87,15 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     assert configuration.getFhirEncoders() != null;
     ExpressionEncoder<IBaseResource> encoder = configuration.getFhirEncoders()
         .of(subjectResource.toCode());
+    reportQueryPlan(resources);
     return resources.as(encoder).collectAsList();
+  }
+
+  private void reportQueryPlan(Dataset<Row> resources) {
+    if (configuration.isExplainQueries()) {
+      logger.info("Search query plan:");
+      resources.explain(true);
+    }
   }
 
   @Nullable
@@ -105,6 +113,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Override
   public Integer size() {
     if (count == null) {
+      reportQueryPlan(result);
       count = Math.toIntExact(result.count());
     }
     return count;
