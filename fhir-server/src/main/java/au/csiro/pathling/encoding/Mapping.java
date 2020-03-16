@@ -17,35 +17,35 @@ public class Mapping implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  private SystemAndCode from;
-  private SystemAndCode to;
+  private SimpleCoding from;
+  private SimpleCoding to;
     
   public Mapping(String sourceSystem, String sourceCode, String targetSystem, String targetCode) {
-    this.from = new SystemAndCode(sourceSystem, sourceCode);
-    this.to = new SystemAndCode(targetSystem, targetCode);
+    this.from = new SimpleCoding(sourceSystem, sourceCode);
+    this.to = new SimpleCoding(targetSystem, targetCode);
   }
   
   public Mapping() {
   }
 
-  public Mapping(SystemAndCode from, SystemAndCode to) {
+  public Mapping(SimpleCoding from, SimpleCoding to) {
     this.from = from;
     this.to = to;
   }
 
-  public SystemAndCode getFrom() {
+  public SimpleCoding getFrom() {
     return from;
   }
 
-  public void setFrom(SystemAndCode from) {
+  public void setFrom(SimpleCoding from) {
     this.from = from;
   }
 
-  public SystemAndCode getTo() {
+  public SimpleCoding getTo() {
     return to;
   }
 
-  public void setTo(SystemAndCode to) {
+  public void setTo(SimpleCoding to) {
     this.to = to;
   }
   

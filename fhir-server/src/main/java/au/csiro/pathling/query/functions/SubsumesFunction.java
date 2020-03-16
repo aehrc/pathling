@@ -36,7 +36,7 @@ import com.google.common.collect.Streams;
 import au.csiro.pathling.encoding.IdAndBoolean;
 import au.csiro.pathling.encoding.IdAndCodingSets;
 import au.csiro.pathling.encoding.Mapping;
-import au.csiro.pathling.encoding.SystemAndCode;
+import au.csiro.pathling.encoding.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.operators.PathTraversalInput;
@@ -52,19 +52,19 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
  * @author szu004
  */
 class Closure {
-  private final Map<SystemAndCode, List<SystemAndCode>> mappings;
+  private final Map<SimpleCoding, List<SimpleCoding>> mappings;
 
-  private Closure(Map<SystemAndCode, List<SystemAndCode>> mappings) {
+  private Closure(Map<SimpleCoding, List<SimpleCoding>> mappings) {
     this.mappings = mappings;
   }
 
-  public Set<SystemAndCode> expand(Set<SystemAndCode> base, boolean includeSelf) {
-    final Set<SystemAndCode> result = new HashSet<SystemAndCode>();
+  public Set<SimpleCoding> expand(Set<SimpleCoding> base, boolean includeSelf) {
+    final Set<SimpleCoding> result = new HashSet<SimpleCoding>();
     if (includeSelf) {
       result.addAll(base);
     }
     base.forEach(c -> {
-      List<SystemAndCode> mapping = mappings.get(c);
+      List<SimpleCoding> mapping = mappings.get(c);
       if (mapping != null) {
         result.addAll(mapping);
       }
@@ -72,11 +72,11 @@ class Closure {
     return result;
   }
 
-  public boolean anyRelates(Collection<SystemAndCode> from, Collection<SystemAndCode> to) {
+  public boolean anyRelates(Collection<SimpleCoding> from, Collection<SimpleCoding> to) {
     // filter out null SystemAndCodes
-    Set<SystemAndCode> fromSet =
-        from.stream().filter(SystemAndCode::isNotNull).collect(Collectors.toSet());
-    Set<SystemAndCode> expansion = expand(fromSet, true);
+    Set<SimpleCoding> fromSet =
+        from.stream().filter(SimpleCoding::isNotNull).collect(Collectors.toSet());
+    Set<SimpleCoding> expansion = expand(fromSet, true);
     expansion.retainAll(to);
     return !expansion.isEmpty();
   }
@@ -87,14 +87,15 @@ class Closure {
   }
 
   public static Closure fromMappings(List<Mapping> mappins) {
-    Map<SystemAndCode, List<Mapping>> groupedMappings =
+    Map<SimpleCoding, List<Mapping>> groupedMappings =
         mappins.stream().collect(Collectors.groupingBy(Mapping::getFrom));
-    Map<SystemAndCode, List<SystemAndCode>> groupedCodings =
+    Map<SimpleCoding, List<SimpleCoding>> groupedCodings =
         groupedMappings.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(),
             e -> e.getValue().stream().map(m -> m.getTo()).collect(Collectors.toList())));
     return new Closure(groupedCodings);
   }
 }
+
 
 /**
  * Helper class to encapsulate creation of subsumes Relation for a set of Codings.
@@ -111,9 +112,9 @@ class ClosureService {
     this.terminologyClient = terminologyClient;
   }
 
-  public Closure getSubumesRelation(Collection<SystemAndCode> systemAndCodes) {
+  public Closure getSubumesRelation(Collection<SimpleCoding> systemAndCodes) {
     List<Coding> codings =
-        systemAndCodes.stream().map(SystemAndCode::toCoding).collect(Collectors.toList());
+        systemAndCodes.stream().map(SimpleCoding::toCoding).collect(Collectors.toList());
     // recreate the systemAndCodes dataset from the list not to execute the query again.
     // Create a unique name for the closure table for this code system, based upon the
     // expressions of the input, argument and the CodeSystem URI.
@@ -150,7 +151,7 @@ class ClosureService {
    * 
    * @return Mapping for subsumes relation i.e from -- subsumes --> to
    */
-  public static Mapping equivalenceToSubsumesMapping(SystemAndCode source, SystemAndCode target,
+  public static Mapping equivalenceToSubsumesMapping(SimpleCoding source, SimpleCoding target,
       ConceptMapEquivalence equivalence) {
     Mapping result = null;
     switch (equivalence) {
@@ -181,9 +182,9 @@ class ClosureService {
         List<SourceElementComponent> elements = group.getElement();
         for (SourceElementComponent source : elements) {
           for (TargetElementComponent target : source.getTarget()) {
-            Mapping subsumesMapping = equivalenceToSubsumesMapping(
-                new SystemAndCode(group.getSource(), source.getCode()),
-                new SystemAndCode(group.getTarget(), target.getCode()), target.getEquivalence());
+            Mapping subsumesMapping =
+                equivalenceToSubsumesMapping(new SimpleCoding(group.getSource(), source.getCode()),
+                    new SimpleCoding(group.getTarget(), target.getCode()), target.getEquivalence());
             if (subsumesMapping != null) {
               mappings.add(subsumesMapping);
             }
@@ -222,9 +223,9 @@ public class SubsumesFunction implements Function {
     public Iterator<IdAndBoolean> call(Iterator<IdAndCodingSets> input) throws Exception {
       List<IdAndCodingSets> entries = Streams.stream(input).collect(Collectors.toList());
       // collect distinct tokens
-      Set<SystemAndCode> entrySet = entries.stream()
+      Set<SimpleCoding> entrySet = entries.stream()
           .flatMap(r -> Streams.concat(r.getLeftCodings().stream(), r.getRightCodings().stream()))
-          .filter(SystemAndCode::isNotNull).collect(Collectors.toSet());
+          .filter(SimpleCoding::isNotNull).collect(Collectors.toSet());
       ClosureService closureService = new ClosureService(terminologyClientFactory.build(logger));
       final Closure subsumeClosure = closureService.getSubumesRelation(entrySet);
       return entries.stream().map(r -> IdAndBoolean.of(r.getId(),
@@ -235,6 +236,7 @@ public class SubsumesFunction implements Function {
   private static final String COL_ID = "id";
   private static final String COL_CODE = "code";
   private static final String COL_SYSTEM = "system";
+  private static final String COL_VERSION = "version";
   private static final String COL_CODING = "coding";
   private static final String COL_CODING_SET = "codingSet";
   private static final String COL_LEFT_CODINGS = "leftCodings";
@@ -315,12 +317,12 @@ public class SubsumesFunction implements Function {
   }
 
   @Nonnull
-  private Dataset<SystemAndCode> getCodes(Dataset<Row> source) {
+  private Dataset<SimpleCoding> getCodes(Dataset<Row> source) {
     Column systemCol = source.col(COL_CODING).getField(COL_SYSTEM).alias(COL_SYSTEM);
     Column codeCol = source.col(COL_CODING).getField(COL_CODE).alias(COL_CODE);
     Dataset<Row> codes = source.select(codeCol, systemCol);
     return codes.where(systemCol.isNotNull().and(codeCol.isNotNull())).distinct()
-        .as(Encoders.bean(SystemAndCode.class));
+        .as(Encoders.bean(SimpleCoding.class));
   }
 
   private ParsedExpression normalizeToCoding(ParsedExpression expression,
@@ -363,9 +365,10 @@ public class SubsumesFunction implements Function {
     Dataset<Row> codingDataset =
         idExpression.getDataset().select(idExpression.getIdColumn().alias(COL_ID),
             inputExpression.getLiteralOrValueColumn().getField(COL_SYSTEM).alias(COL_SYSTEM),
-            inputExpression.getLiteralOrValueColumn().getField(COL_CODE).alias(COL_CODE));
-    return codingDataset.select(codingDataset.col(COL_ID),
-        struct(codingDataset.col(COL_CODE), codingDataset.col(COL_SYSTEM)).alias(COL_CODING));
+            inputExpression.getLiteralOrValueColumn().getField(COL_CODE).alias(COL_CODE),
+            inputExpression.getLiteralOrValueColumn().getField(COL_VERSION).alias(COL_VERSION));
+    return codingDataset.select(codingDataset.col(COL_ID), struct(codingDataset.col(COL_CODE),
+        codingDataset.col(COL_SYSTEM), codingDataset.col(COL_VERSION)).alias(COL_CODING));
   }
 
   /**
