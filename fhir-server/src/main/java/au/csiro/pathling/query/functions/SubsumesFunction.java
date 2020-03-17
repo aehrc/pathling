@@ -58,27 +58,70 @@ class Closure {
     this.mappings = mappings;
   }
 
-  public Set<SimpleCoding> expand(Set<SimpleCoding> base, boolean includeSelf) {
-    final Set<SimpleCoding> result = new HashSet<SimpleCoding>();
-    if (includeSelf) {
-      result.addAll(base);
-    }
-    base.forEach(c -> {
-      List<SimpleCoding> mapping = mappings.get(c);
-      if (mapping != null) {
-        result.addAll(mapping);
-      }
-    });
-    return result;
+  Map<SimpleCoding, List<SimpleCoding>> getMappings() {
+    return mappings;
   }
 
-  public boolean anyRelates(Collection<SimpleCoding> from, Collection<SimpleCoding> to) {
+  /**
+   * Set of codings with contains() following the coding's equivalence semantics.
+   * 
+   * @author szu004
+   *
+   */
+  static class CodingSet {
+    private final Set<SimpleCoding> allCodings;
+    private final Set<SimpleCoding> unversionedCodings;
+
+    CodingSet(Set<SimpleCoding> allCodings) {
+      this.allCodings = allCodings;
+      this.unversionedCodings =
+          allCodings.stream().map(SimpleCoding::toNonVersioned).collect(Collectors.toSet());
+    }
+
+    /**
+     * Belongs to set operation with the coding's equivalence semantics, i.e.: if the set includes
+     * an unversioned coding it contatins any versioned coding with the same system code and if a
+     * set contains a versioned coding it contains it's correspondin unversioned coding as well.
+     * 
+     * @param c coding
+     * @return
+     */
+    boolean contains(SimpleCoding c) {
+      return allCodings.contains(c) || (c.isVersioned() ? allCodings.contains(c.toNonVersioned())
+          : unversionedCodings.contains(c));
+    }
+  }
+
+  /**
+   * Expands given set of codings using with the closure, that is produces a set of coding that are
+   * in the relation with the given set.
+   * 
+   * @param codings set of codings
+   * @return
+   */
+  public Set<SimpleCoding> expand(Set<SimpleCoding> codings) {
+    final CodingSet baseSet = new CodingSet(codings);
+    return Streams
+        .concat(codings.stream(), mappings.entrySet().stream()
+            .filter(kv -> baseSet.contains(kv.getKey())).flatMap(kv -> kv.getValue().stream()))
+        .collect(Collectors.toSet());
+  }
+
+  /**
+   * Checks if any of the coding in the right set is in the relation with any of the coding in the
+   * left set.
+   * 
+   * @param left coding set
+   * @param right coding set
+   * @return true if at last one coding in the right is in relation with any coding in the left
+   */
+
+  public boolean anyRelates(Collection<SimpleCoding> left, Collection<SimpleCoding> right) {
     // filter out null SystemAndCodes
-    Set<SimpleCoding> fromSet =
-        from.stream().filter(SimpleCoding::isNotNull).collect(Collectors.toSet());
-    Set<SimpleCoding> expansion = expand(fromSet, true);
-    expansion.retainAll(to);
-    return !expansion.isEmpty();
+    Set<SimpleCoding> leftSet =
+        left.stream().filter(SimpleCoding::isNotNull).collect(Collectors.toSet());
+    final CodingSet expansion = new CodingSet(expand(leftSet));
+    return right.stream().anyMatch(expansion::contains);
   }
 
   @Override
@@ -128,7 +171,7 @@ class ClosureService {
     ConceptMap closureResponse =
         terminologyClient.closure(new StringType(closureName), codings, null);
     validateConceptMap(closureResponse, closureName, "2");
-    return Closure.fromMappings(conceptMapToMappings(closureResponse));
+    return conceptMapToClosure(closureResponse);
   }
 
   private void validateConceptMap(ConceptMap conceptMap, String closureName, String version) {
@@ -151,7 +194,7 @@ class ClosureService {
    * 
    * @return Mapping for subsumes relation i.e from -- subsumes --> to
    */
-  public static Mapping equivalenceToSubsumesMapping(SimpleCoding source, SimpleCoding target,
+  private static Mapping equivalenceToSubsumesMapping(SimpleCoding source, SimpleCoding target,
       ConceptMapEquivalence equivalence) {
     Mapping result = null;
     switch (equivalence) {
@@ -174,7 +217,7 @@ class ClosureService {
     return result;
   }
 
-  public static List<Mapping> conceptMapToMappings(ConceptMap conceptMap) {
+  private static List<Mapping> conceptMapToMappings(ConceptMap conceptMap) {
     List<Mapping> mappings = new ArrayList<Mapping>();
     if (conceptMap.hasGroup()) {
       List<ConceptMapGroupComponent> groups = conceptMap.getGroup();
@@ -182,9 +225,10 @@ class ClosureService {
         List<SourceElementComponent> elements = group.getElement();
         for (SourceElementComponent source : elements) {
           for (TargetElementComponent target : source.getTarget()) {
-            Mapping subsumesMapping =
-                equivalenceToSubsumesMapping(new SimpleCoding(group.getSource(), source.getCode()),
-                    new SimpleCoding(group.getTarget(), target.getCode()), target.getEquivalence());
+            Mapping subsumesMapping = equivalenceToSubsumesMapping(
+                new SimpleCoding(group.getSource(), source.getCode(), group.getSourceVersion()),
+                new SimpleCoding(group.getTarget(), target.getCode(), group.getTargetVersion()),
+                target.getEquivalence());
             if (subsumesMapping != null) {
               mappings.add(subsumesMapping);
             }
@@ -193,6 +237,10 @@ class ClosureService {
       }
     }
     return mappings;
+  }
+
+  static Closure conceptMapToClosure(ConceptMap conceptMap) {
+    return Closure.fromMappings(conceptMapToMappings(conceptMap));
   }
 }
 

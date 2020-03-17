@@ -66,6 +66,14 @@ public class SimpleCoding implements Serializable {
     return !isNull();
   }
 
+  public boolean isVersioned() {
+    return version != null;
+  }
+
+  public SimpleCoding toNonVersioned() {
+    return new SimpleCoding(this.system, this.code);
+  }
+
   public boolean matches(SimpleCoding other) {
     if (this == other)
       return true;
@@ -131,7 +139,5 @@ public class SimpleCoding implements Serializable {
   public String toString() {
     return "SimpleCoding [system=" + system + ", code=" + code + ", version=" + version + "]";
   }
-
-
 
 }

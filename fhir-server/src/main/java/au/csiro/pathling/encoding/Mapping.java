@@ -86,7 +86,7 @@ public class Mapping implements Serializable {
   }
  
   public static Mapping of(Coding from, Coding to) {
-    return new Mapping(from.getSystem(), from.getCode(), to.getSystem(), to.getCode());
+    return new Mapping(new SimpleCoding(from), new SimpleCoding(to));
   }
   
 }

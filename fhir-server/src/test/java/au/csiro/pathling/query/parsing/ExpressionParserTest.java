@@ -48,8 +48,6 @@ import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ParsedExpressionAssert;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
-
-
 import static org.apache.spark.sql.functions.*;
 
 /**
@@ -68,8 +66,8 @@ public class ExpressionParserTest {
     spark = getSparkSession();
 
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
-          Mockito.withSettings().serializable());
+    TerminologyClientFactory terminologyClientFactory =
+        mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     mockReader = mock(ResourceReader.class);
@@ -251,8 +249,7 @@ public class ExpressionParserTest {
   public void testSubsumesAndSubsumedBy() throws Exception {
 
     // Setup mock terminology client
-    when(terminologyClient.closure(any(), any(), any()))
-        .thenReturn(ConceptMapFixtures.CM_EMPTY);
+    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
 
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
@@ -276,14 +273,15 @@ public class ExpressionParserTest {
             .isSelection().isOfBooleanType().selectResult().hasRows(allPatientsWithValue(true));
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_SNOWMED_444814009_SUBSUMES_40055000);
+    when(terminologyClient.closure(any(), any(), any()))
+        .thenReturn(ConceptMapFixtures.CM_SNOWMED_444814009_SUBSUMES_40055000_VERSIONED);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
             .isSelection().isOfBooleanType().selectResult().hasRows(allPatientsWithValue(true)
                 .changeValue(PATIENT_ID_2b36c1e2, false).changeValue(PATIENT_ID_bbd33563, false));
 
-    assertThatResultOf(
-        "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
+    assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
+        + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
             .isSelection().isOfBooleanType().selectResult()
             .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
 
