@@ -8,7 +8,6 @@ import static org.apache.spark.sql.functions.collect_set;
 import static org.apache.spark.sql.functions.struct;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -194,18 +193,19 @@ class ClosureService {
    * 
    * @return Mapping for subsumes relation i.e from -- subsumes --> to
    */
-  private static Mapping equivalenceToSubsumesMapping(SimpleCoding source, SimpleCoding target,
-      ConceptMapEquivalence equivalence) {
+  private static Mapping appendSubsumesMapping(List<Mapping> mappings, SimpleCoding source,
+      SimpleCoding target, ConceptMapEquivalence equivalence) {
     Mapping result = null;
     switch (equivalence) {
       case SUBSUMES:
-        result = new Mapping(target, source);
+        mappings.add(new Mapping(target, source));
         break;
       case SPECIALIZES:
-        result = new Mapping(source, target);
+        mappings.add(new Mapping(source, target));
         break;
       case EQUAL:
-        result = new Mapping(source, target);
+        mappings.add(new Mapping(source, target));
+        mappings.add(new Mapping(target, source));
         break;
       case UNMATCHED:
         break;
@@ -225,13 +225,10 @@ class ClosureService {
         List<SourceElementComponent> elements = group.getElement();
         for (SourceElementComponent source : elements) {
           for (TargetElementComponent target : source.getTarget()) {
-            Mapping subsumesMapping = equivalenceToSubsumesMapping(
+            appendSubsumesMapping(mappings,
                 new SimpleCoding(group.getSource(), source.getCode(), group.getSourceVersion()),
                 new SimpleCoding(group.getTarget(), target.getCode(), group.getTargetVersion()),
                 target.getEquivalence());
-            if (subsumesMapping != null) {
-              mappings.add(subsumesMapping);
-            }
           }
         }
       }

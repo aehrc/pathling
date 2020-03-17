@@ -6,8 +6,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.junit.Test;
 import au.csiro.pathling.encoding.Mapping;
 import au.csiro.pathling.encoding.SimpleCoding;
@@ -34,34 +32,34 @@ public class ClosureTest {
   public static final SimpleCoding CODING3_VERSION2 =
       new SimpleCoding("uuid:system1", "code1", "version2");
 
-  private static Set<SimpleCoding> setOf(SimpleCoding ... codings) {
+  private static Set<SimpleCoding> setOf(SimpleCoding... codings) {
     return new HashSet<SimpleCoding>(Arrays.asList(codings));
   }
-  
+
   @Test
   public void testVersionedCodingSet() {
-    CodingSet versionedCodingSet = new Closure.CodingSet(setOf(CODING1_VERSION1)); 
-    assertThat(versionedCodingSet.contains(CODING1_UNVERSIONED)).isTrue();    
+    CodingSet versionedCodingSet = new Closure.CodingSet(setOf(CODING1_VERSION1));
+    assertThat(versionedCodingSet.contains(CODING1_UNVERSIONED)).isTrue();
     assertThat(versionedCodingSet.contains(CODING1_VERSION1)).isTrue();
     assertThat(versionedCodingSet.contains(CODING1_VERSION2)).isFalse();
     assertThat(versionedCodingSet.contains(CODING2_VERSION1)).isFalse();
   }
-  
+
   @Test
   public void testUncersionedCodingSet() {
     CodingSet unversionedCodingSet = new Closure.CodingSet(setOf(CODING1_UNVERSIONED));
-    assertThat(unversionedCodingSet.contains(CODING1_UNVERSIONED)).isTrue();    
+    assertThat(unversionedCodingSet.contains(CODING1_UNVERSIONED)).isTrue();
     assertThat(unversionedCodingSet.contains(CODING1_VERSION1)).isTrue();
     assertThat(unversionedCodingSet.contains(CODING1_VERSION2)).isTrue();
     assertThat(unversionedCodingSet.contains(CODING2_VERSION1)).isFalse();
   }
-  
+
   @Test
   public void testEmptyClosure() {
     Closure emptyClosure = Closure.fromMappings(Collections.emptyList());
     checkBasicEqualities(emptyClosure);
   }
-  
+
   private void checkBasicEqualities(Closure closure) {
     assertThat(closure.anyRelates(Collections.emptyList(), Collections.emptyList())).isFalse();
     assertThat(closure.anyRelates(Arrays.asList(CODING1_UNVERSIONED), Collections.emptyList()))
@@ -126,9 +124,10 @@ public class ClosureTest {
     assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
         Arrays.asList(CODING2_UNVERSIONED))).isTrue();
 
-    
-    System.out.println(versionedClosure.expand(new HashSet<SimpleCoding>(Arrays.asList(CODING1_VERSION1))));
-    
+
+    System.out.println(
+        versionedClosure.expand(new HashSet<SimpleCoding>(Arrays.asList(CODING1_VERSION1))));
+
     assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
         Arrays.asList(CODING2_UNVERSIONED))).isTrue();
 

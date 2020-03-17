@@ -29,13 +29,13 @@ public interface ConceptMapFixtures {
 
   // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
   public static final ConceptMap CM_SNOWMED_444814009_SUBSUMES_40055000 =
-      createConceptMap(ConceptMapEntry.ofSubsumes(
+      createConceptMap(ConceptMapEntry.subsumesOf(
           new Coding("http://snomed.info/sct", "40055000", "Chronic sinusitis (disorder)"),
           new Coding("http://snomed.info/sct", "444814009", "Viral sinusitis (disorder)")));
 
   // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
   public static final ConceptMap CM_SNOWMED_444814009_SUBSUMES_40055000_VERSIONED =
-      createConceptMap(ConceptMapEntry.ofSubsumes(
+      createConceptMap(ConceptMapEntry.subsumesOf(
           newVersionedCoding("http://snomed.info/sct", "40055000", SNOWMED_VERSION_DEF,
               "Chronic sinusitis (disorder)"),
           newVersionedCoding("http://snomed.info/sct", "444814009", SNOWMED_VERSION_DEF,

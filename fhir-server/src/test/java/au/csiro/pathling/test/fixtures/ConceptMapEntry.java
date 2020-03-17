@@ -38,10 +38,6 @@ public class ConceptMapEntry {
     return new ConceptMapEntry(source, target, equivalence);
   }
 
-  public static ConceptMapEntry ofSubsumes(Coding source, Coding target) {
-    return of(source, target, ConceptMapEquivalence.SUBSUMES);
-  }
-
   public static ConceptMapEntry subsumesOf(Coding source, Coding target) {
     return of(source, target, ConceptMapEquivalence.SUBSUMES);
   }
