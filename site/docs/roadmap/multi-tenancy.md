@@ -21,4 +21,4 @@ myserver.com/database2/fhir
 The [import](../import.html) operation will be modified to allow for the
 selection of the database that data is to be imported to.
 
-Next: [Summarise operation](./summarise.html)
+Next: [Summarize operation](./summarize.html)

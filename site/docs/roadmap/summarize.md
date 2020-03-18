@@ -1,14 +1,14 @@
 ---
 layout: page
-title: Summarise operation
+title: Summarize operation
 nav_order: 2
 parent: Roadmap
 grand_parent: Documentation
 ---
 
-# Summarise operation
+# Summarize operation
 
-This change will introduce a new operation called `summarise`. This operation is
+This change will introduce a new operation called `summarize`. This operation is
 designed for extracting data for use within other tools, such as statistical and
 machine learning models.
 
@@ -16,13 +16,13 @@ The operation takes a set of expressions that define columns in a tabular view
 of the data. A URL pointing to a delimited text file is returned, which contains
 the result of executing the expressions against each subject resource.
 
-<img src="/images/summarise.png" 
-     srcset="/images/summarise@2x.png 2x, /images/summarise.png 1x"
-     alt="Summarise operation" />
+<img src="/images/summarize.png" 
+     srcset="/images/summarize@2x.png 2x, /images/summarize.png 1x"
+     alt="Summarize operation" />
 
 ## Request
 
-The request for the `$summarise` operation is a
+The request for the `$summarize` operation is a
 [Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
@@ -38,10 +38,15 @@ following parameters:
     this column expression must also.
   - `label [0..1]` - (string) A short description for the column, for display
     purposes.
+- `filter [0..*]` - (string) A FHIRPath expression that can be evaluated against
+  each resource in the data set to determine whether it is included within the
+  result. The context is an individual resource of the type specified in the
+  subjectResource parameter. The expression must evaluate to a Boolean value.
+  Multiple filters are combined using AND logic.
 
 ## Response
 
-The response for the `$summarise` operation is a
+The response for the `$summarize` operation is a
 [Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
