@@ -145,19 +145,17 @@ public class ParsedExpression implements Joinable {
    */
   private Column resourceTypeColumn;
 
-
   /**
-   * For aggregation expression, this dataset holds the dataset that grouped aggregation should be
-   * performed over
+   * For aggregation expression, this holds the dataset that the grouped aggregation should be
+   * performed over.
    */
-
   private Dataset<Row> aggregationDataset;
+
   /**
-   * For aggregate expressions, this column hold the unresolved aggregation that will be applied
+   * For aggregate expressions, these columns hold the unresolved aggregation that will be applied
    * during execution.
    */
   private Column aggregationColumn;
-
   private Column aggregationIdColumn;
 
   public ParsedExpression() {
@@ -454,8 +452,8 @@ public class ParsedExpression implements Joinable {
     IBase exampleObject = definition.getChildByName(elementName).newInstance();
     // BackboneElements do not seem to correctly report their FHIR type.
     return exampleObject.getClass().getSuperclass() == BackboneElement.class
-        ? FHIRDefinedType.BACKBONEELEMENT
-        : FHIRDefinedType.fromCode(exampleObject.fhirType());
+           ? FHIRDefinedType.BACKBONEELEMENT
+           : FHIRDefinedType.fromCode(exampleObject.fhirType());
   }
 
   /**

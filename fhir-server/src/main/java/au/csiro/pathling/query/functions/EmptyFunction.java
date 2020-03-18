@@ -11,6 +11,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -21,8 +22,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @see <a href="https://pathling.app/docs/fhirpath/functions.html#empty">first</a>
  */
 public class EmptyFunction extends AbstractAggFunction {
-
-  /* TODO: Add tests for empty function. */
 
   public EmptyFunction() {
     super("empty");
@@ -41,5 +40,10 @@ public class EmptyFunction extends AbstractAggFunction {
 
   protected void validateInput(FunctionInput input) {
     validateNoArgumentInput(input);
+    ParsedExpression inputExpression = input.getInput();
+    if (inputExpression.isSingular()) {
+      throw new InvalidRequestException(
+          "Input to empty function must not be singular: " + inputExpression.getFhirPath());
+    }
   }
 }
