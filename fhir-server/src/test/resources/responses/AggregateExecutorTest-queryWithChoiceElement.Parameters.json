@@ -6,7 +6,7 @@
       "part": [
         { "name": "label", "valueBoolean": false },
         { "name": "result", "valueUnsignedInt": 9 },
-        { "name": "drillDown", "valueString": "multipleBirthBoolean = false" }
+        { "name": "drillDown", "valueString": "(multipleBirthBoolean) = false" }
       ]
     }
   ]

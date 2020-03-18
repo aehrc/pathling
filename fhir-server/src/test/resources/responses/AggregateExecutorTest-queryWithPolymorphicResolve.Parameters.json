@@ -8,7 +8,7 @@
         { "name": "result", "valueUnsignedInt": 39 },
         {
           "name": "drillDown",
-          "valueString": "subject.resolve().ofType(Patient).gender = 'male'"
+          "valueString": "(subject.resolve().ofType(Patient).gender) = 'male'"
         }
       ]
     },
@@ -19,7 +19,7 @@
         { "name": "result", "valueUnsignedInt": 64 },
         {
           "name": "drillDown",
-          "valueString": "subject.resolve().ofType(Patient).gender = 'female'"
+          "valueString": "(subject.resolve().ofType(Patient).gender) = 'female'"
         }
       ]
     }

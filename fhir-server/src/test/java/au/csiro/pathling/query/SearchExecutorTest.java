@@ -54,9 +54,12 @@ public class SearchExecutorTest extends ExecutorTest {
         filters);
     List<IBaseResource> resources = searchExecutor.getResources(2, 5);
     assertThat(resources.size()).isEqualTo(3);
-    assertThat(resources.get(0).getIdElement().getIdPart()).isEqualTo("542857ec-8ddf-4a4a-bc8c-ffd0a349101b");
-    assertThat(resources.get(1).getIdElement().getIdPart()).isEqualTo("5a807931-7736-47a7-a250-b7067b461f2b");
-    assertThat(resources.get(2).getIdElement().getIdPart()).isEqualTo("017e4feb-9b7f-4e5c-b8d8-f09b01145224");
+    assertThat(resources.get(0).getIdElement().getIdPart())
+        .isEqualTo("542857ec-8ddf-4a4a-bc8c-ffd0a349101b");
+    assertThat(resources.get(1).getIdElement().getIdPart())
+        .isEqualTo("5a807931-7736-47a7-a250-b7067b461f2b");
+    assertThat(resources.get(2).getIdElement().getIdPart())
+        .isEqualTo("017e4feb-9b7f-4e5c-b8d8-f09b01145224");
   }
 
   @Test
@@ -70,8 +73,10 @@ public class SearchExecutorTest extends ExecutorTest {
         filters);
     List<IBaseResource> resources = searchExecutor.getResources(0, 100);
     assertThat(resources.size()).isEqualTo(2);
-    assertThat(resources.get(0).getIdElement().getIdPart()).isEqualTo("05fd5547-18ab-406b-9da1-5eea3e787e7f");
-    assertThat(resources.get(1).getIdElement().getIdPart()).isEqualTo("122ca2d5-d026-4952-929b-8df056a4a157");
+    assertThat(resources.get(0).getIdElement().getIdPart())
+        .isEqualTo("05fd5547-18ab-406b-9da1-5eea3e787e7f");
+    assertThat(resources.get(1).getIdElement().getIdPart())
+        .isEqualTo("122ca2d5-d026-4952-929b-8df056a4a157");
   }
 
   @Test
@@ -87,8 +92,10 @@ public class SearchExecutorTest extends ExecutorTest {
         filters);
     List<IBaseResource> resources = searchExecutor.getResources(0, 100);
     assertThat(resources.size()).isEqualTo(16);
-    assertThat(resources.get(0).getIdElement().getIdPart()).isEqualTo("01b9ab89-fa4e-40cb-a020-d544b82ea31d");
-    assertThat(resources.get(8).getIdElement().getIdPart()).isEqualTo("05fd5547-18ab-406b-9da1-5eea3e787e7f");
+    assertThat(resources.get(0).getIdElement().getIdPart())
+        .isEqualTo("01b9ab89-fa4e-40cb-a020-d544b82ea31d");
+    assertThat(resources.get(8).getIdElement().getIdPart())
+        .isEqualTo("05fd5547-18ab-406b-9da1-5eea3e787e7f");
   }
 
   @Test
@@ -107,8 +114,10 @@ public class SearchExecutorTest extends ExecutorTest {
         filters);
     List<IBaseResource> resources = searchExecutor.getResources(0, 100);
     assertThat(resources.size()).isEqualTo(14);
-    assertThat(resources.get(0).getIdElement().getIdPart()).isEqualTo("017e4feb-9b7f-4e5c-b8d8-f09b01145224");
-    assertThat(resources.get(1).getIdElement().getIdPart()).isEqualTo("01b9ab89-fa4e-40cb-a020-d544b82ea31d");
+    assertThat(resources.get(0).getIdElement().getIdPart())
+        .isEqualTo("017e4feb-9b7f-4e5c-b8d8-f09b01145224");
+    assertThat(resources.get(1).getIdElement().getIdPart())
+        .isEqualTo("01b9ab89-fa4e-40cb-a020-d544b82ea31d");
   }
 
   @Test
@@ -120,7 +129,8 @@ public class SearchExecutorTest extends ExecutorTest {
         filters);
     List<IBaseResource> resources = searchExecutor.getResources(0, 1);
     assertThat(resources.size()).isEqualTo(1);
-    assertThat(resources.get(0).getIdElement().getIdPart()).isEqualTo("9be4c8a3-b0e8-4301-919a-89da2cfff37d");
+    assertThat(resources.get(0).getIdElement().getIdPart())
+        .isEqualTo("9be4c8a3-b0e8-4301-919a-89da2cfff37d");
   }
 
   @Test
@@ -131,7 +141,8 @@ public class SearchExecutorTest extends ExecutorTest {
         null);
     List<IBaseResource> resources = searchExecutor.getResources(0, 1);
     assertThat(resources.size()).isEqualTo(1);
-    assertThat(resources.get(0).getIdElement().getIdPart()).isEqualTo("9be4c8a3-b0e8-4301-919a-89da2cfff37d");
+    assertThat(resources.get(0).getIdElement().getIdPart())
+        .isEqualTo("9be4c8a3-b0e8-4301-919a-89da2cfff37d");
   }
 
   @Test
@@ -144,5 +155,7 @@ public class SearchExecutorTest extends ExecutorTest {
         filters);
     assertThat(searchExecutor.size()).isEqualTo(14);
   }
+
+  /* TODO: Add test that verifies the behaviour of using "true" as a filter. */
 
 }

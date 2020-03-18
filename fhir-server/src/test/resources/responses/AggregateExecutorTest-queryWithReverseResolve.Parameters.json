@@ -11,7 +11,7 @@
         { "name": "result", "valueUnsignedInt": 4 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Acute viral pharyngitis (disorder)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Acute viral pharyngitis (disorder)'"
         }
       ]
     },
@@ -22,7 +22,7 @@
         { "name": "result", "valueUnsignedInt": 6 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Viral sinusitis (disorder)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Viral sinusitis (disorder)'"
         }
       ]
     },
@@ -36,7 +36,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Neuropathy due to type 2 diabetes mellitus (disorder)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Neuropathy due to type 2 diabetes mellitus (disorder)'"
         }
       ]
     },
@@ -47,7 +47,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Metabolic syndrome X (disorder)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Metabolic syndrome X (disorder)'"
         }
       ]
     },
@@ -58,7 +58,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Hypertriglyceridemia (disorder)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Hypertriglyceridemia (disorder)'"
         }
       ]
     },
@@ -69,7 +69,7 @@
         { "name": "result", "valueUnsignedInt": 4 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Anemia (disorder)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Anemia (disorder)'"
         }
       ]
     },
@@ -80,7 +80,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Diabetes'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Diabetes'"
         }
       ]
     },
@@ -91,7 +91,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Pulmonary emphysema (disorder)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Pulmonary emphysema (disorder)'"
         }
       ]
     },
@@ -102,7 +102,7 @@
         { "name": "result", "valueUnsignedInt": 2 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Miscarriage in first trimester'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Miscarriage in first trimester'"
         }
       ]
     },
@@ -113,7 +113,7 @@
         { "name": "result", "valueUnsignedInt": 4 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Prediabetes'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Prediabetes'"
         }
       ]
     },
@@ -124,7 +124,7 @@
         { "name": "result", "valueUnsignedInt": 4 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Acute bronchitis (disorder)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Acute bronchitis (disorder)'"
         }
       ]
     },
@@ -135,7 +135,7 @@
         { "name": "result", "valueUnsignedInt": 3 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Hypertension'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Hypertension'"
         }
       ]
     },
@@ -146,7 +146,7 @@
         { "name": "result", "valueUnsignedInt": 2 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Otitis media'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Otitis media'"
         }
       ]
     },
@@ -160,7 +160,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'History of myocardial infarction (situation)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'History of myocardial infarction (situation)'"
         }
       ]
     },
@@ -171,7 +171,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Myocardial Infarction'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Myocardial Infarction'"
         }
       ]
     },
@@ -182,7 +182,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Coronary Heart Disease'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Coronary Heart Disease'"
         }
       ]
     },
@@ -193,7 +193,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Laceration of foot'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Laceration of foot'"
         }
       ]
     },
@@ -204,7 +204,7 @@
         { "name": "result", "valueUnsignedInt": 2 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'First degree burn'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'First degree burn'"
         }
       ]
     },
@@ -215,7 +215,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Fracture of rib'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Fracture of rib'"
         }
       ]
     },
@@ -229,7 +229,7 @@
         { "name": "result", "valueUnsignedInt": 3 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Body mass index 30+ - obesity (finding)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Body mass index 30+ - obesity (finding)'"
         }
       ]
     },
@@ -240,7 +240,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Seasonal allergic rhinitis'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Seasonal allergic rhinitis'"
         }
       ]
     },
@@ -251,7 +251,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Malignant tumor of colon'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Malignant tumor of colon'"
         }
       ]
     },
@@ -262,7 +262,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Recurrent rectal polyp'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Recurrent rectal polyp'"
         }
       ]
     },
@@ -273,7 +273,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Polyp of colon'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Polyp of colon'"
         }
       ]
     },
@@ -287,7 +287,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Injury of anterior cruciate ligament'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Injury of anterior cruciate ligament'"
         }
       ]
     },
@@ -298,7 +298,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Hyperlipidemia'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Hyperlipidemia'"
         }
       ]
     },
@@ -312,7 +312,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Secondary malignant neoplasm of colon'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Secondary malignant neoplasm of colon'"
         }
       ]
     },
@@ -323,7 +323,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Protracted diarrhea'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Protracted diarrhea'"
         }
       ]
     },
@@ -334,7 +334,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Bleeding from anus'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Bleeding from anus'"
         }
       ]
     },
@@ -345,7 +345,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Fetus with unknown complication'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Fetus with unknown complication'"
         }
       ]
     },
@@ -356,7 +356,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Normal pregnancy'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Normal pregnancy'"
         }
       ]
     },
@@ -367,7 +367,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Sprain of wrist'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Sprain of wrist'"
         }
       ]
     },
@@ -378,7 +378,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Cystitis'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Cystitis'"
         }
       ]
     },
@@ -389,7 +389,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.display contains 'Chronic sinusitis (disorder)'"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.display) contains 'Chronic sinusitis (disorder)'"
         }
       ]
     }

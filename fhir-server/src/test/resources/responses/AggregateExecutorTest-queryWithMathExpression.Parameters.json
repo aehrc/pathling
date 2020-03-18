@@ -6,7 +6,10 @@
       "part": [
         { "name": "label", "valuePositiveInt": 2 },
         { "name": "result", "valueUnsignedInt": 268 },
-        { "name": "drillDown", "valueString": "item.sequence.first() + 1 = 2" }
+        {
+          "name": "drillDown",
+          "valueString": "(item.sequence.first() + 1) = 2"
+        }
       ]
     }
   ]

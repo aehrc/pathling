@@ -6,7 +6,10 @@
       "part": [
         { "name": "label", "valueCode": "female" },
         { "name": "result", "valueUnsignedInt": 4 },
-        { "name": "drillDown", "valueString": "gender = 'female'" }
+        {
+          "name": "drillDown",
+          "valueString": "((gender) = 'female') and (gender = 'female')"
+        }
       ]
     }
   ]

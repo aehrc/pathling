@@ -15,6 +15,7 @@ import au.csiro.pathling.query.parsing.LiteralComposer;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.parser.ExpressionParser;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
+import au.csiro.pathling.utilities.Strings;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -286,7 +287,13 @@ public class AggregateExecutor extends QueryExecutor {
         String equality = parsedGrouping.isSingular()
                           ? " = "
                           : " contains ";
-        fhirPaths.add(parsedGrouping.getFhirPath() + equality + literal);
+        // We need to add parentheses around the grouping expression, as some expressions will not
+        // play well with the equality or membership operator due to precedence.
+        String expression = literal.equals("true")
+                            ? parsedGrouping.getFhirPath()
+                            : Strings.parentheses(parsedGrouping.getFhirPath()) + equality
+                                + literal;
+        fhirPaths.add(expression);
       }
     }
 
@@ -300,7 +307,7 @@ public class AggregateExecutor extends QueryExecutor {
     // together with Boolean AND operators.
     if (fhirPaths.size() > 1) {
       fhirPaths = fhirPaths.stream()
-          .map(fhirPath -> "(" + fhirPath + ")")
+          .map(Strings::parentheses)
           .collect(Collectors.toSet());
     }
     return String.join(" and ", fhirPaths);

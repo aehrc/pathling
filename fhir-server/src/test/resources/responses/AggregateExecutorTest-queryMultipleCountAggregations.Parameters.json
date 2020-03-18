@@ -7,7 +7,7 @@
         { "name": "label", "valueCode": "male" },
         { "name": "result", "valueUnsignedInt": 5 },
         { "name": "result", "valueUnsignedInt": 4 },
-        { "name": "drillDown", "valueString": "gender = 'male'" }
+        { "name": "drillDown", "valueString": "(gender) = 'male'" }
       ]
     },
     {
@@ -16,7 +16,7 @@
         { "name": "label", "valueCode": "female" },
         { "name": "result", "valueUnsignedInt": 7 },
         { "name": "result", "valueUnsignedInt": 7 },
-        { "name": "drillDown", "valueString": "gender = 'female'" }
+        { "name": "drillDown", "valueString": "(gender) = 'female'" }
       ]
     }
   ]

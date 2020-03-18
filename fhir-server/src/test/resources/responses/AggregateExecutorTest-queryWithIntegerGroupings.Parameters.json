@@ -6,7 +6,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 1 },
         { "name": "result", "valueUnsignedInt": 268 },
-        { "name": "drillDown", "valueString": "item.sequence contains 1" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 1" }
       ]
     },
     {
@@ -14,7 +14,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 2 },
         { "name": "result", "valueUnsignedInt": 180 },
-        { "name": "drillDown", "valueString": "item.sequence contains 2" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 2" }
       ]
     },
     {
@@ -22,7 +22,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 3 },
         { "name": "result", "valueUnsignedInt": 72 },
-        { "name": "drillDown", "valueString": "item.sequence contains 3" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 3" }
       ]
     },
     {
@@ -30,7 +30,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 4 },
         { "name": "result", "valueUnsignedInt": 27 },
-        { "name": "drillDown", "valueString": "item.sequence contains 4" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 4" }
       ]
     },
     {
@@ -38,7 +38,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 5 },
         { "name": "result", "valueUnsignedInt": 12 },
-        { "name": "drillDown", "valueString": "item.sequence contains 5" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 5" }
       ]
     },
     {
@@ -46,7 +46,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 6 },
         { "name": "result", "valueUnsignedInt": 5 },
-        { "name": "drillDown", "valueString": "item.sequence contains 6" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 6" }
       ]
     },
     {
@@ -54,7 +54,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 7 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 7" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 7" }
       ]
     },
     {
@@ -62,7 +62,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 8 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 8" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 8" }
       ]
     },
     {
@@ -70,7 +70,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 9 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 9" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 9" }
       ]
     },
     {
@@ -78,7 +78,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 10 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 10" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 10" }
       ]
     },
     {
@@ -86,7 +86,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 11 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 11" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 11" }
       ]
     },
     {
@@ -94,7 +94,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 12 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 12" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 12" }
       ]
     },
     {
@@ -102,7 +102,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 13 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 13" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 13" }
       ]
     },
     {
@@ -110,7 +110,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 14 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 14" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 14" }
       ]
     },
     {
@@ -118,7 +118,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 15 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 15" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 15" }
       ]
     },
     {
@@ -126,7 +126,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 16 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 16" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 16" }
       ]
     },
     {
@@ -134,7 +134,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 17 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 17" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 17" }
       ]
     },
     {
@@ -142,7 +142,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 18 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 18" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 18" }
       ]
     },
     {
@@ -150,7 +150,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 19 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 19" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 19" }
       ]
     },
     {
@@ -158,7 +158,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 20 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 20" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 20" }
       ]
     },
     {
@@ -166,7 +166,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 21 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 21" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 21" }
       ]
     },
     {
@@ -174,7 +174,7 @@
       "part": [
         { "name": "label", "valuePositiveInt": 22 },
         { "name": "result", "valueUnsignedInt": 1 },
-        { "name": "drillDown", "valueString": "item.sequence contains 22" }
+        { "name": "drillDown", "valueString": "(item.sequence) contains 22" }
       ]
     }
   ]

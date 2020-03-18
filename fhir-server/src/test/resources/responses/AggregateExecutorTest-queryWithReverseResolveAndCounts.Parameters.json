@@ -8,7 +8,7 @@
         { "name": "result", "valueUnsignedInt": 3 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.count() = 8"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 8"
         }
       ]
     },
@@ -19,7 +19,7 @@
         { "name": "result", "valueUnsignedInt": 2 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.count() = 3"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 3"
         }
       ]
     },
@@ -30,7 +30,7 @@
         { "name": "result", "valueUnsignedInt": 2 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.count() = 10"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 10"
         }
       ]
     },
@@ -41,7 +41,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.count() = 16"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 16"
         }
       ]
     },
@@ -52,7 +52,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.coding.count() = 5"
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 5"
         }
       ]
     }

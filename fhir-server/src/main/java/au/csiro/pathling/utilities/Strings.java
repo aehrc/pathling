@@ -50,6 +50,10 @@ public abstract class Strings {
     return "`" + value + "`";
   }
 
+  public static String parentheses(String value) {
+    return "(" + value + ")";
+  }
+
   public static String unSingleQuote(String value) {
     return value.replaceAll("^'|'$", "");
   }

@@ -8,7 +8,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "patient.resolve().gender = 'female'"
+          "valueString": "(patient.resolve().gender) = 'female'"
         }
       ]
     },
@@ -19,7 +19,7 @@
         { "name": "result", "valueUnsignedInt": 2 },
         {
           "name": "drillDown",
-          "valueString": "patient.resolve().gender = 'male'"
+          "valueString": "(patient.resolve().gender) = 'male'"
         }
       ]
     }

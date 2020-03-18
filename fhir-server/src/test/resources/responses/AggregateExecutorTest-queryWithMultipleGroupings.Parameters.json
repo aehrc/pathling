@@ -9,7 +9,7 @@
         { "name": "result", "valueUnsignedInt": 14 },
         {
           "name": "drillDown",
-          "valueString": "(reasonCode.coding.display contains 'Viral sinusitis (disorder)') and (class.code = 'AMB')"
+          "valueString": "((reasonCode.coding.display) contains 'Viral sinusitis (disorder)') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -24,7 +24,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Perennial allergic rhinitis with seasonal variation')"
+          "valueString": "((reasonCode.coding.display) contains 'Perennial allergic rhinitis with seasonal variation') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -36,7 +36,7 @@
         { "name": "result", "valueUnsignedInt": 12 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Normal pregnancy')"
+          "valueString": "((reasonCode.coding.display) contains 'Normal pregnancy') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -48,7 +48,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(reasonCode.coding.display contains 'Anemia (disorder)') and (class.code = 'AMB')"
+          "valueString": "((class.code) = 'AMB') and ((reasonCode.coding.display) contains 'Anemia (disorder)')"
         }
       ]
     },
@@ -63,7 +63,7 @@
         { "name": "result", "valueUnsignedInt": 6 },
         {
           "name": "drillDown",
-          "valueString": "(reasonCode.coding.display contains 'Acute viral pharyngitis (disorder)') and (class.code = 'AMB')"
+          "valueString": "((class.code) = 'AMB') and ((reasonCode.coding.display) contains 'Acute viral pharyngitis (disorder)')"
         }
       ]
     },
@@ -75,7 +75,7 @@
         { "name": "result", "valueUnsignedInt": 2 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'First degree burn')"
+          "valueString": "((reasonCode.coding.display) contains 'First degree burn') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -87,7 +87,7 @@
         { "name": "result", "valueUnsignedInt": 5 },
         {
           "name": "drillDown",
-          "valueString": "(reasonCode.coding.display contains 'Acute bronchitis (disorder)') and (class.code = 'AMB')"
+          "valueString": "((reasonCode.coding.display) contains 'Acute bronchitis (disorder)') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -99,7 +99,7 @@
         { "name": "result", "valueUnsignedInt": 3 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Otitis media')"
+          "valueString": "((reasonCode.coding.display) contains 'Otitis media') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -111,7 +111,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Seasonal allergic rhinitis')"
+          "valueString": "((class.code) = 'AMB') and ((reasonCode.coding.display) contains 'Seasonal allergic rhinitis')"
         }
       ]
     },
@@ -123,7 +123,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Fracture of rib')"
+          "valueString": "((reasonCode.coding.display) contains 'Fracture of rib') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -135,7 +135,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Childhood asthma')"
+          "valueString": "((reasonCode.coding.display) contains 'Childhood asthma') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -147,7 +147,7 @@
         { "name": "result", "valueUnsignedInt": 5 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Asthma')"
+          "valueString": "((reasonCode.coding.display) contains 'Asthma') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -162,7 +162,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'IMP') and (reasonCode.coding.display contains 'Injury of anterior cruciate ligament')"
+          "valueString": "((reasonCode.coding.display) contains 'Injury of anterior cruciate ligament') and ((class.code) = 'IMP')"
         }
       ]
     },
@@ -174,7 +174,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(reasonCode.coding.display contains 'Asthma') and (class.code = 'EMER')"
+          "valueString": "((reasonCode.coding.display) contains 'Asthma') and ((class.code) = 'EMER')"
         }
       ]
     },
@@ -186,7 +186,7 @@
         { "name": "result", "valueUnsignedInt": 7 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Malignant tumor of colon')"
+          "valueString": "((reasonCode.coding.display) contains 'Malignant tumor of colon') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -198,7 +198,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'IMP') and (reasonCode.coding.display contains 'Malignant tumor of colon')"
+          "valueString": "((class.code) = 'IMP') and ((reasonCode.coding.display) contains 'Malignant tumor of colon')"
         }
       ]
     },
@@ -210,7 +210,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(reasonCode.coding.display contains 'Normal pregnancy') and (class.code = 'EMER')"
+          "valueString": "((reasonCode.coding.display) contains 'Normal pregnancy') and ((class.code) = 'EMER')"
         }
       ]
     },
@@ -222,7 +222,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Fetus with unknown complication')"
+          "valueString": "((class.code) = 'AMB') and ((reasonCode.coding.display) contains 'Fetus with unknown complication')"
         }
       ]
     },
@@ -234,7 +234,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Bleeding from anus')"
+          "valueString": "((reasonCode.coding.display) contains 'Bleeding from anus') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -249,7 +249,7 @@
         { "name": "result", "valueUnsignedInt": 7 },
         {
           "name": "drillDown",
-          "valueString": "(reasonCode.coding.display contains 'Secondary malignant neoplasm of colon') and (class.code = 'AMB')"
+          "valueString": "((reasonCode.coding.display) contains 'Secondary malignant neoplasm of colon') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -261,7 +261,7 @@
         { "name": "result", "valueUnsignedInt": 2 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Hyperlipidemia')"
+          "valueString": "((reasonCode.coding.display) contains 'Hyperlipidemia') and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -276,7 +276,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Acute bacterial sinusitis (disorder)')"
+          "valueString": "((class.code) = 'AMB') and ((reasonCode.coding.display) contains 'Acute bacterial sinusitis (disorder)')"
         }
       ]
     },
@@ -288,7 +288,7 @@
         { "name": "result", "valueUnsignedInt": 1 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display contains 'Cystitis')"
+          "valueString": "((class.code) = 'AMB') and ((reasonCode.coding.display) contains 'Cystitis')"
         }
       ]
     },
@@ -300,7 +300,7 @@
         { "name": "result", "valueUnsignedInt": 133 },
         {
           "name": "drillDown",
-          "valueString": "(class.code = 'AMB') and (reasonCode.coding.display.empty())"
+          "valueString": "(reasonCode.coding.display.empty()) and ((class.code) = 'AMB')"
         }
       ]
     },
@@ -312,7 +312,7 @@
         { "name": "result", "valueUnsignedInt": 8 },
         {
           "name": "drillDown",
-          "valueString": "(reasonCode.coding.display.empty()) and (class.code = 'EMER')"
+          "valueString": "((class.code) = 'EMER') and (reasonCode.coding.display.empty())"
         }
       ]
     }
