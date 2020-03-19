@@ -27,8 +27,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class BooleanOperator implements BinaryOperator {
 
-  /* TODO: Make sure boolean operators work with aggregate function operands. */
-
   public static final String AND = "and";
   public static final String OR = "or";
   public static final String XOR = "xor";
@@ -52,9 +50,13 @@ public class BooleanOperator implements BinaryOperator {
     Dataset<Row> leftDataset = left.getDataset(),
         rightDataset = right.getDataset();
     Column leftIdColumn = left.getIdColumn(),
-        leftColumn = left.isLiteral() ? lit(left.getJavaLiteralValue()) : left.getValueColumn(),
+        leftColumn = left.isLiteral()
+                     ? lit(left.getJavaLiteralValue())
+                     : left.getValueColumn(),
         rightIdColumn = right.getIdColumn(),
-        rightColumn = right.isLiteral() ? lit(right.getJavaLiteralValue()) : right.getValueColumn();
+        rightColumn = right.isLiteral()
+                      ? lit(right.getJavaLiteralValue())
+                      : right.getValueColumn();
 
     // Based on the type of operator, create the correct column expression.
     Column expression = null;

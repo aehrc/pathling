@@ -31,8 +31,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class EqualityOperator implements BinaryOperator {
 
-  /* TODO: Make sure equality operators work with aggregate function operands. */
-
   public static final String EQUALS = "=";
   public static final String NOT_EQUALS = "!=";
 
@@ -68,10 +66,14 @@ public class EqualityOperator implements BinaryOperator {
     Dataset<Row> leftDataset = left.getDataset(),
         rightDataset = right.getDataset();
     Column leftIdColumn = left.getIdColumn(),
-        leftColumn = left.isLiteral() ? sqlHelper.getLiteralColumn(left) : left.getValueColumn(),
+        leftColumn = left.isLiteral()
+                     ? sqlHelper.getLiteralColumn(left)
+                     : left.getValueColumn(),
         rightIdColumn = right.getIdColumn(),
         rightColumn =
-            right.isLiteral() ? sqlHelper.getLiteralColumn(right) : right.getValueColumn();
+            right.isLiteral()
+            ? sqlHelper.getLiteralColumn(right)
+            : right.getValueColumn();
 
     if (left.getFhirPathType() == DATE_TIME || left.getFhirPathType() == DATE) {
       leftColumn = to_date(leftColumn);

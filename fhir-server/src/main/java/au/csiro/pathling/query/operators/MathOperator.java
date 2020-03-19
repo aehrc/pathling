@@ -31,8 +31,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class MathOperator implements BinaryOperator {
 
-  /* TODO: Make sure math operators work with aggregate function operands. */
-
   private static final Set<FhirPathType> supportedTypes = new HashSet<FhirPathType>() {{
     add(INTEGER);
     add(DECIMAL);
@@ -64,9 +62,13 @@ public class MathOperator implements BinaryOperator {
     Dataset<Row> leftDataset = left.getDataset(),
         rightDataset = right.getDataset();
     Column leftIdColumn = left.getIdColumn(),
-        leftColumn = left.isLiteral() ? lit(left.getJavaLiteralValue()) : left.getValueColumn(),
+        leftColumn = left.isLiteral()
+                     ? lit(left.getJavaLiteralValue())
+                     : left.getValueColumn(),
         rightIdColumn = right.getIdColumn(),
-        rightColumn = right.isLiteral() ? lit(right.getJavaLiteralValue()) : right.getValueColumn();
+        rightColumn = right.isLiteral()
+                      ? lit(right.getJavaLiteralValue())
+                      : right.getValueColumn();
 
     // Based on the type of operator, create the correct column expression.
     Column expression = null;

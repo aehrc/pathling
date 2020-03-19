@@ -156,6 +156,4 @@ public class SearchExecutorTest extends ExecutorTest {
     assertThat(searchExecutor.size()).isEqualTo(14);
   }
 
-  /* TODO: Add test that verifies the behaviour of using "true" as a filter. */
-
 }

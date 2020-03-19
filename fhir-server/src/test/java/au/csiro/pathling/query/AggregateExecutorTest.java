@@ -537,6 +537,4 @@ public class AggregateExecutorTest extends ExecutorTest {
         "responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json");
   }
 
-  /* TODO: Add test that verifies the behaviour of using "true" as a filter. */
-
 }

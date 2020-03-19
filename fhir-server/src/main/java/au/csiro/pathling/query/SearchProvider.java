@@ -25,11 +25,10 @@ import org.slf4j.LoggerFactory;
  * @author John Grimes
  */
 public class SearchProvider<T extends IBaseResource>
-  implements IResourceProvider {
-  /* TODO: Test that exception handling works properly in SearchProvider. */
+    implements IResourceProvider {
 
   private static final Logger logger = LoggerFactory.getLogger(
-    SearchProvider.class
+      SearchProvider.class
   );
 
   public static final String QUERY_NAME = "fhirPath";
@@ -38,8 +37,8 @@ public class SearchProvider<T extends IBaseResource>
   private final Class<T> resourceType;
 
   public SearchProvider(
-    ExecutorConfiguration configuration,
-    Class<T> resourceType
+      ExecutorConfiguration configuration,
+      Class<T> resourceType
   ) {
     this.configuration = configuration;
     this.resourceType = resourceType;
@@ -52,13 +51,13 @@ public class SearchProvider<T extends IBaseResource>
 
   @Search(queryName = QUERY_NAME)
   public IBundleProvider search(
-    @OptionalParam(name = FILTER_PARAM) StringAndListParam filters
+      @OptionalParam(name = FILTER_PARAM) StringAndListParam filters
   ) {
     try {
       return new SearchExecutor(
-        configuration,
-        ResourceType.fromCode(resourceType.getSimpleName()),
-        filters
+          configuration,
+          ResourceType.fromCode(resourceType.getSimpleName()),
+          filters
       );
     } catch (BaseServerResponseException e) {
       // Errors relating to invalid input are re-raised, to be dealt with by HAPI.
@@ -67,8 +66,8 @@ public class SearchProvider<T extends IBaseResource>
     } catch (Exception | AssertionError e) {
       // All unexpected exceptions get wrapped in a 500 for presenting back to the user.
       throw new InternalErrorException(
-        "Unexpected error occurred while executing query",
-        e
+          "Unexpected error occurred while executing query",
+          e
       );
     }
   }

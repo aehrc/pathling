@@ -30,8 +30,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class ComparisonOperator implements BinaryOperator {
 
-  /* TODO: Make sure comparison operators work with aggregate function operands. */
-
   public static final String LESS_THAN_OR_EQUAL_TO = "<=";
   public static final String LESS_THAN = "<";
   public static final String GREATER_THAN_OR_EQUAL_TO = ">=";
@@ -64,9 +62,13 @@ public class ComparisonOperator implements BinaryOperator {
     Dataset<Row> leftDataset = left.getDataset(),
         rightDataset = right.getDataset();
     Column leftIdColumn = left.getIdColumn(),
-        leftColumn = left.isLiteral() ? lit(left.getJavaLiteralValue()) : left.getValueColumn(),
+        leftColumn = left.isLiteral()
+                     ? lit(left.getJavaLiteralValue())
+                     : left.getValueColumn(),
         rightIdColumn = right.getIdColumn(),
-        rightColumn = right.isLiteral() ? lit(right.getJavaLiteralValue()) : right.getValueColumn();
+        rightColumn = right.isLiteral()
+                      ? lit(right.getJavaLiteralValue())
+                      : right.getValueColumn();
 
     if (left.getFhirPathType() == DATE_TIME || left.getFhirPathType() == DATE) {
       leftColumn = to_date(leftColumn);

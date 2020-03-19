@@ -47,9 +47,6 @@ import org.junit.experimental.categories.Category;
 @Category(au.csiro.pathling.UnitTest.class)
 public class MemberOfFunctionTest {
 
-  /* TODO: Add tests to terminology functions to test behaviour when terminology functionality is
-      disabled. */
-
   private static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";
   private static final String TERMINOLOGY_SERVICE_URL = "https://r4.ontoserver.csiro.au/fhir";
 
