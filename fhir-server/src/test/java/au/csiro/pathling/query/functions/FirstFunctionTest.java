@@ -11,6 +11,7 @@ import static au.csiro.pathling.test.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture.*;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
+
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
@@ -109,4 +110,5 @@ public class FirstFunctionTest {
         .isThrownBy(() -> countFunction.invoke(functionInput))
         .withMessage("Arguments can not be passed to first function: first('some argument')");
   }
+
 }

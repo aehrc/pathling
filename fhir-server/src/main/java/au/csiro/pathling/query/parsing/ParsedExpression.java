@@ -32,13 +32,12 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class ParsedExpression implements Joinable {
 
-  // This mapping needs to reflect the mappings that Bunsen and Spark use.
+  // This mapping needs to reflect the mappings that the encoders and Spark use.
   //
   // The Spark mappings are documented here:
   // https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/Row.html#get-int-
   //
-  // The Bunsen mappings can be found within the code here:
-  // https://github.com/cerner/bunsen/blob/master/bunsen-r4/src/main/scala/com/cerner/bunsen/r4/R4DataTypeMappings.scala
+  // The encoder mappings can be found within the R4DataTypeMappings class.
   //
   private static final Map<FHIRDefinedType, Class> FHIR_TYPE_TO_JAVA_CLASS = new EnumMap<FHIRDefinedType, Class>(
       FHIRDefinedType.class) {{
@@ -196,6 +195,10 @@ public class ParsedExpression implements Joinable {
   }
 
   public void setFhirPathType(FhirPathType fhirPathType) {
+    if (definition != null || elementDefinition != null) {
+      throw new IllegalStateException(
+          "Cannot set the FHIRPath type on a ParsedExpression that already has a definition set. Clear the definition first.");
+    }
     this.fhirPathType = fhirPathType;
   }
 
@@ -221,6 +224,14 @@ public class ParsedExpression implements Joinable {
 
   public BaseRuntimeElementDefinition getElementDefinition() {
     return elementDefinition;
+  }
+
+  /**
+   * Clears the `definition` and `elementDefinition` fields.
+   */
+  public void clearDefinition() {
+    this.definition = null;
+    this.elementDefinition = null;
   }
 
   public boolean isResource() {
@@ -538,5 +549,9 @@ public class ParsedExpression implements Joinable {
     public String getFhirPathType() {
       return fhirPathType;
     }
+  }
+
+  private class InvalidAggregationError extends Throwable {
+
   }
 }

@@ -9,6 +9,7 @@ package au.csiro.pathling.query.functions;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -17,17 +18,16 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://pathling.app/docs/fhirpath/functions.html#count">count</a>
  */
-public class CountFunction extends AbstractAggFunction {
+public class CountFunction extends AbstractAggregateFunction {
 
   public CountFunction() {
     super("count");
   }
 
   @Nonnull
-  protected ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
+  protected ParsedExpression aggregate(@Nonnull FunctionInput input) {
     // Construct a new parse result.
-    ParsedExpression result =
-        wrapSparkFunction(input, org.apache.spark.sql.functions::count, false);
+    ParsedExpression result = wrapSparkFunction(input, functions::count, false);
     result.setFhirPathType(FhirPathType.INTEGER);
     result.setFhirType(FHIRDefinedType.UNSIGNEDINT);
     result.setPrimitive(true);
@@ -35,7 +35,7 @@ public class CountFunction extends AbstractAggFunction {
   }
 
   protected void validateInput(FunctionInput input) {
-    validateNoArgumentInput(input);
+    FunctionValidations.validateNoArgumentInput(functionName, input);
   }
 
 }

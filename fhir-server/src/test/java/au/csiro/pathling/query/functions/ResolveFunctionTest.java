@@ -294,4 +294,5 @@ public class ResolveFunctionTest {
         .isThrownBy(() -> resolveFunction.invoke(resolveInput))
         .withMessage("resolve function does not accept arguments");
   }
+
 }

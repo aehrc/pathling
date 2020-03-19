@@ -64,6 +64,6 @@ more details.
 ## Examples
 
 See
-[Example search requests in Postman](https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d4afec33-89d8-411c-8e4d-9169b9af42e0).
+[Example search requests in Postman](https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#f3490537-b116-4a2e-8428-45fdb6e7d137).
 
 Next: [Aggregate](./aggregate.html)

@@ -15,6 +15,7 @@ import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,9 +80,10 @@ public class MemberOfFunction implements Function {
     Dataset<Row> dataset;
     Dataset validateResults;
     ValidateCodeMapper validateCodeMapper = configuredMapper == null
-        ? new ValidateCodeMapper(MDC.get("requestId"), terminologyClientFactory, valueSetUri,
+                                            ? new ValidateCodeMapper(MDC.get("requestId"),
+        terminologyClientFactory, valueSetUri,
         fhirType)
-        : configuredMapper;
+                                            : configuredMapper;
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.
@@ -116,6 +118,11 @@ public class MemberOfFunction implements Function {
   }
 
   private void validateInput(FunctionInput input) {
+    ExpressionParserContext context = input.getContext();
+    if (context.getTerminologyClientFactory() == null) {
+      throw new InvalidRequestException(
+          "Attempt to call terminology function memberOf when no terminology service is configured");
+    }
     ParsedExpression inputResult = input.getInput();
     if (!(inputResult.getFhirPathType() == CODING
         || inputResult.getFhirType() == FHIRDefinedType.CODEABLECONCEPT)) {
@@ -212,7 +219,9 @@ public class MemberOfFunction implements Function {
         systemParam.setName("url");
         systemParam.setValue(new UriType(valueSetUri));
         ParametersParameterComponent conceptParam = new ParametersParameterComponent();
-        conceptParam.setName(fhirType == FHIRDefinedType.CODING ? "coding" : "codeableConcept");
+        conceptParam.setName(fhirType == FHIRDefinedType.CODING
+                             ? "coding"
+                             : "codeableConcept");
         conceptParam.setValue(concept);
         parameters.addParameter(systemParam);
         parameters.addParameter(conceptParam);

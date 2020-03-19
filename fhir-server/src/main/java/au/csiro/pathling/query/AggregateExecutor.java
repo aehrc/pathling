@@ -144,7 +144,12 @@ public class AggregateExecutor extends QueryExecutor {
           if (aggExpression == null) {
             throw new InvalidRequestException("Aggregation component must have expression");
           }
-          return expressionParser.parse(aggExpression);
+          ParsedExpression parsed = expressionParser.parse(aggExpression);
+          if (parsed.getAggregationDataset() == null || parsed.getAggregationIdColumn() == null) {
+            throw new InvalidRequestException(
+                "Expression is not compatible with aggregation: " + parsed.getFhirPath());
+          }
+          return parsed;
         }).collect(Collectors.toList());
   }
 

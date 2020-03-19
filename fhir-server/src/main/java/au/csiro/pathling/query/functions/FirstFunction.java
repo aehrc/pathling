@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
  * @author John Grimes
  * @see <a href="https://pathling.app/docs/fhirpath/functions.html#first">first</a>
  */
-public class FirstFunction extends AbstractAggFunction {
+public class FirstFunction extends AbstractAggregateFunction {
 
 
   public FirstFunction() {
@@ -25,12 +25,13 @@ public class FirstFunction extends AbstractAggFunction {
   }
 
   @Nonnull
-  protected ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
+  protected ParsedExpression aggregate(@Nonnull FunctionInput input) {
     // Use the version of `first` that ignores NULL values.
     return wrapSparkFunction(input, col -> first(col, true), true);
   }
 
   protected void validateInput(FunctionInput input) {
-    validateNoArgumentInput(input);
+    FunctionValidations.validateNoArgumentInput(functionName, input);
   }
+
 }

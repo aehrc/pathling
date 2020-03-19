@@ -132,4 +132,5 @@ public class CountFunctionTest {
         .isThrownBy(() -> countFunction.invoke(countInput))
         .withMessage("Arguments can not be passed to count function: count('some argument')");
   }
+
 }

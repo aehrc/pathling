@@ -71,4 +71,5 @@ public class OfTypeFunction implements Function {
       throw new InvalidRequestException("Argument to ofType function must be a resource type");
     }
   }
+
 }

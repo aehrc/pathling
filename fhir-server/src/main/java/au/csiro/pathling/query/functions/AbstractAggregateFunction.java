@@ -7,32 +7,36 @@
 package au.csiro.pathling.query.functions;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 /**
- * Base class for aggregation/selection function based on their SQL counterparts
+ * This class contains functionality common to all functions which can be used as aggregate
+ * functions.
  *
  * @author Piotr Szul
  */
-
-public abstract class AbstractAggFunction implements Function {
+public abstract class AbstractAggregateFunction implements Function {
 
   protected final String functionName;
 
-  protected AbstractAggFunction(String functionName) {
+  protected AbstractAggregateFunction(String functionName) {
     super();
     this.functionName = functionName;
   }
 
+  /**
+   * The non-aggregate invocation of an aggregate function is simply the result of running the
+   * aggregation immediately, and updating the `dataset`, `idColumn` and `valueColumn` fields for
+   * consumption by downstream invocations.
+   */
   @Nonnull
   @Override
   public ParsedExpression invoke(@Nonnull FunctionInput input) {
     validateInput(input);
-    ParsedExpression result = invokeAgg(input);
+    ParsedExpression result = aggregate(input);
 
     Dataset<Row> aggDataset = result.getAggregationDataset();
     // Apply the aggregate Spark SQL function to the grouping.
@@ -49,12 +53,15 @@ public abstract class AbstractAggFunction implements Function {
   }
 
   @Nonnull
-  protected abstract ParsedExpression invokeAgg(@Nonnull FunctionInput input);
+  protected abstract ParsedExpression aggregate(@Nonnull FunctionInput input);
 
   protected abstract void validateInput(FunctionInput input);
 
-  // helper functions
-
+  /**
+   * This method applies a Spark Column function to a function input, returning a ParsedExpression.
+   * This can be used for implementing functions that correlate one-to-one with Spark functions, and
+   * do not require complex logic.
+   */
   protected ParsedExpression wrapSparkFunction(@Nonnull FunctionInput input,
       java.util.function.Function<Column, Column> aggFunction, boolean copyInputContext) {
     // Construct a new parse result.
@@ -64,7 +71,9 @@ public abstract class AbstractAggFunction implements Function {
     Column prevIdColumn = inputResult.getIdColumn();
 
     ParsedExpression result =
-        copyInputContext ? new ParsedExpression(inputResult) : new ParsedExpression();
+        copyInputContext
+        ? new ParsedExpression(inputResult)
+        : new ParsedExpression();
     result.setFhirPath(input.getExpression());
     result.setSingular(true);
     result.setDataset(null);
@@ -74,13 +83,6 @@ public abstract class AbstractAggFunction implements Function {
     result.setAggregationIdColumn(prevIdColumn);
     result.setAggregationColumn(aggFunction.apply(prevValueColumn));
     return result;
-  }
-
-  protected void validateNoArgumentInput(FunctionInput input) {
-    if (!input.getArguments().isEmpty()) {
-      throw new InvalidRequestException(
-          "Arguments can not be passed to " + functionName + " function: " + input.getExpression());
-    }
   }
 
 }

@@ -21,17 +21,18 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://pathling.app/docs/fhirpath/functions.html#empty">first</a>
  */
-public class EmptyFunction extends AbstractAggFunction {
+public class EmptyFunction extends AbstractAggregateFunction {
 
   public EmptyFunction() {
     super("empty");
   }
 
   @Nonnull
-  protected ParsedExpression invokeAgg(@Nonnull FunctionInput input) {
+  protected ParsedExpression aggregate(@Nonnull FunctionInput input) {
     // "Empty" means that the group contains only null values.
     ParsedExpression result = wrapSparkFunction(input,
         col -> when(max(col).isNull(), true).otherwise(false), true);
+    result.clearDefinition();
     result.setFhirPathType(FhirPathType.BOOLEAN);
     result.setFhirType(FHIRDefinedType.BOOLEAN);
     result.setPrimitive(true);
@@ -39,7 +40,7 @@ public class EmptyFunction extends AbstractAggFunction {
   }
 
   protected void validateInput(FunctionInput input) {
-    validateNoArgumentInput(input);
+    FunctionValidations.validateNoArgumentInput(functionName, input);
     ParsedExpression inputExpression = input.getInput();
     if (inputExpression.isSingular()) {
       throw new InvalidRequestException(

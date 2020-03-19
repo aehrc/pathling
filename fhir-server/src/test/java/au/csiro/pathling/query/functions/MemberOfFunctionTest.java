@@ -273,7 +273,11 @@ public class MemberOfFunctionTest {
     input.setFhirPath("onsetString");
     ParsedExpression argument = PrimitiveExpressionBuilder.literalString(MY_VALUE_SET_URL);
 
+    ExpressionParserContext parserContext = new ExpressionParserContext();
+    parserContext.setTerminologyClientFactory(mock(TerminologyClientFactory.class));
+
     FunctionInput memberOfInput = new FunctionInput();
+    memberOfInput.setContext(parserContext);
     memberOfInput.setInput(input);
     memberOfInput.getArguments().add(argument);
 
@@ -289,7 +293,11 @@ public class MemberOfFunctionTest {
         .build();
     ParsedExpression argument = PrimitiveExpressionBuilder.literalInteger(4);
 
+    ExpressionParserContext parserContext = new ExpressionParserContext();
+    parserContext.setTerminologyClientFactory(mock(TerminologyClientFactory.class));
+
     FunctionInput memberOfInput = new FunctionInput();
+    memberOfInput.setContext(parserContext);
     memberOfInput.setInput(input);
     memberOfInput.getArguments().add(argument);
     memberOfInput.setExpression("memberOf(4)");
@@ -307,7 +315,11 @@ public class MemberOfFunctionTest {
     ParsedExpression argument1 = PrimitiveExpressionBuilder.literalString("foo"),
         argument2 = PrimitiveExpressionBuilder.literalString("bar");
 
+    ExpressionParserContext parserContext = new ExpressionParserContext();
+    parserContext.setTerminologyClientFactory(mock(TerminologyClientFactory.class));
+
     FunctionInput memberOfInput = new FunctionInput();
+    memberOfInput.setContext(parserContext);
     memberOfInput.setInput(input);
     memberOfInput.getArguments().add(argument1);
     memberOfInput.getArguments().add(argument2);
@@ -320,4 +332,24 @@ public class MemberOfFunctionTest {
             "memberOf function accepts one argument of type String: memberOf('foo', 'bar')");
   }
 
+  @Test
+  public void throwsErrorIfTerminologyServiceNotConfigured() {
+    ParsedExpression input = new ComplexExpressionBuilder(FHIRDefinedType.CODEABLECONCEPT)
+        .build();
+    ParsedExpression argument = PrimitiveExpressionBuilder.literalString("foo");
+
+    ExpressionParserContext parserContext = new ExpressionParserContext();
+
+    FunctionInput memberOfInput = new FunctionInput();
+    memberOfInput.setContext(parserContext);
+    memberOfInput.setInput(input);
+    memberOfInput.getArguments().add(argument);
+    memberOfInput.setExpression("memberOf('foo')");
+
+    MemberOfFunction memberOfFunction = new MemberOfFunction();
+    assertThatExceptionOfType(InvalidRequestException.class)
+        .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
+        .withMessage(
+            "Attempt to call terminology function memberOf when no terminology service is configured");
+  }
 }
