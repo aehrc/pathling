@@ -18,9 +18,11 @@ The following functions are currently supported:
 - [ofType](#oftype)
 - [count](#count)
 - [first](#first)
+- [empty](#empty)
 - [where](#where)
 - [memberOf](#memberof)
-- [empty](#empty)
+- [subsumes](#subsumes)
+- [subsumedBy](#subsumedby)
 
 The notation used to describe the type signature of each function is as follows:
 
@@ -159,6 +161,22 @@ Patient.name.given.first()
 
 See also: [first](https://hl7.org/fhirpath/2018Sep/index.html#first-collection)
 
+## empty
+
+```
+collection -> empty() : Boolean
+```
+
+Returns `true` if the input collection is empty, and `false` otherwise.
+
+Example:
+
+```
+Patient.reverseResolve(Condition.subject).empty()
+```
+
+See also: [empty](https://hl7.org/fhirpath/2018Sep/index.html#empty-boolean)
+
 ## where
 
 ```
@@ -205,14 +223,74 @@ based on whether the concept is a member of the
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
 
-## empty
+## subsumes
 
 ```
-collection -> empty() : Boolean
+collection<Coding|CodeableConcept> -> subsumes(code: Coding|CodeableConcept) : collection<Boolean>
 ```
 
-Returns `true` if the input collection is empty, and `false` otherwise.
+When invoked on a [Coding](./data-types.html#coding)-valued element and the
+given code is Coding-valued, returns true if the source code is equivalent to
+the given code, or if the source code subsumes the given code (i.e. the source
+code is an ancestor of the given code in a subsumption hierarchy), and false
+otherwise.
 
-See also: [empty](https://hl7.org/fhirpath/2018Sep/index.html#empty-boolean)
+If the Codings are from different code systems, the relationships between the
+code systems must be well-defined or a run-time error is thrown.
+
+When the source or given elements are
+[CodeableConcepts](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept),
+returns true if any Coding in the source or given elements is equivalent to or
+subsumes the given code.
+
+Example:
+
+```
+Patient.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|770581008)
+```
+
+<div class="callout info">
+    The <code>subsumes</code> function is a <em>terminology function</em>, which means that it requires a configured
+    <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
+    <a href="../deployment.html">Configuration and deployment</a> for details.
+</div>
+
+See also:
+[Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
+
+## subsumedBy
+
+```
+collection<Coding|CodeableConcept> -> subsumedBy(code: Coding|CodeableConcept) : collection<Boolean>
+```
+
+When invoked on a [Coding](./data-types.html#coding)-valued element and the
+given code is Coding-valued, returns true if the source code is equivalent to
+the given code, or if the source code is subsumed by the given code (i.e. the
+given code is an ancestor of the source code in a subsumption hierarchy), and
+false otherwise.
+
+If the Codings are from different code systems, the relationships between the
+code systems must be well-defined or a run-time error is thrown.
+
+When the source or given elements are
+[CodeableConcepts](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept),
+returns true if any Coding in the source or given elements is equivalent to or
+subsumed by the given code.
+
+Example:
+
+```
+Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|73211009)
+```
+
+<div class="callout info">
+    The <code>subsumes</code> function is a <em>terminology function</em>, which means that it requires a configured
+    <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
+    <a href="../deployment.html">Configuration and deployment</a> for details.
+</div>
+
+See also:
+[Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
 
 Next: [Configuration and deployment](../deployment.html)

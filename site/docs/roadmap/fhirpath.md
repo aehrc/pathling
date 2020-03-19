@@ -11,12 +11,8 @@ grand_parent: Documentation
 Implementation of a number of operators, functions and syntax elements from the
 FHIRPath specifications is planned:
 
-- `subsumes` and `subsumedBy` functions (see
-  [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions))
 - `translate` function (see
   [Terminology Service API](https://hl7.org/fhir/R4/fhirpath.html#txapi))
-- `where` function (see
-  [where](https://hl7.org/fhirpath/2018Sep/index.html#wherecriteria-expression-collection))
 - `select` function (see
   [select](https://hl7.org/fhirpath/2018Sep/index.html#selectprojection-expression-collection))
 - Various aggregate functions (`average`, `covarPop`, `covarSample`, `max`,
