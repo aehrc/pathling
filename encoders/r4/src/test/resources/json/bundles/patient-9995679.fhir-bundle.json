@@ -32,9 +32,7 @@
           {
             "use": "official",
             "family": "Alexis",
-            "given": [
-              "Aaron"
-            ]
+            "given": ["Aaron"]
           }
         ],
         "gender": "male",
@@ -85,9 +83,7 @@
           "code": "AMB",
           "display": "ambulatory",
           "_display": {
-            "fhir_comments": [
-              "    outpatient    "
-            ]
+            "fhir_comments": ["    outpatient    "]
           }
         },
         "period": {
@@ -114,9 +110,7 @@
           "code": "AMB",
           "display": "ambulatory",
           "_display": {
-            "fhir_comments": [
-              "    outpatient    "
-            ]
+            "fhir_comments": ["    outpatient    "]
           }
         },
         "subject": {
@@ -146,9 +140,7 @@
           "code": "AMB",
           "display": "ambulatory",
           "_display": {
-            "fhir_comments": [
-              "    outpatient    "
-            ]
+            "fhir_comments": ["    outpatient    "]
           }
         },
         "subject": {
@@ -178,9 +170,7 @@
           "code": "AMB",
           "display": "ambulatory",
           "_display": {
-            "fhir_comments": [
-              "    outpatient    "
-            ]
+            "fhir_comments": ["    outpatient    "]
           }
         },
         "subject": {
@@ -210,9 +200,7 @@
           "code": "AMB",
           "display": "ambulatory",
           "_display": {
-            "fhir_comments": [
-              "    outpatient    "
-            ]
+            "fhir_comments": ["    outpatient    "]
           }
         },
         "subject": {
@@ -242,9 +230,7 @@
           "code": "AMB",
           "display": "ambulatory",
           "_display": {
-            "fhir_comments": [
-              "    outpatient    "
-            ]
+            "fhir_comments": ["    outpatient    "]
           }
         },
         "subject": {
@@ -274,9 +260,7 @@
           "code": "AMB",
           "display": "ambulatory",
           "_display": {
-            "fhir_comments": [
-              "    outpatient    "
-            ]
+            "fhir_comments": ["    outpatient    "]
           }
         },
         "subject": {

@@ -1,0 +1,27 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        { "name": "label", "valueBoolean": false },
+        { "name": "result", "valueUnsignedInt": 7 },
+        {
+          "name": "drillDown",
+          "valueString": "(reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|94260004)) = false"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        { "name": "label", "valueBoolean": true },
+        { "name": "result", "valueUnsignedInt": 2 },
+        {
+          "name": "drillDown",
+          "valueString": "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|94260004)"
+        }
+      ]
+    }
+  ]
+}

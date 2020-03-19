@@ -23,6 +23,7 @@ import au.csiro.pathling.query.parsing.parser.ExpressionParser;
 import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ParsedExpressionAssert;
+import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +36,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.assertj.core.api.Assertions;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.Before;
@@ -51,14 +53,15 @@ public class ExpressionParserTest {
   private SparkSession spark;
   private ResourceReader mockReader;
   private ExpressionParser expressionParser;
+  private TerminologyClient terminologyClient;
 
   @Before
   public void setUp() throws IOException {
     spark = getSparkSession();
 
-    TerminologyClient terminologyClient =
-        mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
+    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
+    TerminologyClientFactory terminologyClientFactory =
+        mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     mockReader = mock(ResourceReader.class);
@@ -72,7 +75,8 @@ public class ExpressionParserTest {
     parserContext.setResourceReader(mockReader);
     parserContext.setSubjectContext(null);
     expressionParser = new ExpressionParser(parserContext);
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
+    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
+        ResourceType.PROCEDURE);
 
     ResourceType resourceType = ResourceType.PATIENT;
     Dataset<Row> subject = mockReader.read(resourceType);
@@ -118,44 +122,20 @@ public class ExpressionParserTest {
 
   @Test
   public void testContainsOperator() {
-    assertThatResultOf("name.family contains 'Wuckert783'")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(false)
-                .changeValue(PATIENT_ID_9360820c, true)
-        );
+    assertThatResultOf("name.family contains 'Wuckert783'").isOfBooleanType().isSelection()
+        .selectResult().hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
 
-    assertThatResultOf("name.suffix contains 'MD'")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(false)
-                .changeValue(PATIENT_ID_8ee183e2, true)
-        );
+    assertThatResultOf("name.suffix contains 'MD'").isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
   }
 
   @Test
   public void testInOperator() {
-    assertThatResultOf("'Wuckert783' in name.family")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(false)
-                .changeValue(PATIENT_ID_9360820c, true)
-        );
+    assertThatResultOf("'Wuckert783' in name.family").isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
 
-    assertThatResultOf("'MD' in name.suffix")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(false)
-                .changeValue(PATIENT_ID_8ee183e2, true)
-        );
+    assertThatResultOf("'MD' in name.suffix").isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
   }
 
   @Test
@@ -163,26 +143,15 @@ public class ExpressionParserTest {
     // test unversioned
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(true)
-                .changeValue(PATIENT_ID_8ee183e2, false)
-                .changeValue(PATIENT_ID_9360820c, false)
-                .changeValue(PATIENT_ID_beff242e, false)
-        );
+        .isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(true).changeValue(PATIENT_ID_8ee183e2, false)
+            .changeValue(PATIENT_ID_9360820c, false).changeValue(PATIENT_ID_beff242e, false));
 
     // test versioned
     assertThatResultOf(
         "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
-        .isOfBooleanType()
-        .isSelection()
-        .selectResult()
-        .hasRows(
-            allPatientsWithValue(true)
-                .changeValue(PATIENT_ID_bbd33563, false)
-        );
+        .isOfBooleanType().isSelection().selectResult()
+        .hasRows(allPatientsWithValue(true).changeValue(PATIENT_ID_bbd33563, false));
   }
 
   @Test
@@ -216,6 +185,29 @@ public class ExpressionParserTest {
     assertThat(result).isSingular();
   }
 
+
+  @Test
+  public void testCodingLiterals() {
+
+    // Coding literal form [system]|[code]
+    final Coding expectedCoding =
+        new Coding("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "S", null);
+    assertThatResultOf("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
+        .isOfType(FHIRDefinedType.CODING, FhirPathType.CODING).isSingular()
+        .isTypeLiteral(expectedCoding);
+
+    // Coding literal form [system]|[version]|[code]
+
+    final Coding expectedCodingWithVersion =
+        new Coding("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "S", null);
+    expectedCodingWithVersion.setVersion("v1");
+    assertThatResultOf("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|v1|S")
+        .isOfType(FHIRDefinedType.CODING, FhirPathType.CODING).isSingular()
+        .isTypeLiteral(expectedCodingWithVersion);
+
+  }
+
+
   @Test
   public void testCountWithReverseResolve() {
 
@@ -232,30 +224,58 @@ public class ExpressionParserTest {
   public void testCount() {
     DatasetBuilder expectedCountResult =
         allPatientsWithValue(1L).changeValue(PATIENT_ID_9360820c, 2L);
-    assertThatResultOf("name.count()")
-        .isSelection()
-        .selectResult()
+    assertThatResultOf("name.count()").isSelection().selectResult().hasRows(expectedCountResult);
+
+    assertThatResultOf("name.family.count()").isSelection().selectResult()
         .hasRows(expectedCountResult);
 
-    assertThatResultOf("name.family.count()")
-        .isSelection()
-        .selectResult()
+    assertThatResultOf("name.family.count()").isAggregation().aggByIdResult()
         .hasRows(expectedCountResult);
 
-    assertThatResultOf("name.family.count()")
-        .isAggregation()
-        .aggByIdResult()
+    assertThatResultOf("name.given.count()").isSelection().selectResult()
         .hasRows(expectedCountResult);
 
-    assertThatResultOf("name.given.count()")
-        .isSelection()
-        .selectResult()
-        .hasRows(expectedCountResult);
-
-    assertThatResultOf("name.prefix.count()")
-        .isSelection()
-        .selectResult()
+    assertThatResultOf("name.prefix.count()").isSelection().selectResult()
         .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
+  }
+
+  @Test
+  public void testSubsumesAndSubsumedBy() {
+    // Setup mock terminology client
+    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+
+    // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
+    // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
+    // Chronic sinusitis (disorder) = http://snomed.info/sct|40055000 in (PATIENT_ID_7001ad9c)
+
+    // With empty concept map subsume should work as member of
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
+        .isSelection().isOfBooleanType().selectResult()
+        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
+
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
+        .isSelection().isOfBooleanType().selectResult()
+        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
+
+    // on the same collection should return all True (even though one is CodeableConcept)
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)")
+        .isSelection().isOfBooleanType().selectResult().hasRows(allPatientsWithValue(true));
+
+    // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
+    when(terminologyClient.closure(any(), any(), any()))
+        .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
+        .isSelection().isOfBooleanType().selectResult().hasRows(allPatientsWithValue(true)
+        .changeValue(PATIENT_ID_2b36c1e2, false).changeValue(PATIENT_ID_bbd33563, false));
+
+    assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
+        + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
+        .isSelection().isOfBooleanType().selectResult()
+        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
   }
 
   @Test
@@ -265,4 +285,5 @@ public class ExpressionParserTest {
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"))
         .withMessage("Error parsing FHIRPath expression: missing ')' at '<EOF>'");
   }
+
 }

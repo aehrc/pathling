@@ -57,6 +57,11 @@ public class DatasetBuilder {
     return this;
   }
 
+  public DatasetBuilder changeValues(final Object value, List<String> ids) {
+    ids.forEach(id -> changeValue(id, value));
+    return this;
+  }
+  
   public DatasetBuilder withIdsAndValue(Object value, List<String> ids) {
     for (String id : ids) {
       Row row = RowFactory.create(id, value);

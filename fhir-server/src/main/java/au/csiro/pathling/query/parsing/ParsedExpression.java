@@ -320,6 +320,14 @@ public class ParsedExpression implements Joinable {
     this.valueColumn = valueColumn;
   }
 
+  public Column getLiteralOrValueColumn() {
+    if (isLiteral()) {
+      return FhirPathTypeSqlHelper.forType(getFhirPathType()).getLiteralColumn(this);
+    } else {
+      return getValueColumn();
+    }
+  }
+
   public Column getResourceTypeColumn() {
     return resourceTypeColumn;
   }

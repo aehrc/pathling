@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
@@ -102,7 +103,6 @@ public class AggregateExecutorTest extends ExecutorTest {
 
   @Test
   public void queryWithMultipleGroupings() throws IOException, JSONException {
-
     subjectResource = ResourceType.ENCOUNTER;
     mockResourceReader(subjectResource);
 
@@ -535,6 +535,51 @@ public class AggregateExecutorTest extends ExecutorTest {
     String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json");
+  }
+
+  /**
+   * Patient/121503c8-9564-4b48-9086-a22df717948e has Condition with Coding:
+   * http://snomed.info/sct|363406005 (Malignant tumor of colon)
+   * <p>
+   * Patient/9360820c-8602-4335-8b50-c88d627a0c20 has Condition with Coding:
+   * http://snomed.info/sct|94260004 (Secondary malignant neoplasm of colon)
+   * <p>
+   * http://snomed.info/sct|363406005 -- subsumes --> http://snomed.info/sct|94260004
+   */
+  @Test
+  public void queryWithSubsumes() throws IOException, JSONException {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.CONDITION, ResourceType.PATIENT);
+    ConceptMap mockResponse = (ConceptMap) TestUtilities.getJsonParser().parseResource(
+        getResourceAsStream("txResponses//SubsumesFunctionTest-closure.ConceptMap.json"));
+
+    // Mock out responses from the terminology server.
+    when(terminologyClient.closure(any(), any(), any())).thenReturn(mockResponse);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping1 = new Grouping();
+    grouping1.setLabel("Condition subsumes http://snomed.info/sct|94260004");
+    grouping1.setExpression(
+        "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|94260004)");
+    request.getGroupings().add(grouping1);
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
+    System.out.println(actualJson);
+    checkExpectedJson(actualJson,
+        "responses/AggregateExecutorTest-queryWithSubsumes.Parameters.json");
   }
 
 }

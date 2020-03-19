@@ -6,12 +6,14 @@
 
 package au.csiro.pathling.test;
 
-import au.csiro.pathling.query.parsing.ParsedExpression;
+import java.util.List;
+import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
+import au.csiro.pathling.query.parsing.ParsedExpression;
 
 /**
  * Assists with the task of creating ParsedExpressions for testing purposes.
@@ -44,6 +46,13 @@ public class ExpressionBuilder {
     return this;
   }
 
+  public ExpressionBuilder withIdValueRows(List<String> ids, Function<String, Object> valueProducer) {
+    ids.forEach(id -> {
+      this.withRow(id, valueProducer.apply(id));
+    });
+    return this;
+  }
+  
   public ExpressionBuilder withStructColumn(String name, DataType dataType) {
     datasetBuilder.withStructColumn(name, dataType);
     return this;

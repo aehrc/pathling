@@ -32,10 +32,7 @@
           {
             "use": "official",
             "family": "Shaw",
-            "given": [
-              "Amy",
-              "V."
-            ]
+            "given": ["Amy", "V."]
           }
         ],
         "telecom": [
@@ -54,9 +51,7 @@
         "address": [
           {
             "use": "home",
-            "line": [
-              "49 Meadow St"
-            ],
+            "line": ["49 Meadow St"],
             "city": "Mounds",
             "state": "OK",
             "postalCode": "74047",

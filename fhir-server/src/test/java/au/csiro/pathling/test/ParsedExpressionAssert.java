@@ -15,6 +15,7 @@ import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
 
 /**
  * @author Piotr Szul
@@ -29,7 +30,7 @@ public class ParsedExpressionAssert {
 
   public DatasetAssert selectResult() {
     return new DatasetAssert(parsedExpression.getDataset()
-        .select(parsedExpression.getIdColumn(), parsedExpression.getValueColumn())
+        .select(parsedExpression.getIdColumn(), parsedExpression.getLiteralOrValueColumn())
         .orderBy(parsedExpression.getIdColumn()));
   }
 
@@ -154,6 +155,12 @@ public class ParsedExpressionAssert {
     assertThat(parsedExpression.getLiteralValue()).isInstanceOf(StringType.class);
     assertThat(parsedExpression.getLiteralValue().toString()).isEqualTo(value);
     assertThat(parsedExpression.getJavaLiteralValue()).isEqualTo(value);
+    return this;
+  }
+
+  public ParsedExpressionAssert isTypeLiteral(Type value) {
+    assertThat(parsedExpression.getLiteralValue()).isEqualToComparingFieldByField(value);
+    assertThat(parsedExpression.getJavaLiteralValue()).isEqualToComparingFieldByField(value);
     return this;
   }
 }
