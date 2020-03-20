@@ -22,7 +22,7 @@
   <properties>
     <jettyVersion>9.4.14.v20181114</jettyVersion>
     <antlrVersion>4.7.2</antlrVersion>
-    <dockerRepository>aehrc/pathling</dockerRepository>
+    <fhirServerDockerRepo>aehrc/pathling</fhirServerDockerRepo>
   </properties>
 
   <dependencies>
@@ -190,7 +190,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${dockerRepository}</repository>
+          <repository>${fhirServerDockerRepo}</repository>
           <tag>${project.version}</tag>
           <buildArgs>
             <VERSION>${project.version}</VERSION>
@@ -227,7 +227,7 @@
           <systemPropertyVariables>
             <version>${project.version}</version>
             <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
-            <dockerRepository>${dockerRepository}</dockerRepository>
+            <dockerRepository>${fhirServerDockerRepo}</dockerRepository>
           </systemPropertyVariables>
         </configuration>
       </plugin>

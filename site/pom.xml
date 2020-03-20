@@ -19,6 +19,10 @@
   <artifactId>site</artifactId>
   <packaging>pom</packaging>
 
+  <properties>
+    <siteDockerRepo>aehrc/pathling-site</siteDockerRepo>
+  </properties>
+
   <build>
     <plugins>
       <plugin>
@@ -64,7 +68,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>pathling/site</repository>
+          <repository>${siteDockerRepo}</repository>
           <tag>${project.version}</tag>
         </configuration>
       </plugin>
