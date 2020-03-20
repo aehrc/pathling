@@ -54,7 +54,7 @@ public abstract class TestUtilities {
     if (activeSession.isEmpty()) {
       return SparkSession.builder()
           .appName("pathling-test")
-          .config("spark.master", "local")
+          .config("spark.master", "local[*]")
           .config("spark.driver.host", "localhost")
           .config("spark.sql.shuffle.partitions", "1")
           .getOrCreate();
