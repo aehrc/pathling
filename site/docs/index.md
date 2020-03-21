@@ -65,10 +65,9 @@ In summary, the operations available within Pathling are:
 3. [aggregate](./aggregate.html) - A "pivot table as an API", able to take in a
    set of expressions that describe aggregations, groupings and filters and
    return grouped aggregate data.
-4. [summarize](./roadmap#summarize-operation) _(currently under development)_
-
-- An operation that allows a client to describe a custom tabular extract of FHIR
-  data, and retrieve it in bulk.
+4. [summarize](./roadmap.html#summarize-operation) _(currently under
+   development)_ - An operation that allows a client to describe a custom
+   tabular extract of FHIR data, and retrieve it in bulk.
 
 You can find some examples of how to interact with Pathling in our
 [Postman](https://www.getpostman.com/) collection:
