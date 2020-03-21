@@ -134,9 +134,9 @@ following requirements:
   [scope claim](https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context/index.html)
 
 Pathling currently only supports the `user/*.read` scope.
-[Future work is planned](./roadmap/smart.html) to expand this to enable control
-over the access of individual resource types, aggregate vs individual record
-data, and more.
+[Future work is planned](./roadmap.html#authorisation-enhancements) to expand
+this to enable control over the access of individual resource types, aggregate
+vs individual record data, and more.
 
 ## Apache Spark
 
@@ -146,4 +146,4 @@ application.
 For compatibility, Pathling runs Spark 2.4.4 (Scala 2.11), with Hadoop version
 2.7.7.
 
-Next: [Roadmap](./roadmap)
+Next: [Roadmap](./roadmap.html)

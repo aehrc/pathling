@@ -81,7 +81,10 @@ following parameters:
 
 ## Examples
 
-See
-[Example \$aggregate requests in Postman](https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d4afec33-89d8-411c-8e4d-9169b9af42e0).
+Check out example `aggregate` requests in the Postman collection:
+
+<a class="postman-link"
+   href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d4afec33-89d8-411c-8e4d-9169b9af42e0">
+<img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Next: [FHIRPath](./fhirpath)

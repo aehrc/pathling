@@ -57,7 +57,10 @@ which will indicate success or a description of any errors that occurred.
 
 ## Examples
 
-See
-[Example \$import requests in Postman](https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d5f260da-7eca-4a19-83b2-a944491ba5a6).
+Check out example `import` requests in the Postman collection:
+
+<a class="postman-link"
+   href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d5f260da-7eca-4a19-83b2-a944491ba5a6">
+<img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Next: [Search](./search.html)

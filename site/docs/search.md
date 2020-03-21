@@ -11,7 +11,7 @@ parent: Documentation
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and defines a
-[named search query](https:/hl7.org/fhir/R4/search.html#query) on all resource
+[named search query](https://hl7.org/fhir/R4/search.html#query) on all resource
 types called `fhirPath`.
 
 This search query allows the user to retrieve a set of FHIR resources from the
@@ -63,7 +63,10 @@ more details.
 
 ## Examples
 
-See
-[Example search requests in Postman](https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#f3490537-b116-4a2e-8428-45fdb6e7d137).
+Check out example search requests in the Postman collection:
+
+<a class="postman-link"
+   href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#f3490537-b116-4a2e-8428-45fdb6e7d137">
+<img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Next: [Aggregate](./aggregate.html)
