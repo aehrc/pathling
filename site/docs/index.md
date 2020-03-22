@@ -56,10 +56,11 @@ Pathling.
 <img src="/images/analytics-api.png" 
      srcset="/images/analytics-api@2x.png 2x, /images/analytics-api.png 1x"
      alt="FHIR Analytics API" />  
+  
 In summary, the operations available within Pathling are:
 
 1. [import](./import.html) - An operation for importing FHIR data in bulk into
-   the server, making it availbel for query using the other operations.
+   the server, making it available for query using the other operations.
 2. [search](./search.html) - A way of retrieving a set of individual FHIR
    resources that match a set of criteria, described using expressions.
 3. [aggregate](./aggregate.html) - A "pivot table as an API", able to take in a
