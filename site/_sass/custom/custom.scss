@@ -128,13 +128,24 @@ $link-color: #2ca0b6;
 //xl: 1400px
 //);
 
+.site-header, .page-header {
+  height: 70px !important;
+}
+
+.site-header {
+  max-height: 70px !important;
+}
+
 .site-title {
-  font-weight: 700;
-  letter-spacing: -0.05em;
+  img {
+    position: relative;
+    width: 5em;
+    left: -0.25em;
+  }
 }
 
 .navigation {
-  padding-top: 2.1rem !important;
+  padding-top: 1rem !important;
 }
 
 .navigation-list-link {
@@ -176,4 +187,12 @@ $link-color: #2ca0b6;
   &.info {
     background-color: #dbebf5;
   }
+}
+
+.page-content h1:first-of-type {
+  margin-top: -0.5em !important;
+}
+
+.breadcrumb-nav {
+  margin-bottom: 2.5rem !important;
 }
