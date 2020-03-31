@@ -1,4 +1,4 @@
-![Pathling logo](./media/logo-colour-detail-tight.svg)
+<img src="./media/logo-colour-detail-tight.svg" alt="Pathling logo" width="300"/>
 
 Pathling is a server based on the HL7® FHIR® standard, implementing special functionality designed
 to ease the delivery of analytics-enabled apps and augment tasks related to health data analytics.
