@@ -1,6 +1,6 @@
 <a href="https://pathling.app"><img src="./media/logo-colour-detail-tight.svg" alt="Pathling logo" width="300"/></a>
 
-Pathling is a server based on the HL7® FHIR® standard, implementing special functionality designed
+[Pathling](https://pathling.app) is a server based on the HL7® FHIR® standard, implementing special functionality designed
 to ease the delivery of analytics-enabled apps and augment tasks related to health data analytics.
 
 You can learn more about how to use Pathling by reading the
