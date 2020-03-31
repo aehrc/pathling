@@ -190,9 +190,19 @@ $link-color: #2ca0b6;
 }
 
 .page-content h1:first-of-type {
-  margin-top: -0.5em !important;
+  margin-top: 0 !important;
 }
 
 .breadcrumb-nav {
-  margin-bottom: 2.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+@media screen and (min-width: $content-width){
+  .page-content h1:first-of-type {
+    margin-top: -0.5em !important;
+  }
+
+  .breadcrumb-nav {
+    margin-bottom: 2.5rem !important;
+  }
 }
