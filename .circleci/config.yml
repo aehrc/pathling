@@ -1,0 +1,90 @@
+version: 2
+jobs:
+  test_server: &build
+    docker:
+      - image: circleci/openjdk:8-jdk
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build server
+          command: mvn test -pl fhir-server -am
+      - store_test_results: &encoders_core_reports
+          path: encoders/core/target/surefire-reports
+      - store_test_results: &encoders_r4_reports
+          path: encoders/r4/target/surefire-reports
+      - store_test_results: &server_reports
+          path: fhir-server/target/surefire-reports
+      - store_test_results: &server_it_reports
+          path: fhir-server/target/failsafe-reports
+      - store_artifacts:
+          <<: *encoders_core_reports
+      - store_artifacts:
+          <<: *encoders_r4_reports
+      - store_artifacts:
+          <<: *server_reports
+      - store_artifacts:
+          <<: *server_it_reports
+  dockerize_server:
+    <<: *build
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build and push Docker image
+          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipITs -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
+      - store_test_results:
+          <<: *encoders_core_reports
+      - store_test_results:
+          <<: *encoders_r4_reports
+      - store_test_results:
+          <<: *server_reports
+      - store_test_results:
+          <<: *server_it_reports
+      - store_artifacts:
+          <<: *encoders_core_reports
+      - store_artifacts:
+          <<: *encoders_r4_reports
+      - store_artifacts:
+          <<: *server_reports
+      - store_artifacts:
+          <<: *server_it_reports
+  test_site: &build_site
+    docker:
+      - image: circleci/ruby:2.6.3
+    steps:
+      - checkout
+      - run:
+          name: Build site
+          command: cd site && bundle && bundle exec jekyll build
+  dockerize_site:
+    <<: *build_site
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Login to Docker
+          command: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      - run:
+          name: Build and push site image
+          command: cd site && bundle && bundle exec jekyll build && docker build . -t aehrc/pathling-site && docker push aehrc/pathling-site
+workflows:
+  version: 2
+  build_deploy:
+    jobs:
+      - test_server:
+          filters:
+            branches:
+              ignore: master
+      - dockerize_server:
+          filters:
+            branches:
+              only: master
+      - test_site:
+          filters:
+            branches:
+              ignore: master
+      - dockerize_site:
+          filters:
+            branches:
+              only: master

@@ -34,9 +34,9 @@ The `-p 8080:8080` option maps the internal port 8080 (which is the port that
 Pathling runs on by default) to port 8080 on the host machine.
 
 The `aehrc/pathling` image reference points to the latest image of
-[Pathling on Docker Hub](https://hub.docker.com/repository/docker/aehrc/pathling).
-Tags can be added to the end of the image reference to refer to particular
-versions of Pathling.
+[Pathling on Docker Hub](https://hub.docker.com/r/aehrc/pathling). Tags can be
+added to the end of the image reference to refer to particular versions of
+Pathling.
 
 ## Using Docker Compose
 
