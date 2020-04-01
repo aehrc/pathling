@@ -7,4 +7,4 @@ jobs:
     steps:
       - checkout
       - add_ssh_keys
-      - run: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
+      - run: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipTests -DskipITs -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
