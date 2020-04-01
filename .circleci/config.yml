@@ -3,7 +3,7 @@ jobs:
   build: &build
     docker:
       - image: circleci/openjdk:8-jdk
-    working_directory: ~/repo
+    working_directory: ~/project
     steps:
       - checkout
       - setup_remote_docker
@@ -21,7 +21,7 @@ jobs:
   build_site: &build_site
     docker:
       - image: circleci/ruby:2.6.3
-    working_directory: ~/repo/site
+    working_directory: ~/project/site
     steps:
       - checkout
       - run:
