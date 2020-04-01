@@ -9,14 +9,22 @@ jobs:
       - run:
           name: Build server
           command: mvn test -pl fhir-server -am
-      - store_test_results:
+      - store_test_results: &encoders_core_reports
           path: encoders/core/target/surefire-reports
-      - store_test_results:
+      - store_test_results: &encoders_r4_reports
           path: encoders/r4/target/surefire-reports
-      - store_test_results:
+      - store_test_results: &server_reports
           path: fhir-server/target/surefire-reports
-      - store_test_results:
+      - store_test_results: &server_it_reports
           path: fhir-server/target/failsafe-reports
+      - store_artifacts:
+          <<: *encoders_core_reports
+      - store_artifacts:
+          <<: *encoders_r4_reports
+      - store_artifacts:
+          <<: *server_reports
+      - store_artifacts:
+          <<: *server_it_reports
   dockerize_server:
     <<: *build
     steps:
@@ -26,13 +34,21 @@ jobs:
           name: Build and push Docker image
           command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipITs -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
       - store_test_results:
-          path: encoders/core/target/surefire-reports
+          <<: *encoders_core_reports
       - store_test_results:
-          path: encoders/r4/target/surefire-reports
+          <<: *encoders_r4_reports
       - store_test_results:
-          path: fhir-server/target/surefire-reports
+          <<: *server_reports
       - store_test_results:
-          path: fhir-server/target/failsafe-reports
+          <<: *server_it_reports
+      - store_artifacts:
+          <<: *encoders_core_reports
+      - store_artifacts:
+          <<: *encoders_r4_reports
+      - store_artifacts:
+          <<: *server_reports
+      - store_artifacts:
+          <<: *server_it_reports
   test_site: &build_site
     docker:
       - image: circleci/ruby:2.6.3
