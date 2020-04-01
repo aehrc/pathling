@@ -12,8 +12,6 @@ jobs:
           command: mvn install -pl fhir-server -am -DskipTests -DskipITs -DskipShade -Ddockerfile.skip
   deploy:
     <<: *build
-    branches:
-      ignore: master
     steps:
       - checkout
       - setup_remote_docker
