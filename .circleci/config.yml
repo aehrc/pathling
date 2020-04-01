@@ -20,6 +20,10 @@ jobs:
           name: Build and push Docker image
           command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
       - store_test_results:
+          path: encoders/core/target/surefire-reports
+      - store_test_results:
+          path: encoders/r4/target/surefire-reports
+      - store_test_results:
           path: fhir-server/target/surefire-reports
       - store_test_results:
           path: fhir-server/target/failsafe-reports
