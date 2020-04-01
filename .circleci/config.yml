@@ -10,7 +10,7 @@ jobs:
           name: Build server
           command: mvn install -pl fhir-server -am -DskipTests -DskipITs -DskipShade -Ddockerfile.skip
     store_artifacts:
-      path: target
+      path: fhir-server/target/
   deploy:
     <<: *build
     steps:
@@ -28,7 +28,7 @@ jobs:
           name: Build site
           command: cd site && bundle && bundle exec jekyll build
     store_artifacts:
-      path: site/_site
+      path: site/_site/
   deploy_site:
     <<: *build_site
     steps:
