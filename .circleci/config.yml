@@ -18,7 +18,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Build and push Docker image
-          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
+          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipITs -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
       - store_test_results:
           path: encoders/core/target/surefire-reports
       - store_test_results:
@@ -50,19 +50,19 @@ workflows:
   version: 2
   build_deploy:
     jobs:
-#      - test_server:
-#          filters:
-#            branches:
-#              ignore: master
+      - test_server:
+          filters:
+            branches:
+              ignore: master
       - dockerize_server
-#          filters:
-#            branches:
-#              only: master
-#      - test_site:
-#          filters:
-#            branches:
-#              ignore: master
+          filters:
+            branches:
+              only: master
+      - test_site:
+          filters:
+            branches:
+              ignore: master
       - dockerize_site
-#          filters:
-#            branches:
-#              only: master
+          filters:
+            branches:
+              only: master
