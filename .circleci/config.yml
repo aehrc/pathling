@@ -1,8 +1,6 @@
 version: 2
 jobs:
-  build_and_deploy_server: &build_and_deploy_server
-    branches:
-      only: master
+  build: &build
     docker:
       - image: circleci/openjdk:8-jdk
     working_directory: ~/repo
@@ -10,24 +8,29 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Build and deploy
-          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipTests -DskipITs -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
-  build_server:
-    <<: *build_and_deploy_server
+          name: Build server
+          command: mvn install -pl fhir-server -am -DskipTests -DskipITs -DskipShade -Ddockerfile.skip
+  deploy:
+    <<: *build
     branches:
       ignore: master
     steps:
       - checkout
       - setup_remote_docker
       - run:
-          name: Build
-          command: mvn install -pl fhir-server -am -DskipTests -DskipITs -DskipShade -Ddockerfile.skip
-  build_and_deploy_site: &build_and_deploy_site
-    branches:
-      only: master
+          name: Build and push Docker image
+          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipTests -DskipITs -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
+  build_site: &build_site
     docker:
       - image: circleci/ruby:2.6.3
     working_directory: ~/repo/site
+    steps:
+      - checkout
+      - run:
+          name: Build site
+          command: bundle && bundle exec jekyll build
+  deploy_site:
+    <<: *build_site
     steps:
       - checkout
       - setup_remote_docker
@@ -35,15 +38,21 @@ jobs:
           name: Login to Docker
           command: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       - run:
-          name: Build
-          command: bundle && bundle exec jekyll build && docker build . -t aehrc/pathling-site && docker push aehrc/pathling-site
-  build_site:
-    <<: *build_and_deploy_site
-    branches:
-      ignore: master
-    steps:
-      - checkout
-      - setup_remote_docker
-      - run:
-          name: Build
-          command: bundle && bundle exec jekyll build
+          name: Build and push site image
+          command: docker build . -t aehrc/pathling-site && docker push aehrc/pathling-site
+workflows:
+  version: 2
+  build_deploy:
+    jobs:
+      - build
+      - deploy:
+          requires: build
+          filters:
+            branches:
+              only: master
+      - build_site
+      - deploy_site:
+          requires: build_site
+          filters:
+            branches:
+              only: master
