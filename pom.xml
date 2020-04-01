@@ -34,7 +34,7 @@
     </license>
   </licenses>
 
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <properties>
     <hapiFhirVersion>4.0.0</hapiFhirVersion>
@@ -206,6 +206,13 @@
   </dependencyManagement>
 
   <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>3.0.0-M1</version>
+      </plugin>
+    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
