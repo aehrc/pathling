@@ -54,7 +54,7 @@ workflows:
           filters:
             branches:
               ignore: master
-      - dockerize_server
+      - dockerize_server:
           filters:
             branches:
               only: master
@@ -62,7 +62,7 @@ workflows:
           filters:
             branches:
               ignore: master
-      - dockerize_site
+      - dockerize_site:
           filters:
             branches:
               only: master
