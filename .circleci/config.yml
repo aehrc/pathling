@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build: &build
+  test_server: &build
     docker:
       - image: circleci/openjdk:8-jdk
     steps:
@@ -8,16 +8,22 @@ jobs:
       - setup_remote_docker
       - run:
           name: Build server
-          command: mvn install -pl fhir-server -am -DskipTests -DskipITs -DskipShade -Ddockerfile.skip
-  deploy:
+          command: mvn test -pl fhir-server -am
+      - store_test_results:
+          path: fhir-server/target/surefire-reports
+  dockerize_server:
     <<: *build
     steps:
       - checkout
       - setup_remote_docker
       - run:
           name: Build and push Docker image
-          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipTests -DskipITs -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
-  build_site: &build_site
+          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
+      - store_test_results:
+          path: fhir-server/target/surefire-reports
+      - store_test_results:
+          path: fhir-server/target/failsafe-reports
+  test_site: &build_site
     docker:
       - image: circleci/ruby:2.6.3
     steps:
@@ -25,7 +31,7 @@ jobs:
       - run:
           name: Build site
           command: cd site && bundle && bundle exec jekyll build
-  deploy_site:
+  dockerize_site:
     <<: *build_site
     steps:
       - checkout
@@ -35,22 +41,24 @@ jobs:
           command: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       - run:
           name: Build and push site image
-          command: cd site && docker build . -t aehrc/pathling-site && docker push aehrc/pathling-site
+          command: cd site && bundle && bundle exec jekyll build && docker build . -t aehrc/pathling-site && docker push aehrc/pathling-site
 workflows:
   version: 2
   build_deploy:
     jobs:
-      - build
-      - deploy:
-          requires:
-            - build
+#      - test_server:
+#          filters:
+#            branches:
+#              ignore: master
+      - dockerize_server:
 #          filters:
 #            branches:
 #              only: master
-      - build_site
-      - deploy_site:
-          requires:
-            - build_site
+#      - test_site:
+#          filters:
+#            branches:
+#              ignore: master
+      - dockerize_site:
 #          filters:
 #            branches:
 #              only: master
