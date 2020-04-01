@@ -6,5 +6,5 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
-      - add_ssh_keys
+      - setup_remote_docker
       - run: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipTests -DskipITs -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
