@@ -10,7 +10,13 @@ jobs:
           name: Build server
           command: mvn test -pl fhir-server -am
       - store_test_results:
+          path: encoders/core/target/surefire-reports
+      - store_test_results:
+          path: encoders/r4/target/surefire-reports
+      - store_test_results:
           path: fhir-server/target/surefire-reports
+      - store_test_results:
+          path: fhir-server/target/failsafe-reports
   dockerize_server:
     <<: *build
     steps:
