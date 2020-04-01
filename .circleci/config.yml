@@ -28,6 +28,7 @@ jobs:
   deploy_site:
     <<: *build_site
     steps:
+      - checkout
       - setup_remote_docker
       - run:
           name: Login to Docker
