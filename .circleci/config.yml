@@ -3,7 +3,6 @@ jobs:
   build: &build
     docker:
       - image: circleci/openjdk:8-jdk
-    working_directory: ~/project
     steps:
       - checkout
       - setup_remote_docker
@@ -21,12 +20,11 @@ jobs:
   build_site: &build_site
     docker:
       - image: circleci/ruby:2.6.3
-    working_directory: ~/project/site
     steps:
       - checkout
       - run:
           name: Build site
-          command: bundle && bundle exec jekyll build
+          command: cd site && bundle && bundle exec jekyll build
   deploy_site:
     <<: *build_site
     steps:
@@ -37,7 +35,7 @@ jobs:
           command: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       - run:
           name: Build and push site image
-          command: docker build . -t aehrc/pathling-site && docker push aehrc/pathling-site
+          command: cd site && docker build . -t aehrc/pathling-site && docker push aehrc/pathling-site
 workflows:
   version: 2
   build_deploy:
