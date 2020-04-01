@@ -1,6 +1,6 @@
 <a href="https://pathling.app"><img src="./media/logo-colour-detail-tight.svg" alt="Pathling logo" width="300"/></a>
 
-[![aehrc](https://circleci.com/gh/aehrc/pathling.svg?style=shield)](https://circleci.com/gh/aehrc/pathling)
+[![aehrc](https://circleci.com/gh/aehrc/pathling/tree/master.svg?style=shield)](https://circleci.com/gh/aehrc/pathling/tree/master)
 
 [Pathling](https://pathling.app) is a server based on the HL7® FHIR® standard, implementing special functionality designed
 to ease the delivery of analytics-enabled apps and augment tasks related to health data analytics.
