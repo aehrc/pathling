@@ -46,13 +46,15 @@ workflows:
     jobs:
       - build
       - deploy:
-          requires: build
+          requires:
+            - build
           filters:
             branches:
               only: master
       - build_site
       - deploy_site:
-          requires: build_site
+          requires:
+            - build_site
           filters:
             branches:
               only: master
