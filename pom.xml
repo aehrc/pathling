@@ -37,7 +37,7 @@
   <version>1.0.0</version>
 
   <properties>
-    <hapiFhirVersion>4.0.0</hapiFhirVersion>
+    <hapiFhirVersion>4.0.3</hapiFhirVersion>
     <sparkVersion>2.4.4</sparkVersion>
     <sparkScalaVersion>2.11</sparkScalaVersion>
     <hadoopVersion>2.7.7</hadoopVersion>
