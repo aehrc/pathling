@@ -52,16 +52,10 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 @Interceptor
 public class AuthorisationInterceptor {
 
-  private String jwksUrl;
-  private String issuer;
-  private String audience;
   private final JWTVerifier verifier;
 
   public AuthorisationInterceptor(String jwksUrl, String issuer, String audience)
       throws MalformedURLException {
-    this.jwksUrl = jwksUrl;
-    this.issuer = issuer;
-    this.audience = audience;
     JwkProvider jwkProvider = new UrlJwkProvider(new URL(jwksUrl));
     AuthorisationKeyProvider keyProvider = new AuthorisationKeyProvider(jwkProvider);
     Algorithm rsa256 = Algorithm.RSA256(keyProvider);
@@ -73,8 +67,10 @@ public class AuthorisationInterceptor {
 
   @Hook(Pointcut.SERVER_INCOMING_REQUEST_PRE_HANDLED)
   public void authoriseRequest(RequestDetails requestDetails) {
-    String token = getBearerToken(requestDetails);
-    validateToken(token);
+    if (!requestDetails.getOperation().equals("metadata")) {
+      String token = getBearerToken(requestDetails);
+      validateToken(token);
+    }
   }
 
   private String getBearerToken(RequestDetails requestDetails) {
@@ -107,8 +103,8 @@ public class AuthorisationInterceptor {
     }
     String scope = jwt.getClaim("scope").asString();
     List<String> scopes = scope == null
-        ? Collections.emptyList()
-        : Arrays.asList(scope.split(" "));
+                          ? Collections.emptyList()
+                          : Arrays.asList(scope.split(" "));
     if (!scopes.contains("user/*.read")) {
       throw buildException("Operation is not authorised by token", IssueType.FORBIDDEN,
           ForbiddenOperationException.class);
