@@ -67,7 +67,8 @@ public class AuthorisationInterceptor {
 
   @Hook(Pointcut.SERVER_INCOMING_REQUEST_PRE_HANDLED)
   public void authoriseRequest(RequestDetails requestDetails) {
-    if (!requestDetails.getOperation().equals("metadata")) {
+    if (requestDetails.getOperation() == null || !requestDetails.getOperation()
+        .equals("metadata")) {
       String token = getBearerToken(requestDetails);
       validateToken(token);
     }

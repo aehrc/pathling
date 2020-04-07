@@ -52,8 +52,8 @@ public class ErrorReportingInterceptor {
     boolean errorReportable = exception != null && exception.getStatusCode() / 100 == 5;
     if (errorReportable) {
       Throwable reportableError = exception.getCause() == null
-          ? exception
-          : exception.getCause();
+                                  ? exception
+                                  : exception.getCause();
       HttpInterface http = buildHttpInterface(servletRequestDetails, request);
       Sentry.getContext().setHttp(http);
       Sentry.capture(reportableError);
@@ -69,7 +69,8 @@ public class ErrorReportingInterceptor {
     // purposes.
     String requestUrl = servletRequestDetails.getCompleteUrl();
     String method = request.getMethod();
-    @SuppressWarnings("unchecked") Map<String, Collection<String>> parameters = (Map<String, Collection<String>>) (Object) servletRequestDetails
+    @SuppressWarnings("unchecked")
+    Map<String, Collection<String>> parameters = (Map<String, Collection<String>>) (Object) servletRequestDetails
         .getParameters().entrySet().stream()
         .collect(Collectors.toMap(
             Entry::getKey,
@@ -89,9 +90,13 @@ public class ErrorReportingInterceptor {
     // This horrible casting hack (and the one in the assignment to parameters above) is here to
     // get around a problem in Java which prevents us from assigning the Map with List values to
     // a variable typed as a Map with Collection values.
-    @SuppressWarnings("unchecked") Map<String, Collection<String>> headers = (Map<String, Collection<String>>) (Object) servletRequestDetails
+    @SuppressWarnings("unchecked")
+    Map<String, Collection<String>> headers = (Map<String, Collection<String>>) (Object) servletRequestDetails
         .getHeaders();
-    String body = jsonParser.encodeResourceToString(servletRequestDetails.getResource());
+    String body = null;
+    if (servletRequestDetails.getResource() != null) {
+      body = jsonParser.encodeResourceToString(servletRequestDetails.getResource());
+    }
 
     return new HttpInterface(requestUrl, method, parameters, queryString,
         cookies, null, serverName, serverPort, localAddr, localName, localPort, protocol,
