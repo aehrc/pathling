@@ -268,6 +268,7 @@ public class AnalyticsServer extends RestfulServer {
       }
       registerInterceptor(new AuthorisationInterceptor(configuration.getAuthJwksUrl(),
           configuration.getAuthIssuer(), configuration.getAuthAudience()));
+      registerInterceptor(new SmartConfigurationInterceptor(configuration));
     }
   }
 

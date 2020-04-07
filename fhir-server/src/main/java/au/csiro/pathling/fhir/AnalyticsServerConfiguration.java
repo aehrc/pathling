@@ -112,6 +112,21 @@ public class AnalyticsServerConfiguration {
    */
   private String authAudience;
 
+  /**
+   * (OPTIONAL) The URL which will be advertised as the authorization endpoint.
+   */
+  private String authorizeUrl;
+
+  /**
+   * (OPTIONAL) The URL which will be advertised as the token endpoint.
+   */
+  private String tokenUrl;
+
+  /**
+   * (OPTIONAL) The URL which will be advertised as the token revocation endpoint.
+   */
+  private String revokeTokenUrl;
+
   public AnalyticsServerConfiguration() {
     sparkMasterUrl = "local[*]";
     warehouseUrl = "file:///usr/share/warehouse";
@@ -267,6 +282,30 @@ public class AnalyticsServerConfiguration {
     this.authAudience = authAudience;
   }
 
+  public String getAuthorizeUrl() {
+    return authorizeUrl;
+  }
+
+  public void setAuthorizeUrl(String authorizeUrl) {
+    this.authorizeUrl = authorizeUrl;
+  }
+
+  public String getTokenUrl() {
+    return tokenUrl;
+  }
+
+  public void setTokenUrl(String tokenUrl) {
+    this.tokenUrl = tokenUrl;
+  }
+
+  public String getRevokeTokenUrl() {
+    return revokeTokenUrl;
+  }
+
+  public void setRevokeTokenUrl(String revokeTokenUrl) {
+    this.revokeTokenUrl = revokeTokenUrl;
+  }
+
   @Override
   public String toString() {
     return "AnalyticsServerConfiguration{" +
@@ -286,6 +325,9 @@ public class AnalyticsServerConfiguration {
         ", authJwksUrl='" + authJwksUrl + '\'' +
         ", authIssuer='" + authIssuer + '\'' +
         ", authAudience='" + authAudience + '\'' +
+        ", authorizeUrl='" + authorizeUrl + '\'' +
+        ", tokenUrl='" + tokenUrl + '\'' +
+        ", revokeTokenUrl='" + revokeTokenUrl + '\'' +
         '}';
   }
 
