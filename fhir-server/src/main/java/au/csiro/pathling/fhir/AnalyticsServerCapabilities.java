@@ -46,6 +46,9 @@ public class AnalyticsServerCapabilities implements
   public static final String IMPORT_URI =
       URI_BASE + "/OperationDefinition/import-" + API_MAJOR_VERSION;
   public static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
+  public static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
+  public static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
+  public static final String SMART_OAUTH_URI = "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris";
 
   private final AnalyticsServerConfiguration configuration;
   private final ResourceReader resourceReader;
@@ -102,10 +105,37 @@ public class AnalyticsServerCapabilities implements
     List<CapabilityStatementRestComponent> rest = new ArrayList<>();
     CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
     server.setMode(RestfulCapabilityMode.SERVER);
+    server.setSecurity(buildSecurity());
     server.setResource(buildResources());
     server.setOperation(buildOperations());
     rest.add(server);
     return rest;
+  }
+
+  private CapabilityStatementRestSecurityComponent buildSecurity() {
+    CapabilityStatementRestSecurityComponent security = new CapabilityStatementRestSecurityComponent();
+    security.setCors(true);
+    if (configuration.isAuthEnabled()) {
+      CodeableConcept smart = new CodeableConcept(
+          new Coding(RESTFUL_SECURITY_URI, RESTFUL_SECURITY_CODE, RESTFUL_SECURITY_CODE));
+      smart.setText("OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)");
+      security.getService().add(smart);
+      if (configuration.getAuthorizeUrl() != null || configuration.getTokenUrl() != null
+          || configuration.getRevokeTokenUrl() != null) {
+        Extension oauthUris = new Extension(SMART_OAUTH_URI);
+        if (configuration.getAuthorizeUrl() != null) {
+          oauthUris.addExtension("authorize", new UriType(configuration.getAuthorizeUrl()));
+        }
+        if (configuration.getTokenUrl() != null) {
+          oauthUris.addExtension("token", new UriType(configuration.getTokenUrl()));
+        }
+        if (configuration.getRevokeTokenUrl() != null) {
+          oauthUris.addExtension("revoke", new UriType(configuration.getRevokeTokenUrl()));
+        }
+        security.addExtension(oauthUris);
+      }
+    }
+    return security;
   }
 
   private List<CapabilityStatementRestResourceComponent> buildResources() {

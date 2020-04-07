@@ -51,6 +51,9 @@ public class FhirServerContainer {
       put("PATHLING_AUTH_JWKS_URL", "authJwksUrl");
       put("PATHLING_AUTH_ISSUER", "authIssuer");
       put("PATHLING_AUTH_AUDIENCE", "authAudience");
+      put("PATHLING_AUTH_AUTHORIZE_URL", "authorizeUrl");
+      put("PATHLING_AUTH_TOKEN_URL", "tokenUrl");
+      put("PATHLING_AUTH_REVOKE_URL", "revokeTokenUrl");
     }});
     String explainQueries = System.getenv("PATHLING_EXPLAIN_QUERIES");
     config.setExplainQueries(explainQueries != null && explainQueries.equals("true"));

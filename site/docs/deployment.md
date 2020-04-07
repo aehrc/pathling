@@ -79,6 +79,15 @@ forms are configured in the same way, through environment variables.
 - `PATHLING_AUTH_AUDIENCE` - Configures the audience for bearer tokens, which is
   the FHIR endpoint that tokens are intended to be authorised for, e.g.
   `https://server.pathling.app/fhir`.
+- `PATHLING_AUTH_AUTHORIZE_URL` - Provides the URL which will be advertised as
+  the [authorization endpoint](https://tools.ietf.org/html/rfc6749#section-3.1),
+  e.g. `https://pathling.au.auth0.com/oauth/authorize`.
+- `PATHLING_AUTH_TOKEN_URL` - Provides the URL which will be advertised as the
+  [token endpoint](https://tools.ietf.org/html/rfc6749#section-3.2), e.g.
+  `https://pathling.au.auth0.com/oauth/token`.
+- `PATHLING_AUTH_REVOKE_URL` - Provides the URL which will be advertised as the
+  [token revocation endpoint](https://tools.ietf.org/html/rfc7009), e.g.
+  `https://pathling.au.auth0.com/oauth/revoke`.
 
 ### Cross-Origin Resource Sharing (CORS)
 
