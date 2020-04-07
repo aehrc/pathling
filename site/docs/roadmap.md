@@ -12,12 +12,13 @@ themes:
 
 1. [Summarize operation](#summarize-operation)
 2. [Improved FHIRPath support](#improved-fhirpath-support)
-3. [Real-time updates](#real-time-updates)
-4. [Subscriptions](#subscriptions)
-5. [Extension content](#extension-content)
-6. [Authorisation enhancements](#authorisation-enhancements)
-7. [APIs for Python and R](#apis-for-python-and-r)
-8. [Multi-tenancy](#multi-tenancy)
+3. [Cell suppression](#cell-suppression)
+4. [Real-time updates](#real-time-updates)
+5. [Subscriptions](#subscriptions)
+6. [Extension content](#extension-content)
+7. [Authorisation enhancements](#authorisation-enhancements)
+8. [APIs for Python and R](#apis-for-python-and-r)
+9. [Multi-tenancy](#multi-tenancy)
 
 ## Summarize operation
 
@@ -88,6 +89,13 @@ FHIRPath specifications is planned:
   [Operations](https://hl7.org/fhirpath/2018Sep/index.html#operations))
 - `aggregate` function (see
   [aggregate](https://hl7.org/fhirpath/2018Sep/index.html#aggregateaggregator-expression-init-value-value))
+
+## Cell suppression
+
+A feature is planned to enable suppression of grouping values within the
+response of the [aggregate operation](./aggregate.html), based upon certain risk
+factors such as cell size. This would reduce the risk of re-identification when
+using Pathling to deploy aggregate-only data query services.
 
 ## Real-time updates
 
