@@ -34,7 +34,7 @@
     </license>
   </licenses>
 
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 
   <properties>
     <hapiFhirVersion>4.0.3</hapiFhirVersion>
@@ -218,12 +218,12 @@
         <plugin>
           <groupId>au.csiro</groupId>
           <artifactId>fhir-definitions-maven-plugin</artifactId>
-          <version>1.0.0</version>
+          <version>1.0.1</version>
         </plugin>
         <plugin>
           <groupId>au.csiro.pathling</groupId>
           <artifactId>ontoserver-preload-maven-plugin</artifactId>
-          <version>1.0.0</version>
+          <version>1.0.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
