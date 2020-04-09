@@ -38,8 +38,8 @@
 
   <properties>
     <hapiFhirVersion>4.2.0</hapiFhirVersion>
-    <sparkVersion>2.4.5</sparkVersion>
-    <sparkScalaVersion>2.11</sparkScalaVersion>
+    <sparkVersion>3.0.0</sparkVersion>
+    <sparkScalaVersion>2.12</sparkScalaVersion>
     <hadoopVersion>2.7.7</hadoopVersion>
     <hadoopMirror>https://mirror.aarnet.edu.au/pub/apache/hadoop/common</hadoopMirror>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -138,6 +138,11 @@
             <artifactId>jackson-annotations</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>2.10.3</version>
       </dependency>
 
       <!-- Encoders -->
@@ -278,6 +283,15 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <repositories>
+    <repository>
+        <name>Spark 3 Staging</name>
+        <id>spark3-staging</id>
+        <url>https://repository.apache.org/content/repositories/orgapachespark-1341/</url>
+        <layout>default</layout>
+    </repository>
+  </repositories>
 
   <profiles>
     <profile>
