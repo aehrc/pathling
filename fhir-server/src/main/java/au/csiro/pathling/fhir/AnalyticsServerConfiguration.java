@@ -149,6 +149,14 @@ public class AnalyticsServerConfiguration {
     this.version = version;
   }
 
+  @Nullable
+  public String getMajorVersion() {
+    String version = getVersion();
+    return version == null
+           ? null
+           : version.substring(0, 1);
+  }
+
   @Nonnull
   public String getSparkMasterUrl() {
     return sparkMasterUrl;
