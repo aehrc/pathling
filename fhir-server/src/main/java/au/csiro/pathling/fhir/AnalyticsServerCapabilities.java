@@ -35,16 +35,6 @@ public class AnalyticsServerCapabilities implements
   private static final Logger logger = LoggerFactory.getLogger(AnalyticsServerCapabilities.class);
 
   public static final String URI_BASE = "https://server.pathling.app/fhir";
-  public static final String API_VERSION = "1.0.0";
-  public static final String API_MAJOR_VERSION = API_VERSION.substring(0, 1);
-  public static final String CAPABILITY_URI =
-      URI_BASE + "/CapabilityStatement/pathling-fhir-api-" + API_MAJOR_VERSION;
-  public static final String SEARCH_URI =
-      URI_BASE + "/OperationDefinition/search-" + API_MAJOR_VERSION;
-  public static final String AGGREGATE_URI =
-      URI_BASE + "/OperationDefinition/aggregate-" + API_MAJOR_VERSION;
-  public static final String IMPORT_URI =
-      URI_BASE + "/OperationDefinition/import-" + API_MAJOR_VERSION;
   public static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
   public static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   public static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
@@ -69,17 +59,15 @@ public class AnalyticsServerCapabilities implements
     logger.info("Received request for server capabilities");
 
     CapabilityStatement capabilityStatement = new CapabilityStatement();
-    capabilityStatement
-        .setUrl(CAPABILITY_URI);
-    capabilityStatement.setVersion(API_VERSION);
+    capabilityStatement.setUrl(getCapabilityUri());
+    capabilityStatement.setVersion(configuration.getVersion());
     capabilityStatement.setTitle("Pathling FHIR API");
     capabilityStatement.setName("pathling-fhir-api");
     capabilityStatement.setStatus(PublicationStatus.ACTIVE);
     capabilityStatement.setExperimental(true);
     capabilityStatement.setPublisher("Australian e-Health Research Centre, CSIRO");
     capabilityStatement.setCopyright(
-        "Dedicated to the public domain via CC0: https://creativecommons.org/publicdomain/zero/"
-            + API_MAJOR_VERSION + ".0/");
+        "Dedicated to the public domain via CC0: https://creativecommons.org/publicdomain/zero/1.0/");
     capabilityStatement.setKind(CapabilityStatementKind.INSTANCE);
 
     CapabilityStatementSoftwareComponent software = new CapabilityStatementSoftwareComponent(
@@ -155,7 +143,7 @@ public class AnalyticsServerCapabilities implements
       resource.getInteraction().add(interaction);
       CapabilityStatementRestResourceOperationComponent searchOperation = new CapabilityStatementRestResourceOperationComponent();
       searchOperation.setName("fhirPath");
-      searchOperation.setDefinition(SEARCH_URI);
+      searchOperation.setDefinition(getSearchUri());
       resource.addOperation(searchOperation);
       resources.add(resource);
 
@@ -178,17 +166,33 @@ public class AnalyticsServerCapabilities implements
   private List<CapabilityStatementRestResourceOperationComponent> buildOperations() {
     List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
 
-    CanonicalType aggregateOperationUri = new CanonicalType(AGGREGATE_URI);
+    CanonicalType aggregateOperationUri = new CanonicalType(getAggregateUri());
     CapabilityStatementRestResourceOperationComponent aggregateOperation = new CapabilityStatementRestResourceOperationComponent(
         new StringType("aggregate"), aggregateOperationUri);
 
-    CanonicalType importOperationUri = new CanonicalType(IMPORT_URI);
+    CanonicalType importOperationUri = new CanonicalType(getImportUri());
     CapabilityStatementRestResourceOperationComponent importOperation = new CapabilityStatementRestResourceOperationComponent(
         new StringType("import"), importOperationUri);
 
     operations.add(aggregateOperation);
     operations.add(importOperation);
     return operations;
+  }
+
+  private String getCapabilityUri() {
+    return URI_BASE + "/CapabilityStatement/pathling-fhir-api-" + configuration.getMajorVersion();
+  }
+
+  private String getSearchUri() {
+    return URI_BASE + "/OperationDefinition/search-" + configuration.getMajorVersion();
+  }
+
+  private String getAggregateUri() {
+    return URI_BASE + "/OperationDefinition/aggregate-" + configuration.getMajorVersion();
+  }
+
+  private String getImportUri() {
+    return URI_BASE + "/OperationDefinition/import-" + configuration.getMajorVersion();
   }
 
   @Override

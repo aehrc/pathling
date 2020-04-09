@@ -40,7 +40,8 @@ public class SmartConfigurationInterceptor {
     boolean smartUrisConfigured =
         configuration.getAuthorizeUrl() != null || configuration.getTokenUrl() != null
             || configuration.getRevokeTokenUrl() != null;
-    if (servletRequest.getPathInfo().equals("/.well-known/smart-configuration")
+    if (servletRequest.getPathInfo() != null
+        && servletRequest.getPathInfo().equals("/.well-known/smart-configuration")
         && smartUrisConfigured) {
       SmartConfiguration smartConfiguration = new SmartConfiguration();
       smartConfiguration.setAuthorizationEndpoint(configuration.getAuthorizeUrl());

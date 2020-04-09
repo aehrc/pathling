@@ -227,7 +227,7 @@ public class AnalyticsServer extends RestfulServer {
 
   private List<Object> buildResourceProviders() {
     List<Object> providers = new ArrayList<>();
-    providers.add(new OperationDefinitionProvider(getFhirContext()));
+    providers.add(new OperationDefinitionProvider(configuration, getFhirContext()));
     return providers;
   }
 

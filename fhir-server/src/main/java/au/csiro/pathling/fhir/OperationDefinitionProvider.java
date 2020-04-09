@@ -27,16 +27,25 @@ import org.hl7.fhir.r4.model.OperationDefinition;
  */
 public class OperationDefinitionProvider implements IResourceProvider {
 
+  private final AnalyticsServerConfiguration configuration;
   private final IParser jsonParser;
-  private static final Map<String, String> idToResourcePath = new HashMap<String, String>() {{
-    put("OperationDefinition/aggregate-1", "fhir/aggregate.OperationDefinition.json");
-    put("OperationDefinition/import-1", "fhir/import.OperationDefinition.json");
-    put("OperationDefinition/search-1", "fhir/search.OperationDefinition.json");
-  }};
+  private Map<String, String> idToResourcePath;
+
   private static final Map<String, OperationDefinition> resourceCache = new HashMap<>();
 
-  public OperationDefinitionProvider(FhirContext fhirContext) {
+  public OperationDefinitionProvider(AnalyticsServerConfiguration configuration,
+      FhirContext fhirContext) {
+    this.configuration = configuration;
     jsonParser = fhirContext.newJsonParser();
+
+    idToResourcePath = new HashMap<String, String>() {{
+      put("OperationDefinition/aggregate-" + configuration.getMajorVersion(),
+          "fhir/aggregate.OperationDefinition.json");
+      put("OperationDefinition/import-" + configuration.getMajorVersion(),
+          "fhir/import.OperationDefinition.json");
+      put("OperationDefinition/search-" + configuration.getMajorVersion(),
+          "fhir/search.OperationDefinition.json");
+    }};
   }
 
   @Override
@@ -60,7 +69,10 @@ public class OperationDefinitionProvider implements IResourceProvider {
     }
     InputStream resourceStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(resourcePath);
-    return (OperationDefinition) jsonParser.parseResource(resourceStream);
+    OperationDefinition operationDefinition = (OperationDefinition) jsonParser
+        .parseResource(resourceStream);
+    operationDefinition.setVersion(configuration.getVersion());
+    return operationDefinition;
   }
 
 }

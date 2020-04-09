@@ -56,7 +56,7 @@ several configuration parameters using environment variables.
 version: "3"
 services:
   pathling:
-    image: aehrc/pathling:1.0.0
+    image: aehrc/pathling:latest
     ports:
       - 8080:8080
     environment:
@@ -77,7 +77,7 @@ directory. Then the following command can be issued to run the Pathling server:
 docker-compose up
 ```
 
-In this example, the `image` key is being used to refer to version `1.0.0` of
+In this example, the `image` key is being used to refer to the latest version of
 the Pathling image on Docker Hub.
 
 We are setting the `PATHLING_EXECUTOR_MEMORY` configuration variable to 6GB, to
