@@ -9,6 +9,7 @@ package au.csiro.pathling.fhir;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
+import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.*;
 import com.auth0.jwk.Jwk;
@@ -67,8 +68,14 @@ public class AuthorisationInterceptor {
 
   @Hook(Pointcut.SERVER_INCOMING_REQUEST_PRE_HANDLED)
   public void authoriseRequest(RequestDetails requestDetails) {
-    if (requestDetails.getOperation() == null || !requestDetails.getOperation()
-        .equals("metadata")) {
+    // Allow unauthenticated requests to the CapabilityStatement, and also to the
+    // OperationDefinitions.
+    boolean metadata = requestDetails.getOperation() != null
+        && requestDetails.getOperation().equals("metadata");
+    boolean opDefRead = requestDetails.getResourceName() != null
+        && requestDetails.getResourceName().equals("OperationDefinition")
+        && requestDetails.getRestOperationType() == RestOperationTypeEnum.READ;
+    if (!metadata && !opDefRead) {
       String token = getBearerToken(requestDetails);
       validateToken(token);
     }
