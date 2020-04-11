@@ -158,7 +158,9 @@ public class DockerImageTest {
     } catch (Exception e) {
       stopContainer(dockerClient, fhirServerContainerId);
       fhirServerContainerId = null;
-      Runtime.getRuntime().removeShutdownHook(shutdownHook);
+      if (shutdownHook != null) {
+        Runtime.getRuntime().removeShutdownHook(shutdownHook);
+      }
       throw e;
     }
   }
