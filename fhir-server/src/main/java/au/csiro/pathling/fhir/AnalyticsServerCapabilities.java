@@ -53,7 +53,7 @@ public class AnalyticsServerCapabilities implements
   }
 
   @Override
-  @Metadata
+  @Metadata(cacheMillis = 0)
   public CapabilityStatement getServerConformance(HttpServletRequest httpServletRequest,
       RequestDetails requestDetails) {
     logger.info("Received request for server capabilities");

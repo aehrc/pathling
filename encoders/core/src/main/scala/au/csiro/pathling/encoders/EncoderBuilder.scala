@@ -160,6 +160,10 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
     }
   }
 
+  private def getSingleChild(childDefinition: BaseRuntimeDeclaredChildDefinition) = {
+    childDefinition.getChildByName(childDefinition.getValidChildNames.iterator.next)
+  }
+
   /**
    * Returns the object type of the given child
    */
@@ -171,23 +175,21 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
         resource.getChildByName(resource.getElementName).getImplementingClass
 
       case block: RuntimeChildResourceBlockDefinition =>
-        block.getSingleChildOrThrow.getImplementingClass
+        getSingleChild(block).getImplementingClass
 
       case composite: RuntimeChildCompositeDatatypeDefinition =>
         composite.getDatatype
 
       case primitive: RuntimeChildPrimitiveDatatypeDefinition =>
-
-        primitive.getSingleChildOrThrow.getChildType match {
-
+        getSingleChild(primitive).getChildType match {
           case ChildTypeEnum.PRIMITIVE_DATATYPE =>
-            primitive.getSingleChildOrThrow.getImplementingClass
+            getSingleChild(primitive).getImplementingClass
 
           case ChildTypeEnum.PRIMITIVE_XHTML_HL7ORG =>
             classOf[XhtmlNode]
 
           case ChildTypeEnum.ID_DATATYPE =>
-            primitive.getSingleChildOrThrow.getImplementingClass
+            getSingleChild(primitive).getImplementingClass
 
           case unsupported =>
             throw new IllegalArgumentException("Unsupported child primitive type: " + unsupported)
@@ -492,10 +494,10 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
             childPath)
 
         case block: RuntimeChildResourceBlockDefinition =>
-          compositeToDeserializer(block.getSingleChildOrThrow.asInstanceOf[BaseRuntimeElementCompositeDefinition[_]], childPath)
+          compositeToDeserializer(getSingleChild(block).asInstanceOf[BaseRuntimeElementCompositeDefinition[_]], childPath)
 
         case composite: RuntimeChildCompositeDatatypeDefinition =>
-          compositeToDeserializer(composite.getSingleChildOrThrow.asInstanceOf[BaseRuntimeElementCompositeDefinition[_]], childPath)
+          compositeToDeserializer(getSingleChild(composite).asInstanceOf[BaseRuntimeElementCompositeDefinition[_]], childPath)
 
         case primitive: RuntimeChildPrimitiveDatatypeDefinition => {
 
