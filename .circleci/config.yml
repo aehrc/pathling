@@ -7,8 +7,8 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Build server
-          command: mvn test -pl fhir-server -am
+          name: Verify server
+          command: mvn verify -pl fhir-server -am -DskipShade
       - store_test_results: &encoders_core_reports
           path: encoders/core/target/surefire-reports
       - store_test_results: &encoders_r4_reports
@@ -25,14 +25,14 @@ jobs:
           <<: *server_reports
       - store_artifacts:
           <<: *server_it_reports
-  dockerize_server:
+  push_server:
     <<: *build
     steps:
       - checkout
       - setup_remote_docker
       - run:
-          name: Build and push Docker image
-          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipITs -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
+          name: Deploy server
+          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
       - store_test_results:
           <<: *encoders_core_reports
       - store_test_results:
@@ -57,7 +57,7 @@ jobs:
       - run:
           name: Build site
           command: cd site && bundle && bundle exec jekyll build
-  dockerize_site:
+  push_site:
     <<: *build_site
     steps:
       - checkout
@@ -76,7 +76,7 @@ workflows:
           filters:
             branches:
               ignore: master
-      - dockerize_server:
+      - push_server:
           filters:
             branches:
               only: master
@@ -84,7 +84,7 @@ workflows:
           filters:
             branches:
               ignore: master
-      - dockerize_site:
+      - push_site:
           filters:
             branches:
               only: master

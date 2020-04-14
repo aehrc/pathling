@@ -55,7 +55,6 @@ import org.slf4j.LoggerFactory;
  *
  * @author John Grimes
  */
-@SuppressWarnings({"ResultOfMethodCallIgnored", "OptionalGetWithoutIsPresent"})
 @Category(au.csiro.pathling.SystemTest.class)
 public class DockerImageTest {
 
@@ -80,6 +79,8 @@ public class DockerImageTest {
     dockerClient = DockerClientBuilder.getInstance(dockerClientConfig).build();
     httpClient = HttpClients.createDefault();
     jsonParser = FhirContext.forR4().newJsonParser();
+    logger.info("Created DockerImageTest: version=" + VERSION + ", terminologyServiceUrl="
+        + TERMINOLOGY_SERVICE_URL + ", dockerRepository=" + DOCKER_REPOSITORY);
   }
 
   private static File[] getResourceFolderFiles(String folder) {
@@ -247,7 +248,6 @@ public class DockerImageTest {
       queryRequest.addHeader("Content-Type", "application/fhir+json");
       queryRequest.addHeader("Accept", "application/fhir+json");
 
-      Parameters outParams = null;
       logger.info("Sending query request");
       try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient
           .execute(queryRequest)) {
