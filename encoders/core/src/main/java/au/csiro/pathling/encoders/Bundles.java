@@ -18,8 +18,11 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.io.Serializable;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
@@ -57,7 +60,12 @@ public class Bundles {
           .newJsonParser()
           .encodeResourceToString(bundle);
 
-      stream.writeUTF(encodedBundle);
+      // We need to write the encoded bundle using bytes - `writeUTF` will not work as there is a
+      // 64K limit on the size of Strings within ObjectOutputStreams in Java.
+      //
+      // See: https://www.drillio.com/en/2009/java-encoded-string-too-long-64kb-limit/
+      byte[] bytes = encodedBundle.getBytes(StandardCharsets.UTF_8);
+      stream.write(bytes);
     }
 
     private void readObject(java.io.ObjectInputStream stream) throws IOException,
@@ -65,11 +73,12 @@ public class Bundles {
 
       stream.defaultReadObject();
 
-      String encodedBundle = stream.readUTF();
+      StringWriter writer = new StringWriter();
+      IOUtils.copy(stream, writer, StandardCharsets.UTF_8);
 
       bundle = (IBaseBundle) FhirEncoders.contextFor(fhirVersion)
           .newJsonParser()
-          .parseResource(encodedBundle);
+          .parseResource(writer.toString());
     }
 
     /**
@@ -331,8 +340,8 @@ public class Bundles {
       this.fhirVersion = fhirVersion;
 
       parser = isXml
-          ? FhirEncoders.contextFor(fhirVersion).newXmlParser()
-          : FhirEncoders.contextFor(fhirVersion).newJsonParser();
+               ? FhirEncoders.contextFor(fhirVersion).newXmlParser()
+               : FhirEncoders.contextFor(fhirVersion).newJsonParser();
     }
 
     private void writeObject(java.io.ObjectOutputStream stream) throws IOException {
@@ -346,8 +355,8 @@ public class Bundles {
       stream.defaultReadObject();
 
       parser = isXml
-          ? FhirEncoders.contextFor(fhirVersion).newXmlParser()
-          : FhirEncoders.contextFor(fhirVersion).newJsonParser();
+               ? FhirEncoders.contextFor(fhirVersion).newXmlParser()
+               : FhirEncoders.contextFor(fhirVersion).newJsonParser();
     }
 
     @Override
