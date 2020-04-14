@@ -124,7 +124,7 @@ Pathling can perform the role of a resource server within the
 [SMART App Launch Framework](https://hl7.org/fhir/smart-app-launch/index.html)
 is a profile of OAuth 2.0 which is specific to the access of health data.
 
-When authorisation is enabled through onfiguration, Pathling will refuse any
+When authorisation is enabled through configuration, Pathling will refuse any
 requests which are not accompanied by a valid
 [bearer token](https://tools.ietf.org/html/rfc6750). Tokens must meet the
 following requirements:
