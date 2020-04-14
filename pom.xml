@@ -34,7 +34,7 @@
     </license>
   </licenses>
 
-  <version>1.0.3</version>
+  <version>1.0.4</version>
 
   <properties>
     <hapiFhirVersion>4.2.0</hapiFhirVersion>
