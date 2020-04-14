@@ -4,15 +4,35 @@
     {
       "name": "grouping",
       "part": [
-        { "name": "label", "valueBoolean": true },
-        { "name": "result", "valueUnsignedInt": 3 }
+        {
+          "name": "label",
+          "valueBoolean": true
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 3
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105|Problem/Diagnosis reference set| : << 263502005|Clinical course| = << 90734009|Chronic|')) and (gender = 'female')"
+        }
       ]
     },
     {
       "name": "grouping",
       "part": [
-        { "name": "label", "valueBoolean": false },
-        { "name": "result", "valueUnsignedInt": 4 }
+        {
+          "name": "label",
+          "valueBoolean": false
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 4
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105|Problem/Diagnosis reference set| : << 263502005|Clinical course| = << 90734009|Chronic|')) contains false) and (gender = 'female')"
+        }
       ]
     }
   ]

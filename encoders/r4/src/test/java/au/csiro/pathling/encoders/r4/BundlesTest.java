@@ -89,13 +89,14 @@ public class BundlesTest {
   }
 
   @Test
-  public void testRetrieveBundle() {
-    BundleContainer container = bundlesRdd.first();
+  public void testRetrieveBundles() {
+    List<BundleContainer> bundleContainers = bundlesRdd.collect();
 
-    Bundle bundle = (Bundle) container.getBundle();
-
-    Assert.assertNotNull(bundle);
-    Assert.assertTrue(bundle.getEntry().size() > 0);
+    for (BundleContainer bundleContainer : bundleContainers) {
+      Bundle bundle = (Bundle) bundleContainer.getBundle();
+      Assert.assertNotNull(bundle);
+      Assert.assertTrue(bundle.getEntry().size() > 0);
+    }
   }
 
   @Test

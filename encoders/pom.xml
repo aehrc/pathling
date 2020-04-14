@@ -51,13 +51,13 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>au.csiro.pathling.bunsen</groupId>
-        <artifactId>bunsen-core</artifactId>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>encoders-core</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>au.csiro.pathling.bunsen</groupId>
-        <artifactId>bunsen-r4</artifactId>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>encoders-r4</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

@@ -11,10 +11,14 @@ import static au.csiro.pathling.utilities.Configuration.setStringPropsUsingEnvVa
 import au.csiro.pathling.fhir.AnalyticsServer;
 import au.csiro.pathling.fhir.AnalyticsServerConfiguration;
 import io.sentry.Sentry;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.Arrays;
 import java.util.HashMap;
 import javax.annotation.Nonnull;
+import javax.servlet.http.HttpServletRequest;
 import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -111,8 +115,19 @@ public class FhirServerContainer {
     servletHandler.addServletWithMapping(analyticsServletHolder, "/fhir/*");
 
     server.setHandler(servletHandler);
+    server.setErrorHandler(new TerseErrorHandler());
 
     server.start();
+  }
+
+  static class TerseErrorHandler extends ErrorHandler {
+
+    @Override
+    protected void writeErrorPageBody(HttpServletRequest request, Writer writer, int code,
+        String message, boolean showStacks) throws IOException {
+      writer.write("<p>" + message + "</p>");
+    }
+
   }
 
 }

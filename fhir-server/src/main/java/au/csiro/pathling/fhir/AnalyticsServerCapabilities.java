@@ -34,7 +34,7 @@ public class AnalyticsServerCapabilities implements
 
   private static final Logger logger = LoggerFactory.getLogger(AnalyticsServerCapabilities.class);
 
-  public static final String URI_BASE = "https://server.pathling.app/fhir";
+  public static final String URI_BASE = "https://pathling.app/fhir";
   public static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
   public static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   public static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
@@ -53,7 +53,7 @@ public class AnalyticsServerCapabilities implements
   }
 
   @Override
-  @Metadata
+  @Metadata(cacheMillis = 0)
   public CapabilityStatement getServerConformance(HttpServletRequest httpServletRequest,
       RequestDetails requestDetails) {
     logger.info("Received request for server capabilities");
