@@ -21,7 +21,7 @@
 
   <properties>
     <jettyVersion>9.4.27.v20200227</jettyVersion>
-    <antlrVersion>4.7.2</antlrVersion>
+    <antlrVersion>4.8-1</antlrVersion>
     <fhirServerDockerRepo>aehrc/pathling</fhirServerDockerRepo>
   </properties>
 
