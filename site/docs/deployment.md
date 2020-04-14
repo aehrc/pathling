@@ -40,7 +40,7 @@ forms are configured in the same way, through environment variables.
 - `PATHLING_SPARK_MASTER_URL` - (default: `local[*]`) Address of the master node
   of an [Apache Spark](https://spark.apache.org/) cluster to use for processing
   data, see
-  [Master URLS](https://spark.apache.org/docs/latest/submitting-applications.html#master-urls).
+  [Master URLs](https://spark.apache.org/docs/latest/submitting-applications.html#master-urls).
 - `PATHLING_EXECUTOR_MEMORY` - (default: `1g`) The quantity of memory available
   for each child task to process data within, in the same format as JVM memory
   strings with a size unit suffix (`k`, `m`, `g` or `t`) (e.g. `512m`, `2g`).
@@ -152,7 +152,7 @@ vs individual record data, and more.
 Pathling can also be run directly within an Apache Spark cluster as a persistent
 application.
 
-For compatibility, Pathling runs Spark 2.4.4 (Scala 2.11), with Hadoop version
+For compatibility, Pathling runs Spark 2.4.5 (Scala 2.11), with Hadoop version
 2.7.7.
 
 Next: [Roadmap](./roadmap.html)
