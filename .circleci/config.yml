@@ -8,7 +8,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Verify server
-          command: mvn verify -pl fhir-server -am -DskipShade
+          command: mvn test -pl fhir-server -am
       - store_test_results: &encoders_core_reports
           path: encoders/core/target/surefire-reports
       - store_test_results: &encoders_r4_reports
