@@ -230,7 +230,7 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>-Xmx6g</argLine>
+            <argLine>-Xmx4g</argLine>
           </configuration>
         </plugin>
         <plugin>
