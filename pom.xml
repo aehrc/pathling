@@ -19,10 +19,12 @@
     <developer>
       <name>John Grimes</name>
       <email>John.Grimes@csiro.au</email>
+      <url>https://github.com/johngrimes</url>
     </developer>
     <developer>
       <name>Piotr Szul</name>
       <email>Piotr.Szul@data61.csiro.au</email>
+      <url>https://github.com/piotrszul</url>
     </developer>
   </developers>
   <licenses>
