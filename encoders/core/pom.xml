@@ -16,7 +16,7 @@
   <parent>
     <artifactId>encoders</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>1.0.5-SNAPSHOT</version>
+    <version>1.0.5</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>encoders-core</artifactId>

@@ -32,7 +32,7 @@
     </license>
   </licenses>
 
-  <version>1.0.5-SNAPSHOT</version>
+  <version>1.0.5</version>
 
   <properties>
     <hapiFhirVersion>4.2.0</hapiFhirVersion>
@@ -279,6 +279,7 @@
   
   <scm>
     <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
+    <tag>v1.0.5</tag>
   </scm>
 
   <profiles>
