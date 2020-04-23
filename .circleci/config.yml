@@ -9,16 +9,12 @@ jobs:
       - run:
           name: Verify server
           command: mvn test -pl fhir-server -am
-      - store_test_results: &encoders_core_reports
-          path: encoders/core/target/surefire-reports
-      - store_test_results: &encoders_r4_reports
-          path: encoders/r4/target/surefire-reports
+      - store_test_results: &encoders_reports
+          path: encoders/target/surefire-reports
       - store_test_results: &server_reports
           path: fhir-server/target/surefire-reports
       - store_artifacts:
-          <<: *encoders_core_reports
-      - store_artifacts:
-          <<: *encoders_r4_reports
+          <<: *encoders_reports
       - store_artifacts:
           <<: *server_reports
   push_server:
@@ -30,15 +26,11 @@ jobs:
           name: Deploy server
           command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipShade -DskipITs -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
       - store_test_results:
-          <<: *encoders_core_reports
-      - store_test_results:
-          <<: *encoders_r4_reports
+          <<: *encoders_reports
       - store_test_results:
           <<: *server_reports
       - store_artifacts:
-          <<: *encoders_core_reports
-      - store_artifacts:
-          <<: *encoders_r4_reports
+          <<: *encoders_reports
       - store_artifacts:
           <<: *server_reports
   test_site: &build_site
