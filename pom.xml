@@ -143,12 +143,7 @@
       <!-- Encoders -->
       <dependency>
         <groupId>au.csiro.pathling</groupId>
-        <artifactId>encoders-core</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>encoders-r4</artifactId>
+        <artifactId>encoders</artifactId>
         <version>${project.version}</version>
       </dependency>
 
