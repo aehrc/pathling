@@ -13,13 +13,13 @@
 package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import ca.uhn.fhir.context._
+import ca.uhn.fhir.context.{RuntimeChildChoiceDefinition, _}
 import org.apache.spark.sql.types.{BooleanType => _, DateType => _, IntegerType => _, StringType => _, _}
-import org.hl7.fhir.instance.model.api.IBaseResource
+import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
 
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Stream.Empty
-
+import SchemaConverter.getOrderedListOfChoiceTypes
 /**
  * Extracts a Spark schema based on a FHIR data model.
  */
@@ -57,7 +57,7 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
 
       // Iterate by types and then lookup the field names so we get the preferred
       // field name for the given type.
-      for (fhirChildType <- choice.getValidChildTypes.toList) yield {
+      for (fhirChildType <- getOrderedListOfChoiceTypes(choice)) yield {
 
         val childName = choice.getChildNameByDatatype(fhirChildType)
 
@@ -137,5 +137,16 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
 
       parent
     }
+  }
+}
+
+object SchemaConverter {
+  /**
+   * Returns a deterministically ordered list of child types of choice.
+   * @param choice
+   * @return
+   */
+  def getOrderedListOfChoiceTypes(choice:RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]] = {
+    choice.getValidChildTypes.toList.sortBy(_.getTypeName())
   }
 }

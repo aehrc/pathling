@@ -8,23 +8,19 @@ jobs:
       - setup_remote_docker
       - run:
           name: Verify server
-          command: mvn verify -pl fhir-server -am -DskipShade
+          command: mvn test -pl fhir-server -am
       - store_test_results: &encoders_core_reports
           path: encoders/core/target/surefire-reports
       - store_test_results: &encoders_r4_reports
           path: encoders/r4/target/surefire-reports
       - store_test_results: &server_reports
           path: fhir-server/target/surefire-reports
-      - store_test_results: &server_it_reports
-          path: fhir-server/target/failsafe-reports
       - store_artifacts:
           <<: *encoders_core_reports
       - store_artifacts:
           <<: *encoders_r4_reports
       - store_artifacts:
           <<: *server_reports
-      - store_artifacts:
-          <<: *server_it_reports
   push_server:
     <<: *build
     steps:
@@ -39,16 +35,12 @@ jobs:
           <<: *encoders_r4_reports
       - store_test_results:
           <<: *server_reports
-      - store_test_results:
-          <<: *server_it_reports
       - store_artifacts:
           <<: *encoders_core_reports
       - store_artifacts:
           <<: *encoders_r4_reports
       - store_artifacts:
           <<: *server_reports
-      - store_artifacts:
-          <<: *server_it_reports
   test_site: &build_site
     docker:
       - image: circleci/ruby:2.6.3

@@ -11,15 +11,13 @@
   ~ under the CSIRO Open Source Software Licence Agreement.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>1.0.4</version>
+    <version>1.0.5</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>encoders</artifactId>
@@ -63,7 +61,7 @@
       <dependency>
         <groupId>org.apache.parquet</groupId>
         <artifactId>parquet-avro</artifactId>
-        <version>1.7.0</version>
+        <version>1.11.0</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -79,7 +77,7 @@
         <plugin>
           <groupId>net.alchim31.maven</groupId>
           <artifactId>scala-maven-plugin</artifactId>
-          <version>3.3.2</version>
+          <version>4.3.1</version>
           <executions>
             <execution>
               <id>scala-compile-first</id>
