@@ -28,7 +28,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Deploy server
-          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
+          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipShade -DskipITs -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
       - store_test_results:
           <<: *encoders_core_reports
       - store_test_results:
