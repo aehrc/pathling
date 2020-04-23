@@ -278,6 +278,10 @@
       </plugins>
     </pluginManagement>
   </build>
+  
+  <scm>
+    <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
+  </scm>
 
   <profiles>
     <profile>
