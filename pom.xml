@@ -228,7 +228,6 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>-Xmx4g</argLine>
           </configuration>
         </plugin>
         <plugin>
