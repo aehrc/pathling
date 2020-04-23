@@ -3,6 +3,7 @@ jobs:
   test_server: &build
     docker:
       - image: circleci/openjdk:8-jdk
+    resource_class: medium+
     steps:
       - checkout
       - setup_remote_docker
