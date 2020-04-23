@@ -12,6 +12,8 @@
 
 package au.csiro.pathling.encoders
 
+import java.util
+
 import au.csiro.pathling.encoders.backports.{InstanceOf, ObjectCast, StaticField}
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
@@ -34,6 +36,7 @@ import scala.collection.immutable.Stream.Empty
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
+import SchemaConverter.getOrderedListOfChoiceTypes
 /**
  * Spark Encoder for FHIR data models.
  */
@@ -229,7 +232,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       // Flatmap to create a list of (name, expression) items.
       // Note that we iterate by types and then look up the name, since this
       // ensures we get the preferred field name for the given type.
-      val namedExpressions = choice.getValidChildTypes.toList.flatMap(fhirChildType => {
+      val namedExpressions = getOrderedListOfChoiceTypes(choice).flatMap(fhirChildType => {
 
         val childName = choice.getChildNameByDatatype(fhirChildType)
 
@@ -456,7 +459,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       val choiceChildDefinition = childDefinition.asInstanceOf[RuntimeChildChoiceDefinition]
 
       Map(childDefinition.getElementName ->
-        choiceToDeserializer(choiceChildDefinition.getValidChildTypes.toList,
+        choiceToDeserializer(getOrderedListOfChoiceTypes(choiceChildDefinition),
           choiceChildDefinition,
           path))
 

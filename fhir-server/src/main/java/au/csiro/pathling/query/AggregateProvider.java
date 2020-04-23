@@ -8,6 +8,7 @@ package au.csiro.pathling.query;
 
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import org.hl7.fhir.r4.model.Parameters;
 
 /**
@@ -27,6 +28,9 @@ public class AggregateProvider {
 
   @Operation(name = "$aggregate", idempotent = true)
   public Parameters aggregate(@ResourceParam Parameters parameters) {
+    if (parameters == null) {
+      throw new InvalidRequestException("Missing Parameters resource");
+    }
     AggregateRequest query = new AggregateRequest(parameters);
     AggregateResponse result = aggregateExecutor.execute(query);
     return result.toParameters();

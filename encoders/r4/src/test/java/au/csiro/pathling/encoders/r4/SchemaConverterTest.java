@@ -15,12 +15,17 @@ package au.csiro.pathling.encoders.r4;
 import au.csiro.pathling.encoders.SchemaConverter;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
 import org.junit.Assert;
 import org.junit.Test;
+import org.spark_project.guava.collect.Ordering;
 
 public class SchemaConverterTest {
 
@@ -116,6 +121,19 @@ public class SchemaConverterTest {
     Assert.assertTrue(getField(conditionSchema, true, "onsetDateTime") instanceof StringType);
     Assert.assertTrue(getField(conditionSchema, true, "onsetString") instanceof StringType);
     Assert.assertTrue(getField(conditionSchema, true, "onsetAge") instanceof StructType);
+  }
+
+  @Test
+  public void orderChoiceFields() {
+    List<String> expectedFields = Arrays.asList("valueBoolean", "valueCodeableConcept", "valueDateTime",
+            "valueInteger", "valuePeriod", "valueQuantity", "valueRange",
+            "valueRatio", "valueSampledData", "valueString", "valueTime");
+
+    List<String> actualFields = Stream.of(observationSchema.fieldNames())
+            .filter(fn -> fn.startsWith("value"))
+            .collect(Collectors.toList());
+
+    Assert.assertEquals(expectedFields, actualFields);
   }
 
   @Test

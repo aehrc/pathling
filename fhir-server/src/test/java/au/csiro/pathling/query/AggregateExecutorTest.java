@@ -432,7 +432,6 @@ public class AggregateExecutorTest extends ExecutorTest {
 
 
   @Test
-  @Ignore
   public void queryMultipleCountAggregations() throws IOException, JSONException {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);

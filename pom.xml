@@ -5,9 +5,7 @@
   ~ Software Licence Agreement.
   -->
 
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xmlns="http://maven.apache.org/POM/4.0.0"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>au.csiro.pathling</groupId>
@@ -34,7 +32,7 @@
     </license>
   </licenses>
 
-  <version>1.0.4</version>
+  <version>1.0.5</version>
 
   <properties>
     <hapiFhirVersion>4.2.0</hapiFhirVersion>
@@ -168,20 +166,20 @@
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>1.7.27</version>
+        <version>1.7.30</version>
       </dependency>
 
       <!-- Testing -->
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <version>4.12</version>
+        <version>4.13</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
-        <version>3.9.1</version>
+        <version>3.15.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -230,7 +228,7 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>-Xmx6g</argLine>
+            <argLine>-Xmx2g</argLine>
           </configuration>
         </plugin>
         <plugin>
@@ -241,7 +239,7 @@
         <plugin>
           <groupId>com.spotify</groupId>
           <artifactId>dockerfile-maven-plugin</artifactId>
-          <version>1.4.12</version>
+          <version>1.4.13</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -278,6 +276,11 @@
       </plugins>
     </pluginManagement>
   </build>
+  
+  <scm>
+    <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
+    <tag>v1.0.5</tag>
+  </scm>
 
   <profiles>
     <profile>
