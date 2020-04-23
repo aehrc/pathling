@@ -64,11 +64,7 @@
     <!-- Encoders -->
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>encoders-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>encoders-r4</artifactId>
+      <artifactId>encoders</artifactId>
     </dependency>
 
     <!-- Logging -->
