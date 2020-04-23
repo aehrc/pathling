@@ -224,9 +224,10 @@ class R4DataTypeMappings extends DataTypeMappings {
           Literal("UTC", ObjectType(classOf[String])) :: Nil)
 
         NewInstance(primitiveClass,
-          List(NewInstance(classOf[java.sql.Timestamp],
-            getPath :: Nil,
-            ObjectType(classOf[java.sql.Timestamp])),
+          List(StaticInvoke(org.apache.spark.sql.catalyst.util.DateTimeUtils.getClass(),
+           ObjectType(classOf[java.sql.Timestamp]),
+            "toJavaTimestamp",
+            getPath :: Nil),
             millis,
             UTCZone),
           ObjectType(primitiveClass))

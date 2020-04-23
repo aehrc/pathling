@@ -13,11 +13,14 @@
 package au.csiro.pathling.encoders;
 
 import com.google.common.collect.ImmutableList;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Date;
 import java.util.Map;
+
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.Dataset;
@@ -228,6 +231,19 @@ public class FhirEncodersTest {
             .getValue()), 0);
   }
 
+
+  @Test
+  public void instant() {
+    Date originalInstant = TestData.TEST_DATE;
+
+    Assert.assertEquals(originalInstant,
+        observationsDataset.select("issued")
+            .head()
+            .get(0));
+
+    Assert.assertEquals(originalInstant, decodedObservation.getIssued());
+  }
+
   @Test
   public void annotation() throws FHIRException {
 
@@ -242,6 +258,7 @@ public class FhirEncodersTest {
         decoded.getAuthorReference().getReference());
 
   }
+
 
   @Test
   public void contained() throws FHIRException {
