@@ -19,11 +19,18 @@ import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
 import org.hl7.fhir.r4.model.codesystems.ConditionVerStatus;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
+import org.joda.time.DateTime;
+
+import java.text.DateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 /**
  * Helper class to create data for testing purposes.
  */
 public class TestData {
+
+  public static final Date TEST_DATE = DateTime.parse("2020-05-09T12:13Z").toDate();
 
   /**
    * Returns a FHIR Condition for testing purposes.
@@ -100,7 +107,7 @@ public class TestData {
     quantity.setValue(new java.math.BigDecimal("123.45"));
     quantity.setUnit("mm[Hg]");
     observation.setValue(quantity);
-
+    observation.setIssued(TEST_DATE);
     return observation;
   }
 
