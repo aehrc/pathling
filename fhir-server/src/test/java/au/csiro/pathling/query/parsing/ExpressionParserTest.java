@@ -95,9 +95,8 @@ public class ExpressionParserTest {
     subjectResource.setResourceType(ResourceType.PATIENT);
     subjectResource.setOrigin(subjectResource);
     subjectResource.setDataset(subject);
-    subjectResource.setIdColumn(idColumn);
     subjectResource.setSingular(true);
-    subjectResource.setValueColumn(valueColumn);
+    subjectResource.setHashedValue(idColumn, valueColumn);
 
     parserContext.setSubjectContext(subjectResource);
   }
@@ -276,6 +275,32 @@ public class ExpressionParserTest {
         + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
         .isSelection().isOfBooleanType().selectResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
+  }
+
+  @Test
+  public void testWhereWithAggregateFunction() {
+    assertThatResultOf("where($this.name.given.first() = 'Paul').gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  @Test
+  public void testWhereWithMembershipOperator() {
+    assertThatResultOf("where($this.name.given contains 'Paul').gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  @Test
+  public void testWhereWithSubsumes() {
+    // Setup mock terminology client
+    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+
+    assertThatResultOf(
+        "where($this.reverseResolve(Condition.subject).code"
+            + ".subsumedBy(http://snomed.info/sct|127027008)).gender")
+        .isSelection()
+        .selectResult();
   }
 
   @Test
