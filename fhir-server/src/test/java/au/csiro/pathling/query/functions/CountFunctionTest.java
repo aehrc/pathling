@@ -13,6 +13,7 @@ import static au.csiro.pathling.test.fixtures.PrimitiveRowFixture.ROW_ID_2;
 import static au.csiro.pathling.test.fixtures.PrimitiveRowFixture.ROW_ID_4;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
@@ -55,10 +56,12 @@ public class CountFunctionTest {
     ParsedExpression input =
         new ResourceExpressionBuilder(ResourceType.PATIENT, FHIRDefinedType.PATIENT)
             .withDataset(dataset).build();
+    ExpressionParserContext parserContext = mock(ExpressionParserContext.class);
 
     FunctionInput functionInput = new FunctionInput();
     functionInput.setInput(input);
     functionInput.setExpression("count()");
+    functionInput.setContext(parserContext);
 
     // Execute the first function.
     Function function = new CountFunction();
@@ -86,9 +89,12 @@ public class CountFunctionTest {
     ParsedExpression input =
         new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, FhirPathType.STRING)
             .withDataset(dataset).build();
+    ExpressionParserContext parserContext = mock(ExpressionParserContext.class);
+
     FunctionInput functionInput = new FunctionInput();
     functionInput.setInput(input);
     functionInput.setExpression("name.family.count()");
+    functionInput.setContext(parserContext);
 
     // Execute the count function.
     ParsedExpression result = new CountFunction().invoke(functionInput);
@@ -112,6 +118,45 @@ public class CountFunctionTest {
 
     // Check the results of the selection.
     assertThat(result).selectResult().hasRows(expectedRows);
+  }
+
+  @Test
+  public void preservesInputValueInThisContext() {
+    // Build a Dataset with several rows in it.
+    Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
+    // Build up an input for the function.
+    ParsedExpression input =
+        new ResourceExpressionBuilder(ResourceType.PATIENT, FHIRDefinedType.PATIENT)
+            .withDataset(dataset).build();
+    ExpressionParserContext parserContext = mock(ExpressionParserContext.class);
+    when(parserContext.getThisContext()).thenReturn(input);
+
+    FunctionInput functionInput = new FunctionInput();
+    functionInput.setInput(input);
+    functionInput.setExpression("count()");
+    functionInput.setContext(parserContext);
+
+    // Execute the first function.
+    Function function = new CountFunction();
+    ParsedExpression result = function.invoke(functionInput);
+
+    assertThat(result)
+        .isResultFor(functionInput)
+        .isOfType(FHIRDefinedType.UNSIGNEDINT, FhirPathType.INTEGER)
+        .isPrimitive()
+        .isSingular()
+        .isSelection()
+        .isAggregation();
+
+    // Check results.
+    assertThat(result).aggResult().isValue().isEqualTo(3L);
+    assertThat(result).aggByIdResult().hasRows(PatientResourceRowFixture.allPatientsWithValue(1L));
+    assertThat(result).selectResult().hasRows(PatientResourceRowFixture.allPatientsWithValue(1L));
+
+    // Check that input value has been preserved.
+    Dataset<Row> inputValueSelected = result.getDataset()
+        .select(result.getIdColumn(), input.getValueColumn());
+    assertThat(inputValueSelected).hasRows(PatientResourceRowFixture.createCompleteDataset(spark));
   }
 
   @Test

@@ -15,15 +15,21 @@ import static au.csiro.pathling.test.PrimitiveExpressionBuilder.literalCoding;
 import static au.csiro.pathling.test.PrimitiveExpressionBuilder.literalString;
 import static au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture.*;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
+import au.csiro.pathling.query.parsing.parser.ExpressionParserContext;
 import au.csiro.pathling.test.CodingRowFixture;
 import au.csiro.pathling.test.PrimitiveExpressionBuilder;
 import au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -50,6 +56,11 @@ public class MembershipOperatorTest {
   public MembershipOperatorTest(String operator) {
     spark = getSparkSession();
     this.operator = operator;
+  }
+
+  @Before
+  public void setUp() {
+    operatorInput.setContext(mock(ExpressionParserContext.class));
   }
 
   private String resolveOperator(String string) {
@@ -178,6 +189,33 @@ public class MembershipOperatorTest {
   }
 
   @Test
+  public void preservesInputValueInThisContext() {
+    ParsedExpression collection = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, STRING)
+        .withDataset(StringPrimitiveRowFixture.createCompleteDataset(spark))
+        .build();
+    ParsedExpression element = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, STRING)
+        .withDataset(StringPrimitiveRowFixture.createDataset(spark,
+            RowFactory.create(ROW_ID_1, "Eva"), STRING_2_SAMUEL, STRING_3_NULL,
+            STRING_4_ADAM, STRING_5_NULL))
+        .build();
+    element.setSingular(true);
+    element.setFhirPath("name.family.first()");
+
+    when(operatorInput.getContext().getThisContext()).thenReturn(element);
+
+    ParsedExpression result = testOperator(collection, element);
+
+    assertThat(result).selectResult().hasRows(RowFactory.create(ROW_ID_1, false),
+        RowFactory.create(ROW_ID_2, true), RowFactory.create(ROW_ID_3, null),
+        RowFactory.create(ROW_ID_4, true), RowFactory.create(ROW_ID_5, null));
+
+    // Check that input value has been preserved.
+    Dataset<Row> inputValueSelected = result.getDataset()
+        .select(result.getIdColumn(), element.getValueColumn());
+    assertThat(inputValueSelected).hasRows(element.getDataset());
+  }
+
+  @Test
   public void throwExceptionWhenElementIsNotSingular() {
     ParsedExpression collection = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, STRING)
         .withDataset(StringPrimitiveRowFixture.createNullRowsDataset(spark))
@@ -203,8 +241,9 @@ public class MembershipOperatorTest {
     element.setFhirPath("true");
 
     // name.family.%op%(true)
-    String message = operator.equals("in") ? "true in " + collection.getFhirPath()
-        : collection.getFhirPath() + " contains true";
+    String message = operator.equals("in")
+                     ? "true in " + collection.getFhirPath()
+                     : collection.getFhirPath() + " contains true";
     assertThatExceptionOfType(InvalidRequestException.class)
         .isThrownBy(() -> testOperator(collection, element))
         .withMessage("Operands are of incompatible types: " + message);

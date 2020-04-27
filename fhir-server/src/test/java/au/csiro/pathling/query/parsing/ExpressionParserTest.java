@@ -284,9 +284,34 @@ public class ExpressionParserTest {
         .selectResult();
   }
 
+  /**
+   * This tests that the value from the `$this` context gets preserved successfully, when used in
+   * the "element" operand to the membership operator.
+   */
   @Test
-  public void testWhereWithMembershipOperator() {
+  public void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Paul').gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  /**
+   * This tests that the value from the `$this` context gets preserved successfully, when used in
+   * the "collection" operand to the membership operator.
+   */
+  @Test
+  public void testWhereWithInOperator() {
+    assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  /**
+   * This tests that where works when there is no reference to `$this` within the argument.
+   */
+  @Test
+  public void testWhereWithNoThis() {
+    assertThatResultOf("where(true).gender")
         .isSelection()
         .selectResult();
   }
