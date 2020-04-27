@@ -1,7 +1,7 @@
 title: Pathling
 description: Advanced FHIR&reg; analytics server, capable of performing aggregate queries and transformations of large FHIR datasets.
 theme: just-the-docs
-url: https://pathling.app
+url: https://pathling.csiro.au
 baseurl: /
 sass:
   sass_dir: _sass
