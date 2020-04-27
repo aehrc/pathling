@@ -43,6 +43,10 @@ public class FhirServerContainer {
     if (httpPortString != null) {
       httpPort = Integer.parseInt(httpPortString);
     }
+    String httpBase = System.getenv("PATHLING_HTTP_BASE");
+    if (httpBase == null) {
+      httpBase = "";
+    }
     setStringPropsUsingEnvVar(config, new HashMap<String, String>() {{
       put("PATHLING_FHIR_SERVER_VERSION", "version");
       put("PATHLING_WAREHOUSE_URL", "warehouseUrl");
@@ -88,10 +92,11 @@ public class FhirServerContainer {
     System.setProperty("javax.xml.stream.XMLOutputFactory", "com.ctc.wstx.stax.WstxOutputFactory");
     System.setProperty("javax.xml.stream.XMLEventFactory", "com.ctc.wstx.stax.WstxEventFactory");
 
-    start(httpPort, config);
+    start(httpPort, httpBase, config);
   }
 
-  private static void start(int httpPort, @Nonnull AnalyticsServerConfiguration configuration)
+  private static void start(int httpPort, final String httpBase,
+      @Nonnull AnalyticsServerConfiguration configuration)
       throws Exception {
     final int maxThreads = 100;
     final int minThreads = 10;
@@ -112,7 +117,7 @@ public class FhirServerContainer {
 
     // Add analytics server to handle all other requests.
     ServletHolder analyticsServletHolder = new ServletHolder(new AnalyticsServer(configuration));
-    servletHandler.addServletWithMapping(analyticsServletHolder, "/fhir/*");
+    servletHandler.addServletWithMapping(analyticsServletHolder, httpBase + "/fhir/*");
 
     server.setHandler(servletHandler);
     server.setErrorHandler(new TerseErrorHandler());

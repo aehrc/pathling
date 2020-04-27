@@ -16,6 +16,9 @@ forms are configured in the same way, through environment variables.
 
 - `PATHLING_HTTP_PORT` - (default: `8080`) The port which the server should bind
   to and listen for HTTP connections.
+- `PATHLING_HTTP_BASE` - (default: `""`) A prefix to add to the API endpoint, 
+  e.g. a value of `/foo` would cause the FHIR endpoint to be changed to 
+  `/foo/fhir`.
 - `PATHLING_VERBOSE_REQUEST_LOGGING` - (default: `false`) Setting this option to
   `true` will enable additional logging of the details of requests to the
   server, and between the server and the terminology service.
