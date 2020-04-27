@@ -16,21 +16,17 @@
   <parent>
     <artifactId>encoders</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>1.1.0</version>
+    <version>1.1.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
-  <artifactId>encoders-core</artifactId>
+  <artifactId>encoders-r4</artifactId>
   <packaging>jar</packaging>
 
   <dependencies>
-    <!-- HAPI FHIR -->
+    <!-- Encoders -->
     <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-base</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>org.hl7.fhir.utilities</artifactId>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>encoders-core</artifactId>
     </dependency>
 
     <!-- Apache Spark -->
@@ -45,6 +41,16 @@
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-hive_${sparkScalaVersion}</artifactId>
+    </dependency>
+
+    <!-- HAPI FHIR R4 -->
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-validation-resources-r4</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
     </dependency>
 
     <!-- Logging -->
@@ -63,16 +69,6 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-validation-resources-r4</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-structures-r4</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
