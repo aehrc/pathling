@@ -43,10 +43,6 @@ public class FhirServerContainer {
     if (httpPortString != null) {
       httpPort = Integer.parseInt(httpPortString);
     }
-    String httpBase = System.getenv("PATHLING_HTTP_BASE");
-    if (httpBase == null) {
-      httpBase = "";
-    }
     setStringPropsUsingEnvVar(config, new HashMap<String, String>() {{
       put("PATHLING_FHIR_SERVER_VERSION", "version");
       put("PATHLING_WAREHOUSE_URL", "warehouseUrl");
@@ -63,6 +59,10 @@ public class FhirServerContainer {
       put("PATHLING_AUTH_TOKEN_URL", "tokenUrl");
       put("PATHLING_AUTH_REVOKE_URL", "revokeTokenUrl");
     }});
+    String httpBase = System.getenv("PATHLING_HTTP_BASE");
+    config.setHttpBase(httpBase == null
+                       ? ""
+                       : httpBase);
     String explainQueries = System.getenv("PATHLING_EXPLAIN_QUERIES");
     config.setExplainQueries(explainQueries != null && explainQueries.equals("true"));
     String authEnabled = System.getenv("PATHLING_AUTH_ENABLED");
@@ -92,11 +92,10 @@ public class FhirServerContainer {
     System.setProperty("javax.xml.stream.XMLOutputFactory", "com.ctc.wstx.stax.WstxOutputFactory");
     System.setProperty("javax.xml.stream.XMLEventFactory", "com.ctc.wstx.stax.WstxEventFactory");
 
-    start(httpPort, httpBase, config);
+    start(httpPort, config);
   }
 
-  private static void start(int httpPort, final String httpBase,
-      @Nonnull AnalyticsServerConfiguration configuration)
+  private static void start(int httpPort, @Nonnull AnalyticsServerConfiguration configuration)
       throws Exception {
     final int maxThreads = 100;
     final int minThreads = 10;
@@ -117,7 +116,8 @@ public class FhirServerContainer {
 
     // Add analytics server to handle all other requests.
     ServletHolder analyticsServletHolder = new ServletHolder(new AnalyticsServer(configuration));
-    servletHandler.addServletWithMapping(analyticsServletHolder, httpBase + "/fhir/*");
+    servletHandler
+        .addServletWithMapping(analyticsServletHolder, configuration.getHttpBase() + "/fhir/*");
 
     server.setHandler(servletHandler);
     server.setErrorHandler(new TerseErrorHandler());
