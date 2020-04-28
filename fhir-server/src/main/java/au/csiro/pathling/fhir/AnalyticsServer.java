@@ -92,7 +92,11 @@ public class AnalyticsServer extends RestfulServer {
 
       // Use a proxy address strategy, which allows proxies to control the server base address with
       // the use of the X-Forwarded-Host and X-Forwarded-Proto headers.
-      setServerAddressStrategy(ApacheProxyAddressStrategy.forHttp());
+      ApacheProxyAddressStrategy addressStrategy = ApacheProxyAddressStrategy.forHttp();
+      if (!configuration.getHttpBase().isEmpty()) {
+        addressStrategy.setServletPath(configuration.getHttpBase() + "/fhir");
+      }
+      setServerAddressStrategy(addressStrategy);
 
       // Register the import provider.
       FhirContextFactory fhirContextFactory = new FhirContextFactory(FhirVersionEnum.R4);
