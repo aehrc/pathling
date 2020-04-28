@@ -100,7 +100,7 @@ public class MemberOfFunction implements Function {
     // as the new value.
     dataset = prevDataset
         .join(validateResults, prevValueHashColumn.equalTo(resultHashColumn), "left_outer");
-    dataset = dataset.select(prevIdColumn, valueColumn);
+    
     // The conditional expression around the value column is required to deal with nulls. This
     // function should only ever return true or false.
     valueColumn = when(valueColumn.isNull(), false).otherwise(valueColumn);

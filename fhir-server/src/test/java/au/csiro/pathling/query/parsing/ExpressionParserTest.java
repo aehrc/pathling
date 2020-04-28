@@ -76,7 +76,7 @@ public class ExpressionParserTest {
     parserContext.setSubjectContext(null);
     expressionParser = new ExpressionParser(parserContext);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
-        ResourceType.PROCEDURE);
+        ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST);
 
     ResourceType resourceType = ResourceType.PATIENT;
     Dataset<Row> subject = mockReader.read(resourceType);
@@ -324,6 +324,18 @@ public class ExpressionParserTest {
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
             + ".subsumedBy(http://snomed.info/sct|127027008)).gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  @Test
+  public void testWhereWithMemberOf() {
+    // Setup mock terminology client
+    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+
+    assertThatResultOf(
+        "reverseResolve(MedicationRequest.subject).where("
+            + "$this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs')).authoredOn")
         .isSelection()
         .selectResult();
   }
