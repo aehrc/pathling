@@ -26,7 +26,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * >=.
  *
  * @author John Grimes
- * @see <a href="https://pathling.app/docs/fhirpath/operators.html#comparison">Comparison</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#comparison">Comparison</a>
  */
 public class ComparisonOperator implements BinaryOperator {
 

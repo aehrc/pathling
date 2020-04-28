@@ -81,7 +81,7 @@ forms are configured in the same way, through environment variables.
   `https://pathling.au.auth0.com/`.
 - `PATHLING_AUTH_AUDIENCE` - Configures the audience for bearer tokens, which is
   the FHIR endpoint that tokens are intended to be authorised for, e.g.
-  `https://server.pathling.app/fhir`.
+  `https://pathling.csiro.au/fhir`.
 - `PATHLING_AUTH_AUTHORIZE_URL` - Provides the URL which will be advertised as
   the [authorization endpoint](https://tools.ietf.org/html/rfc6749#section-3.1),
   e.g. `https://pathling.au.auth0.com/oauth/authorize`.
@@ -104,7 +104,7 @@ forms are configured in the same way, through environment variables.
 
 - `SENTRY_DSN` - If this variable is set, all errors will be reported to a
   [Sentry](https://sentry.io) service, e.g.
-  `https://abc123@sentry.io/123456?servername=server.pathling.app`.
+  `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
 
 ## Server base
 

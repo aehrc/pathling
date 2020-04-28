@@ -27,7 +27,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * Provides the functionality of the family of equality operators within FHIRPath, i.e. = and !=.
  *
  * @author John Grimes
- * @see <a href="https://pathling.app/docs/fhirpath/operators.html#equality">Equality</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#equality">Equality</a>
  */
 public class EqualityOperator implements BinaryOperator {
 

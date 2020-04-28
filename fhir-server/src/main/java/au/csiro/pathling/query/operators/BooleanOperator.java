@@ -23,7 +23,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * and implies.
  *
  * @author John Grimes
- * @see <a href="https://pathling.app/docs/fhirpath/operators.html#boolean-logic">Boolean logic</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#boolean-logic">Boolean
+ * logic</a>
  */
 public class BooleanOperator implements BinaryOperator {
 

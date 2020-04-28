@@ -16,7 +16,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * A function for aggregating data based on counting the number of rows within the result.
  *
  * @author John Grimes
- * @see <a href="https://pathling.app/docs/fhirpath/functions.html#count">count</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#count">count</a>
  */
 public class CountFunction extends AbstractAggregateFunction {
 

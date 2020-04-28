@@ -26,7 +26,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * notation ".".
  *
  * @author John Grimes
- * @see <a href="https://pathling.app/docs/fhirpath/path-selection.html">Path selection</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/path-selection.html">Path selection</a>
  */
 public class PathTraversalOperator {
 
@@ -70,8 +70,8 @@ public class PathTraversalOperator {
     // the element has a max cardinality greater than one).
     Column field = leftValueColumn.getField(right);
     Column valueColumn = isSingular
-        ? field
-        : explode_outer(field);
+                         ? field
+                         : explode_outer(field);
     Dataset<Row> dataset;
     if (isSingular) {
       dataset = leftDataset;

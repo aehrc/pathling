@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
  * This function allows the selection of only the first element of a collection.
  *
  * @author John Grimes
- * @see <a href="https://pathling.app/docs/fhirpath/functions.html#first">first</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#first">first</a>
  */
 public class FirstFunction extends AbstractAggregateFunction {
 

@@ -19,7 +19,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * A function filters items in the input collection to only those that are of the given type.
  *
  * @author John Grimes
- * @see <a href="https://pathling.app/docs/fhirpath/functions.html#oftype">ofType</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
  */
 public class OfTypeFunction implements Function {
 

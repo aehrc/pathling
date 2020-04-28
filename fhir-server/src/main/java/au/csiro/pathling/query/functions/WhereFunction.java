@@ -22,7 +22,7 @@ import org.apache.spark.sql.Row;
  * element currently in scope.
  *
  * @author John Grimes
- * @see <a href="https://pathling.app/docs/fhirpath/functions.html#where">where</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#where">where</a>
  */
 public class WhereFunction implements Function {
 

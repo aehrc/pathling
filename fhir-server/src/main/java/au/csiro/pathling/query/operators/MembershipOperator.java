@@ -24,7 +24,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * An expression that tests whether a singular value is present within a collection.
  *
  * @author John Grimes
- * @see <a href="https://pathling.app/docs/fhirpath/operators.html#membership">Membership</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#membership">Membership</a>
  */
 public class MembershipOperator implements BinaryOperator {
 
@@ -72,13 +72,16 @@ public class MembershipOperator implements BinaryOperator {
     Column collectionIdColumn = collection.getIdColumn();
     Column collectionColumn = collection.getValueColumn();
     Column elementColumn =
-        element.isLiteral() ? sqlHelper.getLiteralColumn(element)
-            : element.getValueColumn();
+        element.isLiteral()
+        ? sqlHelper.getLiteralColumn(element)
+        : element.getValueColumn();
     Column elementIdColumn = element.getIdColumn();
 
-    Dataset<Row> membershipDataset = element.isLiteral() ? collectionDataset
-        : collectionDataset.join(elementDataset, collectionIdColumn.equalTo(elementIdColumn),
-            "left_outer");
+    Dataset<Row> membershipDataset = element.isLiteral()
+                                     ? collectionDataset
+                                     : collectionDataset.join(elementDataset,
+                                         collectionIdColumn.equalTo(elementIdColumn),
+                                         "left_outer");
 
     // If the left-hand side of the operator (element) is empty, the result is empty. If the
     // right-hand side (collection) is empty, the result is false. Otherwise, a Boolean is returned
