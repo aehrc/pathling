@@ -127,6 +127,11 @@ public class AnalyticsServerConfiguration {
    */
   private String revokeTokenUrl;
 
+  /**
+   * (OPTIONAL) A prefix to add to the API endpoint.
+   */
+  private String httpBase;
+
   public AnalyticsServerConfiguration() {
     sparkMasterUrl = "local[*]";
     warehouseUrl = "file:///usr/share/warehouse";
@@ -314,6 +319,14 @@ public class AnalyticsServerConfiguration {
     this.revokeTokenUrl = revokeTokenUrl;
   }
 
+  public String getHttpBase() {
+    return httpBase;
+  }
+
+  public void setHttpBase(String httpBase) {
+    this.httpBase = httpBase;
+  }
+
   @Override
   public String toString() {
     return "AnalyticsServerConfiguration{" +
@@ -336,6 +349,7 @@ public class AnalyticsServerConfiguration {
         ", authorizeUrl='" + authorizeUrl + '\'' +
         ", tokenUrl='" + tokenUrl + '\'' +
         ", revokeTokenUrl='" + revokeTokenUrl + '\'' +
+        ", httpBase='" + httpBase + '\'' +
         '}';
   }
 
