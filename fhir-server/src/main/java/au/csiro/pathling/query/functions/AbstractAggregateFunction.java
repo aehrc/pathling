@@ -44,9 +44,20 @@ public abstract class AbstractAggregateFunction implements Function {
     Column aggColumn = result.getAggregationColumn();
 
     // First apply a grouping based upon the resource ID.
-    Dataset<Row> dataset = aggDataset.groupBy(aggIdColumn).agg(aggColumn);
-    Column idColumn = dataset.col(dataset.columns()[0]);
-    Column valueColumn = dataset.col(dataset.columns()[1]);
+    // If there is a $this context, we need to preserve the input value column within the result.
+    ParsedExpression thisContext = input.getContext().getThisContext();
+    Column[] groupBy;
+    int selectionStart;
+    if (thisContext == null) {
+      groupBy = new Column[]{aggIdColumn};
+      selectionStart = 0;
+    } else {
+      groupBy = new Column[]{thisContext.getValueColumn(), aggIdColumn};
+      selectionStart = 1;
+    }
+    Dataset<Row> dataset = aggDataset.groupBy(groupBy).agg(aggColumn);
+    Column idColumn = dataset.col(dataset.columns()[selectionStart]);
+    Column valueColumn = dataset.col(dataset.columns()[selectionStart + 1]);
     result.setDataset(dataset);
     result.setHashedValue(idColumn, valueColumn);
     return result;

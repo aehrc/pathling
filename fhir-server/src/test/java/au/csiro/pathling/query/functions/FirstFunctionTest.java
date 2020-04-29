@@ -11,6 +11,7 @@ import static au.csiro.pathling.test.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture.*;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
@@ -51,10 +52,12 @@ public class FirstFunctionTest {
     ParsedExpression input =
         new ResourceExpressionBuilder(ResourceType.PATIENT, FHIRDefinedType.PATIENT)
             .withDataset(dataset).build();
+    ExpressionParserContext parserContext = mock(ExpressionParserContext.class);
 
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);
     firstInput.setExpression("first()");
+    firstInput.setContext(parserContext);
 
     // Execute the first function.
     FirstFunction firstFunction = new FirstFunction();
@@ -74,9 +77,12 @@ public class FirstFunctionTest {
     ParsedExpression input =
         new PrimitiveExpressionBuilder(FHIRDefinedType.STRING, FhirPathType.STRING)
             .withDataset(dataset).build();
+    ExpressionParserContext parserContext = mock(ExpressionParserContext.class);
+
     FunctionInput firstInput = new FunctionInput();
     firstInput.setInput(input);
     firstInput.setExpression("name.family.first()");
+    firstInput.setContext(parserContext);
 
     // Execute the fist function.
     ParsedExpression result = new FirstFunction().invoke(firstInput);
@@ -90,6 +96,36 @@ public class FirstFunctionTest {
     assertThat(result).selectResult().hasRows(expectedRows);
     assertThat(result).aggByIdResult().hasRows(expectedRows);
     assertThat(result).aggResult().isValue().isEqualTo((STRING_1_JUDE.getString(1)));
+  }
+
+  @Test
+  public void preservesInputValueInThisContext() {
+    Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
+    // Build up an input for the function.
+    ParsedExpression input =
+        new ResourceExpressionBuilder(ResourceType.PATIENT, FHIRDefinedType.PATIENT)
+            .withDataset(dataset).build();
+    ExpressionParserContext parserContext = mock(ExpressionParserContext.class);
+    when(parserContext.getThisContext()).thenReturn(input);
+
+    FunctionInput firstInput = new FunctionInput();
+    firstInput.setInput(input);
+    firstInput.setExpression("first()");
+    firstInput.setContext(parserContext);
+
+    // Execute the first function.
+    FirstFunction firstFunction = new FirstFunction();
+    ParsedExpression result = firstFunction.invoke(firstInput);
+    assertThat(result).isResultFor(firstInput).hasSameTypeAs(input)
+        .isResourceOfType(ResourceType.PATIENT, FHIRDefinedType.PATIENT).isSelection()
+        .isAggregation();
+    // Check that the correct rows were included in the result.
+    assertThat(result).selectResult().hasRows(PatientResourceRowFixture.PATIENT_ALL_ROWS);
+
+    // Check that input value has been preserved.
+    Dataset<Row> inputValueSelected = result.getDataset()
+        .select(result.getIdColumn(), input.getValueColumn());
+    assertThat(inputValueSelected).hasRows(PatientResourceRowFixture.createCompleteDataset(spark));
   }
 
   @Test

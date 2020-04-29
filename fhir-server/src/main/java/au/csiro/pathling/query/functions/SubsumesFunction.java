@@ -327,6 +327,16 @@ public class SubsumesFunction implements Function {
                                  : createSubsumesResult(input.getContext(),
                                      inputSystemAndCodeDataset,
                                      argSystemAndCodeDataset);
+    Column idColumn = resultDataset.col("id");
+    Column valueColumn = resultDataset.col("value");
+
+    // If there is a `$this` context, we need to add the value column back in to the resulting
+    // dataset so that it can be passed forward in the result from the enclosing function.
+    ParsedExpression thisContext = input.getContext().getThisContext();
+    if (thisContext != null) {
+      resultDataset = resultDataset.join(thisContext.getDataset(),
+          idColumn.equalTo(thisContext.getIdColumn()), "inner");
+    }
 
     ParsedExpression result = new ParsedExpression();
     result.setFhirPath(input.getExpression());
@@ -335,7 +345,7 @@ public class SubsumesFunction implements Function {
     result.setPrimitive(true);
     result.setSingular(true);
     result.setDataset(resultDataset);
-    result.setHashedValue(resultDataset.col("id"), resultDataset.col("value"));
+    result.setHashedValue(idColumn, valueColumn);
     return result;
   }
 

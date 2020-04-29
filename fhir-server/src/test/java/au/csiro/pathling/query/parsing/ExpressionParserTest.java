@@ -76,7 +76,7 @@ public class ExpressionParserTest {
     parserContext.setSubjectContext(null);
     expressionParser = new ExpressionParser(parserContext);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
-        ResourceType.PROCEDURE);
+        ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST);
 
     ResourceType resourceType = ResourceType.PATIENT;
     Dataset<Row> subject = mockReader.read(resourceType);
@@ -95,9 +95,8 @@ public class ExpressionParserTest {
     subjectResource.setResourceType(ResourceType.PATIENT);
     subjectResource.setOrigin(subjectResource);
     subjectResource.setDataset(subject);
-    subjectResource.setIdColumn(idColumn);
     subjectResource.setSingular(true);
-    subjectResource.setValueColumn(valueColumn);
+    subjectResource.setHashedValue(idColumn, valueColumn);
 
     parserContext.setSubjectContext(subjectResource);
   }
@@ -276,6 +275,69 @@ public class ExpressionParserTest {
         + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
         .isSelection().isOfBooleanType().selectResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_7001ad9c, true));
+  }
+
+  @Test
+  public void testWhereWithAggregateFunction() {
+    assertThatResultOf("where($this.name.given.first() = 'Paul').gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  /**
+   * This tests that the value from the `$this` context gets preserved successfully, when used in
+   * the "element" operand to the membership operator.
+   */
+  @Test
+  public void testWhereWithContainsOperator() {
+    assertThatResultOf("where($this.name.given contains 'Paul').gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  /**
+   * This tests that the value from the `$this` context gets preserved successfully, when used in
+   * the "collection" operand to the membership operator.
+   */
+  @Test
+  public void testWhereWithInOperator() {
+    assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  /**
+   * This tests that where works when there is no reference to `$this` within the argument.
+   */
+  @Test
+  public void testWhereWithNoThis() {
+    assertThatResultOf("where(true).gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  @Test
+  public void testWhereWithSubsumes() {
+    // Setup mock terminology client
+    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+
+    assertThatResultOf(
+        "where($this.reverseResolve(Condition.subject).code"
+            + ".subsumedBy(http://snomed.info/sct|127027008)).gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  @Test
+  public void testWhereWithMemberOf() {
+    // Setup mock terminology client
+    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+
+    assertThatResultOf(
+        "reverseResolve(MedicationRequest.subject).where("
+            + "$this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs')).authoredOn")
+        .isSelection()
+        .selectResult();
   }
 
   @Test
