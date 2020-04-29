@@ -21,6 +21,7 @@ import com.github.dockerjava.api.model.Ports.Binding;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.DockerClientConfig;
+import com.github.dockerjava.okhttp.OkHttpDockerCmdExecFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,7 +77,9 @@ public class DockerImageTest {
   public DockerImageTest() {
     DockerClientConfig dockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder()
         .build();
-    dockerClient = DockerClientBuilder.getInstance(dockerClientConfig).build();
+    dockerClient = DockerClientBuilder.getInstance(dockerClientConfig)
+        .withDockerCmdExecFactory(new OkHttpDockerCmdExecFactory())
+        .build();
     httpClient = HttpClients.createDefault();
     jsonParser = FhirContext.forR4().newJsonParser();
     logger.info("Created DockerImageTest: version=" + VERSION + ", terminologyServiceUrl="

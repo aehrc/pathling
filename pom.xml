@@ -40,6 +40,7 @@
     <hapiFhirVersion>4.2.0</hapiFhirVersion>
     <sparkVersion>2.4.5</sparkVersion>
     <sparkScalaVersion>2.11</sparkScalaVersion>
+    <dockerJavaVersion>3.2.1</dockerJavaVersion>
     <hadoopVersion>2.7.7</hadoopVersion>
     <hadoopMirror>https://mirror.aarnet.edu.au/pub/apache/hadoop/common</hadoopMirror>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -194,7 +195,13 @@
       <dependency>
         <groupId>com.github.docker-java</groupId>
         <artifactId>docker-java</artifactId>
-        <version>3.1.1</version>
+        <version>${dockerJavaVersion}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.github.docker-java</groupId>
+        <artifactId>docker-java-transport-okhttp</artifactId>
+        <version>${dockerJavaVersion}</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
@@ -241,7 +248,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.1</version>
+          <version>${dockerJavaVersion}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

@@ -142,6 +142,10 @@
       <groupId>com.github.docker-java</groupId>
       <artifactId>docker-java</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.github.docker-java</groupId>
+      <artifactId>docker-java-transport-okhttp</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
