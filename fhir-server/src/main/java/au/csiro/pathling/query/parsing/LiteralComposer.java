@@ -10,6 +10,7 @@ import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -47,8 +48,8 @@ public abstract class LiteralComposer {
 
   private static String composeCoding(Coding type) {
     return type.getVersion() == null
-        ? type.getSystem() + "|" + type.getCode()
-        : type.getSystem() + "|" + type.getVersion() + "|" + type.getCode();
+           ? type.getSystem() + "|" + type.getCode()
+           : type.getSystem() + "|" + type.getVersion() + "|" + type.getCode();
   }
 
   private static String composeString(StringType type) {
@@ -57,7 +58,8 @@ public abstract class LiteralComposer {
 
   private static String composeDateTime(DateTimeType type) {
     Date date = type.getValue();
-    DateFormat dateFormat = new SimpleDateFormat("YYYY-MM-DDThh:mm:ss.sssZ");
+    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
     return "@" + dateFormat.format(date);
   }
 
