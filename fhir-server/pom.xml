@@ -182,22 +182,74 @@
         <artifactId>dockerfile-maven-plugin</artifactId>
         <executions>
           <execution>
+            <id>build</id>
             <goals>
               <goal>build</goal>
+            </goals>
+            <configuration>
+              <tag>${project.version}</tag>
+              <buildArgs>
+                <VERSION>${project.version}</VERSION>
+                <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
+                <HADOOP_VERSION>${hadoopVersion}</HADOOP_VERSION>
+                <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+                <DEPENDENCY_PATH>target/dependency</DEPENDENCY_PATH>
+              </buildArgs>
+            </configuration>
+          </execution>
+          <execution>
+            <id>tag-major</id>
+            <phase>none</phase>
+            <goals>
+              <goal>tag</goal>
+            </goals>
+            <configuration>
+              <tag>${project.majorVersion}</tag>
+            </configuration>
+          </execution>
+          <execution>
+            <id>tag-latest</id>
+            <phase>none</phase>
+            <goals>
+              <goal>tag</goal>
+            </goals>
+            <configuration>
+              <tag>latest</tag>
+            </configuration>
+          </execution>
+          <execution>
+            <id>push-version</id>
+            <phase>none</phase>
+            <goals>
               <goal>push</goal>
             </goals>
+            <configuration>
+              <tag>${project.version}</tag>
+            </configuration>
+          </execution>
+          <execution>
+            <id>push-major</id>
+            <phase>none</phase>
+            <goals>
+              <goal>push</goal>
+            </goals>
+            <configuration>
+              <tag>${project.majorVersion}</tag>
+            </configuration>
+          </execution>
+          <execution>
+            <id>push-latest</id>
+            <phase>none</phase>
+            <goals>
+              <goal>push</goal>
+            </goals>
+            <configuration>
+              <tag>latest</tag>
+            </configuration>
           </execution>
         </executions>
         <configuration>
           <repository>${fhirServerDockerRepo}</repository>
-          <tag>${project.version}</tag>
-          <buildArgs>
-            <VERSION>${project.version}</VERSION>
-            <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
-            <HADOOP_VERSION>${hadoopVersion}</HADOOP_VERSION>
-            <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
-            <DEPENDENCY_PATH>target/dependency</DEPENDENCY_PATH>
-          </buildArgs>
         </configuration>
       </plugin>
       <plugin>

@@ -37,6 +37,7 @@
   <version>1.1.2</version>
 
   <properties>
+    <project.majorVersion>1</project.majorVersion>
     <hapiFhirVersion>4.2.0</hapiFhirVersion>
     <sparkVersion>2.4.5</sparkVersion>
     <sparkScalaVersion>2.11</sparkScalaVersion>

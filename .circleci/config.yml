@@ -7,7 +7,7 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Verify server
+          name: Test server
           command: mvn test -pl fhir-server -am
       - store_test_results: &encoders_reports
           path: encoders/target/surefire-reports
@@ -23,8 +23,11 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Deploy server
-          command: mvn deploy -pl fhir-server -am -Dmaven.deploy.skip -DskipShade -DskipITs -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
+          name: Build server image
+          command: mvn package -pl fhir-server -am -DskipShade -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO
+      - run:
+          name: Tag and push server image
+          command: mvn dockerfile:tag@tag-major dockerfile:tag@tag-latest dockerfile:push@push-version dockerfile:push@push-major dockerfile:push@push-latest -pl fhir-server -DfhirServerDockerRepo=$FHIR_SERVER_DOCKER_REPO -Ddockerfile.username=$DOCKER_USERNAME -Ddockerfile.password=$DOCKER_PASSWORD
       - store_test_results:
           <<: *encoders_reports
       - store_test_results:
