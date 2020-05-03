@@ -37,7 +37,6 @@ import org.hl7.fhir.r4.model.StringType;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -575,6 +574,37 @@ public class AggregateExecutorTest extends ExecutorTest {
     System.out.println(actualJson);
     checkExpectedJson(actualJson,
         "responses/AggregateExecutorTest-queryWithSubsumes.Parameters.json");
+  }
+
+  @Test
+  public void queryWithWhereAsComparisonOperand() throws IOException, JSONException {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource, ResourceType.MEDICATIONREQUEST);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping = new Grouping();
+    grouping.setLabel("First prescription falls before 2018-05-06");
+    grouping.setExpression("@2018-05-06 > reverseResolve(MedicationRequest.subject).where("
+        + "$this.medicationCodeableConcept.coding contains http://snomed.info/sct|407317001"
+        + ").first().authoredOn");
+    request.getGroupings().add(grouping);
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
+    checkExpectedJson(actualJson,
+        "responses/AggregateExecutorTest-queryWithDateTimeGrouping.Parameters.json");
   }
 
 }
