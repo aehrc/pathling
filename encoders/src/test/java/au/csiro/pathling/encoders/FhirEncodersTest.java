@@ -13,14 +13,12 @@
 package au.csiro.pathling.encoders;
 
 import com.google.common.collect.ImmutableList;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Date;
 import java.util.Map;
-
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.Dataset;
@@ -28,8 +26,19 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Annotation;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Medication;
+import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Provenance;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityComponent;
+import org.hl7.fhir.r4.model.Quantity;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -218,17 +227,20 @@ public class FhirEncodersTest {
   public void bigDecimal() {
 
     BigDecimal originalDecimal = ((Quantity) observation.getValue()).getValue();
+    BigDecimal queriedDecimal = (BigDecimal) observationsDataset.select("valueQuantity.value")
+        .head()
+        .get(0);
+    int queriedDecimal_scale = observationsDataset.select("valueQuantity.value_scale")
+        .head()
+        .getInt(0);
 
-    // Use compareTo since equals checks scale as well.
-    Assert.assertTrue(originalDecimal.compareTo(
-        (BigDecimal) observationsDataset.select("valueQuantity.value")
-            .head()
-            .get(0)) == 0);
+    // we expect the values to be the same but they may differ in scale
+    Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
+    Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
 
-    Assert.assertEquals(originalDecimal.compareTo(
-        ((Quantity) decodedObservation
-            .getValue())
-            .getValue()), 0);
+    BigDecimal decodedDecimal = ((Quantity) decodedObservation.getValue()).getValue();
+    // here we expect same value,  scale and precision
+    Assert.assertEquals(originalDecimal, decodedDecimal);
   }
 
 

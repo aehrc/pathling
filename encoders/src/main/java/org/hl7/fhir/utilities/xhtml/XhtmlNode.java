@@ -68,39 +68,10 @@ import org.hl7.fhir.utilities.Utilities;
 @ca.uhn.fhir.model.api.annotation.DatatypeDef(name = "xhtml")
 public class XhtmlNode implements IBaseXhtml {
 
-  private static final long serialVersionUID = -4362547161441436492L;
-
-
-  public static class Location implements Serializable {
-
-    private static final long serialVersionUID = -4079302502900219721L;
-    private int line;
-    private int column;
-
-    public Location(int line, int column) {
-      super();
-      this.line = line;
-      this.column = column;
-    }
-
-    public int getLine() {
-      return line;
-    }
-
-    public int getColumn() {
-      return column;
-    }
-
-    @Override
-    public String toString() {
-      return "Line " + Integer.toString(line) + ", column " + Integer.toString(column);
-    }
-  }
-
   public static final String NBSP = Character.toString((char) 0xa0);
   public static final String XMLNS = "http://www.w3.org/1999/xhtml";
+  private static final long serialVersionUID = -4362547161441436492L;
   private static final String DECL_XMLNS = " xmlns=\"" + XMLNS + "\"";
-
   private Location location;
   private NodeType nodeType;
   private String name;
@@ -108,11 +79,9 @@ public class XhtmlNode implements IBaseXhtml {
   private List<XhtmlNode> childNodes = new ArrayList<XhtmlNode>();
   private String content;
   private boolean notPretty;
-
   public XhtmlNode() {
     super();
   }
-
 
   public XhtmlNode(NodeType nodeType, String name) {
     super();
@@ -120,9 +89,20 @@ public class XhtmlNode implements IBaseXhtml {
     this.name = name;
   }
 
+
   public XhtmlNode(NodeType nodeType) {
     super();
     this.nodeType = nodeType;
+  }
+
+  private static boolean compareDeep(XhtmlNode e1, XhtmlNode e2) {
+    if (e1 == null && e2 == null) {
+      return true;
+    }
+    if (e1 == null || e2 == null) {
+      return false;
+    }
+    return e1.equalsDeep(e2);
   }
 
   public NodeType getNodeType() {
@@ -369,16 +349,6 @@ public class XhtmlNode implements IBaseXhtml {
     return s1.equals(s2);
   }
 
-  private static boolean compareDeep(XhtmlNode e1, XhtmlNode e2) {
-    if (e1 == null && e2 == null) {
-      return true;
-    }
-    if (e1 == null || e2 == null) {
-      return false;
-    }
-    return e1.equalsDeep(e2);
-  }
-
   public String getNsDecl() {
     for (String an : attributes.keySet()) {
       if (an.equals("xmlns")) {
@@ -387,7 +357,6 @@ public class XhtmlNode implements IBaseXhtml {
     }
     return null;
   }
-
 
   @Override
   public String getValueAsString() {
@@ -464,14 +433,14 @@ public class XhtmlNode implements IBaseXhtml {
     return getValueAsString();
   }
 
-  public boolean hasValue() {
-    return isNotBlank(getValueAsString());
-  }
-
   @Override
   public XhtmlNode setValue(String theValue) throws IllegalArgumentException {
     setValueAsString(theValue);
     return this;
+  }
+
+  public boolean hasValue() {
+    return isNotBlank(getValueAsString());
   }
 
   /**
@@ -509,11 +478,9 @@ public class XhtmlNode implements IBaseXhtml {
     throw new UnsupportedOperationException();
   }
 
-
   public Location getLocation() {
     return location;
   }
-
 
   public void setLocation(Location location) {
     this.location = location;
@@ -615,7 +582,6 @@ public class XhtmlNode implements IBaseXhtml {
     return res;
   }
 
-
   public XhtmlNode code(String text) {
     return addTag("code").tx(text);
   }
@@ -624,11 +590,9 @@ public class XhtmlNode implements IBaseXhtml {
     return addTag("code");
   }
 
-
   public XhtmlNode blockquote() {
     return addTag("blockquote");
   }
-
 
   @Override
   public String toString() {
@@ -652,7 +616,6 @@ public class XhtmlNode implements IBaseXhtml {
     return super.toString();
   }
 
-
   public XhtmlNode getNextElement(XhtmlNode c) {
     boolean f = false;
     for (XhtmlNode n : childNodes) {
@@ -665,28 +628,23 @@ public class XhtmlNode implements IBaseXhtml {
     return null;
   }
 
-
   public XhtmlNode notPretty() {
     notPretty = true;
     return this;
   }
 
-
   public boolean isNoPretty() {
     return notPretty;
   }
-
 
   public XhtmlNode style(String style) {
     setAttribute("style", style);
     return this;
   }
 
-
   public XhtmlNode nbsp() {
     return addText(NBSP);
   }
-
 
   public XhtmlNode para(String text) {
     XhtmlNode p = para();
@@ -698,6 +656,32 @@ public class XhtmlNode implements IBaseXhtml {
   public XhtmlNode add(XhtmlNode n) {
     getChildNodes().add(n);
     return this;
+  }
+
+  public static class Location implements Serializable {
+
+    private static final long serialVersionUID = -4079302502900219721L;
+    private int line;
+    private int column;
+
+    public Location(int line, int column) {
+      super();
+      this.line = line;
+      this.column = column;
+    }
+
+    public int getLine() {
+      return line;
+    }
+
+    public int getColumn() {
+      return column;
+    }
+
+    @Override
+    public String toString() {
+      return "Line " + Integer.toString(line) + ", column " + Integer.toString(column);
+    }
   }
 
 }

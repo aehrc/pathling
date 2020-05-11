@@ -118,6 +118,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
+        <artifactId>spark-catalyst_${sparkScalaVersion}</artifactId>
+        <version>${sparkVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.spark</groupId>
         <artifactId>spark-hive_${sparkScalaVersion}</artifactId>
         <version>${sparkVersion}</version>
       </dependency>

@@ -12,6 +12,8 @@
 
 package au.csiro.pathling.encoders
 
+import java.util
+
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
@@ -252,7 +254,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
 
     } else {
 
-      val definition = childDefinition.getChildByName(childDefinition.getElementName)
+      val definition: BaseRuntimeElementDefinition[_] = childDefinition.getChildByName(childDefinition.getElementName)
 
       if (childDefinition.getMax != 1) {
 
@@ -278,14 +280,20 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
           accessorFor(childDefinition),
           objectTypeFor(childDefinition))
 
-        val childExpr = definition match {
-          case composite: BaseRuntimeElementCompositeDefinition[_] => compositeToExpr(childObject, composite)
-          case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings.primitiveEncoderExpression(childObject, primitive);
-          case narrative: RuntimePrimitiveDatatypeNarrativeDefinition => dataTypeToUtf8Expr(childObject);
-          case htmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => dataTypeToUtf8Expr(childObject)
-        }
+        val customSerializer = dataTypeMappings.customSerializer(childDefinition, childObject)
 
-        List(Literal(childDefinition.getElementName), childExpr)
+        if (!customSerializer.isEmpty) {
+          customSerializer
+        } else {
+          val childExpr = definition match {
+            case composite: BaseRuntimeElementCompositeDefinition[_] => compositeToExpr(childObject, composite)
+            case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings.primitiveEncoderExpression(childObject, primitive);
+            case narrative: RuntimePrimitiveDatatypeNarrativeDefinition => dataTypeToUtf8Expr(childObject);
+            case htmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => dataTypeToUtf8Expr(childObject)
+          }
+
+          List(Literal(childDefinition.getElementName), childExpr)
+        }
       }
     }
   }
@@ -301,7 +309,9 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       case None => {
 
         // Map to (name, value, name, value) expressions for child elements.
-        definition.getChildren
+        val children: util.List[BaseRuntimeChildDefinition] = definition.getChildren
+
+        children
           .filter(child => !dataTypeMappings.skipField(definition, child))
           .flatMap(child => childToExpr(inputObject, child))
       }
@@ -445,10 +455,13 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       .map(p => UnresolvedExtractValue(p, expressions.Literal(part)))
       .getOrElse(UnresolvedAttribute(part))
 
-    // Contained resources and extensions not yet supported.
-    if (childDefinition.isInstanceOf[RuntimeChildContainedResources] ||
-      childDefinition.isInstanceOf[RuntimeChildExtension]) {
 
+    val customDeserializer = dataTypeMappings.customDeserializer(childDefinition, addToPath)
+    if (!customDeserializer.isEmpty) {
+      customDeserializer
+    } else if (childDefinition.isInstanceOf[RuntimeChildContainedResources] ||
+      childDefinition.isInstanceOf[RuntimeChildExtension]) {
+      // Contained resources and extensions not yet supported.
       Map()
 
     } else if (childDefinition.isInstanceOf[RuntimeChildChoiceDefinition]) {

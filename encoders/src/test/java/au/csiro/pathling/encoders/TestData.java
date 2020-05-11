@@ -13,17 +13,29 @@
 package au.csiro.pathling.encoders;
 
 import com.google.common.collect.ImmutableList;
-import org.hl7.fhir.r4.model.*;
+import java.util.Date;
+import org.hl7.fhir.r4.model.Annotation;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.Medication.MedicationIngredientComponent;
+import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Narrative;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Provenance;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
+import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.codesystems.ConditionVerStatus;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.joda.time.DateTime;
-
-import java.text.DateFormat;
-import java.util.Calendar;
-import java.util.Date;
 
 /**
  * Helper class to create data for testing purposes.

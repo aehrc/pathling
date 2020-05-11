@@ -15,7 +15,7 @@ package au.csiro.pathling.encoders.datatypes
 import java.util.TimeZone
 
 import au.csiro.pathling.encoders.StaticField
-import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementCompositeDefinition, RuntimePrimitiveDatatypeDefinition}
+import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementCompositeDefinition, RuntimeChildPrimitiveDatatypeDefinition, RuntimePrimitiveDatatypeDefinition}
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
 import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance, StaticInvoke}
@@ -225,7 +225,7 @@ class R4DataTypeMappings extends DataTypeMappings {
 
         NewInstance(primitiveClass,
           List(StaticInvoke(org.apache.spark.sql.catalyst.util.DateTimeUtils.getClass(),
-           ObjectType(classOf[java.sql.Timestamp]),
+            ObjectType(classOf[java.sql.Timestamp]),
             "toJavaTimestamp",
             getPath :: Nil),
             millis,
@@ -237,4 +237,54 @@ class R4DataTypeMappings extends DataTypeMappings {
     }
   }
 
+  override def customDeserializer(childDefinition: BaseRuntimeChildDefinition, addToPath: String => Expression): Map[String, Expression] = {
+    childDefinition match {
+      case primitive: RuntimeChildPrimitiveDatatypeDefinition => {
+        val definition = childDefinition.getChildByName(childDefinition.getElementName)
+        definition match {
+          case primitive: RuntimePrimitiveDatatypeDefinition if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass => {
+            val primitiveClass = classOf[org.hl7.fhir.r4.model.DecimalType]
+            val elementName = childDefinition.getElementName
+            val expression = NewInstance(primitiveClass,
+              Invoke(
+                Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
+                "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(elementName + "_scale") :: Nil
+              ) :: Nil,
+              ObjectType(primitiveClass)
+            )
+            Map(elementName -> expression)
+          }
+          case _ => super.customDeserializer(childDefinition, addToPath)
+        }
+      }
+      case _ => super.customDeserializer(childDefinition, addToPath)
+    }
+  }
+
+  override def customSerializer(childDefinition: BaseRuntimeChildDefinition, inputObject: Expression): List[Expression] = {
+    childDefinition match {
+      case primitive: RuntimeChildPrimitiveDatatypeDefinition => {
+        val definition = childDefinition.getChildByName(childDefinition.getElementName)
+        definition match {
+          case primitive: RuntimePrimitiveDatatypeDefinition
+            if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass => {
+
+            val valueExpression = StaticInvoke(classOf[Decimal],
+              decimalType,
+              "apply",
+              Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil)
+            val scaleExpression = Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])), "scale", DataTypes.IntegerType)
+            val elementName = childDefinition.getElementName
+
+            List(Literal(elementName), valueExpression, Literal(elementName + "_scale"), scaleExpression)
+          }
+          case _ => super.customSerializer(childDefinition, inputObject)
+        }
+      }
+      case _ => super.customSerializer(childDefinition, inputObject)
+    }
+  }
+
 }
+
+

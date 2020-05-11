@@ -101,4 +101,9 @@ trait DataTypeMappings {
    */
   def primitiveDecoderExpression(primitiveClass: Class[_ <: IPrimitiveType[_]],
                                  path: Option[Expression]): Expression
+
+
+  def customDeserializer(childDefinition: BaseRuntimeChildDefinition, addToPath: String => Expression): Map[String, Expression] = Map.empty
+
+  def customSerializer(childDefinition: BaseRuntimeChildDefinition, inputObject: Expression): List[Expression] = List.empty
 }

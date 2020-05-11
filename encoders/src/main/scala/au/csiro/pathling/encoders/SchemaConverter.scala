@@ -15,7 +15,7 @@ package au.csiro.pathling.encoders
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context.{RuntimeChildChoiceDefinition, _}
-import org.apache.spark.sql.types.{BooleanType => _, DateType => _, IntegerType => _, StringType => _, _}
+import org.apache.spark.sql.types.{IntegerType, BooleanType => _, DateType => _, StringType => _, _}
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
 
 import scala.collection.JavaConversions._
@@ -89,7 +89,13 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
 
       } else {
 
-        List(StructField(childDefinition.getElementName, childType))
+        if (childType.isInstanceOf[DecimalType]) {
+
+          List(StructField(childDefinition.getElementName, childType), StructField(childDefinition.getElementName + "_scale", IntegerType))
+          //List(StructField(childDefinition.getElementName, childType))
+        } else {
+          List(StructField(childDefinition.getElementName, childType))
+        }
       }
     }
   }
