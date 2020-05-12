@@ -241,8 +241,15 @@ public class FhirEncodersTest {
     BigDecimal decodedDecimal = ((Quantity) decodedObservation.getValue()).getValue();
     // here we expect same value,  scale and precision
     Assert.assertEquals(originalDecimal, decodedDecimal);
-  }
 
+    // Test can represent without loss 18 + 6 decimal places
+    Assert.assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
+        decodedObservation.getReferenceRange().get(0).getHigh().getValue());
+
+    // Test rounding of decimals with scale larger than 6
+    Assert.assertEquals(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
+        decodedObservation.getReferenceRange().get(0).getLow().getValue());
+  }
 
   @Test
   public void instant() {

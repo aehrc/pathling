@@ -32,15 +32,10 @@ import scala.collection.JavaConversions._
 class R4DataTypeMappings extends DataTypeMappings {
 
   /**
-   * Decimal type with reasonable precision.
-   */
-  private val decimalType = DataTypes.createDecimalType(12, 4)
-
-  /**
    * Map associating FHIR primitive datatypes with the Spark types used to encode them.
    */
   private val fhirPrimitiveToSparkTypes: Map[Class[_ <: IPrimitiveType[_]], DataType] =
-    Map(classOf[org.hl7.fhir.r4.model.DecimalType] -> decimalType,
+    Map(
       classOf[MarkdownType] -> DataTypes.StringType,
       classOf[IdType] -> DataTypes.StringType,
       classOf[Enumeration[_]] -> DataTypes.StringType,
@@ -163,13 +158,6 @@ class R4DataTypeMappings extends DataTypeMappings {
 
         Invoke(inputObject, "getValue", DataTypes.IntegerType)
 
-      case decimalClass if decimalClass == classOf[org.hl7.fhir.r4.model.DecimalType] =>
-
-        StaticInvoke(classOf[Decimal],
-          decimalType,
-          "apply",
-          Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil)
-
       case unknown =>
         throw new IllegalArgumentException("Cannot serialize unknown primitive type: " + unknown.getName)
     }
@@ -206,12 +194,6 @@ class R4DataTypeMappings extends DataTypeMappings {
           List(getPath),
           ObjectType(primitiveClass))
 
-      case decimalClass if decimalClass == classOf[org.hl7.fhir.r4.model.DecimalType] =>
-
-        NewInstance(primitiveClass,
-          List(Invoke(getPath, "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal]))),
-          ObjectType(primitiveClass))
-
       case instantClass if instantClass == classOf[org.hl7.fhir.r4.model.InstantType] => {
 
         val millis = StaticField(classOf[TemporalPrecisionEnum],
@@ -237,54 +219,20 @@ class R4DataTypeMappings extends DataTypeMappings {
     }
   }
 
-  override def customDeserializer(childDefinition: BaseRuntimeChildDefinition, addToPath: String => Expression): Map[String, Expression] = {
-    childDefinition match {
-      case primitive: RuntimeChildPrimitiveDatatypeDefinition => {
-        val definition = childDefinition.getChildByName(childDefinition.getElementName)
-        definition match {
-          case primitive: RuntimePrimitiveDatatypeDefinition if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass => {
-            val primitiveClass = classOf[org.hl7.fhir.r4.model.DecimalType]
-            val elementName = childDefinition.getElementName
-            val expression = NewInstance(primitiveClass,
-              Invoke(
-                Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
-                "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(elementName + "_scale") :: Nil
-              ) :: Nil,
-              ObjectType(primitiveClass)
-            )
-            Map(elementName -> expression)
-          }
-          case _ => super.customDeserializer(childDefinition, addToPath)
-        }
-      }
-      case _ => super.customDeserializer(childDefinition, addToPath)
-    }
-  }
-
-  override def customSerializer(childDefinition: BaseRuntimeChildDefinition, inputObject: Expression): List[Expression] = {
+  override def customEncoder(childDefinition: BaseRuntimeChildDefinition): Option[CustomCoder] = {
     childDefinition match {
       case primitive: RuntimeChildPrimitiveDatatypeDefinition => {
         val definition = childDefinition.getChildByName(childDefinition.getElementName)
         definition match {
           case primitive: RuntimePrimitiveDatatypeDefinition
             if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass => {
-
-            val valueExpression = StaticInvoke(classOf[Decimal],
-              decimalType,
-              "apply",
-              Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil)
-            val scaleExpression = Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])), "scale", DataTypes.IntegerType)
-            val elementName = childDefinition.getElementName
-
-            List(Literal(elementName), valueExpression, Literal(elementName + "_scale"), scaleExpression)
+            Some(DecimalCustomCoder(childDefinition.getElementName))
           }
-          case _ => super.customSerializer(childDefinition, inputObject)
+          case _ => super.customEncoder(childDefinition)
         }
       }
-      case _ => super.customSerializer(childDefinition, inputObject)
+      case _ => super.customEncoder(childDefinition)
     }
   }
-
 }
-
 

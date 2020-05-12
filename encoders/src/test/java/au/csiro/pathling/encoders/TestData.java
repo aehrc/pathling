@@ -44,6 +44,14 @@ public class TestData {
 
   public static final Date TEST_DATE = DateTime.parse("2020-05-09T12:13Z").toDate();
 
+  public static final java.math.BigDecimal TEST_SMALL_DECIMAL = new java.math.BigDecimal("123.45");
+  public static final java.math.BigDecimal TEST_VERY_BIG_DECIMAL =
+      new java.math.BigDecimal("1234560123456789.123456");
+  public static final java.math.BigDecimal TEST_VERY_SMALL_DECIMAL = new java.math.BigDecimal(
+      "0.1234567");
+  public static final java.math.BigDecimal TEST_VERY_SMALL_DECIMAL_SCALE_6 = new java.math.BigDecimal(
+      "0.123457");
+
   /**
    * Returns a FHIR Condition for testing purposes.
    */
@@ -116,10 +124,14 @@ public class TestData {
     observation.setStatus(Observation.ObservationStatus.FINAL);
 
     Quantity quantity = new Quantity();
-    quantity.setValue(new java.math.BigDecimal("123.45"));
+    quantity.setValue(TEST_SMALL_DECIMAL);
     quantity.setUnit("mm[Hg]");
     observation.setValue(quantity);
     observation.setIssued(TEST_DATE);
+
+    observation.addReferenceRange().getLow().setValue(TEST_VERY_SMALL_DECIMAL);
+    observation.getReferenceRange().get(0).getHigh().setValue(TEST_VERY_BIG_DECIMAL);
+
     return observation;
   }
 

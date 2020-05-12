@@ -280,20 +280,17 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
           accessorFor(childDefinition),
           objectTypeFor(childDefinition))
 
-        val customSerializer = dataTypeMappings.customSerializer(childDefinition, childObject)
-
-        if (!customSerializer.isEmpty) {
-          customSerializer
-        } else {
-          val childExpr = definition match {
-            case composite: BaseRuntimeElementCompositeDefinition[_] => compositeToExpr(childObject, composite)
-            case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings.primitiveEncoderExpression(childObject, primitive);
-            case narrative: RuntimePrimitiveDatatypeNarrativeDefinition => dataTypeToUtf8Expr(childObject);
-            case htmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => dataTypeToUtf8Expr(childObject)
+        dataTypeMappings.customEncoder(childDefinition)
+          .flatMap(cs => Some(cs.customSerializer(childObject)))
+          .getOrElse {
+            val childExpr = definition match {
+              case composite: BaseRuntimeElementCompositeDefinition[_] => compositeToExpr(childObject, composite)
+              case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings.primitiveEncoderExpression(childObject, primitive);
+              case narrative: RuntimePrimitiveDatatypeNarrativeDefinition => dataTypeToUtf8Expr(childObject);
+              case htmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => dataTypeToUtf8Expr(childObject)
+            }
+            List(Literal(childDefinition.getElementName), childExpr)
           }
-
-          List(Literal(childDefinition.getElementName), childExpr)
-        }
       }
     }
   }
@@ -455,10 +452,9 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       .map(p => UnresolvedExtractValue(p, expressions.Literal(part)))
       .getOrElse(UnresolvedAttribute(part))
 
-
-    val customDeserializer = dataTypeMappings.customDeserializer(childDefinition, addToPath)
+    val customDeserializer = dataTypeMappings.customEncoder(childDefinition)
     if (!customDeserializer.isEmpty) {
-      customDeserializer
+      customDeserializer.get.customDeserializer(addToPath)
     } else if (childDefinition.isInstanceOf[RuntimeChildContainedResources] ||
       childDefinition.isInstanceOf[RuntimeChildExtension]) {
       // Contained resources and extensions not yet supported.
