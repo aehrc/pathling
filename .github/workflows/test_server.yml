@@ -8,8 +8,8 @@ on:
     branches-ignore: [ master ]
 
 jobs:
-  test_server:
-    name: Test server
+  server:
+    name: Server
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -19,13 +19,13 @@ jobs:
         java-version: 1.8
     - name: Run the test goal with Maven
       run: mvn test -pl fhir-server -am
-  test_site:
-    name: Test site
+  site:
+    name: Site
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: Build the site in the jekyll/builder container
       run: |
         docker run \
-        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
+        -v ${{ github.workspace }}/site:/srv/jekyll -v ${{ github.workspace }}/site/_site:/srv/jekyll/_site \
         jekyll/builder:latest /bin/bash -c "chmod 777 /srv/jekyll && jekyll build --future"
