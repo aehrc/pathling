@@ -24,6 +24,14 @@ jobs:
         run: |
           mvn package -pl fhir-server -am -DskipShade \
           -DfhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: encoders-surefire-reports
+          path: encoders/target/surefire-reports
+      - uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-surefire-reports
+          path: fhir-server/target/surefire-reports
       - name: Tag and push server image
         run: |
           mvn dockerfile:tag@tag-major dockerfile:tag@tag-latest dockerfile:push@push-version \
