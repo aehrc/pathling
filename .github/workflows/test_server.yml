@@ -22,10 +22,16 @@ jobs:
   site:
     name: Site
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/site
     steps:
     - uses: actions/checkout@v2
-    - name: Build the site in the jekyll/builder container
-      run: |
-        docker run \
-        -v ${{ github.workspace }}/site:/srv/jekyll -v ${{ github.workspace }}/site/_site:/srv/jekyll/_site \
-        jekyll/builder:latest /bin/bash -c "chmod 777 /srv/jekyll && jekyll build --future"
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 2.6.3
+    - name: Install the bundle
+      run: bundle
+    - name: Build the site with Jekyll
+      run: bundle exec jekyll build
