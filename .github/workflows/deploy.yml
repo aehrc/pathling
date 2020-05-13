@@ -50,6 +50,7 @@ jobs:
       - name: Build and push site image
         uses: docker/build-push-action@v1
         with:
+          path: site
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ secrets.SITE_DOCKER_REPO }}
