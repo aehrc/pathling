@@ -4,7 +4,7 @@
 # This is only run on master, and is only intended for changes that have been reviewed and approved 
 # for deployment.
 
-name: Deploy
+name: Test and deploy
 
 on:
   push:
