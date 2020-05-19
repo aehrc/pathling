@@ -1,0 +1,45 @@
+# This workflow will test the server, and build the site to ensure there are no errors.
+# This is run on branches other than master - it does not push or deploy anything.
+
+name: Test
+
+on:
+  push:
+    branches-ignore: [ master ]
+
+jobs:
+  server:
+    name: Server
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 1.8
+      uses: actions/setup-java@v1
+      with:
+        java-version: 1.8
+    - name: Run the test goal with Maven
+      run: mvn test -pl fhir-server -am
+    - uses: actions/upload-artifact@v2
+      with:
+        name: encoders-surefire-reports
+        path: encoders/target/surefire-reports
+    - uses: actions/upload-artifact@v2
+      with:
+        name: fhir-server-surefire-reports
+        path: fhir-server/target/surefire-reports
+  site:
+    name: Site
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/site
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 2.6.3
+    - name: Install the bundle
+      run: bundle
+    - name: Build the site with Jekyll
+      run: bundle exec jekyll build

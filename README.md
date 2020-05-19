@@ -1,6 +1,6 @@
 <a href="https://pathling.csiro.au"><img src="./media/logo-colour-detail-tight.svg" alt="Pathling logo" width="300"/></a>
 
-[![aehrc](https://circleci.com/gh/aehrc/pathling/tree/master.svg?style=shield)](https://circleci.com/gh/aehrc/pathling/tree/master)
+[![Test and deploy](https://github.com/aehrc/pathling/workflows/Test%20and%20deploy/badge.svg)](https://github.com/aehrc/pathling/actions?query=workflow%3A%22Test+and+deploy%22)
 
 [Pathling](https://pathling.csiro.au) is a server based on the HL7® FHIR® standard, implementing special functionality designed
 to ease the delivery of analytics-enabled apps and augment tasks related to health data analytics.
