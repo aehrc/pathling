@@ -67,10 +67,12 @@ following parameters:
   determined by executing the grouping expressions against each of the resources
   within the filtered set of subject resources.
   - `label [0..*]` - ([Type](https://hl7.org/fhir/R4/datatypes.html#primitive))
-    The set of descriptive labels that describe this grouping, corresponding to
-    those requested in the query. There will be one label for each grouping
-    within the query, and the type of each label will correspond to the type
-    returned by the expression of the corresponding grouping.
+    The set of descriptive labels that describe this grouping, corresponding to 
+    those requested in the query. There will be one label for each grouping 
+    within the query, and the type of each label will correspond to the type 
+    returned by the expression of the corresponding grouping. A grouping 
+    expression that results in an empty collection will yield a null label, 
+    which is represented within FHIR as the absence of a value.
   - `result [1..*]` - ([Type](https://hl7.org/fhir/R4/datatypes.html#primitive))
     The set of values that resulted from the execution of the aggregations that
     were requested in the query. There will be one result for each aggregation

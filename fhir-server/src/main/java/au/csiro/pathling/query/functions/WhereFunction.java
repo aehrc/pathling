@@ -7,6 +7,7 @@
 package au.csiro.pathling.query.functions;
 
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
 import au.csiro.pathling.query.parsing.ParsedExpression.FhirPathType;
@@ -33,25 +34,28 @@ public class WhereFunction implements Function {
     ParsedExpression inputResult = input.getInput();
     ParsedExpression argument = input.getArguments().get(0);
 
-    Column idColumn,
-        inputValueCol = inputResult.getValueColumn();
+    Column idColumn, valueColumn;
     Dataset<Row> dataset;
     if (argument.isLiteral()) {
       // Filter the input dataset based upon the literal value of the argument.
-      dataset = inputResult.getDataset().filter(lit(argument.getJavaLiteralValue()));
+      dataset = inputResult.getDataset();
       idColumn = inputResult.getIdColumn();
+      valueColumn = when(lit(argument.getJavaLiteralValue()), inputResult.getValueColumn())
+          .otherwise(null);
     } else {
       // Create a new dataset by performing an inner join from the input to the argument, based on
       // whether the boolean value is true or not.
-      dataset = argument.getDataset().filter(argument.getValueColumn().equalTo(true));
+      dataset = argument.getDataset();
       idColumn = argument.getIdColumn();
+      valueColumn = when(argument.getValueColumn().equalTo(true), inputResult.getValueColumn())
+          .otherwise(null);
     }
 
     // Construct a new parse result.
     ParsedExpression result = new ParsedExpression(inputResult);
     result.setFhirPath(input.getExpression());
     result.setDataset(dataset);
-    result.setHashedValue(idColumn, inputValueCol);
+    result.setHashedValue(idColumn, valueColumn);
 
     return result;
   }

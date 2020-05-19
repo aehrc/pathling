@@ -117,8 +117,7 @@ public class ComparisonOperator implements BinaryOperator {
     result.setPrimitive(true);
     result.setSingular(true);
     result.setDataset(dataset);
-    result.setIdColumn(idColumn);
-    result.setValueColumn(expression);
+    result.setHashedValue(idColumn, expression);
     return result;
   }
 

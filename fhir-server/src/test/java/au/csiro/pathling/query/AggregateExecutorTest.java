@@ -593,7 +593,7 @@ public class AggregateExecutorTest extends ExecutorTest {
     Grouping grouping = new Grouping();
     grouping.setLabel("First prescription falls before 2018-05-06");
     grouping.setExpression("@2018-05-06 > reverseResolve(MedicationRequest.subject).where("
-        + "$this.medicationCodeableConcept.coding contains http://snomed.info/sct|407317001"
+        + "$this.medicationCodeableConcept.coding contains http://www.nlm.nih.gov/research/umls/rxnorm|243670"
         + ").first().authoredOn");
     request.getGroupings().add(grouping);
 
@@ -604,7 +604,7 @@ public class AggregateExecutorTest extends ExecutorTest {
     this.response = response.toParameters();
     String actualJson = getJsonParser().encodeResourceToString(this.response);
     checkExpectedJson(actualJson,
-        "responses/AggregateExecutorTest-queryWithDateTimeGrouping.Parameters.json");
+        "responses/AggregateExecutorTest-queryWithWhereAsComparisonOperand.Parameters.json");
   }
 
 }
