@@ -17,7 +17,11 @@ import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import scala.collection.JavaConversions;
@@ -61,7 +65,7 @@ public class FhirEncoders {
    * Consumers should generally use the {@link #forR4()} method, but this is made available for test
    * purposes and additional experimental mappings.
    *
-   * @param context the FHIR context to use.
+   * @param context  the FHIR context to use.
    * @param mappings mappings between Spark and FHIR data types.
    */
   public FhirEncoders(FhirContext context, DataTypeMappings mappings) {
@@ -160,7 +164,7 @@ public class FhirEncoders {
    * Returns an encoder for the given FHIR resource.
    *
    * @param type the type of the resource to encode.
-   * @param <T> the type of the resource to be encoded.
+   * @param <T>  the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
   public final <T extends IBaseResource> ExpressionEncoder<T> of(String type) {
@@ -172,7 +176,7 @@ public class FhirEncoders {
    * Returns an encoder for the given FHIR resource.
    *
    * @param type the type of the resource to encode.
-   * @param <T> the type of the resource to be encoded.
+   * @param <T>  the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
   public final <T extends IBaseResource> ExpressionEncoder<T> of(Class<T> type) {
@@ -184,9 +188,9 @@ public class FhirEncoders {
    * Returns an encoder for the given FHIR resource by name, as defined by the FHIR specification.
    *
    * @param resourceName the name of the FHIR resource to encode, such as "Encounter", "Condition",
-   * "Observation", etc.
-   * @param contained the names of FHIR resources contained to the encoded resource.
-   * @param <T> the type of the resource to be encoded.
+   *                     "Observation", etc.
+   * @param contained    the names of FHIR resources contained to the encoded resource.
+   * @param <T>          the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
   public <T extends IBaseResource> ExpressionEncoder<T> of(String resourceName,
@@ -207,9 +211,9 @@ public class FhirEncoders {
   /**
    * Returns an encoder for the given FHIR resource.
    *
-   * @param type the type of the resource to encode.
+   * @param type      the type of the resource to encode.
    * @param contained a list of types for FHIR resources contained to the encoded resource.
-   * @param <T> the type of the resource to be encoded.
+   * @param <T>       the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
   public final <T extends IBaseResource> ExpressionEncoder<T> of(Class<T> type,
@@ -235,9 +239,9 @@ public class FhirEncoders {
   /**
    * Returns an encoder for the given FHIR resource.
    *
-   * @param type the type of the resource to encode.
+   * @param type      the type of the resource to encode.
    * @param contained a list of types for FHIR resources contained to the encoded resource.
-   * @param <T> the type of the resource to be encoded.
+   * @param <T>       the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
   public final <T extends IBaseResource> ExpressionEncoder<T> of(Class<T> type,
@@ -283,6 +287,16 @@ public class FhirEncoders {
   }
 
   /**
+   * Returns the version of FHIR used by encoders produced by this instance.
+   *
+   * @return the version of FHIR used by encoders produced by this instance.
+   */
+  public FhirVersionEnum getFhirVersion() {
+
+    return context.getVersion().getVersion();
+  }
+
+  /**
    * Immutable key to look up a matching encoders instance by configuration.
    */
   private static class EncodersKey {
@@ -308,16 +322,6 @@ public class FhirEncoders {
 
       return this.fhirVersion == that.fhirVersion;
     }
-  }
-
-  /**
-   * Returns the version of FHIR used by encoders produced by this instance.
-   *
-   * @return the version of FHIR used by encoders produced by this instance.
-   */
-  public FhirVersionEnum getFhirVersion() {
-
-    return context.getVersion().getVersion();
   }
 
   /**
