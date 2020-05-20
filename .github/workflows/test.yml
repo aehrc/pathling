@@ -18,7 +18,7 @@ jobs:
       with:
         java-version: 1.8
     - name: Run the test goal with Maven
-      run: mvn test -pl fhir-server -am
+      run: mvn verify -pl fhir-server -am
     - uses: actions/upload-artifact@v2
       with:
         name: encoders-surefire-reports
