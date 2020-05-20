@@ -18,7 +18,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.BooleanType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DecimalType;
+import org.apache.spark.sql.types.StringType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.TimestampType;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
@@ -42,8 +49,8 @@ public class SchemaConverterTest {
   DataType getField(DataType dataType, boolean isNullable, String... names) {
 
     StructType schema = dataType instanceof ArrayType
-                        ? (StructType) ((ArrayType) dataType).elementType()
-                        : (StructType) dataType;
+        ? (StructType) ((ArrayType) dataType).elementType()
+        : (StructType) dataType;
 
     StructField field = Arrays.stream(schema.fields())
         .filter(sf -> sf.name().equalsIgnoreCase(names[0]))
@@ -71,7 +78,6 @@ public class SchemaConverterTest {
 
     Assert.assertTrue(getField(conditionSchema, true, "id") instanceof StringType);
   }
-
 
   @Test
   public void boundCodeToStruct() {

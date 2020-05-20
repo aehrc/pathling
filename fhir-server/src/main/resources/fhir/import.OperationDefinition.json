@@ -1,7 +1,7 @@
 {
   "resourceType": "OperationDefinition",
-  "id": "import-1",
-  "url": "https://pathling.csiro.au/fhir/OperationDefinition/import-1",
+  "id": "import-2",
+  "url": "https://pathling.csiro.au/fhir/OperationDefinition/import-2",
   "name": "import",
   "title": "Pathling Import Operation",
   "status": "active",

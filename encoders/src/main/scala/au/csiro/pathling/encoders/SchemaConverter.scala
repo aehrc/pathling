@@ -15,7 +15,7 @@ package au.csiro.pathling.encoders
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context.{RuntimeChildChoiceDefinition, _}
-import org.apache.spark.sql.types.{BooleanType => _, DateType => _, IntegerType => _, StringType => _, _}
+import org.apache.spark.sql.types.{BooleanType => _, DateType => _, StringType => _, _}
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
 
 import scala.collection.JavaConversions._
@@ -46,8 +46,14 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
    */
   private def childToFields(childDefinition: BaseRuntimeChildDefinition): Seq[StructField] = {
 
-    // Contained resources and extensions not yet supported.
-    if (childDefinition.isInstanceOf[RuntimeChildContainedResources] ||
+
+    val customCoder = dataTypeMappings.customEncoder(childDefinition)
+    if (customCoder.nonEmpty) {
+
+      customCoder.get.schema
+
+    } else if (childDefinition.isInstanceOf[RuntimeChildContainedResources] ||
+      // Contained resources and extensions not yet supported.
       childDefinition.isInstanceOf[RuntimeChildExtension]) {
 
       Empty
@@ -84,11 +90,8 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
       }
 
       if (childDefinition.getMax != 1) {
-
         List(StructField(childDefinition.getElementName, ArrayType(childType)))
-
       } else {
-
         List(StructField(childDefinition.getElementName, childType))
       }
     }

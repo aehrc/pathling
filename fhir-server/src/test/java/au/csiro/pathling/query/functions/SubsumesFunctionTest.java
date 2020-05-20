@@ -247,7 +247,7 @@ public class SubsumesFunctionTest {
   }
 
   @Test
-  public void testSubsumedByLiteralWithCodingtCorrectly() throws Exception {
+  public void testSubsumedByLiteralWithCodingCorrectly() throws Exception {
     // call subsumedBy but expect subsumes result
     // because input is switched with argument
     assertSubsumedBySuccess(createLiteralArg(), createCodingInput()).hasRows(expectedSubsumes());

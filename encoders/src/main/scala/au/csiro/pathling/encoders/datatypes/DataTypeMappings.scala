@@ -101,4 +101,12 @@ trait DataTypeMappings {
    */
   def primitiveDecoderExpression(primitiveClass: Class[_ <: IPrimitiveType[_]],
                                  path: Option[Expression]): Expression
+
+  /**
+   * Returns a specialized custom coder for this child definition.
+   * @param childDefinition
+   * @return a specialized custom coder
+   */
+
+  def customEncoder(childDefinition: BaseRuntimeChildDefinition): Option[CustomCoder] = None
 }

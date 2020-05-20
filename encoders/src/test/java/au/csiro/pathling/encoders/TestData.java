@@ -13,17 +13,29 @@
 package au.csiro.pathling.encoders;
 
 import com.google.common.collect.ImmutableList;
-import org.hl7.fhir.r4.model.*;
+import java.util.Date;
+import org.hl7.fhir.r4.model.Annotation;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.Medication.MedicationIngredientComponent;
+import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Narrative;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Provenance;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
+import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.codesystems.ConditionVerStatus;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import org.joda.time.DateTime;
-
-import java.text.DateFormat;
-import java.util.Calendar;
-import java.util.Date;
 
 /**
  * Helper class to create data for testing purposes.
@@ -31,6 +43,14 @@ import java.util.Date;
 public class TestData {
 
   public static final Date TEST_DATE = DateTime.parse("2020-05-09T12:13Z").toDate();
+
+  public static final java.math.BigDecimal TEST_SMALL_DECIMAL = new java.math.BigDecimal("123.45");
+  public static final java.math.BigDecimal TEST_VERY_BIG_DECIMAL =
+      new java.math.BigDecimal("1234560123456789.123456");
+  public static final java.math.BigDecimal TEST_VERY_SMALL_DECIMAL = new java.math.BigDecimal(
+      "0.1234567");
+  public static final java.math.BigDecimal TEST_VERY_SMALL_DECIMAL_SCALE_6 = new java.math.BigDecimal(
+      "0.123457");
 
   /**
    * Returns a FHIR Condition for testing purposes.
@@ -104,10 +124,14 @@ public class TestData {
     observation.setStatus(Observation.ObservationStatus.FINAL);
 
     Quantity quantity = new Quantity();
-    quantity.setValue(new java.math.BigDecimal("123.45"));
+    quantity.setValue(TEST_SMALL_DECIMAL);
     quantity.setUnit("mm[Hg]");
     observation.setValue(quantity);
     observation.setIssued(TEST_DATE);
+
+    observation.addReferenceRange().getLow().setValue(TEST_VERY_SMALL_DECIMAL);
+    observation.getReferenceRange().get(0).getHigh().setValue(TEST_VERY_BIG_DECIMAL);
+
     return observation;
   }
 

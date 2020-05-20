@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.query.operators;
 
+import static au.csiro.pathling.query.functions.AbstractAggregateFunction.thisValuePresentInDataset;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.when;
@@ -101,12 +102,12 @@ public class MembershipOperator implements BinaryOperator {
     ParsedExpression thisContext = input.getContext().getThisContext();
     Column[] groupBy;
     int selectionStart;
-    if (thisContext == null) {
-      groupBy = new Column[]{collectionIdColumn};
-      selectionStart = 0;
-    } else {
+    if (thisValuePresentInDataset(membershipDataset, thisContext)) {
       groupBy = new Column[]{thisContext.getValueColumn(), collectionIdColumn};
       selectionStart = 1;
+    } else {
+      groupBy = new Column[]{collectionIdColumn};
+      selectionStart = 0;
     }
 
     membershipDataset =
@@ -125,4 +126,5 @@ public class MembershipOperator implements BinaryOperator {
     result.setHashedValue(idColumn, valueColumn);
     return result;
   }
+
 }

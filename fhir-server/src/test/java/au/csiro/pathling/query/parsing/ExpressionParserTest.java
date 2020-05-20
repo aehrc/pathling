@@ -334,8 +334,17 @@ public class ExpressionParserTest {
     when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
 
     assertThatResultOf(
-        "reverseResolve(MedicationRequest.subject).where("
-            + "$this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs')).authoredOn")
+        "reverseResolve(MedicationRequest.subject).where(\n"
+            + "                $this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\n"
+            + "            ).first().authoredOn")
+        .isSelection()
+        .selectResult();
+  }
+
+  @Test
+  public void testAggregationFollowingNestedWhere() {
+    assertThatResultOf("where($this.name.first().family in contact.name.where("
+        + "$this.given contains 'Joe').first().family).gender")
         .isSelection()
         .selectResult();
   }

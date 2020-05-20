@@ -1,7 +1,7 @@
 {
   "resourceType": "OperationDefinition",
-  "id": "aggregate-1",
-  "url": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-1",
+  "id": "aggregate-2",
+  "url": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-2",
   "name": "aggregate",
   "title": "Pathling Aggregate Operation",
   "status": "active",
@@ -97,7 +97,7 @@
           "use": "out",
           "min": 0,
           "max": "*",
-          "documentation": "The set of descriptive labels that describe this grouping, corresponding to those requested in the query. There will be one label for each grouping within the query, and the type of each label will correspond to the type returned by the expression of the corresponding grouping.",
+          "documentation": "The set of descriptive labels that describe this grouping, corresponding to those requested in the query. There will be one label for each grouping within the query, and the type of each label will correspond to the type returned by the expression of the corresponding grouping. A grouping expression that results in an empty collection will yield a null label, which is represented within FHIR as the absence of a value.",
           "type": "Type"
         },
         {

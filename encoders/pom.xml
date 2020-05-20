@@ -17,7 +17,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>1.1.2</version>
+    <version>2.0.0</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>encoders</artifactId>
@@ -67,6 +67,10 @@
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
+      <artifactId>spark-catalyst_${sparkScalaVersion}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
       <artifactId>spark-hive_${sparkScalaVersion}</artifactId>
     </dependency>
 
@@ -99,7 +103,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
-        <version>4.3.1</version>
+        <version>4.4.0</version>
         <executions>
           <execution>
             <id>scala-compile-first</id>
@@ -117,6 +121,11 @@
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <args>
+            <arg>-feature</arg>
+          </args>
+        </configuration>
       </plugin>
     </plugins>
   </build>

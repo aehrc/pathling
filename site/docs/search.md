@@ -7,7 +7,7 @@ parent: Documentation
 
 # Search
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-1)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-2)
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and defines a
