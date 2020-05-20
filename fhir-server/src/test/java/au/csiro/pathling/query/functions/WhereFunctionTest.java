@@ -81,8 +81,10 @@ public class WhereFunctionTest {
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("status", DataTypes.StringType)
         .withRow("Patient/abc1", RowFactory.create("Encounter/abc1", "in-progress"))
+        .withRow("Patient/abc1", null)
         .withRow("Patient/abc2", RowFactory.create("Encounter/abc3", "in-progress"))
         .withRow("Patient/abc3", RowFactory.create("Encounter/abc4", "in-progress"))
+        .withRow("Patient/abc3", null)
         .buildWithStructValue("456mnop");
     assertThat(result)
         .selectResult()
@@ -130,8 +132,11 @@ public class WhereFunctionTest {
         .withColumn("456mnop_id", DataTypes.StringType)
         .withColumn("456mnop", DataTypes.StringType)
         .withRow("Patient/abc1", "en")
+        .withRow("Patient/abc1", null)
+        .withRow("Patient/abc2", null)
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc3", "en")
+        .withRow("Patient/abc3", null)
         .build();
     assertThat(result)
         .selectResult()
@@ -184,7 +189,7 @@ public class WhereFunctionTest {
   }
 
   @Test
-  public void nullValuesAreExcluded() {
+  public void nullValuesAreNull() {
     // Build an expression which represents the input to the function.
     ParsedExpression inputExpression = new PrimitiveExpressionBuilder(FHIRDefinedType.STRING,
         FhirPathType.STRING)
@@ -223,8 +228,11 @@ public class WhereFunctionTest {
     Dataset<Row> expectedDataset = new DatasetBuilder()
         .withColumn("456mnop_id", DataTypes.StringType)
         .withColumn("456mnop", DataTypes.StringType)
+        .withRow("Patient/abc1", null)
         .withRow("Patient/abc1", "es")
         .withRow("Patient/abc2", "de")
+        .withRow("Patient/abc3", null)
+        .withRow("Patient/abc3", null)
         .withRow("Patient/abc3", "zh")
         .build();
     assertThat(result)

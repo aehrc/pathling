@@ -51,7 +51,7 @@ public class MemberOfFunctionTest {
   private static final String TERMINOLOGY_SERVICE_URL = "https://r4.ontoserver.csiro.au/fhir";
 
   @Test
-  public void memberOfCoding() throws Exception {
+  public void memberOfCoding() {
     Coding coding1 = new Coding(MY_VALUE_SET_URL, "AMB", "ambulatory");
     Coding coding2 = new Coding(MY_VALUE_SET_URL, "EMER", null);
     Coding coding3 = new Coding(MY_VALUE_SET_URL, "IMP", "inpatient encounter");

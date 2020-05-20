@@ -7,6 +7,8 @@
 package au.csiro.pathling.query.functions;
 
 import au.csiro.pathling.query.parsing.ParsedExpression;
+import java.util.Arrays;
+import java.util.List;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -48,12 +50,12 @@ public abstract class AbstractAggregateFunction implements Function {
     ParsedExpression thisContext = input.getContext().getThisContext();
     Column[] groupBy;
     int selectionStart;
-    if (thisContext == null) {
-      groupBy = new Column[]{aggIdColumn};
-      selectionStart = 0;
-    } else {
+    if (thisValuePresentInDataset(aggDataset, thisContext)) {
       groupBy = new Column[]{thisContext.getValueColumn(), aggIdColumn};
       selectionStart = 1;
+    } else {
+      groupBy = new Column[]{aggIdColumn};
+      selectionStart = 0;
     }
     Dataset<Row> dataset = aggDataset.groupBy(groupBy).agg(aggColumn);
     Column idColumn = dataset.col(dataset.columns()[selectionStart]);
@@ -94,6 +96,22 @@ public abstract class AbstractAggregateFunction implements Function {
     result.setAggregationIdColumn(prevIdColumn);
     result.setAggregationColumn(aggFunction.apply(prevValueColumn));
     return result;
+  }
+
+  /**
+   * Determines whether the value column within a `$this` context is present in the supplied
+   * Dataset.
+   * <p>
+   * Used when deciding whether to explicitly preserve this value when traversing functions that
+   * require aggregation.
+   */
+  public static boolean thisValuePresentInDataset(Dataset<Row> dataset,
+      ParsedExpression thisContext) {
+    if (dataset == null || thisContext == null) {
+      return false;
+    }
+    List<String> columns = Arrays.asList(dataset.columns());
+    return columns.contains(thisContext.getValueColumn().toString());
   }
 
 }

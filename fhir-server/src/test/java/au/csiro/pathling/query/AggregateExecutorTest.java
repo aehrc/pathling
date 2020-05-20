@@ -605,4 +605,35 @@ public class AggregateExecutorTest extends ExecutorTest {
         "responses/AggregateExecutorTest-queryWithDateTimeGrouping.Parameters.json");
   }
 
+  @Test
+  public void queryWithWhereAsComparisonOperand() throws IOException, JSONException {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource, ResourceType.MEDICATIONREQUEST);
+
+    // Build a AggregateRequest to pass to the executor.
+    AggregateRequest request = new AggregateRequest();
+    request.setSubjectResource(ResourceType.PATIENT);
+
+    Aggregation aggregation = new Aggregation();
+    aggregation.setLabel("Number of patients");
+    aggregation.setExpression("count()");
+    request.getAggregations().add(aggregation);
+
+    Grouping grouping = new Grouping();
+    grouping.setLabel("First prescription falls before 2018-05-06");
+    grouping.setExpression("@2018-05-06 > reverseResolve(MedicationRequest.subject).where("
+        + "$this.medicationCodeableConcept.coding contains http://www.nlm.nih.gov/research/umls/rxnorm|243670"
+        + ").first().authoredOn");
+    request.getGroupings().add(grouping);
+
+    // Execute the query.
+    AggregateResponse response = executor.execute(request);
+
+    // Check the response against an expected response.
+    this.response = response.toParameters();
+    String actualJson = getJsonParser().encodeResourceToString(this.response);
+    checkExpectedJson(actualJson,
+        "responses/AggregateExecutorTest-queryWithWhereAsComparisonOperand.Parameters.json");
+  }
+
 }

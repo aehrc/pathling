@@ -115,11 +115,12 @@ class ExpressionInvocationVisitor extends FhirPathBaseVisitor<ParsedExpression> 
     if (function == null) {
       throw new InvalidRequestException("Unrecognised function: " + functionIdentifier);
     }
-    return invokeFunction(ctx, function);
+    return invokeFunction(ctx, functionIdentifier, function);
   }
 
   @Nonnull
-  private ParsedExpression invokeFunction(FunctionInvocationContext ctx, Function function) {
+  private ParsedExpression invokeFunction(FunctionInvocationContext ctx,
+      String functionIdentifier, Function function) {
     // Get the parse results for each of the expressions that make up the functions arguments.
     List<ParsedExpression> arguments;
     ParamListContext paramList = ctx.functn().paramList();
@@ -144,7 +145,11 @@ class ExpressionInvocationVisitor extends FhirPathBaseVisitor<ParsedExpression> 
     // Build a function input that passes the arguments as ParseResults.
     FunctionInput functionInput = new FunctionInput();
     functionInput.setContext(context);
-    functionInput.setExpression(ctx.getText());
+    String argumentsFhirPath = arguments.stream()
+        .map(ParsedExpression::getFhirPath)
+        .collect(Collectors.joining(", "));
+    String fhirPath = functionIdentifier + "(" + argumentsFhirPath + ")";
+    functionInput.setExpression(fhirPath);
     functionInput.setInput(invoker);
     functionInput.getArguments().addAll(arguments);
 

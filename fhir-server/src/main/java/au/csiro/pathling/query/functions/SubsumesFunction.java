@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.query.functions;
 
+import static au.csiro.pathling.query.functions.AbstractAggregateFunction.thisValuePresentInDataset;
 import static org.apache.spark.sql.functions.collect_set;
 import static org.apache.spark.sql.functions.struct;
 
@@ -333,7 +334,7 @@ public class SubsumesFunction implements Function {
     // If there is a `$this` context, we need to add the value column back in to the resulting
     // dataset so that it can be passed forward in the result from the enclosing function.
     ParsedExpression thisContext = input.getContext().getThisContext();
-    if (thisContext != null) {
+    if (thisValuePresentInDataset(inputExpression.getDataset(), thisContext)) {
       resultDataset = resultDataset.join(thisContext.getDataset(),
           idColumn.equalTo(thisContext.getIdColumn()), "inner");
     }
