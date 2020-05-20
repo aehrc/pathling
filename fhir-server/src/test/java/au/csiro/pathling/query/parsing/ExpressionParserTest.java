@@ -341,6 +341,14 @@ public class ExpressionParserTest {
   }
 
   @Test
+  public void testAggregationFollowingNestedWhere() {
+    assertThatResultOf("where($this.name.first().family in contact.name.where("
+        + "$this.given contains 'Joe').first().family).gender")
+        .isSelection()
+        .selectResult();
+  }
+
+  @Test
   public void parserErrorThrows() {
     assertThatExceptionOfType(InvalidRequestException.class)
         .isThrownBy(() -> expressionParser.parse(

@@ -37,16 +37,18 @@ public class WhereFunction implements Function {
     Column idColumn, valueColumn;
     Dataset<Row> dataset;
     if (argument.isLiteral()) {
-      // Filter the input dataset based upon the literal value of the argument.
       dataset = inputResult.getDataset();
       idColumn = inputResult.getIdColumn();
+      // The result is the literal value if true, null otherwise.
       valueColumn = when(lit(argument.getJavaLiteralValue()), inputResult.getValueColumn())
           .otherwise(null);
     } else {
-      // Create a new dataset by performing an inner join from the input to the argument, based on
-      // whether the boolean value is true or not.
+      // We use the argument dataset alone, to avoid the problems with joining from the input
+      // dataset to the argument dataset (which would create duplicate rows).
       dataset = argument.getDataset();
       idColumn = argument.getIdColumn();
+      // The result is the input value if it is equal to true, or null otherwise (signifying the
+      // absence of a value).
       valueColumn = when(argument.getValueColumn().equalTo(true), inputResult.getValueColumn())
           .otherwise(null);
     }

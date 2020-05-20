@@ -117,6 +117,11 @@
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <args>
+            <arg>-feature</arg>
+          </args>
+        </configuration>
       </plugin>
     </plugins>
   </build>
