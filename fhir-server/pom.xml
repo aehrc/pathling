@@ -18,7 +18,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <jettyVersion>9.4.28.v20200408</jettyVersion>
+    <jettyVersion>9.4.29.v20200521</jettyVersion>
     <antlrVersion>4.8-1</antlrVersion>
     <fhirServerDockerRepo>aehrc/pathling</fhirServerDockerRepo>
   </properties>
