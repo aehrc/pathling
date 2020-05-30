@@ -23,7 +23,7 @@ jobs:
       - name: Run the verify goal with Maven
         run: |
           mvn verify -pl fhir-server -am -DskipShade \
-          -DfhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }}
+          -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }}
       - uses: actions/upload-artifact@v2
         with:
           name: encoders-surefire-reports
@@ -36,7 +36,7 @@ jobs:
         run: |
           mvn dockerfile:tag@tag-major dockerfile:tag@tag-latest dockerfile:push@push-version \
           dockerfile:push@push-major dockerfile:push@push-latest -pl fhir-server \
-          -DfhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }} \
+          -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }} \
           -Ddockerfile.username=${{ secrets.DOCKER_USERNAME }} \
           -Ddockerfile.password=${{ secrets.DOCKER_PASSWORD }}
   site:

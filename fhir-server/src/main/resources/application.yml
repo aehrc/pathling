@@ -1,0 +1,89 @@
+pathling:
+  # The port which the server should bind to and listen for HTTP connections.
+  httpPort: 8080
+
+  # A prefix to add to the API endpoint, e.g. a value of /foo would cause the FHIR endpoint to be 
+  # changed to /foo/fhir.
+  httpBase: ""
+
+  # Setting this option to true will enable additional logging of the details of requests to the 
+  # server, and between the server and the terminology service.
+  verboseRequestLogging: false
+
+  # The base URL at which Pathling will look for data files, and where it will save data received
+  # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://) URL.
+  warehouseUrl: file:///usr/share/warehouse
+
+  # The subdirectory within the warehouse path used to read and write data.
+  databaseName: default
+
+  # Authentication details for connecting to a protected Amazon S3 bucket.
+  # awsAccessKeyId: [AWS access key ID]
+
+  # Authentication details for connecting to a protected Amazon S3 bucket.
+  # awsSecretAccessKey: [AWS secret access key]
+
+  # Address of the master node of an Apache Spark cluster to use for processing data.
+  sparkMasterUrl: local[*]
+
+  # The quantity of memory available for each child task to process data within, in the same format
+  # as JVM memory strings.
+  executorMemory: 1g
+
+  # Setting this option to true will enable additional logging relating to the query plan used to 
+  # execute queries.
+  explainQueries: false
+
+  # This option controls the number of data partitions used to distribute data between child tasks.
+  # This can be tuned to higher numbers for larger data sets. It also controls the granularity of
+  # requests made to the configured terminology service.
+  shufflePartitions: 2
+  
+  # This is a comma-delimited list of domain names that controls which domains are permitted to 
+  # access the server per the `Access-Control-Allow-Origin` header within the Cross-Origin Resource 
+  # Sharing specification.
+  corsAllowedDomains: "*"
+  
+  terminology:
+    # Enables the use of terminology functions.
+    enabled: true
+
+    # The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology 
+    # queries.
+    serverUrl: https://r4.ontoserver.csiro.au/fhir
+    
+    # The maximum period (in milliseconds) that the server should wait for incoming data from the
+    # terminology service.
+    socketTimeout: 60000
+    
+  auth:
+    # Enables SMART authorisation.
+    enabled: false
+
+    # Provides the URL of a JSON Web Key Set from which the signing key for incoming bearer tokens
+    # can be retrieved.
+    # jwksUrl: [JWKS URL]
+
+    # Configures the issuing domain for bearer tokens, which will be checked against the claims
+    # within incoming bearer tokens.
+    # issuer: [issuer]
+
+    # Configures the audience for bearer tokens, which is the FHIR endpoint that tokens are
+    # intended to be authorised for.
+    # audience: [audience]
+
+    # Provides the URL which will be advertised as the authorization endpoint.
+    # authorizeUrl: [authorization URL]
+    
+    # Provides the URL which will be advertised as the token endpoint.
+    # tokenUrl: [token URL]
+
+    # Provides the URL which will be advertised as the token revocation endpoint.
+    # revokeUrl: [token revocation URL]
+    
+  caching:
+    # Controls whether request caching is enabled.
+    enabled: true
+
+    # Controls the maximum number of cache entries held in memory.
+    maxEntries: 100

@@ -12,18 +12,31 @@
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
     <version>2.0.0</version>
-    <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
 
   <properties>
-    <jettyVersion>9.4.28.v20200408</jettyVersion>
-    <antlrVersion>4.8-1</antlrVersion>
-    <fhirServerDockerRepo>aehrc/pathling</fhirServerDockerRepo>
+    <pathling.antlrVersion>4.8-1</pathling.antlrVersion>
+    <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
   </properties>
 
   <dependencies>
+    <!-- Spring Boot -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+    </dependency>
+    
     <!-- HAPI FHIR -->
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
@@ -50,11 +63,11 @@
     <!-- Apache Spark -->
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${sparkScalaVersion}</artifactId>
+      <artifactId>spark-core_${pathling.sparkScalaVersion}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
+      <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -93,19 +106,7 @@
     <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr4</artifactId>
-      <version>${antlrVersion}</version>
-    </dependency>
-
-    <!-- Jetty -->
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-server</artifactId>
-      <version>${jettyVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-servlet</artifactId>
-      <version>${jettyVersion}</version>
+      <version>${pathling.antlrVersion}</version>
     </dependency>
 
     <!-- Error monitoring -->
@@ -114,29 +115,17 @@
       <artifactId>sentry</artifactId>
     </dependency>
 
-    <!-- spring-web is required by CorsConfiguration, which is required by the CorsInterceptor -->
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-web</artifactId>
-      <version>5.2.6.RELEASE</version>
-    </dependency>
-
     <!-- Testing -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.skyscreamer</groupId>
-      <artifactId>jsonassert</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.junit.vintage</groupId>
+          <artifactId>junit-vintage-engine</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.github.docker-java</groupId>
@@ -146,14 +135,24 @@
       <groupId>com.github.docker-java</groupId>
       <artifactId>docker-java-transport-okhttp</artifactId>
     </dependency>
+
+    <!-- Lombok -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
       <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.antlr</groupId>
         <artifactId>antlr4-maven-plugin</artifactId>
-        <version>${antlrVersion}</version>
+        <version>${pathling.antlrVersion}</version>
         <executions>
           <execution>
             <goals>
@@ -190,8 +189,8 @@
               <tag>${project.version}</tag>
               <buildArgs>
                 <VERSION>${project.version}</VERSION>
-                <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
-                <HADOOP_VERSION>${hadoopVersion}</HADOOP_VERSION>
+                <HADOOP_MIRROR>${pathling.hadoopMirror}</HADOOP_MIRROR>
+                <HADOOP_VERSION>${pathling.hadoopVersion}</HADOOP_VERSION>
                 <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
                 <DEPENDENCY_PATH>target/dependency</DEPENDENCY_PATH>
               </buildArgs>
@@ -249,7 +248,7 @@
           </execution>
         </executions>
         <configuration>
-          <repository>${fhirServerDockerRepo}</repository>
+          <repository>${pathling.fhirServerDockerRepo}</repository>
         </configuration>
       </plugin>
       <plugin>
@@ -278,7 +277,7 @@
           <systemPropertyVariables>
             <version>${project.version}</version>
             <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
-            <dockerRepository>${fhirServerDockerRepo}</dockerRepository>
+            <dockerRepository>${pathling.fhirServerDockerRepo}</dockerRepository>
           </systemPropertyVariables>
         </configuration>
       </plugin>

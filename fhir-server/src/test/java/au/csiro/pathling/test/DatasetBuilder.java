@@ -6,11 +6,13 @@
 
 package au.csiro.pathling.test;
 
-import static au.csiro.pathling.TestUtilities.getSparkSession;
+import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -24,100 +26,154 @@ import org.apache.spark.sql.types.*;
  */
 public class DatasetBuilder {
 
-  protected SparkSession spark;
-  protected Metadata metadata;
-  protected List<StructField> datasetColumns = new ArrayList<>();
-  protected List<Row> datasetRows = new ArrayList<>();
-  protected List<StructField> structColumns = new ArrayList<>();
+  @Nonnull
+  private final SparkSession spark;
+
+  @Nonnull
+  private final Metadata metadata;
+
+  @Nonnull
+  private final List<StructField> datasetColumns = new ArrayList<>();
+
+  @Nonnull
+  private final List<Row> datasetRows = new ArrayList<>();
+
+  @Nonnull
+  private final List<StructField> structColumns = new ArrayList<>();
 
   public DatasetBuilder() {
     spark = getSparkSession();
-    metadata = new MetadataBuilder().build();
+    final Metadata metadata = new MetadataBuilder().build();
+    checkNotNull(metadata);
+    this.metadata = metadata;
   }
 
-  public DatasetBuilder withColumn(String name, DataType dataType) {
-    StructField column = new StructField(name, dataType, true, metadata);
+  @Nonnull
+  public DatasetBuilder withIdColumn() {
+    final StructField column = new StructField("id", DataTypes.StringType, true, metadata);
     datasetColumns.add(column);
     return this;
   }
 
-  public DatasetBuilder withRow(Object... values) {
-    Row row = RowFactory.create(values);
+  @Nonnull
+  public DatasetBuilder withTypeColumn() {
+    final StructField column = new StructField("type", DataTypes.StringType, true, metadata);
+    datasetColumns.add(column);
+    return this;
+  }
+
+  @Nonnull
+  public DatasetBuilder withColumn(@Nonnull final String name, @Nonnull final DataType dataType) {
+    final StructField column = new StructField(name, dataType, true, metadata);
+    datasetColumns.add(column);
+    return this;
+  }
+
+  @Nonnull
+  public DatasetBuilder withRow(@Nonnull final Object... values) {
+    final Row row = RowFactory.create(values);
     datasetRows.add(row);
     return this;
   }
 
-  public DatasetBuilder changeValue(String id, Object value) {
+  @Nonnull
+  public DatasetBuilder withRow(@Nonnull final Row row) {
+    datasetRows.add(row);
+    return this;
+  }
+
+  @Nonnull
+  public DatasetBuilder changeValue(@Nonnull final String id, @Nonnull final Object value) {
     for (int i = 0; i < datasetRows.size(); i++) {
-      Row row = datasetRows.get(i);
-      if (row.getString(0).equals(id)) {
+      final Row row = datasetRows.get(i);
+      checkNotNull(row);
+
+      final String string = row.getString(0);
+      checkNotNull(string);
+
+      if (string.equals(id)) {
         datasetRows.set(i, RowFactory.create(id, value));
       }
     }
     return this;
   }
 
-  public DatasetBuilder changeValues(final Object value, List<String> ids) {
+  @Nonnull
+  public DatasetBuilder changeValues(@Nonnull final Object value,
+      @Nonnull final Iterable<String> ids) {
     ids.forEach(id -> changeValue(id, value));
     return this;
   }
-  
-  public DatasetBuilder withIdsAndValue(Object value, List<String> ids) {
-    for (String id : ids) {
-      Row row = RowFactory.create(id, value);
+
+  @Nonnull
+  public DatasetBuilder withIdsAndValue(@Nonnull final Object value,
+      @Nonnull final Iterable<String> ids) {
+    for (final String id : ids) {
+      final Row row = RowFactory.create(id, value);
       datasetRows.add(row);
     }
     return this;
   }
 
-  public DatasetBuilder withIdsAndNull(List<String> ids) {
-    for (String id : ids) {
-      Row row = RowFactory.create(id, null);
-      datasetRows.add(row);
-    }
-    return this;
-  }
-
-  public DatasetBuilder withStructColumn(String name, DataType dataType) {
-    StructField column = new StructField(name, dataType, true, metadata);
+  @Nonnull
+  public DatasetBuilder withStructColumn(@Nonnull final String name,
+      @Nonnull final DataType dataType) {
+    final StructField column = new StructField(name, dataType, true, metadata);
     structColumns.add(column);
     return this;
   }
 
-  public DatasetBuilder withStructTypeColumns(StructType structType) {
-    structColumns.addAll(Arrays.asList(structType.fields()));
+  @Nonnull
+  public DatasetBuilder withStructTypeColumns(@Nonnull final StructType structType) {
+    final StructField[] fields = structType.fields();
+    checkNotNull(fields);
+
+    structColumns.addAll(Arrays.asList(fields));
     return this;
   }
 
+  @Nonnull
   public Dataset<Row> build() {
     if (!structColumns.isEmpty()) {
       throw new RuntimeException(
           "Called build() on a DatasetBuilder with struct columns, did you mean to use "
-              + "buildWithStructValue(String structName)?");
+              + "buildWithStructValue()?");
     } else if (datasetColumns.isEmpty()) {
-      return null;
+      throw new RuntimeException("Called build() on a DatasetBuilder with no columns");
     }
     return getDataset(datasetColumns);
   }
 
-  public Dataset<Row> buildWithStructValue(String structName) {
-    List<StructField> columns = new ArrayList<>(datasetColumns);
+  @Nonnull
+  public Dataset<Row> buildWithStructValue() {
+    final List<StructField> columns = new ArrayList<>(datasetColumns);
     columns.add(new StructField(
-        structName,
+        "value",
         DataTypes.createStructType(structColumns),
         true,
         metadata));
     return getDataset(columns);
   }
 
+  @Nonnull
   public List<Row> getRows() {
     return datasetRows;
   }
 
-  private Dataset<Row> getDataset(List<StructField> columns) {
-    StructType schema;
-    schema = new StructType(columns.toArray(new StructField[0]));
-    return spark.createDataFrame(datasetRows, schema);
+  @Nonnull
+  private Dataset<Row> getDataset(@Nonnull final List<StructField> columns) {
+    final StructType schema;
+    schema = new StructType(columns.toArray(new StructField[]{}));
+
+    final Dataset<Row> dataFrame = spark.createDataFrame(datasetRows, schema);
+    checkNotNull(dataFrame);
+
+    return dataFrame;
+  }
+
+  @Nonnull
+  public StructType getStructType() {
+    return new StructType(datasetColumns.toArray(new StructField[]{}));
   }
 
 }

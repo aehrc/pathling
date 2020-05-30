@@ -1,0 +1,29 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "AMB"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 2
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 0
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(status = 'finished') and (serviceProvider.resolve().name = 'ST ELIZABETH'S MEDICAL CENTER') and (reasonCode.coding.display.empty()) and ((class.code) = 'AMB')"
+        }
+      ]
+    }
+  ]
+}

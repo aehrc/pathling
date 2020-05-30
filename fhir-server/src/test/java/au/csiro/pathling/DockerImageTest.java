@@ -6,9 +6,9 @@
 
 package au.csiro.pathling;
 
-import static au.csiro.pathling.TestUtilities.checkExpectedJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.test.assertions.Assertions;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.github.dockerjava.api.DockerClient;
@@ -259,8 +259,9 @@ public class DockerImageTest {
         if (statusCode == 200) {
           StringWriter writer = new StringWriter();
           IOUtils.copy(queryResponseStream, writer, StandardCharsets.UTF_8);
-          checkExpectedJson(writer.toString(),
-              "responses/DockerImageTest-importDataAndQuery.Parameters.json");
+          Assertions.assertJson("responses/DockerImageTest-importDataAndQuery.Parameters.json",
+              writer.toString()
+          );
         } else {
           OperationOutcome opOutcome = (OperationOutcome) jsonParser
               .parseResource(queryResponseStream);

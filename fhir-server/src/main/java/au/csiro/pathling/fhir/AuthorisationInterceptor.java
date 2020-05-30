@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhir;
 
+import au.csiro.pathling.Configuration.Authorisation;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
@@ -33,6 +34,11 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Supplier;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
@@ -44,102 +50,130 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
  * invalid.
  * <p>
  * This should conform to the SMART App Launch specification, but currently only supporting the
- * scope "user/*.read". If the request does not contain this scope, it will be rejected.
+ * scope {@code user/*.read}. If the request does not contain this scope, it will be rejected.
  * <p>
  * The JWT must be signed with the RSA256 algorithm.
  *
  * @author John Grimes
  */
 @Interceptor
+@Slf4j
 public class AuthorisationInterceptor {
 
+  @Nonnull
   private final JWTVerifier verifier;
 
-  public AuthorisationInterceptor(String jwksUrl, String issuer, String audience)
+  /**
+   * @param configuration The authorisation section of the {@link au.csiro.pathling.Configuration}.
+   * @throws MalformedURLException if there are URLs within the configuration that cannot be parsed
+   */
+  public AuthorisationInterceptor(@Nonnull final Authorisation configuration)
       throws MalformedURLException {
-    JwkProvider jwkProvider = new UrlJwkProvider(new URL(jwksUrl));
-    AuthorisationKeyProvider keyProvider = new AuthorisationKeyProvider(jwkProvider);
-    Algorithm rsa256 = Algorithm.RSA256(keyProvider);
+    final Supplier<RuntimeException> authConfigError = () -> new RuntimeException(
+        "Configuration for jwksUrl, issuer and audience must be present if authorisation is enabled");
+    final String jwksUrl = configuration.getJwksUrl().orElseThrow(authConfigError);
+    final String issuer = configuration.getIssuer().orElseThrow(authConfigError);
+    final String audience = configuration.getAudience().orElseThrow(authConfigError);
+
+    final JwkProvider jwkProvider = new UrlJwkProvider(new URL(jwksUrl));
+    final RSAKeyProvider keyProvider = new AuthorisationKeyProvider(jwkProvider);
+    final Algorithm rsa256 = Algorithm.RSA256(keyProvider);
     verifier = JWT.require(rsa256)
         .withIssuer(issuer)
         .withAudience(audience)
         .build();
   }
 
+  /**
+   * HAPI hook to authorise requests before they are processed.
+   *
+   * @param requestDetails the details of the request
+   */
   @Hook(Pointcut.SERVER_INCOMING_REQUEST_PRE_HANDLED)
-  public void authoriseRequest(RequestDetails requestDetails) {
-    // Allow unauthenticated requests to the CapabilityStatement, and also to the
-    // OperationDefinitions.
-    boolean metadata = requestDetails.getOperation() != null
-        && requestDetails.getOperation().equals("metadata");
-    boolean opDefRead = requestDetails.getResourceName() != null
-        && requestDetails.getResourceName().equals("OperationDefinition")
-        && requestDetails.getRestOperationType() == RestOperationTypeEnum.READ;
-    if (!metadata && !opDefRead) {
-      String token = getBearerToken(requestDetails);
-      validateToken(token);
+  @SuppressWarnings("unused")
+  public void authoriseRequest(@Nullable final RequestDetails requestDetails) {
+    if (requestDetails == null) {
+      log.error("Authorisation interceptor invoked with missing request details");
+      throw new InternalErrorException("Unexpected error occurred");
+    } else {
+      // Allow unauthenticated requests to the CapabilityStatement, and also to the
+      // OperationDefinitions.
+      final boolean metadata = requestDetails.getOperation() != null
+          && requestDetails.getOperation().equals("metadata");
+      final boolean opDefRead = requestDetails.getResourceName() != null
+          && requestDetails.getResourceName().equals("OperationDefinition")
+          && requestDetails.getRestOperationType() == RestOperationTypeEnum.READ;
+      if (!metadata && !opDefRead) {
+        final String token = getBearerToken(requestDetails);
+        validateToken(token);
+      }
     }
   }
 
-  private String getBearerToken(RequestDetails requestDetails) {
-    String authHeader = requestDetails.getHeader("Authorization");
+  @Nonnull
+  private String getBearerToken(@Nonnull final RequestDetails requestDetails) {
+    final String authHeader = requestDetails.getHeader("Authorization");
     if (authHeader == null) {
-      throw buildException(null, IssueType.LOGIN,
+      throw buildException(Optional.empty(), IssueType.LOGIN,
           AuthenticationException.class);
     }
     if (!authHeader.startsWith("Bearer ")) {
-      throw buildException("Authorization header must use Bearer scheme", IssueType.SECURITY,
-          AuthenticationException.class);
+      throw buildException(Optional.of("Authorization header must use Bearer scheme"),
+          IssueType.SECURITY, AuthenticationException.class);
     }
     return authHeader.replaceFirst("Bearer ", "");
   }
 
-  private void validateToken(String token) {
-    DecodedJWT jwt;
+  private void validateToken(@Nonnull final String token) {
+    final DecodedJWT jwt;
     try {
       jwt = verifier.verify(token);
-    } catch (AlgorithmMismatchException e) {
-      throw buildException("Signing algorithm must be RSA256", IssueType.SECURITY,
+    } catch (final AlgorithmMismatchException e) {
+      throw buildException(Optional.of("Signing algorithm must be RSA256"), IssueType.SECURITY,
           AuthenticationException.class);
-    } catch (SignatureVerificationException e) {
-      throw buildException("Token signature is invalid", IssueType.SECURITY,
+    } catch (final SignatureVerificationException e) {
+      throw buildException(Optional.of("Token signature is invalid"), IssueType.SECURITY,
           AuthenticationException.class);
-    } catch (TokenExpiredException e) {
-      throw buildException("Token is expired", IssueType.SECURITY, AuthenticationException.class);
-    } catch (Exception e) {
-      throw buildException("Token is invalid", IssueType.SECURITY, AuthenticationException.class);
+    } catch (final TokenExpiredException e) {
+      throw buildException(Optional.of("Token is expired"), IssueType.SECURITY,
+          AuthenticationException.class);
+    } catch (final Exception e) {
+      throw buildException(Optional.of("Token is invalid"), IssueType.SECURITY,
+          AuthenticationException.class);
     }
-    String scope = jwt.getClaim("scope").asString();
-    List<String> scopes = scope == null
-                          ? Collections.emptyList()
-                          : Arrays.asList(scope.split(" "));
+    final String scope = jwt.getClaim("scope").asString();
+    final List<String> scopes = scope == null
+                                ? Collections.emptyList()
+                                : Arrays.asList(scope.split(" "));
     if (!scopes.contains("user/*.read")) {
-      throw buildException("Operation is not authorised by token", IssueType.FORBIDDEN,
+      throw buildException(Optional.of("Operation is not authorised by token"), IssueType.FORBIDDEN,
           ForbiddenOperationException.class);
     }
   }
 
-  private BaseServerResponseException buildException(String message, IssueType issueType,
-      Class<? extends BaseServerResponseException> exceptionClass) {
-    OperationOutcome opOutcome = new OperationOutcome();
-    OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
+  @Nonnull
+  private BaseServerResponseException buildException(@Nonnull final Optional<String> message,
+      @Nonnull final IssueType issueType,
+      @Nonnull final Class<? extends BaseServerResponseException> exceptionClass) {
+    final OperationOutcome opOutcome = new OperationOutcome();
+    final OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
     issue.setSeverity(IssueSeverity.ERROR);
-    if (message != null) {
-      issue.setDiagnostics(message);
-    }
+    message.ifPresent(issue::setDiagnostics);
     issue.setCode(issueType);
     opOutcome.addIssue(issue);
 
-    BaseServerResponseException exception;
-    // This is required to get around the fact that HAPI does not allow for the use of an OperationOutcome resource within the body of a 401 response.
+    final BaseServerResponseException exception;
+    // This is required to get around the fact that HAPI does not allow for the use of an 
+    // OperationOutcome resource within the body of a 401 response.
     if (exceptionClass == AuthenticationException.class) {
-      exception = new UnclassifiedServerFailureException(401, message, opOutcome);
+      exception = new UnclassifiedServerFailureException(401, message.orElse(null), opOutcome);
     } else {
       try {
-        Constructor<? extends BaseServerResponseException> constructor = exceptionClass
+        final Constructor<? extends BaseServerResponseException> constructor = exceptionClass
             .getConstructor(String.class, IBaseOperationOutcome.class);
-        exception = constructor.newInstance(message, opOutcome);
-      } catch (NoSuchMethodException | InstantiationException | InvocationTargetException | IllegalAccessException e) {
+        exception = constructor.newInstance(message.orElse(null), opOutcome);
+      } catch (final NoSuchMethodException | InstantiationException |
+          InvocationTargetException | IllegalAccessException e) {
         return new InternalErrorException("Unexpected error occurred", e);
       }
     }
@@ -149,31 +183,35 @@ public class AuthorisationInterceptor {
 
   private static class AuthorisationKeyProvider implements RSAKeyProvider {
 
+    @Nonnull
     private final JwkProvider jwkProvider;
 
-    public AuthorisationKeyProvider(JwkProvider jwkProvider) {
+    private AuthorisationKeyProvider(@Nonnull final JwkProvider jwkProvider) {
       this.jwkProvider = jwkProvider;
     }
 
     @Override
-    public RSAPublicKey getPublicKeyById(String keyId) {
-      Jwk jwk;
-      RSAPublicKey publicKey;
+    @Nullable
+    public RSAPublicKey getPublicKeyById(@Nonnull final String keyId) {
+      final Jwk jwk;
+      final RSAPublicKey publicKey;
       try {
         jwk = jwkProvider.get(keyId);
         publicKey = (RSAPublicKey) jwk.getPublicKey();
-      } catch (JwkException e) {
+      } catch (final JwkException e) {
         return null;
       }
       return publicKey;
     }
 
     @Override
+    @Nullable
     public RSAPrivateKey getPrivateKey() {
       return null;
     }
 
     @Override
+    @Nullable
     public String getPrivateKeyId() {
       return null;
     }

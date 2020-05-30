@@ -10,33 +10,29 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.Serializable;
+import javax.annotation.Nonnull;
+import org.springframework.stereotype.Component;
 
 /**
  * Uses the FhirEncoders class to create a FhirContext. Used for code that runs on Spark workers.
  *
  * @author John Grimes
  */
+@Component
 public class FhirContextFactory implements Serializable {
 
-  private FhirVersionEnum fhirVersion;
+  private static final long serialVersionUID = 3704272891614244206L;
 
-  public FhirContextFactory() {
+  @Nonnull
+  private final FhirVersionEnum fhirVersion;
+
+  private FhirContextFactory(@Nonnull final FhirContext fhirContext) {
+    this.fhirVersion = fhirContext.getVersion().getVersion();
   }
 
-  public FhirContextFactory(FhirVersionEnum fhirVersion) {
-    this.fhirVersion = fhirVersion;
-  }
-
+  @Nonnull
   public FhirContext build() {
     return FhirEncoders.contextFor(fhirVersion);
-  }
-
-  public FhirVersionEnum getFhirVersion() {
-    return fhirVersion;
-  }
-
-  public void setFhirVersion(FhirVersionEnum fhirVersion) {
-    this.fhirVersion = fhirVersion;
   }
 
 }

@@ -7,8 +7,10 @@
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
 /**
@@ -19,68 +21,45 @@ import org.slf4j.Logger;
  */
 public class TerminologyClientFactory implements Serializable {
 
-  private FhirVersionEnum fhirVersion;
-  private String terminologyServerUrl;
-  private int socketTimeout;
-  private boolean verboseRequestLogging;
+  private static final long serialVersionUID = 8862251697418622614L;
 
-  public TerminologyClientFactory() {
-  }
+  @Nonnull
+  private final FhirVersionEnum fhirVersion;
 
-  public TerminologyClientFactory(FhirVersionEnum fhirVersion, String terminologyServerUrl,
-      int socketTimeout, boolean verboseRequestLogging) {
-    this.fhirVersion = fhirVersion;
+  @Nonnull
+  private final String terminologyServerUrl;
+
+  private final int socketTimeout;
+
+  private final boolean verboseRequestLogging;
+
+  /**
+   * @param fhirContext the {@link FhirContext} used to build the client
+   * @param terminologyServerUrl the URL of the terminology server this client will communicate
+   * with
+   * @param socketTimeout the number of milliseconds to wait for response data
+   * @param verboseRequestLogging whether to log out verbose details of each request
+   */
+  public TerminologyClientFactory(@Nonnull final FhirContext fhirContext,
+      @Nonnull final String terminologyServerUrl, final int socketTimeout,
+      final boolean verboseRequestLogging) {
+    this.fhirVersion = fhirContext.getVersion().getVersion();
     this.terminologyServerUrl = terminologyServerUrl;
     this.socketTimeout = socketTimeout;
     this.verboseRequestLogging = verboseRequestLogging;
   }
 
-  public TerminologyClient build(Logger logger) {
+  /**
+   * Builds a new instance.
+   *
+   * @param logger a {@link Logger} to use for logging
+   * @return a shiny new TerminologyClient instance
+   */
+  @Nonnull
+  public TerminologyClient build(@Nonnull final Logger logger) {
     return TerminologyClient
         .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
             verboseRequestLogging, logger);
-  }
-
-  public FhirVersionEnum getFhirVersion() {
-    return fhirVersion;
-  }
-
-  public void setFhirVersion(FhirVersionEnum fhirVersion) {
-    this.fhirVersion = fhirVersion;
-  }
-
-  public String getTerminologyServerUrl() {
-    return terminologyServerUrl;
-  }
-
-  public void setTerminologyServerUrl(String terminologyServerUrl) {
-    this.terminologyServerUrl = terminologyServerUrl;
-  }
-
-  public int getSocketTimeout() {
-    return socketTimeout;
-  }
-
-  public void setSocketTimeout(int socketTimeout) {
-    this.socketTimeout = socketTimeout;
-  }
-
-  public boolean isVerboseRequestLogging() {
-    return verboseRequestLogging;
-  }
-
-  public void setVerboseRequestLogging(boolean verboseRequestLogging) {
-    this.verboseRequestLogging = verboseRequestLogging;
-  }
-
-  @Override
-  public String toString() {
-    return "TerminologyClientFactory{" +
-        "fhirVersion=" + fhirVersion +
-        ", terminologyServerUrl='" + terminologyServerUrl + '\'' +
-        ", socketTimeout=" + socketTimeout +
-        ", verboseRequestLogging=" + verboseRequestLogging +
-        '}';
   }
 
 }

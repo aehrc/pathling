@@ -8,6 +8,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.3.0.RELEASE</version>
+    <relativePath/>
+  </parent>
+
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
   <packaging>pom</packaging>
@@ -38,13 +45,14 @@
 
   <properties>
     <project.majorVersion>2</project.majorVersion>
-    <hapiFhirVersion>4.2.0</hapiFhirVersion>
-    <sparkVersion>2.4.5</sparkVersion>
-    <sparkScalaVersion>2.11</sparkScalaVersion>
-    <dockerJavaVersion>3.2.1</dockerJavaVersion>
-    <hadoopVersion>2.7.7</hadoopVersion>
-    <hadoopMirror>https://mirror.aarnet.edu.au/pub/apache/hadoop/common</hadoopMirror>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    
+    <pathling.hapiFhirVersion>4.2.0</pathling.hapiFhirVersion>
+    <pathling.sparkVersion>2.4.5</pathling.sparkVersion>
+    <pathling.sparkScalaVersion>2.11</pathling.sparkScalaVersion>
+    <pathling.dockerJavaVersion>3.2.1</pathling.dockerJavaVersion>
+    <pathling.hadoopVersion>2.7.7</pathling.hadoopVersion>
+    <pathling.hadoopMirror>https://mirror.aarnet.edu.au/pub/apache/hadoop/common</pathling.hadoopMirror>
   </properties>
 
   <modules>
@@ -65,32 +73,32 @@
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-base</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-structures-r4</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-validation-resources-r4</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-server</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-client</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>org.hl7.fhir.utilities</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <!-- Woodstox is used by HAPI for XML processing -->
       <dependency>
@@ -102,8 +110,8 @@
       <!-- Apache Spark -->
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-core_${sparkScalaVersion}</artifactId>
-        <version>${sparkVersion}</version>
+        <artifactId>spark-core_${pathling.sparkScalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
         <exclusions>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -113,28 +121,28 @@
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
-        <version>${sparkVersion}</version>
+        <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-catalyst_${sparkScalaVersion}</artifactId>
-        <version>${sparkVersion}</version>
+        <artifactId>spark-catalyst_${pathling.sparkScalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-hive_${sparkScalaVersion}</artifactId>
-        <version>${sparkVersion}</version>
+        <artifactId>spark-hive_${pathling.sparkScalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client</artifactId>
-        <version>${hadoopVersion}</version>
+        <version>${pathling.hadoopVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-aws</artifactId>
-        <version>${hadoopVersion}</version>
+        <version>${pathling.hadoopVersion}</version>
         <exclusions>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -146,24 +154,24 @@
           </exclusion>
         </exclusions>
       </dependency>
+      <!-- The Spring Boot parent POM overrides these dependencies of Spark Catalyst to an 
+      incompatible version.-->
+      <dependency>
+        <groupId>org.codehaus.janino</groupId>
+        <artifactId>janino</artifactId>
+        <version>3.0.9</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.janino</groupId>
+        <artifactId>commons-compiler</artifactId>
+        <version>3.0.9</version>
+      </dependency>
 
       <!-- Encoders -->
       <dependency>
         <groupId>au.csiro.pathling</groupId>
         <artifactId>encoders</artifactId>
         <version>${project.version}</version>
-      </dependency>
-
-      <!-- Logging -->
-      <dependency>
-        <artifactId>logback-classic</artifactId>
-        <groupId>ch.qos.logback</groupId>
-        <version>1.2.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>1.7.30</version>
       </dependency>
 
       <!-- Error monitoring -->
@@ -175,40 +183,24 @@
 
       <!-- Testing -->
       <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.13</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.assertj</groupId>
-        <artifactId>assertj-core</artifactId>
-        <version>3.16.1</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.skyscreamer</groupId>
-        <artifactId>jsonassert</artifactId>
-        <version>1.5.0</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-core</artifactId>
-        <version>3.3.3</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>com.github.docker-java</groupId>
         <artifactId>docker-java</artifactId>
-        <version>${dockerJavaVersion}</version>
+        <version>${pathling.dockerJavaVersion}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>com.github.docker-java</groupId>
         <artifactId>docker-java-transport-okhttp</artifactId>
-        <version>${dockerJavaVersion}</version>
+        <version>${pathling.dockerJavaVersion}</version>
         <scope>test</scope>
+      </dependency>
+
+      <!-- Lombok -->
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>1.18.12</version>
+        <scope>provided</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
