@@ -12,7 +12,7 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>2.3.0.RELEASE</version>
-    <relativePath/>
+    <relativePath />
   </parent>
 
   <groupId>au.csiro.pathling</groupId>
@@ -41,7 +41,7 @@
     </license>
   </licenses>
 
-  <version>2.0.0</version>
+  <version>3.0.0-SNAPSHOT</version>
 
   <properties>
     <project.majorVersion>2</project.majorVersion>
