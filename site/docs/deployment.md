@@ -22,6 +22,8 @@ forms are configured in the same way, through environment variables.
 - `PATHLING_VERBOSE_REQUEST_LOGGING` - (default: `false`) Setting this option to
   `true` will enable additional logging of the details of requests to the
   server, and between the server and the terminology service.
+- `JAVA_OPTS` - (default: `-Xmx2g`) Allows for the configuration of arbitrary 
+  options on the Java VM that Pathling runs within.
 
 ### Storage
 

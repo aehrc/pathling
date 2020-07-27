@@ -25,10 +25,12 @@ RUN mkdir -p /usr/share/staging/test
 
 ARG VERSION
 ENV PATHLING_VERSION=$VERSION
+ENV JAVA_OPTS=-Xmx2g
 
-CMD ["java", "-ea", "-jar", "/fhir-server.jar", "-Djava.library.path=/opt/hadoop/lib/native"]
+COPY run.sh /
+CMD ["bash", "/run.sh"]
 
 HEALTHCHECK --interval=10s --timeout=1s --start-period=25s --retries=3 \
     CMD curl -v --fail http://localhost:8080/fhir/metadata || exit 1
-    
+
 EXPOSE 8080
