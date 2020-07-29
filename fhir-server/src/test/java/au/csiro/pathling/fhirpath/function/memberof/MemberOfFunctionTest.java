@@ -145,7 +145,7 @@ class MemberOfFunctionTest {
         new ValidateCodeResult(4, false),
         new ValidateCodeResult(5, true)
     );
-    assertEquals(results, expectedResults);
+    assertEquals(expectedResults, results);
   }
 
   @Test
@@ -256,11 +256,11 @@ class MemberOfFunctionTest {
         new ValidateCodeResult(3, true),
         new ValidateCodeResult(4, true),
         new ValidateCodeResult(5, false),
-        new ValidateCodeResult(6, false)
+        new ValidateCodeResult(6, true)
     );
-    assertEquals(results, expectedResults);
+    assertEquals(expectedResults, results);
   }
-  
+
   //
   // @Test
   // public void throwsErrorIfInputTypeIsUnsupported() {
