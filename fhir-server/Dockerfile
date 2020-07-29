@@ -19,7 +19,7 @@ RUN cd /tmp && \
 RUN cd /opt && ln -s hadoop-${HADOOP_VERSION} hadoop
 
 ARG JAR_FILE
-COPY $JAR_FILE /fhir-server.jar
+COPY $JAR_FILE /pathling.jar
 
 RUN mkdir -p /usr/share/staging/test
 
