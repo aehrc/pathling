@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertEquals;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.assertions.Assertions.assertThatExceptionOfType;
 import static au.csiro.pathling.test.assertions.Assertions.assertTrue;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
@@ -36,6 +37,7 @@ import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodeMapperAnswerer;
 import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodeableConceptTxAnswerer;
 import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodingTxAnswerer;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -261,29 +263,25 @@ class MemberOfFunctionTest {
     assertEquals(expectedResults, results);
   }
 
-  //
-  // @Test
-  // public void throwsErrorIfInputTypeIsUnsupported() {
-  //   ParsedExpression input = new PrimitiveNonLiteralPathBuilder(FHIRDefinedType.STRING,
-  //       FhirPathType.STRING)
-  //       .build();
-  //   input.setFhirPath("onsetString");
-  //   ParsedExpression argument = PrimitiveNonLiteralPathBuilder.literalString(MY_VALUE_SET_URL);
-  //
-  //   ParserContext parserContext = new ParserContext();
-  //   parserContext.setTerminologyClientFactory(mock(TerminologyClientFactory.class));
-  //
-  //   FunctionInput memberOfInput = new FunctionInput();
-  //   memberOfInput.setContext(parserContext);
-  //   memberOfInput.setInput(input);
-  //   memberOfInput.getArguments().add(argument);
-  //
-  //   MemberOfFunction memberOfFunction = new MemberOfFunction();
-  //   assertThatExceptionOfType(InvalidRequestException.class)
-  //       .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
-  //       .withMessage("Input to memberOf function is of unsupported type: onsetString");
-  // }
-  //
+
+  @Test
+  public void throwsErrorIfInputTypeIsUnsupported() {
+    final FhirPath mockContext = mock(FhirPath.class);
+    final FhirPath input = StringLiteralPath.fromString("some string", mockContext);
+    final FhirPath argument = StringLiteralPath.fromString(MY_VALUE_SET_URL, mockContext);
+
+    final ParserContext parserContext = TestParserContext.builder()
+        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .build();
+
+    final NamedFunctionInput memberOfInput = new NamedFunctionInput(parserContext, input,
+        Collections.singletonList(argument));
+
+    assertThatExceptionOfType(InvalidRequestException.class,
+        () -> new MemberOfFunction().invoke(memberOfInput),
+        "Input to memberOf function is of unsupported type: onsetString");
+  }
+
   // @Test
   // public void throwsErrorIfArgumentIsNotString() {
   //   ParsedExpression input = new ComplexNonLiteralPathBuilder(FHIRDefinedType.CODEABLECONCEPT)
