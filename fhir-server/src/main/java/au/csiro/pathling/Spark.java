@@ -31,6 +31,7 @@ public class Spark {
   @Autowired
   @Nonnull
   public static SparkSession build(@Nonnull final Configuration configuration) {
+    log.info("Creating Spark session");
     final SparkSession spark = SparkSession.builder()
         .appName("pathling-server")
         .config("spark.master", configuration.getSparkMasterUrl())
