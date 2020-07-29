@@ -9,8 +9,12 @@ package au.csiro.pathling.fhirpath.function.memberof;
 import static au.csiro.pathling.test.assertions.Assertions.assertEquals;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.assertions.Assertions.assertTrue;
+import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
+import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
+import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
+import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -21,6 +25,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -29,12 +34,14 @@ import au.csiro.pathling.test.TestElementPath;
 import au.csiro.pathling.test.TestParserContext;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodeMapperAnswerer;
+import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodeableConceptTxAnswerer;
 import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodingTxAnswerer;
 import java.util.*;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Tag;
@@ -141,129 +148,119 @@ class MemberOfFunctionTest {
     assertEquals(results, expectedResults);
   }
 
-  // @Test
-  // public void memberOfCodeableConcept() {
-  //   Coding coding1 = new Coding(LOINC_URL, "10337-4", "Procollagen type I [Mass/volume] in Serum");
-  //   Coding coding2 = new Coding(LOINC_URL, "10428-1",
-  //       "Varicella zoster virus immune globulin given [Volume]");
-  //   Coding coding3 = new Coding(LOINC_URL, "10555-1", null);
-  //   Coding coding4 = new Coding(LOINC_URL, "10665-8",
-  //       "Fungus colony count [#/volume] in Unspecified specimen by Environmental culture");
-  //   Coding coding5 = new Coding(SNOMED_URL, "416399002",
-  //       "Procollagen type I amino-terminal propeptide level");
-  //
-  //   CodeableConcept codeableConcept1 = new CodeableConcept(coding1);
-  //   codeableConcept1.addCoding(coding5);
-  //   CodeableConcept codeableConcept2 = new CodeableConcept(coding2);
-  //   CodeableConcept codeableConcept3 = new CodeableConcept(coding3);
-  //   CodeableConcept codeableConcept4 = new CodeableConcept(coding3);
-  //   CodeableConcept codeableConcept5 = new CodeableConcept(coding4);
-  //   CodeableConcept codeableConcept6 = new CodeableConcept(coding1);
-  //
-  //   ParsedExpression inputExpression = new ComplexNonLiteralPathBuilder(
-  //       FHIRDefinedType.CODEABLECONCEPT)
-  //       .withColumn("789wxyz_id", DataTypes.StringType)
-  //       .withStructTypeColumns(SparkHelpers.codeableConceptStructType())
-  //       .withRow("DiagnosticReport/xyz1", SparkHelpers.rowFromCodeableConcept(codeableConcept1))
-  //       .withRow("DiagnosticReport/xyz2", SparkHelpers.rowFromCodeableConcept(codeableConcept2))
-  //       .withRow("DiagnosticReport/xyz3", SparkHelpers.rowFromCodeableConcept(codeableConcept3))
-  //       .withRow("DiagnosticReport/xyz4", SparkHelpers.rowFromCodeableConcept(codeableConcept4))
-  //       .withRow("DiagnosticReport/xyz5", SparkHelpers.rowFromCodeableConcept(codeableConcept5))
-  //       .withRow("DiagnosticReport/xyz6", SparkHelpers.rowFromCodeableConcept(codeableConcept6))
-  //       .buildWithStructValue("789wxyz");
-  //   inputExpression.setSingular(true);
-  //   BaseRuntimeChildDefinition definition = FhirHelpers.getFhirContext()
-  //       .getResourceDefinition("DiagnosticReport")
-  //       .getChildByName("code");
-  //   inputExpression.setDefinition(definition, "code");
-  //   ParsedExpression argumentExpression = PrimitiveNonLiteralPathBuilder
-  //       .literalString(MY_VALUE_SET_URL);
-  //
-  //   // Create a mock terminology client.
-  //   TerminologyClient terminologyClient = mock(TerminologyClient.class);
-  //   ValidateCodeableConceptTxAnswerer validateCodeableConceptTxAnswerer = new ValidateCodeableConceptTxAnswerer(
-  //       codeableConcept1, codeableConcept3, codeableConcept4);
-  //   when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
-  //   when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodeableConceptTxAnswerer);
-  //
-  //   // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
-  //   TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
-  //   when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
-  //
-  //   // Create a mock ValidateCodeMapper.
-  //   ValidateCodeMapper mockCodeMapper = mock(ValidateCodeMapper.class);
-  //   ValidateCodeMapperAnswerer validateCodeMapperAnswerer = new ValidateCodeMapperAnswerer(true,
-  //       false, true, true, false, false);
-  //   //noinspection unchecked
-  //   when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
-  //
-  //   // Prepare the inputs to the function.
-  //   ParserContext parserContext = new ParserContext();
-  //   parserContext.setTerminologyClient(terminologyClient);
-  //   parserContext.setTerminologyClientFactory(terminologyClientFactory);
-  //
-  //   FunctionInput memberOfInput = new FunctionInput();
-  //   String inputFhirPath = "memberOf('" + MY_VALUE_SET_URL + "')";
-  //   memberOfInput.setExpression(inputFhirPath);
-  //   memberOfInput.setContext(parserContext);
-  //   memberOfInput.setInput(inputExpression);
-  //   memberOfInput.getArguments().add(argumentExpression);
-  //
-  //   // Invoke the function.
-  //   MemberOfFunction memberOfFunction = new MemberOfFunction(mockCodeMapper);
-  //   ParsedExpression result = memberOfFunction.invoke(memberOfInput);
-  //
-  //   // Check the result.
-  //   au.csiro.pathling.test.assertions.Assertions.assertThat(result).hasFhirPath(inputFhirPath);
-  //   au.csiro.pathling.test.assertions.Assertions
-  //       .assertThat(result).isOfType(FHIRDefinedType.BOOLEAN, FhirPathType.BOOLEAN);
-  //   au.csiro.pathling.test.assertions.Assertions.assertThat(result).isPrimitive();
-  //   au.csiro.pathling.test.assertions.Assertions.assertThat(result).isSingular();
-  //   au.csiro.pathling.test.assertions.Assertions.assertThat(result).isSelection();
-  //
-  //   // Test the mapper.
-  //   ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper("xyz",
-  //       terminologyClientFactory,
-  //       MY_VALUE_SET_URL, FHIRDefinedType.CODEABLECONCEPT);
-  //   Row inputCodeableConceptRow1 = RowFactory
-  //       .create(1, SparkHelpers.rowFromCodeableConcept(codeableConcept1));
-  //   Row inputCodeableConceptRow2 = RowFactory
-  //       .create(2, SparkHelpers.rowFromCodeableConcept(codeableConcept2));
-  //   Row inputCodeableConceptRow3 = RowFactory
-  //       .create(3, SparkHelpers.rowFromCodeableConcept(codeableConcept3));
-  //   Row inputCodeableConceptRow4 = RowFactory
-  //       .create(4, SparkHelpers.rowFromCodeableConcept(codeableConcept4));
-  //   Row inputCodeableConceptRow5 = RowFactory
-  //       .create(5, SparkHelpers.rowFromCodeableConcept(codeableConcept5));
-  //   Row inputCodeableConceptRow6 = RowFactory
-  //       .create(5, SparkHelpers.rowFromCodeableConcept(codeableConcept6));
-  //   List<Row> inputCodeableConceptRows = Arrays
-  //       .asList(inputCodeableConceptRow1, inputCodeableConceptRow2, inputCodeableConceptRow3,
-  //           inputCodeableConceptRow4, inputCodeableConceptRow5, inputCodeableConceptRow6);
-  //   List<ValidateCodeResult> results = new ArrayList<>();
-  //   validateCodeMapper.call(inputCodeableConceptRows.iterator()).forEachRemaining(results::add);
-  //
-  //   // Check the result dataset.
-  //   Assertions.assertThat(results.size()).isEqualTo(6);
-  //   ValidateCodeResult validateResult = results.get(0);
-  //   Assertions.assertThat(validateResult.getHash()).isEqualTo(1);
-  //   Assertions.assertThat(validateResult.isResult()).isEqualTo(true);
-  //   validateResult = results.get(1);
-  //   Assertions.assertThat(validateResult.getHash()).isEqualTo(2);
-  //   Assertions.assertThat(validateResult.isResult()).isEqualTo(false);
-  //   validateResult = results.get(2);
-  //   Assertions.assertThat(validateResult.getHash()).isEqualTo(3);
-  //   Assertions.assertThat(validateResult.isResult()).isEqualTo(true);
-  //   validateResult = results.get(3);
-  //   Assertions.assertThat(validateResult.getHash()).isEqualTo(4);
-  //   Assertions.assertThat(validateResult.isResult()).isEqualTo(true);
-  //   validateResult = results.get(4);
-  //   Assertions.assertThat(validateResult.getHash()).isEqualTo(5);
-  //   Assertions.assertThat(validateResult.isResult()).isEqualTo(false);
-  //   validateResult = results.get(4);
-  //   Assertions.assertThat(validateResult.getHash()).isEqualTo(5);
-  //   Assertions.assertThat(validateResult.isResult()).isEqualTo(false);
-  // }
+  @Test
+  public void memberOfCodeableConcept() {
+    final Coding coding1 = new Coding(LOINC_URL, "10337-4",
+        "Procollagen type I [Mass/volume] in Serum");
+    final Coding coding2 = new Coding(LOINC_URL, "10428-1",
+        "Varicella zoster virus immune globulin given [Volume]");
+    final Coding coding3 = new Coding(LOINC_URL, "10555-1", null);
+    final Coding coding4 = new Coding(LOINC_URL, "10665-8",
+        "Fungus colony count [#/volume] in Unspecified specimen by Environmental culture");
+    final Coding coding5 = new Coding(SNOMED_URL, "416399002",
+        "Procollagen type I amino-terminal propeptide level");
+
+    final CodeableConcept codeableConcept1 = new CodeableConcept(coding1);
+    codeableConcept1.addCoding(coding5);
+    final CodeableConcept codeableConcept2 = new CodeableConcept(coding2);
+    final CodeableConcept codeableConcept3 = new CodeableConcept(coding3);
+    final CodeableConcept codeableConcept4 = new CodeableConcept(coding3);
+    final CodeableConcept codeableConcept5 = new CodeableConcept(coding4);
+    final CodeableConcept codeableConcept6 = new CodeableConcept(coding1);
+
+    final Optional<ElementDefinition> optionalDefinition = FhirHelpers
+        .getChildOfResource("DiagnosticReport", "code");
+    assertTrue(optionalDefinition.isPresent());
+    final ElementDefinition definition = optionalDefinition.get();
+
+    final Dataset<Row> inputDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withStructTypeColumns(codeableConceptStructType())
+        .withRow("DiagnosticReport/1", rowFromCodeableConcept(codeableConcept1))
+        .withRow("DiagnosticReport/2", rowFromCodeableConcept(codeableConcept2))
+        .withRow("DiagnosticReport/3", rowFromCodeableConcept(codeableConcept3))
+        .withRow("DiagnosticReport/4", rowFromCodeableConcept(codeableConcept4))
+        .withRow("DiagnosticReport/5", rowFromCodeableConcept(codeableConcept5))
+        .withRow("DiagnosticReport/6", rowFromCodeableConcept(codeableConcept6))
+        .buildWithStructValue();
+    final ElementPath inputExpression = TestElementPath
+        .build("DiagnosticReport.code", inputDataset, true, definition);
+
+    final StringLiteralPath argumentExpression = StringLiteralPath
+        .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
+
+    // Create a mock terminology client.
+    final TerminologyClient terminologyClient = mock(TerminologyClient.class);
+    final Answer<Bundle> validateCodeableConceptTxAnswerer = new ValidateCodeableConceptTxAnswerer(
+        codeableConcept1, codeableConcept3, codeableConcept4);
+    when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
+    when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodeableConceptTxAnswerer);
+
+    // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
+    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
+    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
+
+    // Create a mock ValidateCodeMapper.
+    final ValidateCodeMapper mockCodeMapper = mock(ValidateCodeMapper.class);
+    final Answer<Iterator<ValidateCodeResult>> validateCodeMapperAnswerer = new ValidateCodeMapperAnswerer(
+        true,
+        false, true, true, false, false);
+    //noinspection unchecked
+    when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
+
+    // Prepare the inputs to the function.
+    final ParserContext parserContext = TestParserContext.builder()
+        .terminologyClient(terminologyClient)
+        .terminologyClientFactory(terminologyClientFactory)
+        .build();
+
+    final NamedFunctionInput memberOfInput = new NamedFunctionInput(parserContext, inputExpression,
+        Collections.singletonList(argumentExpression));
+
+    // Invoke the function.
+    final FhirPath result = new MemberOfFunction(mockCodeMapper).invoke(memberOfInput);
+
+    // Check the result.
+    assertTrue(result instanceof BooleanPath);
+    assertThat((BooleanPath) result)
+        .hasExpression("DiagnosticReport.code.memberOf('" + MY_VALUE_SET_URL + "')")
+        .isSingular()
+        .hasFhirType(FHIRDefinedType.BOOLEAN);
+
+    // Test the mapper.
+    final ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper("xyz",
+        terminologyClientFactory,
+        MY_VALUE_SET_URL, FHIRDefinedType.CODEABLECONCEPT);
+    final Row inputCodeableConceptRow1 = RowFactory
+        .create(1, rowFromCodeableConcept(codeableConcept1));
+    final Row inputCodeableConceptRow2 = RowFactory
+        .create(2, rowFromCodeableConcept(codeableConcept2));
+    final Row inputCodeableConceptRow3 = RowFactory
+        .create(3, rowFromCodeableConcept(codeableConcept3));
+    final Row inputCodeableConceptRow4 = RowFactory
+        .create(4, rowFromCodeableConcept(codeableConcept4));
+    final Row inputCodeableConceptRow5 = RowFactory
+        .create(5, rowFromCodeableConcept(codeableConcept5));
+    final Row inputCodeableConceptRow6 = RowFactory
+        .create(6, rowFromCodeableConcept(codeableConcept6));
+    final List<Row> inputCodeableConceptRows = Arrays
+        .asList(inputCodeableConceptRow1, inputCodeableConceptRow2, inputCodeableConceptRow3,
+            inputCodeableConceptRow4, inputCodeableConceptRow5, inputCodeableConceptRow6);
+    final List<ValidateCodeResult> results = new ArrayList<>();
+    validateCodeMapper.call(inputCodeableConceptRows.iterator()).forEachRemaining(results::add);
+
+    // Check the result dataset.
+    final List<ValidateCodeResult> expectedResults = Arrays.asList(
+        new ValidateCodeResult(1, true),
+        new ValidateCodeResult(2, false),
+        new ValidateCodeResult(3, true),
+        new ValidateCodeResult(4, true),
+        new ValidateCodeResult(5, false),
+        new ValidateCodeResult(6, false)
+    );
+    assertEquals(results, expectedResults);
+  }
+  
   //
   // @Test
   // public void throwsErrorIfInputTypeIsUnsupported() {

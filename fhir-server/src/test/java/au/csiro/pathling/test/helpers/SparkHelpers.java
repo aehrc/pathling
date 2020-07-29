@@ -67,7 +67,7 @@ public abstract class SparkHelpers {
   }
 
   @Nonnull
-  private static StructType codeableConceptStructType() {
+  public static StructType codeableConceptStructType() {
     final Metadata metadata = new MetadataBuilder().build();
     final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
     final StructField coding = new StructField("coding",
