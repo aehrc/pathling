@@ -93,10 +93,11 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   @Nonnull
   public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
       @Nonnull final BiFunction<Column, Column, Column> sparkFunction) {
-    // The value columns are converted to native Spark timestamps before comparison.
+    // The value columns are converted to native Spark timestamps before comparison. The reason that
+    // we don't use an explicit format string here is that we require flexibility to accommodate the
+    // optionality of the milliseconds component of the FHIR date time format.
     return target -> sparkFunction
-        .apply(to_timestamp(source.getValueColumn(), DATE_FORMAT.toPattern()),
-            to_timestamp(target.getValueColumn(), DATE_FORMAT.toPattern()));
+        .apply(to_timestamp(source.getValueColumn()), to_timestamp(target.getValueColumn()));
   }
 
   public static SimpleDateFormat getDateFormat() {

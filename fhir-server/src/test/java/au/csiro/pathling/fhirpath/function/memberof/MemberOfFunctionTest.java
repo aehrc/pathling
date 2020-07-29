@@ -37,12 +37,14 @@ import org.apache.spark.sql.RowFactory;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 
 /**
  * @author John Grimes
  */
+@Tag("UnitTest")
 class MemberOfFunctionTest {
 
   private static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";

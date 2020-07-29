@@ -17,7 +17,6 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.TestElementPath;
 import au.csiro.pathling.test.TestParserContext;
-import au.csiro.pathling.test.assertions.Assertions;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
@@ -43,9 +42,9 @@ class ComparisonOperatorTest {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn("value", DataTypes.StringType)
-        .withRow("Patient/abc1", "2013-06-10T15:33:22")
-        .withRow("Patient/abc2", "2014-09-25T12:04:19")
-        .withRow("Patient/abc3", "2018-05-18T11:03:55")
+        .withRow("Patient/abc1", "2013-06-10T15:33:22Z")
+        .withRow("Patient/abc2", "2014-09-25T22:04:19+10:00")
+        .withRow("Patient/abc3", "2018-05-18T11:03:55-05:00")
         .build();
     final ElementPath leftPath = TestElementPath
         .build("authoredOn", leftDataset, true, leftDefinition);
@@ -58,9 +57,9 @@ class ComparisonOperatorTest {
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn("value", DataTypes.StringType)
-        .withRow("Patient/abc1", "2013-06-10T12:33:22")
-        .withRow("Patient/abc2", "2014-09-25T12:04:19")
-        .withRow("Patient/abc3", "2018-05-19T11:03:55")
+        .withRow("Patient/abc1", "2013-06-10T12:33:22Z")
+        .withRow("Patient/abc2", "2014-09-25T12:04:19Z")
+        .withRow("Patient/abc3", "2018-05-19T11:03:55.123Z")
         .build();
     final ElementPath rightPath = TestElementPath
         .build("reverseResolve(Condition.subject).onsetDateTime", rightDataset, true,
@@ -73,7 +72,7 @@ class ComparisonOperatorTest {
     final FhirPath result = lessThan.invoke(comparisonInput);
 
     assertTrue(result instanceof BooleanPath);
-    Assertions.assertThat((ElementPath) result)
+    assertThat((ElementPath) result)
         .hasExpression("authoredOn <= reverseResolve(Condition.subject).onsetDateTime")
         .isSingular()
         .hasFhirType(FHIRDefinedType.BOOLEAN);
