@@ -56,6 +56,13 @@ public class DatasetBuilder {
   }
 
   @Nonnull
+  public DatasetBuilder withValueColumn(@Nonnull final DataType dataType) {
+    final StructField column = new StructField("value", dataType, true, metadata);
+    datasetColumns.add(column);
+    return this;
+  }
+
+  @Nonnull
   public DatasetBuilder withTypeColumn() {
     final StructField column = new StructField("type", DataTypes.StringType, true, metadata);
     datasetColumns.add(column);

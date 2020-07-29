@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Optional;
@@ -68,11 +69,16 @@ public class TestElementPath extends ElementPath {
       final Method elementPathConstructor = ElementPath.class
           .getDeclaredMethod("getInstance", String.class, Dataset.class, Column.class, Column.class,
               boolean.class, FHIRDefinedType.class);
+      final Field definitionField = ElementPath.class.getDeclaredField("definition");
       elementPathConstructor.setAccessible(true);
-      return (ElementPath) elementPathConstructor
+      definitionField.setAccessible(true);
+
+      final ElementPath path = (ElementPath) elementPathConstructor
           .invoke(ElementPath.class, expression, dataset, idAndValueColumns.getId(),
               idAndValueColumns.getValue(), singular, fhirType.get());
-    } catch (final InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+      definitionField.set(path, Optional.of(definition));
+      return path;
+    } catch (final InvocationTargetException | NoSuchMethodException | IllegalAccessException | NoSuchFieldException e) {
       throw new RuntimeException("Problem creating TestElementPath", e);
     }
   }

@@ -67,7 +67,7 @@ class ReverseResolveFunctionTest {
 
     final DatasetBuilder encounterDatasetBuilder = new DatasetBuilder()
         .withIdColumn()
-        .withColumn("status", DataTypes.StringType);
+        .withValueColumn(DataTypes.StringType);
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource("Encounter", "subject");

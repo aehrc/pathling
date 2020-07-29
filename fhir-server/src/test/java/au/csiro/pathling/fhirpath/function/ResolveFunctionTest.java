@@ -75,7 +75,7 @@ class ResolveFunctionTest {
 
     final Dataset<Row> episodeOfCareDataset = new DatasetBuilder()
         .withIdColumn()
-        .withColumn("status", DataTypes.StringType)
+        .withValueColumn(DataTypes.StringType)
         .withRow("EpisodeOfCare/abc1", "planned")
         .withRow("EpisodeOfCare/abc2", "waitlist")
         .withRow("EpisodeOfCare/abc3", "active")
@@ -189,7 +189,7 @@ class ResolveFunctionTest {
 
     final Dataset<Row> observationDataset = new DatasetBuilder()
         .withIdColumn()
-        .withColumn("status", DataTypes.StringType)
+        .withValueColumn(DataTypes.StringType)
         .withRow("Observation/abc1", "registered")
         .build();
     when(mockReader.read(ResourceType.OBSERVATION))
@@ -197,7 +197,7 @@ class ResolveFunctionTest {
 
     final Dataset<Row> clinicalImpressionDataset = new DatasetBuilder()
         .withIdColumn()
-        .withColumn("status", DataTypes.StringType)
+        .withValueColumn(DataTypes.StringType)
         .withRow("ClinicalImpression/def1", "in-progress")
         .build();
     when(mockReader.read(ResourceType.CLINICALIMPRESSION))
@@ -233,7 +233,7 @@ class ResolveFunctionTest {
   public void throwExceptionWhenInputNotReference() {
     final Dataset<Row> patientDataset = new DatasetBuilder()
         .withIdColumn()
-        .withColumn("gender", DataTypes.StringType)
+        .withValueColumn(DataTypes.StringType)
         .build();
     final IdAndValueColumns columns = getIdAndValueColumns(patientDataset);
     final FhirPath genderPath = new StringPath("Patient.gender", patientDataset, columns.getId(),

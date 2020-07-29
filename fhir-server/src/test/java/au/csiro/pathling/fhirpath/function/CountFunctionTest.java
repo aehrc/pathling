@@ -83,7 +83,7 @@ class CountFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withColumn("count", DataTypes.LongType)
+        .withValueColumn(DataTypes.LongType)
         .withRow("Patient/abc1", 1L)
         .withRow("Patient/abc2", 1L)
         .withRow("Patient/abc3", 1L)
