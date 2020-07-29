@@ -81,7 +81,9 @@ class OfTypeFunctionTest {
     final ResourcePath argumentPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
 
-    final ParserContext parserContext = TestParserContext.build(inputPath.getIdColumn());
+    final ParserContext parserContext = TestParserContext.builder()
+        .idColumn(inputPath.getIdColumn())
+        .build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));
     final NamedFunction count = NamedFunction.getInstance("ofType");

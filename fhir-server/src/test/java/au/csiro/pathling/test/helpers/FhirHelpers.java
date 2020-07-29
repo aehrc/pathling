@@ -203,9 +203,9 @@ public class FhirHelpers {
 
       for (int i = 0; i < rows.size(); i++) {
         final Row row = (Row) rows.get(i);
-        final ValidateCodeResult result = new ValidateCodeResult();
-        result.setHash(row.getInt(0));
-        result.setResult(expectedResults.get(i));
+        final int hash = row.getInt(0);
+        final boolean resultValue = expectedResults.get(i);
+        final ValidateCodeResult result = new ValidateCodeResult(hash, resultValue);
         results.add(result);
       }
 

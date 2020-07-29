@@ -66,7 +66,7 @@ class ComparisonOperatorTest {
         .build("reverseResolve(Condition.subject).onsetDateTime", rightDataset, true,
             rightDefinition);
 
-    final ParserContext parserContext = TestParserContext.build();
+    final ParserContext parserContext = TestParserContext.builder().build();
     final OperatorInput comparisonInput = new OperatorInput(parserContext, leftPath,
         rightPath);
     final Operator lessThan = Operator.getInstance("<=");

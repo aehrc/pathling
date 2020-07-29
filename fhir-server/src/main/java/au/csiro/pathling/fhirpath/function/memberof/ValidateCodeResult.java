@@ -30,4 +30,13 @@ public class ValidateCodeResult implements Serializable {
     this.hash = hash;
   }
 
+  /**
+   * @param hash The value used for correlating input concepts to results
+   * @param result The boolean result of the operation
+   */
+  public ValidateCodeResult(final int hash, final boolean result) {
+    this.hash = hash;
+    this.result = result;
+  }
+
 }

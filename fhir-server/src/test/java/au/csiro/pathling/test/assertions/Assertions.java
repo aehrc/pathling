@@ -50,6 +50,10 @@ public abstract class Assertions {
     org.junit.jupiter.api.Assertions.assertTrue(condition);
   }
 
+  public static void assertEquals(@Nonnull final Object expected, @Nonnull final Object actual) {
+    org.junit.jupiter.api.Assertions.assertEquals(expected, actual);
+  }
+
   public static void assertJson(@Nonnull final String expectedPath,
       @Nonnull final String actualJson) {
     assertJson(expectedPath, actualJson, JSONCompareMode.NON_EXTENSIBLE);

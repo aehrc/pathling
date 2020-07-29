@@ -11,13 +11,13 @@ import static au.csiro.pathling.test.assertions.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.TestAggregationParserContext;
 import au.csiro.pathling.test.TestParserContext;
@@ -67,7 +67,9 @@ class CountFunctionTest {
     final ResourcePath inputPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "", false);
 
-    final ParserContext parserContext = TestParserContext.build(inputPath.getIdColumn());
+    final ParserContext parserContext = TestParserContext.builder()
+        .idColumn(inputPath.getIdColumn())
+        .build();
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
     final NamedFunction count = NamedFunction.getInstance("count");

@@ -20,6 +20,7 @@ import au.csiro.pathling.test.helpers.SparkHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.SparkSession;
 
@@ -38,65 +39,97 @@ public class TestParserContext extends ParserContext {
   }
 
   @Nonnull
-  public static ParserContext build() {
-    final FhirPath inputContext = mock(FhirPath.class);
-    when(inputContext.getIdColumn()).thenReturn(mock(Column.class));
-    final ThisPath thisContext = mock(ThisPath.class);
-    final FhirContext fhirContext = FhirHelpers.getFhirContext();
-    final SparkSession sparkSession = SparkHelpers.getSparkSession();
-    final ResourceReader resourceReader = mock(ResourceReader.class, new DefaultAnswer());
-    final TerminologyClient terminologyClient = mock(TerminologyClient.class, new DefaultAnswer());
-    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
-        new DefaultAnswer());
-
-    return new TestParserContext(inputContext, Optional.of(thisContext), fhirContext, sparkSession,
-        resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory));
+  public static TestParserContextBuilder builder() {
+    return new TestParserContextBuilder();
   }
 
-  @Nonnull
-  public static ParserContext build(@Nonnull final Column idColumn) {
-    final FhirPath inputContext = mock(FhirPath.class);
-    when(inputContext.getIdColumn()).thenReturn(idColumn);
-    final ThisPath thisContext = mock(ThisPath.class);
-    final FhirContext fhirContext = FhirHelpers.getFhirContext();
-    final SparkSession sparkSession = SparkHelpers.getSparkSession();
-    final ResourceReader resourceReader = mock(ResourceReader.class, new DefaultAnswer());
-    final TerminologyClient terminologyClient = mock(TerminologyClient.class, new DefaultAnswer());
-    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
-        new DefaultAnswer());
+  public static class TestParserContextBuilder {
 
-    return new TestParserContext(inputContext, Optional.of(thisContext), fhirContext, sparkSession,
-        resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory));
+    @Nonnull
+    private FhirPath inputContext;
+
+    @Nullable
+    private ThisPath thisContext;
+
+    @Nonnull
+    private FhirContext fhirContext;
+
+    @Nonnull
+    private SparkSession sparkSession;
+
+    @Nonnull
+    private ResourceReader resourceReader;
+
+    @Nullable
+    private TerminologyClient terminologyClient;
+
+    @Nullable
+    private TerminologyClientFactory terminologyClientFactory;
+
+    private TestParserContextBuilder() {
+      inputContext = mock(FhirPath.class);
+      when(inputContext.getIdColumn()).thenReturn(mock(Column.class));
+      fhirContext = FhirHelpers.getFhirContext();
+      sparkSession = SparkHelpers.getSparkSession();
+      resourceReader = mock(ResourceReader.class, new DefaultAnswer());
+    }
+
+    @Nonnull
+    public TestParserContextBuilder inputContext(@Nonnull final FhirPath inputContext) {
+      this.inputContext = inputContext;
+      return this;
+    }
+
+    @Nonnull
+    public TestParserContextBuilder idColumn(@Nonnull final Column idColumn) {
+      when(inputContext.getIdColumn()).thenReturn(idColumn);
+      return this;
+    }
+
+    @Nonnull
+    public TestParserContextBuilder thisContext(@Nonnull final ThisPath thisContext) {
+      this.thisContext = thisContext;
+      return this;
+    }
+
+    @Nonnull
+    public TestParserContextBuilder fhirContext(@Nonnull final FhirContext fhirContext) {
+      this.fhirContext = fhirContext;
+      return this;
+    }
+
+    @Nonnull
+    public TestParserContextBuilder sparkSession(@Nonnull final SparkSession sparkSession) {
+      this.sparkSession = sparkSession;
+      return this;
+    }
+
+    @Nonnull
+    public TestParserContextBuilder resourceReader(@Nonnull final ResourceReader resourceReader) {
+      this.resourceReader = resourceReader;
+      return this;
+    }
+
+    @Nonnull
+    public TestParserContextBuilder terminologyClient(
+        @Nonnull final TerminologyClient terminologyClient) {
+      this.terminologyClient = terminologyClient;
+      return this;
+    }
+
+    @Nonnull
+    public TestParserContextBuilder terminologyClientFactory(
+        @Nonnull final TerminologyClientFactory terminologyClientFactory) {
+      this.terminologyClientFactory = terminologyClientFactory;
+      return this;
+    }
+
+    @Nonnull
+    public TestParserContext build() {
+      return new TestParserContext(inputContext, Optional.ofNullable(thisContext), fhirContext,
+          sparkSession, resourceReader, Optional.ofNullable(terminologyClient),
+          Optional.ofNullable(terminologyClientFactory));
+    }
+
   }
-
-  @Nonnull
-  public static ParserContext build(@Nonnull final Column idColumn,
-      @Nonnull final ResourceReader resourceReader) {
-    final FhirPath inputContext = mock(FhirPath.class);
-    when(inputContext.getIdColumn()).thenReturn(idColumn);
-    final ThisPath thisContext = mock(ThisPath.class);
-    final FhirContext fhirContext = FhirHelpers.getFhirContext();
-    final SparkSession sparkSession = SparkHelpers.getSparkSession();
-    final TerminologyClient terminologyClient = mock(TerminologyClient.class, new DefaultAnswer());
-    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
-        new DefaultAnswer());
-
-    return new TestParserContext(inputContext, Optional.of(thisContext), fhirContext, sparkSession,
-        resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory));
-  }
-
-  @Nonnull
-  public static ParserContext build(@Nonnull final FhirPath inputContext,
-      @Nonnull final ResourceReader resourceReader) {
-    final ThisPath thisContext = mock(ThisPath.class, new DefaultAnswer());
-    final FhirContext fhirContext = FhirHelpers.getFhirContext();
-    final SparkSession sparkSession = SparkHelpers.getSparkSession();
-    final TerminologyClient terminologyClient = mock(TerminologyClient.class, new DefaultAnswer());
-    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
-        new DefaultAnswer());
-
-    return new TestParserContext(inputContext, Optional.of(thisContext), fhirContext, sparkSession,
-        resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory));
-  }
-
 }

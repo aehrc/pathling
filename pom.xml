@@ -287,7 +287,6 @@
   
   <scm>
     <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
-    <tag>v2.0.0</tag>
   </scm>
 
   <profiles>

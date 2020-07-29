@@ -263,7 +263,10 @@ class ResolveFunctionTest {
 
     final FhirPath inputContext = mock(FhirPath.class);
     when(inputContext.getDataset()).thenReturn(mock(Dataset.class));
-    final ParserContext parserContext = TestParserContext.build(inputContext, mockReader);
+    final ParserContext parserContext = TestParserContext.builder()
+        .inputContext(inputContext)
+        .resourceReader(mockReader)
+        .build();
     final StringLiteralPath stringLiteralPath = StringLiteralPath
         .fromString("'foo'", parserContext.getInputContext());
     final NamedFunctionInput resolveInput = new NamedFunctionInput(parserContext, referencePath,
@@ -275,8 +278,10 @@ class ResolveFunctionTest {
 
   @Nonnull
   private NamedFunctionInput buildFunctionInput(@Nonnull final FhirPath inputPath) {
-    final ParserContext parserContext = TestParserContext
-        .build(inputPath.getIdColumn(), mockReader);
+    final ParserContext parserContext = TestParserContext.builder()
+        .idColumn(inputPath.getIdColumn())
+        .resourceReader(mockReader)
+        .build();
     return new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
   }

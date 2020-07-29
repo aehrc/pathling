@@ -12,12 +12,12 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.TestElementPath;
 import au.csiro.pathling.test.TestParserContext;
@@ -94,8 +94,10 @@ class ReverseResolveFunctionTest {
     final FhirPath argumentPath = TestElementPath
         .build("Encounter.subject", argumentDataset, false, originDefinition, definition);
 
-    final ParserContext parserContext = TestParserContext
-        .build(inputPath.getIdColumn(), mockReader);
+    final ParserContext parserContext = TestParserContext.builder()
+        .idColumn(inputPath.getIdColumn())
+        .resourceReader(mockReader)
+        .build();
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));
     final NamedFunction count = NamedFunction.getInstance("reverseResolve");
