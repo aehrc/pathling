@@ -48,11 +48,11 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     
     <pathling.hapiFhirVersion>4.2.0</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>2.4.5</pathling.sparkVersion>
-    <pathling.sparkScalaVersion>2.11</pathling.sparkScalaVersion>
+    <pathling.sparkVersion>3.0.0</pathling.sparkVersion>
+    <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.dockerJavaVersion>3.2.1</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>2.7.7</pathling.hadoopVersion>
-    <pathling.hadoopMirror>https://mirror.aarnet.edu.au/pub/apache/hadoop/common</pathling.hadoopMirror>
+    <pathling.hadoopMirror>https://apache.mirror.digitalpacific.com.au/hadoop/common</pathling.hadoopMirror>
   </properties>
 
   <modules>
@@ -154,8 +154,11 @@
           </exclusion>
         </exclusions>
       </dependency>
-      <!-- The Spring Boot parent POM overrides these dependencies of Spark Catalyst to an 
-      incompatible version.-->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>2.10.3</version>
+      </dependency>
       <dependency>
         <groupId>org.codehaus.janino</groupId>
         <artifactId>janino</artifactId>
