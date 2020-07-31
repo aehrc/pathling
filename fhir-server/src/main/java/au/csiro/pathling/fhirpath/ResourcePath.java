@@ -83,4 +83,16 @@ public class ResourcePath extends NonLiteralPath {
     return definition.getChildElement(name);
   }
 
+  @Nonnull
+  @Override
+  public Optional<Column> getOriginColumn() {
+    return Optional.of(getValueColumn());
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ResourceDefinition> getOriginType() {
+    return Optional.of(definition);
+  }
+  
 }

@@ -18,7 +18,7 @@ import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DatasetBuilder;
-import au.csiro.pathling.test.TestParserContext;
+import au.csiro.pathling.test.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
@@ -81,7 +81,7 @@ class OfTypeFunctionTest {
     final ResourcePath argumentPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
 
-    final ParserContext parserContext = TestParserContext.builder()
+    final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn())
         .build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, inputPath,

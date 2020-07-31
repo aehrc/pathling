@@ -55,7 +55,7 @@ public abstract class Assertions {
     org.junit.jupiter.api.Assertions.assertEquals(expected, actual);
   }
 
-  public static <T extends java.lang.Throwable> T assertThatExceptionOfType(
+  public static <T extends java.lang.Throwable> T assertThrows(
       @Nonnull final Class<T> expectedType, @Nonnull final Executable executable,
       @Nonnull final String message) {
     return org.junit.jupiter.api.Assertions.assertThrows(expectedType, executable, message);

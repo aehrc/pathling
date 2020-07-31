@@ -36,7 +36,7 @@ public class ReverseResolveFunction implements NamedFunction {
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     checkUserInput(input.getInput() instanceof ResourcePath,
         "Input to " + NAME + " function must be a resource: " + input.getInput().getExpression());
-    final ResourcePath inputPath = (ResourcePath) input.getInput();
+    final FhirPath inputPath = input.getInput();
     final String expression = NamedFunction.expressionFromInput(input, NAME);
     checkUserInput(input.getArguments().size() == 1,
         "reverseResolve function accepts a single argument: " + expression);

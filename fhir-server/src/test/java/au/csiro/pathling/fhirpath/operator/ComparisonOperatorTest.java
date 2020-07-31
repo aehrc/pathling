@@ -15,8 +15,8 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.DatasetBuilder;
-import au.csiro.pathling.test.TestElementPath;
-import au.csiro.pathling.test.TestParserContext;
+import au.csiro.pathling.test.ElementPathBuilder;
+import au.csiro.pathling.test.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
@@ -46,8 +46,13 @@ class ComparisonOperatorTest {
         .withRow("Patient/abc2", "2014-09-25T22:04:19+10:00")
         .withRow("Patient/abc3", "2018-05-18T11:03:55-05:00")
         .build();
-    final ElementPath leftPath = TestElementPath
-        .build("authoredOn", leftDataset, true, leftDefinition);
+    final ElementPath leftPath = new ElementPathBuilder()
+        .dataset(leftDataset)
+        .idAndValueColumns()
+        .expression("authoredOn")
+        .singular(true)
+        .definition(leftDefinition)
+        .buildDefined();
 
     final Optional<ElementDefinition> optionalRightDefinition = FhirHelpers
         .getChildOfResource("Condition", "onsetDateTime");
@@ -61,11 +66,15 @@ class ComparisonOperatorTest {
         .withRow("Patient/abc2", "2014-09-25T12:04:19Z")
         .withRow("Patient/abc3", "2018-05-19T11:03:55.123Z")
         .build();
-    final ElementPath rightPath = TestElementPath
-        .build("reverseResolve(Condition.subject).onsetDateTime", rightDataset, true,
-            rightDefinition);
+    final ElementPath rightPath = new ElementPathBuilder()
+        .dataset(rightDataset)
+        .idAndValueColumns()
+        .expression("reverseResolve(Condition.subject).onsetDateTime")
+        .singular(true)
+        .definition(rightDefinition)
+        .buildDefined();
 
-    final ParserContext parserContext = TestParserContext.builder().build();
+    final ParserContext parserContext = new ParserContextBuilder().build();
     final OperatorInput comparisonInput = new OperatorInput(parserContext, leftPath,
         rightPath);
     final Operator lessThan = Operator.getInstance("<=");

@@ -66,9 +66,9 @@ public class ElementPath extends NonLiteralPath {
    */
   @Nonnull
   public static ElementPath build(@Nonnull final FhirPath parentPath,
-      @Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final ElementDefinition definition) {
+      @Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
       final FHIRDefinedType fhirType = optionalFhirType.get();

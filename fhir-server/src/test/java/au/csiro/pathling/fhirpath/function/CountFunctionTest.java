@@ -19,8 +19,8 @@ import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DatasetBuilder;
+import au.csiro.pathling.test.ParserContextBuilder;
 import au.csiro.pathling.test.TestAggregationParserContext;
-import au.csiro.pathling.test.TestParserContext;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -67,7 +67,7 @@ class CountFunctionTest {
     final ResourcePath inputPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "", false);
 
-    final ParserContext parserContext = TestParserContext.builder()
+    final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn())
         .build();
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,

@@ -25,8 +25,8 @@ import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DatasetBuilder;
-import au.csiro.pathling.test.TestElementPath;
-import au.csiro.pathling.test.TestParserContext;
+import au.csiro.pathling.test.ElementPathBuilder;
+import au.csiro.pathling.test.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Collections;
@@ -70,8 +70,13 @@ class ResolveFunctionTest {
         .withRow("Encounter/xyz3", RowFactory.create(null, "EpisodeOfCare/abc2", null))
         .withRow("Encounter/xyz4", RowFactory.create(null, "EpisodeOfCare/abc2", null))
         .buildWithStructValue();
-    final FhirPath referencePath = TestElementPath
-        .build("Encounter.episodeOfCare", referenceDataset, false, definition);
+    final FhirPath referencePath = new ElementPathBuilder()
+        .expression("Encounter.episodeOfCare")
+        .dataset(referenceDataset)
+        .idAndValueColumns()
+        .singular(false)
+        .definition(definition)
+        .buildDefined();
 
     final Dataset<Row> episodeOfCareDataset = new DatasetBuilder()
         .withIdColumn()
@@ -121,8 +126,13 @@ class ResolveFunctionTest {
         .withRow("Encounter/xyz4", RowFactory.create(null, "Patient/abc2", null))
         .withRow("Encounter/xyz5", RowFactory.create(null, "Group/def1", null))
         .buildWithStructValue();
-    final FhirPath referencePath = TestElementPath
-        .build("Encounter.subject", referenceDataset, true, definition);
+    final FhirPath referencePath = new ElementPathBuilder()
+        .expression("Encounter.subject")
+        .dataset(referenceDataset)
+        .idAndValueColumns()
+        .singular(true)
+        .definition(definition)
+        .buildDefined();
 
     final Dataset<Row> patientDataset = new DatasetBuilder()
         .withIdColumn()
@@ -184,8 +194,13 @@ class ResolveFunctionTest {
         .withRow("Condition/xyz1", RowFactory.create(null, "Observation/abc1", null))
         .withRow("Condition/xyz2", RowFactory.create(null, "ClinicalImpression/def1", null))
         .buildWithStructValue();
-    final FhirPath referencePath = TestElementPath
-        .build("Condition.evidence.detail", referenceDataset, false, definition);
+    final FhirPath referencePath = new ElementPathBuilder()
+        .expression("Condition.evidence.detail")
+        .dataset(referenceDataset)
+        .idAndValueColumns()
+        .singular(false)
+        .definition(definition)
+        .buildDefined();
 
     final Dataset<Row> observationDataset = new DatasetBuilder()
         .withIdColumn()
@@ -258,12 +273,16 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withStructTypeColumns(referenceStructType())
         .buildWithStructValue();
-    final FhirPath referencePath = TestElementPath
-        .build("Encounter.episodeOfCare", referenceDataset, false, definition);
+    final FhirPath referencePath = new ElementPathBuilder()
+        .expression("Encounter.episodeOfCare")
+        .dataset(referenceDataset)
+        .singular(false)
+        .definition(definition)
+        .buildDefined();
 
     final FhirPath inputContext = mock(FhirPath.class);
     when(inputContext.getDataset()).thenReturn(mock(Dataset.class));
-    final ParserContext parserContext = TestParserContext.builder()
+    final ParserContext parserContext = new ParserContextBuilder()
         .inputContext(inputContext)
         .resourceReader(mockReader)
         .build();
@@ -278,7 +297,7 @@ class ResolveFunctionTest {
 
   @Nonnull
   private NamedFunctionInput buildFunctionInput(@Nonnull final FhirPath inputPath) {
-    final ParserContext parserContext = TestParserContext.builder()
+    final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn())
         .resourceReader(mockReader)
         .build();

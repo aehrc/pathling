@@ -8,7 +8,7 @@ package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertEquals;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.assertions.Assertions.assertThatExceptionOfType;
+import static au.csiro.pathling.test.assertions.Assertions.assertThrows;
 import static au.csiro.pathling.test.assertions.Assertions.assertTrue;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -28,16 +29,16 @@ import au.csiro.pathling.fhirpath.element.CodingPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
+import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.DatasetBuilder;
-import au.csiro.pathling.test.TestElementPath;
-import au.csiro.pathling.test.TestParserContext;
+import au.csiro.pathling.test.ElementPathBuilder;
+import au.csiro.pathling.test.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodeMapperAnswerer;
 import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodeableConceptTxAnswerer;
 import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodingTxAnswerer;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.*;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -81,8 +82,13 @@ class MemberOfFunctionTest {
         .withRow("Encounter/4", rowFromCoding(coding4))
         .withRow("Encounter/5", rowFromCoding(coding5))
         .buildWithStructValue();
-    final CodingPath inputExpression = (CodingPath) TestElementPath
-        .build("Encounter.class", inputDataset, true, definition);
+    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder()
+        .dataset(inputDataset)
+        .idAndValueColumns()
+        .expression("Encounter.class")
+        .singular(true)
+        .definition(definition)
+        .buildDefined();
 
     final StringLiteralPath argumentExpression = StringLiteralPath
         .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
@@ -105,7 +111,7 @@ class MemberOfFunctionTest {
     when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
     // Prepare the inputs to the function.
-    final ParserContext parserContext = TestParserContext.builder()
+    final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputExpression.getIdColumn())
         .terminologyClient(terminologyClient)
         .terminologyClientFactory(terminologyClientFactory)
@@ -185,8 +191,13 @@ class MemberOfFunctionTest {
         .withRow("DiagnosticReport/5", rowFromCodeableConcept(codeableConcept5))
         .withRow("DiagnosticReport/6", rowFromCodeableConcept(codeableConcept6))
         .buildWithStructValue();
-    final ElementPath inputExpression = TestElementPath
-        .build("DiagnosticReport.code", inputDataset, true, definition);
+    final ElementPath inputExpression = new ElementPathBuilder()
+        .dataset(inputDataset)
+        .idAndValueColumns()
+        .expression("DiagnosticReport.code")
+        .singular(true)
+        .definition(definition)
+        .buildDefined();
 
     final StringLiteralPath argumentExpression = StringLiteralPath
         .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
@@ -211,7 +222,7 @@ class MemberOfFunctionTest {
     when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
     // Prepare the inputs to the function.
-    final ParserContext parserContext = TestParserContext.builder()
+    final ParserContext parserContext = new ParserContextBuilder()
         .terminologyClient(terminologyClient)
         .terminologyClientFactory(terminologyClientFactory)
         .build();
@@ -270,39 +281,36 @@ class MemberOfFunctionTest {
     final FhirPath input = StringLiteralPath.fromString("some string", mockContext);
     final FhirPath argument = StringLiteralPath.fromString(MY_VALUE_SET_URL, mockContext);
 
-    final ParserContext parserContext = TestParserContext.builder()
+    final ParserContext parserContext = new ParserContextBuilder()
         .terminologyClientFactory(mock(TerminologyClientFactory.class))
         .build();
 
     final NamedFunctionInput memberOfInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
 
-    assertThatExceptionOfType(InvalidRequestException.class,
+    assertThrows(InvalidUserInputError.class,
         () -> new MemberOfFunction().invoke(memberOfInput),
         "Input to memberOf function is of unsupported type: onsetString");
   }
 
-  // @Test
-  // public void throwsErrorIfArgumentIsNotString() {
-  //   ParsedExpression input = new ComplexNonLiteralPathBuilder(FHIRDefinedType.CODEABLECONCEPT)
-  //       .build();
-  //   ParsedExpression argument = PrimitiveNonLiteralPathBuilder.literalInteger(4);
-  //
-  //   ParserContext parserContext = new ParserContext();
-  //   parserContext.setTerminologyClientFactory(mock(TerminologyClientFactory.class));
-  //
-  //   FunctionInput memberOfInput = new FunctionInput();
-  //   memberOfInput.setContext(parserContext);
-  //   memberOfInput.setInput(input);
-  //   memberOfInput.getArguments().add(argument);
-  //   memberOfInput.setExpression("memberOf(4)");
-  //
-  //   MemberOfFunction memberOfFunction = new MemberOfFunction();
-  //   assertThatExceptionOfType(InvalidRequestException.class)
-  //       .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
-  //       .withMessage("memberOf function accepts one argument of type String: memberOf(4)");
-  // }
-  //
+  @Test
+  public void throwsErrorIfArgumentIsNotString() {
+    final ElementPath input = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+        .build();
+    final IntegerLiteralPath argument = IntegerLiteralPath
+        .fromString("4", mock(FhirPath.class));
+
+    final ParserContext context = new ParserContextBuilder().build();
+
+    final NamedFunctionInput memberOfInput = new NamedFunctionInput(context, input,
+        Collections.singletonList(argument));
+
+    assertThrows(InvalidUserInputError.class,
+        () -> new MemberOfFunction().invoke(memberOfInput),
+        "memberOf function accepts one argument of type String: memberOf(4)");
+  }
+
   // @Test
   // public void throwsErrorIfMoreThanOneArgument() {
   //   ParsedExpression input = new ComplexNonLiteralPathBuilder(FHIRDefinedType.CODEABLECONCEPT)
