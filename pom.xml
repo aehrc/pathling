@@ -44,7 +44,7 @@
   <version>3.0.0-SNAPSHOT</version>
 
   <properties>
-    <project.majorVersion>2</project.majorVersion>
+    <project.majorVersion>3</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     
     <pathling.hapiFhirVersion>4.2.0</pathling.hapiFhirVersion>
