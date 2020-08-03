@@ -6,16 +6,16 @@
 
 package au.csiro.pathling.fhirpath.function.memberof;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertEquals;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.assertions.Assertions.assertThrows;
-import static au.csiro.pathling.test.assertions.Assertions.assertTrue;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

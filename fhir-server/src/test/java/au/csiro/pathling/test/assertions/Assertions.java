@@ -47,14 +47,6 @@ public abstract class Assertions {
     return new DatasetAssert(rowDataset);
   }
 
-  public static void assertTrue(final boolean condition) {
-    org.junit.jupiter.api.Assertions.assertTrue(condition);
-  }
-
-  public static void assertEquals(@Nonnull final Object expected, @Nonnull final Object actual) {
-    org.junit.jupiter.api.Assertions.assertEquals(expected, actual);
-  }
-
   public static <T extends java.lang.Throwable> T assertThrows(
       @Nonnull final Class<T> expectedType, @Nonnull final Executable executable,
       @Nonnull final String message) {

@@ -264,7 +264,7 @@
           <includes>
             <include>**/*.java</include>
           </includes>
-          <groups>au.csiro.pathling.SystemTest</groups>
+          <groups>SystemTest</groups>
           <systemPropertyVariables>
             <version>${project.version}</version>
             <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
