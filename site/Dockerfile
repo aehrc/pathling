@@ -5,3 +5,5 @@ LABEL copyright="Copyright © 2018-2020, Commonwealth Scientific and Industrial 
 
 COPY _docker/site.nginx /etc/nginx/conf.d/default.conf
 COPY _site/ /usr/share/nginx/html/
+
+EXPOSE 80
