@@ -61,9 +61,9 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
     }
     switch (getFhirType()) {
       case UNSIGNEDINT:
-        return Optional.of(new UnsignedIntType(row.getLong(columnNumber)));
+        return Optional.of(new UnsignedIntType(row.getInt(columnNumber)));
       case POSITIVEINT:
-        return Optional.of(new PositiveIntType(row.getLong(columnNumber)));
+        return Optional.of(new PositiveIntType(row.getInt(columnNumber)));
       default:
         return Optional.of(new IntegerType(row.getInt(columnNumber)));
     }

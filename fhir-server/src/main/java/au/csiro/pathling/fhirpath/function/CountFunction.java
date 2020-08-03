@@ -41,7 +41,7 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     final Function<Column, Column> count = (column) -> when(count(column).isNull(), 0L)
         .otherwise(count(column));
     return applyAggregation(input.getContext(), inputPath, count, expression,
-        FHIRDefinedType.UNSIGNEDINT);
+        FHIRDefinedType.DECIMAL);
   }
 
 }

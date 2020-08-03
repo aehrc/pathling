@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.LongType;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -48,7 +49,14 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
-    return Optional.of(new DecimalType(row.getDecimal(columnNumber)));
+    // We use the decimal type for long values where the value is derived from a function, as there
+    // is the potential for the value to be greater tha
+    if (row.schema().fields()[columnNumber].dataType() instanceof LongType) {
+      final long longValue = row.getLong(columnNumber);
+      return Optional.of(new DecimalType(longValue));
+    } else {
+      return Optional.of(new DecimalType(row.getDecimal(columnNumber)));
+    }
   }
 
   @Override
@@ -61,5 +69,5 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return IntegerPath.getComparableTypes().contains(type);
   }
- 
+
 }

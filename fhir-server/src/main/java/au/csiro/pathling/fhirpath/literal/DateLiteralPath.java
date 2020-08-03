@@ -49,14 +49,27 @@ public class DateLiteralPath extends LiteralPath implements Comparable {
   public static DateLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
-    final java.util.Date date = DatePath.getDateFormat().parse(dateString);
+    java.util.Date date;
+    // Try parsing out the date using the three possible formats, from full (most common) down to
+    // the year only format.
+    try {
+      date = DatePath.getFullDateFormat().parse(dateString);
+    } catch (final ParseException e) {
+      try {
+        date = DatePath.getYearMonthDateFormat().parse(dateString);
+      } catch (final ParseException ex) {
+        date = DatePath.getYearOnlyDateFormat().parse(dateString);
+      }
+    }
     return new DateLiteralPath(context.getDataset(), context.getIdColumn(), new DateType(date));
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return "@" + DatePath.getDateFormat().format(literalValue.getValue());
+    // One the way back out, the date is always formatted using the "full" format, even if it was
+    // created from one of the shorter formats.
+    return "@" + DatePath.getFullDateFormat().format(literalValue.getValue());
   }
 
   @Nonnull
@@ -75,4 +88,5 @@ public class DateLiteralPath extends LiteralPath implements Comparable {
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return DateTimePath.getComparableTypes().contains(type);
   }
+
 }

@@ -1,0 +1,90 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueDecimal": 8
+        },
+        {
+          "name": "result",
+          "valueDecimal": 3
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 8"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueDecimal": 3
+        },
+        {
+          "name": "result",
+          "valueDecimal": 2
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 3"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueDecimal": 10
+        },
+        {
+          "name": "result",
+          "valueDecimal": 2
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 10"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueDecimal": 16
+        },
+        {
+          "name": "result",
+          "valueDecimal": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 16"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueDecimal": 5
+        },
+        {
+          "name": "result",
+          "valueDecimal": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(reverseResolve(Condition.subject).code.coding.count()) = 5"
+        }
+      ]
+    }
+  ]
+}

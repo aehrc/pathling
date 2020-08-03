@@ -1,0 +1,39 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "male"
+        },
+        {
+          "name": "result",
+          "valueDecimal": 39
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(subject.resolve().ofType(Patient).gender) = 'male'"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "female"
+        },
+        {
+          "name": "result",
+          "valueDecimal": 64
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(subject.resolve().ofType(Patient).gender) = 'female'"
+        }
+      ]
+    }
+  ]
+}

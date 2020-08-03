@@ -82,7 +82,7 @@ public class CachingAggregateExecutor implements AggregateExecutor, Cacheable {
       return cache.getUnchecked(query);
 
     } catch (final UncheckedExecutionException e) {
-      throw (RuntimeException) e.getCause();
+      throw new RuntimeException(e.getCause());
     }
   }
 

@@ -1,0 +1,47 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "male"
+        },
+        {
+          "name": "result",
+          "valueDecimal": 5
+        },
+        {
+          "name": "result",
+          "valueDecimal": 4
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(gender) = 'male'"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "female"
+        },
+        {
+          "name": "result",
+          "valueDecimal": 7
+        },
+        {
+          "name": "result",
+          "valueDecimal": 7
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(gender) = 'female'"
+        }
+      ]
+    }
+  ]
+}

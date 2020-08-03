@@ -1,0 +1,38 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "confirmed"
+        },
+        {
+          "name": "result",
+          "valueDecimal": 6
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(reverseResolve(Condition.subject).where($this.onsetDateTime > @2010 and $this.onsetDateTime < @2011).verificationStatus.coding.code) contains 'confirmed'"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label"
+        },
+        {
+          "name": "result",
+          "valueDecimal": 9
+        },
+        {
+          "name": "drillDown",
+          "valueString": "reverseResolve(Condition.subject).where($this.onsetDateTime > @2010 and $this.onsetDateTime < @2011).verificationStatus.coding.code.empty()"
+        }
+      ]
+    }
+  ]
+}

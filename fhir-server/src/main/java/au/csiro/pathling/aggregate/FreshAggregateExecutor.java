@@ -238,7 +238,6 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
   private static DatasetWithColumns joinAggregations(@Nonnull final List<FhirPath> expressions,
       @Nonnull final List<Column> groupings) {
     check(!expressions.isEmpty());
-    check(!groupings.isEmpty());
 
     // If there is only one aggregation, we don't need to do any joining.
     if (expressions.size() == 1) {

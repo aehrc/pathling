@@ -1,0 +1,18 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "result",
+          "valueDecimal": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "birthDate > @1980-01-01 and birthDate < @1990-01-01"
+        }
+      ]
+    }
+  ]
+}

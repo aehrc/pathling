@@ -39,7 +39,7 @@ public abstract class TestHelpers {
   public static final String SNOMED_URL = "http://snomed.info/sct";
 
   @Nonnull
-  private static InputStream getResourceAsStream(@Nonnull final String name) {
+  public static InputStream getResourceAsStream(@Nonnull final String name) {
     final ClassLoader loader = Thread.currentThread().getContextClassLoader();
     checkNotNull(loader);
 

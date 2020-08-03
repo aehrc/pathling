@@ -1,0 +1,22 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueBoolean": false
+        },
+        {
+          "name": "result",
+          "valueDecimal": 9
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(multipleBirthBoolean) = false"
+        }
+      ]
+    }
+  ]
+}

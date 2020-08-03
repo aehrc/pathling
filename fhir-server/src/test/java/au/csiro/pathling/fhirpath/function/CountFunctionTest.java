@@ -14,8 +14,8 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DatasetBuilder;
@@ -75,11 +75,11 @@ class CountFunctionTest {
     final NamedFunction count = NamedFunction.getInstance("count");
     final FhirPath result = count.invoke(countInput);
 
-    assertTrue(result instanceof IntegerPath);
+    assertTrue(result instanceof DecimalPath);
     assertThat((ElementPath) result)
         .hasExpression("count()")
         .isSingular()
-        .hasFhirType(FHIRDefinedType.UNSIGNEDINT);
+        .hasFhirType(FHIRDefinedType.DECIMAL);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
@@ -123,11 +123,11 @@ class CountFunctionTest {
     final NamedFunction count = NamedFunction.getInstance("count");
     final FhirPath result = count.invoke(countInput);
 
-    assertTrue(result instanceof IntegerPath);
+    assertTrue(result instanceof DecimalPath);
     assertThat((ElementPath) result)
         .hasExpression("count()")
         .isSingular()
-        .hasFhirType(FHIRDefinedType.UNSIGNEDINT);
+        .hasFhirType(FHIRDefinedType.DECIMAL);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withColumn("gender", DataTypes.StringType)

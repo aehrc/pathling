@@ -28,10 +28,14 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class DatePath extends ElementPath implements Materializable<DateType>, Comparable {
 
-  private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+  private static final SimpleDateFormat FULL_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+  private static final SimpleDateFormat YEAR_MONTH_DATE_FORMAT = new SimpleDateFormat("yyyy-MM");
+  private static final SimpleDateFormat YEAR_ONLY_DATE_FORMAT = new SimpleDateFormat("yyyy");
 
   static {
-    DATE_FORMAT.setTimeZone(DateTimePath.getTimeZone());
+    FULL_DATE_FORMAT.setTimeZone(DateTimePath.getTimeZone());
+    YEAR_MONTH_DATE_FORMAT.setTimeZone(DateTimePath.getTimeZone());
+    YEAR_ONLY_DATE_FORMAT.setTimeZone(DateTimePath.getTimeZone());
   }
 
   /**
@@ -66,8 +70,16 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
             to_timestamp(target.getValueColumn()));
   }
 
-  public static SimpleDateFormat getDateFormat() {
-    return DATE_FORMAT;
+  public static SimpleDateFormat getFullDateFormat() {
+    return FULL_DATE_FORMAT;
+  }
+
+  public static SimpleDateFormat getYearMonthDateFormat() {
+    return YEAR_MONTH_DATE_FORMAT;
+  }
+
+  public static SimpleDateFormat getYearOnlyDateFormat() {
+    return YEAR_ONLY_DATE_FORMAT;
   }
 
   @Nonnull
