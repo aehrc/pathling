@@ -8,13 +8,14 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static org.apache.spark.sql.functions.count;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -36,10 +37,17 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     checkNoArguments("count", input);
     final FhirPath inputPath = input.getInput();
     final String expression = expressionFromInput(input, NAME);
+    // When we are counting resources, we use the distinct count. When we are counting elements, we
+    // use a non-distinct count, to account for the fact that it is valid to have multiple elements
+    // with the same value.
+    final Function<Column, Column> countFunction = inputPath instanceof ResourcePath
+                                                   ? functions::countDistinct
+                                                   : functions::count;
     // According to the FHIRPath specification, the count function must return 0 when invoked on an 
     // empty collection.
-    final Function<Column, Column> count = (column) -> when(count(column).isNull(), 0L)
-        .otherwise(count(column));
+    final Function<Column, Column> count = (column) ->
+        when(countFunction.apply(column).isNull(), 0L)
+            .otherwise(countFunction.apply(column));
     return applyAggregation(input.getContext(), inputPath, count, expression,
         FHIRDefinedType.DECIMAL);
   }
