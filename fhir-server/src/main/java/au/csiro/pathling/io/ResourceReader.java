@@ -113,13 +113,19 @@ public class ResourceReader {
     checkNotNull(fileStatuses);
 
     availableResourceTypes = Arrays.stream(fileStatuses)
+        // Get the filename of each item in the directory listing.
         .map(fileStatus -> {
           @Nullable final Path path = fileStatus.getPath();
           checkNotNull(path);
           @Nullable final String name = path.getName();
           checkNotNull(name);
-
-          final String code = name.replace(".parquet", "");
+          return name;
+        })
+        // Filter out any file names that don't match the pattern.
+        .filter(fileName -> fileName.matches("^[^.]+\\.parquet$"))
+        // Grab the resource code indicated by each matching file name.
+        .map(fileName -> {
+          final String code = fileName.replace(".parquet", "");
           return ResourceType.fromCode(code);
         })
         .collect(Collectors.toSet());
