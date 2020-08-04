@@ -25,6 +25,8 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -34,6 +36,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
  */
 @SpringBootTest
 @Tag("IntegrationTest")
+@Execution(ExecutionMode.SAME_THREAD)
 class AggregateExecutorTest extends QueryExecutorTest {
 
   @Autowired
@@ -143,12 +146,12 @@ class AggregateExecutorTest extends QueryExecutorTest {
 
   @Test
   void queryWithResolve() {
-    final ResourceType subjectResource = ResourceType.DIAGNOSTICREPORT;
+    final ResourceType subjectResource = ResourceType.ALLERGYINTOLERANCE;
     mockResourceReader(subjectResource, ResourceType.PATIENT);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of reports", "count()")
-        .withGrouping("Patient active status", "subject.resolve().ofType(Patient).gender")
+        .withAggregation("Number of allergies", "count()")
+        .withGrouping("Patient gender", "patient.resolve().gender")
         .build();
 
     assertResponse("responses/AggregateExecutorTest-queryWithResolve.Parameters.json",
@@ -157,12 +160,12 @@ class AggregateExecutorTest extends QueryExecutorTest {
 
   @Test
   void queryWithPolymorphicResolve() {
-    final ResourceType subjectResource = ResourceType.ALLERGYINTOLERANCE;
+    final ResourceType subjectResource = ResourceType.DIAGNOSTICREPORT;
     mockResourceReader(subjectResource, ResourceType.PATIENT);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of allergies", "count()")
-        .withGrouping("Patient gender", "patient.resolve().gender")
+        .withAggregation("Number of reports", "count()")
+        .withGrouping("Patient active status", "subject.resolve().ofType(Patient).gender")
         .build();
 
     assertResponse("responses/AggregateExecutorTest-queryWithPolymorphicResolve.Parameters.json",
