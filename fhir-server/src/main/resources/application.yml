@@ -19,31 +19,33 @@ pathling:
 
   # Authentication details for connecting to a protected Amazon S3 bucket.
   # awsAccessKeyId: [AWS access key ID]
-
-  # Authentication details for connecting to a protected Amazon S3 bucket.
   # awsSecretAccessKey: [AWS secret access key]
 
-  # Address of the master node of an Apache Spark cluster to use for processing data.
-  sparkMasterUrl: local[*]
-
-  # The quantity of memory available for each child task to process data within, in the same format
-  # as JVM memory strings.
-  executorMemory: 1g
-
-  # Setting this option to true will enable additional logging relating to the query plan used to 
-  # execute queries.
-  explainQueries: false
-
-  # This option controls the number of data partitions used to distribute data between child tasks.
-  # This can be tuned to higher numbers for larger data sets. It also controls the granularity of
-  # requests made to the configured terminology service.
-  shufflePartitions: 2
-  
   # This is a comma-delimited list of domain names that controls which domains are permitted to 
   # access the server per the `Access-Control-Allow-Origin` header within the Cross-Origin Resource 
   # Sharing specification.
   corsAllowedDomains: "*"
-  
+
+  spark:
+    # Address of the master node of an Apache Spark cluster to use for processing data.
+    masterUrl: local[*]
+
+    # Hostname or IP address to use when binding listening sockets within Spark.
+    bindAddress: localhost
+
+    # The quantity of memory available for each child task to process data within, in the same format
+    # as JVM memory strings.
+    executorMemory: 1g
+
+    # This option controls the number of data partitions used to distribute data between child tasks.
+    # This can be tuned to higher numbers for larger data sets. It also controls the granularity of
+    # requests made to the configured terminology service.
+    shufflePartitions: 2
+
+    # Setting this option to true will enable additional logging relating to the query plan used to
+    # execute queries.
+    explainQueries: false
+
   terminology:
     # Enables the use of terminology functions.
     enabled: true

@@ -197,7 +197,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   }
 
   private void reportQueryPlan(@Nonnull final Dataset<Row> resources) {
-    if (getConfiguration().getExplainQueries()) {
+    if (getConfiguration().getSpark().getExplainQueries()) {
       log.info("Search query plan:");
       resources.explain(true);
     }

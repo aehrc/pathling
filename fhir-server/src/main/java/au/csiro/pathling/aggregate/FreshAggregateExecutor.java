@@ -277,7 +277,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
       @Nonnull final List<FhirPath> parsedGroupings,
       @Nonnull final Collection<FhirPath> parsedFilters) {
     // If explain queries is on, print out a query plan to the log.
-    if (getConfiguration().getExplainQueries()) {
+    if (getConfiguration().getSpark().getExplainQueries()) {
       log.info("$aggregate query plan:");
       dataset.explain(true);
     }

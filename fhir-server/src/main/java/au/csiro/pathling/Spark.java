@@ -34,13 +34,14 @@ public class Spark {
     log.info("Creating Spark session");
     final SparkSession spark = SparkSession.builder()
         .appName("pathling-server")
-        .config("spark.master", configuration.getSparkMasterUrl())
-        .config("spark.executor.memory", configuration.getExecutorMemory())
+        .config("spark.master", configuration.getSpark().getMasterUrl())
+        .config("spark.driver.bindAddress", configuration.getSpark().getBindAddress())
+        .config("spark.executor.memory", configuration.getSpark().getExecutorMemory())
+        .config("spark.sql.shuffle.partitions", configuration.getSpark().getShufflePartitions())
         .config("spark.dynamicAllocation.enabled", "true")
         .config("spark.shuffle.service.enabled", "true")
         .config("spark.scheduler.mode", "FAIR")
         .config("spark.sql.autoBroadcastJoinThreshold", "-1")
-        .config("spark.sql.shuffle.partitions", configuration.getShufflePartitions())
         .getOrCreate();
     if (configuration.getAwsAccessKeyId().isPresent()
         && configuration.getAwsSecretAccessKey().isPresent()) {

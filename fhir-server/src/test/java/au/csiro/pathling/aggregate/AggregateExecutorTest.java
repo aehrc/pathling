@@ -10,13 +10,17 @@ import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static au.csiro.pathling.test.helpers.FhirHelpers.getJsonParser;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.Configuration;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.TestHelpers;
+import ca.uhn.fhir.context.FhirContext;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Bundle;
@@ -27,32 +31,39 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 
 /**
  * @author John Grimes
  */
 @SpringBootTest
 @Tag("IntegrationTest")
+@ActiveProfiles("test")
 @Execution(ExecutionMode.SAME_THREAD)
 class AggregateExecutorTest extends QueryExecutorTest {
 
-  @Autowired
-  private AggregateExecutor executor;
+  private final AggregateExecutor executor;
+  private final SparkSession spark;
+  private final ResourceReader resourceReader;
+  private final TerminologyClient terminologyClient;
 
   @Autowired
-  private SparkSession spark;
+  public AggregateExecutorTest(final Configuration configuration, final FhirContext fhirContext,
+      final SparkSession sparkSession) {
+    resourceReader = mock(ResourceReader.class);
+    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
+    spark = sparkSession;
 
-  @MockBean
-  private ResourceReader resourceReader;
+    final TerminologyClientFactory terminologyClientFactory =
+        mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
+    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
-  @MockBean
-  private TerminologyClient terminologyClient;
-
-  @MockBean
-  private TerminologyClientFactory terminologyClientFactory;
+    this.executor = new CachingAggregateExecutor(configuration, fhirContext, sparkSession,
+        resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory));
+  }
 
   @Test
   void simpleQuery() {

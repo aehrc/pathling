@@ -1,0 +1,7 @@
+pathling:
+  version: 0.0.0-test
+  warehouseUrl: file:///some/nonexistent/path
+  spark:
+    shufflePartitions: 1
+  terminology:
+    serverUrl: https://somenonexistenttxserver.com/fhir
