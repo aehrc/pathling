@@ -39,8 +39,12 @@ public abstract class SparkHelpers {
       return SparkSession.builder()
           .appName("pathling-test")
           .config("spark.master", "local[*]")
-          .config("spark.driver.host", "localhost")
+          .config("spark.driver.bindAddress", "localhost")
           .config("spark.sql.shuffle.partitions", "1")
+          .config("spark.dynamicAllocation.enabled", "true")
+          .config("spark.shuffle.service.enabled", "true")
+          .config("spark.scheduler.mode", "FAIR")
+          .config("spark.sql.autoBroadcastJoinThreshold", "-1")
           .getOrCreate();
     }
     return activeSession.get();

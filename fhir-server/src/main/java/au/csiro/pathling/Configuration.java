@@ -130,6 +130,12 @@ public class Configuration {
   public static class Spark {
 
     /**
+     * The name that Pathling will be identified as within the Spark cluster.
+     */
+    @NotBlank
+    private String appName;
+
+    /**
      * Address of the master node of an Apache Spark cluster to use for processing data.
      */
     @NotBlank

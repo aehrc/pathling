@@ -27,6 +27,9 @@ pathling:
   corsAllowedDomains: "*"
 
   spark:
+    # The name that Pathling will be identified as within the Spark cluster.
+    appName: pathling
+
     # Address of the master node of an Apache Spark cluster to use for processing data.
     masterUrl: local[*]
 
