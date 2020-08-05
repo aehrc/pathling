@@ -9,6 +9,7 @@ package au.csiro.pathling;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.SparkSession.Builder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
@@ -32,17 +33,19 @@ public class Spark {
   @Nonnull
   public static SparkSession build(@Nonnull final Configuration configuration) {
     log.info("Creating Spark session");
-    final SparkSession spark = SparkSession.builder()
+    final Builder builder = SparkSession.builder()
         .appName("pathling-server")
         .config("spark.master", configuration.getSpark().getMasterUrl())
-        .config("spark.driver.bindAddress", configuration.getSpark().getBindAddress())
         .config("spark.executor.memory", configuration.getSpark().getExecutorMemory())
         .config("spark.sql.shuffle.partitions", configuration.getSpark().getShufflePartitions())
         .config("spark.dynamicAllocation.enabled", "true")
         .config("spark.shuffle.service.enabled", "true")
         .config("spark.scheduler.mode", "FAIR")
-        .config("spark.sql.autoBroadcastJoinThreshold", "-1")
-        .getOrCreate();
+        .config("spark.sql.autoBroadcastJoinThreshold", "-1");
+    if (configuration.getSpark().getBindAddress().isPresent()) {
+      builder.config("spark.driver.bindAddress", configuration.getSpark().getBindAddress().get());
+    }
+    final SparkSession spark = builder.getOrCreate();
     if (configuration.getAwsAccessKeyId().isPresent()
         && configuration.getAwsSecretAccessKey().isPresent()) {
       final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()

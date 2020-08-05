@@ -34,7 +34,7 @@ pathling:
     masterUrl: local[*]
 
     # Hostname or IP address to use when binding listening sockets within Spark.
-    bindAddress: localhost
+    # bindAddress: [bind address]
 
     # The quantity of memory available for each child task to process data within, in the same format
     # as JVM memory strings.

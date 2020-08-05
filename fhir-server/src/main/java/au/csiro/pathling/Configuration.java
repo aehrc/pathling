@@ -144,7 +144,7 @@ public class Configuration {
     /**
      * Hostname or IP address to use when binding listening sockets within Spark.
      */
-    @NotBlank
+    @Nullable
     private String bindAddress;
 
     /**
@@ -169,6 +169,11 @@ public class Configuration {
      */
     @NotNull
     private Boolean explainQueries;
+
+    @Nonnull
+    public Optional<String> getBindAddress() {
+      return Optional.ofNullable(bindAddress);
+    }
 
   }
 
