@@ -47,7 +47,7 @@
     <project.majorVersion>3</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     
-    <pathling.hapiFhirVersion>4.2.0</pathling.hapiFhirVersion>
+    <pathling.hapiFhirVersion>5.0.2</pathling.hapiFhirVersion>
     <pathling.sparkVersion>3.0.0</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.dockerJavaVersion>3.2.1</pathling.dockerJavaVersion>
@@ -93,11 +93,6 @@
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-client</artifactId>
-        <version>${pathling.hapiFhirVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>ca.uhn.hapi.fhir</groupId>
-        <artifactId>org.hl7.fhir.utilities</artifactId>
         <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <!-- Woodstox is used by HAPI for XML processing -->
