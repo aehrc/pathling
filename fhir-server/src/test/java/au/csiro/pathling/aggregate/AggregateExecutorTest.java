@@ -22,15 +22,15 @@ import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,7 +42,7 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 @Tag("IntegrationTest")
 @ActiveProfiles("test")
-@Execution(ExecutionMode.SAME_THREAD)
+@Slf4j
 class AggregateExecutorTest extends QueryExecutorTest {
 
   private final AggregateExecutor executor;
@@ -266,11 +266,12 @@ class AggregateExecutorTest extends QueryExecutorTest {
   void queryWithMemberOf() {
     final ResourceType subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
-    final Bundle mockResponse = (Bundle) FhirHelpers.getJsonParser()
+    final ValueSet mockResponse = (ValueSet) FhirHelpers.getJsonParser()
         .parseResource(getResourceAsStream(
-            "txResponses/MemberOfFunctionTest-memberOfCoding-validate-code-positive.Bundle.json"));
+            "txResponses/AggregateExecutorTest-queryWithMemberOf.ValueSet.json"));
 
-    when(terminologyClient.batch(any(Bundle.class))).thenReturn(mockResponse);
+    when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
+        .thenReturn(mockResponse);
 
     final String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)

@@ -10,22 +10,21 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
-import au.csiro.pathling.fhirpath.function.memberof.ValidateCodeResult;
+import au.csiro.pathling.fhirpath.function.memberof.MemberOfResult;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.IParser;
 import java.util.*;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.commons.collections.IteratorUtils;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
-import org.hl7.fhir.r4.model.Bundle.BundleEntryResponseComponent;
-import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionComponent;
+import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -88,124 +87,70 @@ public class FhirHelpers {
 
   /**
    * Custom Mockito answerer for returning a mock response from the terminology server in response
-   * to a $validate-code request using a Coding.
+   * to calculating a ValueSet intersection using {@code $expand}.
    */
-  public static class ValidateCodingTxAnswerer implements Answer<Bundle> {
+  public static class MemberOfTxAnswerer implements Answer<ValueSet> {
 
-    private final Collection<Coding> validCodings = new HashSet<>();
+    private final Collection<Coding> validMembers;
 
-    public ValidateCodingTxAnswerer(@Nonnull final Coding... validCodings) {
-      this.validCodings.addAll(Arrays.asList(validCodings));
+    public MemberOfTxAnswerer(@Nonnull final Coding... validMembers) {
+      this.validMembers = new HashSet<>();
+      this.validMembers.addAll(Arrays.asList(validMembers));
+    }
+
+    public MemberOfTxAnswerer(@Nonnull final CodeableConcept... validMembers) {
+      final List<Coding> codings = Arrays.stream(validMembers)
+          .flatMap(codeableConcept -> codeableConcept.getCoding().stream())
+          .collect(Collectors.toList());
+      this.validMembers = new HashSet<>();
+      this.validMembers.addAll(codings);
     }
 
     @Override
     @Nonnull
-    public Bundle answer(@Nonnull final InvocationOnMock invocation) {
-      final Bundle request = invocation.getArgument(0);
-      final Bundle response = new Bundle();
-      response.setType(BundleType.BATCHRESPONSE);
-
-      // For each entry in the request, check whether it matches one of the valid concepts and add
-      // an entry to the response bundle.
-      for (final BundleEntryComponent entry : request.getEntry()) {
-        final BundleEntryComponent responseEntry = new BundleEntryComponent();
-        final BundleEntryResponseComponent responseEntryResponse = new BundleEntryResponseComponent();
-        responseEntryResponse.setStatus("200");
-        responseEntry.setResponse(responseEntryResponse);
-        final Parameters responseParams = new Parameters();
-        responseEntry.setResource(responseParams);
-
-        final Coding codingParam = (Coding) ((Parameters) entry.getResource())
-            .getParameter("coding");
-        if (codingParam != null) {
-          final boolean result = validCodings.stream()
-              .anyMatch(validCoding -> codingsAreEqual(codingParam, validCoding));
-          responseParams.setParameter("result", result);
-        } else {
-          responseParams.setParameter("result", false);
-        }
-
-        response.addEntry(responseEntry);
-      }
-
-      return response;
+    public ValueSet answer(@Nonnull final InvocationOnMock invocation) {
+      final ValueSet answer = new ValueSet();
+      final ValueSetExpansionComponent expansion = new ValueSetExpansionComponent();
+      final List<ValueSetExpansionContainsComponent> contains = validMembers.stream()
+          .map(validCoding -> {
+            final ValueSetExpansionContainsComponent code = new ValueSetExpansionContainsComponent();
+            code.setSystem(validCoding.getSystem());
+            code.setCode(validCoding.getCode());
+            code.setVersion(validCoding.getVersion());
+            code.setDisplay(validCoding.getDisplay());
+            return code;
+          })
+          .collect(Collectors.toList());
+      expansion.setContains(contains);
+      answer.setExpansion(expansion);
+      return answer;
     }
 
   }
 
   /**
-   * Custom Mockito answerer for returning a mock response from the terminology server in response
-   * to a $validate-code request using a CodeableConcept.
-   */
-  public static class ValidateCodeableConceptTxAnswerer implements Answer<Bundle> {
-
-    private final Collection<CodeableConcept> validCodeableConcepts = new HashSet<>();
-
-    public ValidateCodeableConceptTxAnswerer(
-        @Nonnull final CodeableConcept... validCodeableConcepts) {
-      this.validCodeableConcepts.addAll(Arrays.asList(validCodeableConcepts));
-    }
-
-    @Override
-    @Nonnull
-    public Bundle answer(@Nonnull final InvocationOnMock invocation) {
-      final Bundle request = invocation.getArgument(0);
-      final Bundle response = new Bundle();
-      response.setType(BundleType.BATCHRESPONSE);
-
-      // For each entry in the request, check whether it matches one of the valid concepts and add
-      // an entry to the response bundle.
-      for (final BundleEntryComponent entry : request.getEntry()) {
-        final BundleEntryComponent responseEntry = new BundleEntryComponent();
-        final BundleEntryResponseComponent responseEntryResponse = new BundleEntryResponseComponent();
-        responseEntryResponse.setStatus("200");
-        responseEntry.setResponse(responseEntryResponse);
-        final Parameters responseParams = new Parameters();
-        responseEntry.setResource(responseParams);
-
-        final CodeableConcept codeableConceptParam = (CodeableConcept) ((Parameters) entry
-            .getResource())
-            .getParameter("codeableConcept");
-        if (codeableConceptParam != null) {
-          final boolean result = validCodeableConcepts.stream()
-              .anyMatch(validCodeableConcept -> codeableConceptsAreEqual(codeableConceptParam,
-                  validCodeableConcept));
-          responseParams.setParameter("result", result);
-        } else {
-          responseParams.setParameter("result", false);
-        }
-
-        response.addEntry(responseEntry);
-      }
-
-      return response;
-    }
-
-  }
-
-  /**
-   * Custom Mockito answerer for returning $validate-code results based on the correlation
+   * Custom Mockito answerer for returning @{link MemberOfResult} objects based on the correlation
    * identifiers in the input Rows.
    */
-  public static class ValidateCodeMapperAnswerer implements Answer<Iterator<ValidateCodeResult>> {
+  public static class MemberOfMapperAnswerer implements Answer<Iterator<MemberOfResult>> {
 
     private final List<Boolean> expectedResults;
 
-    public ValidateCodeMapperAnswerer(@Nonnull final Boolean... expectedResults) {
+    public MemberOfMapperAnswerer(@Nonnull final Boolean... expectedResults) {
       this.expectedResults = Arrays.asList(expectedResults);
     }
 
     @Override
     @Nonnull
-    public Iterator<ValidateCodeResult> answer(@Nonnull final InvocationOnMock invocation) {
+    public Iterator<MemberOfResult> answer(@Nonnull final InvocationOnMock invocation) {
       final List rows = IteratorUtils.toList(invocation.getArgument(0));
-      final Collection<ValidateCodeResult> results = new ArrayList<>();
+      final Collection<MemberOfResult> results = new ArrayList<>();
 
       for (int i = 0; i < rows.size(); i++) {
         final Row row = (Row) rows.get(i);
         final int hash = row.getInt(0);
         final boolean resultValue = expectedResults.get(i);
-        final ValidateCodeResult result = new ValidateCodeResult(hash, resultValue);
+        final MemberOfResult result = new MemberOfResult(hash, resultValue);
         results.add(result);
       }
 

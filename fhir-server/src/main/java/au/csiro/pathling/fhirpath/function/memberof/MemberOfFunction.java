@@ -41,7 +41,7 @@ public class MemberOfFunction implements NamedFunction {
   private static final String NAME = "memberOf";
 
   @Nonnull
-  private final Optional<ValidateCodeMapper> configuredMapper;
+  private final Optional<MemberOfMapper> configuredMapper;
 
   /**
    * Returns a new instance of this function.
@@ -51,12 +51,12 @@ public class MemberOfFunction implements NamedFunction {
   }
 
   /**
-   * Returns a new instance of this function, with a pre-configured {@link ValidateCodeMapper}.
+   * Returns a new instance of this function, with a pre-configured {@link MemberOfMapper}.
    *
-   * @param mapper An instance of {@link ValidateCodeMapper} for use in retrieving results from the
+   * @param mapper An instance of {@link MemberOfMapper} for use in retrieving results from the
    * terminology service
    */
-  public MemberOfFunction(@Nonnull final ValidateCodeMapper mapper) {
+  public MemberOfFunction(@Nonnull final MemberOfMapper mapper) {
     configuredMapper = Optional.of(mapper);
   }
 
@@ -82,25 +82,25 @@ public class MemberOfFunction implements NamedFunction {
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
     // then create a new dataset with the boolean results.
-    final ValidateCodeMapper mapper = configuredMapper.orElseGet(() ->
-        new ValidateCodeMapper(MDC.get("requestId"), terminologyClientFactory, valueSetUri,
+    final MemberOfMapper mapper = configuredMapper.orElseGet(() ->
+        new MemberOfMapper(MDC.get("requestId"), terminologyClientFactory, valueSetUri,
             fhirType));
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.
     final Column prevValueHashColumn = hash(prevValueColumn);
-    final Dataset validateResults = prevDataset
+    final Dataset results = prevDataset
         .select(prevValueHashColumn, prevValueColumn)
         .dropDuplicates()
         .filter(prevValueColumn.isNotNull())
-        .mapPartitions(mapper, Encoders.bean(ValidateCodeResult.class));
-    Column valueColumn = validateResults.col("result");
-    final Column resultHashColumn = validateResults.col("hash");
+        .mapPartitions(mapper, Encoders.bean(MemberOfResult.class));
+    Column valueColumn = results.col("result");
+    final Column resultHashColumn = results.col("hash");
 
     // We then join the input dataset to the validated codes, and select the validation result
     // as the new value.
     final Dataset<Row> dataset = prevDataset
-        .join(validateResults, prevValueHashColumn.equalTo(resultHashColumn), "left_outer");
+        .join(results, prevValueHashColumn.equalTo(resultHashColumn), "left_outer");
 
     // The conditional expression around the value column is required to deal with nulls. This
     // function should only ever return true or false.

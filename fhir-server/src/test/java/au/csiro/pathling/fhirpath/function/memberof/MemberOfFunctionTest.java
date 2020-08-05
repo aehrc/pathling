@@ -36,17 +36,17 @@ import au.csiro.pathling.test.DatasetBuilder;
 import au.csiro.pathling.test.ElementPathBuilder;
 import au.csiro.pathling.test.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodeMapperAnswerer;
-import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodeableConceptTxAnswerer;
-import au.csiro.pathling.test.helpers.FhirHelpers.ValidateCodingTxAnswerer;
+import au.csiro.pathling.test.helpers.FhirHelpers.MemberOfMapperAnswerer;
+import au.csiro.pathling.test.helpers.FhirHelpers.MemberOfTxAnswerer;
 import java.util.*;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
@@ -95,18 +95,19 @@ class MemberOfFunctionTest {
 
     // Create a mock terminology client.
     final TerminologyClient terminologyClient = mock(TerminologyClient.class);
-    final Answer<Bundle> validateCodingTxAnswerer = new ValidateCodingTxAnswerer(coding2, coding5);
+    final Answer<ValueSet> memberOfTxAnswerer = new MemberOfTxAnswerer(coding2, coding5);
     when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
-    when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodingTxAnswerer);
+    when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
+        .thenAnswer(memberOfTxAnswerer);
 
     // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
     final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     // Create a mock ValidateCodeMapper.
-    final ValidateCodeMapper mockCodeMapper = mock(ValidateCodeMapper.class);
-    final Answer<Iterator<ValidateCodeResult>> validateCodeMapperAnswerer =
-        new ValidateCodeMapperAnswerer(false, true, false, false, true);
+    final MemberOfMapper mockCodeMapper = mock(MemberOfMapper.class);
+    final Answer<Iterator<MemberOfResult>> validateCodeMapperAnswerer =
+        new MemberOfMapperAnswerer(false, true, false, false, true);
     //noinspection unchecked
     when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
@@ -131,7 +132,7 @@ class MemberOfFunctionTest {
         .hasFhirType(FHIRDefinedType.BOOLEAN);
 
     // Test the mapper.
-    final ValidateCodeMapper validateCodingMapper = new ValidateCodeMapper("xyz",
+    final MemberOfMapper validateCodingMapper = new MemberOfMapper("xyz",
         terminologyClientFactory,
         MY_VALUE_SET_URL, FHIRDefinedType.CODING);
     final Row inputCodingRow1 = RowFactory.create(1, rowFromCoding(coding1));
@@ -142,16 +143,16 @@ class MemberOfFunctionTest {
     final List<Row> inputCodingRows = Arrays
         .asList(inputCodingRow1, inputCodingRow2, inputCodingRow3, inputCodingRow4,
             inputCodingRow5);
-    final List<ValidateCodeResult> results = new ArrayList<>();
+    final List<MemberOfResult> results = new ArrayList<>();
     validateCodingMapper.call(inputCodingRows.iterator()).forEachRemaining(results::add);
 
     // Check the result dataset.
-    final List<ValidateCodeResult> expectedResults = Arrays.asList(
-        new ValidateCodeResult(1, false),
-        new ValidateCodeResult(2, true),
-        new ValidateCodeResult(3, false),
-        new ValidateCodeResult(4, false),
-        new ValidateCodeResult(5, true)
+    final List<MemberOfResult> expectedResults = Arrays.asList(
+        new MemberOfResult(1, false),
+        new MemberOfResult(2, true),
+        new MemberOfResult(3, false),
+        new MemberOfResult(4, false),
+        new MemberOfResult(5, true)
     );
     assertEquals(expectedResults, results);
   }
@@ -204,18 +205,19 @@ class MemberOfFunctionTest {
 
     // Create a mock terminology client.
     final TerminologyClient terminologyClient = mock(TerminologyClient.class);
-    final Answer<Bundle> validateCodeableConceptTxAnswerer = new ValidateCodeableConceptTxAnswerer(
-        codeableConcept1, codeableConcept3, codeableConcept4);
+    final Answer<ValueSet> memberOfTxAnswerer = new MemberOfTxAnswerer(codeableConcept1,
+        codeableConcept3, codeableConcept4);
     when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
-    when(terminologyClient.batch(any(Bundle.class))).thenAnswer(validateCodeableConceptTxAnswerer);
+    when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
+        .thenAnswer(memberOfTxAnswerer);
 
     // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
     final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     // Create a mock ValidateCodeMapper.
-    final ValidateCodeMapper mockCodeMapper = mock(ValidateCodeMapper.class);
-    final Answer<Iterator<ValidateCodeResult>> validateCodeMapperAnswerer = new ValidateCodeMapperAnswerer(
+    final MemberOfMapper mockCodeMapper = mock(MemberOfMapper.class);
+    final Answer<Iterator<MemberOfResult>> validateCodeMapperAnswerer = new MemberOfMapperAnswerer(
         true,
         false, true, true, false, false);
     //noinspection unchecked
@@ -241,7 +243,7 @@ class MemberOfFunctionTest {
         .hasFhirType(FHIRDefinedType.BOOLEAN);
 
     // Test the mapper.
-    final ValidateCodeMapper validateCodeMapper = new ValidateCodeMapper("xyz",
+    final MemberOfMapper memberOfMapper = new MemberOfMapper("xyz",
         terminologyClientFactory,
         MY_VALUE_SET_URL, FHIRDefinedType.CODEABLECONCEPT);
     final Row inputCodeableConceptRow1 = RowFactory
@@ -259,17 +261,17 @@ class MemberOfFunctionTest {
     final List<Row> inputCodeableConceptRows = Arrays
         .asList(inputCodeableConceptRow1, inputCodeableConceptRow2, inputCodeableConceptRow3,
             inputCodeableConceptRow4, inputCodeableConceptRow5, inputCodeableConceptRow6);
-    final List<ValidateCodeResult> results = new ArrayList<>();
-    validateCodeMapper.call(inputCodeableConceptRows.iterator()).forEachRemaining(results::add);
+    final List<MemberOfResult> results = new ArrayList<>();
+    memberOfMapper.call(inputCodeableConceptRows.iterator()).forEachRemaining(results::add);
 
     // Check the result dataset.
-    final List<ValidateCodeResult> expectedResults = Arrays.asList(
-        new ValidateCodeResult(1, true),
-        new ValidateCodeResult(2, false),
-        new ValidateCodeResult(3, true),
-        new ValidateCodeResult(4, true),
-        new ValidateCodeResult(5, false),
-        new ValidateCodeResult(6, true)
+    final List<MemberOfResult> expectedResults = Arrays.asList(
+        new MemberOfResult(1, true),
+        new MemberOfResult(2, false),
+        new MemberOfResult(3, true),
+        new MemberOfResult(4, true),
+        new MemberOfResult(5, false),
+        new MemberOfResult(6, true)
     );
     assertEquals(expectedResults, results);
   }

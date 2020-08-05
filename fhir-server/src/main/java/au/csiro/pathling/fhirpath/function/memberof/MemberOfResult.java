@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function.memberof;
 
 import java.io.Serializable;
+import java.util.Objects;
 import lombok.Data;
 
 /**
@@ -16,7 +17,7 @@ import lombok.Data;
  * @author John Grimes
  */
 @Data
-public class ValidateCodeResult implements Serializable {
+public class MemberOfResult implements Serializable {
 
   private static final long serialVersionUID = 4452195634956143175L;
 
@@ -24,9 +25,15 @@ public class ValidateCodeResult implements Serializable {
   private boolean result;
 
   /**
+   * No arguments constructor to allow for serialization / deserialization.
+   */
+  public MemberOfResult() {
+  }
+
+  /**
    * @param hash The value used for correlating input concepts to results
    */
-  public ValidateCodeResult(final int hash) {
+  public MemberOfResult(final int hash) {
     this.hash = hash;
   }
 
@@ -34,9 +41,28 @@ public class ValidateCodeResult implements Serializable {
    * @param hash The value used for correlating input concepts to results
    * @param result The boolean result of the operation
    */
-  public ValidateCodeResult(final int hash, final boolean result) {
+  public MemberOfResult(final int hash, final boolean result) {
     this.hash = hash;
     this.result = result;
+  }
+
+  @Override
+  @SuppressWarnings("NonFinalFieldReferenceInEquals")
+  public boolean equals(final Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final MemberOfResult that = (MemberOfResult) o;
+    return hash == that.hash;
+  }
+
+  @Override
+  @SuppressWarnings("NonFinalFieldReferencedInHashCode")
+  public int hashCode() {
+    return Objects.hash(hash);
   }
 
 }

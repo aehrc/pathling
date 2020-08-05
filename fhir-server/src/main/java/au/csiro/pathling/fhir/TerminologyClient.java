@@ -9,33 +9,35 @@ package au.csiro.pathling.fhir;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.annotation.Transaction;
-import ca.uhn.fhir.rest.annotation.TransactionParam;
 import ca.uhn.fhir.rest.client.api.IRestfulClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import java.util.List;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.ConceptMap;
-import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
 
 /**
+ * A HAPI "annotation client" for communicating with a R4 FHIR terminology service.
+ *
  * @author John Grimes
+ * @see <a href="https://hapifhir.io/hapi-fhir/docs/client/annotation_client.html">Annotation
+ * Client</a>
  */
 public interface TerminologyClient extends IRestfulClient {
 
   /**
-   * Invokes a "batch" request against the terminology server
+   * Invokes an "expand" request against the terminology server, using an inline ValueSet resource
    *
-   * @param input a {@link Bundle} resource containing the requested operations
-   * @return a {@link Bundle} containing the responses to the operations
-   * @see <a href="https://www.hl7.org/fhir/R4/http.html#transaction">batch/transaction</a>
+   * @param valueSet a {@link ValueSet} resource to be expanded by the terminology server
+   * @param count The number of results to return
+   * @return a ValueSet containing the expansion result
+   * @see <a href="https://www.hl7.org/fhir/R4/valueset-operation-expand.html">Operation $expand on
+   * ValueSet</a>
    */
-  @Transaction
-  Bundle batch(@TransactionParam Bundle input);
+  @Operation(name = "$expand", type = ValueSet.class)
+  ValueSet expand(@OperationParam(name = "valueSet") ValueSet valueSet,
+      @OperationParam(name = "count") IntegerType count);
 
   /**
    * Invokes the "closure" operation against the ConceptMap resource.
