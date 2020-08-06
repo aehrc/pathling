@@ -10,7 +10,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 4
+          "valueUnsignedInt": 4
         },
         {
           "name": "drillDown",
@@ -27,7 +27,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 6
+          "valueUnsignedInt": 6
         },
         {
           "name": "drillDown",
@@ -44,7 +44,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -61,7 +61,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -78,7 +78,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -95,7 +95,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 4
+          "valueUnsignedInt": 4
         },
         {
           "name": "drillDown",
@@ -112,7 +112,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -129,7 +129,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -146,7 +146,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 2
+          "valueUnsignedInt": 2
         },
         {
           "name": "drillDown",
@@ -163,7 +163,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 4
+          "valueUnsignedInt": 4
         },
         {
           "name": "drillDown",
@@ -180,7 +180,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 4
+          "valueUnsignedInt": 4
         },
         {
           "name": "drillDown",
@@ -197,7 +197,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 3
+          "valueUnsignedInt": 3
         },
         {
           "name": "drillDown",
@@ -214,7 +214,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 2
+          "valueUnsignedInt": 2
         },
         {
           "name": "drillDown",
@@ -231,7 +231,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -248,7 +248,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -265,7 +265,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -282,7 +282,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -299,7 +299,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 2
+          "valueUnsignedInt": 2
         },
         {
           "name": "drillDown",
@@ -316,7 +316,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -333,7 +333,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 3
+          "valueUnsignedInt": 3
         },
         {
           "name": "drillDown",
@@ -350,7 +350,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -367,7 +367,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -384,7 +384,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -401,7 +401,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -418,7 +418,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -435,7 +435,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -452,7 +452,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -469,7 +469,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -486,7 +486,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -503,7 +503,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -520,7 +520,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -537,7 +537,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -554,7 +554,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -571,7 +571,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",

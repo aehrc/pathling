@@ -49,7 +49,7 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
         when(countFunction.apply(column).isNull(), 0L)
             .otherwise(countFunction.apply(column));
     return applyAggregation(input.getContext(), inputPath, count, expression,
-        FHIRDefinedType.DECIMAL);
+        FHIRDefinedType.UNSIGNEDINT);
   }
 
 }

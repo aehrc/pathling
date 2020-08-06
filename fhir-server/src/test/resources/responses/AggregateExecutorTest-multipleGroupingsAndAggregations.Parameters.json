@@ -13,11 +13,11 @@
         },
         {
           "name": "result",
-          "valueDecimal": 2
+          "valueUnsignedInt": 2
         },
         {
           "name": "result",
-          "valueDecimal": 0
+          "valueUnsignedInt": 0
         },
         {
           "name": "drillDown",

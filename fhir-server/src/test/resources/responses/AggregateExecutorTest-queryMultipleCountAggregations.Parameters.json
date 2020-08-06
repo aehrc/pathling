@@ -10,11 +10,11 @@
         },
         {
           "name": "result",
-          "valueDecimal": 5
+          "valueUnsignedInt": 5
         },
         {
           "name": "result",
-          "valueDecimal": 5
+          "valueUnsignedInt": 5
         },
         {
           "name": "drillDown",
@@ -31,11 +31,11 @@
         },
         {
           "name": "result",
-          "valueDecimal": 5
+          "valueUnsignedInt": 5
         },
         {
           "name": "result",
-          "valueDecimal": 4
+          "valueUnsignedInt": 4
         },
         {
           "name": "drillDown",

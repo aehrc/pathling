@@ -117,10 +117,10 @@ See also:
 ## count
 
 ```
-collection -> count() : Decimal
+collection -> count() : Integer
 ```
 
-Returns the [Decimal](./data-types.html#decimal) count of the number of items in
+Returns the [Integer](./data-types.html#integer) count of the number of items in
 the input collection.
 
 Example:
@@ -128,16 +128,6 @@ Example:
 ```
 Patient.name.given.count()
 ```
-
-<div class="callout info">
-    The <code>count</code> function is an <em>aggregate function</em>, which means it can be used as the final 
-    path component in contexts that require this, e.g. aggregation expressions within the 
-    <a href="../aggregate.html">aggregate operation</a>.
-</div>
-
-<div class="callout warning">
-    The implementation of <code>count</code> in Pathling diverges from the FHIRPath specification in that it returns a Decimal rather than an Integer. This is so that Pathling can support results that are greater than the limitation imposed by the Integer type of <code>2<sup>31</sup> - 1</code>.
-</div>
 
 See also: [count](https://hl7.org/fhirpath/2018Sep/index.html#count-integer)
 
@@ -156,12 +146,6 @@ Example:
 ```
 Patient.name.given.first()
 ```
-
-<div class="callout info">
-    The <code>first</code> function is an <em>aggregate function</em>, which means it can be used as the final 
-    path component in contexts that require this, e.g. aggregation expressions within the 
-    <a href="../aggregate.html">aggregate operation</a>.
-</div>
 
 See also: [first](https://hl7.org/fhirpath/2018Sep/index.html#first-collection)
 

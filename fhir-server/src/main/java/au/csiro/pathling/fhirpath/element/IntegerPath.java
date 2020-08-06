@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
@@ -20,6 +21,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.LongType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.PositiveIntType;
@@ -59,13 +61,29 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
+    final int value;
+    if (row.schema().fields()[columnNumber].dataType() instanceof LongType) {
+      try {
+        // Currently some functions such as count currently return an Integer type, even though
+        // their return values can theoretically exceed the maximum value permitted for an integer.
+        // This guard allows us to handle this situation in a safe way. In the future, we will
+        // implement the "as" operator to allow the user to explicitly use a Decimal where large
+        // values are possible.
+        value = Math.toIntExact(row.getLong(columnNumber));
+      } catch (final ArithmeticException e) {
+        throw new InvalidUserInputError(
+            "Attempt to return an Integer value greater than the maximum value permitted for this type");
+      }
+    } else {
+      value = row.getInt(columnNumber);
+    }
     switch (getFhirType()) {
       case UNSIGNEDINT:
-        return Optional.of(new UnsignedIntType(row.getInt(columnNumber)));
+        return Optional.of(new UnsignedIntType(value));
       case POSITIVEINT:
-        return Optional.of(new PositiveIntType(row.getInt(columnNumber)));
+        return Optional.of(new PositiveIntType(value));
       default:
-        return Optional.of(new IntegerType(row.getInt(columnNumber)));
+        return Optional.of(new IntegerType(value));
     }
   }
 

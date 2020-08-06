@@ -6,11 +6,11 @@
       "part": [
         {
           "name": "label",
-          "valueDecimal": 8
+          "valueUnsignedInt": 8
         },
         {
           "name": "result",
-          "valueDecimal": 3
+          "valueUnsignedInt": 3
         },
         {
           "name": "drillDown",
@@ -23,11 +23,11 @@
       "part": [
         {
           "name": "label",
-          "valueDecimal": 3
+          "valueUnsignedInt": 3
         },
         {
           "name": "result",
-          "valueDecimal": 2
+          "valueUnsignedInt": 2
         },
         {
           "name": "drillDown",
@@ -40,11 +40,11 @@
       "part": [
         {
           "name": "label",
-          "valueDecimal": 10
+          "valueUnsignedInt": 10
         },
         {
           "name": "result",
-          "valueDecimal": 2
+          "valueUnsignedInt": 2
         },
         {
           "name": "drillDown",
@@ -57,11 +57,11 @@
       "part": [
         {
           "name": "label",
-          "valueDecimal": 16
+          "valueUnsignedInt": 16
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",
@@ -74,11 +74,11 @@
       "part": [
         {
           "name": "label",
-          "valueDecimal": 5
+          "valueUnsignedInt": 5
         },
         {
           "name": "result",
-          "valueDecimal": 1
+          "valueUnsignedInt": 1
         },
         {
           "name": "drillDown",

@@ -10,7 +10,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 39
+          "valueUnsignedInt": 39
         },
         {
           "name": "drillDown",
@@ -27,7 +27,7 @@
         },
         {
           "name": "result",
-          "valueDecimal": 64
+          "valueUnsignedInt": 64
         },
         {
           "name": "drillDown",

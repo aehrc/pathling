@@ -49,8 +49,9 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
-    // We use the decimal type for long values where the value is derived from a function, as there
-    // is the potential for the value to be greater tha
+    // We support the extraction of Decimal values from columns with the long type. This will be
+    // used in the future to support things like casting large numbers to Decimal to work around the
+    // maximum Integer limit.
     if (row.schema().fields()[columnNumber].dataType() instanceof LongType) {
       final long longValue = row.getLong(columnNumber);
       return Optional.of(new DecimalType(longValue));
