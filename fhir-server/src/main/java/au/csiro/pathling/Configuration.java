@@ -6,6 +6,7 @@
 
 package au.csiro.pathling;
 
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -35,8 +36,6 @@ public class Configuration {
   @NotBlank
   private String version;
 
-  /* GENERAL */
-
   /**
    * The port which the server should bind to and listen for HTTP connections.
    */
@@ -57,71 +56,23 @@ public class Configuration {
   @NotNull
   private Boolean verboseRequestLogging;
 
-  /* STORAGE */
-
-  /**
-   * The base URL at which Pathling will look for data files, and where it will save data received
-   * within import requests. Can be an Amazon S3 ({@code s3://}), HDFS ({@code hdfs://}) or
-   * filesystem ({@code file://}) URL.
-   */
-  @NotBlank
-  private String warehouseUrl;
-
-  /**
-   * The subdirectory within the warehouse path used to read and write data.
-   */
-  @NotBlank
-  @Pattern(regexp = "[A-Za-z0-9-_]+")
-  @Size(min = 1, max = 50)
-  private String databaseName;
-
-  /**
-   * Authentication details for connecting to a protected Amazon S3 bucket.
-   */
-  @Nullable
-  private String awsAccessKeyId;
-
-  /**
-   * Authentication details for connecting to a protected Amazon S3 bucket.
-   */
-  @Nullable
-  @ToString.Exclude
-  private String awsSecretAccessKey;
-
-  @Nonnull
-  public Optional<String> getAwsAccessKeyId() {
-    return Optional.ofNullable(awsAccessKeyId);
-  }
-
-  @Nonnull
-  public Optional<String> getAwsSecretAccessKey() {
-    return Optional.ofNullable(awsSecretAccessKey);
-  }
-
-  /* CROSS-ORIGIN RESOURCE SHARING (CORS) */
-
-  @NotBlank
-  private String corsAllowedDomains;
-
-  /* APACHE SPARK */
-
   @NotNull
   private Spark spark;
 
-  /* TERMINOLOGY SERVICE */
+  @NotNull
+  private Storage storage;
 
   @NotNull
   private Terminology terminology;
 
-  /* AUTHORISATION */
-
   @NotNull
   private Authorisation auth;
 
-  /* CACHING */
-
   @NotNull
   private Caching caching;
+
+  @NotNull
+  private Cors cors;
 
   /**
    * Represents configuration that controls the behaviour of Apache Spark.
@@ -141,6 +92,67 @@ public class Configuration {
      */
     @NotNull
     private Boolean explainQueries;
+
+  }
+
+  /**
+   * Configuration relating to the storage of data.
+   */
+  @Data
+  public static class Storage {
+
+    /**
+     * The base URL at which Pathling will look for data files, and where it will save data received
+     * within import requests. Can be an Amazon S3 ({@code s3://}), HDFS ({@code hdfs://}) or
+     * filesystem ({@code file://}) URL.
+     */
+    @NotBlank
+    private String warehouseUrl;
+
+    /**
+     * The subdirectory within the warehouse path used to read and write data.
+     */
+    @NotBlank
+    @Pattern(regexp = "[A-Za-z0-9-_]+")
+    @Size(min = 1, max = 50)
+    private String databaseName;
+
+    @NotNull
+    private Aws aws;
+
+    @Data
+    public static class Aws {
+
+      /**
+       * Public buckets can be accessed by default, set this to false to access protected buckets.
+       */
+      @NotNull
+      private boolean anonymousAccess;
+
+      /**
+       * Authentication details for connecting to a protected Amazon S3 bucket.
+       */
+      @Nullable
+      private String accessKeyId;
+
+      /**
+       * Authentication details for connecting to a protected Amazon S3 bucket.
+       */
+      @Nullable
+      @ToString.Exclude
+      private String secretAccessKey;
+
+      @Nonnull
+      public Optional<String> getAccessKeyId() {
+        return Optional.ofNullable(accessKeyId);
+      }
+
+      @Nonnull
+      public Optional<String> getSecretAccessKey() {
+        return Optional.ofNullable(secretAccessKey);
+      }
+
+    }
 
   }
 
@@ -279,6 +291,34 @@ public class Configuration {
      */
     @NotNull
     private long maxEntries;
+
+  }
+
+  /**
+   * Configures the CORS functionality of the server.
+   */
+  @Data
+  public static class Cors {
+
+    @NotNull
+    private List<String> allowedOrigins;
+
+    @NotNull
+    private List<String> allowedMethods;
+
+    @NotNull
+    private List<String> allowedHeaders;
+
+    @Nullable
+    private List<String> exposeHeaders;
+
+    @NotNull
+    private long maxAge;
+
+    @Nullable
+    public Optional<List<String>> getExposeHeaders() {
+      return Optional.ofNullable(exposeHeaders);
+    }
 
   }
 

@@ -25,7 +25,10 @@ import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import java.net.MalformedURLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -222,11 +225,15 @@ public class FhirServer extends RestfulServer {
    */
   private void defineCorsConfiguration() {
     final CorsConfiguration corsConfig = new CorsConfiguration();
-    corsConfig.setAllowedOrigins(Arrays.asList(configuration.getCorsAllowedDomains().split(",")));
-    corsConfig.setAllowedMethods(Arrays.asList("GET", "POST"));
-    corsConfig.setAllowedHeaders(Collections.singletonList("Content-Type"));
-    corsConfig.setMaxAge(600L);
 
+    corsConfig.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
+    corsConfig.setAllowedMethods(configuration.getCors().getAllowedMethods());
+    corsConfig.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
+    corsConfig.setMaxAge(configuration.getCors().getMaxAge());
+    if (configuration.getCors().getExposeHeaders().isPresent()) {
+      corsConfig.setExposedHeaders(configuration.getCors().getExposeHeaders().get());
+    }
+   
     final CorsInterceptor interceptor = new CorsInterceptor(corsConfig);
     registerInterceptor(interceptor);
   }

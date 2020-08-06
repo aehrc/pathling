@@ -10,22 +10,6 @@ pathling:
   # server, and between the server and the terminology service.
   verboseRequestLogging: false
 
-  # The base URL at which Pathling will look for data files, and where it will save data received
-  # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://) URL.
-  warehouseUrl: file:///usr/share/warehouse
-
-  # The subdirectory within the warehouse path used to read and write data.
-  databaseName: default
-
-  # Authentication details for connecting to a protected Amazon S3 bucket.
-  # awsAccessKeyId: [AWS access key ID]
-  # awsSecretAccessKey: [AWS secret access key]
-
-  # This is a comma-delimited list of domain names that controls which domains are permitted to 
-  # access the server per the `Access-Control-Allow-Origin` header within the Cross-Origin Resource 
-  # Sharing specification.
-  corsAllowedDomains: "*"
-
   spark:
     # The name that Pathling will be identified as within the Spark cluster.
     appName: pathling
@@ -34,18 +18,34 @@ pathling:
     # execute queries.
     explainQueries: false
 
+  storage:
+    # The base URL at which Pathling will look for data files, and where it will save data received
+    # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://) URL.
+    warehouseUrl: file:///usr/share/warehouse
+
+    # The subdirectory within the warehouse path used to read and write data.
+    databaseName: default
+
+    # Configuration relating to accessing data hosted within Amazon Web Services.
+    aws:
+      # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
+      anonymousAccess: true
+      # Authentication details for connecting to protected Amazon S3 locations.
+      # accessKeyId: [AWS access key ID]
+      # secretAccessKey: [AWS secret access key]
+
   terminology:
     # Enables the use of terminology functions.
     enabled: true
 
     # The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology 
-    # queries.
+    # queries. The server listed here is suitable for low volume testing purposes only.
     serverUrl: https://r4.ontoserver.csiro.au/fhir
     
     # The maximum period (in milliseconds) that the server should wait for incoming data from the
     # terminology service.
     socketTimeout: 60000
-    
+
   auth:
     # Enables SMART authorisation.
     enabled: false
@@ -70,13 +70,27 @@ pathling:
 
     # Provides the URL which will be advertised as the token revocation endpoint.
     # revokeUrl: [token revocation URL]
-    
+
   caching:
     # Controls whether request caching is enabled.
     enabled: true
 
     # Controls the maximum number of cache entries held in memory.
     maxEntries: 100
+
+  # This section configures the CORS functionality of the server.
+  # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+  cors:
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+    allowedHeaders:
+      - Content-Type
+    # exposeHeaders:
+    #   - [header]
+    maxAge: 600
 
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.

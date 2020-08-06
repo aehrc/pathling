@@ -6,6 +6,7 @@
 
 package au.csiro.pathling;
 
+import au.csiro.pathling.Configuration.Storage.Aws;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -43,13 +44,17 @@ public class Spark {
         .appName(configuration.getSpark().getAppName())
         .getOrCreate();
 
-    if (configuration.getAwsAccessKeyId().isPresent()
-        && configuration.getAwsSecretAccessKey().isPresent()) {
-      final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
-          .hadoopConfiguration();
-      hadoopConfiguration.set("fs.s3a.access.key", configuration.getAwsAccessKeyId().get());
-      hadoopConfiguration.set("fs.s3a.secret.key", configuration.getAwsSecretAccessKey().get());
+    final Aws awsConfig = configuration.getStorage().getAws();
+    final org.apache.hadoop.conf.Configuration hadoopConfig = spark.sparkContext()
+        .hadoopConfiguration();
+    if (awsConfig.isAnonymousAccess()) {
+      hadoopConfig.set("fs.s3a.aws.credentials.provider",
+          "org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider");
     }
+    awsConfig.getAccessKeyId()
+        .ifPresent(accessKeyId -> hadoopConfig.set("fs.s3a.access.key", accessKeyId));
+    awsConfig.getSecretAccessKey()
+        .ifPresent(secretAccessKey -> hadoopConfig.set("fs.s3a.secret.key", secretAccessKey));
 
     return spark;
   }

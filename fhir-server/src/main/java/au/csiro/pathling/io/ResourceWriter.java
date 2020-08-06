@@ -34,8 +34,8 @@ public class ResourceWriter {
    * @param configuration A {@link Configuration} object which controls the behaviour of the writer
    */
   public ResourceWriter(@Nonnull final Configuration configuration) {
-    this.warehouseUrl = convertS3ToS3aUrl(configuration.getWarehouseUrl());
-    this.databaseName = configuration.getDatabaseName();
+    this.warehouseUrl = convertS3ToS3aUrl(configuration.getStorage().getWarehouseUrl());
+    this.databaseName = configuration.getStorage().getDatabaseName();
   }
 
   /**
