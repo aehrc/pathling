@@ -15,7 +15,6 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.json.JSONException;
-import org.junit.jupiter.api.function.Executable;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
@@ -45,12 +44,6 @@ public abstract class Assertions {
   @Nonnull
   public static DatasetAssert assertThat(@Nonnull final Dataset<Row> rowDataset) {
     return new DatasetAssert(rowDataset);
-  }
-
-  public static <T extends java.lang.Throwable> T assertThrows(
-      @Nonnull final Class<T> expectedType, @Nonnull final Executable executable,
-      @Nonnull final String message) {
-    return org.junit.jupiter.api.Assertions.assertThrows(expectedType, executable, message);
   }
 
   public static void assertJson(@Nonnull final String expectedPath,

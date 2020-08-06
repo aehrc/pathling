@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.assertions.Assertions.assertThrows;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
@@ -15,6 +14,7 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -284,15 +284,17 @@ class MemberOfFunctionTest {
     final FhirPath argument = StringLiteralPath.fromString(MY_VALUE_SET_URL, mockContext);
 
     final ParserContext parserContext = new ParserContextBuilder()
+        .terminologyClient(mock(TerminologyClient.class))
         .terminologyClientFactory(mock(TerminologyClientFactory.class))
         .build();
 
     final NamedFunctionInput memberOfInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
 
-    assertThrows(InvalidUserInputError.class,
-        () -> new MemberOfFunction().invoke(memberOfInput),
-        "Input to memberOf function is of unsupported type: onsetString");
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new MemberOfFunction().invoke(memberOfInput));
+    assertEquals("Input to memberOf function is of unsupported type: 'some string'",
+        error.getMessage());
   }
 
   @Test
@@ -303,59 +305,60 @@ class MemberOfFunctionTest {
     final IntegerLiteralPath argument = IntegerLiteralPath
         .fromString("4", mock(FhirPath.class));
 
-    final ParserContext context = new ParserContextBuilder().build();
+    final ParserContext context = new ParserContextBuilder()
+        .terminologyClient(mock(TerminologyClient.class))
+        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .build();
 
     final NamedFunctionInput memberOfInput = new NamedFunctionInput(context, input,
         Collections.singletonList(argument));
 
-    assertThrows(InvalidUserInputError.class,
-        () -> new MemberOfFunction().invoke(memberOfInput),
-        "memberOf function accepts one argument of type String: memberOf(4)");
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new MemberOfFunction().invoke(memberOfInput));
+    assertEquals("memberOf function accepts one argument of type String literal",
+        error.getMessage());
   }
 
-  // @Test
-  // public void throwsErrorIfMoreThanOneArgument() {
-  //   ParsedExpression input = new ComplexNonLiteralPathBuilder(FHIRDefinedType.CODEABLECONCEPT)
-  //       .build();
-  //   ParsedExpression argument1 = PrimitiveNonLiteralPathBuilder.literalString("foo"),
-  //       argument2 = PrimitiveNonLiteralPathBuilder.literalString("bar");
-  //
-  //   ParserContext parserContext = new ParserContext();
-  //   parserContext.setTerminologyClientFactory(mock(TerminologyClientFactory.class));
-  //
-  //   FunctionInput memberOfInput = new FunctionInput();
-  //   memberOfInput.setContext(parserContext);
-  //   memberOfInput.setInput(input);
-  //   memberOfInput.getArguments().add(argument1);
-  //   memberOfInput.getArguments().add(argument2);
-  //   memberOfInput.setExpression("memberOf('foo', 'bar')");
-  //
-  //   MemberOfFunction memberOfFunction = new MemberOfFunction();
-  //   assertThatExceptionOfType(InvalidRequestException.class)
-  //       .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
-  //       .withMessage(
-  //           "memberOf function accepts one argument of type String: memberOf('foo', 'bar')");
-  // }
-  //
-  // @Test
-  // public void throwsErrorIfTerminologyServiceNotConfigured() {
-  //   ParsedExpression input = new ComplexNonLiteralPathBuilder(FHIRDefinedType.CODEABLECONCEPT)
-  //       .build();
-  //   ParsedExpression argument = PrimitiveNonLiteralPathBuilder.literalString("foo");
-  //
-  //   ParserContext parserContext = new ParserContext();
-  //
-  //   FunctionInput memberOfInput = new FunctionInput();
-  //   memberOfInput.setContext(parserContext);
-  //   memberOfInput.setInput(input);
-  //   memberOfInput.getArguments().add(argument);
-  //   memberOfInput.setExpression("memberOf('foo')");
-  //
-  //   MemberOfFunction memberOfFunction = new MemberOfFunction();
-  //   assertThatExceptionOfType(InvalidRequestException.class)
-  //       .isThrownBy(() -> memberOfFunction.invoke(memberOfInput))
-  //       .withMessage(
-  //           "Attempt to call terminology function memberOf when no terminology service is configured");
-  // }
+  @Test
+  public void throwsErrorIfMoreThanOneArgument() {
+    final ElementPath input = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+        .build();
+    final StringLiteralPath argument1 = StringLiteralPath.fromString("'foo'", mock(FhirPath.class)),
+        argument2 = StringLiteralPath.fromString("'bar'", mock(FhirPath.class));
+
+    final ParserContext context = new ParserContextBuilder()
+        .terminologyClient(mock(TerminologyClient.class))
+        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .build();
+
+    final NamedFunctionInput memberOfInput = new NamedFunctionInput(context, input,
+        Arrays.asList(argument1, argument2));
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new MemberOfFunction().invoke(memberOfInput));
+    assertEquals("memberOf function accepts one argument of type String",
+        error.getMessage());
+  }
+
+  @Test
+  public void throwsErrorIfTerminologyServiceNotConfigured() {
+    final ElementPath input = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+        .build();
+    final FhirPath argument = StringLiteralPath.fromString("some string", mock(FhirPath.class));
+
+    final ParserContext context = new ParserContextBuilder()
+        .build();
+
+    final NamedFunctionInput memberOfInput = new NamedFunctionInput(context, input,
+        Collections.singletonList(argument));
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new MemberOfFunction().invoke(memberOfInput));
+    assertEquals(
+        "Attempt to call terminology function memberOf when terminology service has not been configured",
+        error.getMessage());
+  }
 
 }

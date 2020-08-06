@@ -125,10 +125,10 @@ public class MemberOfFunction implements NamedFunction {
             || ((ElementPath) inputPath).getFhirType().equals(FHIRDefinedType.CODEABLECONCEPT)),
         "Input to memberOf function is of unsupported type: " + inputPath.getExpression());
     checkUserInput(input.getArguments().size() == 1,
-        "memberOf function accepts one argument of type String: " + inputPath.getExpression());
-    checkUserInput(input.getArguments().get(0) instanceof StringLiteralPath,
-        "memberOf function accepts one argument of type String literal: " + inputPath
-            .getExpression());
+        "memberOf function accepts one argument of type String");
+    final FhirPath argument = input.getArguments().get(0);
+    checkUserInput(argument instanceof StringLiteralPath,
+        "memberOf function accepts one argument of type String literal");
   }
 
 }
