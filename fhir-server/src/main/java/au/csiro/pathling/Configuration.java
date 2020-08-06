@@ -136,44 +136,11 @@ public class Configuration {
     private String appName;
 
     /**
-     * Address of the master node of an Apache Spark cluster to use for processing data.
-     */
-    @NotBlank
-    private String masterUrl;
-
-    /**
-     * Hostname or IP address to use when binding listening sockets within Spark.
-     */
-    @Nullable
-    private String bindAddress;
-
-    /**
-     * The quantity of memory available for each child task to process data within, in the same
-     * format as JVM memory strings.
-     */
-    @NotBlank
-    private String executorMemory;
-
-    /**
-     * This option controls the number of data partitions used to distribute data between child
-     * tasks. This can be tuned to higher numbers for larger data sets. It also controls the
-     * granularity of requests made to the configured terminology service.
-     */
-    @NotNull
-    @Min(1)
-    private Integer shufflePartitions;
-
-    /**
      * Setting this option to {@code true} will enable additional logging relating to the query plan
      * used to execute queries.
      */
     @NotNull
     private Boolean explainQueries;
-
-    @Nonnull
-    public Optional<String> getBindAddress() {
-      return Optional.ofNullable(bindAddress);
-    }
 
   }
 

@@ -30,21 +30,6 @@ pathling:
     # The name that Pathling will be identified as within the Spark cluster.
     appName: pathling
 
-    # Address of the master node of an Apache Spark cluster to use for processing data.
-    masterUrl: local[*]
-
-    # Hostname or IP address to use when binding listening sockets within Spark.
-    # bindAddress: [bind address]
-
-    # The quantity of memory available for each child task to process data within, in the same format
-    # as JVM memory strings.
-    executorMemory: 1g
-
-    # This option controls the number of data partitions used to distribute data between child tasks.
-    # This can be tuned to higher numbers for larger data sets. It also controls the granularity of
-    # requests made to the configured terminology service.
-    shufflePartitions: 2
-
     # Setting this option to true will enable additional logging relating to the query plan used to
     # execute queries.
     explainQueries: false
@@ -92,3 +77,23 @@ pathling:
 
     # Controls the maximum number of cache entries held in memory.
     maxEntries: 100
+
+# Use this section to set or override any Spark configuration parameter. Tuning these parameters is
+# essential to get the optimal performance for your dataset.
+# Here is the full list: https://spark.apache.org/docs/latest/configuration.html
+spark:
+  master: local[*]
+  executor:
+    memory: 1g
+  sql:
+    autoBroadcastJoinThreshold: -1
+    adaptive:
+      enabled: true
+    shuffle:
+      service:
+        enabled: true
+      partitions: 2
+  scheduler:
+    mode: FAIR
+  dynamicAllocation:
+    enabled: true
