@@ -85,12 +85,13 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     capabilityStatement.setKind(CapabilityStatementKind.INSTANCE);
 
     final CapabilityStatementSoftwareComponent software = new CapabilityStatementSoftwareComponent(
-        new StringType("Pathling FHIR Server"));
+        new StringType("Pathling"));
     software.setVersion(configuration.getVersion());
     capabilityStatement.setSoftware(software);
 
     final CapabilityStatementImplementationComponent implementation =
-        new CapabilityStatementImplementationComponent(new StringType("Pathling FHIR Server"));
+        new CapabilityStatementImplementationComponent(
+            new StringType(configuration.getImplementationDescription()));
     final Optional<String> serverBase = getServerBase(Optional.ofNullable(httpServletRequest));
     serverBase.ifPresent(implementation::setUrl);
     capabilityStatement.setImplementation(implementation);

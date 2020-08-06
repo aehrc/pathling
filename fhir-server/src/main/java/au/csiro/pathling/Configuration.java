@@ -50,6 +50,12 @@ public class Configuration {
   private String httpBase;
 
   /**
+   * Controls the description of this server displayed within the FHIR CapabilityStatement.
+   */
+  @NotNull
+  private String implementationDescription;
+
+  /**
    * Setting this option to {@code true} will enable additional logging of the details of requests
    * to the server, and between the server and the terminology service.
    */
