@@ -6,8 +6,8 @@ pathling:
   # changed to /foo/fhir.
   httpBase: ""
 
-  # Controls the description of this server displayed within the FHIR CapabilityStatement.
-  implementationDescription: Pathling FHIR Server
+  # Controls the description of this server as displayed within the FHIR CapabilityStatement.
+  implementationDescription: Yet Another Pathling Server
 
   # Setting this option to true will enable additional logging of the details of requests to the 
   # server, and between the server and the terminology service.
