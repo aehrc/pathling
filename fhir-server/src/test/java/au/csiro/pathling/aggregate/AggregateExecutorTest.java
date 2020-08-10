@@ -9,25 +9,35 @@ package au.csiro.pathling.aggregate;
 import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static au.csiro.pathling.test.helpers.FhirHelpers.getJsonParser;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.param.StringAndListParam;
+import ca.uhn.fhir.rest.param.StringParam;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -49,25 +59,56 @@ class AggregateExecutorTest extends QueryExecutorTest {
   private final SparkSession spark;
   private final ResourceReader resourceReader;
   private final TerminologyClient terminologyClient;
+  private final TerminologyClientFactory terminologyClientFactory;
+  private final Configuration configuration;
+  private final FhirContext fhirContext;
+  private final FhirEncoders fhirEncoders;
+  private AggregateResponse response;
+  private ResourceType subjectResource;
 
   @Autowired
   public AggregateExecutorTest(final Configuration configuration, final FhirContext fhirContext,
-      final SparkSession sparkSession) {
+      final SparkSession spark, final FhirEncoders fhirEncoders) {
+    this.configuration = configuration;
+    this.fhirContext = fhirContext;
+    this.spark = spark;
+    this.fhirEncoders = fhirEncoders;
     resourceReader = mock(ResourceReader.class);
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    spark = sparkSession;
 
-    final TerminologyClientFactory terminologyClientFactory =
+    terminologyClientFactory =
         mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
-    this.executor = new CachingAggregateExecutor(configuration, fhirContext, sparkSession,
+    executor = new FreshAggregateExecutor(configuration, fhirContext, spark,
         resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory));
+  }
+
+  /**
+   * Test that the drill down expression from the first grouping from each aggregate result can be
+   * successfully executed using the FHIRPath search.
+   */
+  @AfterEach
+  public void runFirstGroupingThroughSearch() {
+    final Optional<Grouping> firstGroupingOptional = response.getGroupings()
+        .stream()
+        .findFirst();
+    assertTrue(firstGroupingOptional.isPresent());
+    final Grouping firstGrouping = firstGroupingOptional.get();
+    final String drillDown = firstGrouping.getDrillDown();
+
+    final StringAndListParam filters = new StringAndListParam();
+    filters.addAnd(new StringParam(drillDown));
+    final IBundleProvider searchExecutor = new SearchExecutor(configuration, fhirContext, spark,
+        resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory),
+        fhirEncoders, subjectResource, Optional.of(filters));
+    final List<IBaseResource> resources = searchExecutor.getResources(0, 100);
+    assertTrue(resources.size() > 0);
   }
 
   @Test
   void simpleQuery() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -75,13 +116,13 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Gender", "gender")
         .build();
 
-    assertResponse("responses/AggregateExecutorTest-simpleQuery.Parameters.json",
-        executor.execute(request));
+    response = executor.execute(request);
+    assertResponse("responses/AggregateExecutorTest-simpleQuery.Parameters.json", response);
   }
 
   @Test
   void multipleGroupingsAndAggregations() {
-    final ResourceType subjectResource = ResourceType.ENCOUNTER;
+    subjectResource = ResourceType.ENCOUNTER;
     mockResourceReader(subjectResource, ResourceType.ORGANIZATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -93,14 +134,15 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withFilter("serviceProvider.resolve().name = 'ST ELIZABETH\\'S MEDICAL CENTER'")
         .build();
 
+    response = executor.execute(request);
     assertResponse(
         "responses/AggregateExecutorTest-multipleGroupingsAndAggregations.Parameters.json",
-        executor.execute(request));
+        response);
   }
 
   @Test
   void queryWithIntegerGroupings() {
-    final ResourceType subjectResource = ResourceType.CLAIM;
+    subjectResource = ResourceType.CLAIM;
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -108,14 +150,15 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Claim item sequence", "item.sequence")
         .build();
 
+    response = executor.execute(request);
     assertResponse("responses/AggregateExecutorTest-queryWithIntegerGroupings.Parameters.json",
-        executor.execute(request));
+        response);
   }
 
   @Test
   @Disabled
   void queryWithMathExpression() {
-    final ResourceType subjectResource = ResourceType.CLAIM;
+    subjectResource = ResourceType.CLAIM;
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -123,13 +166,14 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("First claim item sequence + 1", "item.sequence.first() + 1")
         .build();
 
+    response = executor.execute(request);
     assertResponse("responses/AggregateExecutorTest-queryWithMathExpression.Parameters.json",
-        executor.execute(request));
+        response);
   }
 
   @Test
   void queryWithChoiceElement() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -137,13 +181,14 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Multiple birth?", "multipleBirthBoolean")
         .build();
 
+    response = executor.execute(request);
     assertResponse("responses/AggregateExecutorTest-queryWithChoiceElement.Parameters.json",
-        executor.execute(request));
+        response);
   }
 
   @Test
   void queryWithDateComparison() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -151,13 +196,14 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withFilter("birthDate > @1980 and birthDate < @1990")
         .build();
 
+    response = executor.execute(request);
     assertResponse("responses/AggregateExecutorTest-queryWithDateComparison.Parameters.json",
-        executor.execute(request));
+        response);
   }
 
   @Test
   void queryWithResolve() {
-    final ResourceType subjectResource = ResourceType.ALLERGYINTOLERANCE;
+    subjectResource = ResourceType.ALLERGYINTOLERANCE;
     mockResourceReader(subjectResource, ResourceType.PATIENT);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -165,13 +211,13 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Patient gender", "patient.resolve().gender")
         .build();
 
-    assertResponse("responses/AggregateExecutorTest-queryWithResolve.Parameters.json",
-        executor.execute(request));
+    response = executor.execute(request);
+    assertResponse("responses/AggregateExecutorTest-queryWithResolve.Parameters.json", response);
   }
 
   @Test
   void queryWithPolymorphicResolve() {
-    final ResourceType subjectResource = ResourceType.DIAGNOSTICREPORT;
+    subjectResource = ResourceType.DIAGNOSTICREPORT;
     mockResourceReader(subjectResource, ResourceType.PATIENT);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -179,13 +225,14 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Patient active status", "subject.resolve().ofType(Patient).gender")
         .build();
 
+    response = executor.execute(request);
     assertResponse("responses/AggregateExecutorTest-queryWithPolymorphicResolve.Parameters.json",
-        executor.execute(request));
+        response);
   }
 
   @Test
   void queryWithReverseResolve() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -193,13 +240,14 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Condition", "reverseResolve(Condition.subject).code.coding.display")
         .build();
 
+    response = executor.execute(request);
     assertResponse("responses/AggregateExecutorTest-queryWithReverseResolve.Parameters.json",
-        executor.execute(request));
+        response);
   }
 
   @Test
   void queryWithReverseResolveAndCounts() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -207,14 +255,15 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Condition", "reverseResolve(Condition.subject).code.coding.count()")
         .build();
 
+    response = executor.execute(request);
     assertResponse(
         "responses/AggregateExecutorTest-queryWithReverseResolveAndCounts.Parameters.json",
-        executor.execute(request));
+        response);
   }
 
   @Test
   void queryMultipleGroupingCounts() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -223,14 +272,14 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Name prefix", "name.prefix")
         .build();
 
-    assertResponse(
-        "responses/AggregateExecutorTest-queryMultipleGroupingCounts.Parameters.json",
-        executor.execute(request));
+    response = executor.execute(request);
+    assertResponse("responses/AggregateExecutorTest-queryMultipleGroupingCounts.Parameters.json",
+        response);
   }
 
   @Test
   void queryMultipleCountAggregations() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -239,15 +288,15 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Gender", "gender")
         .build();
 
-    assertResponse(
-        "responses/AggregateExecutorTest-queryMultipleCountAggregations.Parameters.json",
-        executor.execute(request));
+    response = executor.execute(request);
+    assertResponse("responses/AggregateExecutorTest-queryMultipleCountAggregations.Parameters.json",
+        response);
   }
 
   @Test
   @Disabled
   void queryWithWhere() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -257,14 +306,13 @@ class AggregateExecutorTest extends QueryExecutorTest {
                 + "$this.onsetDateTime < @2011).verificationStatus.coding.code")
         .build();
 
-    assertResponse(
-        "responses/AggregateExecutorTest-queryWithWhere.Parameters.json",
-        executor.execute(request));
+    response = executor.execute(request);
+    assertResponse("responses/AggregateExecutorTest-queryWithWhere.Parameters.json", response);
   }
 
   @Test
   void queryWithMemberOf() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
     final ValueSet mockResponse = (ValueSet) FhirHelpers.getJsonParser()
         .parseResource(getResourceAsStream(
@@ -280,14 +328,13 @@ class AggregateExecutorTest extends QueryExecutorTest {
             "reverseResolve(Condition.subject)" + ".code" + ".memberOf('" + valueSetUrl + "')")
         .build();
 
-    assertResponse(
-        "responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json",
-        executor.execute(request));
+    response = executor.execute(request);
+    assertResponse("responses/AggregateExecutorTest-queryWithMemberOf.Parameters.json", response);
   }
 
   @Test
   void queryWithDateTimeGrouping() {
-    final ResourceType subjectResource = ResourceType.MEDICATIONREQUEST;
+    subjectResource = ResourceType.MEDICATIONREQUEST;
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -295,15 +342,15 @@ class AggregateExecutorTest extends QueryExecutorTest {
         .withGrouping("Authored on", "authoredOn")
         .build();
 
-    assertResponse(
-        "responses/AggregateExecutorTest-queryWithDateTimeGrouping.Parameters.json",
-        executor.execute(request));
+    response = executor.execute(request);
+    assertResponse("responses/AggregateExecutorTest-queryWithDateTimeGrouping.Parameters.json",
+        response);
   }
 
   @Test
   @Disabled
   void queryWithWhereAsComparisonOperand() {
-    final ResourceType subjectResource = ResourceType.PATIENT;
+    subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.MEDICATIONREQUEST);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -314,9 +361,10 @@ class AggregateExecutorTest extends QueryExecutorTest {
                 + "http://www.nlm.nih.gov/research/umls/rxnorm|243670).first().authoredOn")
         .build();
 
+    response = executor.execute(request);
     assertResponse(
         "responses/AggregateExecutorTest-queryWithWhereAsComparisonOperand.Parameters.json",
-        executor.execute(request));
+        response);
   }
 
   private static void assertResponse(@Nonnull final String expectedPath,
