@@ -164,10 +164,11 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     final ResourceDefinition definition = new ResourceDefinition(inputContext.getResourceType(),
         hapiDefinition);
 
-    // The expression is not singular in the case of an aggregation, as the input context is the set
-    // of resources within the grouping that the aggregation is being applied to.
-    return new ResourcePath(resourceCode, dataset, inputContext.getIdColumn(),
-        inputContext.getValueColumn(), false, definition);
+    // We use an empty expression here, as we are referring to the input context implicitly. The 
+    // expression is not singular in the case of an aggregation, as the input context is the set of 
+    // resources within the grouping that the aggregation is being applied to.
+    return new ResourcePath("", dataset, inputContext.getIdColumn(), inputContext.getValueColumn(),
+        false, definition);
   }
 
   @Nonnull

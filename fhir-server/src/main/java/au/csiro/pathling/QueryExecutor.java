@@ -76,10 +76,10 @@ public abstract class QueryExecutor {
 
   @Nonnull
   private ResourcePath buildInputContext(@Nonnull final ResourceType resourceType) {
-    // The expression is a single-item collection in the case of a non-aggregation parse, as the
-    // input context is each individual resource within the dataset.
-    return ResourcePath
-        .build(fhirContext, resourceReader, resourceType, resourceType.toCode(), true);
+    // We use an empty expression here, as we are referring to the input context implicitly. The 
+    // expression is a single-item collection in the case of a non-aggregation parse, as the input 
+    // context is each individual resource within the dataset.
+    return ResourcePath.build(fhirContext, resourceReader, resourceType, "", true);
   }
 
   @Nonnull
