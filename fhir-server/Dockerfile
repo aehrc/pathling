@@ -33,4 +33,8 @@ CMD ["bash", "/run.sh"]
 HEALTHCHECK --interval=10s --timeout=1s --start-period=25s --retries=3 \
     CMD curl -v --fail http://localhost:8080/fhir/metadata || exit 1
 
+# This is the port for the main FHIR server.
 EXPOSE 8080
+
+# This is the port for the Spark web UI.
+EXPOSE 4040
