@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -48,8 +50,9 @@ public class BooleanLiteralPath extends LiteralPath implements Comparable {
   @Nonnull
   public static BooleanLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
+    check(context.getIdColumn().isPresent());
     final boolean value = fhirPath.equals("true");
-    return new BooleanLiteralPath(context.getDataset(), context.getIdColumn(),
+    return new BooleanLiteralPath(context.getDataset(), context.getIdColumn().get(),
         new BooleanType(value));
   }
 

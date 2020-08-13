@@ -12,6 +12,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -42,7 +43,10 @@ public abstract class AggregateFunction {
     final List<Column> newGroupingColumns = firstNColumns(result, numberOfGroupings);
     context.setGroupingColumns(newGroupingColumns);
 
-    return ElementPath.build(expression, result, input.getIdColumn(), valueColumn, true, fhirType);
+    final Optional<Column> idColumn = context.getGroupBy().length > 1
+                                      ? Optional.empty()
+                                      : Optional.of(context.getGroupBy()[0]);
+    return ElementPath.build(expression, result, idColumn, valueColumn, true, fhirType);
   }
 
 }

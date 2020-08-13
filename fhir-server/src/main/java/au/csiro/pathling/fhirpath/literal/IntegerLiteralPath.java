@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
@@ -45,10 +47,10 @@ public class IntegerLiteralPath extends LiteralPath implements Comparable {
    * @throws NumberFormatException if the literal is malformed
    */
   public static IntegerLiteralPath fromString(@Nonnull final String fhirPath,
-      @Nonnull final FhirPath context)
-      throws NumberFormatException {
+      @Nonnull final FhirPath context) throws NumberFormatException {
+    check(context.getIdColumn().isPresent());
     final int value = Integer.parseInt(fhirPath);
-    return new IntegerLiteralPath(context.getDataset(), context.getIdColumn(),
+    return new IntegerLiteralPath(context.getDataset(), context.getIdColumn().get(),
         new IntegerType(value));
   }
 
@@ -80,5 +82,5 @@ public class IntegerLiteralPath extends LiteralPath implements Comparable {
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return IntegerPath.getComparableTypes().contains(type);
   }
-  
+
 }

@@ -10,6 +10,7 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockAvailableResourceTypes;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -251,9 +252,8 @@ class ResolveFunctionTest {
         .withValueColumn(DataTypes.StringType)
         .build();
     final IdAndValueColumns columns = getIdAndValueColumns(patientDataset);
-    final FhirPath genderPath = new StringPath("Patient.gender", patientDataset, columns.getId(),
-        columns.getValue(), true,
-        FHIRDefinedType.CODE);
+    final FhirPath genderPath = new StringPath("Patient.gender", patientDataset,
+        Optional.of(columns.getId()), columns.getValue(), true, FHIRDefinedType.CODE);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(genderPath);
 
@@ -297,8 +297,9 @@ class ResolveFunctionTest {
 
   @Nonnull
   private NamedFunctionInput buildFunctionInput(@Nonnull final FhirPath inputPath) {
+    check(inputPath.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputPath.getIdColumn())
+        .idColumn(inputPath.getIdColumn().get())
         .resourceReader(mockReader)
         .build();
     return new NamedFunctionInput(parserContext, inputPath,

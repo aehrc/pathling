@@ -40,11 +40,10 @@ public class ResourcePath extends NonLiteralPath {
    * @param singular An indicator of whether this path represents a single-valued collection to each
    * FHIRPath type
    * @param definition The {@link ResourceDefinition} that will be used for subsequent path
-   * traversals
    */
   public ResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final ResourceDefinition definition) {
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final ResourceDefinition definition) {
     super(expression, dataset, idColumn, valueColumn, singular);
     this.definition = definition;
   }
@@ -69,8 +68,8 @@ public class ResourcePath extends NonLiteralPath {
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
     final Dataset<Row> rawDataset = resourceReader.read(resourceType);
     final Dataset<Row> dataset = resourceToIdAndValue(rawDataset);
-    return new ResourcePath(expression, dataset, dataset.col("id"), dataset.col("value"), singular,
-        definition);
+    return new ResourcePath(expression, dataset, Optional.of(dataset.col("id")),
+        dataset.col("value"), singular, definition);
   }
 
   public ResourceType getResourceType() {
@@ -94,5 +93,5 @@ public class ResourcePath extends NonLiteralPath {
   public Optional<ResourceDefinition> getOriginType() {
     return Optional.of(definition);
   }
-  
+
 }

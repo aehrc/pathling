@@ -73,10 +73,11 @@ public class DrillDownBuilder {
   private void addGroupings(final Collection<String> fhirPaths) {
     for (int i = 0; i < groupings.size(); i++) {
       final FhirPath grouping = groupings.get(i);
+      check(grouping.getIdColumn().isPresent());
       final Optional<Type> label = labels.get(i);
       if (label.isPresent()) {
         final String literal = LiteralPath
-            .expressionFor(grouping.getDataset(), grouping.getIdColumn(), label.get());
+            .expressionFor(grouping.getDataset(), grouping.getIdColumn().get(), label.get());
         final String equality = grouping.isSingular()
                                 ? " = "
                                 : " contains ";

@@ -31,7 +31,7 @@ public abstract class NonLiteralPath implements FhirPath {
   private final Dataset<Row> dataset;
 
   @Nonnull
-  private final Column idColumn;
+  private final Optional<Column> idColumn;
 
   @Nonnull
   private final Column valueColumn;
@@ -47,12 +47,28 @@ public abstract class NonLiteralPath implements FhirPath {
   private Optional<ResourceDefinition> originType = Optional.empty();
 
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular) {
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular) {
     this.expression = expression;
-    this.dataset = dataset;
-    this.idColumn = idColumn;
-    this.valueColumn = valueColumn;
     this.singular = singular;
+
+    final String hash = Integer.toString(dataset.hashCode(), 36);
+    final String idColumnName = hash + "_id";
+    final String valueColumnName = hash + "_value";
+
+    Dataset<Row> hashedDataset = dataset;
+    if (idColumn.isPresent()) {
+      hashedDataset = dataset.withColumn(idColumnName, idColumn.get());
+    }
+    hashedDataset = hashedDataset.withColumn(valueColumnName, valueColumn);
+
+    this.dataset = hashedDataset;
+    if (idColumn.isPresent()) {
+      this.idColumn = Optional.of(hashedDataset.col(idColumnName));
+    } else {
+      this.idColumn = Optional.empty();
+    }
+    this.valueColumn = hashedDataset.col(valueColumnName);
   }
 
   @Nonnull

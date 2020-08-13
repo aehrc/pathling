@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
@@ -48,6 +50,7 @@ public class DateLiteralPath extends LiteralPath implements Comparable {
    */
   public static DateLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
+    check(context.getIdColumn().isPresent());
     final String dateString = fhirPath.replaceFirst("^@", "");
     java.util.Date date;
     // Try parsing out the date using the three possible formats, from full (most common) down to
@@ -61,7 +64,8 @@ public class DateLiteralPath extends LiteralPath implements Comparable {
         date = DatePath.getYearOnlyDateFormat().parse(dateString);
       }
     }
-    return new DateLiteralPath(context.getDataset(), context.getIdColumn(), new DateType(date));
+    return new DateLiteralPath(context.getDataset(), context.getIdColumn().get(),
+        new DateType(date));
   }
 
   @Nonnull

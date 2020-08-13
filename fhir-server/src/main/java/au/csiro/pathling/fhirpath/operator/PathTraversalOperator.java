@@ -6,11 +6,9 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.hashColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.explode_outer;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -57,27 +55,12 @@ public class PathTraversalOperator {
     // multiple rows.
     final Column field = leftValueColumn.getField(right);
     final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
-    Column valueColumn = maxCardinalityOfOne
-                         ? field
-                         : explode_outer(field);
-
-    final Dataset<Row> dataset;
-    if (maxCardinalityOfOne) {
-      dataset = leftDataset;
-    } else {
-      // If we are exploding a field, we need to explicitly make a new column out of it. Row
-      // generators can not be nested inside expressions. 
-      // 
-      // Also, the column needs to be hashed for the same reason we do this when we join - otherwise 
-      // subsequent explosions will make it impossible to refer to in downstream aggregations.
-      final DatasetWithColumn datasetWithColumn = hashColumn(leftDataset, valueColumn, "exploded");
-      dataset = datasetWithColumn.getDataset();
-      valueColumn = datasetWithColumn.getColumn();
-    }
-
+    final Column valueColumn = maxCardinalityOfOne
+                               ? field
+                               : explode_outer(field);
     final boolean singular = left.isSingular() && maxCardinalityOfOne;
 
-    return ElementPath.build(left, expression, dataset, valueColumn, singular, childDefinition);
+    return ElementPath.build(left, expression, leftDataset, valueColumn, singular, childDefinition);
   }
 
 }

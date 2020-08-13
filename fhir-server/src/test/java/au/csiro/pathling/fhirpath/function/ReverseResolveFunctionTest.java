@@ -9,6 +9,7 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.QueryHelpers.joinOnId;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -94,11 +95,14 @@ class ReverseResolveFunctionTest {
         .withRow("Encounter/5", RowFactory.create(null, "Group/def1", null))
         .buildWithStructValue();
     final Column valueColumn = argumentDatasetPreJoin.col("value");
-    final Dataset<Row> argumentDataset = joinOnId(originPath.getDataset(), originPath.getIdColumn(),
+
+    check(originPath.getIdColumn().isPresent());
+    final Dataset<Row> argumentDataset = joinOnId(originPath.getDataset(),
+        originPath.getIdColumn().get(),
         argumentDatasetPreJoin, argumentDatasetPreJoin.col("id"), JoinType.LEFT_OUTER);
     final FhirPath argumentPath = new ElementPathBuilder()
         .dataset(argumentDataset)
-        .idColumn(originPath.getIdColumn())
+        .idColumn(originPath.getIdColumn().get())
         .valueColumn(valueColumn)
         .expression("Encounter.subject")
         .singular(false)
@@ -106,8 +110,9 @@ class ReverseResolveFunctionTest {
         .definition(definition)
         .buildDefined();
 
+    check(inputPath.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputPath.getIdColumn())
+        .idColumn(inputPath.getIdColumn().get())
         .resourceReader(mockReader)
         .build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, inputPath,

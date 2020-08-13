@@ -69,7 +69,7 @@ public class MemberOfFunction implements NamedFunction {
     final ParserContext inputContext = input.getContext();
 
     final Dataset<Row> prevDataset = inputResult.getDataset();
-    final Column prevIdColumn = inputResult.getIdColumn();
+    final Optional<Column> prevIdColumn = inputResult.getIdColumn();
     final Column prevValueColumn = inputResult.getValueColumn();
 
     // Prepare the data which will be used within the map operation. All of these things must be

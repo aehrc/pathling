@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.CodingPath;
@@ -50,6 +52,7 @@ public class CodingLiteralPath extends LiteralPath implements Comparable {
    */
   public static CodingLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
+    check(context.getIdColumn().isPresent());
     final LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(fhirPath.split("\\|")));
     final Coding coding;
     if (codingTokens.size() == 2) {
@@ -61,7 +64,7 @@ public class CodingLiteralPath extends LiteralPath implements Comparable {
       throw new IllegalArgumentException(
           "Coding literal must be of form [system]|[code] or [system]|[version]|[code]");
     }
-    return new CodingLiteralPath(context.getDataset(), context.getIdColumn(), coding);
+    return new CodingLiteralPath(context.getDataset(), context.getIdColumn().get(), coding);
   }
 
   @Nonnull

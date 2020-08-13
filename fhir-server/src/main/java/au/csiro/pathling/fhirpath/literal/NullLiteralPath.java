@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
@@ -44,7 +45,8 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
    */
   @Nonnull
   public static NullLiteralPath build(@Nonnull final FhirPath context) {
-    return new NullLiteralPath(context.getDataset(), context.getIdColumn());
+    check(context.getIdColumn().isPresent());
+    return new NullLiteralPath(context.getDataset(), context.getIdColumn().get());
   }
 
   @Nonnull

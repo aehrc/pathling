@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.TimePath;
@@ -48,8 +50,9 @@ public class TimeLiteralPath extends LiteralPath implements Comparable {
   @Nonnull
   public static TimeLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
+    check(context.getIdColumn().isPresent());
     final String timeString = fhirPath.replaceFirst("^@", "");
-    return new TimeLiteralPath(context.getDataset(), context.getIdColumn(),
+    return new TimeLiteralPath(context.getDataset(), context.getIdColumn().get(),
         new TimeType(timeString));
   }
 
@@ -75,5 +78,5 @@ public class TimeLiteralPath extends LiteralPath implements Comparable {
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return TimePath.getComparableTypes().contains(type);
   }
- 
+
 }

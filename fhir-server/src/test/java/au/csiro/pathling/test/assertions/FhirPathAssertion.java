@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.test.assertions;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,9 +29,10 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
 
   @Nonnull
   public DatasetAssert selectResult() {
+    check(fhirPath.getIdColumn().isPresent());
     return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn(), fhirPath.getValueColumn())
-        .orderBy(fhirPath.getIdColumn(), fhirPath.getValueColumn()));
+        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn())
+        .orderBy(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
   }
 
   @Nonnull

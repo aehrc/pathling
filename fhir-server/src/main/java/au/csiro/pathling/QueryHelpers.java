@@ -10,7 +10,6 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -56,10 +55,10 @@ public abstract class QueryHelpers {
   @Nonnull
   public static Dataset<Row> joinOnId(@Nonnull final FhirPath left, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
-    final DatasetWithColumn hashedLeft = hashIdColumn(left);
-    final DatasetWithColumn hashedRight = hashIdColumn(right);
-
-    return joinOnId(hashedLeft, hashedRight, joinType);
+    check(left.getIdColumn().isPresent());
+    check(right.getIdColumn().isPresent());
+    final Column joinCondition = left.getIdColumn().get().equalTo(right.getIdColumn().get());
+    return left.getDataset().join(right.getDataset(), joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -73,10 +72,9 @@ public abstract class QueryHelpers {
   public static Dataset<Row> joinOnId(@Nonnull final Dataset<Row> left,
       @Nonnull final Column leftId, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
-    final DatasetWithColumn hashedLeft = hashIdColumn(left, leftId);
-    final DatasetWithColumn hashedRight = hashIdColumn(right);
-
-    return joinOnId(hashedLeft, hashedRight, joinType);
+    check(right.getIdColumn().isPresent());
+    final Column joinCondition = leftId.equalTo(right.getIdColumn().get());
+    return left.join(right.getDataset(), joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -90,12 +88,9 @@ public abstract class QueryHelpers {
   @Nonnull
   public static Dataset<Row> joinOnId(@Nonnull final Dataset<Row> left,
       @Nonnull final Column leftId, @Nonnull final Dataset<Row> right,
-      @Nonnull final Column rightId,
-      @Nonnull final JoinType joinType) {
-    final DatasetWithColumn hashedLeft = hashIdColumn(left, leftId);
-    final DatasetWithColumn hashedRight = hashIdColumn(right, rightId);
-
-    return joinOnId(hashedLeft, hashedRight, joinType);
+      @Nonnull final Column rightId, @Nonnull final JoinType joinType) {
+    final Column joinCondition = leftId.equalTo(rightId);
+    return left.join(right, joinCondition, joinType.getSparkName());
   }
 
   @Nonnull
@@ -114,13 +109,10 @@ public abstract class QueryHelpers {
       @Nonnull final JoinType joinType) {
     check(leftColumns.size() == rightColumns.size());
 
-    final DatasetWithColumns leftDatasetWithColumns = hashColumns(left, leftColumns);
-    final DatasetWithColumns rightDatasetWithColumns = hashColumns(right, rightColumns);
-
     @Nullable Column joinCondition = null;
     for (int i = 0; i < leftColumns.size(); i++) {
-      final Column leftColumn = leftDatasetWithColumns.getColumns().get(i);
-      final Column rightColumn = rightDatasetWithColumns.getColumns().get(i);
+      final Column leftColumn = leftColumns.get(i);
+      final Column rightColumn = rightColumns.get(i);
       // We need to do an explicit null check here, otherwise the join will nullify the result of 
       // the aggregation when the grouping value is null.
       final Column columnsEqual = leftColumn.isNull().and(rightColumn.isNull())
@@ -130,26 +122,8 @@ public abstract class QueryHelpers {
                       : joinCondition.and(columnsEqual);
     }
 
-    final Dataset<Row> dataset = leftDatasetWithColumns.getDataset()
-        .join(rightDatasetWithColumns.getDataset(), joinCondition, joinType.getSparkName());
-    return new DatasetWithColumns(dataset, leftDatasetWithColumns.getColumns());
-  }
-
-  @Nonnull
-  private static DatasetWithColumns hashColumns(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final List<Column> columns) {
-    @Nullable Dataset<Row> hashedDataset = dataset;
-    final List<Column> hashedColumns = new ArrayList<>();
-
-    for (int i = 0; i < columns.size(); i++) {
-      final DatasetWithColumn datasetWithColumn = hashColumn(hashedDataset, columns.get(i),
-          Integer.toString(i + 1));
-      hashedDataset = datasetWithColumn.getDataset();
-      hashedColumns.add(datasetWithColumn.getColumn());
-    }
-
-    checkNotNull(hashedDataset);
-    return new DatasetWithColumns(hashedDataset, hashedColumns);
+    final Dataset<Row> dataset = left.join(right, joinCondition, joinType.getSparkName());
+    return new DatasetWithColumns(dataset, leftColumns);
   }
 
   /**
@@ -164,14 +138,10 @@ public abstract class QueryHelpers {
       @Nonnull final Dataset<Row> right,
       @Nonnull final Column rightId,
       @Nonnull final JoinType joinType) {
-    final DatasetWithColumn hashedLeft = hashIdColumn(left);
-    final DatasetWithColumn hashedRight = hashIdColumn(right, rightId);
-
     @Nullable final Column reference = left.getValueColumn().getField("reference");
     checkNotNull(reference);
-    final Column joinCondition = reference.equalTo(hashedRight.getColumn());
-    return hashedLeft.getDataset()
-        .join(hashedRight.getDataset(), joinCondition, joinType.getSparkName());
+    final Column joinCondition = reference.equalTo(rightId);
+    return left.getDataset().join(right, joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -183,17 +153,13 @@ public abstract class QueryHelpers {
    */
   @Nonnull
   public static Dataset<Row> joinOnIdAndReference(@Nonnull final FhirPath left,
-      @Nonnull final Dataset<Row> right,
-      @Nonnull final Column rightReference,
+      @Nonnull final Dataset<Row> right, @Nonnull final Column rightReference,
       @Nonnull final JoinType joinType) {
-    final DatasetWithColumn hashedLeft = hashIdColumn(left);
-    final DatasetWithColumn hashedRight = hashIdColumn(right, rightReference);
-
+    check(left.getIdColumn().isPresent());
     @Nullable final Column reference = rightReference.getField("reference");
     checkNotNull(reference);
-    final Column joinCondition = hashedLeft.getColumn().equalTo(reference);
-    return hashedLeft.getDataset()
-        .join(hashedRight.getDataset(), joinCondition, joinType.getSparkName());
+    final Column joinCondition = left.getIdColumn().get().equalTo(reference);
+    return left.getDataset().join(right, joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -207,40 +173,6 @@ public abstract class QueryHelpers {
         .orElse(null);
     checkNotNull(result);
     return result;
-  }
-
-  @Nonnull
-  private static Dataset<Row> joinOnId(@Nonnull final DatasetWithColumn left,
-      @Nonnull final DatasetWithColumn right, @Nonnull final JoinType joinType) {
-    final Column joinCondition = left.getColumn().equalTo(right.getColumn());
-    return left.getDataset()
-        .join(right.getDataset(), joinCondition, joinType.getSparkName());
-  }
-
-  @Nonnull
-  private static DatasetWithColumn hashIdColumn(@Nonnull final FhirPath path) {
-    return hashIdColumn(path.getDataset(), path.getIdColumn());
-  }
-
-  @Nonnull
-  private static DatasetWithColumn hashIdColumn(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn) {
-    return hashColumn(dataset, idColumn, "id");
-  }
-
-  @Nonnull
-  public static DatasetWithColumn hashColumn(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column column, @Nonnull final String suffix) {
-    final String hash = getHashForDataset(dataset);
-    final String columnName = hash + "_" + suffix;
-    final Dataset<Row> newDataset = dataset.withColumn(columnName, column);
-    final Column newColumn = newDataset.col(columnName);
-    return new DatasetWithColumn(newDataset, newColumn);
-  }
-
-  @Nonnull
-  private static String getHashForDataset(@Nonnull final Dataset<Row> dataset) {
-    return Integer.toString(dataset.hashCode(), 36);
   }
 
   /**

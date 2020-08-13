@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -24,6 +25,7 @@ import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -65,7 +67,7 @@ class OfTypeFunctionTest {
     final Column typeColumn = inputDataset.col("type");
     final Column valueColumn = inputDataset.col("value");
     final UntypedResourcePath inputPath = new UntypedResourcePath(
-        "Encounter.subject.resolve()", inputDataset, idColumn, valueColumn,
+        "Encounter.subject.resolve()", inputDataset, Optional.of(idColumn), valueColumn,
         true, typeColumn, new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
 
     final Dataset<Row> argumentDataset = new DatasetBuilder()
@@ -80,9 +82,10 @@ class OfTypeFunctionTest {
         .thenReturn(argumentDataset);
     final ResourcePath argumentPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+    check(inputPath.getIdColumn().isPresent());
 
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputPath.getIdColumn())
+        .idColumn(inputPath.getIdColumn().get())
         .build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));

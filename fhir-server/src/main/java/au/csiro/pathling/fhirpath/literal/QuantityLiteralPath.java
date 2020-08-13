@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import java.math.BigDecimal;
 import java.util.regex.Matcher;
@@ -50,6 +52,7 @@ public class QuantityLiteralPath extends LiteralPath {
   @Nonnull
   public static QuantityLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
+    check(context.getIdColumn().isPresent());
     final Matcher matcher = PATTERN.matcher(fhirPath);
     if (!matcher.matches()) {
       throw new IllegalArgumentException("Quantity literal has invalid format: " + fhirPath);
@@ -74,7 +77,7 @@ public class QuantityLiteralPath extends LiteralPath {
       }
     }
 
-    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
+    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn().get(), quantity);
   }
 
   @Nonnull

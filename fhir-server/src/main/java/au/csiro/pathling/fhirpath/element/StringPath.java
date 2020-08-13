@@ -39,11 +39,12 @@ public class StringPath extends ElementPath implements Materializable<PrimitiveT
    * resource
    * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
    * @param singular An indicator of whether this path represents a single-valued collection
-   * @param fhirType The FHIR datatype for this path, note that there can be more than one FHIR type
-   * to each FHIRPath type
+   * @param fhirType The FHIR datatype for this path, note that there can be more than one FHIR
+   * type
    */
   public StringPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular,
       @Nonnull final FHIRDefinedType fhirType) {
     super(expression, dataset, idColumn, valueColumn, singular, fhirType);
   }

@@ -7,6 +7,7 @@ pathling:
 spark:
   driver:
     bindAddress: localhost
+    host: localhost
   sql:
     shuffle:
       partitions: 1

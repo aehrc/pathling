@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.test.assertions;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
@@ -29,9 +30,11 @@ public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResou
 
   @Nonnull
   public DatasetAssert selectUntypedResourceResult() {
+    check(fhirPath.getIdColumn().isPresent());
     return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn(), fhirPath.getTypeColumn(), fhirPath.getValueColumn())
-        .orderBy(fhirPath.getIdColumn(), fhirPath.getTypeColumn(), fhirPath.getValueColumn()));
+        .select(fhirPath.getIdColumn().get(), fhirPath.getTypeColumn(), fhirPath.getValueColumn())
+        .orderBy(fhirPath.getIdColumn().get(), fhirPath.getTypeColumn(),
+            fhirPath.getValueColumn()));
   }
 
   @Nonnull

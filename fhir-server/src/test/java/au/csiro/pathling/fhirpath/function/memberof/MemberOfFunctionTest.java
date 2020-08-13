@@ -13,6 +13,7 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -112,8 +113,9 @@ class MemberOfFunctionTest {
     when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
     // Prepare the inputs to the function.
+    check(inputExpression.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputExpression.getIdColumn())
+        .idColumn(inputExpression.getIdColumn().get())
         .terminologyClient(terminologyClient)
         .terminologyClientFactory(terminologyClientFactory)
         .build();

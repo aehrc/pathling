@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.fhirpath.Comparable;
@@ -50,12 +51,13 @@ public class StringLiteralPath extends LiteralPath implements Comparable {
   @Nonnull
   public static StringLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
+    check(context.getIdColumn().isPresent());
     // Remove the surrounding single quotes and unescape the string according to the rules within
     // the FHIRPath specification.
     String value = unSingleQuote(fhirPath);
     value = unescapeFhirPathString(value);
 
-    return new StringLiteralPath(context.getDataset(), context.getIdColumn(),
+    return new StringLiteralPath(context.getDataset(), context.getIdColumn().get(),
         new StringType(value));
   }
 

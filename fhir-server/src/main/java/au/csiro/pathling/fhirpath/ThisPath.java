@@ -29,7 +29,7 @@ public class ThisPath extends NonLiteralPath {
    * resource
    * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
    */
-  public ThisPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+  public ThisPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
       @Nonnull final Column valueColumn) {
     // A `$this` path will always be singular, as it represents an individual item within an input
     // collection.

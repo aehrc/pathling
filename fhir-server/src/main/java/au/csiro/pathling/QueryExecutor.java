@@ -91,7 +91,8 @@ public abstract class QueryExecutor {
 
     for (int i = 1; i < expressions.size(); i++) {
       final FhirPath current = expressions.get(i);
-      result = joinOnId(result, previous.getIdColumn(), current, JoinType.LEFT_OUTER);
+      check(previous.getIdColumn().isPresent());
+      result = joinOnId(result, previous.getIdColumn().get(), current, JoinType.LEFT_OUTER);
       previous = current;
     }
 

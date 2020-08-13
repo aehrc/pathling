@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -20,8 +21,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class QuantityPath extends ElementPath {
 
   protected QuantityPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final FHIRDefinedType fhirType) {
     super(expression, dataset, idColumn, valueColumn, singular, fhirType);
   }
 

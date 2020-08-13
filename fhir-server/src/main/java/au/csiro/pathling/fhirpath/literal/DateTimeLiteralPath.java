@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.DateTimePath;
@@ -47,9 +49,10 @@ public class DateTimeLiteralPath extends LiteralPath implements Comparable {
    */
   public static DateTimeLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
+    check(context.getIdColumn().isPresent());
     final String dateTimeString = fhirPath.replaceFirst("^@", "");
     final java.util.Date date = DateTimePath.getDateFormat().parse(dateTimeString);
-    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn(),
+    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn().get(),
         new DateTimeType(date));
   }
 
@@ -61,8 +64,8 @@ public class DateTimeLiteralPath extends LiteralPath implements Comparable {
 
   @Nonnull
   @Override
-  public java.sql.Date getJavaValue() {
-    return new java.sql.Date(literalValue.getValue().getTime());
+  public java.sql.Timestamp getJavaValue() {
+    return new java.sql.Timestamp(literalValue.getValue().getTime());
   }
 
   @Override

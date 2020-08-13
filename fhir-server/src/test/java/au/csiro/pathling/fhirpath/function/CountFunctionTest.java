@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -66,9 +67,10 @@ class CountFunctionTest {
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "", false);
+    check(inputPath.getIdColumn().isPresent());
 
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputPath.getIdColumn())
+        .idColumn(inputPath.getIdColumn().get())
         .build();
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
@@ -113,8 +115,8 @@ class CountFunctionTest {
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
     final Column groupingColumn = inputDataset.col("gender");
-    final ResourcePath inputPath = new ResourcePath("", inputDataset, idColumn, valueColumn,
-        false, resourceDefinition);
+    final ResourcePath inputPath = new ResourcePath("", inputDataset,
+        java.util.Optional.of(idColumn), valueColumn, false, resourceDefinition);
 
     final ParserContext parserContext = TestAggregationParserContext
         .build(Collections.singletonList(groupingColumn));

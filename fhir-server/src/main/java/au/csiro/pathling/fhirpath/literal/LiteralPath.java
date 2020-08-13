@@ -60,7 +60,6 @@ public abstract class LiteralPath implements FhirPath {
   @Nonnull
   protected Dataset<Row> dataset;
 
-  @Getter
   @Nonnull
   protected Column idColumn;
 
@@ -105,6 +104,12 @@ public abstract class LiteralPath implements FhirPath {
   @Nonnull
   public abstract String getExpression();
 
+  @Nonnull
+  @Override
+  public Optional<Column> getIdColumn() {
+    return Optional.of(idColumn);
+  }
+
   @Override
   @Nonnull
   public Column getValueColumn() {
@@ -141,5 +146,5 @@ public abstract class LiteralPath implements FhirPath {
   public Optional<ResourceDefinition> getOriginType() {
     return Optional.empty();
   }
- 
+
 }

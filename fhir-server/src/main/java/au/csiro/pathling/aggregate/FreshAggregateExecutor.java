@@ -30,7 +30,6 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -119,9 +118,8 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     // Parse the aggregations, and grab the updated grouping columns. When aggregations are 
     // performed during an aggregation parse, the grouping columns need to be updated, as any 
     // aggregation operation erases the previous columns that were built up within the dataset.
-    final AggregationParseResult aggregationParseResult = parseAggregations(
-        query.getAggregations(), aggregationInputContext, groupingsAndFiltersDataset,
-        groupingColumns);
+    final AggregationParseResult aggregationParseResult = parseAggregations(query.getAggregations(),
+        aggregationInputContext, groupingColumns);
     final List<FhirPath> aggregations = aggregationParseResult.getAggregations();
     final List<Column> updatedGroupingColumns = aggregationParseResult.getGroupingColumns();
 
@@ -147,34 +145,16 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
   @Nonnull
   private AggregationParserContext buildAggregationParserContext(
-      @Nonnull final ResourcePath inputContext, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final ResourcePath inputContext,
       @Nonnull final List<Column> groupingColumns) {
-    final ResourcePath newInputContext = buildAggregationInputContext(inputContext, dataset);
-    return new AggregationParserContext(newInputContext, Optional.empty(), getFhirContext(),
+    return new AggregationParserContext(inputContext, Optional.empty(), getFhirContext(),
         getSparkSession(), getResourceReader(), getTerminologyClient(),
         getTerminologyClientFactory(), groupingColumns);
   }
 
   @Nonnull
-  private ResourcePath buildAggregationInputContext(@Nonnull final ResourcePath inputContext,
-      @Nonnull final Dataset<Row> dataset) {
-    final String resourceCode = inputContext.getResourceType().toCode();
-    final RuntimeResourceDefinition hapiDefinition = getFhirContext()
-        .getResourceDefinition(resourceCode);
-    final ResourceDefinition definition = new ResourceDefinition(inputContext.getResourceType(),
-        hapiDefinition);
-
-    // We use an empty expression here, as we are referring to the input context implicitly. The 
-    // expression is not singular in the case of an aggregation, as the input context is the set of 
-    // resources within the grouping that the aggregation is being applied to.
-    return new ResourcePath("", dataset, inputContext.getIdColumn(), inputContext.getValueColumn(),
-        false, definition);
-  }
-
-  @Nonnull
   private AggregationParseResult parseAggregations(
       @Nonnull final Iterable<Aggregation> aggregations, @Nonnull final ResourcePath inputContext,
-      @Nonnull final Dataset<Row> groupingsAndFiltersDataset,
       @Nonnull final List<Column> groupingColumns) {
     final List<FhirPath> parsedAggregations = new ArrayList<>();
     @Nullable List<Column> updatedGroupingColumns = null;
@@ -183,7 +163,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
       // We need to create a new parser context and parser for each aggregation, as the grouping
       // columns within the context are mutated by aggregations during the parse.
       final AggregationParserContext aggregationContext = buildAggregationParserContext(
-          inputContext, groupingsAndFiltersDataset, groupingColumns);
+          inputContext, groupingColumns);
       final Parser parser = new Parser(aggregationContext);
 
       // Aggregation expressions must evaluate to a singular, Materializable path, or a user error

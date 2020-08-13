@@ -105,6 +105,9 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   private Dataset<Row> initializeDataset() {
     final ParserContext context = buildParserContext(subjectResource);
     final Dataset<Row> subjectDataset = context.getInputContext().getDataset();
+    final Optional<Column> subjectIdColumn = context.getInputContext().getIdColumn();
+    final Column subjectValueColumn = context.getInputContext().getValueColumn();
+    check(subjectIdColumn.isPresent());
 
     if (!filters.isPresent() || filters.get().getValuesAsQueryTokens().isEmpty()) {
       // If there are no filters, return all resources.
@@ -112,7 +115,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     } else {
       final Parser parser = new Parser(context);
       final List<FhirPath> fhirPaths = new ArrayList<>();
-      @Nullable Column idColumn = null;
+      @Nullable Column filterIdColumn = null;
       @Nullable Column filterColumn = null;
 
       // Parse each of the supplied filter expressions, building up a filter column. This captures 
@@ -134,8 +137,9 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
 
           // We save away the first encountered ID column so that we can use it later to join the
           // subject resource dataset with the joined filter datasets.
-          if (idColumn == null) {
-            idColumn = fhirPath.getIdColumn();
+          if (filterIdColumn == null) {
+            check(fhirPath.getIdColumn().isPresent());
+            filterIdColumn = fhirPath.getIdColumn().get();
           }
         }
 
@@ -144,7 +148,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
                        ? orColumn
                        : filterColumn.and(orColumn);
       }
-      checkNotNull(idColumn);
+      checkNotNull(filterIdColumn);
       checkNotNull(filterColumn);
       check(!fhirPaths.isEmpty());
 
@@ -152,8 +156,9 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       final Dataset<Row> filterDataset = joinExpressions(fhirPaths).where(filterColumn);
 
       // Get the full resources which are present in the filtered dataset.
-      final Dataset<Row> dataset = joinOnId(subjectDataset.alias("subject"),
-          subjectDataset.col("id"), filterDataset, idColumn, JoinType.LEFT_SEMI);
+      final Dataset<Row> dataset = joinOnId(subjectDataset, subjectIdColumn.get(),
+          filterDataset.select(filterIdColumn), filterIdColumn, JoinType.LEFT_SEMI)
+          .select(subjectIdColumn.get().as("id"), subjectValueColumn.as("value"));
 
       // We cache the dataset because we know it will be accessed for both the total and the
       // record retrieval.

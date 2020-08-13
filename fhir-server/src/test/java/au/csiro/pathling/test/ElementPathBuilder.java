@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -118,17 +119,16 @@ public class ElementPathBuilder {
 
   @Nonnull
   public ElementPath build() {
-    return ElementPath.build(expression, dataset, idColumn, valueColumn, singular, fhirType);
+    return ElementPath
+        .build(expression, dataset, Optional.of(idColumn), valueColumn, singular, fhirType);
   }
 
   @Nonnull
   public ElementPath buildDefined() {
     // This defaults the ID column to that of this path, if a parent path was not provided. This
     // prevents us from having to create parent paths for every element path we create in the tests.
-    //
-    //noinspection ConstantConditions
-    if (parentPath.getIdColumn() == null) {
-      when(parentPath.getIdColumn()).thenReturn(idColumn);
+    if (!parentPath.getIdColumn().isPresent()) {
+      when(parentPath.getIdColumn()).thenReturn(Optional.of(idColumn));
     }
     return ElementPath.build(parentPath, expression, dataset, valueColumn, singular, definition);
   }

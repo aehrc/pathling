@@ -102,6 +102,7 @@ public class ParserContext {
       @Nonnull final SparkSession sparkSession, @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyClient> terminologyClient,
       @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory) {
+    check(inputContext.getIdColumn().isPresent());
     this.inputContext = inputContext;
     this.thisContext = thisContext;
     this.fhirContext = fhirContext;
@@ -109,7 +110,7 @@ public class ParserContext {
     this.resourceReader = resourceReader;
     this.terminologyClient = terminologyClient;
     this.terminologyClientFactory = terminologyClientFactory;
-    groupByColumn = inputContext.getIdColumn();
+    groupByColumn = inputContext.getIdColumn().get();
   }
 
   /**
@@ -118,7 +119,7 @@ public class ParserContext {
    */
   @Nonnull
   public Column[] getGroupBy() {
-    return new Column[]{inputContext.getIdColumn()};
+    return new Column[]{groupByColumn};
   }
 
   public void setGroupingColumns(@Nonnull final List<Column> columns) {

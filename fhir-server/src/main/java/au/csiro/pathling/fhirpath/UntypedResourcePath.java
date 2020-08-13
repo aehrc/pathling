@@ -47,10 +47,10 @@ public class UntypedResourcePath extends NonLiteralPath {
    * @param singular An indicator of whether this path represents a single-valued collection
    * @param typeColumn A {@link Column} within the dataset containing the resource type
    * @param possibleTypes A set of {@link ResourceType} objects that describe the different types
-   * that this collection may contain
    */
   public UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular,
       @Nonnull final Column typeColumn, @Nonnull final Set<ResourceType> possibleTypes) {
     super(expression, dataset, idColumn, valueColumn, singular);
     this.typeColumn = typeColumn;

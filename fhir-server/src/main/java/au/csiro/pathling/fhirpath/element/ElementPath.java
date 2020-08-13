@@ -43,8 +43,8 @@ public class ElementPath extends NonLiteralPath {
   private Optional<ElementDefinition> definition = Optional.empty();
 
   protected ElementPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final FHIRDefinedType fhirType) {
     super(expression, dataset, idColumn, valueColumn, singular);
     this.fhirType = fhirType;
   }
@@ -100,7 +100,7 @@ public class ElementPath extends NonLiteralPath {
    */
   @Nonnull
   public static ElementPath build(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final FHIRDefinedType fhirType) {
     return getInstance(expression, dataset, idColumn, valueColumn, singular, fhirType);
@@ -108,7 +108,7 @@ public class ElementPath extends NonLiteralPath {
 
   @Nonnull
   private static ElementPath getInstance(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final FHIRDefinedType fhirType) {
     // Look up the class that represents an element with the specified FHIR type.
@@ -117,7 +117,7 @@ public class ElementPath extends NonLiteralPath {
     try {
       // Call its constructor and return.
       final Constructor<? extends ElementPath> constructor = elementPathClass
-          .getDeclaredConstructor(String.class, Dataset.class, Column.class, Column.class,
+          .getDeclaredConstructor(String.class, Dataset.class, Optional.class, Column.class,
               boolean.class, FHIRDefinedType.class);
       return constructor
           .newInstance(expression, dataset, idColumn, valueColumn, singular, fhirType);

@@ -26,6 +26,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -95,7 +96,7 @@ public class ResolveFunction implements NamedFunction {
     final Dataset<Row> dataset = joinOnReferenceAndId(referencePath, targetDataset, targetId,
         JoinType.LEFT_OUTER);
 
-    final Column inputId = referencePath.getIdColumn();
+    final Optional<Column> inputId = referencePath.getIdColumn();
     return new ResourcePath(expression, dataset, inputId, targetValue, referencePath.isSingular(),
         definition);
   }
@@ -129,7 +130,7 @@ public class ResolveFunction implements NamedFunction {
     final Dataset<Row> dataset = joinOnReferenceAndId(referencePath, targetDataset, targetId,
         JoinType.LEFT_OUTER);
 
-    final Column inputId = referencePath.getIdColumn();
+    final Optional<Column> inputId = referencePath.getIdColumn();
     return new UntypedResourcePath(expression, dataset, inputId, valueColumn,
         referencePath.isSingular(), typeColumn, referenceTypes);
   }

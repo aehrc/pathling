@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.element;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -23,8 +24,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class ReferencePath extends ElementPath {
 
   protected ReferencePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final FHIRDefinedType fhirType) {
     super(expression, dataset, idColumn, valueColumn, singular, fhirType);
   }
 
