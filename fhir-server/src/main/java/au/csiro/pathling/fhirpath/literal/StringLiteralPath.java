@@ -64,7 +64,7 @@ public class StringLiteralPath extends LiteralPath implements Comparable {
   @Nonnull
   @Override
   public String getExpression() {
-    return "'" + literalValue.getValue() + "'";
+    return "'" + escapeFhirPathString(literalValue.getValue()) + "'";
   }
 
   @Nonnull
@@ -86,6 +86,12 @@ public class StringLiteralPath extends LiteralPath implements Comparable {
     value = value.replaceAll("\\\\`", "`");
     value = value.replaceAll("\\\\'", "'");
     return value.replaceAll("\\\\", "\\");
+  }
+
+  // On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
+  @Nonnull
+  private static String escapeFhirPathString(@Nonnull String value) {
+    return value.replace("'", "\\'");
   }
 
   @Override

@@ -262,29 +262,12 @@ class ResolveFunctionTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void throwExceptionWhenArgumentSupplied() {
-    final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource("Encounter", "episodeOfCare");
-    assertTrue(optionalDefinition.isPresent());
-    final ElementDefinition definition = optionalDefinition.get();
-
-    final Dataset<Row> referenceDataset = new DatasetBuilder()
-        .withIdColumn()
-        .withStructTypeColumns(referenceStructType())
-        .buildWithStructValue();
     final FhirPath referencePath = new ElementPathBuilder()
-        .expression("Encounter.episodeOfCare")
-        .dataset(referenceDataset)
-        .singular(false)
-        .definition(definition)
-        .buildDefined();
+        .fhirType(FHIRDefinedType.REFERENCE)
+        .build();
 
-    final FhirPath inputContext = mock(FhirPath.class);
-    when(inputContext.getDataset()).thenReturn(mock(Dataset.class));
     final ParserContext parserContext = new ParserContextBuilder()
-        .inputContext(inputContext)
-        .resourceReader(mockReader)
         .build();
     final StringLiteralPath stringLiteralPath = StringLiteralPath
         .fromString("'foo'", parserContext.getInputContext());

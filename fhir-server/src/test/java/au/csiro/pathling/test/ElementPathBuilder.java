@@ -7,6 +7,7 @@
 package au.csiro.pathling.test;
 
 import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -54,6 +55,8 @@ public class ElementPathBuilder {
     expression = "";
     //noinspection unchecked
     dataset = (Dataset<Row>) mock(Dataset.class);
+    when(dataset.withColumn(any(String.class), any(Column.class))).thenReturn(dataset);
+    when(dataset.col(any(String.class))).thenReturn(mock(Column.class));
     valueColumn = mock(Column.class);
     singular = false;
     definition = mock(ElementDefinition.class);

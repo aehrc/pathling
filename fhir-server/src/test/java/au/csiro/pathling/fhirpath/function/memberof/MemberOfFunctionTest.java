@@ -281,7 +281,7 @@ class MemberOfFunctionTest {
 
   @Test
   public void throwsErrorIfInputTypeIsUnsupported() {
-    final FhirPath mockContext = mock(FhirPath.class);
+    final FhirPath mockContext = new ElementPathBuilder().build();
     final FhirPath input = StringLiteralPath.fromString("some string", mockContext);
     final FhirPath argument = StringLiteralPath.fromString(MY_VALUE_SET_URL, mockContext);
 
@@ -304,8 +304,7 @@ class MemberOfFunctionTest {
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
-    final IntegerLiteralPath argument = IntegerLiteralPath
-        .fromString("4", mock(FhirPath.class));
+    final IntegerLiteralPath argument = IntegerLiteralPath.fromString("4", input);
 
     final ParserContext context = new ParserContextBuilder()
         .terminologyClient(mock(TerminologyClient.class))
@@ -326,8 +325,8 @@ class MemberOfFunctionTest {
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
-    final StringLiteralPath argument1 = StringLiteralPath.fromString("'foo'", mock(FhirPath.class)),
-        argument2 = StringLiteralPath.fromString("'bar'", mock(FhirPath.class));
+    final StringLiteralPath argument1 = StringLiteralPath.fromString("'foo'", input),
+        argument2 = StringLiteralPath.fromString("'bar'", input);
 
     final ParserContext context = new ParserContextBuilder()
         .terminologyClient(mock(TerminologyClient.class))
@@ -348,7 +347,7 @@ class MemberOfFunctionTest {
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
-    final FhirPath argument = StringLiteralPath.fromString("some string", mock(FhirPath.class));
+    final FhirPath argument = StringLiteralPath.fromString("some string", input);
 
     final ParserContext context = new ParserContextBuilder()
         .build();

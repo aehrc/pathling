@@ -43,9 +43,9 @@ public abstract class AggregateFunction {
     final List<Column> newGroupingColumns = firstNColumns(result, numberOfGroupings);
     context.setGroupingColumns(newGroupingColumns);
 
-    final Optional<Column> idColumn = context.getGroupBy().length > 1
-                                      ? Optional.empty()
-                                      : Optional.of(context.getGroupBy()[0]);
+    final Optional<Column> idColumn = context.getGroupBy().length == 1
+                                      ? Optional.of(context.getGroupBy()[0])
+                                      : Optional.empty();
     return ElementPath.build(expression, result, idColumn, valueColumn, true, fhirType);
   }
 
