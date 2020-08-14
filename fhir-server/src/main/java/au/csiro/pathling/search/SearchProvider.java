@@ -6,9 +6,10 @@
 
 package au.csiro.pathling.search;
 
+import static au.csiro.pathling.errors.ErrorHandling.handleError;
+
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.io.ResourceReader;
@@ -18,8 +19,6 @@ import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -124,11 +123,8 @@ public class SearchProvider implements IResourceProvider {
           terminologyClient, terminologyClientFactory, fhirEncoders,
           subjectResource, Optional.ofNullable(filters));
 
-    } catch (final InvalidUserInputError e) {
-      throw new InvalidRequestException(e);
-
-    } catch (final Exception e) {
-      throw new InternalErrorException("Unexpected error occurred during search request", e);
+    } catch (final Throwable e) {
+      throw handleError(e);
     }
   }
 }

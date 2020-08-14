@@ -6,11 +6,10 @@
 
 package au.csiro.pathling.update;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
+import static au.csiro.pathling.errors.ErrorHandling.handleError;
+
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
-import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -53,11 +52,8 @@ public class ImportProvider {
     try {
       return executor.execute(parameters);
 
-    } catch (final InvalidUserInputError e) {
-      throw new InvalidRequestException(e);
-
-    } catch (final Exception e) {
-      throw new InternalErrorException("Unexpected error occurred during import", e);
+    } catch (final Throwable e) {
+      throw handleError(e);
     }
   }
 

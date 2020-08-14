@@ -24,4 +24,8 @@ public class InvalidUserInputError extends RuntimeException {
     super(message, cause);
   }
 
+  public InvalidUserInputError(final Throwable cause) {
+    super(cause);
+  }
+
 }

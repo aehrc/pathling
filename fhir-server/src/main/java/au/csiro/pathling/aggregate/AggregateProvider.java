@@ -6,13 +6,11 @@
 
 package au.csiro.pathling.aggregate;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.errors.ResourceNotFoundError;
+import static au.csiro.pathling.errors.ErrorHandling.handleError;
+
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
-import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Parameters;
@@ -52,14 +50,8 @@ public class AggregateProvider {
       final AggregateResponse result = aggregateExecutor.execute(query);
       return result.toParameters();
 
-    } catch (final ResourceNotFoundError e) {
-      throw new ResourceNotFoundException(e.getMessage());
-
-    } catch (final InvalidUserInputError e) {
-      throw new InvalidRequestException(e);
-
-    } catch (final Exception e) {
-      throw new InternalErrorException("Unexpected error occurred while executing query", e);
+    } catch (final Throwable e) {
+      throw handleError(e);
     }
   }
 
