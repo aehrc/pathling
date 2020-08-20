@@ -8,10 +8,13 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -21,11 +24,13 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.AggregationParserContextBuilder;
 import au.csiro.pathling.test.DatasetBuilder;
+import au.csiro.pathling.test.ElementPathBuilder;
 import au.csiro.pathling.test.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Collections;
+import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -116,7 +121,7 @@ class CountFunctionTest {
     final Column valueColumn = inputDataset.col("value");
     final Column groupingColumn = inputDataset.col("gender");
     final ResourcePath inputPath = new ResourcePath("", inputDataset,
-        java.util.Optional.of(idColumn), valueColumn, false, resourceDefinition);
+        Optional.of(idColumn), valueColumn, false, resourceDefinition);
 
     final ParserContext parserContext = new AggregationParserContextBuilder()
         .groupingColumns(Collections.singletonList(groupingColumn))
@@ -140,5 +145,19 @@ class CountFunctionTest {
         .build();
     assertThat(expectedDataset)
         .hasRows(expectedDataset);
+  }
+
+  @Test
+  public void inputMustNotContainArguments() {
+    final ElementPath inputPath = new ElementPathBuilder().build();
+    final ElementPath argumentPath = new ElementPathBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder().build();
+
+    final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
+        Collections.singletonList(argumentPath));
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> NamedFunction.getInstance("count").invoke(countInput));
+    assertEquals("Arguments can not be passed to count function", error.getMessage());
   }
 }

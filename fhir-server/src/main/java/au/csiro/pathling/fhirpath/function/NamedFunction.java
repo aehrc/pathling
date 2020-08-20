@@ -64,8 +64,7 @@ public interface NamedFunction {
   static void checkNoArguments(@Nonnull final String functionName,
       @Nonnull final NamedFunctionInput input) {
     checkUserInput(input.getArguments().isEmpty(),
-        "Arguments can not be passed to " + functionName + " function: " + input.getInput()
-            .getExpression());
+        "Arguments can not be passed to " + functionName + " function");
   }
 
   /**
