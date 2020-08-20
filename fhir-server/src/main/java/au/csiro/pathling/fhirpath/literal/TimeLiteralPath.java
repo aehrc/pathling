@@ -51,7 +51,7 @@ public class TimeLiteralPath extends LiteralPath implements Comparable {
   public static TimeLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
     check(context.getIdColumn().isPresent());
-    final String timeString = fhirPath.replaceFirst("^@", "");
+    final String timeString = fhirPath.replaceFirst("^@T", "");
     return new TimeLiteralPath(context.getDataset(), context.getIdColumn().get(),
         new TimeType(timeString));
   }

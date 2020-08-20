@@ -12,6 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import javax.annotation.Nonnull;
 
 /**
@@ -49,6 +52,21 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   public T isNotSingular() {
     assertFalse(fhirPath.isSingular());
     return self();
+  }
+
+  public ElementPathAssertion isElementPath(final Class<? extends ElementPath> ofType) {
+    assertTrue(ofType.isAssignableFrom(fhirPath.getClass()));
+    return new ElementPathAssertion((ElementPath) fhirPath);
+  }
+
+  public ResourcePathAssertion isResourcePath() {
+    assertTrue(ResourcePath.class.isAssignableFrom(fhirPath.getClass()));
+    return new ResourcePathAssertion((ResourcePath) fhirPath);
+  }
+
+  public LiteralPathAssertion isLiteralPath(final Class<? extends LiteralPath> ofType) {
+    assertTrue(ofType.isAssignableFrom(fhirPath.getClass()));
+    return new LiteralPathAssertion((LiteralPath) fhirPath);
   }
 
   @SuppressWarnings("unchecked")
