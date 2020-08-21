@@ -15,10 +15,12 @@ import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A function for accessing elements of resources which refer to the input resource. The path to the
@@ -43,6 +45,13 @@ public class ReverseResolveFunction implements NamedFunction {
     final FhirPath argument = input.getArguments().get(0);
     checkUserInput(argument instanceof ReferencePath,
         "Argument to reverseResolve function must be a Reference: " + argument.getExpression());
+
+    // Check that the argument types include the input type.
+    final Set<ResourceType> argumentTypes = ((ReferencePath) argument).getResourceTypes();
+    final ResourceType inputType = ((ResourcePath) inputPath).getResourceType();
+    checkUserInput(argumentTypes.contains(inputType),
+        "Reference in argument to reverseResolve does not support input resource type: "
+            + expression);
 
     // Do a left outer join from the input to the argument dataset using the reference field in the
     // argument.
