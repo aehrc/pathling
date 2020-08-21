@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.test;
+package au.csiro.pathling.test.builders;
 
 import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;

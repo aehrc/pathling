@@ -8,7 +8,7 @@ package au.csiro.pathling.test.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import au.csiro.pathling.test.DatasetBuilder;
+import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;

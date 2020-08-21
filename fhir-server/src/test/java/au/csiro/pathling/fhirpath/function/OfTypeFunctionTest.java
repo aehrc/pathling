@@ -9,17 +9,23 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
+import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.DatasetBuilder;
-import au.csiro.pathling.test.ParserContextBuilder;
+import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.ResourcePathBuilder;
+import au.csiro.pathling.test.builders.UntypedResourcePathBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
@@ -112,6 +118,67 @@ class OfTypeFunctionTest {
     assertThat(result)
         .selectResult()
         .hasRows(expectedDataset);
+  }
+
+  @Test
+  public void throwsErrorIfInputNotPolymorphic() {
+    final ResourcePath input = new ResourcePathBuilder()
+        .expression("Patient")
+        .build();
+    final ResourcePath argument = new ResourcePathBuilder().build();
+
+    final ParserContext parserContext = new ParserContextBuilder().build();
+    final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, input,
+        Collections.singletonList(argument));
+
+    final NamedFunction ofTypeFunction = NamedFunction.getInstance("ofType");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> ofTypeFunction.invoke(ofTypeInput));
+    assertEquals(
+        "Input to ofType function must be a polymorphic resource type: Patient",
+        error.getMessage());
+  }
+
+  @Test
+  public void throwsErrorIfMoreThanOneArgument() {
+    final UntypedResourcePath input = new UntypedResourcePathBuilder().build();
+    final ResourcePath argument1 = new ResourcePathBuilder()
+        .expression("Patient")
+        .build();
+    final ResourcePath argument2 = new ResourcePathBuilder()
+        .expression("Condition")
+        .build();
+
+    final ParserContext parserContext = new ParserContextBuilder().build();
+    final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, input,
+        Arrays.asList(argument1, argument2));
+
+    final NamedFunction ofTypeFunction = NamedFunction.getInstance("ofType");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> ofTypeFunction.invoke(ofTypeInput));
+    assertEquals(
+        "ofType function must have one argument: ofType(Patient, Condition)",
+        error.getMessage());
+  }
+
+  @Test
+  public void throwsErrorIfArgumentNotResource() {
+    final UntypedResourcePath input = new UntypedResourcePathBuilder().build();
+    final StringLiteralPath argument = StringLiteralPath
+        .fromString("'some string'", input);
+
+    final ParserContext parserContext = new ParserContextBuilder().build();
+    final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, input,
+        Collections.singletonList(argument));
+
+    final NamedFunction ofTypeFunction = NamedFunction.getInstance("ofType");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> ofTypeFunction.invoke(ofTypeInput));
+    assertEquals("Argument to ofType function must be a resource type: ofType('some string')",
+        error.getMessage());
   }
 
 }

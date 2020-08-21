@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.test;
+package au.csiro.pathling.test.builders;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -15,6 +15,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ThisPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.test.DefaultAnswer;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import ca.uhn.fhir.context.FhirContext;
@@ -23,6 +24,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.SparkSession;
+import org.mockito.Mockito;
 
 /**
  * @author John Grimes
@@ -55,7 +57,7 @@ public class ParserContextBuilder {
     when(inputContext.getIdColumn()).thenReturn(Optional.of(mock(Column.class)));
     fhirContext = FhirHelpers.getFhirContext();
     sparkSession = SparkHelpers.getSparkSession();
-    resourceReader = mock(ResourceReader.class, new DefaultAnswer());
+    resourceReader = Mockito.mock(ResourceReader.class, new DefaultAnswer());
   }
 
   @Nonnull

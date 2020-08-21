@@ -50,8 +50,8 @@ public class UntypedResourcePath extends NonLiteralPath {
    */
   public UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular,
-      @Nonnull final Column typeColumn, @Nonnull final Set<ResourceType> possibleTypes) {
+      final boolean singular, @Nonnull final Column typeColumn,
+      @Nonnull final Set<ResourceType> possibleTypes) {
     super(expression, dataset, idColumn, valueColumn, singular);
     this.typeColumn = typeColumn;
     this.possibleTypes = possibleTypes;

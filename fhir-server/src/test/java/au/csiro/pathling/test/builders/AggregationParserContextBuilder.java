@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.test;
+package au.csiro.pathling.test.builders;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -15,6 +15,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ThisPath;
 import au.csiro.pathling.fhirpath.parser.AggregationParserContext;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.test.DefaultAnswer;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import ca.uhn.fhir.context.FhirContext;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.SparkSession;
+import org.mockito.Mockito;
 
 /**
  * @author John Grimes
@@ -61,7 +63,7 @@ public class AggregationParserContextBuilder {
     thisContext = Optional.of(mock(ThisPath.class));
     fhirContext = FhirHelpers.getFhirContext();
     sparkSession = SparkHelpers.getSparkSession();
-    resourceReader = mock(ResourceReader.class, new DefaultAnswer());
+    resourceReader = Mockito.mock(ResourceReader.class, new DefaultAnswer());
     terminologyClient = Optional.of(mock(TerminologyClient.class, new DefaultAnswer()));
     terminologyClientFactory = Optional
         .of(mock(TerminologyClientFactory.class, new DefaultAnswer()));

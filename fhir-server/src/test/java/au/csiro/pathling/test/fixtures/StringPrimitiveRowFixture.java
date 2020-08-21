@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.test.fixtures;
 
-import au.csiro.pathling.test.DatasetBuilder;
+import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
