@@ -30,11 +30,15 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * @author John Grimes
  */
+@Tag("UnitTest")
+@Disabled
 public class EmptyFunctionTest {
 
   @Test
