@@ -12,6 +12,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -86,6 +87,15 @@ public class DatasetBuilder {
   @Nonnull
   public DatasetBuilder withRow(@Nonnull final Row row) {
     datasetRows.add(row);
+    return this;
+  }
+
+  @Nonnull
+  public DatasetBuilder withIdValueRows(@Nonnull final Iterable<String> ids,
+      @Nonnull final Function<String, Object> valueProducer) {
+    ids.forEach(id -> {
+      this.withRow(id, valueProducer.apply(id));
+    });
     return this;
   }
 
