@@ -55,6 +55,10 @@ public abstract class QueryHelpers {
   @Nonnull
   public static Dataset<Row> joinOnId(@Nonnull final FhirPath left, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
+    // Don't do unnecessary joins between identical datasets.
+    if (left.getDataset().equals(right.getDataset())) {
+      return left.getDataset();
+    }
     check(left.getIdColumn().isPresent());
     check(right.getIdColumn().isPresent());
     final Column joinCondition = left.getIdColumn().get().equalTo(right.getIdColumn().get());
@@ -72,6 +76,10 @@ public abstract class QueryHelpers {
   public static Dataset<Row> joinOnId(@Nonnull final Dataset<Row> left,
       @Nonnull final Column leftId, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
+    // Don't do unnecessary joins between identical datasets.
+    if (left.equals(right.getDataset())) {
+      return left;
+    }
     check(right.getIdColumn().isPresent());
     final Column joinCondition = leftId.equalTo(right.getIdColumn().get());
     return left.join(right.getDataset(), joinCondition, joinType.getSparkName());
@@ -89,6 +97,10 @@ public abstract class QueryHelpers {
   public static Dataset<Row> joinOnId(@Nonnull final Dataset<Row> left,
       @Nonnull final Column leftId, @Nonnull final Dataset<Row> right,
       @Nonnull final Column rightId, @Nonnull final JoinType joinType) {
+    // Don't do unnecessary joins between identical datasets.
+    if (left.equals(right)) {
+      return left;
+    }
     final Column joinCondition = leftId.equalTo(rightId);
     return left.join(right, joinCondition, joinType.getSparkName());
   }
@@ -108,6 +120,10 @@ public abstract class QueryHelpers {
       final Dataset<Row> right, @Nonnull final List<Column> rightColumns,
       @Nonnull final JoinType joinType) {
     check(leftColumns.size() == rightColumns.size());
+    // Don't do unnecessary joins between identical datasets.
+    if (left.equals(right)) {
+      return new DatasetWithColumns(left, leftColumns);
+    }
 
     @Nullable Column joinCondition = null;
     for (int i = 0; i < leftColumns.size(); i++) {

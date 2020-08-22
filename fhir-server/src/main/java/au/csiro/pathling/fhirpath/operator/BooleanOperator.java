@@ -47,16 +47,18 @@ public class BooleanOperator implements Operator {
 
     checkUserInput(left instanceof BooleanPath || left instanceof BooleanLiteralPath,
         "Left operand to " + type + " operator must be Boolean: " + left.getExpression());
-    checkUserInput(left.isSingular(), "Left operand to " + type + " must be singular");
+    checkUserInput(left.isSingular(),
+        "Left operand to " + type + " operator must be singular: " + left.getExpression());
     checkUserInput(right instanceof BooleanPath || right instanceof BooleanLiteralPath,
-        "Right operand to " + type + " operator must be Boolean: " + left.getExpression());
-    checkUserInput(left.isSingular(), "Right operand to " + type + " must be singular");
+        "Right operand to " + type + " operator must be Boolean: " + right.getExpression());
+    checkUserInput(right.isSingular(),
+        "Right operand to " + type + " operator must be singular: " + right.getExpression());
 
     final Column leftValue = left.getValueColumn();
     final Column rightValue = right.getValueColumn();
 
     // Based on the type of operator, create the correct column expression.
-    Column valueColumn;
+    final Column valueColumn;
     switch (type) {
       case AND:
         valueColumn = leftValue.and(rightValue);
@@ -89,9 +91,7 @@ public class BooleanOperator implements Operator {
 
     final String expression =
         left.getExpression() + " " + type + " " + right.getExpression();
-    final Dataset<Row> dataset = QueryHelpers.joinOnId(left, right, JoinType.LEFT_OUTER)
-        .withColumn("booleanResult", valueColumn);
-    valueColumn = dataset.col("booleanResult");
+    final Dataset<Row> dataset = QueryHelpers.joinOnId(left, right, JoinType.LEFT_OUTER);
     return new BooleanPath(expression, dataset, left.getIdColumn(), valueColumn, true,
         FHIRDefinedType.BOOLEAN);
   }
@@ -128,7 +128,7 @@ public class BooleanOperator implements Operator {
     public String toString() {
       return fhirPath;
     }
-    
+
   }
 
 }

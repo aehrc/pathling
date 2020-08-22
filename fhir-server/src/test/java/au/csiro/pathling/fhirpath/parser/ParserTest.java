@@ -363,6 +363,12 @@ public class ParserTest {
   }
 
   @Test
+  public void testBooleanOperatorWithTwoLiterals() {
+    assertThatResultOf("true and false")
+        .selectResult();
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
