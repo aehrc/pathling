@@ -13,7 +13,6 @@ import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -82,9 +81,8 @@ public class StringPath extends ElementPath implements Materializable<PrimitiveT
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(
-      final BiFunction<Column, Column, Column> sparkFunction) {
-    return FhirPath.buildComparison(this, sparkFunction);
+  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+    return FhirPath.buildComparison(this, operation.getSparkFunction());
   }
 
   @Override

@@ -10,7 +10,6 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -61,9 +60,8 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(
-      final BiFunction<Column, Column, Column> sparkFunction) {
-    return FhirPath.buildComparison(this, sparkFunction);
+  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+    return FhirPath.buildComparison(this, operation.getSparkFunction());
   }
 
   @Override

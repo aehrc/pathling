@@ -11,7 +11,6 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -62,8 +61,7 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(
-      final BiFunction<Column, Column, Column> sparkFunction) {
+  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
     // Comparing an empty collection with anything always results in an empty collection.
     return (target) -> lit(null);
   }

@@ -9,9 +9,9 @@ package au.csiro.pathling.fhirpath.operator;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
-import au.csiro.pathling.fhirpath.operator.ComparisonOperator.ComparisonOperatorType;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -31,12 +31,12 @@ public interface Operator {
       .put("or", new BooleanOperator(BooleanOperatorType.OR))
       .put("xor", new BooleanOperator(BooleanOperatorType.XOR))
       .put("implies", new BooleanOperator(BooleanOperatorType.IMPLIES))
-      .put("=", new ComparisonOperator(ComparisonOperatorType.EQUALS))
-      .put("!=", new ComparisonOperator(ComparisonOperatorType.NOT_EQUALS))
-      .put("<=", new ComparisonOperator(ComparisonOperatorType.LESS_THAN_OR_EQUAL_TO))
-      .put("<", new ComparisonOperator(ComparisonOperatorType.LESS_THAN))
-      .put(">=", new ComparisonOperator(ComparisonOperatorType.GREATER_THAN_OR_EQUAL_TO))
-      .put(">", new ComparisonOperator(ComparisonOperatorType.GREATER_THAN))
+      .put("=", new ComparisonOperator(ComparisonOperation.EQUALS))
+      .put("!=", new ComparisonOperator(ComparisonOperation.NOT_EQUALS))
+      .put("<=", new ComparisonOperator(ComparisonOperation.LESS_THAN_OR_EQUAL_TO))
+      .put("<", new ComparisonOperator(ComparisonOperation.LESS_THAN))
+      .put(">=", new ComparisonOperator(ComparisonOperation.GREATER_THAN_OR_EQUAL_TO))
+      .put(">", new ComparisonOperator(ComparisonOperation.GREATER_THAN))
       .build();
 
   /**

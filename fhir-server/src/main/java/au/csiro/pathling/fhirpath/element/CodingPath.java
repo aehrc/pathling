@@ -6,16 +6,17 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.when;
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.not;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -75,41 +76,23 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
    * Builds a comparison function for Coding paths.
    *
    * @param source The path to build the comparison function for
-   * @param sparkFunction The Spark column function to use
+   * @param operation The {@link au.csiro.pathling.fhirpath.Comparable.ComparisonOperation} type to
+   * build
    * @return A new {@link Function}
    */
   @Nonnull
   public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      @Nonnull final BiFunction<Column, Column, Column> sparkFunction) {
-    return (target) -> {
-      // If either path is a null literal, we need to bail here as it won't be legal to refer to 
-      // fields of a null literal later in the expression.
-      if (source instanceof NullLiteralPath || target instanceof NullLiteralPath) {
-        return lit(null);
-      }
-
-      final Column left = source.getValueColumn();
-      final Column right = target.getValueColumn();
-
-      final Column eitherCodingIsIncomplete = left.getField("system").isNull()
-          .or(left.getField("code").isNull())
-          .or(right.getField("system").isNull())
-          .or(right.getField("code").isNull());
-
-      final Column eitherCodingIsMissingVersion = left.getField("version").isNull()
-          .or(right.getField("version").isNull());
-
-      final Column versionAgnosticTest = sparkFunction
-          .apply(left.getField("system"), right.getField("system"))
-          .and(sparkFunction.apply(left.getField("code"), right.getField("code")));
-
-      final Column fullEqualityTest = versionAgnosticTest
-          .and(sparkFunction.apply(left.getField("version"), right.getField("version")));
-
-      return when(eitherCodingIsIncomplete, null)
-          .when(eitherCodingIsMissingVersion, versionAgnosticTest)
-          .otherwise(fullEqualityTest);
-    };
+      @Nonnull final ComparisonOperation operation) {
+    if (operation.equals(ComparisonOperation.EQUALS)) {
+      return FhirPath
+          .buildComparison(source, (left, right) -> callUDF("codings_equal", left, right));
+    } else if (operation.equals(ComparisonOperation.NOT_EQUALS)) {
+      return FhirPath
+          .buildComparison(source, (left, right) -> not(callUDF("codings_equal", left, right)));
+    } else {
+      throw new InvalidUserInputError(
+          "Coding type does not support comparison operator: " + operation);
+    }
   }
 
   @Nonnull
@@ -118,9 +101,8 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(
-      final BiFunction<Column, Column, Column> sparkFunction) {
-    return buildComparison(this, sparkFunction);
+  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+    return buildComparison(this, operation);
   }
 
   @Override

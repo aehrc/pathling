@@ -4,14 +4,17 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling;
+package au.csiro.pathling.spark;
 
+import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Storage.Aws;
+import au.csiro.pathling.spark.udf.CodingsEqual;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.*;
@@ -49,6 +52,10 @@ public class Spark {
         .config("spark.sql.analyzer.failAmbiguousSelfJoin", "false")
         .getOrCreate();
 
+    // Configure user defined functions.
+    spark.udf().register("codings_equal", new CodingsEqual(), DataTypes.BooleanType);
+
+    // Configure AWS driver and credentials.
     final Aws awsConfig = configuration.getStorage().getAws();
     final org.apache.hadoop.conf.Configuration hadoopConfig = spark.sparkContext()
         .hadoopConfiguration();

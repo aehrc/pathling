@@ -12,7 +12,6 @@ import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -95,9 +94,8 @@ public class StringLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(
-      final BiFunction<Column, Column, Column> sparkFunction) {
-    return FhirPath.buildComparison(this, sparkFunction);
+  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+    return FhirPath.buildComparison(this, operation.getSparkFunction());
   }
 
   @Override

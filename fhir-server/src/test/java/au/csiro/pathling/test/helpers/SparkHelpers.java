@@ -8,6 +8,7 @@ package au.csiro.pathling.test.helpers;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+import au.csiro.pathling.spark.udf.CodingsEqual;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -36,7 +37,7 @@ public abstract class SparkHelpers {
     checkNotNull(activeSession);
 
     if (activeSession.isEmpty()) {
-      return SparkSession.builder()
+      final SparkSession spark = SparkSession.builder()
           .appName("pathling-test")
           .config("spark.master", "local[*]")
           .config("spark.driver.bindAddress", "localhost")
@@ -46,6 +47,8 @@ public abstract class SparkHelpers {
           .config("spark.scheduler.mode", "FAIR")
           .config("spark.sql.autoBroadcastJoinThreshold", "-1")
           .getOrCreate();
+      spark.udf().register("codings_equal", new CodingsEqual(), DataTypes.BooleanType);
+      return spark;
     }
     return activeSession.get();
   }

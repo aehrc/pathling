@@ -115,9 +115,8 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(
-      final BiFunction<Column, Column, Column> sparkFunction) {
-    return buildComparison(this, sparkFunction);
+  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+    return buildComparison(this, operation.getSparkFunction());
   }
 
   @Override

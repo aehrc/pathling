@@ -15,7 +15,6 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import java.util.Arrays;
 import java.util.LinkedList;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -98,9 +97,8 @@ public class CodingLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(
-      final BiFunction<Column, Column, Column> sparkFunction) {
-    return CodingPath.buildComparison(this, sparkFunction);
+  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+    return CodingPath.buildComparison(this, operation);
   }
 
   @Override

@@ -12,9 +12,9 @@ import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComp
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
-import java.util.function.BiFunction;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -32,12 +32,12 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class ComparisonOperator implements Operator {
 
   @Nonnull
-  private final ComparisonOperatorType type;
+  private final ComparisonOperation type;
 
   /**
    * @param type The type of operator
    */
-  public ComparisonOperator(@Nonnull final ComparisonOperatorType type) {
+  public ComparisonOperator(@Nonnull final ComparisonOperation type) {
     this.type = type;
   }
 
@@ -54,69 +54,10 @@ public class ComparisonOperator implements Operator {
 
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;
-    final Column valueColumn = leftComparable.getComparison(type.getSparkFunction())
-        .apply(rightComparable);
+    final Column valueColumn = leftComparable.getComparison(type).apply(rightComparable);
 
     return new BooleanPath(expression, dataset,
         left.getIdColumn(), valueColumn, true, FHIRDefinedType.BOOLEAN);
-  }
-
-  /**
-   * Represents a type of comparison operator.
-   */
-  public enum ComparisonOperatorType {
-    /**
-     * The equals operator.
-     */
-    EQUALS("=", Column::equalTo),
-
-    /**
-     * The not equals operator.
-     */
-    NOT_EQUALS("!=", Column::notEqual),
-
-    /**
-     * The less than or equal to operator.
-     */
-    LESS_THAN_OR_EQUAL_TO("<=", Column::leq),
-
-    /**
-     * The less than operator.
-     */
-    LESS_THAN("<", Column::lt),
-
-    /**
-     * The greater than or equal to operator.
-     */
-    GREATER_THAN_OR_EQUAL_TO(">=", Column::geq),
-
-    /**
-     * The greater than operator.
-     */
-    GREATER_THAN(">", Column::gt);
-
-    @Nonnull
-    private final String fhirPath;
-
-    @Nonnull
-    private final BiFunction<Column, Column, Column> sparkFunction;
-
-    ComparisonOperatorType(@Nonnull final String fhirPath,
-        @Nonnull final BiFunction<Column, Column, Column> sparkFunction) {
-      this.fhirPath = fhirPath;
-      this.sparkFunction = sparkFunction;
-    }
-
-    @Nonnull
-    public BiFunction<Column, Column, Column> getSparkFunction() {
-      return sparkFunction;
-    }
-
-    @Override
-    public String toString() {
-      return fhirPath;
-    }
-
   }
 
 }
