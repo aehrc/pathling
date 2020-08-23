@@ -7,6 +7,8 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -80,6 +82,19 @@ public class CodingLiteralPath extends LiteralPath implements Comparable {
   @Override
   public Coding getJavaValue() {
     return literalValue;
+  }
+
+  @Nonnull
+  @Override
+  public Column getValueColumn() {
+    final Coding value = getJavaValue();
+    return struct(
+        lit(value.getId()).as("id"),
+        lit(value.getSystem()).as("system"),
+        lit(value.getVersion()).as("version"),
+        lit(value.getCode()).as("code"),
+        lit(value.getDisplay()).as("display"),
+        lit(value.getUserSelected()).as("userSelected"));
   }
 
   @Override
