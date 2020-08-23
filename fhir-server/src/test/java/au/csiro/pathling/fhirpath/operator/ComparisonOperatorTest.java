@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -16,7 +15,6 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.stream.Stream;
@@ -26,7 +24,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -76,8 +73,7 @@ public class ComparisonOperatorTest {
         "DateTime",
         "Date",
         "Date (YYYY-MM)",
-        "Date (YYYY)",
-        "Coding"
+        "Date (YYYY)"
     ).map(ComparisonOperatorTest::buildTestParameters);
   }
 
@@ -109,8 +105,6 @@ public class ComparisonOperatorTest {
             "2015",
             "2016",
             FHIRDefinedType.DATE);
-      case "Coding":
-        return buildCodingExpressions(name);
       default:
         throw new RuntimeException("Invalid data type");
     }
@@ -272,85 +266,6 @@ public class ComparisonOperatorTest {
       throw new RuntimeException("Error parsing literal date or date time");
     }
     return new TestParameters(name, left, right, literal);
-  }
-
-  private static TestParameters buildCodingExpressions(final String name) {
-    final Coding lesser = new Coding("http://a.org", "1", "1");
-    lesser.setVersion("1");
-    final Coding greater = new Coding("http://b.org", "2", "2");
-    greater.setVersion("2");
-
-    final Dataset<Row> leftDataset = new DatasetBuilder()
-        .withIdColumn()
-        .withValueColumn(SparkHelpers.codingStructType())
-        .withRow("abc1", rowFromCoding(lesser))
-        .withRow("abc2", rowFromCoding(lesser))
-        .withRow("abc3", rowFromCoding(greater))
-        .withRow("abc4", null)
-        .withRow("abc5", rowFromCoding(lesser))
-        .withRow("abc6", null)
-        .build();
-    final ElementPath left = new ElementPathBuilder()
-        .fhirType(FHIRDefinedType.CODING)
-        .dataset(leftDataset)
-        .idAndValueColumns()
-        .singular(true)
-        .build();
-    final Dataset<Row> rightDataset = new DatasetBuilder()
-        .withIdColumn()
-        .withValueColumn(SparkHelpers.codingStructType())
-        .withRow("abc1", rowFromCoding(lesser))
-        .withRow("abc2", rowFromCoding(greater))
-        .withRow("abc3", rowFromCoding(lesser))
-        .withRow("abc4", rowFromCoding(lesser))
-        .withRow("abc5", null)
-        .withRow("abc6", null)
-        .build();
-    final ElementPath right = new ElementPathBuilder()
-        .fhirType(FHIRDefinedType.CODING)
-        .dataset(rightDataset)
-        .idAndValueColumns()
-        .singular(true)
-        .build();
-    final CodingLiteralPath literal = CodingLiteralPath
-        .fromString("http://a.org|1|1", left);
-    return new TestParameters(name, left, right, literal);
-  }
-
-  @ParameterizedTest
-  @MethodSource("parameters")
-  public void equalTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
-        parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance("=");
-    final FhirPath result = comparisonOperator.invoke(input);
-
-    assertThat(result).selectResult().hasRows(
-        RowFactory.create("abc1", true),
-        RowFactory.create("abc2", false),
-        RowFactory.create("abc3", false),
-        RowFactory.create("abc4", null),
-        RowFactory.create("abc5", null),
-        RowFactory.create("abc6", null)
-    );
-  }
-
-  @ParameterizedTest
-  @MethodSource("parameters")
-  public void notEqualTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
-        parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance("!=");
-    final FhirPath result = comparisonOperator.invoke(input);
-
-    assertThat(result).selectResult().hasRows(
-        RowFactory.create("abc1", false),
-        RowFactory.create("abc2", true),
-        RowFactory.create("abc3", true),
-        RowFactory.create("abc4", null),
-        RowFactory.create("abc5", null),
-        RowFactory.create("abc6", null)
-    );
   }
 
   @ParameterizedTest
