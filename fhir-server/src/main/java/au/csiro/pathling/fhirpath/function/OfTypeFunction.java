@@ -43,7 +43,7 @@ public class OfTypeFunction implements NamedFunction {
     // If the input is a polymorphic resource reference, check that the argument is a resource 
     // type.
     checkUserInput(argumentPath instanceof ResourcePath,
-        "Argument to ofType function must be a resource type: " + expression);
+        "Argument to ofType function must be a resource type: " + argumentPath.getExpression());
     final ResourcePath resourcePath = (ResourcePath) argumentPath;
 
     // Do a left outer join to the resource dataset using the reference in the untyped dataset - the

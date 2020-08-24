@@ -67,6 +67,12 @@ public class ParserContextBuilder {
   }
 
   @Nonnull
+  public ParserContextBuilder inputExpression(@Nonnull final String inputExpression) {
+    when(inputContext.getExpression()).thenReturn(inputExpression);
+    return this;
+  }
+
+  @Nonnull
   public ParserContextBuilder idColumn(@Nonnull final Column idColumn) {
     when(inputContext.getIdColumn()).thenReturn(Optional.of(idColumn));
     return this;

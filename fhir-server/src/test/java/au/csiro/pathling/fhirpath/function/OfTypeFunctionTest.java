@@ -73,7 +73,7 @@ class OfTypeFunctionTest {
     final Column typeColumn = inputDataset.col("type");
     final Column valueColumn = inputDataset.col("value");
     final UntypedResourcePath inputPath = new UntypedResourcePath(
-        "Encounter.subject.resolve()", inputDataset, Optional.of(idColumn), valueColumn,
+        "subject.resolve()", inputDataset, Optional.of(idColumn), valueColumn,
         true, typeColumn, new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
 
     final Dataset<Row> argumentDataset = new DatasetBuilder()
@@ -100,7 +100,7 @@ class OfTypeFunctionTest {
 
     assertTrue(result instanceof ResourcePath);
     assertThat((ResourcePath) result)
-        .hasExpression("Encounter.subject.resolve().ofType(Patient)")
+        .hasExpression("subject.resolve().ofType(Patient)")
         .isSingular()
         .hasResourceType(ResourceType.PATIENT);
 
@@ -142,7 +142,9 @@ class OfTypeFunctionTest {
 
   @Test
   public void throwsErrorIfMoreThanOneArgument() {
-    final UntypedResourcePath input = new UntypedResourcePathBuilder().build();
+    final UntypedResourcePath input = new UntypedResourcePathBuilder()
+        .expression("subject")
+        .build();
     final ResourcePath argument1 = new ResourcePathBuilder()
         .expression("Patient")
         .build();
@@ -159,13 +161,15 @@ class OfTypeFunctionTest {
         InvalidUserInputError.class,
         () -> ofTypeFunction.invoke(ofTypeInput));
     assertEquals(
-        "ofType function must have one argument: ofType(Patient, Condition)",
+        "ofType function must have one argument: subject.ofType(Patient, Condition)",
         error.getMessage());
   }
 
   @Test
   public void throwsErrorIfArgumentNotResource() {
-    final UntypedResourcePath input = new UntypedResourcePathBuilder().build();
+    final UntypedResourcePath input = new UntypedResourcePathBuilder()
+        .expression("subject")
+        .build();
     final StringLiteralPath argument = StringLiteralPath
         .fromString("'some string'", input);
 
@@ -177,7 +181,7 @@ class OfTypeFunctionTest {
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> ofTypeFunction.invoke(ofTypeInput));
-    assertEquals("Argument to ofType function must be a resource type: ofType('some string')",
+    assertEquals("Argument to ofType function must be a resource type: 'some string'",
         error.getMessage());
   }
 

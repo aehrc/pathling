@@ -80,7 +80,12 @@ public interface NamedFunction {
         .collect(
             Collectors.joining(", "));
     final String functionExpression = functionName + "(" + argumentsExpression + ")";
-    return inputExpression.isEmpty()
+
+    // If the input expression is the same as the input context, the child will be the start of the
+    // expression. This is to account for where we omit the expression that represents the input
+    // expression, e.g. "gender" instead of "Patient.gender".
+    final String inputContextExpression = input.getContext().getInputContext().getExpression();
+    return inputExpression.equals(inputContextExpression)
            ? functionExpression
            : inputExpression + "." + functionExpression;
   }

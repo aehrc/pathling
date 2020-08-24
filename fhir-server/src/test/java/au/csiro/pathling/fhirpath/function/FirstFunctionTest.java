@@ -63,7 +63,7 @@ public class FirstFunctionTest {
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(PatientResourceRowFixture.createCompleteDataset(spark));
     final ResourcePath input = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "", false);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
     final ParserContext parserContext = new ParserContextBuilder().build();
 
     final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, input,

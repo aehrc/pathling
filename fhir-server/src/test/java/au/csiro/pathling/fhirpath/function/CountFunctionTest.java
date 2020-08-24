@@ -71,11 +71,12 @@ class CountFunctionTest {
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "", false);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
     check(inputPath.getIdColumn().isPresent());
 
     final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn().get())
+        .inputExpression("Patient")
         .build();
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
@@ -120,11 +121,12 @@ class CountFunctionTest {
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
     final Column groupingColumn = inputDataset.col("gender");
-    final ResourcePath inputPath = new ResourcePath("", inputDataset,
+    final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
         Optional.of(idColumn), valueColumn, false, resourceDefinition);
 
     final ParserContext parserContext = new AggregationParserContextBuilder()
         .groupingColumns(Collections.singletonList(groupingColumn))
+        .inputExpression("Patient")
         .build();
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());

@@ -74,7 +74,7 @@ class ReverseResolveFunctionTest {
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "", false);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
 
     final DatasetBuilder encounterDatasetBuilder = new DatasetBuilder()
         .withIdColumn()
@@ -87,7 +87,7 @@ class ReverseResolveFunctionTest {
     final Dataset<Row> encounterDataset = encounterDatasetBuilder.build();
     when(mockReader.read(ResourceType.ENCOUNTER)).thenReturn(encounterDataset);
     final ResourcePath originPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.ENCOUNTER, "", false);
+        .build(fhirContext, mockReader, ResourceType.ENCOUNTER, "Encounter", false);
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource("Encounter", "subject");
@@ -123,6 +123,7 @@ class ReverseResolveFunctionTest {
     final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn().get())
         .resourceReader(mockReader)
+        .inputExpression("Patient")
         .build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));
@@ -195,7 +196,9 @@ class ReverseResolveFunctionTest {
 
   @Test
   public void throwsErrorIfMoreThanOneArgument() {
-    final ResourcePath input = new ResourcePathBuilder().build();
+    final ResourcePath input = new ResourcePathBuilder()
+        .expression("Patient")
+        .build();
     final ElementPath argument1 = new ElementPathBuilder()
         .expression("Encounter.subject")
         .fhirType(FHIRDefinedType.REFERENCE)
@@ -205,7 +208,9 @@ class ReverseResolveFunctionTest {
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
 
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder()
+        .inputExpression("Patient")
+        .build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, input,
         Arrays.asList(argument1, argument2));
 
@@ -222,6 +227,7 @@ class ReverseResolveFunctionTest {
   public void throwsErrorIfArgumentTypeDoesNotMatchInput() {
     final ResourcePath input = new ResourcePathBuilder()
         .resourceType(ResourceType.PATIENT)
+        .expression("Patient")
         .build();
     final BaseRuntimeChildDefinition childDefinition = getFhirContext()
         .getResourceDefinition("Encounter").getChildByName("episodeOfCare");
@@ -233,7 +239,9 @@ class ReverseResolveFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder()
+        .inputExpression("Patient")
+        .build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
 

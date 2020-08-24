@@ -47,7 +47,7 @@ public class ResourcePathBuilder {
     final Dataset<Row> dataset = PatientResourceRowFixture.createCompleteDataset(spark);
     when(resourceReader.read(any(ResourceType.class))).thenReturn(dataset);
     resourceType = ResourceType.PATIENT;
-    expression = "";
+    expression = "Patient";
     singular = false;
   }
 
