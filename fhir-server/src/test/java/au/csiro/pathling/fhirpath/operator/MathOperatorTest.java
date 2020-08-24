@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
@@ -74,7 +75,7 @@ public class MathOperatorTest {
 
   }
 
-  public static Object[] parameters() {
+  public static Stream<TestParameters> parameters() {
     final Collection<TestParameters> parameters = new ArrayList<>();
     for (final String leftType : EXPRESSION_TYPES) {
       for (final String rightType : EXPRESSION_TYPES) {
@@ -91,7 +92,7 @@ public class MathOperatorTest {
                 leftTypeIsLiteral, rightTypeIsLiteral));
       }
     }
-    return parameters.toArray();
+    return parameters.stream();
   }
 
   private static FhirPath getExpressionForType(final String expressionType,
