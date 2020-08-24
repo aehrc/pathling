@@ -26,7 +26,7 @@ public class FhirContextFactory implements Serializable {
   @Nonnull
   private final FhirVersionEnum fhirVersion;
 
-  private FhirContextFactory(@Nonnull final FhirContext fhirContext) {
+  public FhirContextFactory(@Nonnull final FhirContext fhirContext) {
     this.fhirVersion = fhirContext.getVersion().getVersion();
   }
 

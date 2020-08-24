@@ -10,3 +10,6 @@ tmp/
 # IDEA
 .idea
 *.iml
+
+# Imported test data
+fhir-server/src/test/resources/test-data/parquet/*.parquet
