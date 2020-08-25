@@ -9,6 +9,7 @@ package au.csiro.pathling.fhirpath.operator;
 import static au.csiro.pathling.QueryHelpers.joinOnId;
 import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
@@ -44,12 +45,14 @@ public class ComparisonOperator implements Operator {
   @Nonnull
   @Override
   public FhirPath invoke(@Nonnull final OperatorInput input) {
-    checkArgumentsAreComparable(input, type.toString());
-
     final FhirPath left = input.getLeft();
     final FhirPath right = input.getRight();
-    final String expression = buildExpression(input, type.toString());
+    checkUserInput(left.isSingular(), "Left operand must be singular: " + left.getExpression());
+    checkUserInput(right.isSingular(),
+        "Right operand must be singular: " + right.getExpression());
+    checkArgumentsAreComparable(input, type.toString());
 
+    final String expression = buildExpression(input, type.toString());
     final Dataset<Row> dataset = joinOnId(left, right, JoinType.LEFT_OUTER);
 
     final Comparable leftComparable = (Comparable) left;

@@ -10,13 +10,16 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
+import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -44,6 +47,32 @@ public abstract class QueryHelpers {
     final Column valueColumn = functions.struct(firstColumn, remainingColumns).as("value");
 
     return dataset.select(idColumn, valueColumn);
+  }
+
+  /**
+   * Used for updating the grouping columns within the parser context, following aggregation.
+   *
+   * @param context the {@link ParserContext} to be updated with the new grouping columns
+   * @param dataset the {@link Dataset} resulting from the aggregation
+   * @return an {@link IdAndValue} object containing the new ID and value columns for the result
+   */
+  @Nonnull
+  public static IdAndValue updateGroupingColumns(@Nonnull final ParserContext context,
+      @Nonnull final Dataset<Row> dataset) {
+    // The value column will be the column following each of the grouping columns.
+    final int numberOfGroupings = context.getGroupBy().length;
+    final Column valueColumn = dataset.col(dataset.columns()[numberOfGroupings]);
+
+    // We need to update the grouping columns, as the aggregation erases any columns that were
+    // previously in the Dataset.
+    final List<Column> newGroupingColumns = firstNColumns(dataset, numberOfGroupings);
+    context.setGroupingColumns(newGroupingColumns);
+
+    final Optional<Column> idColumn = context.getGroupBy().length == 1
+                                      ? Optional.of(context.getGroupBy()[0])
+                                      : Optional.empty();
+
+    return new IdAndValue(idColumn, valueColumn);
   }
 
   /**
@@ -288,4 +317,16 @@ public abstract class QueryHelpers {
     }
 
   }
+
+  @Value
+  public static class IdAndValue {
+
+    @Nonnull
+    Optional<Column> idColumn;
+
+    @Nonnull
+    Column valueColumn;
+
+  }
+
 }

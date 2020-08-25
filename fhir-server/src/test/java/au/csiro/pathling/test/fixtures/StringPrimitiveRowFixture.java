@@ -68,8 +68,8 @@ public class StringPrimitiveRowFixture extends PrimitiveRowFixture {
 
   public static DatasetBuilder allStringsWithValue(final Object value) {
     return new DatasetBuilder()
-        .withColumn("123abcd_id", DataTypes.StringType)
-        .withColumn("123abcd", DataTypes.BooleanType)
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
         .withIdsAndValue(value, STRING_ALL_IDS);
   }
 }

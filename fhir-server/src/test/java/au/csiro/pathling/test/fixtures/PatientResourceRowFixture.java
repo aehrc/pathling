@@ -29,8 +29,8 @@ public class PatientResourceRowFixture {
     final StructField activeColumn = new StructField("active", DataTypes.BooleanType, true,
         metadata);
     final StructType resourceStruct = new StructType(new StructField[]{genderColumn, activeColumn});
-    final StructField id = new StructField("id", DataTypes.StringType, false, metadata);
-    final StructField resource = new StructField("value", resourceStruct, false, metadata);
+    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
+    final StructField resource = new StructField("value", resourceStruct, true, metadata);
     return new StructType(new StructField[]{id, resource});
   }
 

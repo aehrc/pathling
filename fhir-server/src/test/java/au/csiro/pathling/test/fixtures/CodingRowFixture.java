@@ -23,8 +23,8 @@ public class CodingRowFixture extends PrimitiveRowFixture {
   public static StructType createCodingRowStruct() {
     final Metadata metadata = new MetadataBuilder().build();
     final StructType codingStruct = SparkHelpers.codingStructType();
-    final StructField id = new StructField("123abcd_id", DataTypes.StringType, false, metadata);
-    final StructField codingField = new StructField("123abcd", codingStruct, false, metadata);
+    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
+    final StructField codingField = new StructField("value", codingStruct, true, metadata);
     return new StructType(new StructField[]{id, codingField});
   }
 

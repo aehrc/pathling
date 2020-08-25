@@ -12,6 +12,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
+import au.csiro.pathling.fhirpath.operator.MembershipOperator.MembershipOperatorType;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -37,6 +38,8 @@ public interface Operator {
       .put("<", new ComparisonOperator(ComparisonOperation.LESS_THAN))
       .put(">=", new ComparisonOperator(ComparisonOperation.GREATER_THAN_OR_EQUAL_TO))
       .put(">", new ComparisonOperator(ComparisonOperation.GREATER_THAN))
+      .put("in", new MembershipOperator(MembershipOperatorType.IN))
+      .put("contains", new MembershipOperator(MembershipOperatorType.CONTAINS))
       .build();
 
   /**
@@ -90,8 +93,6 @@ public interface Operator {
         operatorName + " operator does not support left operand: " + left.getExpression());
     checkUserInput(right instanceof Comparable,
         operatorName + " operator does not support right operand: " + left.getExpression());
-    checkUserInput(left.isSingular(), "Left operand must be singular: " + left.getExpression());
-    checkUserInput(right.isSingular(), "Right operand must be singular: " + right.getExpression());
 
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;

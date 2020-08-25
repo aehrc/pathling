@@ -21,8 +21,8 @@ public class PrimitiveRowFixture {
 
   public static StructType createPrimitiveRowStruct(final DataType dataType) {
     final Metadata metadata = new MetadataBuilder().build();
-    final StructField id = new StructField("123abcd_id", DataTypes.StringType, false, metadata);
-    final StructField value = new StructField("123abcd", dataType, true, metadata);
+    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
+    final StructField value = new StructField("value", dataType, true, metadata);
     return new StructType(new StructField[]{id, value});
   }
 

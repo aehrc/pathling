@@ -6,13 +6,12 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.firstNColumns;
+import static au.csiro.pathling.QueryHelpers.updateGroupingColumns;
 
+import au.csiro.pathling.QueryHelpers.IdAndValue;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -34,19 +33,10 @@ public abstract class AggregateFunction {
     final Dataset<Row> result = input.getDataset().groupBy(context.getGroupBy())
         .agg(function.apply(input.getValueColumn()));
 
-    // The value column will be the column following each of the grouping columns.
-    final int numberOfGroupings = context.getGroupBy().length;
-    final Column valueColumn = result.col(result.columns()[numberOfGroupings]);
-
-    // We need to update the grouping columns, as the aggregation erases any columns that were 
-    // previously in the Dataset.
-    final List<Column> newGroupingColumns = firstNColumns(result, numberOfGroupings);
-    context.setGroupingColumns(newGroupingColumns);
-
-    final Optional<Column> idColumn = context.getGroupBy().length == 1
-                                      ? Optional.of(context.getGroupBy()[0])
-                                      : Optional.empty();
-    return ElementPath.build(expression, result, idColumn, valueColumn, true, fhirType);
+    final IdAndValue idAndValue = updateGroupingColumns(context, result);
+    return ElementPath
+        .build(expression, result, idAndValue.getIdColumn(), idAndValue.getValueColumn(), true,
+            fhirType);
   }
 
 }

@@ -83,6 +83,9 @@ public class MembershipOperatorTest {
         .idAndValueColumns()
         .build();
     final StringLiteralPath element = StringLiteralPath.fromString("'Samuel'", collection);
+    parserContext = new ParserContextBuilder()
+        .inputContext(collection)
+        .build();
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
@@ -115,6 +118,9 @@ public class MembershipOperatorTest {
         .singular(true)
         .expression("name.family.first()")
         .build();
+    parserContext = new ParserContextBuilder()
+        .inputContext(collection)
+        .build();
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
@@ -136,6 +142,9 @@ public class MembershipOperatorTest {
         .idAndValueColumns()
         .build();
     final StringLiteralPath element = StringLiteralPath.fromString("'Samuel'", collection);
+    parserContext = new ParserContextBuilder()
+        .inputContext(collection)
+        .build();
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
@@ -160,6 +169,9 @@ public class MembershipOperatorTest {
         .singular(true)
         .expression("name.family.first()")
         .build();
+    parserContext = new ParserContextBuilder()
+        .inputContext(collection)
+        .build();
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
@@ -179,9 +191,13 @@ public class MembershipOperatorTest {
         .fhirType(FHIRDefinedType.CODING)
         .dataset(CodingRowFixture.createCompleteDataset(spark))
         .idAndValueColumns()
+        .expression("code")
         .build();
     final CodingLiteralPath element = CodingLiteralPath
         .fromString(CodingRowFixture.SYSTEM_1 + "|" + CodingRowFixture.CODE_1, collection);
+    parserContext = new ParserContextBuilder()
+        .inputContext(collection)
+        .build();
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
@@ -204,6 +220,9 @@ public class MembershipOperatorTest {
     final CodingLiteralPath element = CodingLiteralPath
         .fromString(CodingRowFixture.SYSTEM_2 + "|" + CodingRowFixture.VERSION_2 + "|"
             + CodingRowFixture.CODE_2, collection);
+    parserContext = new ParserContextBuilder()
+        .inputContext(collection)
+        .build();
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
@@ -229,7 +248,7 @@ public class MembershipOperatorTest {
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> testOperator(operator, collection, element));
-    assertEquals("Element operand to %op% operator is not singular: name.given",
+    assertEquals("Element operand used with " + operator + " operator is not singular: name.given",
         error.getMessage());
   }
 
@@ -239,13 +258,18 @@ public class MembershipOperatorTest {
   public void throwExceptionWhenIncompatibleTypes(final String operator) {
     final ElementPath collection = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
+        .expression("foo")
         .build();
     final BooleanLiteralPath element = BooleanLiteralPath.fromString("true", collection);
 
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> testOperator(operator, collection, element));
-    assertEquals("Operands to " + operator + " operator are of incompatible types",
+    assertEquals(
+        "Left operand to " + operator + " operator is not comparable to right operand: "
+            + (operator.equals("in")
+               ? "true in foo"
+               : "foo contains true"),
         error.getMessage());
   }
 
