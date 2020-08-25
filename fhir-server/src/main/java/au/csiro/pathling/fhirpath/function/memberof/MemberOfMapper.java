@@ -11,16 +11,20 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import au.csiro.pathling.fhir.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
+import ca.uhn.fhir.rest.param.UriOrListParam;
+import ca.uhn.fhir.rest.param.UriParam;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.CanonicalType;
+import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -92,8 +96,28 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     final List<SimpleCoding> codings = hashesAndCodes.values().stream()
         .flatMap(Collection::stream)
         .collect(Collectors.toList());
-    final Set<String> codeSystems = codings.stream()
-        .map(SimpleCoding::getSystem)
+    final Set<CodeSystemReference> codeSystems = codings.stream()
+        .map(coding -> new CodeSystemReference(Optional.ofNullable(coding.getSystem()),
+            Optional.ofNullable(coding.getVersion())))
+        .filter(codeSystem -> codeSystem.getSystem().isPresent())
+        .collect(Collectors.toSet());
+
+    // Filter the set of code systems to only those known by the terminology server. We determine
+    // this by performing a CodeSystem search operation.
+    final TerminologyClient terminologyClient = terminologyClientFactory.build(log);
+    final UriOrListParam uris = new UriOrListParam();
+    //noinspection OptionalGetWithoutIsPresent
+    codeSystems.stream()
+        .map(codeSystem -> new UriParam(codeSystem.getSystem().get()))
+        .distinct()
+        .forEach(uris::addOr);
+    final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(uris);
+    final Set<String> uniqueKnownUris = knownSystems.stream()
+        .map(CodeSystem::getUrl)
+        .collect(Collectors.toSet());
+    //noinspection OptionalGetWithoutIsPresent
+    final Set<CodeSystemReference> filteredCodeSystems = codeSystems.stream()
+        .filter(codeSystem -> uniqueKnownUris.contains(codeSystem.getSystem().get()))
         .collect(Collectors.toSet());
 
     // Create a ValueSet to represent the intersection of the input codings and the ValueSet
@@ -103,13 +127,16 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     final List<ConceptSetComponent> includes = new ArrayList<>();
 
     // Create an include section for each unique code system present within the input codings.
-    for (final String system : codeSystems) {
+    for (final CodeSystemReference codeSystem : filteredCodeSystems) {
       final ConceptSetComponent include = new ConceptSetComponent();
       include.setValueSet(Collections.singletonList(new CanonicalType(valueSetUri)));
-      include.setSystem(system);
-      @SuppressWarnings("ConstantConditions")
+      //noinspection OptionalGetWithoutIsPresent
+      include.setSystem(codeSystem.getSystem().get());
+      codeSystem.getVersion().ifPresent(include::setVersion);
+
+      // Add the codings that match the current code system.
       final List<ConceptReferenceComponent> concepts = codings.stream()
-          .filter(coding -> coding.getSystem().equals(system))
+          .filter(codeSystem::matchesCoding)
           .map(coding -> {
             final ConceptReferenceComponent concept = new ConceptReferenceComponent();
             concept.setCode(coding.getCode());
@@ -124,7 +151,6 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
 
     // Ask the terminology service to work out the intersection between the set of input codings
     // and the ValueSet identified by the URI in the argument.
-    final TerminologyClient terminologyClient = terminologyClientFactory.build(log);
     log.info("Intersecting " + hashesAndCodes.size() + " concepts with " + valueSetUri
         + " using terminology service");
     final ValueSet expansion = terminologyClient
@@ -168,6 +194,31 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     final String code = inputCoding.getString(inputCoding.fieldIndex("code"));
     final String version = inputCoding.getString(inputCoding.fieldIndex("version"));
     return new SimpleCoding(system, code, version);
+  }
+
+  @Value
+  private static class CodeSystemReference {
+
+    @Nonnull
+    Optional<String> system;
+
+    @Nonnull
+    Optional<String> version;
+
+    public boolean matchesCoding(@Nonnull final SimpleCoding coding) {
+      if (!system.isPresent() || coding.getSystem() == null) {
+        return false;
+      }
+      final boolean eitherSideIsMissingVersion =
+          !version.isPresent() || coding.getVersion() == null;
+      final boolean versionAgnosticTest = system.get().equals(coding.getSystem());
+      if (eitherSideIsMissingVersion) {
+        return versionAgnosticTest;
+      } else {
+        return versionAgnosticTest && version.get().equals(coding.getVersion());
+      }
+    }
+
   }
 
 }
