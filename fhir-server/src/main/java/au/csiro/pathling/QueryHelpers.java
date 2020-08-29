@@ -11,11 +11,9 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -33,20 +31,43 @@ import org.apache.spark.sql.functions;
 public abstract class QueryHelpers {
 
   /**
+   * String used at the end of column names used for resource identity.
+   */
+  public static final String ID_COLUMN_SUFFIX = "_id";
+
+  /**
+   * String used at the end of column names used for expression values.
+   */
+  public static final String VALUE_COLUMN_SUFFIX = "_value";
+
+  /**
+   * String used at the end of column names used for resource types.
+   */
+  public static final String TYPE_COLUMN_SUFFIX = "_type";
+
+  /**
    * @param dataset A {@link Dataset} representing a raw resource, with at least 2 columns
    * @return A Dataset with two columns: an ID column and a value column containing all of the
    * columns from the original Dataset
    */
   @Nonnull
-  public static Dataset<Row> resourceToIdAndValue(@Nonnull final Dataset<Row> dataset) {
+  public static DatasetWithIdAndValue convertRawResource(@Nonnull final Dataset<Row> dataset) {
     check(dataset.columns().length > 1);
+
+    final String hash = Integer.toString(Math.abs(dataset.hashCode()), 36);
+    final String idColumnName = hash + ID_COLUMN_SUFFIX;
+    final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
+
     final String firstColumn = dataset.columns()[0];
     final String[] remainingColumns = Arrays
         .copyOfRange(dataset.columns(), 1, dataset.columns().length);
-    final Column idColumn = dataset.col("id");
-    final Column valueColumn = functions.struct(firstColumn, remainingColumns).as("value");
 
-    return dataset.select(idColumn, valueColumn);
+    Dataset<Row> result = dataset.withColumn(idColumnName, dataset.col("id"));
+    result = result.withColumn(valueColumnName, functions.struct(firstColumn, remainingColumns));
+    final Column idColumn = result.col(idColumnName);
+    final Column valueColumn = result.col(valueColumnName);
+
+    return new DatasetWithIdAndValue(result.select(idColumn, valueColumn), idColumn, valueColumn);
   }
 
   /**
@@ -54,13 +75,17 @@ public abstract class QueryHelpers {
    *
    * @param context the {@link ParserContext} to be updated with the new grouping columns
    * @param dataset the {@link Dataset} resulting from the aggregation
+   * @param idColumn the resource identity column, if present
    * @return an {@link IdAndValue} object containing the new ID and value columns for the result
    */
   @Nonnull
   public static IdAndValue updateGroupingColumns(@Nonnull final ParserContext context,
-      @Nonnull final Dataset<Row> dataset) {
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn) {
+    check(context.getGroupBy().isPresent() || idColumn.isPresent());
+
     // The value column will be the column following each of the grouping columns.
-    final int numberOfGroupings = context.getGroupBy().length;
+    final int numberOfGroupings = context.getGroupBy()
+        .flatMap(columns -> Optional.of(columns.length)).orElse(1);
     final Column valueColumn = dataset.col(dataset.columns()[numberOfGroupings]);
 
     // We need to update the grouping columns, as the aggregation erases any columns that were
@@ -68,11 +93,50 @@ public abstract class QueryHelpers {
     final List<Column> newGroupingColumns = firstNColumns(dataset, numberOfGroupings);
     context.setGroupingColumns(newGroupingColumns);
 
-    final Optional<Column> idColumn = context.getGroupBy().length == 1
-                                      ? Optional.of(context.getGroupBy()[0])
-                                      : Optional.empty();
-
     return new IdAndValue(idColumn, valueColumn);
+  }
+
+  /**
+   * Filters a dataset to only the nominated ID column, plus any pre-existing value columns.
+   * Pre-existing ID columns are dropped out. p
+   *
+   * @param dataset the dataset to perform the operation upon
+   * @param idColumn the ID column to preserve
+   * @return a new {@link Dataset} with a subset of columns
+   */
+  @Nonnull
+  public static Dataset<Row> applySelection(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn) {
+    // Preserve value columns in the existing dataset, drop any pre-existing ID columns.
+    final List<Column> columns = new ArrayList<>();
+    idColumn.ifPresent(columns::add);
+    final List<Column> preservedColumns = Stream.of(dataset.columns())
+        .filter(column ->
+            column.endsWith(VALUE_COLUMN_SUFFIX) || column.endsWith(TYPE_COLUMN_SUFFIX))
+        .map(dataset::col)
+        .collect(Collectors.toList());
+    columns.addAll(preservedColumns);
+    return dataset.select(columns.toArray(new Column[0]));
+  }
+
+  @Nonnull
+  private static Dataset<Row> selectJoinTarget(@Nonnull final Dataset<Row> target,
+      @Nonnull final Dataset<Row> source) {
+    final List<String> targetColumns = Arrays.asList(target.columns());
+    final List<String> sourceColumns = Arrays.asList(source.columns());
+    final HashSet<String> result = new HashSet<>(targetColumns);
+    result.removeAll(sourceColumns);
+    if (result.isEmpty()) {
+      return target;
+    } else {
+      final String[] columns = result.toArray(new String[0]);
+      if (result.size() == 1) {
+        return target.select(columns[0]);
+      } else {
+        final String[] remainingColumns = Arrays.copyOfRange(columns, 1, columns.length);
+        return target.select(columns[0], remainingColumns);
+      }
+    }
   }
 
   /**
@@ -91,7 +155,8 @@ public abstract class QueryHelpers {
     check(left.getIdColumn().isPresent());
     check(right.getIdColumn().isPresent());
     final Column joinCondition = left.getIdColumn().get().equalTo(right.getIdColumn().get());
-    return left.getDataset().join(right.getDataset(), joinCondition, joinType.getSparkName());
+    final Dataset<Row> target = selectJoinTarget(right.getDataset(), left.getDataset());
+    return left.getDataset().join(target, joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -111,7 +176,8 @@ public abstract class QueryHelpers {
     }
     check(right.getIdColumn().isPresent());
     final Column joinCondition = leftId.equalTo(right.getIdColumn().get());
-    return left.join(right.getDataset(), joinCondition, joinType.getSparkName());
+    final Dataset<Row> target = selectJoinTarget(right.getDataset(), left);
+    return left.join(target, joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -131,9 +197,17 @@ public abstract class QueryHelpers {
       return left;
     }
     final Column joinCondition = leftId.equalTo(rightId);
-    return left.join(right, joinCondition, joinType.getSparkName());
+    final Dataset<Row> target = selectJoinTarget(right, left);
+    return left.join(target, joinCondition, joinType.getSparkName());
   }
 
+  /**
+   * Returns a list of the first N columns within a {@link Dataset}.
+   *
+   * @param dataset the Dataset to get the columns from
+   * @param numberOfColumns the number of columns to take
+   * @return a list of {@link Column} objects
+   */
   @Nonnull
   public static List<Column> firstNColumns(@Nonnull final Dataset<Row> dataset,
       final int numberOfColumns) {
@@ -143,6 +217,19 @@ public abstract class QueryHelpers {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Join two datasets based on the equality of an arbitrary set of columns. The same number of
+   * columns must be provided for each dataset, and it is assumed that they are matched on their
+   * position within their respective lists.
+   *
+   * @param left the first {@link Dataset}
+   * @param leftColumns the columns for the first Dataset
+   * @param right the second Dataset
+   * @param rightColumns the columns for the second Dataset
+   * @param joinType the type of join to use
+   * @return a {@link DatasetWithColumns} containing the joined Dataset and the columns that were
+   * used in the join
+   */
   @Nonnull
   public static DatasetWithColumns joinOnColumns(@Nonnull final Dataset<Row> left,
       @Nonnull final List<Column> leftColumns,
@@ -155,9 +242,12 @@ public abstract class QueryHelpers {
     }
 
     @Nullable Column joinCondition = null;
+    final Dataset<Row> leftAliased = left.as("left");
+    final Dataset<Row> rightAliased = right.as("right");
+
     for (int i = 0; i < leftColumns.size(); i++) {
-      final Column leftColumn = leftColumns.get(i);
-      final Column rightColumn = rightColumns.get(i);
+      final Column leftColumn = leftAliased.col("left." + leftColumns.get(i));
+      final Column rightColumn = rightAliased.col("right." + rightColumns.get(i));
       // We need to do an explicit null check here, otherwise the join will nullify the result of 
       // the aggregation when the grouping value is null.
       final Column columnsEqual = leftColumn.isNull().and(rightColumn.isNull())
@@ -186,7 +276,8 @@ public abstract class QueryHelpers {
     @Nullable final Column reference = left.getValueColumn().getField("reference");
     checkNotNull(reference);
     final Column joinCondition = reference.equalTo(rightId);
-    return left.getDataset().join(right, joinCondition, joinType.getSparkName());
+    final Dataset<Row> target = selectJoinTarget(right, left.getDataset());
+    return left.getDataset().join(target, joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -204,7 +295,8 @@ public abstract class QueryHelpers {
     @Nullable final Column reference = rightReference.getField("reference");
     checkNotNull(reference);
     final Column joinCondition = left.getIdColumn().get().equalTo(reference);
-    return left.getDataset().join(right, joinCondition, joinType.getSparkName());
+    final Dataset<Row> target = selectJoinTarget(right, left.getDataset());
+    return left.getDataset().join(target, joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -223,7 +315,6 @@ public abstract class QueryHelpers {
   /**
    * Represents a type of join that can be made between two {@link Dataset} objects.
    */
-  @SuppressWarnings("unused")
   public enum JoinType {
     /**
      * Inner join.
@@ -284,40 +375,53 @@ public abstract class QueryHelpers {
    * Represents a {@link Dataset} along with a {@link Column} that can be used to refer to one of
    * the columns within.
    */
-  @Getter
+  @Value
   public static class DatasetWithColumn {
 
     @Nonnull
-    private final Dataset<Row> dataset;
+    Dataset<Row> dataset;
 
     @Nonnull
-    private final Column column;
-
-    private DatasetWithColumn(@Nonnull final Dataset<Row> dataset,
-        @Nonnull final Column column) {
-      this.dataset = dataset;
-      this.column = column;
-    }
+    Column column;
 
   }
 
-  @Getter
+  /**
+   * Represents a {@link Dataset} along with a list of {@link Column} objects that refer to columns
+   * within the Dataset.
+   */
+  @Value
   public static class DatasetWithColumns {
 
     @Nonnull
-    private final Dataset<Row> dataset;
+    Dataset<Row> dataset;
 
     @Nonnull
-    private final List<Column> columns;
-
-    public DatasetWithColumns(@Nonnull final Dataset<Row> dataset,
-        @Nonnull final List<Column> columns) {
-      this.dataset = dataset;
-      this.columns = columns;
-    }
+    List<Column> columns;
 
   }
 
+  /**
+   * Represents a {@link Dataset} along with a resource identity column and an expression value
+   * {@link Column}.
+   */
+  @Value
+  public static class DatasetWithIdAndValue {
+
+    @Nonnull
+    Dataset<Row> dataset;
+
+    @Nonnull
+    Column idColumn;
+
+    @Nonnull
+    Column valueColumn;
+
+  }
+
+  /**
+   * A pair of {@link Column} objects that refer to the resource identity and expression value.
+   */
   @Value
   public static class IdAndValue {
 

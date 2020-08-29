@@ -6,11 +6,10 @@
 
 package au.csiro.pathling.test.builders;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
+import au.csiro.pathling.test.helpers.SparkHelpers;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
@@ -47,14 +46,11 @@ public class UntypedResourcePathBuilder {
 
   public UntypedResourcePathBuilder() {
     expression = "";
-    //noinspection unchecked
-    dataset = (Dataset<Row>) mock(Dataset.class);
-    when(dataset.withColumn(any(String.class), any(Column.class))).thenReturn(dataset);
-    when(dataset.col(any(String.class))).thenReturn(mock(Column.class));
-    idColumn = mock(Column.class);
-    valueColumn = mock(Column.class);
+    dataset = SparkHelpers.getSparkSession().emptyDataFrame();
+    idColumn = lit(null);
+    valueColumn = lit(null);
     singular = false;
-    typeColumn = mock(Column.class);
+    typeColumn = lit(null);
     possibleTypes = Collections.emptySet();
   }
 
@@ -102,7 +98,7 @@ public class UntypedResourcePathBuilder {
 
   @Nonnull
   public UntypedResourcePath build() {
-    return new UntypedResourcePath(expression, dataset, Optional.of(idColumn), valueColumn,
+    return UntypedResourcePath.build(expression, dataset, Optional.of(idColumn), valueColumn,
         singular, typeColumn, possibleTypes);
   }
 

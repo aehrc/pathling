@@ -6,15 +6,17 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.QueryHelpers.convertRawResource;
 import static au.csiro.pathling.QueryHelpers.joinOnReferenceAndId;
-import static au.csiro.pathling.QueryHelpers.resourceToIdAndValue;
 import static au.csiro.pathling.QueryHelpers.union;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithIdAndValue;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
@@ -90,14 +92,14 @@ public class ResolveFunction implements NamedFunction {
         .getResourceDefinition(resourceType.toCode());
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
 
-    final Dataset<Row> targetDataset = resourceToIdAndValue(resourceReader.read(resourceType));
-    final Column targetId = targetDataset.col("id");
-    final Column targetValue = targetDataset.col("value");
-    final Dataset<Row> dataset = joinOnReferenceAndId(referencePath, targetDataset, targetId,
-        JoinType.LEFT_OUTER);
+    final DatasetWithIdAndValue targetDataset = convertRawResource(
+        resourceReader.read(resourceType));
+    final Dataset<Row> dataset = joinOnReferenceAndId(referencePath, targetDataset.getDataset(),
+        targetDataset.getIdColumn(), JoinType.LEFT_OUTER);
 
     final Optional<Column> inputId = referencePath.getIdColumn();
-    return new ResourcePath(expression, dataset, inputId, targetValue, referencePath.isSingular(),
+    return new ResourcePath(expression, dataset, inputId, targetDataset.getValueColumn(),
+        referencePath.isSingular(),
         definition);
   }
 
@@ -113,9 +115,13 @@ public class ResolveFunction implements NamedFunction {
       if (resourceReader.getAvailableResourceTypes().contains(referenceType)) {
         // Unfortunately we can't include the full content of the resource, as Spark won't tolerate 
         // the structure of two rows in the same dataset being different.
-        final Dataset<Row> typeDataset = resourceToIdAndValue(resourceReader.read(referenceType))
-            .withColumn("type", lit(referenceType.toCode()))
-            .select("id", "type");
+        final DatasetWithIdAndValue typeDatasetWithColumns = convertRawResource(
+            resourceReader.read(referenceType));
+        Dataset<Row> typeDataset = typeDatasetWithColumns.getDataset()
+            .withColumn("type", lit(referenceType.toCode()));
+        typeDataset = typeDataset
+            .select(typeDatasetWithColumns.getIdColumn(), typeDataset.col("type"));
+
         typeDatasets.add(typeDataset);
       }
     }
@@ -123,15 +129,16 @@ public class ResolveFunction implements NamedFunction {
         "No types within reference are available, cannot resolve: " + referencePath
             .getExpression());
     final Dataset<Row> targetDataset = union(typeDatasets);
+    final Column targetId = targetDataset.col(targetDataset.columns()[0]);
 
-    final Column targetId = targetDataset.col("id");
+    checkNotNull(targetId);
     final Column typeColumn = targetDataset.col("type");
     final Column valueColumn = referencePath.getValueColumn();
     final Dataset<Row> dataset = joinOnReferenceAndId(referencePath, targetDataset, targetId,
         JoinType.LEFT_OUTER);
 
     final Optional<Column> inputId = referencePath.getIdColumn();
-    return new UntypedResourcePath(expression, dataset, inputId, valueColumn,
+    return UntypedResourcePath.build(expression, dataset, inputId, valueColumn,
         referencePath.isSingular(), typeColumn, referenceTypes);
   }
 

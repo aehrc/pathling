@@ -7,11 +7,13 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.updateGroupingColumns;
+import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.QueryHelpers.IdAndValue;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -30,10 +32,23 @@ public abstract class AggregateFunction {
   protected ElementPath applyAggregation(@Nonnull final ParserContext context,
       @Nonnull final FhirPath input, @Nonnull final Function<Column, Column> function,
       @Nonnull final String expression, @Nonnull final FHIRDefinedType fhirType) {
-    final Dataset<Row> result = input.getDataset().groupBy(context.getGroupBy())
+    check(context.getGroupBy().isPresent() || input.getIdColumn().isPresent());
+
+    // Group by the grouping columns if present, or the ID column from the input.
+    final Dataset<Row> result = input.getDataset()
+        .groupBy(context.getGroupBy()
+            .orElse(new Column[]{input.getIdColumn().get()})
+        )
         .agg(function.apply(input.getValueColumn()));
 
-    final IdAndValue idAndValue = updateGroupingColumns(context, result);
+    // If there were grouping columns, there will no longer be an ID column.
+    final Optional<Column> updatedIdColumn = context.getGroupBy().isPresent()
+                                             ? Optional.empty()
+                                             : input.getIdColumn();
+
+    // The grouping columns are updated to the new columns within the aggregation result.
+    final IdAndValue idAndValue = updateGroupingColumns(context, result, updatedIdColumn);
+
     return ElementPath
         .build(expression, result, idAndValue.getIdColumn(), idAndValue.getValueColumn(), true,
             fhirType);

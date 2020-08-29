@@ -58,8 +58,8 @@ public class AggregationParserContext extends ParserContext {
 
   @Nonnull
   @Override
-  public Column[] getGroupBy() {
-    return groupingColumns.toArray(new Column[]{});
+  public Optional<Column[]> getGroupBy() {
+    return Optional.of(groupingColumns.toArray(new Column[]{}));
   }
 
   @Override

@@ -6,12 +6,14 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
+import static au.csiro.pathling.QueryHelpers.VALUE_COLUMN_SUFFIX;
+import static au.csiro.pathling.QueryHelpers.applySelection;
+
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.Setter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -25,26 +27,24 @@ import org.apache.spark.sql.Row;
 public abstract class NonLiteralPath implements FhirPath {
 
   @Nonnull
-  private final String expression;
+  protected final String expression;
 
   @Nonnull
-  private final Dataset<Row> dataset;
+  protected final Dataset<Row> dataset;
 
   @Nonnull
-  private final Optional<Column> idColumn;
+  protected final Optional<Column> idColumn;
 
   @Nonnull
-  private final Column valueColumn;
+  protected final Column valueColumn;
 
-  private final boolean singular;
-
-  @Nonnull
-  @Setter(AccessLevel.PROTECTED)
-  private Optional<Column> originColumn = Optional.empty();
+  protected final boolean singular;
 
   @Nonnull
-  @Setter(AccessLevel.PROTECTED)
-  private Optional<ResourceDefinition> originType = Optional.empty();
+  protected Optional<Column> originColumn = Optional.empty();
+
+  @Nonnull
+  protected Optional<ResourceDefinition> originType = Optional.empty();
 
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
@@ -52,9 +52,9 @@ public abstract class NonLiteralPath implements FhirPath {
     this.expression = expression;
     this.singular = singular;
 
-    final String hash = Integer.toString(dataset.hashCode(), 36);
-    final String idColumnName = hash + "_id";
-    final String valueColumnName = hash + "_value";
+    final String hash = Integer.toString(Math.abs(dataset.hashCode()), 36);
+    final String idColumnName = hash + ID_COLUMN_SUFFIX;
+    final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
 
     Dataset<Row> hashedDataset = dataset;
     if (idColumn.isPresent()) {
@@ -62,13 +62,13 @@ public abstract class NonLiteralPath implements FhirPath {
     }
     hashedDataset = hashedDataset.withColumn(valueColumnName, valueColumn);
 
-    this.dataset = hashedDataset;
     if (idColumn.isPresent()) {
       this.idColumn = Optional.of(hashedDataset.col(idColumnName));
     } else {
       this.idColumn = Optional.empty();
     }
     this.valueColumn = hashedDataset.col(valueColumnName);
+    this.dataset = applySelection(hashedDataset, this.idColumn);
   }
 
   @Nonnull

@@ -82,9 +82,6 @@ public class ParserContext {
   @Nonnull
   private final Optional<TerminologyClientFactory> terminologyClientFactory;
 
-  @Nonnull
-  private Column groupByColumn;
-
   /**
    * @param inputContext The input context from which the FHIRPath is to be evaluated
    * @param thisContext The item from an input collection currently under evaluation
@@ -110,7 +107,6 @@ public class ParserContext {
     this.resourceReader = resourceReader;
     this.terminologyClient = terminologyClient;
     this.terminologyClientFactory = terminologyClientFactory;
-    groupByColumn = inputContext.getIdColumn().get();
   }
 
   /**
@@ -118,13 +114,11 @@ public class ParserContext {
    * aggregations
    */
   @Nonnull
-  public Column[] getGroupBy() {
-    return new Column[]{groupByColumn};
+  public Optional<Column[]> getGroupBy() {
+    return Optional.empty();
   }
 
   public void setGroupingColumns(@Nonnull final List<Column> columns) {
-    check(columns.size() == 1);
-    groupByColumn = columns.get(0);
   }
 
 }

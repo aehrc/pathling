@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.aggregate;
 
-import static au.csiro.pathling.QueryHelpers.firstNColumns;
 import static au.csiro.pathling.QueryHelpers.joinOnColumns;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
@@ -38,7 +37,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import lombok.Getter;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -121,7 +120,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     final AggregationParseResult aggregationParseResult = parseAggregations(query.getAggregations(),
         aggregationInputContext, groupingColumns);
     final List<FhirPath> aggregations = aggregationParseResult.getAggregations();
-    final List<Column> updatedGroupingColumns = aggregationParseResult.getGroupingColumns();
+    final List<List<Column>> updatedGroupingColumns = aggregationParseResult.getGroupingColumns();
 
     // Join the aggregations together, using equality of the grouping column values as the join 
     // condition.
@@ -157,7 +156,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
       @Nonnull final Iterable<Aggregation> aggregations, @Nonnull final ResourcePath inputContext,
       @Nonnull final List<Column> groupingColumns) {
     final List<FhirPath> parsedAggregations = new ArrayList<>();
-    @Nullable List<Column> updatedGroupingColumns = null;
+    final List<List<Column>> updatedGroupingColumns = new ArrayList<>();
 
     for (final Aggregation aggregation : aggregations) {
       // We need to create a new parser context and parser for each aggregation, as the grouping
@@ -176,10 +175,9 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
           "Aggregation expression does not evaluate to a singular value: " + expression);
 
       parsedAggregations.add(result);
-      updatedGroupingColumns = aggregationContext.getGroupingColumns();
+      updatedGroupingColumns.add(aggregationContext.getGroupingColumns());
     }
 
-    checkNotNull(updatedGroupingColumns);
     return new AggregationParseResult(parsedAggregations, updatedGroupingColumns);
   }
 
@@ -216,39 +214,37 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
   @Nonnull
   private static DatasetWithColumns joinAggregations(@Nonnull final List<FhirPath> expressions,
-      @Nonnull final List<Column> groupings) {
+      @Nonnull final List<List<Column>> groupings) {
     check(!expressions.isEmpty());
 
     // If there is only one aggregation, we don't need to do any joining.
     if (expressions.size() == 1) {
       final FhirPath aggregation = expressions.get(0);
-      return new DatasetWithColumns(aggregation.getDataset(), groupings);
+      return new DatasetWithColumns(aggregation.getDataset(), groupings.get(0));
     }
 
     @Nullable Dataset<Row> result = null;
-    @Nullable List<Column> columns = null;
+    @Nullable List<Column> currentColumns = null;
 
     for (int i = 0; i < expressions.size(); i++) {
       if (i == 0) {
         result = expressions.get(i).getDataset();
+        currentColumns = groupings.get(i);
       } else {
         // Take the grouping columns from each aggregation dataset, and join the datasets together
         // based on their equality.
-        final Dataset<Row> current = expressions.get(i).getDataset();
-        final List<Column> currentColumns = firstNColumns(current, groupings.size());
-        final List<Column> previousColumns = firstNColumns(result, groupings.size());
-        final DatasetWithColumns datasetWithColumns = joinOnColumns(result, previousColumns,
-            current,
-            currentColumns,
-            JoinType.LEFT_OUTER);
+        final Dataset<Row> nextDataset = expressions.get(i).getDataset();
+        final List<Column> nextColumns = groupings.get(i);
+        final DatasetWithColumns datasetWithColumns = joinOnColumns(result, currentColumns,
+            nextDataset, nextColumns, JoinType.LEFT_OUTER);
         result = datasetWithColumns.getDataset();
-        columns = datasetWithColumns.getColumns();
+        currentColumns = datasetWithColumns.getColumns();
       }
     }
 
     checkNotNull(result);
-    checkNotNull(columns);
-    return new DatasetWithColumns(result, columns);
+    checkNotNull(currentColumns);
+    return new DatasetWithColumns(result, currentColumns);
   }
 
   @Nonnull
@@ -306,21 +302,14 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     };
   }
 
-  @Getter
+  @Value
   private static class AggregationParseResult {
 
     @Nonnull
-    private final List<FhirPath> aggregations;
+    List<FhirPath> aggregations;
 
     @Nonnull
-    private final List<Column> groupingColumns;
-
-    private AggregationParseResult(
-        @Nonnull final List<FhirPath> aggregations,
-        @Nonnull final List<Column> groupingColumns) {
-      this.aggregations = aggregations;
-      this.groupingColumns = groupingColumns;
-    }
+    List<List<Column>> groupingColumns;
 
   }
 

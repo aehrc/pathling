@@ -7,13 +7,14 @@
 package au.csiro.pathling.test.builders;
 
 import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
-import static org.mockito.ArgumentMatchers.any;
+import static org.apache.spark.sql.functions.lit;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -53,14 +54,11 @@ public class ElementPathBuilder {
   public ElementPathBuilder() {
     parentPath = mock(FhirPath.class);
     expression = "";
-    //noinspection unchecked
-    dataset = (Dataset<Row>) mock(Dataset.class);
-    when(dataset.withColumn(any(String.class), any(Column.class))).thenReturn(dataset);
-    when(dataset.col(any(String.class))).thenReturn(mock(Column.class));
-    valueColumn = mock(Column.class);
+    dataset = SparkHelpers.getSparkSession().emptyDataFrame();
+    valueColumn = lit(null);
     singular = false;
     definition = mock(ElementDefinition.class);
-    idColumn = mock(Column.class);
+    idColumn = lit(null);
     fhirType = FHIRDefinedType.NULL;
   }
 

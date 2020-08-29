@@ -74,8 +74,8 @@ public class ElementPath extends NonLiteralPath {
       final FHIRDefinedType fhirType = optionalFhirType.get();
       final ElementPath path = ElementPath
           .build(expression, dataset, parentPath.getIdColumn(), valueColumn, singular, fhirType);
-      path.setOriginColumn(parentPath.getOriginColumn());
-      path.setOriginType(parentPath.getOriginType());
+      path.originColumn = parentPath.getOriginColumn();
+      path.originType = parentPath.getOriginType();
       path.definition = Optional.of(definition);
       return path;
     } else {

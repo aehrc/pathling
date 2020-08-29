@@ -109,7 +109,7 @@ class CountFunctionTest {
         hapiDefinition);
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
-        .withColumn("gender", DataTypes.StringType)
+        .withColumn("gender_value", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("gender", DataTypes.StringType)
@@ -120,7 +120,7 @@ class CountFunctionTest {
         .buildWithStructValue();
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
-    final Column groupingColumn = inputDataset.col("gender");
+    final Column groupingColumn = inputDataset.col("gender_value");
     final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
         Optional.of(idColumn), valueColumn, false, resourceDefinition);
 

@@ -45,11 +45,6 @@ public class Spark {
 
     final SparkSession spark = SparkSession.builder()
         .appName(configuration.getSpark().getAppName())
-        // The Spark 3 analyzer throws an error by default when joining a table with itself using
-        // columns with the same name. Because we ensure that the columns are in fact the same
-        // thing, and it doesn't matter which to choose, ignoring these errors is fine within this
-        // implementation. This saves us doing a whole bunch of fancy aliasing for no benefit.
-        .config("spark.sql.analyzer.failAmbiguousSelfJoin", "false")
         .getOrCreate();
 
     // Configure user defined functions.

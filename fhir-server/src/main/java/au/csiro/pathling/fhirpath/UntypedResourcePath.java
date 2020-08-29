@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.QueryHelpers.TYPE_COLUMN_SUFFIX;
+
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import java.util.Optional;
 import java.util.Set;
@@ -38,6 +40,15 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Getter
   private final Set<ResourceType> possibleTypes;
 
+  protected UntypedResourcePath(@Nonnull final String expression,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Column valueColumn, final boolean singular, @Nonnull final Column typeColumn,
+      @Nonnull final Set<ResourceType> possibleTypes) {
+    super(expression, dataset, idColumn, valueColumn, singular);
+    this.typeColumn = typeColumn;
+    this.possibleTypes = possibleTypes;
+  }
+
   /**
    * @param expression The FHIRPath representation of this path
    * @param dataset A {@link Dataset} that can be used to evaluate this path against data
@@ -47,14 +58,20 @@ public class UntypedResourcePath extends NonLiteralPath {
    * @param singular An indicator of whether this path represents a single-valued collection
    * @param typeColumn A {@link Column} within the dataset containing the resource type
    * @param possibleTypes A set of {@link ResourceType} objects that describe the different types
+   * @return a shiny new UntypedResourcePath
    */
-  public UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final Column typeColumn,
+  public static UntypedResourcePath build(@Nonnull final String expression,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Column valueColumn, final boolean singular, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
-    super(expression, dataset, idColumn, valueColumn, singular);
-    this.typeColumn = typeColumn;
-    this.possibleTypes = possibleTypes;
+
+    final String hash = Integer.toString(Math.abs(dataset.hashCode()), 36);
+    final String typeColumnName = hash + TYPE_COLUMN_SUFFIX;
+
+    final Dataset<Row> hashedDataset = dataset.withColumn(typeColumnName, typeColumn);
+
+    return new UntypedResourcePath(expression, hashedDataset, idColumn, valueColumn, singular,
+        hashedDataset.col(typeColumnName), possibleTypes);
   }
 
   @Nonnull

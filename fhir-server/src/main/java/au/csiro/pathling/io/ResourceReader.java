@@ -154,8 +154,8 @@ public class ResourceReader {
           "Requested resource type not available within selected database: " + resourceType
               .toCode());
     }
-    final String tableUrl =
-        warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
+    final String tableUrl = String
+        .join("/", warehouseUrl, databaseName, fileNameForResource(resourceType));
     @Nullable final Dataset<Row> resources = spark.read().parquet(tableUrl);
     checkNotNull(resources);
 

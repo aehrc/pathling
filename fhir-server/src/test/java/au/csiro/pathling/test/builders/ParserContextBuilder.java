@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.test.builders;
 
+import static org.apache.spark.sql.functions.lit;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -54,7 +55,8 @@ public class ParserContextBuilder {
 
   public ParserContextBuilder() {
     inputContext = mock(FhirPath.class);
-    when(inputContext.getIdColumn()).thenReturn(Optional.of(mock(Column.class)));
+    when(inputContext.getIdColumn()).thenReturn(Optional.of(lit(null)));
+    when(inputContext.getDataset()).thenReturn(SparkHelpers.getSparkSession().emptyDataFrame());
     fhirContext = FhirHelpers.getFhirContext();
     sparkSession = SparkHelpers.getSparkSession();
     resourceReader = Mockito.mock(ResourceReader.class, new DefaultAnswer());
