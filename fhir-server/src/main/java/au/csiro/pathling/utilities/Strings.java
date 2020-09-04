@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.utilities;
 
+import java.util.Random;
 import javax.annotation.Nonnull;
 
 /**
@@ -31,6 +32,15 @@ public abstract class Strings {
   @Nonnull
   public static String unSingleQuote(@Nonnull final String value) {
     return value.replaceAll("^'|'$", "");
+  }
+
+  /**
+   * @return A short, random String
+   */
+  @Nonnull
+  public static String randomShortString() {
+    final int randomNumber = Math.abs(new Random().nextInt());
+    return Integer.toString(randomNumber, 36);
   }
 
 }

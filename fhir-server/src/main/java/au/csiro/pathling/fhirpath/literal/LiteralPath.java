@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
+import static au.csiro.pathling.utilities.Strings.randomShortString;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.QueryHelpers;
@@ -73,8 +74,7 @@ public abstract class LiteralPath implements FhirPath {
 
   protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
-    final String hash = Integer
-        .toString(Math.abs(dataset.hashCode() + literalValue.hashCode()), 36);
+    final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
 
     final Dataset<Row> hashedDataset = dataset.withColumn(idColumnName, idColumn);

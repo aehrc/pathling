@@ -78,8 +78,7 @@ public class ResourceReader {
     checkNotNull(hadoopConfiguration);
     @Nullable final FileSystem warehouse;
     try {
-      warehouse = FileSystem
-          .get(new URI(warehouseUrl), hadoopConfiguration);
+      warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
     } catch (final IOException e) {
       throw new UnexpectedServerError("Problem accessing warehouse location: " + warehouseUrl, e);
     } catch (final URISyntaxException e) {

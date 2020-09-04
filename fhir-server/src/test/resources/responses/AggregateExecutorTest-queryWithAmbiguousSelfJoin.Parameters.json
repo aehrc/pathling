@@ -1,0 +1,39 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "stopped"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 28
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((status) = 'stopped') and (authoredOn < @2018-01-01 and authoredOn > @2000-01-01)"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "active"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 7
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((status) = 'active') and (authoredOn < @2018-01-01 and authoredOn > @2000-01-01)"
+        }
+      ]
+    }
+  ]
+}

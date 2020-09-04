@@ -8,6 +8,7 @@ package au.csiro.pathling;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static au.csiro.pathling.utilities.Strings.randomShortString;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -54,7 +55,7 @@ public abstract class QueryHelpers {
   public static DatasetWithIdAndValue convertRawResource(@Nonnull final Dataset<Row> dataset) {
     check(dataset.columns().length > 1);
 
-    final String hash = Integer.toString(Math.abs(dataset.hashCode()), 36);
+    final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
     final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
 

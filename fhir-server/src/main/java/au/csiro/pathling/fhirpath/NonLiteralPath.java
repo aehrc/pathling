@@ -9,6 +9,7 @@ package au.csiro.pathling.fhirpath;
 import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
 import static au.csiro.pathling.QueryHelpers.VALUE_COLUMN_SUFFIX;
 import static au.csiro.pathling.QueryHelpers.applySelection;
+import static au.csiro.pathling.utilities.Strings.randomShortString;
 
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import java.util.Optional;
@@ -52,7 +53,7 @@ public abstract class NonLiteralPath implements FhirPath {
     this.expression = expression;
     this.singular = singular;
 
-    final String hash = Integer.toString(Math.abs(dataset.hashCode()), 36);
+    final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
     final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
 

@@ -378,6 +378,22 @@ class AggregateExecutorTest extends QueryExecutorTest {
         response);
   }
 
+  @Test
+  void queryWithAmbiguousSelfJoin() {
+    subjectResource = ResourceType.MEDICATIONREQUEST;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of medication requests", "count()")
+        .withGrouping("Status", "status")
+        .withFilter("authoredOn < @2018 and authoredOn > @2000")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("responses/AggregateExecutorTest-queryWithAmbiguousSelfJoin.Parameters.json",
+        response);
+  }
+
   private static void assertResponse(@Nonnull final String expectedPath,
       @Nonnull final AggregateResponse response) {
     final Parameters parameters = response.toParameters();
