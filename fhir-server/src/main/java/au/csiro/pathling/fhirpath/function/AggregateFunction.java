@@ -29,22 +29,31 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public abstract class AggregateFunction {
 
   @Nonnull
-  protected ElementPath applyAggregation(@Nonnull final ParserContext context,
+  protected ElementPath applyAggregationFunction(@Nonnull final ParserContext context,
       @Nonnull final FhirPath input, @Nonnull final Function<Column, Column> function,
       @Nonnull final String expression, @Nonnull final FHIRDefinedType fhirType) {
-    check(context.getGroupBy().isPresent() || input.getIdColumn().isPresent());
+    return applyAggregation(context, input.getDataset(), input.getIdColumn(),
+        function.apply(input.getValueColumn()), expression, fhirType);
+  }
+
+  @Nonnull
+  protected ElementPath applyAggregation(@Nonnull final ParserContext context,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Column aggregationColumn, @Nonnull final String expression,
+      @Nonnull final FHIRDefinedType fhirType) {
+    check(context.getGroupBy().isPresent() || idColumn.isPresent());
 
     // Group by the grouping columns if present, or the ID column from the input.
-    final Dataset<Row> result = input.getDataset()
+    @SuppressWarnings("OptionalGetWithoutIsPresent") final Dataset<Row> result = dataset
         .groupBy(context.getGroupBy()
-            .orElse(new Column[]{input.getIdColumn().get()})
+            .orElse(new Column[]{idColumn.get()})
         )
-        .agg(function.apply(input.getValueColumn()));
+        .agg(aggregationColumn);
 
     // If there were grouping columns, there will no longer be an ID column.
     final Optional<Column> updatedIdColumn = context.getGroupBy().isPresent()
                                              ? Optional.empty()
-                                             : input.getIdColumn();
+                                             : idColumn;
 
     // The grouping columns are updated to the new columns within the aggregation result.
     final IdAndValue idAndValue = updateGroupingColumns(context, result, updatedIdColumn);

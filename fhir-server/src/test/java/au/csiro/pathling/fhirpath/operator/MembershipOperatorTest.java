@@ -28,7 +28,6 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -37,7 +36,6 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @author Piotr Szul
  */
 @Tag("UnitTest")
-@Disabled
 public class MembershipOperatorTest {
 
   private final SparkSession spark;

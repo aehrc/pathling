@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.updateGroupingColumns;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
@@ -15,12 +14,11 @@ import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers;
-import au.csiro.pathling.QueryHelpers.IdAndValue;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.function.AggregateFunction;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -35,7 +33,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#membership">Membership</a>
  */
-public class MembershipOperator implements Operator {
+public class MembershipOperator extends AggregateFunction implements Operator {
 
   private final MembershipOperatorType type;
 
@@ -85,19 +83,10 @@ public class MembershipOperator implements Operator {
     final Column aggColumn = max(equalityWithNullChecks).as("value");
 
     // Group by the grouping columns if present, or the ID column from the input.
-    @SuppressWarnings("OptionalGetWithoutIsPresent") final Dataset<Row> dataset = QueryHelpers
-        .joinOnId(left, right, JoinType.LEFT_OUTER)
-        .groupBy(context.getGroupBy().orElse(new Column[]{leftIdColumn.get()}))
-        .agg(aggColumn);
+    final Dataset<Row> dataset = QueryHelpers.joinOnId(left, right, JoinType.LEFT_OUTER);
 
-    // If there were grouping columns, there will no longer be an ID column.
-    final Optional<Column> updatedIdColumn = context.getGroupBy().isPresent()
-                                             ? Optional.empty()
-                                             : leftIdColumn;
-
-    final IdAndValue idAndValue = updateGroupingColumns(context, dataset, updatedIdColumn);
-    return new BooleanPath(expression, dataset, idAndValue.getIdColumn(),
-        idAndValue.getValueColumn(), true, FHIRDefinedType.BOOLEAN);
+    return applyAggregation(input.getContext(), dataset, left.getIdColumn(),
+        aggColumn, expression, FHIRDefinedType.BOOLEAN);
   }
 
   /**
