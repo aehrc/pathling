@@ -11,7 +11,6 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import au.csiro.pathling.fhir.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
-import ca.uhn.fhir.rest.param.UriOrListParam;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.*;
 import java.util.function.Function;
@@ -105,16 +104,16 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     // Filter the set of code systems to only those known by the terminology server. We determine
     // this by performing a CodeSystem search operation.
     final TerminologyClient terminologyClient = terminologyClientFactory.build(log);
-    final UriOrListParam uris = new UriOrListParam();
-    //noinspection OptionalGetWithoutIsPresent
-    codeSystems.stream()
-        .map(codeSystem -> new UriParam(codeSystem.getSystem().get()))
-        .distinct()
-        .forEach(uris::addOr);
-    final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(uris);
-    final Set<String> uniqueKnownUris = knownSystems.stream()
-        .map(CodeSystem::getUrl)
-        .collect(Collectors.toSet());
+    final Collection<String> uniqueKnownUris = new HashSet<>();
+    for (final CodeSystemReference codeSystem : codeSystems) {
+      //noinspection OptionalGetWithoutIsPresent
+      final UriParam uri = new UriParam(codeSystem.getSystem().get());
+      final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
+          uri);
+      if (knownSystems.size() > 0) {
+        uniqueKnownUris.add(codeSystem.getSystem().get());
+      }
+    }
     //noinspection OptionalGetWithoutIsPresent
     final Set<CodeSystemReference> filteredCodeSystems = codeSystems.stream()
         .filter(codeSystem -> uniqueKnownUris.contains(codeSystem.getSystem().get()))

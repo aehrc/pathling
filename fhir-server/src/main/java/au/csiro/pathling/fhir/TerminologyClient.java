@@ -14,7 +14,7 @@ import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.client.api.IRestfulClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
-import ca.uhn.fhir.rest.param.UriOrListParam;
+import ca.uhn.fhir.rest.param.UriParam;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.*;
@@ -30,14 +30,13 @@ import org.slf4j.Logger;
 public interface TerminologyClient extends IRestfulClient {
 
   /**
-   * Performs a CodeSystem search using a list of URIs, returning any resources which match any of
-   * the supplied values.
+   * Performs a CodeSystem search using a single URI.
    *
-   * @param uris a list of URIs, combined using OR logic
+   * @param uri a URI string
    * @return a list of {@link CodeSystem} objects
    */
   @Search
-  List<CodeSystem> searchCodeSystems(@RequiredParam(name = CodeSystem.SP_URL) UriOrListParam uris);
+  List<CodeSystem> searchCodeSystems(@RequiredParam(name = CodeSystem.SP_URL) UriParam uri);
 
   /**
    * Invokes an "expand" request against the terminology server, using an inline ValueSet resource
