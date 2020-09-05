@@ -142,24 +142,33 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
             return concept;
           })
           .collect(Collectors.toList());
-      include.setConcept(concepts);
-      includes.add(include);
+
+      if (!concepts.isEmpty()) {
+        include.setConcept(concepts);
+        includes.add(include);
+      }
     }
     compose.setInclude(includes);
     intersection.setCompose(compose);
 
-    // Ask the terminology service to work out the intersection between the set of input codings
-    // and the ValueSet identified by the URI in the argument.
-    log.info("Intersecting " + hashesAndCodes.size() + " concepts with " + valueSetUri
-        + " using terminology service");
-    final ValueSet expansion = terminologyClient
-        .expand(intersection, new IntegerType(hashesAndCodes.size()));
+    final Set<SimpleCoding> expandedCodings;
+    if (includes.isEmpty()) {
+      // If there is nothing to expand, don't bother calling the terminology server.
+      expandedCodings = Collections.emptySet();
+    } else {
+      // Ask the terminology service to work out the intersection between the set of input codings
+      // and the ValueSet identified by the URI in the argument.
+      log.info("Intersecting " + hashesAndCodes.size() + " concepts with " + valueSetUri
+          + " using terminology service");
+      final ValueSet expansion = terminologyClient
+          .expand(intersection, new IntegerType(hashesAndCodes.size()));
 
-    // Build a set of SimpleCodings to represent the codings present in the intersection.
-    final Set<SimpleCoding> expandedCodings = expansion.getExpansion().getContains().stream()
-        .map(contains -> new SimpleCoding(contains.getSystem(), contains.getCode(),
-            contains.getVersion()))
-        .collect(Collectors.toSet());
+      // Build a set of SimpleCodings to represent the codings present in the intersection.
+      expandedCodings = expansion.getExpansion().getContains().stream()
+          .map(contains -> new SimpleCoding(contains.getSystem(), contains.getCode(),
+              contains.getVersion()))
+          .collect(Collectors.toSet());
+    }
 
     // Build a MemberOfResult for each of the input rows, with the result indicating whether that
     // coding was present in the intersection.
