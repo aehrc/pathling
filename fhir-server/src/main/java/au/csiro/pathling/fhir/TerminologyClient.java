@@ -7,15 +7,13 @@
 package au.csiro.pathling.fhir;
 
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.rest.annotation.Operation;
-import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.annotation.RequiredParam;
-import ca.uhn.fhir.rest.annotation.Search;
+import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.client.api.IRestfulClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
@@ -33,10 +31,12 @@ public interface TerminologyClient extends IRestfulClient {
    * Performs a CodeSystem search using a single URI.
    *
    * @param uri a URI string
+   * @param elements a set of elements to return within the response
    * @return a list of {@link CodeSystem} objects
    */
   @Search
-  List<CodeSystem> searchCodeSystems(@RequiredParam(name = CodeSystem.SP_URL) UriParam uri);
+  List<CodeSystem> searchCodeSystems(@RequiredParam(name = CodeSystem.SP_URL) UriParam uri,
+      @Elements Set<String> elements);
 
   /**
    * Invokes an "expand" request against the terminology server, using an inline ValueSet resource

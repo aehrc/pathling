@@ -109,7 +109,7 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
       //noinspection OptionalGetWithoutIsPresent
       final UriParam uri = new UriParam(codeSystem.getSystem().get());
       final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
-          uri);
+          uri, new HashSet<>(Collections.singletonList("id")));
       if (knownSystems.size() > 0) {
         uniqueKnownUris.add(codeSystem.getSystem().get());
       }
