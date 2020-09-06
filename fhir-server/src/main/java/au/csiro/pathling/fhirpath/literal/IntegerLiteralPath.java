@@ -10,12 +10,15 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Type;
 
@@ -24,7 +27,7 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public class IntegerLiteralPath extends LiteralPath implements Comparable {
+public class IntegerLiteralPath extends LiteralPath implements Comparable, Numeric {
 
   @Nonnull
   private final IntegerType literalValue;
@@ -73,7 +76,7 @@ public class IntegerLiteralPath extends LiteralPath implements Comparable {
 
   @Override
   public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
-    return FhirPath.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation.getSparkFunction());
   }
 
   @Override
@@ -81,4 +84,12 @@ public class IntegerLiteralPath extends LiteralPath implements Comparable {
     return IntegerPath.getComparableTypes().contains(type);
   }
 
+  @Nonnull
+  @Override
+  public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
+      @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
+    return IntegerPath
+        .buildMathOperation(this, operation, expression, dataset, FHIRDefinedType.INTEGER);
+  }
+  
 }

@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -63,7 +62,7 @@ public class BooleanPath extends ElementPath implements Materializable<BooleanTy
 
   @Override
   public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
-    return FhirPath.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation.getSparkFunction());
   }
 
   @Override

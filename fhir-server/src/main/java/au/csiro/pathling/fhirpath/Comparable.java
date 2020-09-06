@@ -20,8 +20,8 @@ public interface Comparable {
 
   /**
    * Get a function that can take two Comparable paths and return a {@link Column} that contains a
-   * comparison condition. The type of condition is controlled by supplying a Spark column function,
-   * e.g. {@link Column#equalTo}.
+   * comparison condition. The type of condition is controlled by supplying a {@link
+   * ComparisonOperation}.
    *
    * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
    * @return A {@link Function} that takes a Comparable as its parameter, and returns a {@link
@@ -41,6 +41,19 @@ public interface Comparable {
    * @return {@code true} if this path can be compared to the specified class
    */
   boolean isComparableTo(@Nonnull Class<? extends Comparable> type);
+
+  /**
+   * Builds a comparison function for directly comparable paths.
+   *
+   * @param source The path to build the comparison function for
+   * @param sparkFunction The Spark column function to use
+   * @return A new {@link Function}
+   */
+  @Nonnull
+  static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
+      final BiFunction<Column, Column, Column> sparkFunction) {
+    return target -> sparkFunction.apply(source.getValueColumn(), target.getValueColumn());
+  }
 
   /**
    * Represents a type of comparison operation.

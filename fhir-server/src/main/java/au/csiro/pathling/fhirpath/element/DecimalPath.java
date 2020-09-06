@@ -7,8 +7,9 @@
 package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -24,7 +25,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class DecimalPath extends ElementPath implements Materializable<DecimalType>, Comparable {
+public class DecimalPath extends ElementPath implements Materializable<DecimalType>, Comparable,
+    Numeric {
 
   /**
    * @param expression The FHIRPath representation of this path
@@ -61,12 +63,54 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
 
   @Override
   public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
-    return FhirPath.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation.getSparkFunction());
   }
 
   @Override
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return IntegerPath.getComparableTypes().contains(type);
+  }
+
+  @Nonnull
+  @Override
+  public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
+      @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
+    return buildMathOperation(this, operation, expression, dataset, getFhirType());
+  }
+
+  /**
+   * Builds a math operation result for a Decimal-like path.
+   *
+   * @param source The left operand for the operation
+   * @param operation The type of {@link au.csiro.pathling.fhirpath.Numeric.MathOperation}
+   * @param expression The FHIRPath expression to use in the result
+   * @param dataset The {@link Dataset} to use in the result
+   * @param fhirType The {@link FHIRDefinedType} to use in the result
+   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a {@link
+   * NonLiteralPath}
+   */
+  @Nonnull
+  public static Function<Numeric, NonLiteralPath> buildMathOperation(@Nonnull final Numeric source,
+      @Nonnull final MathOperation operation, @Nonnull final String expression,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final FHIRDefinedType fhirType) {
+    return target -> {
+      Column valueColumn = operation.getSparkFunction()
+          .apply(source.getValueColumn(), target.getValueColumn());
+      switch (operation) {
+        case ADDITION:
+        case SUBTRACTION:
+        case MULTIPLICATION:
+        case DIVISION:
+          return new DecimalPath(expression, dataset, source.getIdColumn(), valueColumn, true,
+              fhirType);
+        case MODULUS:
+          valueColumn = valueColumn.cast("int");
+          return new IntegerPath(expression, dataset, source.getIdColumn(), valueColumn, true,
+              FHIRDefinedType.INTEGER);
+        default:
+          throw new AssertionError("Unsupported math operation encountered: " + operation);
+      }
+    };
   }
 
 }

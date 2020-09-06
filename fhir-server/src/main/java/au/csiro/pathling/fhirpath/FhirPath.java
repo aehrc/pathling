@@ -8,8 +8,6 @@ package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import java.util.Optional;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -93,18 +91,5 @@ public interface FhirPath {
    */
   @Nonnull
   Optional<ResourceDefinition> getOriginType();
-
-  /**
-   * Builds a comparison function for directly comparable paths.
-   *
-   * @param source The path to build the comparison function for
-   * @param sparkFunction The Spark column function to use
-   * @return A new {@link Function}
-   */
-  @Nonnull
-  static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      final BiFunction<Column, Column, Column> sparkFunction) {
-    return target -> sparkFunction.apply(source.getValueColumn(), target.getValueColumn());
-  }
 
 }

@@ -11,6 +11,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
 import au.csiro.pathling.fhirpath.operator.MembershipOperator.MembershipOperatorType;
 import com.google.common.collect.ImmutableMap;
@@ -40,6 +41,11 @@ public interface Operator {
       .put(">", new ComparisonOperator(ComparisonOperation.GREATER_THAN))
       .put("in", new MembershipOperator(MembershipOperatorType.IN))
       .put("contains", new MembershipOperator(MembershipOperatorType.CONTAINS))
+      .put("+", new MathOperator(MathOperation.ADDITION))
+      .put("-", new MathOperator(MathOperation.SUBTRACTION))
+      .put("*", new MathOperator(MathOperation.MULTIPLICATION))
+      .put("/", new MathOperator(MathOperation.DIVISION))
+      .put("mod", new MathOperator(MathOperation.MODULUS))
       .build();
 
   /**

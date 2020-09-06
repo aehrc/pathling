@@ -9,6 +9,7 @@ package au.csiro.pathling.fhirpath.operator;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -29,7 +30,6 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -38,7 +38,6 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @author John Grimes
  */
 @Tag("UnitTest")
-@Disabled
 public class MathOperatorTest {
 
   private static final List<String> EXPRESSION_TYPES = Arrays
@@ -97,19 +96,28 @@ public class MathOperatorTest {
 
   private static FhirPath getExpressionForType(final String expressionType,
       final boolean leftOperand) {
+    final Dataset<Row> literalContextDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withIdsAndValue(false, Arrays.asList("abc1", "abc2", "abc3", "abc4"))
+        .build();
+    final ElementPath literalContext = new ElementPathBuilder()
+        .dataset(literalContextDataset)
+        .idAndValueColumns()
+        .build();
     switch (expressionType) {
       case "Integer":
         return buildIntegerExpression(leftOperand);
       case "Integer (literal)":
         return IntegerLiteralPath.fromString(leftOperand
                                              ? "1"
-                                             : "2", new ElementPathBuilder().build());
+                                             : "2", literalContext);
       case "Decimal":
         return buildDecimalExpression(leftOperand);
       case "Decimal (literal)":
         return DecimalLiteralPath.fromString(leftOperand
                                              ? "1.0"
-                                             : "2.0", new ElementPathBuilder().build());
+                                             : "2.0", literalContext);
       default:
         throw new RuntimeException("Invalid data type");
     }
@@ -180,7 +188,10 @@ public class MathOperatorTest {
         RowFactory.create("abc3", parameters.isRightTypeIsLiteral()
                                   ? value
                                   : null),
-        RowFactory.create("abc4", null)
+        RowFactory
+            .create("abc4", parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
+                            ? value
+                            : null)
     );
   }
 
@@ -203,7 +214,10 @@ public class MathOperatorTest {
         RowFactory.create("abc3", parameters.isRightTypeIsLiteral()
                                   ? value
                                   : null),
-        RowFactory.create("abc4", null)
+        RowFactory
+            .create("abc4", parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
+                            ? value
+                            : null)
     );
   }
 
@@ -226,7 +240,10 @@ public class MathOperatorTest {
         RowFactory.create("abc3", parameters.isRightTypeIsLiteral()
                                   ? value
                                   : null),
-        RowFactory.create("abc4", null)
+        RowFactory
+            .create("abc4", parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
+                            ? value
+                            : null)
     );
   }
 
@@ -247,7 +264,10 @@ public class MathOperatorTest {
         RowFactory.create("abc3", parameters.isRightTypeIsLiteral()
                                   ? value
                                   : null),
-        RowFactory.create("abc4", null)
+        RowFactory
+            .create("abc4", parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
+                            ? value
+                            : null)
     );
   }
 
@@ -256,7 +276,7 @@ public class MathOperatorTest {
   public void modulus(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
         parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance("%");
+    final Operator comparisonOperator = Operator.getInstance("mod");
     final FhirPath result = comparisonOperator.invoke(input);
     final Object value = 1;
 
@@ -268,7 +288,10 @@ public class MathOperatorTest {
         RowFactory.create("abc3", parameters.isRightTypeIsLiteral()
                                   ? value
                                   : null),
-        RowFactory.create("abc4", null)
+        RowFactory
+            .create("abc4", parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
+                            ? value
+                            : null)
     );
   }
 

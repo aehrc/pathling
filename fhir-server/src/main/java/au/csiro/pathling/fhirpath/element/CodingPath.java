@@ -11,7 +11,6 @@ import static org.apache.spark.sql.functions.not;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -84,10 +83,10 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
       @Nonnull final ComparisonOperation operation) {
     if (operation.equals(ComparisonOperation.EQUALS)) {
-      return FhirPath
+      return Comparable
           .buildComparison(source, (left, right) -> callUDF("codings_equal", left, right));
     } else if (operation.equals(ComparisonOperation.NOT_EQUALS)) {
-      return FhirPath
+      return Comparable
           .buildComparison(source, (left, right) -> not(callUDF("codings_equal", left, right)));
     } else {
       throw new InvalidUserInputError(
