@@ -49,6 +49,18 @@ public class TimePath extends ElementPath implements Materializable<TimeType>, C
   @Nonnull
   @Override
   public Optional<TimeType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return valueFromRow(row, columnNumber);
+  }
+
+  /**
+   * Gets a value from a row for a Time or Time literal.
+   *
+   * @param row The {@link Row} from which to extract the value
+   * @param columnNumber The column number to extract the value from
+   * @return A {@link TimeType}, or the absence of a value
+   */
+  @Nonnull
+  public static Optional<TimeType> valueFromRow(@Nonnull final Row row, final int columnNumber) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }

@@ -10,10 +10,11 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.element.TimePath;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -25,17 +26,13 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public class TimeLiteralPath extends LiteralPath implements Comparable {
-
-  @Nonnull
-  @Getter
-  private final TimeType literalValue;
+public class TimeLiteralPath extends LiteralPath implements Materializable<TimeType>, Comparable {
 
   @SuppressWarnings("WeakerAccess")
   protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    this.literalValue = (TimeType) literalValue;
+    check(literalValue instanceof TimeType);
   }
 
   /**
@@ -58,13 +55,18 @@ public class TimeLiteralPath extends LiteralPath implements Comparable {
   @Nonnull
   @Override
   public String getExpression() {
-    return "@T" + literalValue.getValue();
+    return "@T" + getLiteralValue().getValue();
+  }
+
+  @Override
+  public TimeType getLiteralValue() {
+    return (TimeType) literalValue;
   }
 
   @Nonnull
   @Override
   public String getJavaValue() {
-    return literalValue.getValue();
+    return getLiteralValue().getValue();
   }
 
   @Override
@@ -77,4 +79,10 @@ public class TimeLiteralPath extends LiteralPath implements Comparable {
     return TimePath.getComparableTypes().contains(type);
   }
 
+  @Nonnull
+  @Override
+  public Optional<TimeType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return TimePath.valueFromRow(row, columnNumber);
+  }
+  
 }

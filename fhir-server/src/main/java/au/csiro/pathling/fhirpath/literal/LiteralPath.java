@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
+import static au.csiro.pathling.QueryHelpers.VALUE_COLUMN_SUFFIX;
 import static au.csiro.pathling.utilities.Strings.randomShortString;
 import static org.apache.spark.sql.functions.lit;
 
@@ -66,6 +67,10 @@ public abstract class LiteralPath implements FhirPath {
   @Nonnull
   protected Column idColumn;
 
+  @Getter
+  @Nonnull
+  protected Column valueColumn;
+
   /**
    * The HAPI object that represents the value of this literal.
    */
@@ -76,10 +81,16 @@ public abstract class LiteralPath implements FhirPath {
       @Nonnull final Type literalValue) {
     final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
+    final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
 
-    final Dataset<Row> hashedDataset = dataset.withColumn(idColumnName, idColumn);
-    this.idColumn = hashedDataset.col(idColumnName);
     this.literalValue = literalValue;
+    final Column valueColumn = buildValueColumn();
+
+    final Dataset<Row> hashedDataset = dataset
+        .withColumn(idColumnName, idColumn)
+        .withColumn(valueColumnName, valueColumn);
+    this.idColumn = hashedDataset.col(idColumnName);
+    this.valueColumn = hashedDataset.col(valueColumnName);
     this.dataset = QueryHelpers.applySelection(hashedDataset, Optional.of(this.idColumn));
   }
 
@@ -118,12 +129,6 @@ public abstract class LiteralPath implements FhirPath {
   }
 
   @Override
-  @Nonnull
-  public Column getValueColumn() {
-    return lit(getJavaValue());
-  }
-
-  @Override
   public boolean isSingular() {
     return true;
   }
@@ -135,6 +140,14 @@ public abstract class LiteralPath implements FhirPath {
    */
   @Nullable
   public abstract Object getJavaValue();
+
+  /**
+   * @return A column representing the value for this literal.
+   */
+  @Nonnull
+  public Column buildValueColumn() {
+    return lit(getJavaValue());
+  }
 
   @Nonnull
   @Override

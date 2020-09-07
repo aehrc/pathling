@@ -59,7 +59,7 @@ class AuthorisationTest {
     final String response = restTemplate
         .getForObject("http://localhost:" + port + "/fhir/metadata",
             String.class);
-    assertJson("capabilities/AuthorisationTest-capabilityStatement.CapabilityStatement.json",
+    assertJson("capabilities/capabilityStatement.CapabilityStatement.json",
         response, JSONCompareMode.LENIENT);
   }
 

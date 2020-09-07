@@ -49,6 +49,18 @@ public class BooleanPath extends ElementPath implements Materializable<BooleanTy
   @Nonnull
   @Override
   public Optional<BooleanType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return valueFromRow(row, columnNumber);
+  }
+
+  /**
+   * Gets a value from a row for a Boolean or Boolean literal.
+   *
+   * @param row The {@link Row} from which to extract the value
+   * @param columnNumber The column number to extract the value from
+   * @return A {@link BooleanType}, or the absence of a value
+   */
+  @Nonnull
+  public static Optional<BooleanType> valueFromRow(@Nonnull final Row row, final int columnNumber) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }

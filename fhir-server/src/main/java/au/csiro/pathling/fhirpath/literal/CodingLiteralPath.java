@@ -12,9 +12,11 @@ import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -30,16 +32,13 @@ import org.hl7.fhir.r4.model.Type;
  * @author John Grimes
  */
 @Getter
-public class CodingLiteralPath extends LiteralPath implements Comparable {
-
-  @Nonnull
-  private final Coding literalValue;
+public class CodingLiteralPath extends LiteralPath implements Materializable<Coding>, Comparable {
 
   @SuppressWarnings("WeakerAccess")
   protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    this.literalValue = (Coding) literalValue;
+    check(literalValue instanceof Coding);
   }
 
   /**
@@ -71,21 +70,26 @@ public class CodingLiteralPath extends LiteralPath implements Comparable {
   @Nonnull
   @Override
   public String getExpression() {
-    return literalValue.getVersion() == null
-           ? literalValue.getSystem() + "|" + literalValue.getCode()
-           : literalValue.getSystem() + "|" + literalValue.getVersion() + "|" + literalValue
-               .getCode();
+    return getLiteralValue().getVersion() == null
+           ? getLiteralValue().getSystem() + "|" + getLiteralValue().getCode()
+           : getLiteralValue().getSystem() + "|" + getLiteralValue().getVersion() + "|"
+               + getLiteralValue().getCode();
+  }
+
+  @Override
+  public Coding getLiteralValue() {
+    return (Coding) literalValue;
   }
 
   @Nonnull
   @Override
   public Coding getJavaValue() {
-    return literalValue;
+    return getLiteralValue();
   }
 
   @Nonnull
   @Override
-  public Column getValueColumn() {
+  public Column buildValueColumn() {
     final Coding value = getJavaValue();
     return struct(
         lit(value.getId()).as("id"),
@@ -105,4 +109,11 @@ public class CodingLiteralPath extends LiteralPath implements Comparable {
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return CodingPath.getComparableTypes().contains(type);
   }
+
+  @Nonnull
+  @Override
+  public Optional<Coding> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return CodingPath.valueFromRow(row, columnNumber);
+  }
+  
 }

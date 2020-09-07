@@ -7,12 +7,16 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.DateTimePath;
 import java.text.ParseException;
+import java.util.Date;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -26,16 +30,13 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public class DateLiteralPath extends LiteralPath implements Comparable {
-
-  @Nonnull
-  private final DateType literalValue;
+public class DateLiteralPath extends LiteralPath implements Materializable<DateType>, Comparable {
 
   @SuppressWarnings("WeakerAccess")
   protected DateLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    this.literalValue = (DateType) literalValue;
+    check(literalValue instanceof DateType);
   }
 
   /**
@@ -63,6 +64,7 @@ public class DateLiteralPath extends LiteralPath implements Comparable {
         date = DatePath.getYearOnlyDateFormat().parse(dateString);
       }
     }
+
     return new DateLiteralPath(context.getDataset(), context.getIdColumn().get(),
         new DateType(date));
   }
@@ -72,13 +74,25 @@ public class DateLiteralPath extends LiteralPath implements Comparable {
   public String getExpression() {
     // One the way back out, the date is always formatted using the "full" format, even if it was
     // created from one of the shorter formats.
-    return "@" + DatePath.getFullDateFormat().format(literalValue.getValue());
+    return "@" + DatePath.getFullDateFormat().format(getLiteralValue().getValue());
+  }
+
+  @Override
+  public DateType getLiteralValue() {
+    return (DateType) literalValue;
   }
 
   @Nonnull
   @Override
-  public java.sql.Date getJavaValue() {
-    return new java.sql.Date(literalValue.getValue().getTime());
+  public Date getJavaValue() {
+    return getLiteralValue().getValue();
+  }
+
+  @Nonnull
+  @Override
+  public Column buildValueColumn() {
+    final String date = DatePath.getFullDateFormat().format(getJavaValue());
+    return lit(date);
   }
 
   @Override
@@ -89,6 +103,12 @@ public class DateLiteralPath extends LiteralPath implements Comparable {
   @Override
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return DateTimePath.getComparableTypes().contains(type);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<DateType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return DatePath.valueFromRow(row, columnNumber);
   }
 
 }

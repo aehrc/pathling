@@ -7,17 +7,23 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.element.DateTimePath;
 import java.text.ParseException;
+import java.util.Date;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.BaseDateTimeType;
 import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Type;
 
 /**
@@ -25,16 +31,14 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public class DateTimeLiteralPath extends LiteralPath implements Comparable {
-
-  @Nonnull
-  private final DateTimeType literalValue;
+public class DateTimeLiteralPath extends LiteralPath implements Materializable<BaseDateTimeType>,
+    Comparable {
 
   @SuppressWarnings("WeakerAccess")
   protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    this.literalValue = (DateTimeType) literalValue;
+    check(literalValue instanceof DateTimeType);
   }
 
   /**
@@ -51,20 +55,33 @@ public class DateTimeLiteralPath extends LiteralPath implements Comparable {
     check(context.getIdColumn().isPresent());
     final String dateTimeString = fhirPath.replaceFirst("^@", "");
     final java.util.Date date = DateTimePath.getDateFormat().parse(dateTimeString);
+    final DateTimeType literalValue = new DateTimeType(date);
+    literalValue.setTimeZone(DateTimePath.getTimeZone());
     return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn().get(),
-        new DateTimeType(date));
+        literalValue);
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return "@" + DateTimePath.getDateFormat().format(literalValue.getValue());
+    return "@" + DateTimePath.getDateFormat().format(getLiteralValue().getValue());
+  }
+
+  @Override
+  public DateTimeType getLiteralValue() {
+    return (DateTimeType) literalValue;
   }
 
   @Nonnull
   @Override
-  public java.sql.Timestamp getJavaValue() {
-    return new java.sql.Timestamp(literalValue.getValue().getTime());
+  public Date getJavaValue() {
+    return getLiteralValue().getValue();
+  }
+
+  @Nonnull
+  @Override
+  public Column buildValueColumn() {
+    return lit(getLiteralValue().asStringValue());
   }
 
   @Override
@@ -76,4 +93,12 @@ public class DateTimeLiteralPath extends LiteralPath implements Comparable {
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return DateTimePath.getComparableTypes().contains(type);
   }
+
+  @Nonnull
+  @Override
+  public Optional<BaseDateTimeType> getValueFromRow(@Nonnull final Row row,
+      final int columnNumber) {
+    return DateTimePath.valueFromRow(row, columnNumber, FHIRDefinedType.DATETIME);
+  }
+
 }

@@ -10,11 +10,14 @@ import static org.apache.spark.sql.functions.to_timestamp;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Materializable;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -26,6 +29,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
+@Slf4j
 public class DatePath extends ElementPath implements Materializable<DateType>, Comparable {
 
   private static final SimpleDateFormat FULL_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
@@ -85,10 +89,29 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
   @Nonnull
   @Override
   public Optional<DateType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return valueFromRow(row, columnNumber);
+  }
+
+  /**
+   * Gets a value from a row for a Date or Date literal.
+   *
+   * @param row The {@link Row} from which to extract the value
+   * @param columnNumber The column number to extract the value from
+   * @return A {@link DateType}, or the absence of a value
+   */
+  @Nonnull
+  public static Optional<DateType> valueFromRow(@Nonnull final Row row, final int columnNumber) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
-    return Optional.of(new DateType(row.getString(columnNumber)));
+    final Date date;
+    try {
+      date = getFullDateFormat().parse(row.getString(columnNumber));
+    } catch (final ParseException e) {
+      log.warn("Error parsing date extracted from row", e);
+      return Optional.empty();
+    }
+    return Optional.of(new DateType(date));
   }
 
   @Override

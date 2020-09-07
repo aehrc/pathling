@@ -136,7 +136,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     finalSelection.addAll(finalDatasetWithColumns.getColumns());
     finalSelection.addAll(aggregationColumns);
     final Dataset<Row> finalDataset = finalDatasetWithColumns.getDataset()
-        .select(finalSelection.toArray(new Column[]{}));
+        .select(finalSelection.toArray(new Column[0]));
 
     // Translate the result into a response object to be passed back to the user.
     return buildResponse(finalDataset, aggregations, groupings, filters);

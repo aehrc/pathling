@@ -53,20 +53,37 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   @Nonnull
   @Override
   public Optional<Coding> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return valueFromRow(row, columnNumber);
+  }
+
+  /**
+   * Gets a value from a row for a Coding or Coding literal.
+   *
+   * @param row The {@link Row} from which to extract the value
+   * @param columnNumber The column number to extract the value from
+   * @return A {@link Coding}, or the absence of a value
+   */
+  @Nonnull
+  public static Optional<Coding> valueFromRow(@Nonnull final Row row, final int columnNumber) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
 
     final Row codingStruct = row.getStruct(columnNumber);
 
-    final String system = codingStruct.getString(row.fieldIndex("system"));
-    final String version = codingStruct.getString(row.fieldIndex("version"));
-    final String code = codingStruct.getString(row.fieldIndex("code"));
-    final String display = codingStruct.getString(row.fieldIndex("display"));
-    final boolean userSelected = codingStruct.getBoolean(row.fieldIndex("userSelected"));
+    final String system = codingStruct.getString(codingStruct.fieldIndex("system"));
+    final String version = codingStruct.getString(codingStruct.fieldIndex("version"));
+    final String code = codingStruct.getString(codingStruct.fieldIndex("code"));
+    final String display = codingStruct.getString(codingStruct.fieldIndex("display"));
+
+    final int userSelectedIndex = codingStruct.fieldIndex("userSelected");
+    final boolean userSelectedPresent = !codingStruct.isNullAt(userSelectedIndex);
+
     final Coding coding = new Coding(system, code, display);
     coding.setVersion(version);
-    coding.setUserSelected(userSelected);
+    if (userSelectedPresent) {
+      coding.setUserSelected(codingStruct.getBoolean(userSelectedIndex));
+    }
 
     return Optional.of(coding);
   }

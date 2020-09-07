@@ -6,16 +6,21 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.LongType;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -27,6 +32,9 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class DecimalPath extends ElementPath implements Materializable<DecimalType>, Comparable,
     Numeric {
+
+  private static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
+      .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
   /**
    * @param expression The FHIRPath representation of this path
@@ -47,6 +55,18 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
   @Nonnull
   @Override
   public Optional<DecimalType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return valueFromRow(row, columnNumber);
+  }
+
+  /**
+   * Gets a value from a row for a Decimal or Decimal literal.
+   *
+   * @param row The {@link Row} from which to extract the value
+   * @param columnNumber The column number to extract the value from
+   * @return A {@link DecimalType}, or the absence of a value
+   */
+  @Nonnull
+  public static Optional<DecimalType> valueFromRow(@Nonnull final Row row, final int columnNumber) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
@@ -57,13 +77,28 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
       final long longValue = row.getLong(columnNumber);
       return Optional.of(new DecimalType(longValue));
     } else {
-      return Optional.of(new DecimalType(row.getDecimal(columnNumber)));
+      final BigDecimal decimal = row.getDecimal(columnNumber);
+
+      if (decimal.precision() > getDecimalType().precision()) {
+        throw new InvalidUserInputError(
+            "Attempt to return a Decimal value with greater than supported precision");
+      }
+      if (decimal.scale() > getDecimalType().scale()) {
+        throw new InvalidUserInputError(
+            "Attempt to return a Decimal value with greater than supported scale");
+      }
+
+      return Optional.of(new DecimalType(decimal));
     }
   }
 
   @Override
   public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
     return Comparable.buildComparison(this, operation.getSparkFunction());
+  }
+
+  public static org.apache.spark.sql.types.DecimalType getDecimalType() {
+    return DECIMAL_TYPE;
   }
 
   @Override
@@ -94,17 +129,22 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
       @Nonnull final MathOperation operation, @Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final FHIRDefinedType fhirType) {
     return target -> {
+      final Column targetValueColumn =
+          target instanceof IntegerPath || target instanceof IntegerLiteralPath
+          ? target.getValueColumn().cast(DataTypes.LongType)
+          : target.getValueColumn();
       Column valueColumn = operation.getSparkFunction()
-          .apply(source.getValueColumn(), target.getValueColumn());
+          .apply(source.getValueColumn(), targetValueColumn);
       switch (operation) {
         case ADDITION:
         case SUBTRACTION:
         case MULTIPLICATION:
         case DIVISION:
+          valueColumn = valueColumn.cast(getDecimalType());
           return new DecimalPath(expression, dataset, source.getIdColumn(), valueColumn, true,
               fhirType);
         case MODULUS:
-          valueColumn = valueColumn.cast("int");
+          valueColumn = valueColumn.cast(DataTypes.LongType);
           return new IntegerPath(expression, dataset, source.getIdColumn(), valueColumn, true,
               FHIRDefinedType.INTEGER);
         default:

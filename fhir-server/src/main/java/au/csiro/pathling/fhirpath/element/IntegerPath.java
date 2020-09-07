@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.LongType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IntegerType;
@@ -59,6 +60,20 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
   @Nonnull
   @Override
   public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return valueFromRow(row, columnNumber, getFhirType());
+  }
+
+  /**
+   * Gets a value from a row for an Integer or Integer literal.
+   *
+   * @param row The {@link Row} from which to extract the value
+   * @param columnNumber The column number to extract the value from
+   * @param fhirType The FHIR type to assume when extracting the value
+   * @return A {@link PrimitiveType}, or the absence of a value
+   */
+  @Nonnull
+  public static Optional<PrimitiveType> valueFromRow(@Nonnull final Row row, final int columnNumber,
+      @Nonnull final FHIRDefinedType fhirType) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
@@ -78,7 +93,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
     } else {
       value = row.getInt(columnNumber);
     }
-    switch (getFhirType()) {
+    switch (fhirType) {
       case UNSIGNEDINT:
         return Optional.of(new UnsignedIntType(value));
       case POSITIVEINT:
@@ -126,21 +141,25 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
       @Nonnull final MathOperation operation, @Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final FHIRDefinedType fhirType) {
     return target -> {
+      final Column targetValueColumn =
+          target instanceof IntegerPath || target instanceof IntegerLiteralPath
+          ? target.getValueColumn().cast(DataTypes.LongType)
+          : target.getValueColumn();
       Column valueColumn = operation.getSparkFunction()
-          .apply(source.getValueColumn(), target.getValueColumn());
+          .apply(source.getValueColumn().cast(DataTypes.LongType), targetValueColumn);
       switch (operation) {
         case ADDITION:
         case SUBTRACTION:
         case MULTIPLICATION:
         case MODULUS:
           if (target instanceof DecimalPath || target instanceof DecimalLiteralPath) {
-            valueColumn = valueColumn.cast("int");
+            valueColumn = valueColumn.cast(DataTypes.LongType);
           }
           return new IntegerPath(expression, dataset, source.getIdColumn(), valueColumn, true,
               fhirType);
         case DIVISION:
-          final Column numerator = source.getValueColumn().cast("decimal");
-          valueColumn = operation.getSparkFunction().apply(numerator, target.getValueColumn());
+          final Column numerator = source.getValueColumn().cast(DecimalPath.getDecimalType());
+          valueColumn = operation.getSparkFunction().apply(numerator, targetValueColumn);
           return new DecimalPath(expression, dataset, source.getIdColumn(), valueColumn, true,
               FHIRDefinedType.DECIMAL);
         default:

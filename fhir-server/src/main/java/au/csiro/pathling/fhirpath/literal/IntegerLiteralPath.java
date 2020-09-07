@@ -9,10 +9,9 @@ package au.csiro.pathling.fhirpath.literal;
 import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.*;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -20,6 +19,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.PrimitiveType;
 import org.hl7.fhir.r4.model.Type;
 
 /**
@@ -27,16 +27,14 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public class IntegerLiteralPath extends LiteralPath implements Comparable, Numeric {
-
-  @Nonnull
-  private final IntegerType literalValue;
+public class IntegerLiteralPath extends LiteralPath implements Materializable<PrimitiveType>,
+    Comparable, Numeric {
 
   @SuppressWarnings("WeakerAccess")
   protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    this.literalValue = (IntegerType) literalValue;
+    check(literalValue instanceof IntegerType);
   }
 
   /**
@@ -59,19 +57,19 @@ public class IntegerLiteralPath extends LiteralPath implements Comparable, Numer
   @Nonnull
   @Override
   public String getExpression() {
-    return literalValue.getValueAsString();
+    return getLiteralValue().getValueAsString();
   }
 
   @Override
   @Nonnull
   public IntegerType getLiteralValue() {
-    return literalValue;
+    return (IntegerType) literalValue;
   }
 
   @Nonnull
   @Override
   public Integer getJavaValue() {
-    return literalValue.getValue();
+    return getLiteralValue().getValue();
   }
 
   @Override
@@ -91,5 +89,11 @@ public class IntegerLiteralPath extends LiteralPath implements Comparable, Numer
     return IntegerPath
         .buildMathOperation(this, operation, expression, dataset, FHIRDefinedType.INTEGER);
   }
-  
+
+  @Nonnull
+  @Override
+  public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return IntegerPath.valueFromRow(row, columnNumber, FHIRDefinedType.INTEGER);
+  }
+
 }

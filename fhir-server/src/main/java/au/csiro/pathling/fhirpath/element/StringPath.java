@@ -51,10 +51,24 @@ public class StringPath extends ElementPath implements Materializable<PrimitiveT
   @Override
   public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row,
       final int columnNumber) {
+    return valueFromRow(row, columnNumber, getFhirType());
+  }
+
+  /**
+   * Gets a value from a row for a String or String literal.
+   *
+   * @param row The {@link Row} from which to extract the value
+   * @param columnNumber The column number to extract the value from
+   * @param fhirType The FHIR type to assume when extracting the value
+   * @return A {@link PrimitiveType}, or the absence of a value
+   */
+  @Nonnull
+  public static Optional<PrimitiveType> valueFromRow(@Nonnull final Row row, final int columnNumber,
+      final FHIRDefinedType fhirType) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
-    switch (getFhirType()) {
+    switch (fhirType) {
       case URI:
         return Optional.of(new UriType(row.getString(columnNumber)));
       case CODE:

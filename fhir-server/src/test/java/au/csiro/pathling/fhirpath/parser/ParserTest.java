@@ -38,7 +38,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Date;
-import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.HashSet;
 import org.apache.spark.sql.Dataset;
@@ -165,7 +164,7 @@ public class ParserTest {
     assertThatResultOf("@2015-02-04T14:34:28Z")
         .isLiteralPath(DateTimeLiteralPath.class)
         .hasExpression("@2015-02-04T14:34:28Z")
-        .hasJavaValue(new Timestamp(1423060468000L));
+        .hasJavaValue(new Date(1423060468000L));
 
     // Date with no time component.
     assertThatResultOf("@2015-02-04")

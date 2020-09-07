@@ -8,13 +8,13 @@ package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.*;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -29,16 +29,14 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public class DecimalLiteralPath extends LiteralPath implements Comparable, Numeric {
-
-  @Nonnull
-  private final DecimalType literalValue;
+public class DecimalLiteralPath extends LiteralPath implements Materializable<DecimalType>,
+    Comparable, Numeric {
 
   @SuppressWarnings("WeakerAccess")
   protected DecimalLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    this.literalValue = (DecimalType) literalValue;
+    check(literalValue instanceof DecimalType);
   }
 
   /**
@@ -54,6 +52,18 @@ public class DecimalLiteralPath extends LiteralPath implements Comparable, Numer
       @Nonnull final FhirPath context) throws NumberFormatException {
     check(context.getIdColumn().isPresent());
     final BigDecimal value = new BigDecimal(fhirPath);
+
+    if (value.precision() > DecimalPath.getDecimalType().precision()) {
+      throw new InvalidUserInputError(
+          "Decimal literal exceeded maximum precision supported (" + DecimalPath.getDecimalType()
+              .precision() + "): " + fhirPath);
+    }
+    if (value.scale() > DecimalPath.getDecimalType().scale()) {
+      throw new InvalidUserInputError(
+          "Decimal literal exceeded maximum scale supported (" + DecimalPath.getDecimalType()
+              .scale() + "): " + fhirPath);
+    }
+
     return new DecimalLiteralPath(context.getDataset(), context.getIdColumn().get(),
         new DecimalType(value));
   }
@@ -61,19 +71,19 @@ public class DecimalLiteralPath extends LiteralPath implements Comparable, Numer
   @Nonnull
   @Override
   public String getExpression() {
-    return literalValue.getValue().toPlainString();
+    return getLiteralValue().getValue().toPlainString();
   }
 
   @Override
   @Nonnull
   public DecimalType getLiteralValue() {
-    return literalValue;
+    return (DecimalType) literalValue;
   }
 
   @Nonnull
   @Override
   public BigDecimal getJavaValue() {
-    return literalValue.getValue();
+    return getLiteralValue().getValue();
   }
 
   @Override
@@ -92,6 +102,12 @@ public class DecimalLiteralPath extends LiteralPath implements Comparable, Numer
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
     return DecimalPath
         .buildMathOperation(this, operation, expression, dataset, FHIRDefinedType.DECIMAL);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<DecimalType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return DecimalPath.valueFromRow(row, columnNumber);
   }
 
 }

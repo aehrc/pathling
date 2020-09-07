@@ -1,0 +1,26 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCoding": {
+            "system": "http://somecodesystem.org",
+            "code": "ABC",
+            "userSelected": false
+          }
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 51
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(http://somecodesystem.org|ABC) = http://somecodesystem.org|ABC"
+        }
+      ]
+    }
+  ]
+}

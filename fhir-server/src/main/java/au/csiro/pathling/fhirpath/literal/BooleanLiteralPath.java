@@ -10,10 +10,11 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -25,17 +26,14 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public class BooleanLiteralPath extends LiteralPath implements Comparable {
-
-  @Nonnull
-  @Getter
-  private final BooleanType literalValue;
+public class BooleanLiteralPath extends LiteralPath implements Materializable<BooleanType>,
+    Comparable {
 
   @SuppressWarnings("WeakerAccess")
   protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    this.literalValue = (BooleanType) literalValue;
+    check(literalValue instanceof BooleanType);
   }
 
   /**
@@ -58,13 +56,18 @@ public class BooleanLiteralPath extends LiteralPath implements Comparable {
   @Nonnull
   @Override
   public String getExpression() {
-    return literalValue.asStringValue();
+    return getLiteralValue().asStringValue();
+  }
+
+  @Override
+  public BooleanType getLiteralValue() {
+    return (BooleanType) literalValue;
   }
 
   @Nonnull
   @Override
   public Boolean getJavaValue() {
-    return literalValue.booleanValue();
+    return getLiteralValue().booleanValue();
   }
 
   @Override
@@ -76,4 +79,11 @@ public class BooleanLiteralPath extends LiteralPath implements Comparable {
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return BooleanPath.getComparableTypes().contains(type);
   }
+
+  @Nonnull
+  @Override
+  public Optional<BooleanType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return BooleanPath.valueFromRow(row, columnNumber);
+  }
+  
 }

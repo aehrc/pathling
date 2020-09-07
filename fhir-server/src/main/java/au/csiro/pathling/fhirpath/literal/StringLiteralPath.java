@@ -11,13 +11,17 @@ import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.element.StringPath;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.PrimitiveType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 
@@ -27,16 +31,13 @@ import org.hl7.fhir.r4.model.Type;
  * @author John Grimes
  */
 @Getter
-public class StringLiteralPath extends LiteralPath implements Comparable {
+public class StringLiteralPath extends LiteralPath implements Materializable<PrimitiveType>,
+    Comparable {
 
-  @Nonnull
-  private final StringType literalValue;
-
-  @SuppressWarnings("WeakerAccess")
   protected StringLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    this.literalValue = (StringType) literalValue;
+    check(literalValue instanceof StringType);
   }
 
   /**
@@ -63,13 +64,18 @@ public class StringLiteralPath extends LiteralPath implements Comparable {
   @Nonnull
   @Override
   public String getExpression() {
-    return "'" + escapeFhirPathString(literalValue.getValue()) + "'";
+    return "'" + escapeFhirPathString(getLiteralValue().getValue()) + "'";
+  }
+
+  @Override
+  public StringType getLiteralValue() {
+    return (StringType) literalValue;
   }
 
   @Nonnull
   @Override
   public String getJavaValue() {
-    return literalValue.getValue();
+    return getLiteralValue().getValue();
   }
 
   // This method implements the rules for dealing with strings in the FHIRPath specification.
@@ -103,4 +109,10 @@ public class StringLiteralPath extends LiteralPath implements Comparable {
     return StringPath.getComparableTypes().contains(type);
   }
 
+  @Nonnull
+  @Override
+  public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+    return StringPath.valueFromRow(row, columnNumber, FHIRDefinedType.STRING);
+  }
+  
 }

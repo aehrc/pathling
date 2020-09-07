@@ -30,14 +30,11 @@ public class QuantityLiteralPath extends LiteralPath {
 
   private static final Pattern PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
-  @Nonnull
-  private final Quantity literalValue;
-
   @SuppressWarnings("WeakerAccess")
   protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    this.literalValue = (Quantity) literalValue;
+    check(literalValue instanceof Quantity);
   }
 
   /**
@@ -83,13 +80,18 @@ public class QuantityLiteralPath extends LiteralPath {
   @Nonnull
   @Override
   public String getExpression() {
-    return literalValue.getValue().toPlainString() + " '" + literalValue.getUnit() + "'";
+    return getLiteralValue().getValue().toPlainString() + " '" + getLiteralValue().getUnit() + "'";
+  }
+
+  @Override
+  public Quantity getLiteralValue() {
+    return (Quantity) literalValue;
   }
 
   @Nonnull
   @Override
   public Quantity getJavaValue() {
-    return literalValue;
+    return getLiteralValue();
   }
 
 }

@@ -190,7 +190,7 @@ public class DockerImageTest {
       // Create a request to the $import operation, referencing the NDJSON files we have loaded into
       // the staging area.
       final InputStream requestStream = Thread.currentThread().getContextClassLoader()
-          .getResourceAsStream("import/SystemTest-request.Parameters.json");
+          .getResourceAsStream("import/SystemTest/request.Parameters.json");
       assertThat(requestStream).isNotNull();
 
       final HttpPost importRequest = new HttpPost("http://localhost:8091/fhir/$import");
@@ -274,7 +274,7 @@ public class DockerImageTest {
         if (statusCode == 200) {
           final StringWriter writer = new StringWriter();
           IOUtils.copy(queryResponseStream, writer, StandardCharsets.UTF_8);
-          assertJson("responses/DockerImageTest-importDataAndQuery.Parameters.json",
+          assertJson("responses/DockerImageTest/importDataAndQuery.Parameters.json",
               writer.toString()
           );
         } else {
