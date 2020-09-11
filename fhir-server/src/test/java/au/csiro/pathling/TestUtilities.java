@@ -121,11 +121,9 @@ public abstract class TestUtilities {
   }
 
   public static boolean codingsAreEqual(Coding coding1, Coding coding2) {
-    return coding1.getUserSelected() == coding2.getUserSelected() &&
-        Objects.equals(coding1.getSystem(), coding2.getSystem()) &&
+    return Objects.equals(coding1.getSystem(), coding2.getSystem()) &&
         Objects.equals(coding1.getVersion(), coding2.getVersion()) &&
-        Objects.equals(coding1.getCode(), coding2.getCode()) &&
-        Objects.equals(coding1.getDisplay(), coding2.getDisplay());
+        Objects.equals(coding1.getCode(), coding2.getCode());
   }
 
   public static boolean codeableConceptsAreEqual(CodeableConcept codeableConcept1,
