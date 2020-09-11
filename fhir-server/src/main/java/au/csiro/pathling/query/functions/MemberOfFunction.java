@@ -100,7 +100,7 @@ public class MemberOfFunction implements Function {
     // as the new value.
     dataset = prevDataset
         .join(validateResults, prevValueHashColumn.equalTo(resultHashColumn), "left_outer");
-    
+
     // The conditional expression around the value column is required to deal with nulls. This
     // function should only ever return true or false.
     valueColumn = when(valueColumn.isNull(), false).otherwise(valueColumn);
@@ -258,20 +258,13 @@ public class MemberOfFunction implements Function {
 
     private static Coding getCodingFromRow(Row inputCoding) {
       Coding coding;
-      String id = inputCoding.getString(inputCoding.fieldIndex("id"));
       String system = inputCoding.getString(inputCoding.fieldIndex("system"));
       String version = inputCoding.getString(inputCoding.fieldIndex("version"));
       String code = inputCoding.getString(inputCoding.fieldIndex("code"));
-      String display = inputCoding.getString(inputCoding.fieldIndex("display"));
-      coding = new Coding(system, code, display);
-      coding.setId(id);
+      // We purposefully omit the display, as we do not wish to validate it as part of the
+      // operation.
+      coding = new Coding(system, code, null);
       coding.setVersion(version);
-      // Conditionally set the `userSelected` field based on whether it is null in the data -
-      // missingness is significant in FHIR.
-      Boolean userSelected = (Boolean) inputCoding.get(inputCoding.fieldIndex("userSelected"));
-      if (userSelected != null) {
-        coding.setUserSelected(userSelected);
-      }
       return coding;
     }
   }
