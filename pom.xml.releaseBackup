@@ -34,7 +34,7 @@
     </license>
   </licenses>
 
-  <version>2.1.2</version>
+  <version>2.1.2-SNAPSHOT</version>
 
   <properties>
     <project.majorVersion>2</project.majorVersion>
@@ -295,7 +295,7 @@
   
   <scm>
     <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
-    <tag>v2.1.2</tag>
+    <tag>v2.1.1</tag>
   </scm>
 
   <profiles>
