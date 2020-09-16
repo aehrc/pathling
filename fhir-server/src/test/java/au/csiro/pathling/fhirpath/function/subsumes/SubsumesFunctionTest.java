@@ -41,12 +41,12 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -55,7 +55,6 @@ import org.mockito.Mockito;
  * @author Piotr Szul
  */
 @Tag("UnitTest")
-@Disabled
 public class SubsumesFunctionTest {
 
   private TerminologyClient terminologyClient;
@@ -102,7 +101,7 @@ public class SubsumesFunctionTest {
     terminologyClientFactory = mock(TerminologyClientFactory.class,
         Mockito.withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
-    when(terminologyClient.closure(any(), any(), any())).thenReturn(MAP_LARGE_MEDIUM_SMALL);
+    when(terminologyClient.closure(any(), any())).thenReturn(MAP_LARGE_MEDIUM_SMALL);
   }
 
   private static CodingPath createCodingInput() {
@@ -122,6 +121,7 @@ public class SubsumesFunctionTest {
     final ElementPath inputExpression = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
+        .idAndValueColumns()
         .singular(false)
         .build();
 
@@ -146,13 +146,24 @@ public class SubsumesFunctionTest {
     return new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
+        .idAndValueColumns()
         .singular(false)
         .build();
   }
 
   private static CodingLiteralPath createLiteralArg() {
+    final Dataset<Row> literalContextDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withIdsAndValue(false, ALL_RES_IDS)
+        .build();
+    final ElementPath literalContext = new ElementPathBuilder()
+        .dataset(literalContextDataset)
+        .idAndValueColumns()
+        .build();
+
     return CodingLiteralPath.fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-        mock(FhirPath.class));
+        literalContext);
   }
 
   private static CodingPath createCodingArg() {
@@ -165,6 +176,7 @@ public class SubsumesFunctionTest {
     final ElementPath argument = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
+        .idAndValueColumns()
         .build();
 
     return (CodingPath) argument;
@@ -207,11 +219,33 @@ public class SubsumesFunctionTest {
   }
 
   private static DatasetBuilder expectedSubsumes() {
-    return allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID3));
+    return new DatasetBuilder()
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, false)
+        .withRow(RES_ID1, false)
+        .withRow(RES_ID2, false)
+        .withRow(RES_ID2, true)
+        .withRow(RES_ID3, false)
+        .withRow(RES_ID3, true)
+        .withRow(RES_ID4, false)
+        .withRow(RES_ID4, false)
+        .withRow(RES_ID5, null);
   }
 
   private static DatasetBuilder expectedSubsumedBy() {
-    return allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID1));
+    return new DatasetBuilder()
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, false)
+        .withRow(RES_ID1, true)
+        .withRow(RES_ID2, false)
+        .withRow(RES_ID2, true)
+        .withRow(RES_ID3, false)
+        .withRow(RES_ID3, false)
+        .withRow(RES_ID4, false)
+        .withRow(RES_ID4, false)
+        .withRow(RES_ID5, null);
   }
 
   private FhirPathAssertion assertCallSuccess(final NamedFunction function,
@@ -227,7 +261,7 @@ public class SubsumesFunctionTest {
 
     return assertThat(result)
         .isElementPath(BooleanPath.class)
-        .isSingular();
+        .isNotSingular();
   }
 
   private DatasetAssert assertSubsumesSuccess(final FhirPath inputExpression,
