@@ -95,4 +95,12 @@ public class ResourcePath extends NonLiteralPath {
     return Optional.of(definition);
   }
 
+  @Nonnull
+  @Override
+  public FhirPath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular) {
+    return new ResourcePath(expression, dataset, idColumn, valueColumn, singular, definition);
+  }
+
 }

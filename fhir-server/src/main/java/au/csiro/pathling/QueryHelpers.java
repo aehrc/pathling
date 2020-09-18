@@ -85,8 +85,13 @@ public abstract class QueryHelpers {
     check(context.getGroupBy().isPresent() || idColumn.isPresent());
 
     // The value column will be the column following each of the grouping columns.
-    final int numberOfGroupings = context.getGroupBy()
+    int numberOfGroupings = context.getGroupBy()
         .flatMap(columns -> Optional.of(columns.length)).orElse(1);
+    // If there is a $this context, there will be one more column - the preserved input value
+    // column.
+    if (context.getThisContext().isPresent()) {
+      numberOfGroupings += 1;
+    }
     final Column valueColumn = dataset.col(dataset.columns()[numberOfGroupings]);
 
     // We need to update the grouping columns, as the aggregation erases any columns that were
@@ -210,7 +215,7 @@ public abstract class QueryHelpers {
    * @return a list of {@link Column} objects
    */
   @Nonnull
-  public static List<Column> firstNColumns(@Nonnull final Dataset<Row> dataset,
+  private static List<Column> firstNColumns(@Nonnull final Dataset<Row> dataset,
       final int numberOfColumns) {
     return Arrays.asList(dataset.columns()).subList(0, numberOfColumns)
         .stream()

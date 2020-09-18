@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ThisPath;
 import au.csiro.pathling.fhirpath.parser.AggregationParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DefaultAnswer;
@@ -37,7 +36,7 @@ public class AggregationParserContextBuilder {
   private FhirPath inputContext;
 
   @Nonnull
-  private Optional<ThisPath> thisContext;
+  private Optional<FhirPath> thisContext;
 
   @Nonnull
   private FhirContext fhirContext;
@@ -60,7 +59,7 @@ public class AggregationParserContextBuilder {
   public AggregationParserContextBuilder() {
     inputContext = mock(FhirPath.class);
     when(inputContext.getIdColumn()).thenReturn(Optional.of(mock(Column.class)));
-    thisContext = Optional.of(mock(ThisPath.class));
+    thisContext = Optional.empty();
     fhirContext = FhirHelpers.getFhirContext();
     sparkSession = SparkHelpers.getSparkSession();
     resourceReader = Mockito.mock(ResourceReader.class, new DefaultAnswer());
@@ -89,7 +88,7 @@ public class AggregationParserContextBuilder {
   }
 
   @Nonnull
-  public AggregationParserContextBuilder thisContext(@Nonnull final ThisPath thisPath) {
+  public AggregationParserContextBuilder thisContext(@Nonnull final FhirPath thisPath) {
     this.thisContext = Optional.of(thisPath);
     return this;
   }

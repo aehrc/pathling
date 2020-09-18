@@ -131,7 +131,9 @@ public class ElementPathBuilder {
     if (!parentPath.getIdColumn().isPresent()) {
       when(parentPath.getIdColumn()).thenReturn(Optional.of(idColumn));
     }
-    return ElementPath.build(parentPath, expression, dataset, valueColumn, singular, definition);
+    return ElementPath
+        .build(parentPath.getOriginColumn(), parentPath.getOriginType(), expression, dataset,
+            parentPath.getIdColumn(), valueColumn, singular, definition);
   }
 
 }

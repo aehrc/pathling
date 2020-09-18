@@ -61,7 +61,8 @@ public class PathTraversalOperator {
                                : explode_outer(field);
     final boolean singular = left.isSingular() && maxCardinalityOfOne;
 
-    return ElementPath.build(left, expression, leftDataset, valueColumn, singular, childDefinition);
+    return ElementPath.build(left.getOriginColumn(), left.getOriginType(), expression, leftDataset,
+        left.getIdColumn(), valueColumn, singular, childDefinition);
   }
 
 }

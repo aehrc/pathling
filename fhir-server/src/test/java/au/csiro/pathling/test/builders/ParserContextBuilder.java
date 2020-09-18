@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ThisPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DefaultAnswer;
@@ -36,7 +35,7 @@ public class ParserContextBuilder {
   private FhirPath inputContext;
 
   @Nullable
-  private ThisPath thisContext;
+  private FhirPath thisContext;
 
   @Nonnull
   private FhirContext fhirContext;
@@ -81,7 +80,7 @@ public class ParserContextBuilder {
   }
 
   @Nonnull
-  public ParserContextBuilder thisContext(@Nonnull final ThisPath thisContext) {
+  public ParserContextBuilder thisContext(@Nonnull final FhirPath thisContext) {
     this.thisContext = thisContext;
     return this;
   }

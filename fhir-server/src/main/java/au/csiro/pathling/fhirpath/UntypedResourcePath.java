@@ -80,4 +80,14 @@ public class UntypedResourcePath extends NonLiteralPath {
     return Optional.empty();
   }
 
+  @Nonnull
+  @Override
+  public UntypedResourcePath copy(@Nonnull final String expression,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Column valueColumn, final boolean singular) {
+    return new UntypedResourcePath(expression, dataset, idColumn, valueColumn, singular,
+        typeColumn,
+        possibleTypes);
+  }
+
 }

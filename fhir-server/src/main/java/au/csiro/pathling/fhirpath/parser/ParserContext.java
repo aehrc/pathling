@@ -11,7 +11,6 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ThisPath;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
@@ -48,7 +47,7 @@ public class ParserContext {
    * @see <a href="https://hl7.org/fhirpath/2018Sep/index.html#functions-2">Functions</a>
    */
   @Nonnull
-  private final Optional<ThisPath> thisContext;
+  private final Optional<FhirPath> thisContext;
 
   /**
    * A FHIR context that can be used to do FHIR stuff.
@@ -95,7 +94,7 @@ public class ParserContext {
    * parallel processing
    */
   public ParserContext(@Nonnull final FhirPath inputContext,
-      @Nonnull final Optional<ThisPath> thisContext, @Nonnull final FhirContext fhirContext,
+      @Nonnull final Optional<FhirPath> thisContext, @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyClient> terminologyClient,
       @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory) {

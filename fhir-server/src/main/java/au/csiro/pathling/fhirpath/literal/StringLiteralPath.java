@@ -95,7 +95,7 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
 
   // On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
   @Nonnull
-  private static String escapeFhirPathString(@Nonnull String value) {
+  private static String escapeFhirPathString(@Nonnull final String value) {
     return value.replace("'", "\\'");
   }
 
@@ -114,5 +114,20 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
   public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return StringPath.valueFromRow(row, columnNumber, FHIRDefinedType.STRING);
   }
-  
+
+  @Nonnull
+  @Override
+  public StringLiteralPath copy(@Nonnull final String expression,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Column valueColumn, final boolean singular) {
+    check(idColumn.isPresent());
+    return new StringLiteralPath(dataset, idColumn.get(), literalValue) {
+      @Nonnull
+      @Override
+      public String getExpression() {
+        return expression;
+      }
+    };
+  }
+
 }

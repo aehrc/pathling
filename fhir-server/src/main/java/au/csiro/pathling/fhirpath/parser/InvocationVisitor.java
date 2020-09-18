@@ -16,7 +16,6 @@ import au.csiro.pathling.fhir.FhirPathParser.ParamListContext;
 import au.csiro.pathling.fhir.FhirPathParser.ThisInvocationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.ThisPath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
@@ -136,10 +135,14 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
     final List<FhirPath> arguments = new ArrayList<>();
     if (paramList != null) {
+      // The `$this` path will be the same as the input, but with a different expression and it will
+      // be singular as it represents the current item from the collection.
+      final FhirPath thisPath = input
+          .copy(NamedFunction.THIS, input.getDataset(), input.getIdColumn(), input.getValueColumn(),
+              true);
+     
       // Create a new ParserContext, which includes information about how to evaluate the `$this` 
       // expression.
-      final ThisPath thisPath = new ThisPath(input.getDataset(), input.getIdColumn(),
-          input.getValueColumn());
       final ParserContext argumentContext = new ParserContext(context.getInputContext(),
           Optional.of(thisPath), context.getFhirContext(), context.getSparkSession(),
           context.getResourceReader(), context.getTerminologyClient(),
@@ -160,7 +163,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitThisInvocation(@Nonnull final ThisInvocationContext ctx) {
-    checkUserInput(!context.getThisContext().isPresent(),
+    checkUserInput(context.getThisContext().isPresent(),
         "$this can only be used within the context of arguments to a function");
     return context.getThisContext().get();
   }

@@ -29,7 +29,6 @@ import org.hl7.fhir.r4.model.Type;
 public class BooleanLiteralPath extends LiteralPath implements Materializable<BooleanType>,
     Comparable {
 
-  @SuppressWarnings("WeakerAccess")
   protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
@@ -85,5 +84,20 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
   public Optional<BooleanType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return BooleanPath.valueFromRow(row, columnNumber);
   }
-  
+
+  @Nonnull
+  @Override
+  public BooleanLiteralPath copy(@Nonnull final String expression,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Column valueColumn, final boolean singular) {
+    check(idColumn.isPresent());
+    return new BooleanLiteralPath(dataset, idColumn.get(), literalValue) {
+      @Nonnull
+      @Override
+      public String getExpression() {
+        return expression;
+      }
+    };
+  }
+
 }

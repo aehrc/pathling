@@ -93,6 +93,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  // first function
   @Disabled
   void queryWithMathExpression() {
     subjectResource = ResourceType.CLAIM;
@@ -231,7 +232,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // where function
+  // empty function
   @Disabled
   void queryWithWhere() {
     subjectResource = ResourceType.PATIENT;
@@ -293,6 +294,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  // first function
   @Disabled
   void queryWithWhereAsComparisonOperand() {
     subjectResource = ResourceType.PATIENT;

@@ -11,6 +11,7 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -69,6 +70,21 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
   @Override
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return true;
+  }
+
+  @Nonnull
+  @Override
+  public NullLiteralPath copy(@Nonnull final String expression,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Column valueColumn, final boolean singular) {
+    check(idColumn.isPresent());
+    return new NullLiteralPath(dataset, idColumn.get()) {
+      @Nonnull
+      @Override
+      public String getExpression() {
+        return expression;
+      }
+    };
   }
 
 }

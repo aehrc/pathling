@@ -9,7 +9,6 @@ package au.csiro.pathling.fhirpath.parser;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ThisPath;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
@@ -46,7 +45,7 @@ public class AggregationParserContext extends ParserContext {
    * performing aggregations
    */
   public AggregationParserContext(@Nonnull final FhirPath inputContext,
-      @Nonnull final Optional<ThisPath> thisContext, @Nonnull final FhirContext fhirContext,
+      @Nonnull final Optional<FhirPath> thisContext, @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyClient> terminologyClient,
       @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
