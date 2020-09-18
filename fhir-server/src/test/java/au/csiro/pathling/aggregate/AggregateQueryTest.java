@@ -330,4 +330,20 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
+  @Test
+  void queryWithWhereAndMembership() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource, ResourceType.OBSERVATION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "count()")
+        .withGrouping(
+            "reverseResolve(Observation.subject).where($this.code.coding contains http://loinc.org|8302-2)")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithAmbiguousSelfJoin.Parameters.json",
+        response);
+  }
+
 }
