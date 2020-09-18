@@ -245,7 +245,7 @@ public class ParserTest {
   @Disabled
   public void testSubsumesAndSubsumedBy() {
     // Setup mock terminology client
-    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+    when(terminologyClient.closure(any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
 
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
@@ -273,7 +273,7 @@ public class ParserTest {
         .hasRows(allPatientsWithValue(true));
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyClient.closure(any(), any(), any()))
+    when(terminologyClient.closure(any(), any()))
         .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
@@ -332,7 +332,7 @@ public class ParserTest {
   @Disabled
   public void testWhereWithSubsumes() {
     // Setup mock terminology client
-    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+    when(terminologyClient.closure(any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
@@ -344,7 +344,7 @@ public class ParserTest {
   @Disabled
   public void testWhereWithMemberOf() {
     // Setup mock terminology client
-    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+    when(terminologyClient.closure(any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
 
     assertThatResultOf(
         "reverseResolve(MedicationRequest.subject).where(\n"
