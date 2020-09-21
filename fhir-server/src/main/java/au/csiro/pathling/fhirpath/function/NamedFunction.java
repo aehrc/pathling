@@ -10,6 +10,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.function.memberof.MemberOfFunction;
+import au.csiro.pathling.fhirpath.function.subsumes.SubsumesFunction;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,6 +32,8 @@ public interface NamedFunction {
       .put("ofType", new OfTypeFunction())
       .put("reverseResolve", new ReverseResolveFunction())
       .put("memberOf", new MemberOfFunction())
+      .put("subsumes", new SubsumesFunction())
+      .put("subsumedBy", new SubsumesFunction(true))
       .build();
 
   /**

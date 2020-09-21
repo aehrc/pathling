@@ -33,6 +33,14 @@ public class SimpleCoding implements Serializable {
   @Nullable
   private final String version;
 
+
+  /**
+   * Default constructor
+   */
+  public SimpleCoding() {
+    this(null, null, null);
+  }
+
   /**
    * @param system The code system URI for this coding
    * @param code The code itself
