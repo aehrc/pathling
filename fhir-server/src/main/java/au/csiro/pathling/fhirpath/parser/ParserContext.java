@@ -17,11 +17,15 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.SparkSession;
 
 /**
- * Context and dependencies used in the parsing of a FHIRPath expression.
+ * Context and dependencies used in the parsing of a FHIRPath expression. The parser context can
+ * change through the parsing of an expression as it passes through different states (e.g.
+ * aggregation, inside the arguments to a function). Change to the parser context is only permitted
+ * through a limited set of public setter methods.
  *
  * @author John Grimes
  */
@@ -39,15 +43,6 @@ public class ParserContext {
    */
   @Nonnull
   private final FhirPath inputContext;
-
-  /**
-   * The item from an input collection currently under evaluation, e.g. an item from the input to
-   * the `where` function. Used for the implementation of the {@code $this} element.
-   *
-   * @see <a href="https://hl7.org/fhirpath/2018Sep/index.html#functions-2">Functions</a>
-   */
-  @Nonnull
-  private final Optional<FhirPath> thisContext;
 
   /**
    * A FHIR context that can be used to do FHIR stuff.
@@ -82,8 +77,22 @@ public class ParserContext {
   private final Optional<TerminologyClientFactory> terminologyClientFactory;
 
   /**
+   * The context may contain zero or more grouping columns. If there are columns in this list, the
+   * data will be aggregated using them rather than the resource identity.
+   */
+  @Nonnull
+  @Setter
+  private List<Column> groupingColumns;
+
+  /**
+   * When within the context of function arguments, this is the {@link FhirPath} that represents the
+   * item in a collection currently being iterated over, denoted by the {@code $this} keyword.
+   */
+  @Nonnull
+  private Optional<FhirPath> thisContext = Optional.empty();
+
+  /**
    * @param inputContext The input context from which the FHIRPath is to be evaluated
-   * @param thisContext The item from an input collection currently under evaluation
    * @param fhirContext A {@link FhirContext} that can be used to do FHIR stuff
    * @param sparkSession A {@link SparkSession} that can be used to resolve Spark queries required
    * for this expression
@@ -92,32 +101,25 @@ public class ParserContext {
    * terminology queries
    * @param terminologyClientFactory A factory for {@link TerminologyClient} objects, used for
    * parallel processing
+   * @param groupingColumns the list of columns to group on when aggregating
    */
-  public ParserContext(@Nonnull final FhirPath inputContext,
-      @Nonnull final Optional<FhirPath> thisContext, @Nonnull final FhirContext fhirContext,
+  public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyClient> terminologyClient,
-      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory) {
+      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
+      @Nonnull final List<Column> groupingColumns) {
     check(inputContext.getIdColumn().isPresent());
     this.inputContext = inputContext;
-    this.thisContext = thisContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.resourceReader = resourceReader;
     this.terminologyClient = terminologyClient;
     this.terminologyClientFactory = terminologyClientFactory;
+    this.groupingColumns = groupingColumns;
   }
 
-  /**
-   * @return The set of {@link Column} objects that should be used for grouping, when performing
-   * aggregations
-   */
-  @Nonnull
-  public Optional<Column[]> getGroupBy() {
-    return Optional.empty();
-  }
-
-  public void setGroupingColumns(@Nonnull final List<Column> columns) {
+  public void setThisContext(@Nonnull final FhirPath thisContext) {
+    this.thisContext = Optional.of(thisContext);
   }
 
 }

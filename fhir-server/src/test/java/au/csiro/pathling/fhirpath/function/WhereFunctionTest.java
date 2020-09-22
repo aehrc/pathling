@@ -64,6 +64,8 @@ public class WhereFunctionTest {
         .withRow("Patient/abc2", RowFactory.create("Encounter/abc3", "in-progress"))
         .withRow("Patient/abc3", RowFactory.create("Encounter/abc4", "in-progress"))
         .withRow("Patient/abc3", RowFactory.create("Encounter/abc5", "finished"))
+        .withRow("Patient/abc4", RowFactory.create("Encounter/abc6", "finished"))
+        .withRow("Patient/abc4", RowFactory.create("Encounter/abc7", "finished"))
         .buildWithStructValue();
     final IdAndValueColumns inputIdAndValue = SparkHelpers.getIdAndValueColumns(inputDataset);
     final ResourceDefinition resourceDefinition = new ResourceDefinition(ResourceType.ENCOUNTER,
@@ -71,7 +73,7 @@ public class WhereFunctionTest {
 
     final ResourcePath inputPath = new ResourcePath("reverseResolve(Encounter.subject)",
         inputDataset, Optional.of(inputIdAndValue.getId()), inputIdAndValue.getValue(), false,
-        resourceDefinition);
+        Optional.empty(), resourceDefinition);
 
     // Build an expression which represents the argument to the function. We assume that the value
     // column from the input dataset is also present within the argument dataset.
@@ -99,11 +101,10 @@ public class WhereFunctionTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withStructTypeColumns(encounterStruct)
-        .withRow("Patient/abc1", null)
         .withRow("Patient/abc1", RowFactory.create("Encounter/abc1", "in-progress"))
         .withRow("Patient/abc2", RowFactory.create("Encounter/abc3", "in-progress"))
-        .withRow("Patient/abc3", null)
         .withRow("Patient/abc3", RowFactory.create("Encounter/abc4", "in-progress"))
+        .withRow("Patient/abc4", null)
         .buildWithStructValue();
     assertThat(result)
         .selectResult()
@@ -122,6 +123,8 @@ public class WhereFunctionTest {
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc3", "zh")
+        .withRow("Patient/abc4", "fr")
+        .withRow("Patient/abc4", "fr")
         .build();
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
@@ -156,12 +159,11 @@ public class WhereFunctionTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", null)
         .withRow("Patient/abc1", "en")
         .withRow("Patient/abc2", null)
-        .withRow("Patient/abc3", null)
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc3", "en")
+        .withRow("Patient/abc4", null)
         .build();
     assertThat(result)
         .selectResult()
@@ -229,6 +231,7 @@ public class WhereFunctionTest {
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc3", "zh")
+        .withRow("Patient/abc4", "ar")
         .build();
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
@@ -263,12 +266,10 @@ public class WhereFunctionTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", null)
         .withRow("Patient/abc1", "es")
         .withRow("Patient/abc2", "de")
-        .withRow("Patient/abc3", null)
-        .withRow("Patient/abc3", null)
         .withRow("Patient/abc3", "zh")
+        .withRow("Patient/abc4", "ar")
         .build();
     assertThat(result)
         .selectResult()

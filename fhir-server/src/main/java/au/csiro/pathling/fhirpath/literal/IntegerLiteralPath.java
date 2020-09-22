@@ -99,7 +99,8 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
   @Override
   public IntegerLiteralPath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular) {
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
     check(idColumn.isPresent());
     return new IntegerLiteralPath(dataset, idColumn.get(), literalValue) {
       @Nonnull

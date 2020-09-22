@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
@@ -19,8 +18,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.function.AggregateFunction;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.Optional;
+import java.util.Arrays;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -55,17 +53,13 @@ public class MembershipOperator extends AggregateFunction implements Operator {
     final FhirPath collection = type.equals(MembershipOperatorType.IN)
                                 ? right
                                 : left;
-    final ParserContext context = input.getContext();
-    final Optional<Column> leftIdColumn = left.getIdColumn();
 
     checkUserInput(element.isSingular(),
         "Element operand used with " + type + " operator is not singular: " + element
             .getExpression());
     checkArgumentsAreComparable(input, type.toString());
-    check(context.getGroupBy().isPresent() || leftIdColumn.isPresent());
 
-    final String expression =
-        left.getExpression() + " " + type + " " + right.getExpression();
+    final String expression = left.getExpression() + " " + type + " " + right.getExpression();
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;
     final Column equality = leftComparable.getComparison(ComparisonOperation.EQUALS)
@@ -85,8 +79,8 @@ public class MembershipOperator extends AggregateFunction implements Operator {
     // Group by the grouping columns if present, or the ID column from the input.
     final Dataset<Row> dataset = QueryHelpers.joinOnId(left, right, JoinType.LEFT_OUTER);
 
-    return applyAggregation(input.getContext(), dataset, left.getIdColumn(),
-        aggColumn, expression, FHIRDefinedType.BOOLEAN);
+    return applyAggregation(input.getContext(), dataset, Arrays.asList(left, right), aggColumn,
+        expression, FHIRDefinedType.BOOLEAN);
   }
 
   /**

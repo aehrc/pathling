@@ -119,7 +119,8 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   @Override
   public CodingLiteralPath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular) {
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
     check(idColumn.isPresent());
     return new CodingLiteralPath(dataset, idColumn.get(), literalValue) {
       @Nonnull

@@ -338,7 +338,52 @@ class AggregateQueryTest extends AggregateExecutorTest {
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("Number of patients", "count()")
         .withGrouping(
-            "reverseResolve(Observation.subject).where($this.code.coding contains http://loinc.org|8302-2)")
+            "reverseResolve(Observation.subject).where($this.code.coding contains http://loinc.org|8302-2).status")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithAmbiguousSelfJoin.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithWhereAndLiterals() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "count()")
+        .withGrouping("5.where($this = 6)")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithAmbiguousSelfJoin.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithWhereAndTrue() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "count()")
+        .withGrouping("where(true)")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithAmbiguousSelfJoin.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithNestedAggregation() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "name.given contains 'Frank'")
+        .withGrouping("gender")
         .build();
 
     response = executor.execute(request);

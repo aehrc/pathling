@@ -105,7 +105,7 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
   public DateTimeLiteralPath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular) {
+      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
     check(idColumn.isPresent());
     return new DateTimeLiteralPath(dataset, idColumn.get(), literalValue) {
       @Nonnull

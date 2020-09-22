@@ -119,7 +119,8 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
   @Override
   public StringLiteralPath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular) {
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
     check(idColumn.isPresent());
     return new StringLiteralPath(dataset, idColumn.get(), literalValue) {
       @Nonnull

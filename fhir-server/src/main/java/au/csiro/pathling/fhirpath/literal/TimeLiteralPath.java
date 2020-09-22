@@ -88,7 +88,8 @@ public class TimeLiteralPath extends LiteralPath implements Materializable<TimeT
   @Override
   public TimeLiteralPath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular) {
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
     check(idColumn.isPresent());
     return new TimeLiteralPath(dataset, idColumn.get(), literalValue) {
       @Nonnull

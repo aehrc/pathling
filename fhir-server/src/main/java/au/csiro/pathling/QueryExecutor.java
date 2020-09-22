@@ -18,6 +18,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -70,8 +71,10 @@ public abstract class QueryExecutor {
   @Nonnull
   protected ParserContext buildParserContext(@Nonnull final ResourceType resourceType) {
     final ResourcePath inputContext = buildInputContext(resourceType);
-    return new ParserContext(inputContext, Optional.empty(), fhirContext, sparkSession,
-        resourceReader, terminologyClient, terminologyClientFactory);
+    check(inputContext.getIdColumn().isPresent());
+
+    return new ParserContext(inputContext, fhirContext, sparkSession,
+        resourceReader, terminologyClient, terminologyClientFactory, Collections.emptyList());
   }
 
   @Nonnull

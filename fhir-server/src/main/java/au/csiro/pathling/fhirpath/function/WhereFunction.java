@@ -11,8 +11,9 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -36,11 +37,14 @@ public class WhereFunction implements NamedFunction {
     checkUserInput(input.getArguments().size() == 1,
         "where function accepts one argument");
     final FhirPath inputPath = input.getInput();
-    final FhirPath argumentPath = input.getArguments().get(0);
-    final boolean argumentIsBoolean =
-        argumentPath instanceof BooleanPath || argumentPath instanceof BooleanLiteralPath;
-    checkUserInput(argumentIsBoolean && argumentPath.isSingular(),
+    checkUserInput(input.getArguments().get(0) instanceof NonLiteralPath,
+        "Argument to where function cannot be a literal");
+    final NonLiteralPath argumentPath = (NonLiteralPath) input.getArguments().get(0);
+    checkUserInput(argumentPath instanceof BooleanPath && argumentPath.isSingular(),
         "Argument to where function must be a singular Boolean: " + argumentPath.getExpression());
+    checkUserInput(argumentPath.getThisColumn().isPresent(),
+        "Argument to where function must be navigable from collection item (use $this): "
+            + argumentPath.getExpression());
 
     // We use the argument dataset alone, to avoid the problems with joining from the input
     // dataset to the argument dataset (which would create duplicate rows).
@@ -48,12 +52,14 @@ public class WhereFunction implements NamedFunction {
 
     // The result is the input value if it is equal to true, or null otherwise (signifying the
     // absence of a value).
-    final Column valueColumn = when(argumentPath.getValueColumn().equalTo(true),
-        inputPath.getValueColumn()).otherwise(null);
+    final Column argumentTrue = argumentPath.getValueColumn().equalTo(true);
+    final Column thisColumn = argumentPath.getThisColumn().get();
+    final Column valueColumn = when(argumentTrue, thisColumn).otherwise(null);
 
     final String expression = expressionFromInput(input, NAME);
     return inputPath
-        .copy(expression, dataset, argumentPath.getIdColumn(), valueColumn, inputPath.isSingular());
+        .copy(expression, dataset, argumentPath.getIdColumn(), valueColumn, inputPath.isSingular(),
+            Optional.empty());
   }
 
 }

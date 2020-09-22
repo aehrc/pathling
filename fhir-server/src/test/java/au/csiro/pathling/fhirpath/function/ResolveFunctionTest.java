@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockAvailableResourceTypes;
 import static au.csiro.pathling.utilities.Preconditions.check;
@@ -21,7 +20,6 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
-import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
@@ -29,7 +27,6 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Collections;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -251,9 +248,13 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withValueColumn(DataTypes.StringType)
         .build();
-    final IdAndValueColumns columns = getIdAndValueColumns(patientDataset);
-    final FhirPath genderPath = new StringPath("Patient.gender", patientDataset,
-        Optional.of(columns.getId()), columns.getValue(), true, FHIRDefinedType.CODE);
+    final FhirPath genderPath = new ElementPathBuilder()
+        .expression("Patient.gender")
+        .dataset(patientDataset)
+        .idAndValueColumns()
+        .singular(true)
+        .fhirType(FHIRDefinedType.CODE)
+        .build();
 
     final NamedFunctionInput resolveInput = buildFunctionInput(genderPath);
 

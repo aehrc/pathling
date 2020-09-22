@@ -13,7 +13,6 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
@@ -64,20 +63,20 @@ public class MemberOfFunction implements NamedFunction {
   @Override
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     validateInput(input);
-    final ElementPath inputResult = (ElementPath) input.getInput();
+    final ElementPath inputPath = (ElementPath) input.getInput();
     final StringLiteralPath argument = (StringLiteralPath) input.getArguments().get(0);
     final ParserContext inputContext = input.getContext();
 
-    final Dataset<Row> prevDataset = inputResult.getDataset();
-    final Optional<Column> prevIdColumn = inputResult.getIdColumn();
-    final Column prevValueColumn = inputResult.getValueColumn();
+    final Dataset<Row> prevDataset = inputPath.getDataset();
+    final Optional<Column> prevIdColumn = inputPath.getIdColumn();
+    final Column prevValueColumn = inputPath.getValueColumn();
 
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final TerminologyClientFactory terminologyClientFactory = inputContext
         .getTerminologyClientFactory().get();
-    final FHIRDefinedType fhirType = inputResult.getFhirType();
+    final FHIRDefinedType fhirType = inputPath.getFhirType();
     final String valueSetUri = argument.getJavaValue();
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
@@ -108,8 +107,9 @@ public class MemberOfFunction implements NamedFunction {
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
-    return new BooleanPath(expression, dataset, prevIdColumn, valueColumn, inputResult.isSingular(),
-        FHIRDefinedType.BOOLEAN);
+    return ElementPath
+        .build(expression, dataset, prevIdColumn, valueColumn, inputPath.isSingular(),
+            inputPath.getForeignResource(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

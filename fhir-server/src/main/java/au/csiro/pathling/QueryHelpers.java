@@ -11,7 +11,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Strings.randomShortString;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -72,37 +71,6 @@ public abstract class QueryHelpers {
   }
 
   /**
-   * Used for updating the grouping columns within the parser context, following aggregation.
-   *
-   * @param context the {@link ParserContext} to be updated with the new grouping columns
-   * @param dataset the {@link Dataset} resulting from the aggregation
-   * @param idColumn the resource identity column, if present
-   * @return an {@link IdAndValue} object containing the new ID and value columns for the result
-   */
-  @Nonnull
-  public static IdAndValue updateGroupingColumns(@Nonnull final ParserContext context,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn) {
-    check(context.getGroupBy().isPresent() || idColumn.isPresent());
-
-    // The value column will be the column following each of the grouping columns.
-    int numberOfGroupings = context.getGroupBy()
-        .flatMap(columns -> Optional.of(columns.length)).orElse(1);
-    // If there is a $this context, there will be one more column - the preserved input value
-    // column.
-    if (context.getThisContext().isPresent()) {
-      numberOfGroupings += 1;
-    }
-    final Column valueColumn = dataset.col(dataset.columns()[numberOfGroupings]);
-
-    // We need to update the grouping columns, as the aggregation erases any columns that were
-    // previously in the Dataset.
-    final List<Column> newGroupingColumns = firstNColumns(dataset, numberOfGroupings);
-    context.setGroupingColumns(newGroupingColumns);
-
-    return new IdAndValue(idColumn, valueColumn);
-  }
-
-  /**
    * Filters a dataset to only the nominated ID column, plus any pre-existing value columns.
    * Pre-existing ID columns are dropped out. p
    *
@@ -125,6 +93,9 @@ public abstract class QueryHelpers {
     return dataset.select(columns.toArray(new Column[0]));
   }
 
+  /**
+   * De-duplicates rows after joining.
+   */
   @Nonnull
   private static Dataset<Row> selectJoinTarget(@Nonnull final Dataset<Row> target,
       @Nonnull final Dataset<Row> source) {
@@ -154,10 +125,6 @@ public abstract class QueryHelpers {
   @Nonnull
   public static Dataset<Row> joinOnId(@Nonnull final FhirPath left, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
-    // Don't do unnecessary joins between identical datasets.
-    if (left.getDataset().equals(right.getDataset())) {
-      return left.getDataset();
-    }
     check(left.getIdColumn().isPresent());
     check(right.getIdColumn().isPresent());
     final Column joinCondition = left.getIdColumn().get().equalTo(right.getIdColumn().get());
@@ -215,7 +182,7 @@ public abstract class QueryHelpers {
    * @return a list of {@link Column} objects
    */
   @Nonnull
-  private static List<Column> firstNColumns(@Nonnull final Dataset<Row> dataset,
+  public static List<Column> firstNColumns(@Nonnull final Dataset<Row> dataset,
       final int numberOfColumns) {
     return Arrays.asList(dataset.columns()).subList(0, numberOfColumns)
         .stream()

@@ -15,7 +15,9 @@ import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.element.ElementPath;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -58,9 +60,10 @@ public class ComparisonOperator implements Operator {
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;
     final Column valueColumn = leftComparable.getComparison(type).apply(rightComparable);
+    final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(left, right);
 
-    return new BooleanPath(expression, dataset,
-        left.getIdColumn(), valueColumn, true, FHIRDefinedType.BOOLEAN);
+    return ElementPath.build(expression, dataset, left.getIdColumn(), valueColumn, true,
+        Optional.empty(), thisColumn, FHIRDefinedType.BOOLEAN);
   }
 
 }

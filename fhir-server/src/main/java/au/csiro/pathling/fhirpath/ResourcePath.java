@@ -33,30 +33,32 @@ public class ResourcePath extends NonLiteralPath {
   private final ResourceDefinition definition;
 
   /**
-   * @param expression The FHIRPath representation of this path
-   * @param dataset A {@link Dataset} that can be used to evaluate this path against data
-   * @param idColumn A {@link Column} within the dataset containing the identity of the subject
+   * @param expression the FHIRPath representation of this path
+   * @param dataset a {@link Dataset} that can be used to evaluate this path against data
+   * @param idColumn a {@link Column} within the dataset containing the identity of the subject
    * resource
-   * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
-   * @param singular An indicator of whether this path represents a single-valued collection to each
+   * @param valueColumn a {@link Column} within the dataset containing the values of the nodes
+   * @param singular an indicator of whether this path represents a single-valued collection to each
    * FHIRPath type
-   * @param definition The {@link ResourceDefinition} that will be used for subsequent path
+   * @param thisColumn collection values where this path originated from {@code $this}
+   * @param definition the {@link ResourceDefinition} that will be used for subsequent path
    */
   public ResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final ResourceDefinition definition) {
-    super(expression, dataset, idColumn, valueColumn, singular);
+      final boolean singular, @Nonnull final Optional<Column> thisColumn,
+      @Nonnull final ResourceDefinition definition) {
+    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
     this.definition = definition;
   }
 
   /**
    * Build a new ResourcePath using the supplied {@link FhirContext} and {@link ResourceReader}.
    *
-   * @param fhirContext The {@link FhirContext} to use for sourcing the resource definition
-   * @param resourceReader The {@link ResourceReader} to use for retrieving the Dataset
-   * @param resourceType The type of the resource
-   * @param expression The expression to use in the resulting path
-   * @param singular Whether the resulting path should be flagged as a single item collection
+   * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
+   * @param resourceReader the {@link ResourceReader} to use for retrieving the Dataset
+   * @param resourceType the type of the resource
+   * @param expression the expression to use in the resulting path
+   * @param singular whether the resulting path should be flagged as a single item collection
    * @return A shiny new ResourcePath
    */
   @Nonnull
@@ -70,7 +72,7 @@ public class ResourcePath extends NonLiteralPath {
     final Dataset<Row> rawDataset = resourceReader.read(resourceType);
     final DatasetWithIdAndValue dataset = convertRawResource(rawDataset);
     return new ResourcePath(expression, dataset.getDataset(), Optional.of(dataset.getIdColumn()),
-        dataset.getValueColumn(), singular, definition);
+        dataset.getValueColumn(), singular, Optional.empty(), definition);
   }
 
   public ResourceType getResourceType() {
@@ -83,24 +85,17 @@ public class ResourcePath extends NonLiteralPath {
     return definition.getChildElement(name);
   }
 
-  @Nonnull
-  @Override
-  public Optional<Column> getOriginColumn() {
-    return Optional.of(getValueColumn());
+  public void setForeignResource(@Nonnull final ResourcePath foreignResource) {
+    this.foreignResource = Optional.of(foreignResource);
   }
 
   @Nonnull
   @Override
-  public Optional<ResourceDefinition> getOriginType() {
-    return Optional.of(definition);
-  }
-
-  @Nonnull
-  @Override
-  public FhirPath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+  public ResourcePath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular) {
-    return new ResourcePath(expression, dataset, idColumn, valueColumn, singular, definition);
+      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
+    return new ResourcePath(expression, dataset, idColumn, valueColumn, singular, thisColumn,
+        definition);
   }
 
 }

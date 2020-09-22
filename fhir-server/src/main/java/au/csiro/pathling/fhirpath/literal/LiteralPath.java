@@ -13,8 +13,6 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -147,24 +145,6 @@ public abstract class LiteralPath implements FhirPath {
   @Nonnull
   public Column buildValueColumn() {
     return lit(getJavaValue());
-  }
-
-  @Nonnull
-  @Override
-  public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
-    return Optional.empty();
-  }
-
-  @Nonnull
-  @Override
-  public Optional<Column> getOriginColumn() {
-    return Optional.empty();
-  }
-
-  @Nonnull
-  @Override
-  public Optional<ResourceDefinition> getOriginType() {
-    return Optional.empty();
   }
 
 }

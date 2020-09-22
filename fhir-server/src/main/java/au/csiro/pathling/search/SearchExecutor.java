@@ -7,6 +7,7 @@
 package au.csiro.pathling.search;
 
 import static au.csiro.pathling.QueryHelpers.joinOnId;
+import static au.csiro.pathling.errors.ErrorHandling.handleError;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
@@ -109,9 +110,17 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     final Column subjectValueColumn = context.getInputContext().getValueColumn();
     check(subjectIdColumn.isPresent());
 
+    Dataset<Row> dataset;
+    final Column idColumn;
+    final Column valueColumn;
+
     if (!filters.isPresent() || filters.get().getValuesAsQueryTokens().isEmpty()) {
       // If there are no filters, return all resources.
-      return subjectDataset;
+      dataset = subjectDataset;
+      check(context.getInputContext().getIdColumn().isPresent());
+      idColumn = context.getInputContext().getIdColumn().get();
+      valueColumn = context.getInputContext().getValueColumn();
+
     } else {
       final Parser parser = new Parser(context);
       final List<FhirPath> fhirPaths = new ArrayList<>();
@@ -156,49 +165,61 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       final Dataset<Row> filterDataset = joinExpressions(fhirPaths).where(filterColumn);
 
       // Get the full resources which are present in the filtered dataset.
-      final Dataset<Row> dataset = joinOnId(subjectDataset, subjectIdColumn.get(),
-          filterDataset.select(filterIdColumn), filterIdColumn, JoinType.LEFT_SEMI)
-          .select(subjectIdColumn.get().as("id"), subjectValueColumn.as("value"));
-
-      // We cache the dataset because we know it will be accessed for both the total and the
-      // record retrieval.
-      dataset.cache();
-
-      return dataset;
+      dataset = joinOnId(subjectDataset, subjectIdColumn.get(),
+          filterDataset.select(filterIdColumn), filterIdColumn, JoinType.LEFT_SEMI);
+      idColumn = subjectIdColumn.get();
+      valueColumn = subjectValueColumn;
     }
+
+    dataset = dataset.select(idColumn.as("id"), valueColumn.as("value"));
+
+    // We cache the dataset because we know it will be accessed for both the total and the
+    // record retrieval.
+    dataset.cache();
+
+    return dataset;
   }
 
   @Override
   @Nonnull
   public IPrimitiveType<Date> getPublished() {
-    return new InstantType(new Date());
+    try {
+      return new InstantType(new Date());
+    } catch (final Throwable e) {
+      throw handleError(e);
+    }
   }
 
   @Nonnull
   @Override
   public List<IBaseResource> getResources(final int theFromIndex, final int theToIndex) {
-    log.info("Retrieving search results (" + (theFromIndex + 1) + "-" + theToIndex + ")");
+    try {
+      log.info("Retrieving search results (" + (theFromIndex + 1) + "-" + theToIndex + ")");
 
-    Dataset<Row> resources = result;
-    if (theFromIndex != 0) {
-      // Spark does not have an "offset" concept, so we create a list of rows to exclude and
-      // subtract them from the dataset using a left anti-join.
-      final Dataset<Row> exclude = resources.limit(theFromIndex)
-          .select(resources.col("id").alias("excludeId"));
-      resources = joinOnId(resources, resources.col("id"), exclude, exclude.col("excludeId"),
-          JoinType.LEFT_ANTI);
-    }
-    // The dataset is trimmed to the requested size.
-    if (theToIndex != 0) {
-      resources = resources.limit(theToIndex - theFromIndex);
-    }
+      Dataset<Row> resources = result;
+      if (theFromIndex != 0) {
+        // Spark does not have an "offset" concept, so we create a list of rows to exclude and
+        // subtract them from the dataset using a left anti-join.
+        final Dataset<Row> exclude = resources.limit(theFromIndex)
+            .select(resources.col("id").alias("excludeId"));
+        resources = joinOnId(resources, resources.col("id"), exclude, exclude.col("excludeId"),
+            JoinType.LEFT_ANTI);
+      }
+      // The dataset is trimmed to the requested size.
+      if (theToIndex != 0) {
+        resources = resources.limit(theToIndex - theFromIndex);
+      }
 
-    // The requested resources are encoded into HAPI FHIR objects, and then collected.
-    @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
-        .of(subjectResource.toCode());
-    checkNotNull(encoder);
-    reportQueryPlan(resources);
-    return resources.select("value.*").as(encoder).collectAsList();
+      // The requested resources are encoded into HAPI FHIR objects, and then collected.
+      @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
+          .of(subjectResource.toCode());
+      checkNotNull(encoder);
+      reportQueryPlan(resources);
+
+      return resources.select("value.*").as(encoder).collectAsList();
+    } catch (final Throwable e) {
+      throw handleError(e);
+    }
   }
 
   private void reportQueryPlan(@Nonnull final Dataset<Row> resources) {
@@ -223,11 +244,15 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Nullable
   @Override
   public Integer size() {
-    if (!count.isPresent()) {
-      reportQueryPlan(result);
-      count = Optional.of(Math.toIntExact(result.count()));
+    try {
+      if (!count.isPresent()) {
+        reportQueryPlan(result);
+        count = Optional.of(Math.toIntExact(result.count()));
+      }
+      return count.get();
+    } catch (final Throwable e) {
+      throw handleError(e);
     }
-    return count.get();
   }
 
   @Nonnull

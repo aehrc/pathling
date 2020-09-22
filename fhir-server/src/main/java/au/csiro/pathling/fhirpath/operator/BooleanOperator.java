@@ -12,8 +12,11 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -41,7 +44,7 @@ public class BooleanOperator implements Operator {
 
   @Nonnull
   @Override
-  public BooleanPath invoke(@Nonnull final OperatorInput input) {
+  public FhirPath invoke(@Nonnull final OperatorInput input) {
     final FhirPath left = input.getLeft();
     final FhirPath right = input.getRight();
 
@@ -92,8 +95,11 @@ public class BooleanOperator implements Operator {
     final String expression =
         left.getExpression() + " " + type + " " + right.getExpression();
     final Dataset<Row> dataset = QueryHelpers.joinOnId(left, right, JoinType.LEFT_OUTER);
-    return new BooleanPath(expression, dataset, left.getIdColumn(), valueColumn, true,
-        FHIRDefinedType.BOOLEAN);
+    final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(left, right);
+
+    return ElementPath
+        .build(expression, dataset, left.getIdColumn(), valueColumn, true, Optional.empty(),
+            thisColumn, FHIRDefinedType.BOOLEAN);
   }
 
   /**

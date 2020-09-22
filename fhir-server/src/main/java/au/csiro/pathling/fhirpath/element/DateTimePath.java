@@ -10,6 +10,7 @@ import static org.apache.spark.sql.functions.to_timestamp;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -48,21 +49,12 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
       .of(DatePath.class, DateTimePath.class, DateLiteralPath.class, DateTimeLiteralPath.class,
           NullLiteralPath.class);
 
-  /**
-   * @param expression The FHIRPath representation of this path
-   * @param dataset A {@link Dataset} that can be used to evaluate this path against data
-   * @param idColumn A {@link Column} within the dataset containing the identity of the subject
-   * resource
-   * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
-   * @param singular An indicator of whether this path represents a single-valued collection
-   * @param fhirType The FHIR datatype for this path, note that there can be more than one FHIR
-   * type
-   */
-  public DateTimePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+  protected DateTimePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular,
-      @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, fhirType);
+      final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+        fhirType);
   }
 
   @Nonnull

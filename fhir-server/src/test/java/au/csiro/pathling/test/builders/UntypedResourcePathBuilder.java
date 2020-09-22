@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -37,6 +38,9 @@ public class UntypedResourcePathBuilder {
   private Column valueColumn;
 
   private boolean singular;
+
+  @Nullable
+  private Column thisColumn;
 
   @Nonnull
   private Column typeColumn;
@@ -85,6 +89,12 @@ public class UntypedResourcePathBuilder {
   }
 
   @Nonnull
+  public UntypedResourcePathBuilder thisColumn(final Column thisColumn) {
+    this.thisColumn = thisColumn;
+    return this;
+  }
+
+  @Nonnull
   public UntypedResourcePathBuilder typeColumn(@Nonnull final Column typeColumn) {
     this.typeColumn = typeColumn;
     return this;
@@ -99,7 +109,7 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   public UntypedResourcePath build() {
     return UntypedResourcePath.build(expression, dataset, Optional.of(idColumn), valueColumn,
-        singular, typeColumn, possibleTypes);
+        singular, Optional.ofNullable(thisColumn), typeColumn, possibleTypes);
   }
 
 }

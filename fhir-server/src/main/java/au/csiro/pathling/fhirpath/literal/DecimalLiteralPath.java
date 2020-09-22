@@ -114,7 +114,7 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
   public DecimalLiteralPath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular) {
+      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
     check(idColumn.isPresent());
     return new DecimalLiteralPath(dataset, idColumn.get(), literalValue) {
       @Nonnull

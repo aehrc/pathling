@@ -10,6 +10,7 @@ import static org.apache.spark.sql.functions.to_timestamp;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -42,20 +43,12 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
     YEAR_ONLY_DATE_FORMAT.setTimeZone(DateTimePath.getTimeZone());
   }
 
-  /**
-   * @param expression The FHIRPath representation of this path
-   * @param dataset A {@link Dataset} that can be used to evaluate this path against data
-   * @param idColumn A {@link Column} within the dataset containing the identity of the subject
-   * resource
-   * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
-   * @param singular An indicator of whether this path represents a single-valued collection
-   * @param fhirType The FHIR datatype for this path, note that there can be more than one FHIR
-   * type
-   */
-  public DatePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+  protected DatePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, fhirType);
+      final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+        fhirType);
   }
 
   /**

@@ -24,7 +24,6 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.parser.AggregationParserContext;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
@@ -112,7 +111,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     final ResourceDefinition definition = ((ResourcePath) inputContext).getDefinition();
     final ResourcePath aggregationInputContext = new ResourcePath(inputContext.getExpression(),
         groupingsAndFiltersDataset, inputContext.getIdColumn(), inputContext.getValueColumn(),
-        inputContext.isSingular(), definition);
+        inputContext.isSingular(), Optional.empty(), definition);
 
     // Parse the aggregations, and grab the updated grouping columns. When aggregations are 
     // performed during an aggregation parse, the grouping columns need to be updated, as any 
@@ -143,12 +142,11 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
   }
 
   @Nonnull
-  private AggregationParserContext buildAggregationParserContext(
+  private ParserContext buildAggregationParserContext(
       @Nonnull final ResourcePath inputContext,
       @Nonnull final List<Column> groupingColumns) {
-    return new AggregationParserContext(inputContext, Optional.empty(), getFhirContext(),
-        getSparkSession(), getResourceReader(), getTerminologyClient(),
-        getTerminologyClientFactory(), groupingColumns);
+    return new ParserContext(inputContext, getFhirContext(), getSparkSession(), getResourceReader(),
+        getTerminologyClient(), getTerminologyClientFactory(), groupingColumns);
   }
 
   @Nonnull
@@ -161,8 +159,8 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     for (final Aggregation aggregation : aggregations) {
       // We need to create a new parser context and parser for each aggregation, as the grouping
       // columns within the context are mutated by aggregations during the parse.
-      final AggregationParserContext aggregationContext = buildAggregationParserContext(
-          inputContext, groupingColumns);
+      final ParserContext aggregationContext = buildAggregationParserContext(inputContext,
+          groupingColumns);
       final Parser parser = new Parser(aggregationContext);
 
       // Aggregation expressions must evaluate to a singular, Materializable path, or a user error

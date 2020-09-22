@@ -13,6 +13,7 @@ import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -31,13 +32,13 @@ public class OfTypeFunction implements NamedFunction {
   @Nonnull
   @Override
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
-    final FhirPath inputPath = input.getInput();
     final String expression = NamedFunction.expressionFromInput(input, NAME);
-    checkUserInput(inputPath instanceof UntypedResourcePath,
-        "Input to ofType function must be a polymorphic resource type: " + inputPath
+    checkUserInput(input.getInput() instanceof UntypedResourcePath,
+        "Input to ofType function must be a polymorphic resource type: " + input.getInput()
             .getExpression());
     checkUserInput(input.getArguments().size() == 1,
         "ofType function must have one argument: " + expression);
+    final UntypedResourcePath inputPath = (UntypedResourcePath) input.getInput();
     final FhirPath argumentPath = input.getArguments().get(0);
 
     // If the input is a polymorphic resource reference, check that the argument is a resource 
@@ -54,8 +55,10 @@ public class OfTypeFunction implements NamedFunction {
         JoinType.LEFT_OUTER);
 
     // Return a new resource path with the joined dataset, and the argument's value column.
+    final Optional<Column> thisColumn = inputPath.getThisColumn();
     return new ResourcePath(expression, dataset, inputPath.getIdColumn(),
-        resourcePath.getValueColumn(), inputPath.isSingular(), resourcePath.getDefinition());
+        resourcePath.getValueColumn(), inputPath.isSingular(), thisColumn,
+        resourcePath.getDefinition());
   }
 
 }

@@ -82,7 +82,7 @@ public class ResolveFunction implements NamedFunction {
   }
 
   @Nonnull
-  private FhirPath resolveMonomorphicReference(@Nonnull final FhirPath referencePath,
+  private FhirPath resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
       @Nonnull final ResourceReader resourceReader, @Nonnull final FhirContext fhirContext,
       @Nonnull final Collection<ResourceType> referenceTypes, final String expression) {
     // If this is a monomorphic reference, we just need to retrieve the appropriate table and
@@ -99,14 +99,13 @@ public class ResolveFunction implements NamedFunction {
 
     final Optional<Column> inputId = referencePath.getIdColumn();
     return new ResourcePath(expression, dataset, inputId, targetDataset.getValueColumn(),
-        referencePath.isSingular(),
-        definition);
+        referencePath.isSingular(), referencePath.getThisColumn(), definition);
   }
 
   @Nonnull
-  private static FhirPath resolvePolymorphicReference(@Nonnull final FhirPath referencePath,
-      @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Set<ResourceType> referenceTypes, final String expression) {
+  private static FhirPath resolvePolymorphicReference(@Nonnull final ReferencePath referencePath,
+      @Nonnull final ResourceReader resourceReader, @Nonnull final Set<ResourceType> referenceTypes,
+      final String expression) {
     // If this is a polymorphic reference, create a dataset for each reference type, and union
     // them together to produce the target dataset. The dataset will not contain the resources
     // themselves, only a type and identifier for later resolution.
@@ -139,7 +138,7 @@ public class ResolveFunction implements NamedFunction {
 
     final Optional<Column> inputId = referencePath.getIdColumn();
     return UntypedResourcePath.build(expression, dataset, inputId, valueColumn,
-        referencePath.isSingular(), typeColumn, referenceTypes);
+        referencePath.isSingular(), referencePath.getThisColumn(), typeColumn, referenceTypes);
   }
 
 }

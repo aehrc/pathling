@@ -42,9 +42,10 @@ public class UntypedResourcePath extends NonLiteralPath {
 
   protected UntypedResourcePath(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular, @Nonnull final Column typeColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
-    super(expression, dataset, idColumn, valueColumn, singular);
+    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
     this.typeColumn = typeColumn;
     this.possibleTypes = possibleTypes;
   }
@@ -56,13 +57,15 @@ public class UntypedResourcePath extends NonLiteralPath {
    * resource
    * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
    * @param singular An indicator of whether this path represents a single-valued collection
+   * @param thisColumn collection values where this path originated from {@code $this}
    * @param typeColumn A {@link Column} within the dataset containing the resource type
    * @param possibleTypes A set of {@link ResourceType} objects that describe the different types
    * @return a shiny new UntypedResourcePath
    */
   public static UntypedResourcePath build(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular, @Nonnull final Column typeColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
 
     final String hash = Integer.toString(Math.abs(dataset.hashCode()), 36);
@@ -71,7 +74,7 @@ public class UntypedResourcePath extends NonLiteralPath {
     final Dataset<Row> hashedDataset = dataset.withColumn(typeColumnName, typeColumn);
 
     return new UntypedResourcePath(expression, hashedDataset, idColumn, valueColumn, singular,
-        hashedDataset.col(typeColumnName), possibleTypes);
+        thisColumn, hashedDataset.col(typeColumnName), possibleTypes);
   }
 
   @Nonnull
@@ -84,10 +87,10 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Override
   public UntypedResourcePath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular) {
-    return new UntypedResourcePath(expression, dataset, idColumn, valueColumn, singular,
-        typeColumn,
-        possibleTypes);
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
+    return new UntypedResourcePath(expression, dataset, idColumn, valueColumn, singular, thisColumn,
+        typeColumn, possibleTypes);
   }
 
 }

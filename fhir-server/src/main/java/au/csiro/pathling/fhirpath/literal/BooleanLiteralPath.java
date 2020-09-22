@@ -89,7 +89,8 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
   @Override
   public BooleanLiteralPath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular) {
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
     check(idColumn.isPresent());
     return new BooleanLiteralPath(dataset, idColumn.get(), literalValue) {
       @Nonnull

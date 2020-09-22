@@ -8,9 +8,7 @@ package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.*;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -41,20 +39,12 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
       .of(IntegerPath.class, IntegerLiteralPath.class, DecimalPath.class, DecimalLiteralPath.class,
           NullLiteralPath.class);
 
-  /**
-   * @param expression The FHIRPath representation of this path
-   * @param dataset A {@link Dataset} that can be used to evaluate this path against data
-   * @param idColumn A {@link Column} within the dataset containing the identity of the subject
-   * resource
-   * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
-   * @param singular An indicator of whether this path represents a single-valued collection
-   * @param fhirType The FHIR datatype for this path, note that there can be more than one FHIR
-   * type
-   */
-  public IntegerPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+  protected IntegerPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, fhirType);
+      final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+        fhirType);
   }
 
   @Nonnull
@@ -147,6 +137,8 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
           : target.getValueColumn();
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getValueColumn().cast(DataTypes.LongType), targetValueColumn);
+      final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(source, target);
+
       switch (operation) {
         case ADDITION:
         case SUBTRACTION:
@@ -155,13 +147,15 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
           if (target instanceof DecimalPath || target instanceof DecimalLiteralPath) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          return new IntegerPath(expression, dataset, source.getIdColumn(), valueColumn, true,
-              fhirType);
+          return ElementPath
+              .build(expression, dataset, source.getIdColumn(), valueColumn, true, Optional.empty(),
+                  thisColumn, fhirType);
         case DIVISION:
           final Column numerator = source.getValueColumn().cast(DecimalPath.getDecimalType());
           valueColumn = operation.getSparkFunction().apply(numerator, targetValueColumn);
-          return new DecimalPath(expression, dataset, source.getIdColumn(), valueColumn, true,
-              FHIRDefinedType.DECIMAL);
+          return ElementPath
+              .build(expression, dataset, source.getIdColumn(), valueColumn, true, Optional.empty(),
+                  thisColumn, FHIRDefinedType.DECIMAL);
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

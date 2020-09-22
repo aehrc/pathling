@@ -98,7 +98,8 @@ public class QuantityLiteralPath extends LiteralPath {
   @Override
   public QuantityLiteralPath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular) {
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
     check(idColumn.isPresent());
     return new QuantityLiteralPath(dataset, idColumn.get(), literalValue) {
       @Nonnull

@@ -115,7 +115,7 @@ class ReverseResolveFunctionTest {
         .valueColumn(valueColumn)
         .expression("Encounter.subject")
         .singular(false)
-        .parentPath(originPath)
+        .foreignResource(originPath)
         .definition(definition)
         .buildDefined();
 

@@ -19,6 +19,8 @@ import au.csiro.pathling.test.DefaultAnswer;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -52,6 +54,9 @@ public class ParserContextBuilder {
   @Nullable
   private TerminologyClientFactory terminologyClientFactory;
 
+  @Nonnull
+  private List<Column> groupingColumns;
+
   public ParserContextBuilder() {
     inputContext = mock(FhirPath.class);
     when(inputContext.getIdColumn()).thenReturn(Optional.of(lit(null)));
@@ -59,6 +64,7 @@ public class ParserContextBuilder {
     fhirContext = FhirHelpers.getFhirContext();
     sparkSession = SparkHelpers.getSparkSession();
     resourceReader = Mockito.mock(ResourceReader.class, new DefaultAnswer());
+    groupingColumns = Collections.emptyList();
   }
 
   @Nonnull
@@ -118,10 +124,16 @@ public class ParserContextBuilder {
   }
 
   @Nonnull
+  public ParserContextBuilder groupingColumns(@Nonnull final List<Column> groupingColumns) {
+    this.groupingColumns = groupingColumns;
+    return this;
+  }
+
+  @Nonnull
   public ParserContext build() {
-    return new ParserContext(inputContext, Optional.ofNullable(thisContext), fhirContext,
-        sparkSession, resourceReader, Optional.ofNullable(terminologyClient),
-        Optional.ofNullable(terminologyClientFactory));
+    return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
+        Optional.ofNullable(terminologyClient), Optional.ofNullable(terminologyClientFactory),
+        groupingColumns);
   }
 
 }

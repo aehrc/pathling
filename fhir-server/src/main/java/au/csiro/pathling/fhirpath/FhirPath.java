@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -23,7 +22,7 @@ public interface FhirPath {
   /**
    * Returns the FHIRPath expression that represents this path.
    *
-   * @return A FHIRPath string.
+   * @return a FHIRPath string
    */
   @Nonnull
   String getExpression();
@@ -41,7 +40,7 @@ public interface FhirPath {
    * This is optional as sometimes we can have paths that do not contain a resource identity, e.g. a
    * path representing the result of an aggregation over groupings.
    *
-   * @return A {@link Column}
+   * @return a {@link Column}
    */
   @Nonnull
   Optional<Column> getIdColumn();
@@ -49,7 +48,7 @@ public interface FhirPath {
   /**
    * Returns a {@link Column} within the dataset containing the values of the nodes.
    *
-   * @return A {@link Column}
+   * @return a {@link Column}
    */
   @Nonnull
   Column getValueColumn();
@@ -62,37 +61,6 @@ public interface FhirPath {
   boolean isSingular();
 
   /**
-   * Returns the specified child of this path, if there is one.
-   *
-   * @param name The name of the child element
-   * @return An {@link ElementDefinition} object
-   */
-  @Nonnull
-  Optional<ElementDefinition> getChildElement(@Nonnull String name);
-
-  /**
-   * Returns the resource value column from the resource at the root of this path.
-   * <p>
-   * This is required for reverse reference resolution, where we need to get to the resource to be
-   * joined to the source of the reverse resolve operation.
-   *
-   * @return A {@link Column}
-   */
-  @Nonnull
-  Optional<Column> getOriginColumn();
-
-  /**
-   * Returns the resource type of the resource at the root of this path.
-   * <p>
-   * This is required for reverse reference resolution, where we need to get to the resource to be
-   * joined to the source of the reverse resolve operation.
-   *
-   * @return A {@link ResourceDefinition}
-   */
-  @Nonnull
-  Optional<ResourceDefinition> getOriginType();
-
-  /**
    * Creates a copy of this FhirPath with an updated {@link Dataset}, ID and value {@link Column}s.
    *
    * @param expression an updated expression to describe the new FhirPath
@@ -100,10 +68,13 @@ public interface FhirPath {
    * @param idColumn the new resource identity column
    * @param valueColumn the new expression value column
    * @param singular the new singular value
+   * @param thisColumn a column containing the collection being iterated, for cases where a path is
+   * being created to represent the {@code $this} keyword
    * @return a new instance of FhirPath
    */
   @Nonnull
   FhirPath copy(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-      @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular);
+      @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
+      @Nonnull Optional<Column> thisColumn);
 
 }

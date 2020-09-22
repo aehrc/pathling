@@ -13,6 +13,7 @@ import static au.csiro.pathling.utilities.Strings.randomShortString;
 
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
@@ -41,17 +42,31 @@ public abstract class NonLiteralPath implements FhirPath {
 
   protected final boolean singular;
 
+  /**
+   * Returns an expression representing a resource (other than the subject resource) that this path
+   * originated from. This is used in {@code reverseResolve} for joining between the subject
+   * resource and a reference within a foreign resource.
+   */
   @Nonnull
-  protected Optional<Column> originColumn = Optional.empty();
+  protected Optional<ResourcePath> foreignResource;
 
+  /**
+   * For paths that traverse from the {@code $this} keyword, this column refers to the values in the
+   * collection. This is so that functions that operate over collections can construct a result that
+   * is based on the original input using the argument alone, without having to join from the input
+   * to the argument (which has problems relating to the generation of duplicate rows).
+   */
   @Nonnull
-  protected Optional<ResourceDefinition> originType = Optional.empty();
+  protected Optional<Column> thisColumn;
 
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular) {
+      final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<Column> thisColumn) {
     this.expression = expression;
     this.singular = singular;
+    this.foreignResource = foreignResource;
+    this.thisColumn = thisColumn;
 
     final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
@@ -72,8 +87,29 @@ public abstract class NonLiteralPath implements FhirPath {
     this.dataset = applySelection(hashedDataset, this.idColumn);
   }
 
+  /**
+   * Returns the specified child of this path, if there is one.
+   *
+   * @param name The name of the child element
+   * @return an {@link ElementDefinition} object
+   */
   @Nonnull
-  @Override
   public abstract Optional<ElementDefinition> getChildElement(@Nonnull final String name);
+
+  /**
+   * Gets a this {@link Column} from any of the inputs, if there is one.
+   *
+   * @param inputs a collection of objects
+   * @return a {@link Column}, if one was found
+   */
+  @Nonnull
+  public static Optional<Column> findThisColumn(@Nonnull final Object... inputs) {
+    return Stream.of(inputs)
+        .filter(input -> input instanceof NonLiteralPath)
+        .map(path -> (NonLiteralPath) path)
+        .filter(path -> path.getThisColumn().isPresent())
+        .findFirst()
+        .flatMap(NonLiteralPath::getThisColumn);
+  }
 
 }
