@@ -342,7 +342,25 @@ class AggregateQueryTest extends AggregateExecutorTest {
         .build();
 
     response = executor.execute(request);
-    assertResponse("AggregateQueryTest/queryWithAmbiguousSelfJoin.Parameters.json",
+    assertResponse("AggregateQueryTest/queryWithWhereAndMembership.Parameters.json",
+        response);
+  }
+
+  @Test
+  // empty function
+  @Disabled
+  void queryWithWhereAndBoolean() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource, ResourceType.OBSERVATION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "count()")
+        .withGrouping(
+            "where($this.gender = 'male' and $this.birthDate > @1990).communication.language.text")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithWhereAndBoolean.Parameters.json",
         response);
   }
 

@@ -90,7 +90,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // If there is no invoker, we need to interpret what the expression means, based on its
       // content and context.
 
-      if (!context.getThisContext().isPresent()) {
+      if (context.getThisContext().isEmpty()) {
         // If we're at the root of the expression, this could be:
         // (1) a path traversal from the input context; or
         // (2) a reference to the subject resource.

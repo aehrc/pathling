@@ -8,6 +8,7 @@ package au.csiro.pathling.utilities;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import java.util.Objects;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -40,6 +41,19 @@ public class Preconditions {
   @Nonnull
   public static <T> T checkNotNull(@Nullable final T object) {
     return Objects.requireNonNull(object);
+  }
+
+  /**
+   * Ensures that an {@link Optional} value is present, throwing a {@link
+   * java.util.NoSuchElementException} if it is not.
+   *
+   * @param object The object to check
+   * @param <T> The type of the object within the Optional
+   * @return The unwrapped object
+   */
+  @Nonnull
+  public static <T> T checkPresent(@Nonnull final Optional<T> object) {
+    return object.orElseThrow();
   }
 
   /**

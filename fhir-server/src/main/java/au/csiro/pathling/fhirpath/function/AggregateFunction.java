@@ -68,7 +68,7 @@ public abstract class AggregateFunction {
     final List<Column> groupingColumns = context.getGroupingColumns();
 
     // Use an ID column from any of the inputs.
-    final Optional<Column> idColumn = findIdColumn(inputs);
+    final Optional<Column> idColumn = FhirPath.findIdColumn(inputs.toArray());
 
     // There should be either an ID column or at least one grouping column.
     check(idColumn.isPresent() || groupingColumns.size() > 0);
@@ -128,14 +128,6 @@ public abstract class AggregateFunction {
     thisColumn.ifPresent(groupBy::add);
 
     return groupBy.toArray(new Column[]{});
-  }
-
-  @Nonnull
-  private static Optional<Column> findIdColumn(@Nonnull final Collection<FhirPath> inputs) {
-    return inputs.stream()
-        .filter(fhirPath -> fhirPath.getIdColumn().isPresent())
-        .findFirst()
-        .flatMap(FhirPath::getIdColumn);
   }
 
 }

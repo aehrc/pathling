@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.joinOnIdAndReference;
+import static au.csiro.pathling.QueryHelpers.joinOnReference;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
@@ -55,8 +55,7 @@ public class ReverseResolveFunction implements NamedFunction {
 
     // Do a left outer join from the input to the argument dataset using the reference field in the
     // argument.
-    final Dataset<Row> dataset = joinOnIdAndReference(inputPath, argument.getDataset(),
-        argument.getValueColumn(), JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = joinOnReference(argument, inputPath, JoinType.RIGHT_OUTER);
 
     // Check the argument for information about a foreign resource that it originated from - if it
     // not present, reverse reference resolution will not be possible.

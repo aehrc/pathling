@@ -7,7 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.convertRawResource;
-import static au.csiro.pathling.QueryHelpers.joinOnReferenceAndId;
+import static au.csiro.pathling.QueryHelpers.joinOnReference;
 import static au.csiro.pathling.QueryHelpers.union;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
@@ -94,7 +94,7 @@ public class ResolveFunction implements NamedFunction {
 
     final DatasetWithIdAndValue targetDataset = convertRawResource(
         resourceReader.read(resourceType));
-    final Dataset<Row> dataset = joinOnReferenceAndId(referencePath, targetDataset.getDataset(),
+    final Dataset<Row> dataset = joinOnReference(referencePath, targetDataset.getDataset(),
         targetDataset.getIdColumn(), JoinType.LEFT_OUTER);
 
     final Optional<Column> inputId = referencePath.getIdColumn();
@@ -133,7 +133,7 @@ public class ResolveFunction implements NamedFunction {
     checkNotNull(targetId);
     final Column typeColumn = targetDataset.col("type");
     final Column valueColumn = referencePath.getValueColumn();
-    final Dataset<Row> dataset = joinOnReferenceAndId(referencePath, targetDataset, targetId,
+    final Dataset<Row> dataset = joinOnReference(referencePath, targetDataset, targetId,
         JoinType.LEFT_OUTER);
 
     final Optional<Column> inputId = referencePath.getIdColumn();

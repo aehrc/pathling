@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
+
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.*;
@@ -137,7 +139,8 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
           : target.getValueColumn();
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getValueColumn().cast(DataTypes.LongType), targetValueColumn);
-      final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(source, target);
+      final Optional<Column> idColumn = findIdColumn(source, target);
+      final Optional<Column> thisColumn = findThisColumn(source, target);
 
       switch (operation) {
         case ADDITION:
@@ -148,13 +151,13 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
           return ElementPath
-              .build(expression, dataset, source.getIdColumn(), valueColumn, true, Optional.empty(),
+              .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
                   thisColumn, fhirType);
         case DIVISION:
           final Column numerator = source.getValueColumn().cast(DecimalPath.getDecimalType());
           valueColumn = operation.getSparkFunction().apply(numerator, targetValueColumn);
           return ElementPath
-              .build(expression, dataset, source.getIdColumn(), valueColumn, true, Optional.empty(),
+              .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
                   thisColumn, FHIRDefinedType.DECIMAL);
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);

@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -76,5 +77,21 @@ public interface FhirPath {
   FhirPath copy(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
       @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
       @Nonnull Optional<Column> thisColumn);
+
+  /**
+   * Gets an ID {@link Column} from any of the inputs, if there is one.
+   *
+   * @param inputs a collection of objects
+   * @return a {@link Column}, if one was found
+   */
+  @Nonnull
+  static Optional<Column> findIdColumn(@Nonnull final Object... inputs) {
+    return Stream.of(inputs)
+        .filter(path -> path instanceof FhirPath)
+        .map(path -> (FhirPath) path)
+        .filter(fhirPath -> fhirPath.getIdColumn().isPresent())
+        .findFirst()
+        .flatMap(FhirPath::getIdColumn);
+  }
 
 }

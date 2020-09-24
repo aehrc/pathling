@@ -6,13 +6,13 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
@@ -77,7 +77,7 @@ public class MembershipOperator extends AggregateFunction implements Operator {
     final Column aggColumn = max(equalityWithNullChecks).as("value");
 
     // Group by the grouping columns if present, or the ID column from the input.
-    final Dataset<Row> dataset = QueryHelpers.joinOnId(left, right, JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
 
     return applyAggregation(input.getContext(), dataset, Arrays.asList(left, right), aggColumn,
         expression, FHIRDefinedType.BOOLEAN);

@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
+
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
@@ -125,6 +127,7 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
           : target.getValueColumn();
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getValueColumn(), targetValueColumn);
+      final Optional<Column> idColumn = findIdColumn(source, target);
       final Optional<Column> thisColumn = findThisColumn(source, target);
 
       switch (operation) {
@@ -134,12 +137,13 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
         case DIVISION:
           valueColumn = valueColumn.cast(getDecimalType());
           return ElementPath
-              .build(expression, dataset, source.getIdColumn(), valueColumn, true,
-                  Optional.empty(), thisColumn, fhirType);
+              .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(), thisColumn,
+                  fhirType);
         case MODULUS:
           valueColumn = valueColumn.cast(DataTypes.LongType);
-          return ElementPath.build(expression, dataset, source.getIdColumn(), valueColumn, true,
-              Optional.empty(), thisColumn, FHIRDefinedType.INTEGER);
+          return ElementPath
+              .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(), thisColumn,
+                  FHIRDefinedType.INTEGER);
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

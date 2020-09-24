@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.joinOnId;
+import static au.csiro.pathling.QueryHelpers.joinOnReference;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
@@ -49,10 +49,7 @@ public class OfTypeFunction implements NamedFunction {
 
     // Do a left outer join to the resource dataset using the reference in the untyped dataset - the
     // result will be null in the rows that are not of the resource type nominated.
-    final Dataset<Row> inputDataset = inputPath.getDataset();
-    final Column inputReference = inputPath.getValueColumn().getField("reference");
-    final Dataset<Row> dataset = joinOnId(inputDataset, inputReference, resourcePath,
-        JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = joinOnReference(inputPath, resourcePath, JoinType.LEFT_OUTER);
 
     // Return a new resource path with the joined dataset, and the argument's value column.
     final Optional<Column> thisColumn = inputPath.getThisColumn();

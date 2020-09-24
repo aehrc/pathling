@@ -6,7 +6,9 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.joinOnId;
+import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
+import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
@@ -15,7 +17,6 @@ import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -55,14 +56,15 @@ public class ComparisonOperator implements Operator {
     checkArgumentsAreComparable(input, type.toString());
 
     final String expression = buildExpression(input, type.toString());
-    final Dataset<Row> dataset = joinOnId(left, right, JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
 
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;
     final Column valueColumn = leftComparable.getComparison(type).apply(rightComparable);
-    final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(left, right);
+    final Optional<Column> idColumn = findIdColumn(left, right);
+    final Optional<Column> thisColumn = findThisColumn(left, right);
 
-    return ElementPath.build(expression, dataset, left.getIdColumn(), valueColumn, true,
+    return ElementPath.build(expression, dataset, idColumn, valueColumn, true,
         Optional.empty(), thisColumn, FHIRDefinedType.BOOLEAN);
   }
 

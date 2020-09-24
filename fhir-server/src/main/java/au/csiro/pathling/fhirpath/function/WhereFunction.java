@@ -6,13 +6,20 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
+import static au.csiro.pathling.QueryHelpers.joinOnColumns;
+import static au.csiro.pathling.QueryHelpers.joinOnId;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.when;
+import static au.csiro.pathling.utilities.Strings.randomShortString;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumns;
+import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -48,17 +55,41 @@ public class WhereFunction implements NamedFunction {
 
     // We use the argument dataset alone, to avoid the problems with joining from the input
     // dataset to the argument dataset (which would create duplicate rows).
-    final Dataset<Row> dataset = argumentPath.getDataset();
+    // final Dataset<Row> dataset = argumentPath.getDataset();
 
     // The result is the input value if it is equal to true, or null otherwise (signifying the
     // absence of a value).
     final Column argumentTrue = argumentPath.getValueColumn().equalTo(true);
     final Column thisColumn = argumentPath.getThisColumn().get();
-    final Column valueColumn = when(argumentTrue, thisColumn).otherwise(null);
+
+    final Dataset<Row> dataset;
+    final Optional<Column> idColumn;
+    final List<Column> groupingColumns = input.getContext().getGroupingColumns();
+    final Dataset<Row> argumentDataset = argumentPath.getDataset();
+
+    if (!groupingColumns.isEmpty()) {
+      final Dataset<Row> distinctIds = argumentDataset
+          .select(groupingColumns.toArray(new Column[]{})).distinct();
+      final DatasetWithColumns datasetWithColumns = joinOnColumns(distinctIds, groupingColumns,
+          argumentDataset, groupingColumns, JoinType.LEFT_OUTER);
+      dataset = datasetWithColumns.getDataset();
+      input.getContext().setGroupingColumns(datasetWithColumns.getColumns());
+      idColumn = Optional.empty();
+    } else {
+      final Column argumentId = checkPresent(argumentPath.getIdColumn());
+      final String hash = randomShortString();
+      final String idColumnName = hash + ID_COLUMN_SUFFIX;
+      Dataset<Row> distinctIds = argumentDataset.withColumn(idColumnName, argumentId);
+      final Column distinctIdCol = distinctIds.col(idColumnName);
+      distinctIds = distinctIds.select(distinctIdCol).distinct();
+      dataset = joinOnId(distinctIds, distinctIdCol, argumentPath, Optional.of(argumentTrue),
+          JoinType.LEFT_OUTER);
+      idColumn = Optional.of(distinctIdCol);
+    }
 
     final String expression = expressionFromInput(input, NAME);
     return inputPath
-        .copy(expression, dataset, argumentPath.getIdColumn(), valueColumn, inputPath.isSingular(),
+        .copy(expression, dataset, idColumn, thisColumn, inputPath.isSingular(),
             Optional.empty());
   }
 
