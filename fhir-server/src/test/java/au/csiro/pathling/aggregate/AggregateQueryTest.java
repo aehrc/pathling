@@ -56,7 +56,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // empty function
+  // TODO: Re-enable along with empty function
   @Disabled
   void multipleGroupingsAndAggregations() {
     subjectResource = ResourceType.ENCOUNTER;
@@ -93,7 +93,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // first function
+  // TODO: Re-enable along with first function
   @Disabled
   void queryWithMathExpression() {
     subjectResource = ResourceType.CLAIM;
@@ -232,7 +232,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // empty function
+  // TODO: Re-enable along with empty function
   @Disabled
   void queryWithWhere() {
     subjectResource = ResourceType.PATIENT;
@@ -294,7 +294,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // first function
+  // TODO: Re-enable along with first function
   @Disabled
   void queryWithWhereAsComparisonOperand() {
     subjectResource = ResourceType.PATIENT;
@@ -347,7 +347,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // empty function
+  // TODO: Re-enable along with empty function
   @Disabled
   void queryWithWhereAndBoolean() {
     subjectResource = ResourceType.PATIENT;
@@ -365,7 +365,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // empty function
+  // TODO: Re-enable along with empty function
   @Disabled
   void queryWithWhereInAggregation() {
     subjectResource = ResourceType.PATIENT;

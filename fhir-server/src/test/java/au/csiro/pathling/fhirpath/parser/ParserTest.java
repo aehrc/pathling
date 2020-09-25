@@ -110,7 +110,6 @@ public class ParserTest {
   }
 
   @Test
-  @Disabled
   public void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
         .isElementPath(BooleanPath.class)
@@ -124,7 +123,6 @@ public class ParserTest {
   }
 
   @Test
-  @Disabled
   public void testInOperator() {
     assertThatResultOf("'Wuckert783' in name.family")
         .isElementPath(BooleanPath.class)
@@ -138,7 +136,6 @@ public class ParserTest {
   }
 
   @Test
-  @Disabled
   public void testCodingOperations() {
     // test unversioned
     assertThatResultOf(
@@ -242,6 +239,7 @@ public class ParserTest {
   }
 
   @Test
+  // TODO: Re-enable along with subsumes function
   @Disabled
   public void testSubsumesAndSubsumedBy() {
     // Setup mock terminology client
@@ -290,6 +288,7 @@ public class ParserTest {
   }
 
   @Test
+  // TODO: Re-enable along with first function
   @Disabled
   public void testWhereWithAggregateFunction() {
     assertThatResultOf("where($this.name.given.first() = 'Paul').gender")
@@ -301,7 +300,6 @@ public class ParserTest {
    * the "element" operand to the membership operator.
    */
   @Test
-  @Disabled
   public void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Paul').gender")
         .selectResult();
@@ -312,23 +310,15 @@ public class ParserTest {
    * the "collection" operand to the membership operator.
    */
   @Test
+  // TODO: Re-enable along with first function
   @Disabled
   public void testWhereWithInOperator() {
     assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
         .selectResult();
   }
 
-  /**
-   * This tests that where works when there is no reference to `$this` within the argument.
-   */
   @Test
-  @Disabled
-  public void testWhereWithNoThis() {
-    assertThatResultOf("where(true).gender")
-        .selectResult();
-  }
-
-  @Test
+  // TODO: Re-enable along with subsumes function
   @Disabled
   public void testWhereWithSubsumes() {
     // Setup mock terminology client
@@ -341,6 +331,7 @@ public class ParserTest {
   }
 
   @Test
+  // TODO: Re-enable along with first function
   @Disabled
   public void testWhereWithMemberOf() {
     // Setup mock terminology client
@@ -354,6 +345,7 @@ public class ParserTest {
   }
 
   @Test
+  // TODO: Re-enable along with first function
   @Disabled
   public void testAggregationFollowingNestedWhere() {
     assertThatResultOf("where($this.name.first().family in contact.name.where("

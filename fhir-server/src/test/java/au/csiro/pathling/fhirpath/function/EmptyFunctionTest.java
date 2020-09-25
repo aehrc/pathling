@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
  * @author John Grimes
  */
 @Tag("UnitTest")
+// TODO: Re-enable along with empty function
 @Disabled
 public class EmptyFunctionTest {
 

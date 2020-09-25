@@ -55,6 +55,7 @@ import org.mockito.Mockito;
  * @author Piotr Szul
  */
 @Tag("UnitTest")
+// TODO: Re-enable along with subsumes function
 @Disabled
 public class SubsumesFunctionTest {
 

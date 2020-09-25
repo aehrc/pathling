@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test;
  * @author Piotr Szul
  */
 @Tag("UnitTest")
+// TODO: Re-enable along with first function
 @Disabled
 public class FirstFunctionTest {
 

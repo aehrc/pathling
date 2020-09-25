@@ -16,7 +16,6 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +23,6 @@ import org.junit.jupiter.api.Test;
  * @author John Grimes
  */
 @Tag("UnitTest")
-@Disabled
 public class MathOperatorValidationTest {
 
   private ParserContext parserContext;
@@ -52,7 +50,7 @@ public class MathOperatorValidationTest {
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> mathOperator.invoke(input));
-    assertEquals("Left operand to + operator is of unsupported type, or is not singular: foo",
+    assertEquals("+ operator does not support left operand: foo",
         error.getMessage());
 
     // Now test the right operand.
@@ -61,7 +59,7 @@ public class MathOperatorValidationTest {
         InvalidUserInputError.class,
         () -> mathOperator.invoke(reversedInput));
     assertEquals(
-        "Right operand to + operator is of unsupported type, or is not singular: foo",
+        "+ operator does not support right operand: foo",
         reversedError.getMessage());
   }
 
@@ -83,7 +81,7 @@ public class MathOperatorValidationTest {
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> mathOperator.invoke(input));
-    assertEquals("Left operand to + operator is of unsupported type, or is not singular: foo",
+    assertEquals("Left operand to + operator must be singular: foo",
         error.getMessage());
 
     // Now test the right operand.
@@ -92,7 +90,7 @@ public class MathOperatorValidationTest {
         InvalidUserInputError.class,
         () -> mathOperator.invoke(reversedInput));
     assertEquals(
-        "Right operand to + operator is of unsupported type, or is not singular: foo",
+        "Right operand to + operator must be singular: foo",
         reversedError.getMessage());
   }
 
