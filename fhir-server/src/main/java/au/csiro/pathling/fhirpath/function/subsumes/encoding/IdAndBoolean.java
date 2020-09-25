@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function.subsumes.encoding;
 
 import java.io.Serializable;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Data;
 
@@ -26,13 +27,17 @@ public class IdAndBoolean implements Serializable {
   @Nullable
   private Boolean value;
 
-  public IdAndBoolean(String id, Boolean value) {
+  private IdAndBoolean(String id, Boolean value) {
     this.id = id;
     this.value = value;
   }
 
-  public static IdAndBoolean of(String id, Boolean value) {
+  public static IdAndBoolean resultFor(@Nonnull String id, boolean value) {
     return new IdAndBoolean(id, value);
+  }
+
+  public static IdAndBoolean nullFor(@Nonnull String id) {
+    return new IdAndBoolean(id, null);
   }
 
   @Override

@@ -86,10 +86,7 @@ public class SubsumesFunction implements NamedFunction {
         toCodingSetsDataset(
             toSystemAndCodeDataset(normalizeToCoding(argExpression, parserContext)));
 
-    Dataset<Row> resultDataset = this.inverted
-                                 ? createSubsumesResult(input.getContext(), argSystemAndCodeDataset,
-        inputSystemAndCodeDataset)
-                                 : createSubsumesResult(input.getContext(),
+    Dataset<Row> resultDataset = createSubsumesResult(input.getContext(),
                                      inputSystemAndCodeDataset,
                                      argSystemAndCodeDataset);
 
@@ -131,7 +128,7 @@ public class SubsumesFunction implements NamedFunction {
 
     // apply subsumption relation per partition
     return joinedCodingSets.as(Encoders.bean(IdAndCodingSets.class))
-        .mapPartitions(new SubsumptionMapper(ctx.getTerminologyClientFactory().get()),
+        .mapPartitions(new SubsumptionMapper(ctx.getTerminologyClientFactory().get(), inverted),
             Encoders.bean(IdAndBoolean.class)).toDF();
   }
 
