@@ -388,12 +388,12 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "name.given contains 'Frank'")
+        .withAggregation("Number of patients", "name.given contains 'Seymour882'")
         .withGrouping("gender")
         .build();
 
     response = executor.execute(request);
-    assertResponse("AggregateQueryTest/queryWithAmbiguousSelfJoin.Parameters.json",
+    assertResponse("AggregateQueryTest/queryWithNestedAggregation.Parameters.json",
         response);
   }
 
