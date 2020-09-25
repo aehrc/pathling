@@ -8,9 +8,7 @@ package au.csiro.pathling.fhirpath.function.subsumes.encoding;
 
 import au.csiro.pathling.fhir.SimpleCoding;
 import java.io.Serializable;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import javax.annotation.Nullable;
 import lombok.Data;
 
@@ -28,11 +26,4 @@ public class IdAndCodingSets implements Serializable {
 
   @Nullable
   private List<SimpleCoding> argCodings;
-
-  public boolean subsumes() {
-    Set<SimpleCoding> ls = new HashSet<SimpleCoding>(argCodings);
-    ls.retainAll(inputCodings);
-    return !ls.isEmpty();
-  }
-
 }

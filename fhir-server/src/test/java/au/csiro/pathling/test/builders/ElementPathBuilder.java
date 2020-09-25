@@ -110,14 +110,6 @@ public class ElementPathBuilder {
   }
 
   @Nonnull
-  public ElementPathBuilder withDefinitionFromResource(
-      Class<? extends IBaseResource> resourceClazz, String elementName) {
-    RuntimeResourceDefinition resourceDefinition = FhirHelpers.getFhirContext()
-        .getResourceDefinition(resourceClazz);
-    return definition(ElementDefinition.build(resourceDefinition.getChildByName(elementName), elementName));
-  }
-
-  @Nonnull
   public ElementPathBuilder idColumn(@Nonnull final Column idColumn) {
     this.idColumn = idColumn;
     return this;

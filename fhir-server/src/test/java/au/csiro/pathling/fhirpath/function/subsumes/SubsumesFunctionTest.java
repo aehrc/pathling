@@ -146,11 +146,10 @@ public class SubsumesFunctionTest {
 
     return new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .withDefinitionFromResource(Condition.class, "code")
         .dataset(dataset)
         .idAndValueColumns()
         .singular(false)
-        .buildDefined();
+        .build();
   }
 
   private static CodingLiteralPath createLiteralArg() {
@@ -194,11 +193,10 @@ public class SubsumesFunctionTest {
         .buildWithStructValue();
 
     return new ElementPathBuilder()
-        .withDefinitionFromResource(Condition.class, "code")
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
         .idAndValueColumns()
-        .buildDefined();
+        .build();
   }
 
   private static CodingPath createNullCodingArg() {
@@ -305,10 +303,6 @@ public class SubsumesFunctionTest {
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, inputExpression,
         Collections.singletonList(argumentExpression));
     final FhirPath result = function.invoke(functionInput);
-
-    System.out.println("BoolPathStart");
-    result.getDataset().show();
-    System.out.println("BoolPathEnd");
 
     return assertThat(result)
         .isElementPath(BooleanPath.class)

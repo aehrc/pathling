@@ -4,9 +4,9 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.collect_set;
+import static org.apache.spark.sql.functions.explode_outer;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.fhir.SimpleCoding;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -15,8 +15,6 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.function.subsumes.encoding.IdAndBoolean;
 import au.csiro.pathling.fhirpath.function.subsumes.encoding.IdAndCodingSets;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
-import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
-import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -72,26 +70,13 @@ public class SubsumesFunction implements NamedFunction {
     FhirPath inputExpression = input.getInput();
     FhirPath argExpression = input.getArguments().get(0);
 
-    System.out.println("INPUT");
-    inputExpression.getDataset().show();
-
-    System.out.println("ARG[0]");
-    argExpression.getDataset().show();
-
-    System.out.println("END:INPUT");
-
     ParserContext parserContext = input.getContext();
     Dataset<Row> inputSystemAndCodeDataset = toInputDataset(inputExpression);
-    Dataset<Row> argSystemAndCodeDataset =
-        toCodingSetsDataset(
-            toSystemAndCodeDataset(normalizeToCoding(argExpression, parserContext)));
+    Dataset<Row> argSystemAndCodeDataset = toArgDataset(argExpression, parserContext);
 
     Dataset<Row> resultDataset = createSubsumesResult(input.getContext(),
-                                     inputSystemAndCodeDataset,
-                                     argSystemAndCodeDataset);
-
-    System.out.println("Result");
-    resultDataset.show();
+        inputSystemAndCodeDataset,
+        argSystemAndCodeDataset);
 
     Column idColumn = resultDataset.col("id");
     Column valueColumn = resultDataset.col("value");
@@ -116,8 +101,6 @@ public class SubsumesFunction implements NamedFunction {
 
   private Dataset<Row> createSubsumesResult(ParserContext ctx,
       Dataset<Row> inputCodingSet, Dataset<Row> argCodingSet) {
-    // Dataset<Row> inputCodingSet = toCodingSetsDataset(inputSystemAndCodeDataset);
-    // Dataset<Row> argCodingSet = toCodingSetsDataset(argSystemAndCodeDataset);
 
     // JOIN the input args datasets
     Dataset<Row> joinedCodingSets = inputCodingSet.join(argCodingSet,
@@ -132,114 +115,41 @@ public class SubsumesFunction implements NamedFunction {
             Encoders.bean(IdAndBoolean.class)).toDF();
   }
 
-  @Nonnull
-  private Dataset<SimpleCoding> getCodes(Dataset<Row> source) {
-    Column systemCol = source.col(COL_CODING).getField(COL_SYSTEM).alias(COL_SYSTEM);
-    Column codeCol = source.col(COL_CODING).getField(COL_CODE).alias(COL_CODE);
-    Dataset<Row> codes = source.select(codeCol, systemCol);
-    return codes.where(systemCol.isNotNull().and(codeCol.isNotNull())).distinct()
-        .as(Encoders.bean(SimpleCoding.class));
-  }
-
 
   /**
-   * Expands CodeableConcepts to a set of Codings
-   */
-  private FhirPath normalizeToCoding(@Nonnull FhirPath expression,
-      ParserContext parserContext) {
-
-    assert (isCodingOrCodeableConcept(expression));
-    if (expression instanceof ElementPath &&
-        FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) expression).getFhirType())) {
-
-      System.out.println("START: XXXX");
-      expression.getDataset().show();
-      System.out.println("END: XXXX");
-
-      PathTraversalInput pathTraversalInput = new PathTraversalInput(parserContext, expression,
-          "coding");
-      return new PathTraversalOperator().invoke(pathTraversalInput);
-    } else {
-      return expression;
-    }
-  }
-
-
-  /**
-   * Expands CodeableConcepts to a set of Codings
+   * Converts extracts the input dataset from a FhirPath
    */
   private Dataset<Row> toInputDataset(@Nonnull FhirPath expression) {
 
     assert (isCodingOrCodeableConcept(expression));
-    if (expression instanceof ElementPath &&
-        FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) expression).getFhirType())) {
-      Dataset<Row> expressionDataset = expression.getDataset();
-      return expressionDataset.select(expression.getIdColumn().get().alias(COL_ID),
-          when(expression.getValueColumn().isNotNull(),
-              expression.getValueColumn().getField("coding"))
-              .otherwise(null)
-              .alias(COL_CODING_SET)
 
-      );
-    } else {
-      Dataset<Row> expressionDataset = expression.getDataset();
-      return expressionDataset.select(expression.getIdColumn().get().alias(COL_ID),
-          when(expression.getValueColumn().isNotNull(), array(expression.getValueColumn()))
-              .otherwise(null)
-              .alias(COL_CODING_SET)
-      );
-    }
+    Dataset<Row> expressionDataset = expression.getDataset();
+    Column codingArrayCol = (isCodeableConcept(expression))
+                            ? expression.getValueColumn().getField("coding")
+                            : array(expression.getValueColumn());
+
+    return expressionDataset.select(expression.getIdColumn().get().alias(COL_ID),
+        when(expression.getValueColumn().isNotNull(), codingArrayCol)
+            .otherwise(null)
+            .alias(COL_CODING_SET)
+    );
   }
 
-  /**
-   * @return Dataframe with schema: "STRING id, STRUCT (STRING system, STRING code) coding"
-   */
-  @Nonnull
-  private Dataset<Row> toSystemAndCodeDataset(FhirPath inputExpression) {
+  private Dataset<Row> toArgDataset(@Nonnull FhirPath expression,
+      @Nonnull ParserContext parserContext) {
 
-    assert isCodingPathOrLiteral(inputExpression) : "Expression of CODING type expected";
+    assert (isCodingOrCodeableConcept(expression));
 
-    // do the literal magic here
-    FhirPath idExpression = inputExpression;
-    // Dataset<Row> codingDataset =
-    //     idExpression.getDataset().select(idExpression.getIdColumn().get().alias(COL_ID),
-    //         inputExpression.getValueColumn().getField(COL_SYSTEM).alias(COL_SYSTEM),
-    //         inputExpression.getValueColumn().getField(COL_CODE).alias(COL_CODE),
-    //         inputExpression.getValueColumn().getField(COL_VERSION).alias(COL_VERSION));
-    // Dataset<Row> xxx = codingDataset
-    //     .select(codingDataset.col(COL_ID), struct(codingDataset.col(COL_CODE),
-    //         codingDataset.col(COL_SYSTEM), codingDataset.col(COL_VERSION)).alias(COL_CODING));
+    Dataset<Row> expressionDataset = expression.getDataset();
+    Column codingCol = (isCodeableConcept(expression))
+                       ? explode_outer(expression.getValueColumn().getField("coding"))
+                       : expression.getValueColumn();
 
-    Dataset<Row> codingDataset = inputExpression.getDataset();
-    Dataset<Row> xxx = codingDataset
-        //.where(inputExpression.getValueColumn().isNotNull())
-        .select(idExpression.getIdColumn().get().alias(COL_ID),
-            inputExpression.getValueColumn().alias(COL_CODING)
-        );
-    xxx.show();
-    xxx.printSchema();
-    return xxx;
-  }
+    Dataset<Row> systemAndCodeDataset = expressionDataset
+        .select(expression.getIdColumn().get().alias(COL_ID), codingCol.alias(COL_CODING));
 
-  /**
-   * Groups all coding for each into an array column.
-   *
-   * @return Dataframe with schema "STRING id ARRAY(STRUCT(STRING system, STRING code)) codingSet"
-   */
-  @Nonnull
-  private Dataset<Row> toCodingSetsDataset(Dataset<Row> systemAndCodeDataset) {
-    // Dataset<Row> yyy = systemAndCodeDataset
-    //     .select(systemAndCodeDataset.col(COL_ID),
-    //         when(systemAndCodeDataset.col(COL_CODING).isNotNull(),
-    //             array(systemAndCodeDataset.col(COL_CODING)))
-    //             .otherwise(array())
-    //             .alias(COL_CODING_SET)
-    //     );
-    //
-    // yyy.show();
-    // yyy.printSchema();
-    // return yyy;
-    return systemAndCodeDataset.groupBy(systemAndCodeDataset.col(COL_ID))
+    return systemAndCodeDataset
+        .groupBy(systemAndCodeDataset.col(COL_ID))
         .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_CODING_SET));
   }
 
@@ -260,32 +170,12 @@ public class SubsumesFunction implements NamedFunction {
     FhirPath argExpression = input.getArguments().get(0);
     validateExpressionType(inputExpression, "input");
     validateExpressionType(argExpression, "argument");
-
-    // TODO: Check if still relevant
-    // // at least one expression must not be a literal
-    // if (inputExpression.isLiteral() && argExpression.isLiteral()) {
-    //   throw new InvalidRequestException("Input and argument cannot be both literals for "
-    //       + functionName + " function: " + input.getExpression());
-    // }
-
-    // if both are not literals than they must be based on the same resource
-    // otherwise the literal will inherit the resource from the non literal
-
-    // TODO: check
-    // if (!inputExpression.isLiteral() && !argExpression.isLiteral()
-    // && !inputExpression.getResourceType().equals(argExpression.getResourceType())) {
-    // throw new InvalidRequestException(
-    // "Input and argument are based on different resources in " + functionName + " function");
-    // }
   }
 
-
-  private boolean isCodingPathOrLiteral(@Nonnull FhirPath fhirPath) {
-    return (fhirPath instanceof CodingLiteralPath) ||
-        (fhirPath instanceof ElementPath &&
-            FHIRDefinedType.CODING.equals(((ElementPath) fhirPath).getFhirType()));
+  private boolean isCodeableConcept(@Nonnull FhirPath fhirPath) {
+    return (fhirPath instanceof ElementPath &&
+        FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) fhirPath).getFhirType()));
   }
-
 
   private boolean isCodingOrCodeableConcept(@Nonnull FhirPath fhirPath) {
     if (fhirPath instanceof CodingLiteralPath) {
@@ -305,5 +195,4 @@ public class SubsumesFunction implements NamedFunction {
         functionName + " function accepts " + pathRole + " of type Coding or CodeableConcept"
     );
   }
-
 }

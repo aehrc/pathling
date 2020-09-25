@@ -23,10 +23,6 @@ public class SubsumptionMapper
   private final TerminologyClientFactory terminologyClientFactory;
   private final boolean inverted;
 
-  public SubsumptionMapper(@Nonnull TerminologyClientFactory terminologyClientFactory) {
-    this(terminologyClientFactory, true);
-  }
-
   public SubsumptionMapper(@Nonnull TerminologyClientFactory terminologyClientFactory,
       boolean inverted) {
     this.terminologyClientFactory = terminologyClientFactory;
@@ -37,9 +33,6 @@ public class SubsumptionMapper
   public Iterator<IdAndBoolean> call(Iterator<IdAndCodingSets> input) {
     List<IdAndCodingSets> entries = Streams.stream(input).collect(Collectors.toList());
     // collect distinct token
-
-    entries.forEach(System.out::println);
-
     Set<SimpleCoding> entrySet = entries.stream()
         .filter(r -> r.getInputCodings() != null && r.getArgCodings() != null)
         .flatMap(r -> Streams.concat(r.getInputCodings().stream(), r.getArgCodings().stream()))
