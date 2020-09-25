@@ -297,6 +297,28 @@ public class WhereFunctionTest {
   }
 
   @Test
+  public void throwsErrorIfInputIsLiteral() {
+    final ElementPath argument = new ElementPathBuilder()
+        .expression("$this.gender")
+        .fhirType(FHIRDefinedType.STRING)
+        .build();
+    final BooleanLiteralPath input = BooleanLiteralPath
+        .fromString("true", argument);
+
+    final ParserContext parserContext = new ParserContextBuilder().build();
+    final NamedFunctionInput whereInput = new NamedFunctionInput(parserContext, input,
+        Collections.singletonList(argument));
+
+    final NamedFunction whereFunction = NamedFunction.getInstance("where");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> whereFunction.invoke(whereInput));
+    assertEquals(
+        "Input to where function cannot be a literal: true",
+        error.getMessage());
+  }
+
+  @Test
   public void throwsErrorIfArgumentIsLiteral() {
     final ResourcePath input = new ResourcePathBuilder().build();
     final BooleanLiteralPath argument = BooleanLiteralPath
@@ -311,7 +333,7 @@ public class WhereFunctionTest {
         InvalidUserInputError.class,
         () -> whereFunction.invoke(whereInput));
     assertEquals(
-        "Argument to where function cannot be a literal",
+        "Argument to where function cannot be a literal: true",
         error.getMessage());
   }
 

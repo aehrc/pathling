@@ -44,8 +44,11 @@ public class WhereFunction implements NamedFunction {
     checkUserInput(input.getArguments().size() == 1,
         "where function accepts one argument");
     final FhirPath inputPath = input.getInput();
+    checkUserInput(inputPath instanceof NonLiteralPath,
+        "Input to where function cannot be a literal: " + inputPath.getExpression());
     checkUserInput(input.getArguments().get(0) instanceof NonLiteralPath,
-        "Argument to where function cannot be a literal");
+        "Argument to where function cannot be a literal: " + input.getArguments().get(0)
+            .getExpression());
     final NonLiteralPath argumentPath = (NonLiteralPath) input.getArguments().get(0);
     checkUserInput(argumentPath instanceof BooleanPath && argumentPath.isSingular(),
         "Argument to where function must be a singular Boolean: " + argumentPath.getExpression());

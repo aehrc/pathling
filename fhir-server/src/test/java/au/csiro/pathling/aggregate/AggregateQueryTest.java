@@ -383,21 +383,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  void queryWithWhereAndLiterals() {
-    subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
-
-    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("5.where($this = 6)")
-        .build();
-
-    response = executor.execute(request);
-    assertResponse("AggregateQueryTest/queryWithAmbiguousSelfJoin.Parameters.json",
-        response);
-  }
-
-  @Test
   void queryWithNestedAggregation() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource);
