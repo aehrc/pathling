@@ -11,37 +11,28 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import javax.annotation.Nullable;
+import lombok.Data;
 
+
+@Data
 public class IdAndCodingSets implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
+  @Nullable
   private String id;
-  private List<SimpleCoding> leftCodings;
-  private List<SimpleCoding> rightCodings;
-  
-  public String getId() {
-    return id;
-  }
-  public void setId(String id) {
-    this.id = id;
-  }
-  public List<SimpleCoding> getLeftCodings() {
-    return leftCodings;
-  }
-  public void setLeftCodings(List<SimpleCoding> leftCodings) {
-    this.leftCodings = leftCodings;
-  }
-  public List<SimpleCoding> getRightCodings() {
-    return rightCodings;
-  }
-  public void setRightCodings(List<SimpleCoding> rightCodings) {
-    this.rightCodings = rightCodings;
-  }
-  
+
+  @Nullable
+  private List<SimpleCoding> inputCodings;
+
+  @Nullable
+  private List<SimpleCoding> argCodings;
+
   public boolean subsumes() {
-     Set<SimpleCoding> ls = new HashSet<SimpleCoding>(rightCodings);
-     ls.retainAll(leftCodings);
-     return !ls.isEmpty();
+    Set<SimpleCoding> ls = new HashSet<SimpleCoding>(argCodings);
+    ls.retainAll(inputCodings);
+    return !ls.isEmpty();
   }
+
 }

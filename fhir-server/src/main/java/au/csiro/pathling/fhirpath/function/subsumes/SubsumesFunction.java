@@ -1,9 +1,10 @@
 package au.csiro.pathling.fhirpath.function.subsumes;
 
+import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.collect_set;
-import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhir.SimpleCoding;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -17,7 +18,6 @@ import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -27,8 +27,6 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 
 
 /**
@@ -48,8 +46,8 @@ public class SubsumesFunction implements NamedFunction {
   private static final String COL_VERSION = "version";
   private static final String COL_CODING = "coding";
   private static final String COL_CODING_SET = "codingSet";
-  private static final String COL_LEFT_CODINGS = "leftCodings";
-  private static final String COL_RIGHT_CODINGS = "rightCodings";
+  private static final String COL_INPUT_CODINGS = "inputCodings";
+  private static final String COL_ARG_CODINGS = "argCodings";
 
   private static final Logger logger = LoggerFactory.getLogger(SubsumesFunction.class);
 
@@ -74,11 +72,19 @@ public class SubsumesFunction implements NamedFunction {
     FhirPath inputExpression = input.getInput();
     FhirPath argExpression = input.getArguments().get(0);
 
+    System.out.println("INPUT");
+    inputExpression.getDataset().show();
+
+    System.out.println("ARG[0]");
+    argExpression.getDataset().show();
+
+    System.out.println("END:INPUT");
+
     ParserContext parserContext = input.getContext();
-    Dataset<Row> inputSystemAndCodeDataset = toSystemAndCodeDataset(
-        normalizeToCoding(inputExpression, parserContext));
+    Dataset<Row> inputSystemAndCodeDataset = toInputDataset(inputExpression);
     Dataset<Row> argSystemAndCodeDataset =
-        toSystemAndCodeDataset(normalizeToCoding(argExpression, parserContext));
+        toCodingSetsDataset(
+            toSystemAndCodeDataset(normalizeToCoding(argExpression, parserContext)));
 
     Dataset<Row> resultDataset = this.inverted
                                  ? createSubsumesResult(input.getContext(), argSystemAndCodeDataset,
@@ -86,6 +92,10 @@ public class SubsumesFunction implements NamedFunction {
                                  : createSubsumesResult(input.getContext(),
                                      inputSystemAndCodeDataset,
                                      argSystemAndCodeDataset);
+
+    System.out.println("Result");
+    resultDataset.show();
+
     Column idColumn = resultDataset.col("id");
     Column valueColumn = resultDataset.col("value");
 
@@ -103,28 +113,26 @@ public class SubsumesFunction implements NamedFunction {
     return new BooleanPath(expression, resultDataset, Optional.of(idColumn),
         valueColumn,
         false,
-//        inputExpression.isSingular(),
+        //        inputExpression.isSingular(),
         FHIRDefinedType.BOOLEAN);
   }
 
-
   private Dataset<Row> createSubsumesResult(ParserContext ctx,
-      Dataset<Row> inputSystemAndCodeDataset, Dataset<Row> argSystemAndCodeDataset) {
-    Dataset<Row> inputCodingSet = toCodingSetsDataset(inputSystemAndCodeDataset);
-    Dataset<Row> argCodingSet = toCodingSetsDataset(argSystemAndCodeDataset);
+      Dataset<Row> inputCodingSet, Dataset<Row> argCodingSet) {
+    // Dataset<Row> inputCodingSet = toCodingSetsDataset(inputSystemAndCodeDataset);
+    // Dataset<Row> argCodingSet = toCodingSetsDataset(argSystemAndCodeDataset);
 
     // JOIN the input args datasets
     Dataset<Row> joinedCodingSets = inputCodingSet.join(argCodingSet,
         inputCodingSet.col(COL_ID).equalTo(argCodingSet.col(COL_ID)), "left_outer")
         .select(inputCodingSet.col(COL_ID).alias(COL_ID),
-            inputCodingSet.col(COL_CODING_SET).alias(COL_LEFT_CODINGS),
-            argCodingSet.col(COL_CODING_SET).alias(COL_RIGHT_CODINGS));
+            inputCodingSet.col(COL_CODING_SET).alias(COL_INPUT_CODINGS),
+            argCodingSet.col(COL_CODING_SET).alias(COL_ARG_CODINGS));
 
     // apply subsumption relation per partition
     return joinedCodingSets.as(Encoders.bean(IdAndCodingSets.class))
         .mapPartitions(new SubsumptionMapper(ctx.getTerminologyClientFactory().get()),
-            Encoders.bean(IdAndBoolean.class))
-        .toDF();
+            Encoders.bean(IdAndBoolean.class)).toDF();
   }
 
   @Nonnull
@@ -147,11 +155,42 @@ public class SubsumesFunction implements NamedFunction {
     if (expression instanceof ElementPath &&
         FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) expression).getFhirType())) {
 
+      System.out.println("START: XXXX");
+      expression.getDataset().show();
+      System.out.println("END: XXXX");
+
       PathTraversalInput pathTraversalInput = new PathTraversalInput(parserContext, expression,
           "coding");
       return new PathTraversalOperator().invoke(pathTraversalInput);
     } else {
       return expression;
+    }
+  }
+
+
+  /**
+   * Expands CodeableConcepts to a set of Codings
+   */
+  private Dataset<Row> toInputDataset(@Nonnull FhirPath expression) {
+
+    assert (isCodingOrCodeableConcept(expression));
+    if (expression instanceof ElementPath &&
+        FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) expression).getFhirType())) {
+      Dataset<Row> expressionDataset = expression.getDataset();
+      return expressionDataset.select(expression.getIdColumn().get().alias(COL_ID),
+          when(expression.getValueColumn().isNotNull(),
+              expression.getValueColumn().getField("coding"))
+              .otherwise(null)
+              .alias(COL_CODING_SET)
+
+      );
+    } else {
+      Dataset<Row> expressionDataset = expression.getDataset();
+      return expressionDataset.select(expression.getIdColumn().get().alias(COL_ID),
+          when(expression.getValueColumn().isNotNull(), array(expression.getValueColumn()))
+              .otherwise(null)
+              .alias(COL_CODING_SET)
+      );
     }
   }
 
@@ -165,13 +204,24 @@ public class SubsumesFunction implements NamedFunction {
 
     // do the literal magic here
     FhirPath idExpression = inputExpression;
-    Dataset<Row> codingDataset =
-        idExpression.getDataset().select(idExpression.getIdColumn().get().alias(COL_ID),
-            inputExpression.getValueColumn().getField(COL_SYSTEM).alias(COL_SYSTEM),
-            inputExpression.getValueColumn().getField(COL_CODE).alias(COL_CODE),
-            inputExpression.getValueColumn().getField(COL_VERSION).alias(COL_VERSION));
-    return codingDataset.select(codingDataset.col(COL_ID), struct(codingDataset.col(COL_CODE),
-        codingDataset.col(COL_SYSTEM), codingDataset.col(COL_VERSION)).alias(COL_CODING));
+    // Dataset<Row> codingDataset =
+    //     idExpression.getDataset().select(idExpression.getIdColumn().get().alias(COL_ID),
+    //         inputExpression.getValueColumn().getField(COL_SYSTEM).alias(COL_SYSTEM),
+    //         inputExpression.getValueColumn().getField(COL_CODE).alias(COL_CODE),
+    //         inputExpression.getValueColumn().getField(COL_VERSION).alias(COL_VERSION));
+    // Dataset<Row> xxx = codingDataset
+    //     .select(codingDataset.col(COL_ID), struct(codingDataset.col(COL_CODE),
+    //         codingDataset.col(COL_SYSTEM), codingDataset.col(COL_VERSION)).alias(COL_CODING));
+
+    Dataset<Row> codingDataset = inputExpression.getDataset();
+    Dataset<Row> xxx = codingDataset
+        //.where(inputExpression.getValueColumn().isNotNull())
+        .select(idExpression.getIdColumn().get().alias(COL_ID),
+            inputExpression.getValueColumn().alias(COL_CODING)
+        );
+    xxx.show();
+    xxx.printSchema();
+    return xxx;
   }
 
   /**
@@ -181,11 +231,19 @@ public class SubsumesFunction implements NamedFunction {
    */
   @Nonnull
   private Dataset<Row> toCodingSetsDataset(Dataset<Row> systemAndCodeDataset) {
-        return systemAndCodeDataset.select(systemAndCodeDataset.col(COL_ID),
-            array(systemAndCodeDataset.col(COL_CODING)).alias(COL_CODING_SET));
-
-//    return systemAndCodeDataset.groupBy(systemAndCodeDataset.col(COL_ID))
-//        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_CODING_SET));
+    // Dataset<Row> yyy = systemAndCodeDataset
+    //     .select(systemAndCodeDataset.col(COL_ID),
+    //         when(systemAndCodeDataset.col(COL_CODING).isNotNull(),
+    //             array(systemAndCodeDataset.col(COL_CODING)))
+    //             .otherwise(array())
+    //             .alias(COL_CODING_SET)
+    //     );
+    //
+    // yyy.show();
+    // yyy.printSchema();
+    // return yyy;
+    return systemAndCodeDataset.groupBy(systemAndCodeDataset.col(COL_ID))
+        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_CODING_SET));
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

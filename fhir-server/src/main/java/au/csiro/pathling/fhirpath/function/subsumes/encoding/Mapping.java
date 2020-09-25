@@ -22,12 +22,12 @@ public class Mapping implements Serializable {
 
   private SimpleCoding from;
   private SimpleCoding to;
-    
+
   public Mapping(String sourceSystem, String sourceCode, String targetSystem, String targetCode) {
     this.from = new SimpleCoding(sourceSystem, sourceCode);
     this.to = new SimpleCoding(targetSystem, targetCode);
   }
-  
+
   public Mapping() {
   }
 
@@ -51,35 +51,46 @@ public class Mapping implements Serializable {
   public void setTo(SimpleCoding to) {
     this.to = to;
   }
-  
+
   @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ((from == null) ? 0 : from.hashCode());
-    result = prime * result + ((to == null) ? 0 : to.hashCode());
+    result = prime * result + ((from == null)
+                               ? 0
+                               : from.hashCode());
+    result = prime * result + ((to == null)
+                               ? 0
+                               : to.hashCode());
     return result;
   }
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj)
+    if (this == obj) {
       return true;
-    if (obj == null)
+    }
+    if (obj == null) {
       return false;
-    if (getClass() != obj.getClass())
+    }
+    if (getClass() != obj.getClass()) {
       return false;
+    }
     Mapping other = (Mapping) obj;
     if (from == null) {
-      if (other.from != null)
+      if (other.from != null) {
         return false;
-    } else if (!from.equals(other.from))
+      }
+    } else if (!from.equals(other.from)) {
       return false;
+    }
     if (to == null) {
-      if (other.to != null)
+      if (other.to != null) {
         return false;
-    } else if (!to.equals(other.to))
+      }
+    } else if (!to.equals(other.to)) {
       return false;
+    }
     return true;
   }
 
@@ -87,9 +98,9 @@ public class Mapping implements Serializable {
   public String toString() {
     return "Mapping [from=" + from + ", to=" + to + "]";
   }
- 
+
   public static Mapping of(Coding from, Coding to) {
     return new Mapping(new SimpleCoding(from), new SimpleCoding(to));
   }
-  
+
 }

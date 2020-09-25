@@ -25,13 +25,13 @@ public class SimpleCoding implements Serializable {
   private static final long serialVersionUID = 6509272647875353748L;
 
   @Nullable
-  private final String system;
+  private String system;
 
   @Nullable
-  private final String code;
+  private String code;
 
   @Nullable
-  private final String version;
+  private String version;
 
 
   /**

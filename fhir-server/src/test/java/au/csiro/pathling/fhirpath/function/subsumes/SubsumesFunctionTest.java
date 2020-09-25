@@ -26,7 +26,6 @@ import au.csiro.pathling.fhirpath.element.CodingPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
-import au.csiro.pathling.fhirpath.function.memberof.MemberOfFunction;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -37,7 +36,6 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptMapEntry;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -49,7 +47,6 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -195,10 +192,12 @@ public class SubsumesFunctionTest {
         .withIdValueRows(ALL_RES_IDS,
             id -> codeableConceptRowFromCoding(CODING_OTHER3, CODING_OTHER5))
         .buildWithStructValue();
+
     return new ElementPathBuilder()
         .withDefinitionFromResource(Condition.class, "code")
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
+        .idAndValueColumns()
         .buildDefined();
   }
 
@@ -208,9 +207,11 @@ public class SubsumesFunctionTest {
         .withStructTypeColumns(codingStructType())
         .withIdValueRows(ALL_RES_IDS, id -> null)
         .buildWithStructValue();
+
     final ElementPath argument = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
+        .idAndValueColumns()
         .build();
 
     return (CodingPath) argument;
@@ -222,6 +223,31 @@ public class SubsumesFunctionTest {
 
   private static DatasetBuilder allTrue() {
     return new DatasetBuilder().withIdsAndValue(true, ALL_RES_IDS);
+  }
+
+
+  private static DatasetBuilder expectedLiteralSubsumes() {
+    // literal coding is MEDIUM
+    return new DatasetBuilder()
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, true) // subsumes SMALL
+        .withRow(RES_ID2, true) // subsumes MEDIUM
+        .withRow(RES_ID3, false)
+        .withRow(RES_ID4, false)
+        .withRow(RES_ID5, false); // NULL CodeableConcept
+  }
+
+  private static DatasetBuilder expectedLiteralSubsumedBy() {
+    // literal coding is MEDIUM
+    return new DatasetBuilder()
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, false) //
+        .withRow(RES_ID2, true) // subsumedBy MEDIUM
+        .withRow(RES_ID3, true) // subsumedBy LARGER
+        .withRow(RES_ID4, false)
+        .withRow(RES_ID5, false); // NULL CodeableConcept
   }
 
   private static DatasetBuilder expectedSubsumes() {
@@ -254,6 +280,21 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID5, null);
   }
 
+  private static DatasetBuilder expectedAllNonNull(boolean result) {
+    return new DatasetBuilder()
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, result)
+        .withRow(RES_ID1, result)
+        .withRow(RES_ID2, result)
+        .withRow(RES_ID2, result)
+        .withRow(RES_ID3, result)
+        .withRow(RES_ID3, result)
+        .withRow(RES_ID4, result)
+        .withRow(RES_ID4, result)
+        .withRow(RES_ID5, null);
+  }
+
   private FhirPathAssertion assertCallSuccess(final NamedFunction function,
       final FhirPath inputExpression, final FhirPath argumentExpression) {
     final ParserContext parserContext = new ParserContextBuilder()
@@ -265,6 +306,10 @@ public class SubsumesFunctionTest {
         Collections.singletonList(argumentExpression));
     final FhirPath result = function.invoke(functionInput);
 
+    System.out.println("BoolPathStart");
+    result.getDataset().show();
+    System.out.println("BoolPathEnd");
+
     return assertThat(result)
         .isElementPath(BooleanPath.class)
         .isNotSingular();
@@ -273,13 +318,13 @@ public class SubsumesFunctionTest {
   private DatasetAssert assertSubsumesSuccess(final FhirPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumes"), inputExpression,
-        argumentExpression).selectResult();
+        argumentExpression).selectResultPreserveOrder();
   }
 
   private DatasetAssert assertSubsumedBySuccess(final FhirPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumedBy"), inputExpression,
-        argumentExpression).selectResult();
+        argumentExpression).selectResultPreserveOrder();
   }
 
   //
@@ -299,10 +344,8 @@ public class SubsumesFunctionTest {
 
   @Test
   public void testSubsumesLiteralWithCodeableConcepCorrectly() {
-    // call subsumes but expect subsumedBy result
-    // because input is switched with argument
     assertSubsumesSuccess(createLiteralArg(), createCodeableConceptInput())
-        .hasRows(expectedSubsumedBy());
+        .hasRows(expectedLiteralSubsumes());
   }
   //
   // Test subsumedBy on selected pairs of argument types
@@ -325,7 +368,8 @@ public class SubsumesFunctionTest {
   public void testSubsumedByLiteralWithCodingCorrectly() {
     // call subsumedBy but expect subsumes result
     // because input is switched with argument
-    assertSubsumedBySuccess(createLiteralArg(), createCodingInput()).hasRows(expectedSubsumes());
+    assertSubsumedBySuccess(createLiteralArg(), createCodingInput())
+        .hasRows(expectedLiteralSubsumedBy());
   }
 
   //
@@ -334,20 +378,28 @@ public class SubsumesFunctionTest {
 
   @Test
   public void testAllFalseWhenSubsumesNullCoding() {
-    // call subsumedBy but expect subsumes result
-    // because input is switched with argument
-    assertSubsumesSuccess(createCodingInput(), createNullCodingArg()).hasRows(allFalse());
+    assertSubsumesSuccess(createCodingInput(), createNullCodingArg())
+        .hasRows(expectedAllNonNull(false));
+  }
+
+  @Test
+  public void testAllFalseWhenSubsumedByNullCoding() {
     assertSubsumedBySuccess(createCodeableConceptInput(), createNullCodingArg())
-        .hasRows(allFalse());
+        .hasRows(expectedAllNonNull(false));
   }
 
 
   @Test
   public void testAllNonNullTrueWhenSubsumesItself() {
     assertSubsumesSuccess(createCodingInput(), createCodeableConceptInput())
-        .hasRows(allTrue().changeValue(RES_ID5, false));
-    assertSubsumedBySuccess(createCodingInput(), createCodeableConceptInput())
-        .hasRows(allTrue().changeValue(RES_ID5, false));
+        .hasRows(expectedAllNonNull(true));
+  }
+
+
+  @Test
+  public void testAllNonNullTrueSubsumedByItself() {
+    assertSubsumedBySuccess(createCodeableConceptInput(), createCodingInput())
+        .hasRows(expectedAllNonNull(true));
   }
 
   //
@@ -402,26 +454,6 @@ public class SubsumesFunctionTest {
         error.getMessage());
   }
 
-//  @Test
-  public void throwsErrorIfBothArgumentsAreLiterals() {
-    final ParserContext parserContext = new ParserContextBuilder().build();
-
-    final CodingLiteralPath input = CodingLiteralPath
-        .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-            mock(FhirPath.class));
-    final CodingLiteralPath argument = CodingLiteralPath
-        .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-            mock(FhirPath.class));
-
-    final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
-        Collections.singletonList(argument));
-    final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumedBy");
-    final InvalidRequestException error = assertThrows(
-        InvalidRequestException.class,
-        () -> subsumesFunction.invoke(functionInput));
-    assertEquals("Input and argument cannot be both literals for subsumedBy function",
-        error.getMessage());
-  }
 
   @Test
   public void throwsErrorIfMoreThanOneArgument() {

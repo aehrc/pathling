@@ -29,13 +29,23 @@ public class SubsumptionMapper
   @Override
   public Iterator<IdAndBoolean> call(Iterator<IdAndCodingSets> input) {
     List<IdAndCodingSets> entries = Streams.stream(input).collect(Collectors.toList());
-    // collect distinct tokens
+    // collect distinct token
+
+    entries.forEach(System.out::println);
+
     Set<SimpleCoding> entrySet = entries.stream()
-        .flatMap(r -> Streams.concat(r.getLeftCodings().stream(), r.getRightCodings().stream()))
+        .filter(r -> r.getInputCodings() != null && r.getArgCodings() != null)
+        .flatMap(r -> Streams.concat(r.getInputCodings().stream(), r.getArgCodings().stream()))
         .filter(SimpleCoding::isNotNull).collect(Collectors.toSet());
     ClosureService closureService = new ClosureService(terminologyClientFactory.build(logger));
     final Closure subsumeClosure = closureService.getSubsumesRelation(entrySet);
+
     return entries.stream().map(r -> IdAndBoolean.of(r.getId(),
-        subsumeClosure.anyRelates(r.getLeftCodings(), r.getRightCodings()))).iterator();
+        (r.getInputCodings() == null || r.getArgCodings() == null || r.getInputCodings().isEmpty()
+            || r.getArgCodings().isEmpty())
+        ? null
+        :
+        subsumeClosure.anyRelates(r.getInputCodings(), r.getArgCodings()))
+    ).iterator();
   }
 }
