@@ -74,7 +74,7 @@ public abstract class QueryHelpers {
 
   /**
    * Filters a dataset to only the nominated ID column, plus any pre-existing value columns.
-   * Pre-existing ID columns are dropped out. p
+   * Pre-existing ID columns are dropped out.
    *
    * @param dataset the dataset to perform the operation upon
    * @param idColumn the ID column to preserve
@@ -261,6 +261,8 @@ public abstract class QueryHelpers {
    * @param leftColumns the columns for the first Dataset
    * @param right the second Dataset
    * @param rightColumns the columns for the second Dataset
+   * @param additionalCondition an additional condition that will be combined with the column
+   * equality using AND
    * @param joinType the type of join to use
    * @return a {@link DatasetWithColumns} containing the joined Dataset and the columns that were
    * used in the join
@@ -268,16 +270,31 @@ public abstract class QueryHelpers {
   @Nonnull
   public static DatasetWithColumns joinOnColumns(@Nonnull final Dataset<Row> left,
       @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
-      @Nonnull final List<Column> rightColumns, @Nonnull final JoinType joinType) {
+      @Nonnull final List<Column> rightColumns, @Nonnull final Optional<Column> additionalCondition,
+      @Nonnull final JoinType joinType) {
     check(leftColumns.size() == rightColumns.size());
 
     @Nullable Column joinCondition = null;
-    final Dataset<Row> leftAliased = left.as("left");
-    final Dataset<Row> rightAliased = right.as("right");
+    Dataset<Row> leftAliased = left;
+    Dataset<Row> rightAliased = right;
+    final List<Column> newColumns = new ArrayList<>();
 
     for (int i = 0; i < leftColumns.size(); i++) {
-      final Column leftColumn = leftAliased.col("left." + leftColumns.get(i));
-      final Column rightColumn = rightAliased.col("right." + rightColumns.get(i));
+      final String leftHash = randomShortString();
+      final String leftColumnName = leftHash + VALUE_COLUMN_SUFFIX;
+      final String rightHash = randomShortString();
+      final String rightColumnName = rightHash + VALUE_COLUMN_SUFFIX;
+
+      // We keep the old grouping column in one of the datasets, so as to preserve it without ending
+      // up with duplicates in the join.
+      leftAliased = leftAliased.withColumn(leftColumnName, leftColumns.get(i))
+          .drop(leftColumns.get(i));
+      rightAliased = rightAliased.withColumn(rightColumnName, rightColumns.get(i));
+
+      final Column leftColumn = leftAliased.col(leftColumnName);
+      final Column rightColumn = rightAliased.col(rightColumnName);
+      newColumns.add(leftColumn);
+
       // We need to do an explicit null check here, otherwise the join will nullify the result of 
       // the aggregation when the grouping value is null.
       final Column columnsEqual = leftColumn.isNull().and(rightColumn.isNull())
@@ -286,9 +303,36 @@ public abstract class QueryHelpers {
                       ? columnsEqual
                       : joinCondition.and(columnsEqual);
     }
+    checkNotNull(joinCondition);
 
-    final Dataset<Row> dataset = left.join(right, joinCondition, joinType.getSparkName());
-    return new DatasetWithColumns(dataset, leftColumns);
+    if (additionalCondition.isPresent()) {
+      joinCondition = joinCondition.and(additionalCondition.get());
+    }
+
+    final Dataset<Row> target = selectJoinTarget(rightAliased, leftAliased);
+    final Dataset<Row> dataset = leftAliased
+        .join(target, joinCondition, joinType.getSparkName());
+    return new DatasetWithColumns(dataset, newColumns);
+  }
+
+  /**
+   * Join two datasets based on the equality of an arbitrary set of columns. The same number of
+   * columns must be provided for each dataset, and it is assumed that they are matched on their
+   * position within their respective lists.
+   *
+   * @param left the first {@link Dataset}
+   * @param leftColumns the columns for the first Dataset
+   * @param right the second Dataset
+   * @param rightColumns the columns for the second Dataset
+   * @param joinType the type of join to use
+   * @return a {@link DatasetWithColumns} containing the joined Dataset and the columns that were
+   * used in the join
+   */
+  @Nonnull
+  public static DatasetWithColumns joinOnColumns(@Nonnull final Dataset<Row> left,
+      @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
+      @Nonnull final List<Column> rightColumns, @Nonnull final JoinType joinType) {
+    return joinOnColumns(left, leftColumns, right, rightColumns, Optional.empty(), joinType);
   }
 
   /**

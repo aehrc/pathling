@@ -85,6 +85,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn().get())
         .valueColumn(argumentDataset.col("value"))
+        .thisColumn(inputPath.getValueColumn())
         .singular(true)
         .build();
 
@@ -142,6 +143,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn().get())
         .valueColumn(argumentDataset.col("value"))
+        .thisColumn(inputPath.getValueColumn())
         .singular(true)
         .build();
 
@@ -164,55 +166,6 @@ public class WhereFunctionTest {
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc4", null)
-        .build();
-    assertThat(result)
-        .selectResult()
-        .hasRows(expectedDataset);
-  }
-
-  @Test
-  public void withLiteralArgument() {
-    // Build an expression which represents the input to the function.
-    final Dataset<Row> inputDataset = new DatasetBuilder()
-        .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "en")
-        .withRow("Patient/abc1", "es")
-        .withRow("Patient/abc2", "de")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "zh")
-        .build();
-    final ElementPath inputExpression = new ElementPathBuilder()
-        .fhirType(FHIRDefinedType.STRING)
-        .dataset(inputDataset)
-        .idAndValueColumns()
-        .singular(false)
-        .build();
-
-    // Build an expression which represents the argument to the function.
-    final BooleanLiteralPath argumentPath = BooleanLiteralPath
-        .fromString("true", inputExpression);
-
-    // Prepare the input to the function.
-    final ParserContext parserContext = new ParserContextBuilder().build();
-    final NamedFunctionInput whereInput = new NamedFunctionInput(parserContext, inputExpression,
-        Collections.singletonList(argumentPath));
-
-    // Execute the function.
-    final NamedFunction whereFunction = NamedFunction.getInstance("where");
-    final FhirPath result = whereFunction.invoke(whereInput);
-
-    // Check the result dataset.
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
-        .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "en")
-        .withRow("Patient/abc1", "es")
-        .withRow("Patient/abc2", "de")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "zh")
         .build();
     assertThat(result)
         .selectResult()
@@ -250,6 +203,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn().get())
         .valueColumn(argumentDataset.col("value"))
+        .thisColumn(inputPath.getValueColumn())
         .singular(true)
         .build();
 
@@ -339,6 +293,25 @@ public class WhereFunctionTest {
         () -> whereFunction.invoke(whereInput));
     assertEquals(
         "Argument to where function must be a singular Boolean: $this.communication.preferred",
+        error.getMessage());
+  }
+
+  @Test
+  public void throwsErrorIfArgumentIsLiteral() {
+    final ResourcePath input = new ResourcePathBuilder().build();
+    final BooleanLiteralPath argument = BooleanLiteralPath
+        .fromString("true", input);
+
+    final ParserContext parserContext = new ParserContextBuilder().build();
+    final NamedFunctionInput whereInput = new NamedFunctionInput(parserContext, input,
+        Collections.singletonList(argument));
+
+    final NamedFunction whereFunction = NamedFunction.getInstance("where");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> whereFunction.invoke(whereInput));
+    assertEquals(
+        "Argument to where function cannot be a literal",
         error.getMessage());
   }
 

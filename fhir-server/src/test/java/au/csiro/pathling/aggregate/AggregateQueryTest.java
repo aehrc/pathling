@@ -365,6 +365,24 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  // empty function
+  @Disabled
+  void queryWithWhereInAggregation() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource, ResourceType.OBSERVATION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of female patients", "where($this.gender = 'female').count()")
+        .withGrouping("gender")
+        .withGrouping("maritalStatus.coding")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithWhereInAggregation.Parameters.json",
+        response);
+  }
+
+  @Test
   void queryWithWhereAndLiterals() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource);
@@ -372,21 +390,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("Number of patients", "count()")
         .withGrouping("5.where($this = 6)")
-        .build();
-
-    response = executor.execute(request);
-    assertResponse("AggregateQueryTest/queryWithAmbiguousSelfJoin.Parameters.json",
-        response);
-  }
-
-  @Test
-  void queryWithWhereAndTrue() {
-    subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
-
-    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("where(true)")
         .build();
 
     response = executor.execute(request);

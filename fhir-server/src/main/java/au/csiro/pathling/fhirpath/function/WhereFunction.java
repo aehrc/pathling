@@ -53,10 +53,6 @@ public class WhereFunction implements NamedFunction {
         "Argument to where function must be navigable from collection item (use $this): "
             + argumentPath.getExpression());
 
-    // We use the argument dataset alone, to avoid the problems with joining from the input
-    // dataset to the argument dataset (which would create duplicate rows).
-    // final Dataset<Row> dataset = argumentPath.getDataset();
-
     // The result is the input value if it is equal to true, or null otherwise (signifying the
     // absence of a value).
     final Column argumentTrue = argumentPath.getValueColumn().equalTo(true);
@@ -71,7 +67,7 @@ public class WhereFunction implements NamedFunction {
       final Dataset<Row> distinctIds = argumentDataset
           .select(groupingColumns.toArray(new Column[]{})).distinct();
       final DatasetWithColumns datasetWithColumns = joinOnColumns(distinctIds, groupingColumns,
-          argumentDataset, groupingColumns, JoinType.LEFT_OUTER);
+          argumentDataset, groupingColumns, Optional.of(argumentTrue), JoinType.LEFT_OUTER);
       dataset = datasetWithColumns.getDataset();
       input.getContext().setGroupingColumns(datasetWithColumns.getColumns());
       idColumn = Optional.empty();
