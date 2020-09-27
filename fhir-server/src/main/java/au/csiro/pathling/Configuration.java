@@ -126,6 +126,9 @@ public class Configuration {
     @NotNull
     private Aws aws;
 
+    /**
+     * Configuration relating to storage of data using Amazon Web Services (AWS).
+     */
     @Data
     public static class Aws {
 
@@ -296,7 +299,20 @@ public class Configuration {
      * Controls the maximum number of cache entries held in memory.
      */
     @NotNull
-    private long maxEntries;
+    @Min(0)
+    private long aggregateRequestCacheSize;
+
+    @NotNull
+    @Min(0)
+    private long searchBundleCacheSize;
+
+    @NotNull
+    @Min(0)
+    private long searchPageCacheSize;
+
+    @NotNull
+    @Min(0)
+    private long resourceReaderCacheSize;
 
   }
 

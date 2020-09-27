@@ -71,14 +71,14 @@ public class CachingSearchExecutor implements IBundleProvider {
       @Nonnull final Optional<StringAndListParam> filters) {
     delegate = new SearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
         terminologyClient, terminologyClientFactory, fhirEncoders, subjectResource, filters);
-    cache = initializeCache(configuration.getCaching().getMaxEntries());
+    cache = initializeCache(configuration.getCaching().getSearchPageCacheSize());
   }
 
   private LoadingCache<SearchCacheKey, List<IBaseResource>> initializeCache(
       final long maximumSize) {
     return CacheBuilder.newBuilder()
         .maximumSize(maximumSize)
-        .build(new CacheLoader<SearchCacheKey, List<IBaseResource>>() {
+        .build(new CacheLoader<>() {
           @Override
           public List<IBaseResource> load(@Nonnull final SearchCacheKey key) {
             return delegate.getResources(key.getFromIndex(), key.getToIndex());

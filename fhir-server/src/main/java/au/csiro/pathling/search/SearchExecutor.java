@@ -114,7 +114,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     final Column idColumn;
     final Column valueColumn;
 
-    if (!filters.isPresent() || filters.get().getValuesAsQueryTokens().isEmpty()) {
+    if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
       // If there are no filters, return all resources.
       dataset = subjectDataset;
       check(context.getInputContext().getIdColumn().isPresent());
@@ -245,7 +245,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Override
   public Integer size() {
     try {
-      if (!count.isPresent()) {
+      if (count.isEmpty()) {
         reportQueryPlan(result);
         count = Optional.of(Math.toIntExact(result.count()));
       }

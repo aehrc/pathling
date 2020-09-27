@@ -11,8 +11,13 @@ import static au.csiro.pathling.io.PersistenceScheme.fileNameForResource;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.errors.UnexpectedServerError;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -41,7 +46,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-public class ResourceReader {
+public class ResourceReader implements Cacheable {
 
   @Nonnull
   private final SparkSession spark;
@@ -56,6 +61,9 @@ public class ResourceReader {
   private Set<ResourceType> availableResourceTypes = Collections
       .unmodifiableSet(EnumSet.noneOf(ResourceType.class));
 
+  @Nullable
+  private LoadingCache<ResourceType, Dataset<Row>> cache = null;
+
   /**
    * @param configuration A {@link Configuration} object which controls the behaviour of the reader
    * @param spark A {@link SparkSession} for interacting with Spark
@@ -65,7 +73,23 @@ public class ResourceReader {
     this.spark = spark;
     this.warehouseUrl = convertS3ToS3aUrl(configuration.getStorage().getWarehouseUrl());
     this.databaseName = configuration.getStorage().getDatabaseName();
+    if (configuration.getCaching().isEnabled()) {
+      cache = initializeCache(configuration.getCaching().getResourceReaderCacheSize());
+    }
     updateAvailableResourceTypes();
+  }
+
+  private LoadingCache<ResourceType, Dataset<Row>> initializeCache(final long maximumSize) {
+    return CacheBuilder.newBuilder()
+        .maximumSize(maximumSize)
+        .build(
+            new CacheLoader<>() {
+              @Override
+              public Dataset<Row> load(@Nonnull final ResourceType resourceType) {
+                return getDatasetForResourceType(resourceType);
+              }
+            }
+        );
   }
 
   /**
@@ -148,6 +172,19 @@ public class ResourceReader {
    */
   @Nonnull
   public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
+    if (cache == null) {
+      return getDatasetForResourceType(resourceType);
+    } else {
+      try {
+        return cache.getUnchecked(resourceType);
+      } catch (final UncheckedExecutionException e) {
+        throw new RuntimeException(e.getCause());
+      }
+    }
+  }
+
+  @Nonnull
+  private Dataset<Row> getDatasetForResourceType(@Nonnull final ResourceType resourceType) {
     if (!availableResourceTypes.contains(resourceType)) {
       throw new ResourceNotFoundError(
           "Requested resource type not available within selected database: " + resourceType
@@ -155,6 +192,8 @@ public class ResourceReader {
     }
     final String tableUrl = String
         .join("/", warehouseUrl, databaseName, fileNameForResource(resourceType));
+
+    log.info("Loading resource " + resourceType.toCode() + " from: " + tableUrl);
     @Nullable final Dataset<Row> resources = spark.read().parquet(tableUrl);
     checkNotNull(resources);
 
@@ -162,4 +201,10 @@ public class ResourceReader {
     return resources;
   }
 
+  @Override
+  public void invalidateCache() {
+    if (cache != null) {
+      cache.invalidateAll();
+    }
+  }
 }
