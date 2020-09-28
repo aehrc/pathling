@@ -77,7 +77,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
   @Nonnull
   @Override
   public AggregateResponse execute(@Nonnull final AggregateRequest query) {
-    log.info("Executing request");
+    log.info("Executing request: " + query);
 
     // Build a new expression parser, and parse all of the filter and grouping expressions within
     // the query.
