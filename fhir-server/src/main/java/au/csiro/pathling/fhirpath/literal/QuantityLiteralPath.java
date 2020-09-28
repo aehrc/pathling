@@ -56,7 +56,8 @@ public class QuantityLiteralPath extends LiteralPath {
     }
 
     final String rawUnit = matcher.group(2);
-    final String unit = StringLiteralPath.fromString(rawUnit, context).getLiteralValue().getValue();
+    final String unit = StringLiteralPath.fromString(rawUnit, context).getLiteralValue()
+        .getValueAsString();
     final Quantity quantity = new Quantity();
     quantity.setUnit(unit);
 
