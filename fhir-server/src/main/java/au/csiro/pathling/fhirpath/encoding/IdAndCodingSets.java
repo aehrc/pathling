@@ -8,10 +8,11 @@ package au.csiro.pathling.fhirpath.encoding;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Data;
-
 
 @Data
 public class IdAndCodingSets implements Serializable {
@@ -26,4 +27,16 @@ public class IdAndCodingSets implements Serializable {
 
   @Nullable
   private List<SimpleCoding> argCodings;
+
+
+  @Nonnull
+  public List<SimpleCoding> safeGetInputCodings() {
+    return inputCodings != null ? getInputCodings() : Collections.emptyList();
+  }
+
+  @Nonnull
+  public List<SimpleCoding> safeGetArgCodings() {
+    return argCodings != null ? getArgCodings() : Collections.emptyList();
+  }
+
 }
