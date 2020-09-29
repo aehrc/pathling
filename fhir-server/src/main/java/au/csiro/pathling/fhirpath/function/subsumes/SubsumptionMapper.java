@@ -1,9 +1,9 @@
 package au.csiro.pathling.fhirpath.function.subsumes;
 
-import au.csiro.pathling.fhir.SimpleCoding;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
-import au.csiro.pathling.fhirpath.function.subsumes.encoding.IdAndBoolean;
-import au.csiro.pathling.fhirpath.function.subsumes.encoding.IdAndCodingSets;
+import au.csiro.pathling.fhirpath.encoding.IdAndBoolean;
+import au.csiro.pathling.fhirpath.encoding.IdAndCodingSets;
 import com.google.common.collect.Streams;
 import java.util.Iterator;
 import java.util.List;

@@ -1,8 +1,7 @@
 package au.csiro.pathling.fhirpath.function.subsumes;
 
-import au.csiro.pathling.fhir.SimpleCoding;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhirpath.function.subsumes.encoding.Mapping;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -79,14 +78,14 @@ class ClosureService {
     Mapping result = null;
     switch (equivalence) {
       case SUBSUMES:
-        mappings.add(new Mapping(target, source));
+        mappings.add(Mapping.of(target, source));
         break;
       case SPECIALIZES:
-        mappings.add(new Mapping(source, target));
+        mappings.add(Mapping.of(source, target));
         break;
       case EQUAL:
-        mappings.add(new Mapping(source, target));
-        mappings.add(new Mapping(target, source));
+        mappings.add(Mapping.of(source, target));
+        mappings.add(Mapping.of(target, source));
         break;
       case UNMATCHED:
         break;

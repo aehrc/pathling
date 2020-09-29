@@ -9,7 +9,7 @@ package au.csiro.pathling.test.assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.fhir.SimpleCoding;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import javax.annotation.Nonnull;

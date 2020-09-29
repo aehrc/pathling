@@ -1,7 +1,6 @@
 package au.csiro.pathling.fhirpath.function.subsumes;
 
-import au.csiro.pathling.fhir.SimpleCoding;
-import au.csiro.pathling.fhirpath.function.subsumes.encoding.Mapping;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import com.google.common.collect.Streams;
 import java.util.Collection;
 import java.util.List;

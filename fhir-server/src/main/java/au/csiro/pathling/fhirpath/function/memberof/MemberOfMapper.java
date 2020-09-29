@@ -8,7 +8,7 @@ package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 
-import au.csiro.pathling.fhir.SimpleCoding;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import ca.uhn.fhir.rest.param.UriParam;
