@@ -9,7 +9,9 @@ package au.csiro.pathling.fhirpath.function.subsumes.encoding;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NonNull;
 
 /**
  * Used for representing results of functions that return boolean values.
@@ -17,34 +19,23 @@ import lombok.Data;
  * @author John Grimes
  */
 @Data
+@AllArgsConstructor(staticName = "of")
 public class IdAndBoolean implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  @Nullable
+  @NonNull
   private String id;
 
   @Nullable
   private Boolean value;
 
-  private IdAndBoolean(String id, Boolean value) {
-    this.id = id;
-    this.value = value;
-  }
-
-  public static IdAndBoolean resultFor(@Nonnull String id, boolean value) {
-    return new IdAndBoolean(id, value);
-  }
-
-  public static IdAndBoolean nullFor(@Nonnull String id) {
+  /**
+   * Creates a NULL boolean result for given id
+   * @param id
+   * @return NULL boolean result
+   */
+  public static IdAndBoolean nullOf(@Nonnull String id) {
     return new IdAndBoolean(id, null);
-  }
-
-  @Override
-  public String toString() {
-    return "IdAndBoolean{" +
-        "id='" + id + '\'' +
-        ", value=" + value +
-        '}';
   }
 }

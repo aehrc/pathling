@@ -43,13 +43,13 @@ public class SubsumptionMapper
 
     return entries.stream().map(r -> {
       if (r.getInputCodings() == null) {
-        return IdAndBoolean.nullFor(r.getId());
+        return IdAndBoolean.nullOf(r.getId());
       } else {
         boolean result = (!inverted
                           ? subsumeClosure.anyRelates(r.getInputCodings(), r.getArgCodings())
                           :
                           subsumeClosure.anyRelates(r.getArgCodings(), r.getInputCodings()));
-        return IdAndBoolean.resultFor(r.getId(), result);
+        return IdAndBoolean.of(r.getId(), result);
       }
     }).iterator();
   }

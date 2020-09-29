@@ -16,6 +16,7 @@ import org.hl7.fhir.r4.model.Coding;
  * @author John Grimes
  * @author Pior Szul
  */
+
 public class Mapping implements Serializable {
 
   private static final long serialVersionUID = 1L;

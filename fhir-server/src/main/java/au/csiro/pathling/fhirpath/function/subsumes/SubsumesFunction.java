@@ -39,9 +39,7 @@ public class SubsumesFunction implements NamedFunction {
 
 
   private static final String COL_ID = "id";
-  private static final String COL_CODE = "code";
-  private static final String COL_SYSTEM = "system";
-  private static final String COL_VERSION = "version";
+  private static final String COL_VALUE = "value";
   private static final String COL_CODING = "coding";
   private static final String COL_CODING_SET = "codingSet";
   private static final String COL_INPUT_CODINGS = "inputCodings";
@@ -70,25 +68,15 @@ public class SubsumesFunction implements NamedFunction {
     FhirPath inputExpression = input.getInput();
     FhirPath argExpression = input.getArguments().get(0);
 
-    ParserContext parserContext = input.getContext();
     Dataset<Row> inputSystemAndCodeDataset = toInputDataset(inputExpression);
-    Dataset<Row> argSystemAndCodeDataset = toArgDataset(argExpression, parserContext);
+    Dataset<Row> argSystemAndCodeDataset = toArgDataset(argExpression);
 
     Dataset<Row> resultDataset = createSubsumesResult(input.getContext(),
         inputSystemAndCodeDataset,
         argSystemAndCodeDataset);
 
-    Column idColumn = resultDataset.col("id");
-    Column valueColumn = resultDataset.col("value");
-
-    //TODO: check what this is all about
-    // // If there is a `$this` context, we need to add the value column back in to the resulting
-    // // dataset so that it can be passed forward in the result from the enclosing function.
-    // ParsedExpression thisContext = input.getContext().getThisContext();
-    // if (thisValuePresentInDataset(inputExpression.getDataset(), thisContext)) {
-    //   resultDataset = resultDataset.join(thisContext.getDataset(),
-    //       idColumn.equalTo(thisContext.getIdColumn()), "inner");
-    // }
+    Column idColumn = resultDataset.col(COL_ID);
+    Column valueColumn = resultDataset.col(COL_VALUE);
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
@@ -119,6 +107,7 @@ public class SubsumesFunction implements NamedFunction {
   /**
    * Converts extracts the input dataset from a FhirPath
    */
+  @Nonnull
   private Dataset<Row> toInputDataset(@Nonnull FhirPath expression) {
 
     assert (isCodingOrCodeableConcept(expression));
@@ -135,8 +124,8 @@ public class SubsumesFunction implements NamedFunction {
     );
   }
 
-  private Dataset<Row> toArgDataset(@Nonnull FhirPath expression,
-      @Nonnull ParserContext parserContext) {
+  @Nonnull
+  private Dataset<Row> toArgDataset(@Nonnull FhirPath expression) {
 
     assert (isCodingOrCodeableConcept(expression));
 
