@@ -8,12 +8,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.ToString;
 
 /**
  * Represents a relation defined by a transitive closure table.
  *
  * @author Piotr Szul
  */
+@ToString
 class Closure {
 
   private final Map<SimpleCoding, List<SimpleCoding>> mappings;
@@ -78,11 +80,6 @@ class Closure {
         left.stream().filter(SimpleCoding::isNotNull).collect(Collectors.toSet());
     final Closure.CodingSet expansion = new Closure.CodingSet(expand(leftSet));
     return right.stream().anyMatch(expansion::contains);
-  }
-
-  @Override
-  public String toString() {
-    return "Closure [mappings=" + mappings + "]";
   }
 
   public static Closure fromMappings(List<Mapping> mappings) {

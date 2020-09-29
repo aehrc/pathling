@@ -20,7 +20,7 @@ import lombok.NonNull;
  */
 @Data
 @AllArgsConstructor(staticName = "of")
-public class IdAndBoolean implements Serializable {
+public class BooleanResult implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
@@ -35,7 +35,7 @@ public class IdAndBoolean implements Serializable {
    * @param id
    * @return NULL boolean result
    */
-  public static IdAndBoolean nullOf(@Nonnull String id) {
-    return new IdAndBoolean(id, null);
+  public static BooleanResult nullOf(@Nonnull String id) {
+    return new BooleanResult(id, null);
   }
 }

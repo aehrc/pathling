@@ -1,12 +1,14 @@
 package au.csiro.pathling.fhirpath.function.subsumes;
 
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
@@ -23,16 +25,17 @@ import org.slf4j.LoggerFactory;
  *
  * @author Piotr Szul
  */
+@Slf4j
 class ClosureService {
 
-  private static final Logger logger = LoggerFactory.getLogger(ClosureService.class);
-
+  @Nonnull
   private final TerminologyClient terminologyClient;
 
-  public ClosureService(TerminologyClient terminologyClient) {
+  public ClosureService(@Nonnull TerminologyClient terminologyClient) {
     this.terminologyClient = terminologyClient;
   }
 
+  @Nonnull
   public Closure getSubsumesRelation(
       Collection<SimpleCoding> systemAndCodes) {
     List<Coding> codings =
@@ -41,7 +44,7 @@ class ClosureService {
     // Create a unique name for the closure table for this code system, based upon the
     // expressions of the input, argument and the CodeSystem URI.
     String closureName = UUID.randomUUID().toString();
-    logger.info("Sending $closure request to terminology service with name '{}' and {} codings",
+    log.info("Sending $closure request to terminology service with name '{}' and {} codings",
         closureName, codings.size());
     // Execute the closure operation against the terminology server.
     // TODO: add validation checks for the response
@@ -90,7 +93,7 @@ class ClosureService {
       case UNMATCHED:
         break;
       default:
-        logger.warn("Ignoring unexpected equivalence: " + equivalence + " source: " + source
+        log.warn("Ignoring unexpected equivalence: " + equivalence + " source: " + source
             + " target: " + target);
         break;
     }

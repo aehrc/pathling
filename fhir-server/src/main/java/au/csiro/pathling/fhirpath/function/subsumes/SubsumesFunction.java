@@ -10,33 +10,34 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.encoding.BooleanResult;
+import au.csiro.pathling.fhirpath.encoding.IdAndCodingSets;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
-import au.csiro.pathling.fhirpath.encoding.IdAndBoolean;
-import au.csiro.pathling.fhirpath.encoding.IdAndCodingSets;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 /**
- * Describes a function which returns a boolean value based upon whether any of the input set of
- * Codings or CodeableConcepts subsume one or more Codings or CodeableConcepts in the target set.
+ * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
+ * values whether based upon whether each item subsumes or is subsumedBy one or more Codings or
+ * CodeableConcepts in the argument set.
  *
  * @author John Grimes
  * @author Piotr Szul
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
  */
-public class SubsumesFunction implements NamedFunction {
 
+@Slf4j
+public class SubsumesFunction implements NamedFunction {
 
   private static final String COL_ID = "id";
   private static final String COL_VALUE = "value";
@@ -44,8 +45,8 @@ public class SubsumesFunction implements NamedFunction {
   private static final String COL_CODING_SET = "codingSet";
   private static final String COL_INPUT_CODINGS = "inputCodings";
   private static final String COL_ARG_CODINGS = "argCodings";
+  private static final String FIELD_CODING = "coding";
 
-  private static final Logger logger = LoggerFactory.getLogger(SubsumesFunction.class);
 
   private boolean inverted = false;
   private String functionName = "subsumes";
@@ -65,77 +66,104 @@ public class SubsumesFunction implements NamedFunction {
   public FhirPath invoke(@Nonnull NamedFunctionInput input) {
     validateInput(input);
 
-    FhirPath inputExpression = input.getInput();
-    FhirPath argExpression = input.getArguments().get(0);
+    final FhirPath inputFhirPath = input.getInput();
+    final Dataset<IdAndCodingSets> idAndCodingSet = createJoinedDataset(input.getInput(),
+        input.getArguments().get(0));
 
-    Dataset<Row> inputSystemAndCodeDataset = toInputDataset(inputExpression);
-    Dataset<Row> argSystemAndCodeDataset = toArgDataset(argExpression);
+    // apply subsumption relation per partition
+    final Dataset<Row> resultDataset = idAndCodingSet
+        .mapPartitions(
+            new SubsumptionMapper(input.getContext().getTerminologyClientFactory().get(), inverted),
+            Encoders.bean(BooleanResult.class)).toDF();
 
-    Dataset<Row> resultDataset = createSubsumesResult(input.getContext(),
-        inputSystemAndCodeDataset,
-        argSystemAndCodeDataset);
-
-    Column idColumn = resultDataset.col(COL_ID);
-    Column valueColumn = resultDataset.col(COL_VALUE);
+    final Column idColumn = resultDataset.col(COL_ID);
+    final Column valueColumn = resultDataset.col(COL_VALUE);
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
     return new BooleanPath(expression, resultDataset, Optional.of(idColumn),
         valueColumn,
-        false,
-        //        inputExpression.isSingular(),
+        inputFhirPath.isSingular(),
         FHIRDefinedType.BOOLEAN);
   }
 
-  private Dataset<Row> createSubsumesResult(ParserContext ctx,
-      Dataset<Row> inputCodingSet, Dataset<Row> argCodingSet) {
+  /**
+   * Creates a dataset with schema: STRING id, ARRAY(CODING) inputCoding, ARRAY(CODING) argCodings,
+   * which joins for each id arrays representing input Codings or CodeableConcept with the array
+   * representing all argument codings.
+   *
+   * @see #toInputDataset(FhirPath)
+   * @see #toArgDataset(FhirPath)
+   */
+  @Nonnull
+  private Dataset<IdAndCodingSets> createJoinedDataset(@Nonnull FhirPath inputFhirPath,
+      @Nonnull FhirPath argFhirPath) {
 
-    // JOIN the input args datasets
-    Dataset<Row> joinedCodingSets = inputCodingSet.join(argCodingSet,
+    Dataset<Row> inputCodingSet = toInputDataset(inputFhirPath);
+    Dataset<Row> argCodingSet = toArgDataset(argFhirPath);
+
+    // JOIN the input arg args datasets
+    return inputCodingSet.join(argCodingSet,
         inputCodingSet.col(COL_ID).equalTo(argCodingSet.col(COL_ID)), "left_outer")
         .select(inputCodingSet.col(COL_ID).alias(COL_ID),
             inputCodingSet.col(COL_CODING_SET).alias(COL_INPUT_CODINGS),
-            argCodingSet.col(COL_CODING_SET).alias(COL_ARG_CODINGS));
-
-    // apply subsumption relation per partition
-    return joinedCodingSets.as(Encoders.bean(IdAndCodingSets.class))
-        .mapPartitions(new SubsumptionMapper(ctx.getTerminologyClientFactory().get(), inverted),
-            Encoders.bean(IdAndBoolean.class)).toDF();
+            argCodingSet.col(COL_CODING_SET).alias(COL_ARG_CODINGS))
+        .as(Encoders.bean(IdAndCodingSets.class));
   }
 
-
   /**
-   * Converts extracts the input dataset from a FhirPath
+   * Converts the the input fhirpath to a dataset with schema: STRING id, ARRAY(struct CODING)
+   * codingSet Each CodeableConcept is converted to an array that includes all its coding. Each
+   * Coding is converted to an array that only includes this coding.
+   * <p>
+   * NULL Codings and CodeableConcepts are represented as NULL `codingSet`.
+   *
+   * @param fhirPath to convert
+   * @return input dataset
    */
   @Nonnull
-  private Dataset<Row> toInputDataset(@Nonnull FhirPath expression) {
+  private Dataset<Row> toInputDataset(@Nonnull FhirPath fhirPath) {
 
-    assert (isCodingOrCodeableConcept(expression));
+    assert (isCodingOrCodeableConcept(fhirPath));
 
-    Dataset<Row> expressionDataset = expression.getDataset();
-    Column codingArrayCol = (isCodeableConcept(expression))
-                            ? expression.getValueColumn().getField("coding")
-                            : array(expression.getValueColumn());
+    Dataset<Row> expressionDataset = fhirPath.getDataset();
+    Column codingArrayCol = (isCodeableConcept(fhirPath))
+                            ? fhirPath.getValueColumn().getField(FIELD_CODING)
+                            : array(fhirPath.getValueColumn());
 
-    return expressionDataset.select(expression.getIdColumn().get().alias(COL_ID),
-        when(expression.getValueColumn().isNotNull(), codingArrayCol)
+    return expressionDataset.select(fhirPath.getIdColumn().get().alias(COL_ID),
+        when(fhirPath.getValueColumn().isNotNull(), codingArrayCol)
             .otherwise(null)
             .alias(COL_CODING_SET)
     );
   }
 
+  /**
+   * Converts the the argument fhirpath to a dataset with schema: STRING id, ARRAY(struct CODING)
+   * codingSet
+   * <p>
+   * All directly provided Coding or all Codings from provided CodeableConcepts are collected in a
+   * single `array` per resource
+   * <p>
+   * NULL Codings and CodeableConcepts are ignored. In case the resource does not have any non NULL
+   * elements an empty array created.
+   *
+   * @param fhirPath to convert
+   * @return input dataset
+   */
+
   @Nonnull
-  private Dataset<Row> toArgDataset(@Nonnull FhirPath expression) {
+  private Dataset<Row> toArgDataset(@Nonnull FhirPath fhirPath) {
 
-    assert (isCodingOrCodeableConcept(expression));
+    assert (isCodingOrCodeableConcept(fhirPath));
 
-    Dataset<Row> expressionDataset = expression.getDataset();
-    Column codingCol = (isCodeableConcept(expression))
-                       ? explode_outer(expression.getValueColumn().getField("coding"))
-                       : expression.getValueColumn();
+    Dataset<Row> expressionDataset = fhirPath.getDataset();
+    Column codingCol = (isCodeableConcept(fhirPath))
+                       ? explode_outer(fhirPath.getValueColumn().getField(FIELD_CODING))
+                       : fhirPath.getValueColumn();
 
     Dataset<Row> systemAndCodeDataset = expressionDataset
-        .select(expression.getIdColumn().get().alias(COL_ID), codingCol.alias(COL_CODING));
+        .select(fhirPath.getIdColumn().get().alias(COL_ID), codingCol.alias(COL_CODING));
 
     return systemAndCodeDataset
         .groupBy(systemAndCodeDataset.col(COL_ID))

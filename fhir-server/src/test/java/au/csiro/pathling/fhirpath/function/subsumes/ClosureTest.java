@@ -10,11 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.function.subsumes.Closure.CodingSet;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import org.junit.Test;
 import org.junit.jupiter.api.Tag;
 

@@ -45,7 +45,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
-import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -306,7 +305,7 @@ public class SubsumesFunctionTest {
 
     return assertThat(result)
         .isElementPath(BooleanPath.class)
-        .isNotSingular();
+        .preservesCardinalityOf(inputExpression);
   }
 
   private DatasetAssert assertSubsumesSuccess(final FhirPath inputExpression,

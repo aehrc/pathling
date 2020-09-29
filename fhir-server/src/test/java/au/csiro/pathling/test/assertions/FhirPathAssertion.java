@@ -61,6 +61,12 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
     return self();
   }
 
+  public T preservesCardinalityOf(FhirPath otherFhirPath) {
+    assertEquals(otherFhirPath.isSingular(), fhirPath.isSingular());
+    return self();
+  }
+
+
   public ElementPathAssertion isElementPath(final Class<? extends ElementPath> ofType) {
     assertTrue(ofType.isAssignableFrom(fhirPath.getClass()));
     return new ElementPathAssertion((ElementPath) fhirPath);
