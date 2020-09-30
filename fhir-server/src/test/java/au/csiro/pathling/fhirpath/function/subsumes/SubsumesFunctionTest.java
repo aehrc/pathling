@@ -213,16 +213,7 @@ public class SubsumesFunctionTest {
 
     return (CodingPath) argument;
   }
-
-  private static DatasetBuilder allFalse() {
-    return new DatasetBuilder().withIdsAndValue(false, ALL_RES_IDS);
-  }
-
-  private static DatasetBuilder allTrue() {
-    return new DatasetBuilder().withIdsAndValue(true, ALL_RES_IDS);
-  }
-
-
+  
   private static DatasetBuilder expectedLiteralSubsumes() {
     // literal coding is MEDIUM
     return new DatasetBuilder()
