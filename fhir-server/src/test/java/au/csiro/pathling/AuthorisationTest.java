@@ -6,18 +6,17 @@
 
 package au.csiro.pathling;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import java.io.IOException;
 import java.util.List;
 import lombok.Getter;
-import org.json.JSONException;
+import org.apache.catalina.webresources.TomcatURLStreamHandlerFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -28,6 +27,7 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * @author John Grimes
  */
+@Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @TestPropertySource(locations = {"classpath:/configuration/authorisation-enabled.properties"})
 class AuthorisationTest {
@@ -37,6 +37,12 @@ class AuthorisationTest {
 
   @Autowired
   private TestRestTemplate restTemplate;
+
+  @BeforeAll
+  static void beforeAll() {
+    // See: https://github.com/spring-projects/spring-boot/issues/21535#issuecomment-634088332
+    TomcatURLStreamHandlerFactory.disable();
+  }
 
   @Test
   void smartConfiguration() {
@@ -52,15 +58,6 @@ class AuthorisationTest {
         smartConfiguration.getAuthorizationEndpoint());
     assertEquals("https://sso.acme.com/auth/token", smartConfiguration.getTokenEndpoint());
     assertEquals("https://sso.acme.com/auth/revoke", smartConfiguration.getRevocationEndpoint());
-  }
-
-  @Test
-  void capabilityStatement() throws IOException, JSONException {
-    final String response = restTemplate
-        .getForObject("http://localhost:" + port + "/fhir/metadata",
-            String.class);
-    assertJson("capabilities/capabilityStatement.CapabilityStatement.json",
-        response, JSONCompareMode.LENIENT);
   }
 
   // TODO: Add tests for enforcement of authorisation. Use WireMock for mocking out the JWKS fetch.
