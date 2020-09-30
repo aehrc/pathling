@@ -38,27 +38,27 @@ public class SubsumptionMapper
    * au.csiro.pathling.fhir.TerminologyClient}
    * @param inverted if true checks for `subsumedBy` relation otherwise for `subsumes`
    */
-  public SubsumptionMapper(@Nonnull TerminologyClientFactory terminologyClientFactory,
+  public SubsumptionMapper(@Nonnull final TerminologyClientFactory terminologyClientFactory,
       boolean inverted) {
     this.terminologyClientFactory = terminologyClientFactory;
     this.inverted = inverted;
   }
 
   @Override
-  public Iterator<BooleanResult> call(Iterator<IdAndCodingSets> input) {
-    List<IdAndCodingSets> entries = Streams.stream(input).collect(Collectors.toList());
+  public Iterator<BooleanResult> call(@Nonnull final Iterator<IdAndCodingSets> input) {
+    final List<IdAndCodingSets> entries = Streams.stream(input).collect(Collectors.toList());
 
     // Collect all distinct tokens used on both in inputs and arguments in this partition
     // Rows in which either input or argument are NULL are exluded as they do not need
     // to be included in closure request.
 
     // @TODO: filter out invalid codings, whatever the invalid definition is
-    Set<SimpleCoding> entrySet = entries.stream()
+    final Set<SimpleCoding> entrySet = entries.stream()
         .filter(r -> r.getInputCodings() != null && r.getArgCodings() != null)
         .flatMap(r -> Streams.concat(r.getInputCodings().stream(), r.getArgCodings().stream()))
         .collect(Collectors.toSet());
 
-    ClosureService closureService = new ClosureService(terminologyClientFactory.build(log));
+    final ClosureService closureService = new ClosureService(terminologyClientFactory.build(log));
     final Closure subsumeClosure = closureService.getSubsumesRelation(entrySet);
 
     return entries.stream().map(r -> {

@@ -35,7 +35,7 @@ class ClosureService {
 
   @Nonnull
   public Closure getSubsumesRelation(
-      Collection<SimpleCoding> systemAndCodes) {
+      @Nonnull final Collection<SimpleCoding> systemAndCodes) {
     List<Coding> codings =
         systemAndCodes.stream().map(SimpleCoding::toCoding).collect(Collectors.toList());
     // recreate the systemAndCodes dataset from the list not to execute the query again.
@@ -54,7 +54,8 @@ class ClosureService {
     return conceptMapToClosure(closureResponse);
   }
 
-  private void validateConceptMap(ConceptMap conceptMap, String closureName, String version) {
+  private void validateConceptMap(@Nonnull final ConceptMap conceptMap,
+      @Nonnull final String closureName, @Nonnull final String version) {
     if (!PublicationStatus.ACTIVE.equals(conceptMap.getStatus())) {
       throw new RuntimeException(
           "Expected ConceptMap with status: ACTIVE, got: " + conceptMap.getStatus());
@@ -74,9 +75,9 @@ class ClosureService {
    *
    * @return Mapping for subsumes relation i.e from -- subsumes --> to
    */
-  private static Mapping appendSubsumesMapping(List<Mapping> mappings, SimpleCoding source,
-      SimpleCoding target, ConceptMapEquivalence equivalence) {
-    Mapping result = null;
+  private static void appendSubsumesMapping(@Nonnull final List<Mapping> mappings,
+      @Nonnull final SimpleCoding source,
+      @Nonnull final SimpleCoding target, @Nonnull final ConceptMapEquivalence equivalence) {
     switch (equivalence) {
       case SUBSUMES:
         mappings.add(Mapping.of(target, source));
@@ -95,11 +96,11 @@ class ClosureService {
             + " target: " + target);
         break;
     }
-    return result;
   }
 
-  private static List<Mapping> conceptMapToMappings(ConceptMap conceptMap) {
-    List<Mapping> mappings = new ArrayList<Mapping>();
+  @Nonnull
+  private static List<Mapping> conceptMapToMappings(@Nonnull final ConceptMap conceptMap) {
+    final List<Mapping> mappings = new ArrayList<>();
     if (conceptMap.hasGroup()) {
       List<ConceptMapGroupComponent> groups = conceptMap.getGroup();
       for (ConceptMapGroupComponent group : groups) {
@@ -117,7 +118,8 @@ class ClosureService {
     return mappings;
   }
 
-  static Closure conceptMapToClosure(ConceptMap conceptMap) {
+  @Nonnull
+  static Closure conceptMapToClosure(@Nonnull final ConceptMap conceptMap) {
     return Closure.fromMappings(conceptMapToMappings(conceptMap));
   }
 }

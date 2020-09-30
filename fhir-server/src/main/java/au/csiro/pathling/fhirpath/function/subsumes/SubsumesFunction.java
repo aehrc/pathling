@@ -63,7 +63,7 @@ public class SubsumesFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull NamedFunctionInput input) {
+  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     validateInput(input);
 
     final FhirPath inputFhirPath = input.getInput();
@@ -96,11 +96,11 @@ public class SubsumesFunction implements NamedFunction {
    * @see #toArgDataset(FhirPath)
    */
   @Nonnull
-  private Dataset<IdAndCodingSets> createJoinedDataset(@Nonnull FhirPath inputFhirPath,
-      @Nonnull FhirPath argFhirPath) {
+  private Dataset<IdAndCodingSets> createJoinedDataset(@Nonnull final FhirPath inputFhirPath,
+      @Nonnull final FhirPath argFhirPath) {
 
-    Dataset<Row> inputCodingSet = toInputDataset(inputFhirPath);
-    Dataset<Row> argCodingSet = toArgDataset(argFhirPath);
+    final Dataset<Row> inputCodingSet = toInputDataset(inputFhirPath);
+    final Dataset<Row> argCodingSet = toArgDataset(argFhirPath);
 
     // JOIN the input arg args datasets
     return inputCodingSet.join(argCodingSet,
@@ -122,14 +122,14 @@ public class SubsumesFunction implements NamedFunction {
    * @return input dataset
    */
   @Nonnull
-  private Dataset<Row> toInputDataset(@Nonnull FhirPath fhirPath) {
+  private Dataset<Row> toInputDataset(@Nonnull final FhirPath fhirPath) {
 
     assert (isCodingOrCodeableConcept(fhirPath));
 
-    Dataset<Row> expressionDataset = fhirPath.getDataset();
-    Column codingArrayCol = (isCodeableConcept(fhirPath))
-                            ? fhirPath.getValueColumn().getField(FIELD_CODING)
-                            : array(fhirPath.getValueColumn());
+    final Dataset<Row> expressionDataset = fhirPath.getDataset();
+    final Column codingArrayCol = (isCodeableConcept(fhirPath))
+                                  ? fhirPath.getValueColumn().getField(FIELD_CODING)
+                                  : array(fhirPath.getValueColumn());
 
     return expressionDataset.select(fhirPath.getIdColumn().get().alias(COL_ID),
         when(fhirPath.getValueColumn().isNotNull(), codingArrayCol)
@@ -153,16 +153,16 @@ public class SubsumesFunction implements NamedFunction {
    */
 
   @Nonnull
-  private Dataset<Row> toArgDataset(@Nonnull FhirPath fhirPath) {
+  private Dataset<Row> toArgDataset(@Nonnull final FhirPath fhirPath) {
 
     assert (isCodingOrCodeableConcept(fhirPath));
 
-    Dataset<Row> expressionDataset = fhirPath.getDataset();
-    Column codingCol = (isCodeableConcept(fhirPath))
-                       ? explode_outer(fhirPath.getValueColumn().getField(FIELD_CODING))
-                       : fhirPath.getValueColumn();
+    final Dataset<Row> expressionDataset = fhirPath.getDataset();
+    final Column codingCol = (isCodeableConcept(fhirPath))
+                             ? explode_outer(fhirPath.getValueColumn().getField(FIELD_CODING))
+                             : fhirPath.getValueColumn();
 
-    Dataset<Row> systemAndCodeDataset = expressionDataset
+    final Dataset<Row> systemAndCodeDataset = expressionDataset
         .select(fhirPath.getIdColumn().get().alias(COL_ID), codingCol.alias(COL_CODING));
 
     return systemAndCodeDataset
@@ -183,18 +183,16 @@ public class SubsumesFunction implements NamedFunction {
         functionName + " function accepts one argument of type Coding or CodeableConcept"
     );
 
-    FhirPath inputExpression = input.getInput();
-    FhirPath argExpression = input.getArguments().get(0);
-    validateExpressionType(inputExpression, "input");
-    validateExpressionType(argExpression, "argument");
+    validateExpressionType(input.getInput(), "input");
+    validateExpressionType(input.getArguments().get(0), "argument");
   }
 
-  private boolean isCodeableConcept(@Nonnull FhirPath fhirPath) {
+  private boolean isCodeableConcept(@Nonnull final FhirPath fhirPath) {
     return (fhirPath instanceof ElementPath &&
         FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) fhirPath).getFhirType()));
   }
 
-  private boolean isCodingOrCodeableConcept(@Nonnull FhirPath fhirPath) {
+  private boolean isCodingOrCodeableConcept(@Nonnull final FhirPath fhirPath) {
     if (fhirPath instanceof CodingLiteralPath) {
       return true;
     } else if (fhirPath instanceof ElementPath) {
@@ -206,7 +204,8 @@ public class SubsumesFunction implements NamedFunction {
     }
   }
 
-  private void validateExpressionType(@Nonnull FhirPath inputPath, @Nonnull String pathRole) {
+  private void validateExpressionType(@Nonnull final FhirPath inputPath,
+      @Nonnull final String pathRole) {
     checkUserInput(
         isCodingOrCodeableConcept(inputPath),
         functionName + " function accepts " + pathRole + " of type Coding or CodeableConcept"

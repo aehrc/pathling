@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import lombok.ToString;
 
 /**
@@ -18,12 +19,14 @@ import lombok.ToString;
 @ToString
 class Closure {
 
+  @Nonnull
   private final Map<SimpleCoding, List<SimpleCoding>> mappings;
 
-  private Closure(Map<SimpleCoding, List<SimpleCoding>> mappings) {
+  private Closure(@Nonnull final Map<SimpleCoding, List<SimpleCoding>> mappings) {
     this.mappings = mappings;
   }
 
+  @Nonnull
   Map<SimpleCoding, List<SimpleCoding>> getMappings() {
     return mappings;
   }
@@ -35,10 +38,12 @@ class Closure {
    */
   static class CodingSet {
 
+    @Nonnull
     private final Set<SimpleCoding> allCodings;
+    @Nonnull
     private final Set<SimpleCoding> unversionedCodings;
 
-    CodingSet(Set<SimpleCoding> allCodings) {
+    CodingSet(@Nonnull final Set<SimpleCoding> allCodings) {
       this.allCodings = allCodings;
       this.unversionedCodings =
           allCodings.stream().map(SimpleCoding::toNonVersioned).collect(Collectors.toSet());
@@ -51,7 +56,7 @@ class Closure {
      *
      * @param c coding
      */
-    boolean contains(SimpleCoding c) {
+    boolean contains(@Nonnull final SimpleCoding c) {
       return allCodings.contains(c) || (c.isVersioned()
                                         ? allCodings.contains(c.toNonVersioned())
                                         : unversionedCodings.contains(c));
@@ -62,7 +67,8 @@ class Closure {
    * Expands given set of Codings using with the closure, that is produces a set of Codings that are
    * in the relation with the given set.
    */
-  public Set<SimpleCoding> expand(Set<SimpleCoding> codings) {
+  @Nonnull
+  public Set<SimpleCoding> expand(@Nonnull final Set<SimpleCoding> codings) {
     final Closure.CodingSet baseSet = new Closure.CodingSet(codings);
     return Streams
         .concat(codings.stream(), mappings.entrySet().stream()
@@ -74,18 +80,20 @@ class Closure {
    * Checks if any of the Codings in the right set is in the relation with any of the Codings in the
    * left set.
    */
-  public boolean anyRelates(Collection<SimpleCoding> left, Collection<SimpleCoding> right) {
+  public boolean anyRelates(@Nonnull final Collection<SimpleCoding> left,
+      @Nonnull final Collection<SimpleCoding> right) {
     // filter out null SystemAndCodes
-    Set<SimpleCoding> leftSet =
+    final Set<SimpleCoding> leftSet =
         left.stream().filter(SimpleCoding::isNotNull).collect(Collectors.toSet());
     final Closure.CodingSet expansion = new Closure.CodingSet(expand(leftSet));
     return right.stream().anyMatch(expansion::contains);
   }
 
-  public static Closure fromMappings(List<Mapping> mappings) {
-    Map<SimpleCoding, List<Mapping>> groupedMappings =
+  @Nonnull
+  public static Closure fromMappings(@Nonnull final List<Mapping> mappings) {
+    final Map<SimpleCoding, List<Mapping>> groupedMappings =
         mappings.stream().collect(Collectors.groupingBy(Mapping::getFrom));
-    Map<SimpleCoding, List<SimpleCoding>> groupedCodings =
+    final Map<SimpleCoding, List<SimpleCoding>> groupedCodings =
         groupedMappings.entrySet().stream()
             .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().stream()
                 .map(Mapping::getTo)
