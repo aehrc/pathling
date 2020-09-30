@@ -330,6 +330,21 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
 
   @Test
+  void queryWithNestedAggregationAndNoGroupings() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of given and family names",
+            "name.given.count() + name.family.count()")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithNestedAggregationAndNoGroupings.Parameters.json",
+        response);
+  }
+
+  @Test
   // empty function
   @Disabled
   void queryWithUriValueInGrouping() {
