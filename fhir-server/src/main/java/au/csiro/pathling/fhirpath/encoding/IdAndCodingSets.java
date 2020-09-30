@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath.encoding;
 
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;

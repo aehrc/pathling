@@ -9,7 +9,8 @@ package au.csiro.pathling.fhirpath.function.subsumes;
 import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.CM_EMPTY;
 import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.createConceptMap;
 import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.newVersionedCoding;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.test.fixtures.ConceptMapEntry;
@@ -18,8 +19,8 @@ import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.junit.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag("UnitTest")
 public class ClosureServiceTest {
@@ -39,7 +40,7 @@ public class ClosureServiceTest {
   @Test
   public void testMapsEmptyConceptMapCorrectly() {
     Closure closure = ClosureService.conceptMapToClosure(CM_EMPTY);
-    assertThat(closure.getMappings()).isEmpty();
+    assertTrue(closure.getMappings().isEmpty());
   }
 
   @Test
@@ -52,7 +53,7 @@ public class ClosureServiceTest {
         .forEach(e -> {
           ConceptMap invalidMap = createConceptMap(
               ConceptMapEntry.of(CODING_1_1_1, CODING_1_1_1, e));
-          assertThat(ClosureService.conceptMapToClosure(invalidMap).getMappings()).isEmpty();
+          assertTrue(ClosureService.conceptMapToClosure(invalidMap).getMappings().isEmpty());
         });
   }
 
@@ -74,12 +75,11 @@ public class ClosureServiceTest {
 
     HashMap<SimpleCoding, List<SimpleCoding>> expectedMappings = new HashMap<SimpleCoding, List<SimpleCoding>>();
     expectedMappings.put(new SimpleCoding(CODING_1_3_1),
-        Arrays.asList(new SimpleCoding(CODING_1_1_1)));//, new SimpleCoding(CODING_2_1_1)));
+        Arrays.asList(new SimpleCoding(CODING_1_1_1), new SimpleCoding(CODING_2_1_1)));
     expectedMappings.put(new SimpleCoding(CODING_1_2_1),
         Arrays.asList(new SimpleCoding(CODING_1_1_1), new SimpleCoding(CODING_1_3_1)));
     expectedMappings.put(new SimpleCoding(CODING_2_1_1),
         Arrays.asList(new SimpleCoding(CODING_1_3_1)));
-    assertThat(ClosureService.conceptMapToClosure(complexMap).getMappings())
-        .isEqualTo(expectedMappings);
+    assertEquals(expectedMappings, ClosureService.conceptMapToClosure(complexMap).getMappings());
   }
 }

@@ -6,13 +6,14 @@
 
 package au.csiro.pathling.fhirpath.function.subsumes;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.function.subsumes.Closure.CodingSet;
 import java.util.*;
-import org.junit.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag("UnitTest")
 public class ClosureTest {
@@ -42,19 +43,19 @@ public class ClosureTest {
   @Test
   public void testVersionedCodingSet() {
     CodingSet versionedCodingSet = new Closure.CodingSet(setOf(CODING1_VERSION1));
-    assertThat(versionedCodingSet.contains(CODING1_UNVERSIONED)).isTrue();
-    assertThat(versionedCodingSet.contains(CODING1_VERSION1)).isTrue();
-    assertThat(versionedCodingSet.contains(CODING1_VERSION2)).isFalse();
-    assertThat(versionedCodingSet.contains(CODING2_VERSION1)).isFalse();
+    assertTrue(versionedCodingSet.contains(CODING1_UNVERSIONED));
+    assertTrue(versionedCodingSet.contains(CODING1_VERSION1));
+    assertFalse(versionedCodingSet.contains(CODING1_VERSION2));
+    assertFalse(versionedCodingSet.contains(CODING2_VERSION1));
   }
 
   @Test
   public void testUncersionedCodingSet() {
     CodingSet unversionedCodingSet = new Closure.CodingSet(setOf(CODING1_UNVERSIONED));
-    assertThat(unversionedCodingSet.contains(CODING1_UNVERSIONED)).isTrue();
-    assertThat(unversionedCodingSet.contains(CODING1_VERSION1)).isTrue();
-    assertThat(unversionedCodingSet.contains(CODING1_VERSION2)).isTrue();
-    assertThat(unversionedCodingSet.contains(CODING2_VERSION1)).isFalse();
+    assertTrue(unversionedCodingSet.contains(CODING1_UNVERSIONED));
+    assertTrue(unversionedCodingSet.contains(CODING1_VERSION1));
+    assertTrue(unversionedCodingSet.contains(CODING1_VERSION2));
+    assertFalse(unversionedCodingSet.contains(CODING2_VERSION1));
   }
 
   @Test
@@ -64,30 +65,32 @@ public class ClosureTest {
   }
 
   private void checkBasicEqualities(Closure closure) {
-    assertThat(closure.anyRelates(Collections.emptyList(), Collections.emptyList())).isFalse();
-    assertThat(closure.anyRelates(Arrays.asList(CODING1_UNVERSIONED), Collections.emptyList()))
-        .isFalse();
-    assertThat(closure.anyRelates(Collections.emptyList(), Arrays.asList(CODING1_UNVERSIONED)))
-        .isFalse();
+    assertFalse(closure.anyRelates(Collections.emptyList(), Collections.emptyList()));
+    assertFalse(closure.anyRelates(Arrays.asList(CODING1_UNVERSIONED), Collections.emptyList()))
+    ;
+    assertFalse(closure.anyRelates(Collections.emptyList(), Arrays.asList(CODING1_UNVERSIONED)))
+    ;
 
-    assertThat(
+    assertTrue(
         closure.anyRelates(Arrays.asList(CODING1_UNVERSIONED), Arrays.asList(CODING1_UNVERSIONED)))
-        .isTrue();
-    assertThat(
+    ;
+    assertTrue(
         closure.anyRelates(Arrays.asList(CODING1_VERSION1), Arrays.asList(CODING1_UNVERSIONED)))
-        .isTrue();
-    assertThat(
+    ;
+    assertTrue(
         closure.anyRelates(Arrays.asList(CODING1_UNVERSIONED), Arrays.asList(CODING1_VERSION1)))
-        .isTrue();
-    assertThat(closure.anyRelates(Arrays.asList(CODING1_VERSION1), Arrays.asList(CODING1_VERSION1)))
-        .isTrue();
-    assertThat(closure.anyRelates(Arrays.asList(CODING1_VERSION1), Arrays.asList(CODING1_VERSION2)))
-        .isFalse();
-    assertThat(
+    ;
+    assertTrue(closure.anyRelates(Arrays.asList(CODING1_VERSION1), Arrays.asList(CODING1_VERSION1)))
+    ;
+    assertFalse(
+        closure.anyRelates(Arrays.asList(CODING1_VERSION1), Arrays.asList(CODING1_VERSION2)))
+    ;
+    assertFalse(
         closure.anyRelates(Arrays.asList(CODING1_UNVERSIONED), Arrays.asList(CODING3_UNVERSIONED)))
-        .isFalse();
-    assertThat(closure.anyRelates(Arrays.asList(CODING1_VERSION1), Arrays.asList(CODING3_VERSION1)))
-        .isFalse();
+    ;
+    assertFalse(
+        closure.anyRelates(Arrays.asList(CODING1_VERSION1), Arrays.asList(CODING3_VERSION1)))
+    ;
   }
 
   @Test
@@ -98,20 +101,20 @@ public class ClosureTest {
 
     checkBasicEqualities(versionedClosure);
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
-        Arrays.asList(CODING2_UNVERSIONED))).isTrue();
+    assertTrue(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
+        Arrays.asList(CODING2_UNVERSIONED)));
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
-        Arrays.asList(CODING2_UNVERSIONED))).isTrue();
+    assertTrue(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
+        Arrays.asList(CODING2_UNVERSIONED)));
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
-        Arrays.asList(CODING2_VERSION2))).isTrue();
+    assertTrue(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
+        Arrays.asList(CODING2_VERSION2)));
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
-        Arrays.asList(CODING2_VERSION2))).isTrue();
+    assertTrue(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
+        Arrays.asList(CODING2_VERSION2)));
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
-        Arrays.asList(CODING3_UNVERSIONED))).isFalse();
+    assertFalse(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
+        Arrays.asList(CODING3_UNVERSIONED)));
 
   }
 
@@ -123,26 +126,23 @@ public class ClosureTest {
     // in addition to all equalities
     checkBasicEqualities(versionedClosure);
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
-        Arrays.asList(CODING2_UNVERSIONED))).isTrue();
+    assertTrue(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
+        Arrays.asList(CODING2_UNVERSIONED)));
 
-    System.out.println(
-        versionedClosure.expand(new HashSet<SimpleCoding>(Arrays.asList(CODING1_VERSION1))));
+    assertTrue(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
+        Arrays.asList(CODING2_UNVERSIONED)));
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
-        Arrays.asList(CODING2_UNVERSIONED))).isTrue();
+    assertTrue(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
+        Arrays.asList(CODING2_VERSION1)));
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
-        Arrays.asList(CODING2_VERSION1))).isTrue();
+    assertTrue(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
+        Arrays.asList(CODING2_VERSION1)));
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
-        Arrays.asList(CODING2_VERSION1))).isTrue();
+    assertFalse(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
+        Arrays.asList(CODING2_VERSION2)));
 
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_VERSION1),
-        Arrays.asList(CODING2_VERSION2))).isFalse();
-
-    assertThat(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
-        Arrays.asList(CODING3_UNVERSIONED))).isFalse();
+    assertFalse(versionedClosure.anyRelates(Arrays.asList(CODING1_UNVERSIONED),
+        Arrays.asList(CODING3_UNVERSIONED)));
 
   }
 }
