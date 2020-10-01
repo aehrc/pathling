@@ -151,7 +151,7 @@ public class SubsumesFunctionTest {
         .build();
   }
 
-  private static CodingLiteralPath createLiteralArg() {
+  private static CodingLiteralPath createLiteralArgOrInput() {
     final Dataset<Row> literalContextDataset = new DatasetBuilder()
         .withIdColumn()
         .withValueColumn(DataTypes.BooleanType)
@@ -186,7 +186,8 @@ public class SubsumesFunctionTest {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
         .withStructTypeColumns(codeableConceptStructType())
-        .withIdValueRows(ALL_RES_IDS, id -> codeableConceptRowFromCoding(CODING_MEDIUM))
+        .withIdValueRows(ALL_RES_IDS,
+            id -> codeableConceptRowFromCoding(CODING_MEDIUM, CODING_OTHER5))
         .withIdValueRows(ALL_RES_IDS,
             id -> codeableConceptRowFromCoding(CODING_OTHER3, CODING_OTHER5))
         .buildWithStructValue();
@@ -314,10 +315,12 @@ public class SubsumesFunctionTest {
   //
   // Test subsumes on selected pairs of argument types
   // (Coding, CodingLiteral) && (CodeableConcept, Coding) && (Literal, CodeableConcept)
+  // plus (Coding, Coding)
   //
   @Test
   public void testSubsumesCodingWithLiteralCorrectly() {
-    assertSubsumesSuccess(createCodingInput(), createLiteralArg()).hasRows(expectedSubsumes());
+    assertSubsumesSuccess(createCodingInput(), createLiteralArgOrInput())
+        .hasRows(expectedSubsumes());
   }
 
   @Test
@@ -328,12 +331,19 @@ public class SubsumesFunctionTest {
 
   @Test
   public void testSubsumesLiteralWithCodeableConcepCorrectly() {
-    assertSubsumesSuccess(createLiteralArg(), createCodeableConceptInput())
+    assertSubsumesSuccess(createLiteralArgOrInput(), createCodeableConceptInput())
         .hasRows(expectedLiteralSubsumes());
   }
+
+  @Test
+  public void testSubsumesCodingWithCodingCorrectly() {
+    assertSubsumesSuccess(createCodingInput(), createCodingArg()).hasRows(expectedSubsumes());
+  }
+
   //
   // Test subsumedBy on selected pairs of argument types
   // (Coding, CodeableConcept) && (CodeableConcept, Literal) && (Literal, Coding)
+  // plus (CodeableConcept, CodeableConcept)
   //
 
   @Test
@@ -344,7 +354,7 @@ public class SubsumesFunctionTest {
 
   @Test
   public void testSubsumedByCodeableConceptWithLiteralCorrectly() {
-    assertSubsumedBySuccess(createCodeableConceptInput(), createLiteralArg())
+    assertSubsumedBySuccess(createCodeableConceptInput(), createLiteralArgOrInput())
         .hasRows(expectedSubsumedBy());
   }
 
@@ -352,8 +362,16 @@ public class SubsumesFunctionTest {
   public void testSubsumedByLiteralWithCodingCorrectly() {
     // call subsumedBy but expect subsumes result
     // because input is switched with argument
-    assertSubsumedBySuccess(createLiteralArg(), createCodingInput())
+    assertSubsumedBySuccess(createLiteralArgOrInput(), createCodingInput())
         .hasRows(expectedLiteralSubsumedBy());
+  }
+
+  @Test
+  public void testSubsumedByCodeableConceptWithCodeablConceptCorrectly() {
+    // call subsumedBy but expect subsumes result
+    // because input is switched with argument
+    assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptArg())
+        .hasRows(expectedSubsumedBy());
   }
 
   //
