@@ -84,7 +84,7 @@ class Closure {
       @Nonnull final Collection<SimpleCoding> right) {
     // filter out null SystemAndCodes
     final Set<SimpleCoding> leftSet =
-        left.stream().filter(SimpleCoding::isNotNull).collect(Collectors.toSet());
+        left.stream().filter(SimpleCoding::isDefined).collect(Collectors.toSet());
     final Closure.CodingSet expansion = new Closure.CodingSet(expand(leftSet));
     return right.stream().anyMatch(expansion::contains);
   }

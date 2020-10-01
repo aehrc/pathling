@@ -85,7 +85,7 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     final Function<Row, MemberOfResult> keyMapper = row -> new MemberOfResult(row.getInt(0));
     final Function<Row, List<SimpleCoding>> valueMapper = row ->
         getCodingsFromRow(row.getStruct(1)).stream()
-            .filter(SimpleCoding::isNotNull)
+            .filter(SimpleCoding::isDefined)
             .collect(Collectors.toList());
     final Map<MemberOfResult, List<SimpleCoding>> hashesAndCodes = StreamSupport
         .stream(inputRowsIterable.spliterator(), false)

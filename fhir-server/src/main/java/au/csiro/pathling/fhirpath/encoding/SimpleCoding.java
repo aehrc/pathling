@@ -61,12 +61,13 @@ public class SimpleCoding implements Serializable {
     return new Coding(system, code, version);
   }
 
-  public boolean isNull() {
-    return system == null || code == null;
-  }
-
-  public boolean isNotNull() {
-    return !isNull();
+  /**
+   * Checks if the coding has both the system and code defined, so that it represent
+   * a known deterministic code.
+   * @return if the coding is defined.
+   */
+  public boolean isDefined() {
+    return system != null && code != null;
   }
 
   /**
