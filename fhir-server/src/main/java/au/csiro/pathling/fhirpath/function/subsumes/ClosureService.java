@@ -15,13 +15,18 @@ import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.r4.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.StringType;
 
 /**
  * Helper class to encapsulate the creation of a subsumes relation for a set of Codings.
+ * <p>
+ * Additional resources on closure table maintenance:
  *
  * @author Piotr Szul
+ * @see <a href="https://www.hl7.org/fhir/terminology-service.html#closure">Maintaining a Closure
+ * Table</a>
+ * @see <a href="https://www.hl7.org/fhir/conceptmap-operation-closure.html">Operation $closure on
+ * ConceptMap</a>
  */
 @Slf4j
 class ClosureService {
@@ -47,27 +52,11 @@ class ClosureService {
     // Execute the closure operation against the terminology server.
     // TODO: add validation checks for the response
     ConceptMap initialResponse = terminologyClient.closure(new StringType(closureName), null);
-    validateConceptMap(initialResponse, closureName, "1");
     ConceptMap closureResponse =
         terminologyClient.closure(new StringType(closureName), codings);
-    validateConceptMap(closureResponse, closureName, "2");
     return conceptMapToClosure(closureResponse);
   }
 
-  private void validateConceptMap(@Nonnull final ConceptMap conceptMap,
-      @Nonnull final String closureName, @Nonnull final String version) {
-    if (!PublicationStatus.ACTIVE.equals(conceptMap.getStatus())) {
-      throw new RuntimeException(
-          "Expected ConceptMap with status: ACTIVE, got: " + conceptMap.getStatus());
-    }
-    // TODO: Uncomment when testing is done
-    // if (!closureName.equals(conceptMap.getName())) {
-    // throw new RuntimeException("");
-    // }
-    // if (!version.equals(conceptMap.getVersion())) {
-    // throw new RuntimeException("");
-    // }
-  }
 
   /**
    * According to the specification the only valid equivalences in the response are: equal,

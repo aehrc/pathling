@@ -213,7 +213,7 @@ public class SubsumesFunctionTest {
 
     return (CodingPath) argument;
   }
-  
+
   private static DatasetBuilder expectedLiteralSubsumes() {
     // literal coding is MEDIUM
     return new DatasetBuilder()
@@ -375,14 +375,14 @@ public class SubsumesFunctionTest {
 
   @Test
   public void testAllNonNullTrueWhenSubsumesItself() {
-    assertSubsumesSuccess(createCodingInput(), createCodeableConceptInput())
+    assertSubsumesSuccess(createCodingInput(), createCodingInput())
         .hasRows(expectedAllNonNull(true));
   }
 
 
   @Test
   public void testAllNonNullTrueSubsumedByItself() {
-    assertSubsumedBySuccess(createCodeableConceptInput(), createCodingInput())
+    assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptInput())
         .hasRows(expectedAllNonNull(true));
   }
 
