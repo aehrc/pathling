@@ -58,12 +58,15 @@ public class SimpleCoding implements Serializable {
    */
   @Nonnull
   public Coding toCoding() {
-    return new Coding(system, code, version);
+    final Coding coding = new Coding(system, code, null); // the last arg is display name
+    coding.setVersion(version);
+    return coding;
   }
 
   /**
-   * Checks if the coding has both the system and code defined, so that it represent
-   * a known deterministic code.
+   * Checks if the coding has both the system and code defined, so that it represent a known
+   * deterministic code.
+   *
    * @return if the coding is defined.
    */
   public boolean isDefined() {
@@ -91,4 +94,5 @@ public class SimpleCoding implements Serializable {
            new SimpleCoding(this.system, this.code)
            : this;
   }
+
 }

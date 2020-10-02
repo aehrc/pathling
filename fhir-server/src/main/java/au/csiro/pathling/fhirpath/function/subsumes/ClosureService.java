@@ -49,9 +49,7 @@ class ClosureService {
     String closureName = UUID.randomUUID().toString();
     log.info("Sending $closure request to terminology service with name '{}' and {} codings",
         closureName, codings.size());
-    // Execute the closure operation against the terminology server.
-    // TODO: add validation checks for the response
-    ConceptMap initialResponse = terminologyClient.closure(new StringType(closureName), null);
+    terminologyClient.closure(new StringType(closureName), null);
     ConceptMap closureResponse =
         terminologyClient.closure(new StringType(closureName), codings);
     return conceptMapToClosure(closureResponse);

@@ -10,7 +10,6 @@ import com.google.common.collect.Streams;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.hl7.fhir.r4.model.CodeSystem;
@@ -76,8 +75,15 @@ public class SubsumptionMapper
       return !knownSystems.isEmpty();
     }).collect(Collectors.toSet());
 
+    if (!knownCodeSystems.equals(allCodeSystems)) {
+      final Set<String> unrecognizedCodeSystems = new HashSet<>(allCodeSystems);
+      unrecognizedCodeSystems.removeAll(knownCodeSystems);
+      log.warn("Terminology server does not recognize these coding systems: {}",
+          unrecognizedCodeSystems);
+    }
+
     final Set<SimpleCoding> knownCodings = allCodings.stream()
-        .filter(knownCodeSystems::contains)
+        .filter(coding -> knownCodeSystems.contains(coding.getSystem()))
         .collect(Collectors.toSet());
 
     final ClosureService closureService = new ClosureService(terminologyClient);
