@@ -328,4 +328,22 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
+
+  @Test
+  // empty function
+  @Disabled
+  void queryWithUriValueInGrouping() {
+    subjectResource = ResourceType.ENCOUNTER;
+    mockResourceReader(subjectResource, ResourceType.CONDITION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of encounters", "count()")
+        .withGrouping("Code system", "reverseResolve(Condition.encounter).code.coding.system")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithUriValueInGrouping.Parameters.json",
+        response);
+  }
+
 }

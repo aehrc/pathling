@@ -37,7 +37,7 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
   protected StringLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof StringType);
+    check(literalValue instanceof PrimitiveType);
   }
 
   /**
@@ -61,21 +61,21 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
         new StringType(value));
   }
 
+  // On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
+  @Nonnull
+  private static String escapeFhirPathString(@Nonnull final String value) {
+    return value.replace("'", "\\'");
+  }
+
   @Nonnull
   @Override
   public String getExpression() {
-    return "'" + escapeFhirPathString(getLiteralValue().getValue()) + "'";
+    return "'" + escapeFhirPathString(getLiteralValue().getValueAsString()) + "'";
   }
 
   @Override
-  public StringType getLiteralValue() {
-    return (StringType) literalValue;
-  }
-
-  @Nonnull
-  @Override
-  public String getJavaValue() {
-    return getLiteralValue().getValue();
+  public PrimitiveType getLiteralValue() {
+    return (PrimitiveType) literalValue;
   }
 
   // This method implements the rules for dealing with strings in the FHIRPath specification.
@@ -93,10 +93,10 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
     return value.replaceAll("\\\\", "\\");
   }
 
-  // On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
   @Nonnull
-  private static String escapeFhirPathString(@Nonnull String value) {
-    return value.replace("'", "\\'");
+  @Override
+  public String getJavaValue() {
+    return getLiteralValue().getValueAsString();
   }
 
   @Override
@@ -114,5 +114,5 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
   public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return StringPath.valueFromRow(row, columnNumber, FHIRDefinedType.STRING);
   }
-  
+
 }
