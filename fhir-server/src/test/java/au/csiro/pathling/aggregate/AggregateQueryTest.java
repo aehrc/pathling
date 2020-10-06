@@ -346,4 +346,19 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
+  @Test
+  void queryWithComparisonInAggregation() {
+    subjectResource = ResourceType.CAREPLAN;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Expression containing literal", "count() = 12")
+        .withGrouping("Status", "status")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithComparisonInAggregation.Parameters.json",
+        response);
+  }
+
 }

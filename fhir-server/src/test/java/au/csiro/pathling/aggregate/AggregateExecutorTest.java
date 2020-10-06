@@ -54,7 +54,7 @@ public abstract class AggregateExecutorTest {
   private final Configuration configuration;
   private final FhirContext fhirContext;
   private final FhirEncoders fhirEncoders;
-  protected AggregateResponse response;
+  protected AggregateResponse response = null;
   protected ResourceType subjectResource;
 
   public AggregateExecutorTest(final Configuration configuration, final FhirContext fhirContext,
@@ -80,20 +80,22 @@ public abstract class AggregateExecutorTest {
    */
   @AfterEach
   public void runFirstGroupingThroughSearch() {
-    final Optional<Grouping> firstGroupingOptional = response.getGroupings()
-        .stream()
-        .findFirst();
-    assertTrue(firstGroupingOptional.isPresent());
-    final Grouping firstGrouping = firstGroupingOptional.get();
-    final String drillDown = firstGrouping.getDrillDown();
+    if (response != null) {
+      final Optional<Grouping> firstGroupingOptional = response.getGroupings()
+          .stream()
+          .findFirst();
+      assertTrue(firstGroupingOptional.isPresent());
+      final Grouping firstGrouping = firstGroupingOptional.get();
+      final String drillDown = firstGrouping.getDrillDown();
 
-    final StringAndListParam filters = new StringAndListParam();
-    filters.addAnd(new StringParam(drillDown));
-    final IBundleProvider searchExecutor = new SearchExecutor(configuration, fhirContext, spark,
-        resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory),
-        fhirEncoders, subjectResource, Optional.of(filters));
-    final List<IBaseResource> resources = searchExecutor.getResources(0, 100);
-    assertTrue(resources.size() > 0);
+      final StringAndListParam filters = new StringAndListParam();
+      filters.addAnd(new StringParam(drillDown));
+      final IBundleProvider searchExecutor = new SearchExecutor(configuration, fhirContext, spark,
+          resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory),
+          fhirEncoders, subjectResource, Optional.of(filters));
+      final List<IBaseResource> resources = searchExecutor.getResources(0, 100);
+      assertTrue(resources.size() > 0);
+    }
   }
 
   protected static void assertResponse(@Nonnull final String expectedPath,
