@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.fhirpath.function.subsumes;
 
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -9,6 +15,7 @@ import ca.uhn.fhir.rest.param.UriParam;
 import com.google.common.collect.Streams;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
@@ -54,7 +61,10 @@ public class SubsumptionMapper
 
   @Override
   public Iterator<BooleanResult> call(@Nonnull final Iterator<IdAndCodingSets> input) {
-    final List<IdAndCodingSets> entries = Streams.stream(input).collect(Collectors.toList());
+    final Iterable<IdAndCodingSets> inputIterable = () -> input;
+    final List<IdAndCodingSets> entries = StreamSupport
+        .stream(inputIterable.spliterator(), false)
+        .collect(Collectors.toList());
 
     // Add the request ID to the logging context, so that we can track the logging for this
     // request across all workers.
@@ -87,7 +97,7 @@ public class SubsumptionMapper
     }).collect(Collectors.toSet());
 
     if (!knownCodeSystems.equals(allCodeSystems)) {
-      final Set<String> unrecognizedCodeSystems = new HashSet<>(allCodeSystems);
+      final Collection<String> unrecognizedCodeSystems = new HashSet<>(allCodeSystems);
       unrecognizedCodeSystems.removeAll(knownCodeSystems);
       log.warn("Terminology server does not recognize these coding systems: {}",
           unrecognizedCodeSystems);
@@ -104,12 +114,12 @@ public class SubsumptionMapper
       if (r.getInputCodings() == null) {
         return BooleanResult.nullOf(r.getId());
       } else {
-        boolean result = (!inverted
-                          ? subsumeClosure
-                              .anyRelates(r.safeGetInputCodings(), r.safeGetArgCodings())
-                          :
-                          subsumeClosure
-                              .anyRelates(r.safeGetArgCodings(), r.safeGetInputCodings()));
+        final boolean result = (!inverted
+                                ? subsumeClosure
+                                    .anyRelates(r.safeGetInputCodings(), r.safeGetArgCodings())
+                                :
+                                subsumeClosure
+                                    .anyRelates(r.safeGetArgCodings(), r.safeGetInputCodings()));
         return BooleanResult.of(r.getId(), result);
       }
     }).iterator();

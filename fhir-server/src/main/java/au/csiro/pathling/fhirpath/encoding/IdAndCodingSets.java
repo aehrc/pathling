@@ -15,6 +15,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Represents a resource identity along with a set of input codings, and a set of argument codings.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,14 +35,24 @@ public class IdAndCodingSets implements Serializable {
   private List<SimpleCoding> argCodings;
 
 
+  /**
+   * @return a list of {@link SimpleCoding} objects, or an empty list
+   */
   @Nonnull
   public List<SimpleCoding> safeGetInputCodings() {
-    return inputCodings != null ? getInputCodings() : Collections.emptyList();
+    return getInputCodings() != null
+           ? getInputCodings()
+           : Collections.emptyList();
   }
 
+  /**
+   * @return a list of {@link SimpleCoding} objects, or an empty list
+   */
   @Nonnull
   public List<SimpleCoding> safeGetArgCodings() {
-    return argCodings != null ? getArgCodings() : Collections.emptyList();
+    return getArgCodings() != null
+           ? getArgCodings()
+           : Collections.emptyList();
   }
 
 }

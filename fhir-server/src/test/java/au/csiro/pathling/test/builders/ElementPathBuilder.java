@@ -14,16 +14,13 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**

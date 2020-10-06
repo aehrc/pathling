@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.fhirpath.function.subsumes;
 
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -34,37 +40,17 @@ class ClosureService {
   @Nonnull
   private final TerminologyClient terminologyClient;
 
-  public ClosureService(@Nonnull TerminologyClient terminologyClient) {
+  public ClosureService(@Nonnull final TerminologyClient terminologyClient) {
     this.terminologyClient = terminologyClient;
   }
 
-  @Nonnull
-  public Closure getSubsumesRelation(
-      @Nonnull final Collection<SimpleCoding> systemAndCodes) {
-    List<Coding> codings =
-        systemAndCodes.stream().map(SimpleCoding::toCoding).collect(Collectors.toList());
-    // recreate the systemAndCodes dataset from the list not to execute the query again.
-    // Create a unique name for the closure table for this code system, based upon the
-    // expressions of the input, argument and the CodeSystem URI.
-    String closureName = UUID.randomUUID().toString();
-    log.info("Sending $closure request to terminology service with name '{}' and {} codings",
-        closureName, codings.size());
-    terminologyClient.closure(new StringType(closureName), null);
-    ConceptMap closureResponse =
-        terminologyClient.closure(new StringType(closureName), codings);
-    return conceptMapToClosure(closureResponse);
-  }
-
-
   /**
    * According to the specification the only valid equivalences in the response are: equal,
-   * specializes, subsumes and unmatched
-   *
-   * @return Mapping for subsumes relation i.e from -- subsumes --> to
+   * specializes, subsumes and unmatched.
    */
-  private static void appendSubsumesMapping(@Nonnull final List<Mapping> mappings,
-      @Nonnull final SimpleCoding source,
-      @Nonnull final SimpleCoding target, @Nonnull final ConceptMapEquivalence equivalence) {
+  private static void appendSubsumesMapping(@Nonnull final Collection<Mapping> mappings,
+      @Nonnull final SimpleCoding source, @Nonnull final SimpleCoding target,
+      @Nonnull final ConceptMapEquivalence equivalence) {
     switch (equivalence) {
       case SUBSUMES:
         mappings.add(Mapping.of(target, source));
@@ -89,11 +75,11 @@ class ClosureService {
   private static List<Mapping> conceptMapToMappings(@Nonnull final ConceptMap conceptMap) {
     final List<Mapping> mappings = new ArrayList<>();
     if (conceptMap.hasGroup()) {
-      List<ConceptMapGroupComponent> groups = conceptMap.getGroup();
-      for (ConceptMapGroupComponent group : groups) {
-        List<SourceElementComponent> elements = group.getElement();
-        for (SourceElementComponent source : elements) {
-          for (TargetElementComponent target : source.getTarget()) {
+      final List<ConceptMapGroupComponent> groups = conceptMap.getGroup();
+      for (final ConceptMapGroupComponent group : groups) {
+        final List<SourceElementComponent> elements = group.getElement();
+        for (final SourceElementComponent source : elements) {
+          for (final TargetElementComponent target : source.getTarget()) {
             appendSubsumesMapping(mappings,
                 new SimpleCoding(group.getSource(), source.getCode(), group.getSourceVersion()),
                 new SimpleCoding(group.getTarget(), target.getCode(), group.getTargetVersion()),
@@ -103,6 +89,23 @@ class ClosureService {
       }
     }
     return mappings;
+  }
+
+  @Nonnull
+  public Closure getSubsumesRelation(
+      @Nonnull final Collection<SimpleCoding> systemAndCodes) {
+    final List<Coding> codings =
+        systemAndCodes.stream().map(SimpleCoding::toCoding).collect(Collectors.toList());
+    // recreate the systemAndCodes dataset from the list not to execute the query again.
+    // Create a unique name for the closure table for this code system, based upon the
+    // expressions of the input, argument and the CodeSystem URI.
+    final String closureName = UUID.randomUUID().toString();
+    log.info("Sending $closure request to terminology service with name '{}' and {} codings",
+        closureName, codings.size());
+    terminologyClient.closure(new StringType(closureName), null);
+    final ConceptMap closureResponse =
+        terminologyClient.closure(new StringType(closureName), codings);
+    return conceptMapToClosure(closureResponse);
   }
 
   @Nonnull

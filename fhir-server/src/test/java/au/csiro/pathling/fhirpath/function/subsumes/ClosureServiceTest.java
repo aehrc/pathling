@@ -39,33 +39,33 @@ public class ClosureServiceTest {
 
   @Test
   public void testMapsEmptyConceptMapCorrectly() {
-    Closure closure = ClosureService.conceptMapToClosure(CM_EMPTY);
+    final Closure closure = ClosureService.conceptMapToClosure(CM_EMPTY);
     assertTrue(closure.getMappings().isEmpty());
   }
 
   @Test
   public void testIgnoresUnknownEquivalenceTypes() {
-    Set<ConceptMapEquivalence> validRelations = new HashSet<ConceptMapEquivalence>(Arrays.asList(
+    final Collection<ConceptMapEquivalence> validRelations = new HashSet<>(Arrays.asList(
         ConceptMapEquivalence.SPECIALIZES, ConceptMapEquivalence.SUBSUMES,
         ConceptMapEquivalence.EQUAL, ConceptMapEquivalence.UNMATCHED));
 
     Stream.of(ConceptMapEquivalence.values()).filter(e -> !validRelations.contains(e))
         .forEach(e -> {
-          ConceptMap invalidMap = createConceptMap(
+          final ConceptMap invalidMap = createConceptMap(
               ConceptMapEntry.of(CODING_1_1_1, CODING_1_1_1, e));
           assertTrue(ClosureService.conceptMapToClosure(invalidMap).getMappings().isEmpty());
         });
   }
 
   @Test
-  public void testComplexReponse() {
+  public void testComplexResponse() {
     // system1|code2 -- subsumes --> system1|code1
     // system1|code3 -- subsumes --> system1|code1
     // system1|code3 -- isSubsumedBy --> system1|code2 (equiv: system1|code2 -- subsumes --> system1|code3)
     // system1|code3 -- equal --> system2|code1 (equiv: system1|code3 -- subsumes --> system2|code1 and 
     //                                                     system2|code1 -- subsumes --> system1|code3)
     // system1|code1 -- unmatched --> system3|code1 (equiv: NONE)
-    ConceptMap complexMap = createConceptMap(
+    final ConceptMap complexMap = createConceptMap(
         ConceptMapEntry.subsumesOf(CODING_1_1_1, CODING_1_2_1),
         ConceptMapEntry.subsumesOf(CODING_1_1_1, CODING_1_3_1),
         ConceptMapEntry.specializesOf(CODING_1_2_1, CODING_1_3_1),
@@ -73,13 +73,13 @@ public class ClosureServiceTest {
         ConceptMapEntry.of(CODING_3_1_1, CODING_1_1_1, ConceptMapEquivalence.UNMATCHED)
     );
 
-    HashMap<SimpleCoding, List<SimpleCoding>> expectedMappings = new HashMap<SimpleCoding, List<SimpleCoding>>();
+    final Map<SimpleCoding, List<SimpleCoding>> expectedMappings = new HashMap<>();
     expectedMappings.put(new SimpleCoding(CODING_1_3_1),
         Arrays.asList(new SimpleCoding(CODING_1_1_1), new SimpleCoding(CODING_2_1_1)));
     expectedMappings.put(new SimpleCoding(CODING_1_2_1),
         Arrays.asList(new SimpleCoding(CODING_1_1_1), new SimpleCoding(CODING_1_3_1)));
     expectedMappings.put(new SimpleCoding(CODING_2_1_1),
-        Arrays.asList(new SimpleCoding(CODING_1_3_1)));
+        Collections.singletonList(new SimpleCoding(CODING_1_3_1)));
     assertEquals(expectedMappings, ClosureService.conceptMapToClosure(complexMap).getMappings());
   }
 }

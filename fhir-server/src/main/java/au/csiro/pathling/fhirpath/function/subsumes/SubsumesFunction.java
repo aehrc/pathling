@@ -1,6 +1,13 @@
+/*
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.fhirpath.function.subsumes;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.collect_set;
@@ -52,10 +59,19 @@ public class SubsumesFunction implements NamedFunction {
   private boolean inverted = false;
   private String functionName = "subsumes";
 
+  /**
+   * Creates a new SubsumesFunction, with a type of {@code subsumes}.
+   */
   public SubsumesFunction() {
   }
 
-  public SubsumesFunction(boolean inverted) {
+  /**
+   * Creates a new SubsumesFunction, specifying whether it is inverted. "Inverted" means that the
+   * type is {@code subsumedBy}, otherwise it is {@code subsumes}.
+   *
+   * @param inverted whether to invert the operation from {@code subsumes} to {@code subsumedBy}
+   */
+  public SubsumesFunction(final boolean inverted) {
     this.inverted = inverted;
     if (inverted) {
       this.functionName = "subsumedBy";
@@ -72,6 +88,7 @@ public class SubsumesFunction implements NamedFunction {
         input.getArguments().get(0));
 
     // apply subsumption relation per partition
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
     final Dataset<Row> resultDataset = idAndCodingSet
         .mapPartitions(
             new SubsumptionMapper(MDC.get("requestId"),
@@ -133,6 +150,7 @@ public class SubsumesFunction implements NamedFunction {
                                   ? fhirPath.getValueColumn().getField(FIELD_CODING)
                                   : array(fhirPath.getValueColumn());
 
+    check(fhirPath.getIdColumn().isPresent());
     return expressionDataset.select(fhirPath.getIdColumn().get().alias(COL_ID),
         when(fhirPath.getValueColumn().isNotNull(), codingArrayCol)
             .otherwise(null)
@@ -164,6 +182,7 @@ public class SubsumesFunction implements NamedFunction {
                              ? explode_outer(fhirPath.getValueColumn().getField(FIELD_CODING))
                              : fhirPath.getValueColumn();
 
+    check(fhirPath.getIdColumn().isPresent());
     final Dataset<Row> systemAndCodeDataset = expressionDataset
         .select(fhirPath.getIdColumn().get().alias(COL_ID), codingCol.alias(COL_CODING));
 
@@ -198,7 +217,7 @@ public class SubsumesFunction implements NamedFunction {
     if (fhirPath instanceof CodingLiteralPath) {
       return true;
     } else if (fhirPath instanceof ElementPath) {
-      FHIRDefinedType elementFhirType = ((ElementPath) fhirPath).getFhirType();
+      final FHIRDefinedType elementFhirType = ((ElementPath) fhirPath).getFhirType();
       return FHIRDefinedType.CODING.equals(elementFhirType)
           || FHIRDefinedType.CODEABLECONCEPT.equals(elementFhirType);
     } else {

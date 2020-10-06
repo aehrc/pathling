@@ -8,9 +8,9 @@ package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.*;
 import java.util.function.Function;
@@ -213,7 +213,7 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     @Nonnull
     Optional<String> version;
 
-    public boolean matchesCoding(@Nonnull final SimpleCoding coding) {
+    private boolean matchesCoding(@Nonnull final SimpleCoding coding) {
       if (!system.isPresent() || coding.getSystem() == null) {
         return false;
       }

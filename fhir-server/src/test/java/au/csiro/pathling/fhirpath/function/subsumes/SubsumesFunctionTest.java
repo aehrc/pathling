@@ -39,6 +39,7 @@ import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
@@ -269,7 +270,8 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID5, null);
   }
 
-  private static DatasetBuilder expectedAllNonNull(boolean result) {
+  @Nonnull
+  private static DatasetBuilder expectedAllNonNull(final boolean result) {
     return new DatasetBuilder()
         .withIdColumn()
         .withValueColumn(DataTypes.BooleanType)
@@ -330,7 +332,7 @@ public class SubsumesFunctionTest {
   }
 
   @Test
-  public void testSubsumesLiteralWithCodeableConcepCorrectly() {
+  public void testSubsumesLiteralWithCodeableConceptCorrectly() {
     assertSubsumesSuccess(createLiteralArgOrInput(), createCodeableConceptInput())
         .hasRows(expectedLiteralSubsumes());
   }
@@ -367,7 +369,7 @@ public class SubsumesFunctionTest {
   }
 
   @Test
-  public void testSubsumedByCodeableConceptWithCodeablConceptCorrectly() {
+  public void testSubsumedByCodeableConceptWithCodeableConceptCorrectly() {
     // call subsumedBy but expect subsumes result
     // because input is switched with argument
     assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptArg())

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
@@ -27,7 +28,7 @@ public interface ConceptMapFixtures {
 
 
   static Coding newVersionedCoding(final String system, final String code, final String version,
-      final String description) {
+      @Nullable final String description) {
     final Coding newCoding = new Coding(system, code, description);
     newCoding.setVersion(version);
     return newCoding;

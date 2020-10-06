@@ -61,7 +61,7 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
     return self();
   }
 
-  public T preservesCardinalityOf(FhirPath otherFhirPath) {
+  public T preservesCardinalityOf(final FhirPath otherFhirPath) {
     assertEquals(otherFhirPath.isSingular(), fhirPath.isSingular());
     return self();
   }

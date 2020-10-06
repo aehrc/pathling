@@ -11,7 +11,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NonNull;
 
 /**
  * Used for representing results of functions that return boolean values.
@@ -24,18 +23,20 @@ public class BooleanResult implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  @NonNull
+  @Nullable
   private String id;
 
   @Nullable
   private Boolean value;
 
   /**
-   * Creates a NULL boolean result for given id
-   * @param id
+   * Creates a NULL boolean result for given id.
+   *
+   * @param id the ID to use within the result
    * @return NULL boolean result
    */
-  public static BooleanResult nullOf(@Nonnull String id) {
+  @Nonnull
+  public static BooleanResult nullOf(@Nullable final String id) {
     return new BooleanResult(id, null);
   }
 }
