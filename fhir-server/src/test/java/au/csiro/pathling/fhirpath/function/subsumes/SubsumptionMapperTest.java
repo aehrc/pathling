@@ -95,7 +95,7 @@ public class SubsumptionMapperTest {
     when(terminologyClient.searchCodeSystems(refEq(new UriParam(SYSTEM1)), any()))
         .thenReturn(Collections.singletonList(new CodeSystem()));
 
-    SubsumptionMapper mapper = new SubsumptionMapper(terminologyClientFactory, false);
+    SubsumptionMapper mapper = new SubsumptionMapper("foo", terminologyClientFactory, false);
     List<IdAndCodingSets> input = Arrays.asList(
         new IdAndCodingSets("id1",
             Arrays.asList(CODING1_VERSION1), Arrays.asList(CODING2_VERSION1)),
@@ -121,7 +121,7 @@ public class SubsumptionMapperTest {
   @Test
   public void testFiltersUndefineCodingSets() {
 
-    SubsumptionMapper mapper = new SubsumptionMapper(terminologyClientFactory, false);
+    SubsumptionMapper mapper = new SubsumptionMapper("foo", terminologyClientFactory, false);
     List<IdAndCodingSets> input = Arrays.asList(
         new IdAndCodingSets("id-null-null",
             null, null),
@@ -149,7 +149,7 @@ public class SubsumptionMapperTest {
   @Test
   public void testFiltersOutUndefinedCodings() {
 
-    SubsumptionMapper mapper = new SubsumptionMapper(terminologyClientFactory, false);
+    SubsumptionMapper mapper = new SubsumptionMapper("foo", terminologyClientFactory, false);
     List<IdAndCodingSets> input = Arrays.asList(
         new IdAndCodingSets("id-null-code",
             Arrays.asList(new SimpleCoding(SYSTEM1, null)),

@@ -24,6 +24,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.slf4j.MDC;
 
 
 /**
@@ -73,7 +74,8 @@ public class SubsumesFunction implements NamedFunction {
     // apply subsumption relation per partition
     final Dataset<Row> resultDataset = idAndCodingSet
         .mapPartitions(
-            new SubsumptionMapper(input.getContext().getTerminologyClientFactory().get(), inverted),
+            new SubsumptionMapper(MDC.get("requestId"),
+                input.getContext().getTerminologyClientFactory().get(), inverted),
             Encoders.bean(BooleanResult.class)).toDF();
 
     final Column idColumn = resultDataset.col(COL_ID);

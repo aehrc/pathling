@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.hl7.fhir.r4.model.CodeSystem;
+import org.slf4j.MDC;
 
 
 /**
@@ -29,18 +30,24 @@ public class SubsumptionMapper
   private static final long serialVersionUID = 1L;
 
   @Nonnull
+  private final String requestId;
+
+  @Nonnull
   private final TerminologyClientFactory terminologyClientFactory;
   private final boolean inverted;
 
   /**
    * Constructor
    *
+   * @param requestId An identifier used alongside any logging that the mapper outputs
    * @param terminologyClientFactory the factory to use to create the {@link
    * au.csiro.pathling.fhir.TerminologyClient}
    * @param inverted if true checks for `subsumedBy` relation otherwise for `subsumes`
    */
-  public SubsumptionMapper(@Nonnull final TerminologyClientFactory terminologyClientFactory,
-      boolean inverted) {
+  public SubsumptionMapper(@Nonnull final String requestId,
+      @Nonnull final TerminologyClientFactory terminologyClientFactory,
+      final boolean inverted) {
+    this.requestId = requestId;
     this.terminologyClientFactory = terminologyClientFactory;
     this.inverted = inverted;
   }
@@ -48,6 +55,10 @@ public class SubsumptionMapper
   @Override
   public Iterator<BooleanResult> call(@Nonnull final Iterator<IdAndCodingSets> input) {
     final List<IdAndCodingSets> entries = Streams.stream(input).collect(Collectors.toList());
+
+    // Add the request ID to the logging context, so that we can track the logging for this
+    // request across all workers.
+    MDC.put("requestId", requestId);
 
     // Collect all distinct tokens used on both in inputs and arguments in this partition
     // Rows in which either input or argument are NULL are excluded as they do not need
