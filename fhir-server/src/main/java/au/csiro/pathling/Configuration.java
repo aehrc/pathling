@@ -300,19 +300,19 @@ public class Configuration {
      */
     @NotNull
     @Min(0)
-    private long aggregateRequestCacheSize;
+    private Long aggregateRequestCacheSize;
 
     @NotNull
     @Min(0)
-    private long searchBundleCacheSize;
+    private Long searchBundleCacheSize;
 
     @NotNull
     @Min(0)
-    private long searchPageCacheSize;
+    private Long searchPageCacheSize;
 
     @NotNull
     @Min(0)
-    private long resourceReaderCacheSize;
+    private Long resourceReaderCacheSize;
 
   }
 
@@ -335,7 +335,7 @@ public class Configuration {
     private List<String> exposeHeaders;
 
     @NotNull
-    private long maxAge;
+    private Long maxAge;
 
     @Nullable
     public Optional<List<String>> getExposeHeaders() {
