@@ -37,13 +37,13 @@ import org.hl7.fhir.r4.model.InstantType;
 public class DateTimePath extends ElementPath implements Materializable<BaseDateTimeType>,
     Comparable {
 
-  private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
-      "yyyy-MM-dd'T'HH:mm:ssXXX");
   private static final TimeZone TIME_ZONE = TimeZone.getTimeZone("GMT");
-
-  static {
-    DATE_FORMAT.setTimeZone(TIME_ZONE);
-  }
+  private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = ThreadLocal
+      .withInitial(() -> {
+        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
+        format.setTimeZone(TIME_ZONE);
+        return format;
+      });
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(DatePath.class, DateTimePath.class, DateLiteralPath.class, DateTimeLiteralPath.class,
@@ -108,7 +108,7 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   }
 
   public static SimpleDateFormat getDateFormat() {
-    return DATE_FORMAT;
+    return DATE_FORMAT.get();
   }
 
   public static TimeZone getTimeZone() {
