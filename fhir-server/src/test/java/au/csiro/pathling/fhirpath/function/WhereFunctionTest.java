@@ -66,6 +66,7 @@ public class WhereFunctionTest {
         .withRow("Patient/abc3", RowFactory.create("Encounter/abc5", "finished"))
         .withRow("Patient/abc4", RowFactory.create("Encounter/abc6", "finished"))
         .withRow("Patient/abc4", RowFactory.create("Encounter/abc7", "finished"))
+        .withRow("Patient/abc5", null)
         .buildWithStructValue();
     final IdAndValueColumns inputIdAndValue = SparkHelpers.getIdAndValueColumns(inputDataset);
     final ResourceDefinition resourceDefinition = new ResourceDefinition(ResourceType.ENCOUNTER,
@@ -106,6 +107,7 @@ public class WhereFunctionTest {
         .withRow("Patient/abc2", RowFactory.create("Encounter/abc3", "in-progress"))
         .withRow("Patient/abc3", RowFactory.create("Encounter/abc4", "in-progress"))
         .withRow("Patient/abc4", null)
+        .withRow("Patient/abc5", null)
         .buildWithStructValue();
     assertThat(result)
         .selectResult()
@@ -126,6 +128,7 @@ public class WhereFunctionTest {
         .withRow("Patient/abc3", "zh")
         .withRow("Patient/abc4", "fr")
         .withRow("Patient/abc4", "fr")
+        .withRow("Patient/abc5", null)
         .build();
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
@@ -166,6 +169,7 @@ public class WhereFunctionTest {
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc4", null)
+        .withRow("Patient/abc5", null)
         .build();
     assertThat(result)
         .selectResult()
