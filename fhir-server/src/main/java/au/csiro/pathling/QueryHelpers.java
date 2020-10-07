@@ -353,8 +353,8 @@ public abstract class QueryHelpers {
   @Nonnull
   public static List<Column> firstNColumns(@Nonnull final Dataset<Row> dataset,
       final int numberOfColumns) {
-    return Arrays.asList(dataset.columns()).subList(0, numberOfColumns)
-        .stream()
+    return Stream.of(dataset.columns())
+        .limit(numberOfColumns)
         .map(dataset::col)
         .collect(Collectors.toList());
   }
