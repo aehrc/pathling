@@ -40,7 +40,7 @@ public abstract class Strings {
   @Nonnull
   public static String randomShortString() {
     final int randomNumber = Math.abs(new Random().nextInt());
-    return Integer.toString(randomNumber, 36);
+    return Integer.toString(randomNumber, Character.MAX_RADIX);
   }
 
 }

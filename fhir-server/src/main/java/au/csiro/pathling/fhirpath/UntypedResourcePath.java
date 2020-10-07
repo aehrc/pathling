@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.TYPE_COLUMN_SUFFIX;
+import static au.csiro.pathling.utilities.Strings.randomShortString;
 
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import java.util.Optional;
@@ -68,7 +69,7 @@ public class UntypedResourcePath extends NonLiteralPath {
       @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
 
-    final String hash = Integer.toString(Math.abs(dataset.hashCode()), 36);
+    final String hash = randomShortString();
     final String typeColumnName = hash + TYPE_COLUMN_SUFFIX;
 
     final Dataset<Row> hashedDataset = dataset.withColumn(typeColumnName, typeColumn);
