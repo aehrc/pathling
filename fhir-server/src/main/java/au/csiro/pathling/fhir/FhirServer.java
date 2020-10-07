@@ -142,7 +142,7 @@ public class FhirServer extends RestfulServer {
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.conformanceProvider = conformanceProvider;
     this.searchExecutorCache = searchExecutorCache;
-    log.info("Starting FHIR server with configuration: " + configuration);
+    log.info("Starting FHIR server with configuration: {}", configuration);
   }
 
   @Override
@@ -233,7 +233,7 @@ public class FhirServer extends RestfulServer {
     if (configuration.getCors().getExposeHeaders().isPresent()) {
       corsConfig.setExposedHeaders(configuration.getCors().getExposeHeaders().get());
     }
-   
+
     final CorsInterceptor interceptor = new CorsInterceptor(corsConfig);
     registerInterceptor(interceptor);
   }

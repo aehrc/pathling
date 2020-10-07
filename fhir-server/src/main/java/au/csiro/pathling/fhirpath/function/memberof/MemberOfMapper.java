@@ -158,8 +158,8 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     } else {
       // Ask the terminology service to work out the intersection between the set of input codings
       // and the ValueSet identified by the URI in the argument.
-      log.info("Intersecting " + hashesAndCodes.size() + " concepts with " + valueSetUri
-          + " using terminology service");
+      log.info("Intersecting {} concepts with {} using terminology service", hashesAndCodes.size(),
+          valueSetUri);
       final ValueSet expansion = terminologyClient
           .expand(intersection, new IntegerType(hashesAndCodes.size()));
 

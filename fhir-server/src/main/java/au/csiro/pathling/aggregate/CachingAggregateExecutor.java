@@ -76,7 +76,7 @@ public class CachingAggregateExecutor implements AggregateExecutor, Cacheable {
   @Override
   public AggregateResponse execute(@Nonnull final AggregateRequest query) {
     try {
-      log.info("Received request: " + query);
+      log.info("Received request: {}", query);
       // We use `getUnchecked` here to avoid wrapping HAPI exceptions with a checked 
       // ExecutionException.
       return cache.getUnchecked(query);

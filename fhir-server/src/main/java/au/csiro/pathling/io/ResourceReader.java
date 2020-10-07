@@ -153,7 +153,7 @@ public class ResourceReader implements Cacheable {
         })
         .collect(Collectors.toSet());
     availableResourceTypes = Collections.unmodifiableSet(availableResourceTypes);
-    log.info("Available resources: " + availableResourceTypes);
+    log.info("Available resources: {}", availableResourceTypes);
   }
 
   /**
@@ -193,7 +193,7 @@ public class ResourceReader implements Cacheable {
     final String tableUrl = String
         .join("/", warehouseUrl, databaseName, fileNameForResource(resourceType));
 
-    log.info("Loading resource " + resourceType.toCode() + " from: " + tableUrl);
+    log.info("Loading resource {} from: {}", resourceType.toCode(), tableUrl);
     @Nullable final Dataset<Row> resources = spark.read().parquet(tableUrl);
     checkNotNull(resources);
 

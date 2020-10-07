@@ -99,7 +99,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     this.count = Optional.empty();
 
     final String filterStrings = filters.map(SearchExecutor::filtersToString).orElse("none");
-    log.info("Received search request: filters=[" + filterStrings + "]");
+    log.info("Received search request: filters=[{}]", filterStrings);
 
   }
 
@@ -193,7 +193,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Override
   public List<IBaseResource> getResources(final int theFromIndex, final int theToIndex) {
     try {
-      log.info("Retrieving search results (" + (theFromIndex + 1) + "-" + theToIndex + ")");
+      log.info("Retrieving search results ({}-{})", theFromIndex + 1, theToIndex);
 
       Dataset<Row> resources = result;
       if (theFromIndex != 0) {
