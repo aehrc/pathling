@@ -43,11 +43,7 @@ public class WhereFunction implements NamedFunction {
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     checkUserInput(input.getArguments().size() == 1,
         "where function accepts one argument");
-    final FhirPath inputPath = input.getInput();
-    checkUserInput(inputPath instanceof NonLiteralPath,
-        "Input to where function cannot be a literal: " + inputPath.getExpression());
-    final NonLiteralPath nonLiteral = (NonLiteralPath) inputPath;
-
+    final NonLiteralPath inputPath = input.getInput();
     checkUserInput(input.getArguments().get(0) instanceof NonLiteralPath,
         "Argument to where function cannot be a literal: " + input.getArguments().get(0)
             .getExpression());
@@ -89,7 +85,7 @@ public class WhereFunction implements NamedFunction {
     }
 
     final String expression = expressionFromInput(input, NAME);
-    return nonLiteral
+    return inputPath
         .copy(expression, dataset, idColumn, thisColumn, inputPath.isSingular(),
             Optional.empty());
   }

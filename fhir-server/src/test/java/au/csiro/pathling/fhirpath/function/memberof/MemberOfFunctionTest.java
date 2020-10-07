@@ -281,7 +281,10 @@ class MemberOfFunctionTest {
   @Test
   public void throwsErrorIfInputTypeIsUnsupported() {
     final FhirPath mockContext = new ElementPathBuilder().build();
-    final FhirPath input = StringLiteralPath.fromString("some string", mockContext);
+    final ElementPath input = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.STRING)
+        .expression("name.given")
+        .build();
     final FhirPath argument = StringLiteralPath.fromString(MY_VALUE_SET_URL, mockContext);
 
     final ParserContext parserContext = new ParserContextBuilder()
@@ -294,7 +297,7 @@ class MemberOfFunctionTest {
 
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new MemberOfFunction().invoke(memberOfInput));
-    assertEquals("Input to memberOf function is of unsupported type: 'some string'",
+    assertEquals("Input to memberOf function is of unsupported type: name.given",
         error.getMessage());
   }
 

@@ -193,7 +193,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       );
     }
 
-    final NamedFunctionInput functionInput = new NamedFunctionInput(context, input, arguments);
+    final NamedFunctionInput functionInput = new NamedFunctionInput(context, nonLiteral, arguments);
     return function.invoke(functionInput);
   }
 

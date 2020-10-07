@@ -8,9 +8,9 @@ package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 
-import au.csiro.pathling.fhir.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.*;
 import java.util.function.Function;
@@ -85,7 +85,7 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     final Function<Row, MemberOfResult> keyMapper = row -> new MemberOfResult(row.getInt(0));
     final Function<Row, List<SimpleCoding>> valueMapper = row ->
         getCodingsFromRow(row.getStruct(1)).stream()
-            .filter(SimpleCoding::isNotNull)
+            .filter(SimpleCoding::isDefined)
             .collect(Collectors.toList());
     final Map<MemberOfResult, List<SimpleCoding>> hashesAndCodes = StreamSupport
         .stream(inputRowsIterable.spliterator(), false)

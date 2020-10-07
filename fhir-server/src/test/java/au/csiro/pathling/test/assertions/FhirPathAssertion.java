@@ -39,6 +39,13 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   }
 
   @Nonnull
+  public DatasetAssert selectResultPreserveOrder() {
+    check(fhirPath.getIdColumn().isPresent());
+    return new DatasetAssert(fhirPath.getDataset()
+        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
+  }
+
+  @Nonnull
   public T hasExpression(@Nonnull final String expression) {
     assertEquals(expression, fhirPath.getExpression());
     return self();
@@ -53,6 +60,12 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
     assertFalse(fhirPath.isSingular());
     return self();
   }
+
+  public T preservesCardinalityOf(final FhirPath otherFhirPath) {
+    assertEquals(otherFhirPath.isSingular(), fhirPath.isSingular());
+    return self();
+  }
+
 
   public ElementPathAssertion isElementPath(final Class<? extends ElementPath> ofType) {
     assertTrue(ofType.isAssignableFrom(fhirPath.getClass()));
