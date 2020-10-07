@@ -10,6 +10,7 @@ import static au.csiro.pathling.QueryHelpers.joinOnId;
 import static au.csiro.pathling.errors.ErrorHandling.handleError;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
@@ -117,8 +118,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
       // If there are no filters, return all resources.
       dataset = subjectDataset;
-      check(context.getInputContext().getIdColumn().isPresent());
-      idColumn = context.getInputContext().getIdColumn().get();
+      idColumn = checkPresent(context.getInputContext().getIdColumn());
       valueColumn = context.getInputContext().getValueColumn();
 
     } else {
@@ -147,8 +147,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           // We save away the first encountered ID column so that we can use it later to join the
           // subject resource dataset with the joined filter datasets.
           if (filterIdColumn == null) {
-            check(fhirPath.getIdColumn().isPresent());
-            filterIdColumn = fhirPath.getIdColumn().get();
+            filterIdColumn = checkPresent(fhirPath.getIdColumn());
           }
         }
 

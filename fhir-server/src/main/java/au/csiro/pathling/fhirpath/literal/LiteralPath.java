@@ -62,8 +62,9 @@ public abstract class LiteralPath implements FhirPath {
   @Nonnull
   protected Dataset<Row> dataset;
 
+  @Getter
   @Nonnull
-  protected Column idColumn;
+  protected Optional<Column> idColumn;
 
   @Getter
   @Nonnull
@@ -75,8 +76,8 @@ public abstract class LiteralPath implements FhirPath {
   @Getter
   protected Type literalValue;
 
-  protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected LiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
     final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
@@ -84,12 +85,19 @@ public abstract class LiteralPath implements FhirPath {
     this.literalValue = literalValue;
     final Column valueColumn = buildValueColumn();
 
-    final Dataset<Row> hashedDataset = dataset
-        .withColumn(idColumnName, idColumn)
-        .withColumn(valueColumnName, valueColumn);
-    this.idColumn = hashedDataset.col(idColumnName);
+    Dataset<Row> hashedDataset = dataset;
+    if (idColumn.isPresent()) {
+      hashedDataset = dataset.withColumn(idColumnName, idColumn.get());
+    }
+    hashedDataset = hashedDataset.withColumn(valueColumnName, valueColumn);
+
+    if (idColumn.isPresent()) {
+      this.idColumn = Optional.of(hashedDataset.col(idColumnName));
+    } else {
+      this.idColumn = Optional.empty();
+    }
     this.valueColumn = hashedDataset.col(valueColumnName);
-    this.dataset = QueryHelpers.applySelection(hashedDataset, Optional.of(this.idColumn));
+    this.dataset = QueryHelpers.applySelection(hashedDataset, this.idColumn);
   }
 
   /**
@@ -102,12 +110,12 @@ public abstract class LiteralPath implements FhirPath {
    */
   @Nonnull
   public static String expressionFor(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     final Class<? extends LiteralPath> literalPathClass = FHIR_TYPE_TO_FHIRPATH_TYPE
         .get(FHIRDefinedType.fromCode(literalValue.fhirType()));
     try {
       final Constructor<? extends LiteralPath> constructor = literalPathClass
-          .getDeclaredConstructor(Dataset.class, Column.class, Type.class);
+          .getDeclaredConstructor(Dataset.class, Optional.class, Type.class);
       final LiteralPath literalPath = constructor.newInstance(dataset, idColumn, literalValue);
       return literalPath.getExpression();
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
@@ -119,12 +127,6 @@ public abstract class LiteralPath implements FhirPath {
   @Override
   @Nonnull
   public abstract String getExpression();
-
-  @Nonnull
-  @Override
-  public Optional<Column> getIdColumn() {
-    return Optional.of(idColumn);
-  }
 
   @Override
   public boolean isSingular() {

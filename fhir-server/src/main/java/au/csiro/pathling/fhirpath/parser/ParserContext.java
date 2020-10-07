@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
@@ -108,7 +108,7 @@ public class ParserContext {
       @Nonnull final Optional<TerminologyClient> terminologyClient,
       @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
       @Nonnull final List<Column> groupingColumns) {
-    check(inputContext.getIdColumn().isPresent());
+    checkArgument(inputContext.getIdColumn().isPresent(), "inputContext must have ID column");
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;

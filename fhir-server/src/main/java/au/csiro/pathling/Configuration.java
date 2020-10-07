@@ -337,7 +337,7 @@ public class Configuration {
     @NotNull
     private Long maxAge;
 
-    @Nullable
+    @Nonnull
     public Optional<List<String>> getExposeHeaders() {
       return Optional.ofNullable(exposeHeaders);
     }

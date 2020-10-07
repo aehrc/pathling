@@ -32,8 +32,8 @@ import org.hl7.fhir.r4.model.Type;
 public class DecimalLiteralPath extends LiteralPath implements Materializable<DecimalType>,
     Comparable, Numeric {
 
-  protected DecimalLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected DecimalLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof DecimalType);
   }
@@ -49,7 +49,6 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
    */
   public static DecimalLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws NumberFormatException {
-    check(context.getIdColumn().isPresent());
     final BigDecimal value = new BigDecimal(fhirPath);
 
     if (value.precision() > DecimalPath.getDecimalType().precision()) {
@@ -63,7 +62,7 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
               .scale() + "): " + fhirPath);
     }
 
-    return new DecimalLiteralPath(context.getDataset(), context.getIdColumn().get(),
+    return new DecimalLiteralPath(context.getDataset(), context.getIdColumn(),
         new DecimalType(value));
   }
 
@@ -112,11 +111,10 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
   @Nonnull
   @Override
   public DecimalLiteralPath copy(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
-    check(idColumn.isPresent());
-    return new DecimalLiteralPath(dataset, idColumn.get(), literalValue) {
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
+    return new DecimalLiteralPath(dataset, idColumn, literalValue) {
       @Nonnull
       @Override
       public String getExpression() {

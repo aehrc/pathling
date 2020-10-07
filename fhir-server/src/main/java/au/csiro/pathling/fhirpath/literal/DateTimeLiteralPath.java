@@ -34,8 +34,8 @@ import org.hl7.fhir.r4.model.Type;
 public class DateTimeLiteralPath extends LiteralPath implements Materializable<BaseDateTimeType>,
     Comparable {
 
-  protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof DateTimeType);
   }
@@ -51,13 +51,11 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
    */
   public static DateTimeLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
-    check(context.getIdColumn().isPresent());
     final String dateTimeString = fhirPath.replaceFirst("^@", "");
     final java.util.Date date = DateTimePath.getDateFormat().parse(dateTimeString);
     final DateTimeType literalValue = new DateTimeType(date);
     literalValue.setTimeZone(DateTimePath.getTimeZone());
-    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn().get(),
-        literalValue);
+    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn(), literalValue);
   }
 
   @Nonnull
@@ -103,11 +101,10 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
   @Nonnull
   @Override
   public DateTimeLiteralPath copy(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
-    check(idColumn.isPresent());
-    return new DateTimeLiteralPath(dataset, idColumn.get(), literalValue) {
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
+    return new DateTimeLiteralPath(dataset, idColumn, literalValue) {
       @Nonnull
       @Override
       public String getExpression() {

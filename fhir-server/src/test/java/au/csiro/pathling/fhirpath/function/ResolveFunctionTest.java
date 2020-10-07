@@ -9,7 +9,6 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockAvailableResourceTypes;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -281,7 +280,7 @@ class ResolveFunctionTest {
 
   @Nonnull
   private NamedFunctionInput buildFunctionInput(@Nonnull final FhirPath inputPath) {
-    check(inputPath.getIdColumn().isPresent());
+    assertTrue(inputPath.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn().get())
         .resourceReader(mockReader)

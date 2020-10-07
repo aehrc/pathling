@@ -7,7 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.firstNColumns;
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -71,7 +71,8 @@ public abstract class AggregateFunction {
     final Optional<Column> idColumn = FhirPath.findIdColumn(inputs.toArray());
 
     // There should be either an ID column or at least one grouping column.
-    check(idColumn.isPresent() || groupingColumns.size() > 0);
+    checkArgument(idColumn.isPresent() || groupingColumns.size() > 0,
+        "ID column should be present within inputs, or groupings should be present in context");
 
     // Check for a $this column in any of the inputs - if its present, it will need to be preserved.
     final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(inputs.toArray());

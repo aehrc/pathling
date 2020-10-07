@@ -31,8 +31,8 @@ public class QuantityLiteralPath extends LiteralPath {
 
   private static final Pattern PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
-  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof Quantity);
   }
@@ -49,7 +49,6 @@ public class QuantityLiteralPath extends LiteralPath {
   @Nonnull
   public static QuantityLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
-    check(context.getIdColumn().isPresent());
     final Matcher matcher = PATTERN.matcher(fhirPath);
     if (!matcher.matches()) {
       throw new IllegalArgumentException("Quantity literal has invalid format: " + fhirPath);
@@ -75,7 +74,7 @@ public class QuantityLiteralPath extends LiteralPath {
       }
     }
 
-    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn().get(), quantity);
+    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
   }
 
   @Nonnull
@@ -101,8 +100,7 @@ public class QuantityLiteralPath extends LiteralPath {
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    check(idColumn.isPresent());
-    return new QuantityLiteralPath(dataset, idColumn.get(), literalValue) {
+    return new QuantityLiteralPath(dataset, idColumn, literalValue) {
       @Nonnull
       @Override
       public String getExpression() {

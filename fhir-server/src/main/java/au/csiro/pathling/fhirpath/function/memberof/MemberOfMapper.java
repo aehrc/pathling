@@ -213,12 +213,12 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     @Nonnull
     Optional<String> version;
 
-    public boolean matchesCoding(@Nonnull final SimpleCoding coding) {
-      if (!system.isPresent() || coding.getSystem() == null) {
+    private boolean matchesCoding(@Nonnull final SimpleCoding coding) {
+      if (system.isEmpty() || coding.getSystem() == null) {
         return false;
       }
       final boolean eitherSideIsMissingVersion =
-          !version.isPresent() || coding.getVersion() == null;
+          version.isEmpty() || coding.getVersion() == null;
       final boolean versionAgnosticTest = system.get().equals(coding.getSystem());
       if (eitherSideIsMissingVersion) {
         return versionAgnosticTest;

@@ -28,8 +28,8 @@ import org.hl7.fhir.r4.model.Type;
  */
 public class TimeLiteralPath extends LiteralPath implements Materializable<TimeType>, Comparable {
 
-  protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof TimeType);
   }
@@ -45,9 +45,8 @@ public class TimeLiteralPath extends LiteralPath implements Materializable<TimeT
   @Nonnull
   public static TimeLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
-    check(context.getIdColumn().isPresent());
     final String timeString = fhirPath.replaceFirst("^@T", "");
-    return new TimeLiteralPath(context.getDataset(), context.getIdColumn().get(),
+    return new TimeLiteralPath(context.getDataset(), context.getIdColumn(),
         new TimeType(timeString));
   }
 
@@ -86,12 +85,10 @@ public class TimeLiteralPath extends LiteralPath implements Materializable<TimeT
 
   @Nonnull
   @Override
-  public TimeLiteralPath copy(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn) {
-    check(idColumn.isPresent());
-    return new TimeLiteralPath(dataset, idColumn.get(), literalValue) {
+  public TimeLiteralPath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
+    return new TimeLiteralPath(dataset, idColumn, literalValue) {
       @Nonnull
       @Override
       public String getExpression() {

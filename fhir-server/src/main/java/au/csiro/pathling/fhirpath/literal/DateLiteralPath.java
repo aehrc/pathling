@@ -35,8 +35,8 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
   @Nonnull
   private Optional<DateLiteralFormat> format;
 
-  protected DateLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected DateLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof DateType);
     format = Optional.empty();
@@ -53,7 +53,6 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
    */
   public static DateLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
-    check(context.getIdColumn().isPresent());
     final String dateString = fhirPath.replaceFirst("^@", "");
     java.util.Date date;
     DateLiteralFormat format;
@@ -72,8 +71,8 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
       }
     }
 
-    final DateLiteralPath result = new DateLiteralPath(context.getDataset(),
-        context.getIdColumn().get(), new DateType(date));
+    final DateLiteralPath result = new DateLiteralPath(context.getDataset(), context.getIdColumn(),
+        new DateType(date));
     result.format = Optional.of(format);
     return result;
   }
@@ -81,7 +80,7 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
   @Nonnull
   @Override
   public String getExpression() {
-    if (!format.isPresent() || format.get() == DateLiteralFormat.FULL) {
+    if (format.isEmpty() || format.get() == DateLiteralFormat.FULL) {
       return "@" + DatePath.getFullDateFormat().format(getLiteralValue().getValue());
     } else if (format.get() == DateLiteralFormat.YEAR_MONTH_DATE) {
       return "@" + DatePath.getYearMonthDateFormat().format(getLiteralValue().getValue());
@@ -126,12 +125,10 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
 
   @Nonnull
   @Override
-  public DateLiteralPath copy(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn) {
-    check(idColumn.isPresent());
-    return new DateLiteralPath(dataset, idColumn.get(), literalValue) {
+  public DateLiteralPath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
+    return new DateLiteralPath(dataset, idColumn, literalValue) {
       @Nonnull
       @Override
       public String getExpression() {

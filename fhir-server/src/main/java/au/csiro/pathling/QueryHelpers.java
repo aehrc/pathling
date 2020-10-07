@@ -6,7 +6,7 @@
 
 package au.csiro.pathling;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Strings.randomShortString;
@@ -54,7 +54,7 @@ public abstract class QueryHelpers {
    */
   @Nonnull
   public static DatasetWithIdAndValue convertRawResource(@Nonnull final Dataset<Row> dataset) {
-    check(dataset.columns().length > 1);
+    checkArgument(dataset.columns().length > 1, "dataset has no columns");
 
     final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
@@ -181,7 +181,7 @@ public abstract class QueryHelpers {
   public static Dataset<Row> joinOnId(@Nonnull final Dataset<Row> left,
       @Nonnull final Column leftId, @Nonnull final FhirPath right,
       @Nonnull final Optional<Column> additionalCondition, @Nonnull final JoinType joinType) {
-    check(right.getIdColumn().isPresent());
+    checkArgument(right.getIdColumn().isPresent(), "Right expression must have an ID column");
     Column joinCondition = leftId.equalTo(right.getIdColumn().get());
     if (additionalCondition.isPresent()) {
       joinCondition = joinCondition.and(additionalCondition.get());
@@ -272,7 +272,8 @@ public abstract class QueryHelpers {
       @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
       @Nonnull final List<Column> rightColumns, @Nonnull final Optional<Column> additionalCondition,
       @Nonnull final JoinType joinType) {
-    check(leftColumns.size() == rightColumns.size());
+    checkArgument(leftColumns.size() == rightColumns.size(),
+        "Left columns should be same size as right columns");
 
     @Nullable Column joinCondition = null;
     Dataset<Row> leftAliased = left;

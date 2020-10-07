@@ -7,9 +7,9 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -79,7 +79,7 @@ public class WhereFunctionTest {
     // column from the input dataset is also present within the argument dataset.
     final Dataset<Row> argumentDataset = inputPath.getDataset()
         .withColumn("value", inputPath.getValueColumn().getField("status").equalTo("in-progress"));
-    check(inputPath.getIdColumn().isPresent());
+    assertTrue(inputPath.getIdColumn().isPresent());
     final ElementPath argumentPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
@@ -137,7 +137,7 @@ public class WhereFunctionTest {
     // Build an expression which represents the argument to the function.
     final Dataset<Row> argumentDataset = inputPath.getDataset()
         .withColumn("value", inputPath.getValueColumn().equalTo("en"));
-    check(inputPath.getIdColumn().isPresent());
+    assertTrue(inputPath.getIdColumn().isPresent());
     final ElementPath argumentExpression = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
@@ -197,7 +197,7 @@ public class WhereFunctionTest {
     final Dataset<Row> argumentDataset = inputPath.getDataset()
         .withColumn("value",
             functions.when(inputPath.getValueColumn().equalTo("en"), null).otherwise(true));
-    check(inputPath.getIdColumn().isPresent());
+    assertTrue(inputPath.getIdColumn().isPresent());
     final ElementPath argumentPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)

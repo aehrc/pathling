@@ -29,8 +29,8 @@ import org.hl7.fhir.r4.model.Type;
 public class BooleanLiteralPath extends LiteralPath implements Materializable<BooleanType>,
     Comparable {
 
-  protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof BooleanType);
   }
@@ -46,9 +46,8 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
   @Nonnull
   public static BooleanLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
-    check(context.getIdColumn().isPresent());
     final boolean value = fhirPath.equals("true");
-    return new BooleanLiteralPath(context.getDataset(), context.getIdColumn().get(),
+    return new BooleanLiteralPath(context.getDataset(), context.getIdColumn(),
         new BooleanType(value));
   }
 
@@ -91,8 +90,7 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    check(idColumn.isPresent());
-    return new BooleanLiteralPath(dataset, idColumn.get(), literalValue) {
+    return new BooleanLiteralPath(dataset, idColumn, literalValue) {
       @Nonnull
       @Override
       public String getExpression() {

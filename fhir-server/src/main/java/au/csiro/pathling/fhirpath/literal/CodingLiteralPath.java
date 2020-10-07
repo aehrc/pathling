@@ -34,8 +34,8 @@ import org.hl7.fhir.r4.model.Type;
 @Getter
 public class CodingLiteralPath extends LiteralPath implements Materializable<Coding>, Comparable {
 
-  protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof Coding);
   }
@@ -51,7 +51,6 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
    */
   public static CodingLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
-    check(context.getIdColumn().isPresent());
     final LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(fhirPath.split("\\|")));
     final Coding coding;
     if (codingTokens.size() == 2) {
@@ -63,7 +62,7 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
       throw new IllegalArgumentException(
           "Coding literal must be of form [system]|[code] or [system]|[version]|[code]");
     }
-    return new CodingLiteralPath(context.getDataset(), context.getIdColumn().get(), coding);
+    return new CodingLiteralPath(context.getDataset(), context.getIdColumn(), coding);
   }
 
   @Nonnull
@@ -121,8 +120,7 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    check(idColumn.isPresent());
-    return new CodingLiteralPath(dataset, idColumn.get(), literalValue) {
+    return new CodingLiteralPath(dataset, idColumn, literalValue) {
       @Nonnull
       @Override
       public String getExpression() {
