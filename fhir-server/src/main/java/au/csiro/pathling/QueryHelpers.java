@@ -223,12 +223,8 @@ public abstract class QueryHelpers {
   @Nonnull
   public static Dataset<Row> joinOnReference(@Nonnull final FhirPath left,
       @Nonnull final FhirPath right, @Nonnull final JoinType joinType) {
-    @Nullable final Column reference = left.getValueColumn().getField("reference");
-    checkNotNull(reference);
     final Column rightId = checkPresent(right.getIdColumn());
-    final Column joinCondition = reference.equalTo(rightId);
-    final Dataset<Row> target = selectJoinTarget(right.getDataset(), left.getDataset());
-    return left.getDataset().join(target, joinCondition, joinType.getSparkName());
+    return joinOnReference(left, right.getDataset(), rightId, joinType);
   }
 
   /**
