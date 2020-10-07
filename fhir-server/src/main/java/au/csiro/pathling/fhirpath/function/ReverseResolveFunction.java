@@ -46,7 +46,7 @@ public class ReverseResolveFunction implements NamedFunction {
     checkUserInput(argument instanceof ReferencePath,
         "Argument to reverseResolve function must be a Reference: " + argument.getExpression());
 
-    // Check that the argument types include the input type.
+    // Check that the input type is one of the possible types specified by the argument.
     final Set<ResourceType> argumentTypes = ((ReferencePath) argument).getResourceTypes();
     final ResourceType inputType = inputPath.getResourceType();
     checkUserInput(argumentTypes.contains(inputType),
