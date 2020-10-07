@@ -31,7 +31,8 @@ public class QuantityLiteralPath extends LiteralPath {
 
   private static final Pattern PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
-  private QuantityLiteralPath(@Nonnull final Dataset<Row> dataset,
+  @SuppressWarnings("WeakerAccess")
+  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof Quantity);

@@ -32,7 +32,8 @@ import org.hl7.fhir.r4.model.Type;
 public class DecimalLiteralPath extends LiteralPath implements Materializable<DecimalType>,
     Comparable, Numeric {
 
-  private DecimalLiteralPath(@Nonnull final Dataset<Row> dataset,
+  @SuppressWarnings("WeakerAccess")
+  protected DecimalLiteralPath(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof DecimalType);
