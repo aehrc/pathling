@@ -108,7 +108,8 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return DateTimePath.buildComparison(this, operation.getSparkFunction());
   }
 

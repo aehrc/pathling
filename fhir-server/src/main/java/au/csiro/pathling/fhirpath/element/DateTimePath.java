@@ -121,7 +121,8 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return buildComparison(this, operation.getSparkFunction());
   }
 

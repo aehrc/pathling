@@ -110,7 +110,8 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return buildComparison(this, operation);
   }
 

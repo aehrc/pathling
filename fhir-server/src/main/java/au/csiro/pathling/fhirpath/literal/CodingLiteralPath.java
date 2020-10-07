@@ -99,7 +99,8 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return CodingPath.buildComparison(this, operation);
   }
 

@@ -108,7 +108,8 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return DateTimePath.buildComparison(this, operation.getSparkFunction());
   }
 

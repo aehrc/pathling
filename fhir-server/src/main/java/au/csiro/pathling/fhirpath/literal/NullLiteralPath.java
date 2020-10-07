@@ -61,7 +61,8 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     // Comparing an empty collection with anything always results in an empty collection.
     return (target) -> lit(null);
   }
