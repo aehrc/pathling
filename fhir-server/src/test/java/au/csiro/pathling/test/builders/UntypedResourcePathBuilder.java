@@ -89,7 +89,7 @@ public class UntypedResourcePathBuilder {
   }
 
   @Nonnull
-  public UntypedResourcePathBuilder thisColumn(final Column thisColumn) {
+  public UntypedResourcePathBuilder thisColumn(@Nonnull final Column thisColumn) {
     this.thisColumn = thisColumn;
     return this;
   }
