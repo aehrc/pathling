@@ -15,6 +15,7 @@ import au.csiro.pathling.fhir.FhirPathParser.MemberInvocationContext;
 import au.csiro.pathling.fhir.FhirPathParser.ParamListContext;
 import au.csiro.pathling.fhir.FhirPathParser.ThisInvocationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
@@ -159,13 +160,20 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
     final FhirPath input = invoker == null
                            ? context.getInputContext()
                            : invoker;
+
+    // A literal cannot be used as a function input.
+    checkUserInput(input instanceof NonLiteralPath,
+        "Literal expression cannot be used as input to a function invocation: " + input
+            .getExpression());
+    final NonLiteralPath nonLiteral = (NonLiteralPath) input;
+
     @Nullable final ParamListContext paramList = ctx.functn().paramList();
 
     final List<FhirPath> arguments = new ArrayList<>();
     if (paramList != null) {
       // The `$this` path will be the same as the input, but with a different expression and it will
       // be singular as it represents the current item from the collection.
-      final FhirPath thisPath = input
+      final FhirPath thisPath = nonLiteral
           .copy(NamedFunction.THIS, input.getDataset(), input.getIdColumn(), input.getValueColumn(),
               true, Optional.of(input.getValueColumn()));
 

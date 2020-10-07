@@ -62,23 +62,6 @@ public interface FhirPath {
   boolean isSingular();
 
   /**
-   * Creates a copy of this FhirPath with an updated {@link Dataset}, ID and value {@link Column}s.
-   *
-   * @param expression an updated expression to describe the new FhirPath
-   * @param dataset the new Dataset that can be used to evaluate this FhirPath against data
-   * @param idColumn the new resource identity column
-   * @param valueColumn the new expression value column
-   * @param singular the new singular value
-   * @param thisColumn a column containing the collection being iterated, for cases where a path is
-   * being created to represent the {@code $this} keyword
-   * @return a new instance of FhirPath
-   */
-  @Nonnull
-  FhirPath copy(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-      @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
-      @Nonnull Optional<Column> thisColumn);
-
-  /**
    * Gets an ID {@link Column} from any of the inputs, if there is one.
    *
    * @param inputs a collection of objects

@@ -34,7 +34,7 @@ import org.hl7.fhir.r4.model.Type;
 @Getter
 public class CodingLiteralPath extends LiteralPath implements Materializable<Coding>, Comparable {
 
-  protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset,
+  private CodingLiteralPath(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof Coding);
@@ -113,21 +113,6 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   @Override
   public Optional<Coding> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return CodingPath.valueFromRow(row, columnNumber);
-  }
-
-  @Nonnull
-  @Override
-  public CodingLiteralPath copy(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn) {
-    return new CodingLiteralPath(dataset, idColumn, literalValue) {
-      @Nonnull
-      @Override
-      public String getExpression() {
-        return expression;
-      }
-    };
   }
 
 }

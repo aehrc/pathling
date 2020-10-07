@@ -35,7 +35,7 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
   @Nonnull
   private Optional<DateLiteralFormat> format;
 
-  protected DateLiteralPath(@Nonnull final Dataset<Row> dataset,
+  private DateLiteralPath(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof DateType);
@@ -122,20 +122,6 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
   @Override
   public Optional<DateType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return DatePath.valueFromRow(row, columnNumber);
-  }
-
-  @Nonnull
-  @Override
-  public DateLiteralPath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
-    return new DateLiteralPath(dataset, idColumn, literalValue) {
-      @Nonnull
-      @Override
-      public String getExpression() {
-        return expression;
-      }
-    };
   }
 
   private enum DateLiteralFormat {

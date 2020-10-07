@@ -46,6 +46,8 @@ public class WhereFunction implements NamedFunction {
     final FhirPath inputPath = input.getInput();
     checkUserInput(inputPath instanceof NonLiteralPath,
         "Input to where function cannot be a literal: " + inputPath.getExpression());
+    final NonLiteralPath nonLiteral = (NonLiteralPath) inputPath;
+
     checkUserInput(input.getArguments().get(0) instanceof NonLiteralPath,
         "Argument to where function cannot be a literal: " + input.getArguments().get(0)
             .getExpression());
@@ -87,7 +89,7 @@ public class WhereFunction implements NamedFunction {
     }
 
     final String expression = expressionFromInput(input, NAME);
-    return inputPath
+    return nonLiteral
         .copy(expression, dataset, idColumn, thisColumn, inputPath.isSingular(),
             Optional.empty());
   }

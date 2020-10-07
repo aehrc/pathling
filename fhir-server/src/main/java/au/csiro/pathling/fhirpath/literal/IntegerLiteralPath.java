@@ -30,7 +30,7 @@ import org.hl7.fhir.r4.model.Type;
 public class IntegerLiteralPath extends LiteralPath implements Materializable<PrimitiveType>,
     Comparable, Numeric {
 
-  protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset,
+  private IntegerLiteralPath(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof IntegerType);
@@ -95,18 +95,4 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
     return IntegerPath.valueFromRow(row, columnNumber, FHIRDefinedType.INTEGER);
   }
 
-  @Nonnull
-  @Override
-  public IntegerLiteralPath copy(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn) {
-    return new IntegerLiteralPath(dataset, idColumn, literalValue) {
-      @Nonnull
-      @Override
-      public String getExpression() {
-        return expression;
-      }
-    };
-  }
 }

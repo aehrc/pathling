@@ -72,18 +72,4 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
     return true;
   }
 
-  @Nonnull
-  @Override
-  public NullLiteralPath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
-    return new NullLiteralPath(dataset, idColumn) {
-      @Nonnull
-      @Override
-      public String getExpression() {
-        return expression;
-      }
-    };
-  }
-
 }

@@ -34,7 +34,7 @@ import org.hl7.fhir.r4.model.Type;
 public class DateTimeLiteralPath extends LiteralPath implements Materializable<BaseDateTimeType>,
     Comparable {
 
-  protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset,
+  private DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof DateTimeType);
@@ -99,18 +99,4 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
     return DateTimePath.valueFromRow(row, columnNumber, FHIRDefinedType.DATETIME);
   }
 
-  @Nonnull
-  @Override
-  public DateTimeLiteralPath copy(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn) {
-    return new DateTimeLiteralPath(dataset, idColumn, literalValue) {
-      @Nonnull
-      @Override
-      public String getExpression() {
-        return expression;
-      }
-    };
-  }
 }

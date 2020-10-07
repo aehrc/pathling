@@ -28,7 +28,7 @@ import org.hl7.fhir.r4.model.Type;
  */
 public class TimeLiteralPath extends LiteralPath implements Materializable<TimeType>, Comparable {
 
-  protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset,
+  private TimeLiteralPath(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof TimeType);
@@ -82,20 +82,6 @@ public class TimeLiteralPath extends LiteralPath implements Materializable<TimeT
   @Override
   public Optional<TimeType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return TimePath.valueFromRow(row, columnNumber);
-  }
-
-  @Nonnull
-  @Override
-  public TimeLiteralPath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
-    return new TimeLiteralPath(dataset, idColumn, literalValue) {
-      @Nonnull
-      @Override
-      public String getExpression() {
-        return expression;
-      }
-    };
   }
 
 }

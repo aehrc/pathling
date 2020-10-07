@@ -116,19 +116,4 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
     return StringPath.valueFromRow(row, columnNumber, FHIRDefinedType.STRING);
   }
 
-  @Nonnull
-  @Override
-  public StringLiteralPath copy(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn) {
-    return new StringLiteralPath(dataset, idColumn, literalValue) {
-      @Nonnull
-      @Override
-      public String getExpression() {
-        return expression;
-      }
-    };
-  }
-
 }

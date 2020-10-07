@@ -97,6 +97,24 @@ public abstract class NonLiteralPath implements FhirPath {
   public abstract Optional<ElementDefinition> getChildElement(@Nonnull final String name);
 
   /**
+   * Creates a copy of this NonLiteralPath with an updated {@link Dataset}, ID and value {@link
+   * Column}s.
+   *
+   * @param expression an updated expression to describe the new NonLiteralPath
+   * @param dataset the new Dataset that can be used to evaluate this NonLiteralPath against data
+   * @param idColumn the new resource identity column
+   * @param valueColumn the new expression value column
+   * @param singular the new singular value
+   * @param thisColumn a column containing the collection being iterated, for cases where a path is
+   * being created to represent the {@code $this} keyword
+   * @return a new instance of NonLiteralPath
+   */
+  @Nonnull
+  public abstract NonLiteralPath copy(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
+      @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
+      @Nonnull Optional<Column> thisColumn);
+
+  /**
    * Gets a this {@link Column} from any of the inputs, if there is one.
    *
    * @param inputs a collection of objects
