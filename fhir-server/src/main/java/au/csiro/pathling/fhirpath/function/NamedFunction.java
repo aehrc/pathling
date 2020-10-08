@@ -35,6 +35,7 @@ public interface NamedFunction {
       .put("where", new WhereFunction())
       .put("subsumes", new SubsumesFunction())
       .put("subsumedBy", new SubsumesFunction(true))
+      .put("empty", new EmptyFunction())
       .build();
 
   /**
