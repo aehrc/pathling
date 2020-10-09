@@ -93,8 +93,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with first function
-  @Disabled
   void queryWithMathExpression() {
     subjectResource = ResourceType.CLAIM;
     mockResourceReader(subjectResource);
@@ -295,6 +293,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
   @Test
   // TODO: Re-enable along with first function
+  // also requires empty()
   @Disabled
   void queryWithWhereAsComparisonOperand() {
     subjectResource = ResourceType.PATIENT;

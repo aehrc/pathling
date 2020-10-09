@@ -222,7 +222,7 @@ public abstract class AggregateFunction {
     return resultPathFactory.create(expression, result, newIdColumn, valueColumn,
         true, newThisColumn);
   }
-  
+
   @Nonnull
   private static Column[] getGroupBy(@Nonnull final Collection<Column> groupingColumns,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Optional<Column> thisColumn) {
