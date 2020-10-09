@@ -15,7 +15,10 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.Column;
 
 /**
  * @author Piotr Szul
@@ -37,6 +40,26 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
         .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn())
         .orderBy(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
   }
+
+
+  @Nonnull
+  public DatasetAssert selectGroupingResult(@Nonnull final List<Column> groupingColumns) {
+    return selectGroupingResult(groupingColumns, false);
+  }
+
+  @Nonnull
+  public DatasetAssert selectGroupingResult(@Nonnull final List<Column> groupingColumns,
+      boolean preserveOrder) {
+    check(fhirPath.getIdColumn().isEmpty());
+    check(!groupingColumns.isEmpty());
+    final ArrayList<Column> allColumnsList = new ArrayList<>(groupingColumns);
+    allColumnsList.add(fhirPath.getValueColumn());
+    final Column[] allColumns = allColumnsList.toArray(new Column[allColumnsList.size()]);
+    return new DatasetAssert(preserveOrder
+                             ? fhirPath.getDataset().select(allColumns)
+                             : fhirPath.getDataset().select(allColumns).orderBy(allColumns));
+  }
+
 
   @Nonnull
   public DatasetAssert selectResultPreserveOrder() {
