@@ -288,11 +288,11 @@ public class ParserTest {
   }
 
   @Test
-  // TODO: Re-enable along with first function
-  @Disabled
   public void testWhereWithAggregateFunction() {
-    assertThatResultOf("where($this.name.given.first() = 'Paul').gender")
-        .selectResult();
+    assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
+        .selectResult()
+        .hasRows(allPatientsWithValue(null)
+            .changeValue(PATIENT_ID_9360820c, "female"));
   }
 
   /**
@@ -301,8 +301,9 @@ public class ParserTest {
    */
   @Test
   public void testWhereWithContainsOperator() {
-    assertThatResultOf("where($this.name.given contains 'Paul').gender")
-        .selectResult();
+    assertThatResultOf("where($this.name.given contains 'Karina848').gender")
+        .selectResult()
+        .hasRows(allPatientsWithValue(null).changeValue(PATIENT_ID_9360820c, "female"));
   }
 
   /**
@@ -310,11 +311,12 @@ public class ParserTest {
    * the "collection" operand to the membership operator.
    */
   @Test
-  // TODO: Re-enable along with first function
-  @Disabled
   public void testWhereWithInOperator() {
+
+    // TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
-        .selectResult();
+        .selectResult()
+        .hasRows(allPatientsWithValue(null));
   }
 
   @Test
@@ -331,26 +333,25 @@ public class ParserTest {
   }
 
   @Test
-  // TODO: Re-enable along with first function
-  @Disabled
   public void testWhereWithMemberOf() {
-    // Setup mock terminology client
-    when(terminologyClient.closure(any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
 
+    // TODO: Change to a non-trivial case?
     assertThatResultOf(
         "reverseResolve(MedicationRequest.subject).where(\n"
             + "                $this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\n"
             + "            ).first().authoredOn")
-        .selectResult();
+        .selectResult()
+        .hasRows(allPatientsWithValue(null));
   }
 
   @Test
-  // TODO: Re-enable along with first function
-  @Disabled
   public void testAggregationFollowingNestedWhere() {
+
+    // TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.where("
         + "$this.given contains 'Joe').first().family).gender")
-        .selectResult();
+        .selectResult().
+        hasRows(allPatientsWithValue(null));
   }
 
   @Test
