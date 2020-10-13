@@ -56,8 +56,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void multipleGroupingsAndAggregations() {
     subjectResource = ResourceType.ENCOUNTER;
     mockResourceReader(subjectResource, ResourceType.ORGANIZATION);
@@ -232,8 +230,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void queryWithWhere() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
@@ -347,8 +343,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void queryWithWhereAndBoolean() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.OBSERVATION);
@@ -365,8 +359,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void queryWithWhereInAggregation() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.OBSERVATION);
@@ -398,8 +390,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void queryWithUriValueInGrouping() {
     subjectResource = ResourceType.ENCOUNTER;
     mockResourceReader(subjectResource, ResourceType.CONDITION);

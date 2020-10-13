@@ -12,6 +12,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Strings.randomShortString;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -121,6 +122,9 @@ public abstract class QueryHelpers {
   /**
    * Joins two {@link FhirPath} expressions in a way that is aware of the fact that they may be
    * grouped, and not have resource identity columns.
+   * <p>
+   * Also detects the case where two {@code $this} derived paths are being joined, and adds the
+   * {@code $this} column to the join condition.
    *
    * @param context the current {@link ParserContext}
    * @param left a {@link FhirPath} expression
@@ -132,18 +136,44 @@ public abstract class QueryHelpers {
   public static Dataset<Row> join(@Nonnull final ParserContext context,
       @Nonnull final FhirPath left, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
+    Dataset<Row> leftDataset = left.getDataset();
+    Dataset<Row> rightDataset = right.getDataset();
+
     if (!context.getGroupingColumns().isEmpty()) {
-      final DatasetWithColumns datasetWithColumns = joinOnColumns(left.getDataset(),
-          context.getGroupingColumns(), right.getDataset(),
+      final DatasetWithColumns datasetWithColumns = joinOnColumns(leftDataset,
+          context.getGroupingColumns(), rightDataset,
           context.getGroupingColumns(), joinType);
       return datasetWithColumns.getDataset();
     }
-    final Column leftId = checkPresent(left.getIdColumn());
-    final Column rightId = checkPresent(right.getIdColumn());
 
-    final Column joinCondition = leftId.equalTo(rightId);
-    final Dataset<Row> target = selectJoinTarget(right.getDataset(), left.getDataset());
-    return left.getDataset().join(target, joinCondition, joinType.getSparkName());
+    final Column leftId;
+    final Column rightId;
+    leftId = checkPresent(left.getIdColumn());
+    rightId = checkPresent(right.getIdColumn());
+    Column joinCondition = leftId.equalTo(rightId);
+
+    // If both the left and right expressions are not literal and contain $this columns, we need to
+    // add equality of the $this columns to the join condition. This is to scope the join to a
+    // single element within the input collection.
+    if (left instanceof NonLiteralPath && right instanceof NonLiteralPath) {
+      final NonLiteralPath nonLiteralLeft = (NonLiteralPath) left;
+      final NonLiteralPath nonLiteralRight = (NonLiteralPath) right;
+      if (nonLiteralLeft.getThisColumn().isPresent() && nonLiteralRight.getThisColumn()
+          .isPresent()) {
+        final String leftThisColumnName = randomShortString() + "_value";
+        final String rightThisColumnName = randomShortString() + "_value";
+        leftDataset = leftDataset
+            .withColumn(leftThisColumnName, nonLiteralLeft.getThisColumn().get());
+        rightDataset = rightDataset
+            .withColumn(rightThisColumnName, nonLiteralRight.getThisColumn().get());
+        final Column leftThisColumn = leftDataset.col(leftThisColumnName);
+        final Column rightThisColumn = rightDataset.col(rightThisColumnName);
+        joinCondition = joinCondition.and(leftThisColumn.equalTo(rightThisColumn));
+      }
+    }
+
+    final Dataset<Row> target = selectJoinTarget(rightDataset, leftDataset);
+    return leftDataset.join(target, joinCondition, joinType.getSparkName());
   }
 
   /**
