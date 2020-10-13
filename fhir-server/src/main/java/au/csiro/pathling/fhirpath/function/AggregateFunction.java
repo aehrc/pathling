@@ -92,17 +92,9 @@ public abstract class AggregateFunction {
 
     return applyAggregation(context, dataset, inputs, aggregationColumn, expression,
         // create the result as an ElementPath of given FhirType
-        new ResultPathFactory<ElementPath>() {
-          @Override
-          public ElementPath create(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-              @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
-              @Nonnull Optional<Column> thisColumn) {
-            return ElementPath
-                .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
-                    thisColumn,
-                    fhirType);
-          }
-        });
+        (expression1, dataset1, idColumn, valueColumn, singular, thisColumn) -> ElementPath
+            .build(expression1, dataset1, idColumn, valueColumn, true, Optional.empty(), thisColumn,
+                fhirType));
   }
 
   /**
@@ -137,22 +129,14 @@ public abstract class AggregateFunction {
    * @return a new {@link FhirPath} representing the result
    */
   @Nonnull
-  protected NonLiteralPath applyAggregation(@Nonnull final ParserContext context,
+  private NonLiteralPath applyAggregation(@Nonnull final ParserContext context,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Collection<FhirPath> inputs,
       @Nonnull final Column aggregationColumn, @Nonnull final String expression,
       @Nonnull final NonLiteralPath contextPath) {
 
     return applyAggregation(context, dataset, inputs, aggregationColumn, expression,
         // create the result as a copy of input path
-        new ResultPathFactory<NonLiteralPath>() {
-          @Override
-          public NonLiteralPath create(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-              @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
-              @Nonnull Optional<Column> thisColumn) {
-            return contextPath
-                .copy(expression, dataset, idColumn, valueColumn, singular, thisColumn);
-          }
-        });
+        contextPath::copy);
   }
 
   /**

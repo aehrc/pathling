@@ -7,11 +7,9 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -20,7 +18,6 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -29,7 +26,10 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Collections;
 import java.util.Optional;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -45,15 +45,11 @@ import org.junit.jupiter.api.Test;
 @Tag("UnitTest")
 public class FirstFunctionTest {
 
-  private SparkSession spark;
-  private ResourceReader mockReader;
   private FhirContext fhirContext;
 
   @BeforeEach
   public void setUp() {
     fhirContext = FhirHelpers.getFhirContext();
-    spark = getSparkSession();
-    mockReader = mock(ResourceReader.class);
   }
 
   @Test
@@ -92,7 +88,7 @@ public class FirstFunctionTest {
         .isSingular()
         .hasResourceType(ResourceType.PATIENT);
 
-    final Dataset<Row> expectedDataset = inputDataset;
+    @SuppressWarnings("UnnecessaryLocalVariable") final Dataset<Row> expectedDataset = inputDataset;
 
     assertThat(result)
         .selectResult()

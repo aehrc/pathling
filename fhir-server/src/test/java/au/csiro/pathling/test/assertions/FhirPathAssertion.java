@@ -24,6 +24,7 @@ import org.apache.spark.sql.Column;
  * @author Piotr Szul
  * @author John Grimes
  */
+@SuppressWarnings("unused")
 public class FhirPathAssertion<T extends FhirPathAssertion> {
 
   @Nonnull
@@ -49,12 +50,12 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
 
   @Nonnull
   public DatasetAssert selectGroupingResult(@Nonnull final List<Column> groupingColumns,
-      boolean preserveOrder) {
+      final boolean preserveOrder) {
     check(fhirPath.getIdColumn().isEmpty());
     check(!groupingColumns.isEmpty());
     final ArrayList<Column> allColumnsList = new ArrayList<>(groupingColumns);
     allColumnsList.add(fhirPath.getValueColumn());
-    final Column[] allColumns = allColumnsList.toArray(new Column[allColumnsList.size()]);
+    final Column[] allColumns = allColumnsList.toArray(new Column[0]);
     return new DatasetAssert(preserveOrder
                              ? fhirPath.getDataset().select(allColumns)
                              : fhirPath.getDataset().select(allColumns).orderBy(allColumns));

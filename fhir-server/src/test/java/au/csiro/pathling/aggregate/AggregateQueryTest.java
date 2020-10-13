@@ -292,8 +292,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with first function
-  // also requires empty()
+  // TODO: Re-enable along with empty function
   @Disabled
   void queryWithWhereAsComparisonOperand() {
     subjectResource = ResourceType.PATIENT;

@@ -9,11 +9,13 @@ package au.csiro.pathling.test.fixtures;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.Arrays;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.types.DataTypes;
 
 /**
  * @author Piotr Szul
  */
+@SuppressWarnings("WeakerAccess")
 public class PatientListBuilder {
 
   public static final String PATIENT_ID_121503c8 = "Patient/121503c8-9564-4b48-9086-a22df717948e";
@@ -30,7 +32,7 @@ public class PatientListBuilder {
       PATIENT_ID_2b36c1e2, PATIENT_ID_7001ad9c, PATIENT_ID_8ee183e2, PATIENT_ID_9360820c,
       PATIENT_ID_a7eb2ce7, PATIENT_ID_bbd33563, PATIENT_ID_beff242e, PATIENT_ID_e62e52ae);
 
-  public static DatasetBuilder allPatientsWithValue(Object value) {
+  public static DatasetBuilder allPatientsWithValue(@Nullable final Object value) {
     return new DatasetBuilder()
         .withColumn("123abcd_id", DataTypes.StringType)
         .withColumn("123abcd", DataTypes.BooleanType)

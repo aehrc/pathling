@@ -12,7 +12,6 @@ import static org.apache.spark.sql.functions.first;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -33,10 +32,10 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull NamedFunctionInput input) {
+  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     checkNoArguments("first", input);
 
-    final NonLiteralPath inputPath =  input.getInput();
+    final NonLiteralPath inputPath = input.getInput();
     final String expression = expressionFromInput(input, NAME);
 
     final Function<Column, Column> firstIgnoreNull = col -> first(col, true);
