@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -93,9 +94,7 @@ public class DatasetBuilder {
   @Nonnull
   public DatasetBuilder withIdValueRows(@Nonnull final Iterable<String> ids,
       @Nonnull final Function<String, Object> valueProducer) {
-    ids.forEach(id -> {
-      this.withRow(id, valueProducer.apply(id));
-    });
+    ids.forEach(id -> this.withRow(id, valueProducer.apply(id)));
     return this;
   }
 
@@ -123,7 +122,7 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public DatasetBuilder withIdsAndValue(@Nonnull final Object value,
+  public DatasetBuilder withIdsAndValue(@Nullable final Object value,
       @Nonnull final Iterable<String> ids) {
     for (final String id : ids) {
       final Row row = RowFactory.create(id, value);
