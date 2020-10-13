@@ -13,7 +13,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.encounter).code.coding.system.empty()"
+          "valueString": "(reverseResolve(Condition.encounter).code.coding.system).empty()"
         }
       ]
     },

@@ -21,7 +21,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "(status = 'finished') and (reasonCode.coding.display.empty()) and ((class.code) = 'AMB') and (serviceProvider.resolve().name = 'ST ELIZABETH\\'S MEDICAL CENTER')"
+          "valueString": "(status = 'finished') and ((class.code) = 'AMB') and (serviceProvider.resolve().name = 'ST ELIZABETH\\'S MEDICAL CENTER') and ((reasonCode.coding.display).empty())"
         }
       ]
     }
