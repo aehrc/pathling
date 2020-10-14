@@ -146,10 +146,8 @@ public abstract class QueryHelpers {
       return datasetWithColumns.getDataset();
     }
 
-    final Column leftId;
-    final Column rightId;
-    leftId = checkPresent(left.getIdColumn());
-    rightId = checkPresent(right.getIdColumn());
+    final Column leftId = checkPresent(left.getIdColumn());
+    final Column rightId = checkPresent(right.getIdColumn());
     Column joinCondition = leftId.equalTo(rightId);
 
     // If both the left and right expressions are not literal and contain $this columns, we need to
