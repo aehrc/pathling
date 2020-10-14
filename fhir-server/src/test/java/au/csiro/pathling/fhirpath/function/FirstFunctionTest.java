@@ -109,11 +109,14 @@ public class FirstFunctionTest {
         .withStructColumn("status", DataTypes.StringType)
         .withRow("Encounter/xyz1", RowFactory.create("EpisodeOfCare/abc1", "planned"))
         .withRow("Encounter/xyz1", RowFactory.create("EpisodeOfCare/abc2", "planned"))
+        .withRow("Encounter/xyz1", RowFactory.create("EpisodeOfCare/abc4", "active"))
+        .withRow("Encounter/xyz1", RowFactory.create("EpisodeOfCare/abc5", "active"))
         .withRow("Encounter/xyz2", RowFactory.create("EpisodeOfCare/abc3", "active"))
         .withRow("Encounter/xyz3", null)
         .withRow("Encounter/xyz3", RowFactory.create("EpisodeOfCare/abc3", "waitlist"))
         .withRow("Encounter/xyz4", null)
-        .buildWithStructValue();
+        .buildWithStructValue()
+        .repartition(3);
 
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
@@ -162,6 +165,8 @@ public class FirstFunctionTest {
         .withValueColumn(DataTypes.StringType)
         .withRow("Patient/abc1", "Jude")   // when: "two values"  expect: "Jude"
         .withRow("Patient/abc1", "Mark")
+        .withRow("Patient/abc1", "Mark")
+        .withRow("Patient/abc1", "Mark")
         .withRow("Patient/abc2", "Samuel") // when: "single value" expect: "Samuel"
         .withRow("Patient/abc3", null)     // when: "leading null" expect: "Adam"
         .withRow("Patient/abc3", "Adam")
@@ -170,7 +175,8 @@ public class FirstFunctionTest {
         .withRow("Patient/abc5", null)    // when: "single null" expect: null
         .withRow("Patient/abc6", null)    // when: "many nulls" expect: null
         .withRow("Patient/abc6", null)
-        .build();
+        .build()
+        .repartition(3);
 
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)

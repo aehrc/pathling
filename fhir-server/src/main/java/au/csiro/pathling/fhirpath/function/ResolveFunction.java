@@ -16,7 +16,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithIdAndValue;
+import au.csiro.pathling.QueryHelpers.DatasetWithIdsAndValue;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
@@ -92,7 +92,7 @@ public class ResolveFunction implements NamedFunction {
         .getResourceDefinition(resourceType.toCode());
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
 
-    final DatasetWithIdAndValue targetDataset = convertRawResource(
+    final DatasetWithIdsAndValue targetDataset = convertRawResource(
         resourceReader.read(resourceType));
     final Dataset<Row> dataset = joinOnReference(referencePath, targetDataset.getDataset(),
         targetDataset.getIdColumn(), JoinType.LEFT_OUTER);
@@ -114,7 +114,7 @@ public class ResolveFunction implements NamedFunction {
       if (resourceReader.getAvailableResourceTypes().contains(referenceType)) {
         // Unfortunately we can't include the full content of the resource, as Spark won't tolerate 
         // the structure of two rows in the same dataset being different.
-        final DatasetWithIdAndValue typeDatasetWithColumns = convertRawResource(
+        final DatasetWithIdsAndValue typeDatasetWithColumns = convertRawResource(
             resourceReader.read(referenceType));
         Dataset<Row> typeDataset = typeDatasetWithColumns.getDataset()
             .withColumn("type", lit(referenceType.toCode()));

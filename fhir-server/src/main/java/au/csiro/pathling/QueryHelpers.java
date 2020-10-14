@@ -39,6 +39,11 @@ public abstract class QueryHelpers {
   public static final String ID_COLUMN_SUFFIX = "_id";
 
   /**
+   * String used at the end of column names used for element identity (hid).
+   */
+  public static final String HID_COLUMN_SUFFIX = "_hid";
+
+  /**
    * String used at the end of column names used for expression values.
    */
   public static final String VALUE_COLUMN_SUFFIX = "_value";
@@ -54,11 +59,12 @@ public abstract class QueryHelpers {
    * columns from the original Dataset
    */
   @Nonnull
-  public static DatasetWithIdAndValue convertRawResource(@Nonnull final Dataset<Row> dataset) {
+  public static DatasetWithIdsAndValue convertRawResource(@Nonnull final Dataset<Row> dataset) {
     checkArgument(dataset.columns().length > 1, "dataset has no columns");
 
     final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
+    final String hidColumnName = hash + HID_COLUMN_SUFFIX;
     final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
 
     final String firstColumn = dataset.columns()[0];
@@ -66,11 +72,15 @@ public abstract class QueryHelpers {
         .copyOfRange(dataset.columns(), 1, dataset.columns().length);
 
     Dataset<Row> result = dataset.withColumn(idColumnName, dataset.col("id"));
+    // initially the hid is set to array(0)
+    result = result.withColumn(hidColumnName, functions.array(functions.lit(0)));
     result = result.withColumn(valueColumnName, functions.struct(firstColumn, remainingColumns));
     final Column idColumn = result.col(idColumnName);
+    final Column hidColumn = result.col(hidColumnName);
     final Column valueColumn = result.col(valueColumnName);
 
-    return new DatasetWithIdAndValue(result.select(idColumn, valueColumn), idColumn, valueColumn);
+    return new DatasetWithIdsAndValue(result.select(idColumn, hidColumn, valueColumn), idColumn,
+        hidColumn, valueColumn);
   }
 
   /**
@@ -481,13 +491,16 @@ public abstract class QueryHelpers {
    * {@link Column}.
    */
   @Value
-  public static class DatasetWithIdAndValue {
+  public static class DatasetWithIdsAndValue {
 
     @Nonnull
     Dataset<Row> dataset;
 
     @Nonnull
     Column idColumn;
+
+    @Nonnull
+    Column hidColumn;
 
     @Nonnull
     Column valueColumn;

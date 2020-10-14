@@ -8,7 +8,7 @@ package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.convertRawResource;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithIdAndValue;
+import au.csiro.pathling.QueryHelpers.DatasetWithIdsAndValue;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
@@ -70,7 +70,7 @@ public class ResourcePath extends NonLiteralPath {
         .getResourceDefinition(resourceCode);
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
     final Dataset<Row> rawDataset = resourceReader.read(resourceType);
-    final DatasetWithIdAndValue dataset = convertRawResource(rawDataset);
+    final DatasetWithIdsAndValue dataset = convertRawResource(rawDataset);
     return new ResourcePath(expression, dataset.getDataset(), Optional.of(dataset.getIdColumn()),
         dataset.getValueColumn(), singular, Optional.empty(), definition);
   }

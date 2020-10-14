@@ -58,6 +58,15 @@ public class DatasetBuilder {
   }
 
   @Nonnull
+  public DatasetBuilder withHIDColumn() {
+    final StructField column = new StructField("hid",
+        DataTypes.createArrayType(DataTypes.IntegerType), true, metadata);
+    datasetColumns.add(column);
+    return this;
+  }
+
+
+  @Nonnull
   public DatasetBuilder withValueColumn(@Nonnull final DataType dataType) {
     final StructField column = new StructField("value", dataType, true, metadata);
     datasetColumns.add(column);
@@ -190,6 +199,11 @@ public class DatasetBuilder {
   @Nonnull
   public StructType getStructType() {
     return new StructType(datasetColumns.toArray(new StructField[]{}));
+  }
+
+  @Nonnull
+  public static List<Integer> makeHID(Integer ... levels) {
+    return Arrays.asList(levels);
   }
 
 }
