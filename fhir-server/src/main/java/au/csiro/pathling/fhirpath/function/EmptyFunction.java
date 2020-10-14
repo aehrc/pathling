@@ -8,7 +8,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static org.apache.spark.sql.functions.max;
+import static org.apache.spark.sql.functions.count;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -36,7 +36,8 @@ public class EmptyFunction extends AggregateFunction implements NamedFunction {
     final String expression = expressionFromInput(input, "empty");
 
     // "Empty" means that the group contains only null values.
-    final Function<Column, Column> empty = col -> when(max(col).isNull(), true).otherwise(false);
+    final Function<Column, Column> empty = col -> when(count(col).equalTo(0), true)
+        .otherwise(false);
 
     return applyAggregationFunction(input.getContext(), inputPath, empty, expression,
         FHIRDefinedType.BOOLEAN);
