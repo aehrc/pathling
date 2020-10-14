@@ -6,6 +6,69 @@
       "part": [
         {
           "name": "label",
+          "valueString": "Ophelia894"
+        },
+        {
+          "name": "label",
+          "valueString": "Ms."
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Ophelia894') and ((name.prefix) contains 'Ms.')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Pedro316"
+        },
+        {
+          "name": "label",
+          "valueString": "Mr."
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Pedro316') and ((name.prefix) contains 'Mr.')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Cherryl901"
+        },
+        {
+          "name": "label",
+          "valueString": "Ms."
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.prefix) contains 'Ms.') and ((name.given) contains 'Cherryl901')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
           "valueString": "Seymour882"
         },
         {
@@ -19,6 +82,68 @@
         {
           "name": "drillDown",
           "valueString": "((name.given) contains 'Seymour882') and ((name.prefix) contains 'Mr.')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Mrs."
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.prefix) contains 'Mrs.') and ((name.given) contains 'Karina848')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Shirley182"
+        },
+        {
+          "name": "label",
+          "valueString": "Mr."
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Shirley182') and ((name.prefix) contains 'Mr.')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Gilberto712"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Gilberto712') and ((name.prefix).empty())"
         }
       ]
     },
@@ -61,131 +186,6 @@
         {
           "name": "drillDown",
           "valueString": "((name.given) contains 'Su690') and ((name.prefix) contains 'Ms.')"
-        }
-      ]
-    },
-    {
-      "name": "grouping",
-      "part": [
-        {
-          "name": "label",
-          "valueString": "Pedro316"
-        },
-        {
-          "name": "label",
-          "valueString": "Mr."
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 1
-        },
-        {
-          "name": "drillDown",
-          "valueString": "((name.given) contains 'Pedro316') and ((name.prefix) contains 'Mr.')"
-        }
-      ]
-    },
-    {
-      "name": "grouping",
-      "part": [
-        {
-          "name": "label",
-          "valueString": "Shirley182"
-        },
-        {
-          "name": "label",
-          "valueString": "Mr."
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 1
-        },
-        {
-          "name": "drillDown",
-          "valueString": "((name.given) contains 'Shirley182') and ((name.prefix) contains 'Mr.')"
-        }
-      ]
-    },
-    {
-      "name": "grouping",
-      "part": [
-        {
-          "name": "label",
-          "valueString": "Ophelia894"
-        },
-        {
-          "name": "label",
-          "valueString": "Ms."
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 1
-        },
-        {
-          "name": "drillDown",
-          "valueString": "((name.given) contains 'Ophelia894') and ((name.prefix) contains 'Ms.')"
-        }
-      ]
-    },
-    {
-      "name": "grouping",
-      "part": [
-        {
-          "name": "label",
-          "valueString": "Karina848"
-        },
-        {
-          "name": "label",
-          "valueString": "Mrs."
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 1
-        },
-        {
-          "name": "drillDown",
-          "valueString": "((name.prefix) contains 'Mrs.') and ((name.given) contains 'Karina848')"
-        }
-      ]
-    },
-    {
-      "name": "grouping",
-      "part": [
-        {
-          "name": "label",
-          "valueString": "Cherryl901"
-        },
-        {
-          "name": "label",
-          "valueString": "Ms."
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 1
-        },
-        {
-          "name": "drillDown",
-          "valueString": "((name.prefix) contains 'Ms.') and ((name.given) contains 'Cherryl901')"
-        }
-      ]
-    },
-    {
-      "name": "grouping",
-      "part": [
-        {
-          "name": "label",
-          "valueString": "Gilberto712"
-        },
-        {
-          "name": "label"
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 1
-        },
-        {
-          "name": "drillDown",
-          "valueString": "((name.given) contains 'Gilberto712') and (name.prefix.empty())"
         }
       ]
     }

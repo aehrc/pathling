@@ -11,8 +11,8 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructT
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -22,7 +22,6 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -30,7 +29,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -38,8 +36,6 @@ import org.junit.jupiter.api.Test;
  * @author John Grimes
  */
 @Tag("UnitTest")
-// TODO: Re-enable along with empty function
-@Disabled
 public class EmptyFunctionTest {
 
   @Test
@@ -65,6 +61,8 @@ public class EmptyFunctionTest {
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
+        .idAndValueColumns()
+        .expression("code")
         .build();
 
     // Set up the function input.
@@ -86,7 +84,7 @@ public class EmptyFunctionTest {
         .withRow("Observation/abc5", false)
         .build();
     assertThat(result)
-        .hasExpression("empty()")
+        .hasExpression("code.empty()")
         .isSingular()
         .isElementPath(BooleanPath.class)
         .selectResult()
@@ -97,37 +95,18 @@ public class EmptyFunctionTest {
   public void inputMustNotContainArguments() {
     final ElementPath input = new ElementPathBuilder().build();
     final StringLiteralPath argument = StringLiteralPath
-        .fromString("'some argument'", mock(FhirPath.class));
+        .fromString("'some argument'", input);
 
     final ParserContext parserContext = new ParserContextBuilder().build();
     final NamedFunctionInput emptyInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
 
     final NamedFunction emptyFunction = NamedFunction.getInstance("empty");
-    final InvalidRequestException error = assertThrows(
-        InvalidRequestException.class,
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
         () -> emptyFunction.invoke(emptyInput));
     assertEquals(
-        "Arguments can not be passed to empty function: empty('some argument')",
-        error.getMessage());
-  }
-
-  @Test
-  public void inputMustNotBeSingular() {
-    final ElementPath input = new ElementPathBuilder()
-        .singular(true)
-        .build();
-
-    final ParserContext parserContext = new ParserContextBuilder().build();
-    final NamedFunctionInput emptyInput = new NamedFunctionInput(parserContext, input,
-        Collections.emptyList());
-
-    final NamedFunction emptyFunction = NamedFunction.getInstance("empty");
-    final InvalidRequestException error = assertThrows(
-        InvalidRequestException.class,
-        () -> emptyFunction.invoke(emptyInput));
-    assertEquals(
-        "Input to empty function must not be singular",
+        "Arguments can not be passed to empty function",
         error.getMessage());
   }
 

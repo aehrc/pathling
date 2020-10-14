@@ -25,7 +25,6 @@ import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.ValueSet;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -56,8 +55,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void multipleGroupingsAndAggregations() {
     subjectResource = ResourceType.ENCOUNTER;
     mockResourceReader(subjectResource, ResourceType.ORGANIZATION);
@@ -230,8 +227,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void queryWithWhere() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
@@ -292,8 +287,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void queryWithWhereAsComparisonOperand() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.MEDICATIONREQUEST);
@@ -345,8 +338,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void queryWithWhereAndBoolean() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.OBSERVATION);
@@ -363,8 +354,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void queryWithWhereInAggregation() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.OBSERVATION);
@@ -396,8 +385,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // TODO: Re-enable along with empty function
-  @Disabled
   void queryWithUriValueInGrouping() {
     subjectResource = ResourceType.ENCOUNTER;
     mockResourceReader(subjectResource, ResourceType.CONDITION);

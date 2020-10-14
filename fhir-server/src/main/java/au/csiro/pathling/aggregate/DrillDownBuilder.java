@@ -7,6 +7,7 @@
 package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+import static au.csiro.pathling.utilities.Strings.parentheses;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
@@ -85,11 +86,10 @@ public class DrillDownBuilder {
         // play well with the equality or membership operator due to precedence.
         final String expression = literal.equals("true")
                                   ? grouping.getExpression()
-                                  : Strings.parentheses(grouping.getExpression()) + equality
-                                      + literal;
+                                  : parentheses(grouping.getExpression()) + equality + literal;
         fhirPaths.add(expression);
       } else {
-        fhirPaths.add(grouping.getExpression() + ".empty()");
+        fhirPaths.add(parentheses(grouping.getExpression()) + ".empty()");
       }
     }
   }
