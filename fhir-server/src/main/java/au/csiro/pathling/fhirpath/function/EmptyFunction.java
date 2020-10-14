@@ -22,7 +22,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * This function returns true if the input collection is empty.
  *
  * @author John Grimes
- * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#empty">first</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#empty">empty</a>
  */
 public class EmptyFunction extends AggregateFunction implements NamedFunction {
 
