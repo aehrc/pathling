@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import au.csiro.pathling.fhirpath.ResourcePath;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
@@ -25,8 +26,10 @@ public class ReferencePath extends ElementPath {
 
   protected ReferencePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, fhirType);
+      final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+        fhirType);
   }
 
   @Nonnull

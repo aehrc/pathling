@@ -126,6 +126,9 @@ public class Configuration {
     @NotNull
     private Aws aws;
 
+    /**
+     * Configuration relating to storage of data using Amazon Web Services (AWS).
+     */
     @Data
     public static class Aws {
 
@@ -296,7 +299,20 @@ public class Configuration {
      * Controls the maximum number of cache entries held in memory.
      */
     @NotNull
-    private long maxEntries;
+    @Min(0)
+    private Long aggregateRequestCacheSize;
+
+    @NotNull
+    @Min(0)
+    private Long searchBundleCacheSize;
+
+    @NotNull
+    @Min(0)
+    private Long searchPageCacheSize;
+
+    @NotNull
+    @Min(0)
+    private Long resourceReaderCacheSize;
 
   }
 
@@ -319,9 +335,9 @@ public class Configuration {
     private List<String> exposeHeaders;
 
     @NotNull
-    private long maxAge;
+    private Long maxAge;
 
-    @Nullable
+    @Nonnull
     public Optional<List<String>> getExposeHeaders() {
       return Optional.ofNullable(exposeHeaders);
     }

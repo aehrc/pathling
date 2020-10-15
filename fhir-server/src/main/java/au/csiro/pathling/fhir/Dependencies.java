@@ -51,7 +51,7 @@ public class Dependencies {
       @Nonnull final FhirContext fhirContext) {
     final Terminology terminology = configuration.getTerminology();
     checkNotNull(terminology);
-    log.info("Creating FHIR terminology client: " + terminology.getServerUrl());
+    log.info("Creating FHIR terminology client: {}", terminology.getServerUrl());
     return TerminologyClient.build(fhirContext,
         terminology.getServerUrl(),
         terminology.getSocketTimeout(),

@@ -1,0 +1,22 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "final"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 9
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(reverseResolve(Observation.subject).where($this.code.coding contains http://loinc.org|8302-2).status) contains 'final'"
+        }
+      ]
+    }
+  ]
+}

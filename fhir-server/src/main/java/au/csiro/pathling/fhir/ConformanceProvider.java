@@ -236,7 +236,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Nonnull
   private Optional<String> getServerBase(
       @Nonnull final Optional<HttpServletRequest> httpServletRequest) {
-    if (!httpServletRequest.isPresent() || !restfulServer.isPresent()) {
+    if (httpServletRequest.isEmpty() || restfulServer.isEmpty()) {
       log.warn("Attempted to get server base URL, HTTP servlet request or RestfulServer missing");
       return Optional.empty();
     } else {

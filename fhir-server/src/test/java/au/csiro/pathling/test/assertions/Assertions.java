@@ -6,11 +6,15 @@
 
 package au.csiro.pathling.test.assertions;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.TestHelpers;
+import java.net.URL;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -60,5 +64,14 @@ public abstract class Assertions {
     } catch (final JSONException e) {
       throw new RuntimeException("Problem checking JSON against test resource", e);
     }
+  }
+
+  public static void assertDatasetAgainstCsv(@Nonnull final String expectedCsvPath,
+      @Nonnull final Dataset<Row> actualDataset) {
+    final URL url = TestHelpers.getResourceAsUrl(expectedCsvPath);
+    final Dataset<Row> expectedDataset = SparkHelpers.getSparkSession().read()
+        .schema(actualDataset.schema())
+        .csv(url.toString());
+    assertEquals(expectedDataset.collectAsList(), actualDataset.collectAsList());
   }
 }

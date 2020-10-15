@@ -46,7 +46,6 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -110,7 +109,6 @@ public class ParserTest {
   }
 
   @Test
-  @Disabled
   public void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
         .isElementPath(BooleanPath.class)
@@ -124,7 +122,6 @@ public class ParserTest {
   }
 
   @Test
-  @Disabled
   public void testInOperator() {
     assertThatResultOf("'Wuckert783' in name.family")
         .isElementPath(BooleanPath.class)
@@ -138,7 +135,6 @@ public class ParserTest {
   }
 
   @Test
-  @Disabled
   public void testCodingOperations() {
     // test unversioned
     assertThatResultOf(
@@ -242,10 +238,9 @@ public class ParserTest {
   }
 
   @Test
-  @Disabled
   public void testSubsumesAndSubsumedBy() {
     // Setup mock terminology client
-    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+    when(terminologyClient.closure(any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
 
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
@@ -256,44 +251,40 @@ public class ParserTest {
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .hasRows(allPatientsWithValue(false)
-            .changeValue(PATIENT_ID_7001ad9c, true));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-empty.csv");
 
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .hasRows(allPatientsWithValue(false)
-            .changeValue(PATIENT_ID_7001ad9c, true));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy-empty.csv");
 
     // on the same collection should return all True (even though one is CodeableConcept)
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)")
         .selectResult()
-        .hasRows(allPatientsWithValue(true));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyClient.closure(any(), any(), any()))
+    when(terminologyClient.closure(any(), any()))
         .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .selectResult()
-        .hasRows(allPatientsWithValue(true)
-            .changeValue(PATIENT_ID_2b36c1e2, false)
-            .changeValue(PATIENT_ID_bbd33563, false));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes.csv");
 
     assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
         + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
         .selectResult()
-        .hasRows(allPatientsWithValue(false)
-            .changeValue(PATIENT_ID_7001ad9c, true));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.csv");
   }
 
   @Test
-  @Disabled
   public void testWhereWithAggregateFunction() {
-    assertThatResultOf("where($this.name.given.first() = 'Paul').gender")
-        .selectResult();
+    assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
+        .selectResult()
+        .hasRows(allPatientsWithValue(null)
+            .changeValue(PATIENT_ID_9360820c, "female"));
   }
 
   /**
@@ -301,10 +292,10 @@ public class ParserTest {
    * the "element" operand to the membership operator.
    */
   @Test
-  @Disabled
   public void testWhereWithContainsOperator() {
-    assertThatResultOf("where($this.name.given contains 'Paul').gender")
-        .selectResult();
+    assertThatResultOf("where($this.name.given contains 'Karina848').gender")
+        .selectResult()
+        .hasRows(allPatientsWithValue(null).changeValue(PATIENT_ID_9360820c, "female"));
   }
 
   /**
@@ -312,53 +303,47 @@ public class ParserTest {
    * the "collection" operand to the membership operator.
    */
   @Test
-  @Disabled
   public void testWhereWithInOperator() {
+
+    // TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
-        .selectResult();
-  }
-
-  /**
-   * This tests that where works when there is no reference to `$this` within the argument.
-   */
-  @Test
-  @Disabled
-  public void testWhereWithNoThis() {
-    assertThatResultOf("where(true).gender")
-        .selectResult();
+        .selectResult()
+        .hasRows(allPatientsWithValue(null));
   }
 
   @Test
-  @Disabled
   public void testWhereWithSubsumes() {
-    // Setup mock terminology client
-    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+    when(terminologyClient.closure(any(), any()))
+        .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
-            + ".subsumedBy(http://snomed.info/sct|127027008)).gender")
-        .selectResult();
+            + ".subsumedBy(http://snomed.info/sct|40055000) contains true).gender")
+        .selectResult()
+        .hasRows(allPatientsWithValue(null)
+            .changeValue(PATIENT_ID_7001ad9c, "female"));
   }
 
   @Test
-  @Disabled
   public void testWhereWithMemberOf() {
-    // Setup mock terminology client
-    when(terminologyClient.closure(any(), any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
 
+    // TODO: Change to a non-trivial case?
     assertThatResultOf(
         "reverseResolve(MedicationRequest.subject).where(\n"
             + "                $this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\n"
             + "            ).first().authoredOn")
-        .selectResult();
+        .selectResult()
+        .hasRows(allPatientsWithValue(null));
   }
 
   @Test
-  @Disabled
   public void testAggregationFollowingNestedWhere() {
+
+    // TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.where("
         + "$this.given contains 'Joe').first().family).gender")
-        .selectResult();
+        .selectResult().
+        hasRows(allPatientsWithValue(null));
   }
 
   @Test

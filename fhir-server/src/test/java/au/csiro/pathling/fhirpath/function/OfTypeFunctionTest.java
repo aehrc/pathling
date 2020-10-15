@@ -8,7 +8,6 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,9 +71,10 @@ class OfTypeFunctionTest {
     final Column idColumn = inputDataset.col("id");
     final Column typeColumn = inputDataset.col("type");
     final Column valueColumn = inputDataset.col("value");
-    final UntypedResourcePath inputPath = UntypedResourcePath.build(
-        "subject.resolve()", inputDataset, Optional.of(idColumn), valueColumn,
-        true, typeColumn, new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
+    final UntypedResourcePath inputPath = UntypedResourcePath
+        .build("subject.resolve()", inputDataset, Optional.of(idColumn), valueColumn, true,
+            Optional.empty(), typeColumn,
+            new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
 
     final Dataset<Row> argumentDataset = new DatasetBuilder()
         .withIdColumn()
@@ -88,7 +88,7 @@ class OfTypeFunctionTest {
         .thenReturn(argumentDataset);
     final ResourcePath argumentPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
-    check(inputPath.getIdColumn().isPresent());
+    assertTrue(inputPath.getIdColumn().isPresent());
 
     final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn().get())

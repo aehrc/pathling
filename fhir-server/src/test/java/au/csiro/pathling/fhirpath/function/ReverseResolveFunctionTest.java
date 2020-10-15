@@ -10,7 +10,6 @@ import static au.csiro.pathling.QueryHelpers.joinOnId;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.FhirHelpers.getFhirContext;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -105,7 +104,7 @@ class ReverseResolveFunctionTest {
         .buildWithStructValue();
     final Column valueColumn = argumentDatasetPreJoin.col("value");
 
-    check(originPath.getIdColumn().isPresent());
+    assertTrue(originPath.getIdColumn().isPresent());
     final Dataset<Row> argumentDataset = joinOnId(originPath.getDataset(),
         originPath.getIdColumn().get(),
         argumentDatasetPreJoin, argumentDatasetPreJoin.col("id"), JoinType.LEFT_OUTER);
@@ -115,11 +114,11 @@ class ReverseResolveFunctionTest {
         .valueColumn(valueColumn)
         .expression("Encounter.subject")
         .singular(false)
-        .parentPath(originPath)
+        .foreignResource(originPath)
         .definition(definition)
         .buildDefined();
 
-    check(inputPath.getIdColumn().isPresent());
+    assertTrue(inputPath.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn().get())
         .resourceReader(mockReader)

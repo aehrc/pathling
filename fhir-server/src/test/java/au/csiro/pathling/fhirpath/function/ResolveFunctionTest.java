@@ -7,10 +7,8 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockAvailableResourceTypes;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -18,10 +16,11 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
-import au.csiro.pathling.fhirpath.element.StringPath;
+import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
@@ -29,7 +28,6 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Collections;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -71,7 +69,7 @@ class ResolveFunctionTest {
         .withRow("Encounter/xyz3", RowFactory.create(null, "EpisodeOfCare/abc2", null))
         .withRow("Encounter/xyz4", RowFactory.create(null, "EpisodeOfCare/abc2", null))
         .buildWithStructValue();
-    final FhirPath referencePath = new ElementPathBuilder()
+    final ElementPath referencePath = new ElementPathBuilder()
         .expression("Encounter.episodeOfCare")
         .dataset(referenceDataset)
         .idAndValueColumns()
@@ -127,7 +125,7 @@ class ResolveFunctionTest {
         .withRow("Encounter/xyz4", RowFactory.create(null, "Patient/abc2", null))
         .withRow("Encounter/xyz5", RowFactory.create(null, "Group/def1", null))
         .buildWithStructValue();
-    final FhirPath referencePath = new ElementPathBuilder()
+    final ElementPath referencePath = new ElementPathBuilder()
         .expression("Encounter.subject")
         .dataset(referenceDataset)
         .idAndValueColumns()
@@ -195,7 +193,7 @@ class ResolveFunctionTest {
         .withRow("Condition/xyz1", RowFactory.create(null, "Observation/abc1", null))
         .withRow("Condition/xyz2", RowFactory.create(null, "ClinicalImpression/def1", null))
         .buildWithStructValue();
-    final FhirPath referencePath = new ElementPathBuilder()
+    final ElementPath referencePath = new ElementPathBuilder()
         .expression("Condition.evidence.detail")
         .dataset(referenceDataset)
         .idAndValueColumns()
@@ -251,9 +249,13 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withValueColumn(DataTypes.StringType)
         .build();
-    final IdAndValueColumns columns = getIdAndValueColumns(patientDataset);
-    final FhirPath genderPath = new StringPath("Patient.gender", patientDataset,
-        Optional.of(columns.getId()), columns.getValue(), true, FHIRDefinedType.CODE);
+    final ElementPath genderPath = new ElementPathBuilder()
+        .expression("Patient.gender")
+        .dataset(patientDataset)
+        .idAndValueColumns()
+        .singular(true)
+        .fhirType(FHIRDefinedType.CODE)
+        .build();
 
     final NamedFunctionInput resolveInput = buildFunctionInput(genderPath);
 
@@ -263,7 +265,7 @@ class ResolveFunctionTest {
 
   @Test
   public void throwExceptionWhenArgumentSupplied() {
-    final FhirPath referencePath = new ElementPathBuilder()
+    final ElementPath referencePath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
 
@@ -279,14 +281,13 @@ class ResolveFunctionTest {
   }
 
   @Nonnull
-  private NamedFunctionInput buildFunctionInput(@Nonnull final FhirPath inputPath) {
-    check(inputPath.getIdColumn().isPresent());
+  private NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
+    assertTrue(inputPath.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn().get())
         .resourceReader(mockReader)
         .build();
-    return new NamedFunctionInput(parserContext, inputPath,
-        Collections.emptyList());
+    return new NamedFunctionInput(parserContext, inputPath, Collections.emptyList());
   }
 
   @Nonnull

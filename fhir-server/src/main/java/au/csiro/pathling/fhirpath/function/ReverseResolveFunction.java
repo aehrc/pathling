@@ -6,12 +6,12 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.joinOnIdAndReference;
+import static au.csiro.pathling.QueryHelpers.joinOnReference;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Optional;
@@ -38,7 +38,7 @@ public class ReverseResolveFunction implements NamedFunction {
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     checkUserInput(input.getInput() instanceof ResourcePath,
         "Input to " + NAME + " function must be a resource: " + input.getInput().getExpression());
-    final FhirPath inputPath = input.getInput();
+    final ResourcePath inputPath = (ResourcePath) input.getInput();
     final String expression = NamedFunction.expressionFromInput(input, NAME);
     checkUserInput(input.getArguments().size() == 1,
         "reverseResolve function accepts a single argument: " + expression);
@@ -46,29 +46,30 @@ public class ReverseResolveFunction implements NamedFunction {
     checkUserInput(argument instanceof ReferencePath,
         "Argument to reverseResolve function must be a Reference: " + argument.getExpression());
 
-    // Check that the argument types include the input type.
+    // Check that the input type is one of the possible types specified by the argument.
     final Set<ResourceType> argumentTypes = ((ReferencePath) argument).getResourceTypes();
-    final ResourceType inputType = ((ResourcePath) inputPath).getResourceType();
+    final ResourceType inputType = inputPath.getResourceType();
     checkUserInput(argumentTypes.contains(inputType),
         "Reference in argument to reverseResolve does not support input resource type: "
             + expression);
 
     // Do a left outer join from the input to the argument dataset using the reference field in the
     // argument.
-    final Dataset<Row> dataset = joinOnIdAndReference(inputPath, argument.getDataset(),
-        argument.getValueColumn(), JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = joinOnReference(argument, inputPath, JoinType.RIGHT_OUTER);
 
-    // Check the path for origin information - if it not present, reverse reference resolution will
-    // not be possible. This may occur in some cases, e.g. where aggregations are performed within
-    // the argument to this function.
-    final Optional<Column> optionalOriginColumn = argument.getOriginColumn();
-    final Optional<ResourceDefinition> optionalOriginType = argument.getOriginType();
-    checkUserInput(optionalOriginColumn.isPresent() && optionalOriginType.isPresent(),
-        "Argument to reverse resolve must be an element that is navigable from the "
-            + "target resource type, without any aggregations: " + expression);
+    // Check the argument for information about a foreign resource that it originated from - if it
+    // not present, reverse reference resolution will not be possible.
+    checkUserInput(argument instanceof NonLiteralPath,
+        "Argument to reverseResolve cannot be a literal");
+    final NonLiteralPath nonLiteralArgument = (NonLiteralPath) argument;
+    checkUserInput(nonLiteralArgument.getForeignResource().isPresent(),
+        "Argument to reverseResolve must be an element that is navigable from a "
+            + "target resource type: " + expression);
+    final ResourcePath foreignResource = nonLiteralArgument.getForeignResource().get();
 
+    final Optional<Column> thisColumn = inputPath.getThisColumn();
     return new ResourcePath(expression, dataset, inputPath.getIdColumn(),
-        optionalOriginColumn.get(), false, optionalOriginType.get());
+        foreignResource.getValueColumn(), false, thisColumn, foreignResource.getDefinition());
   }
 
 }

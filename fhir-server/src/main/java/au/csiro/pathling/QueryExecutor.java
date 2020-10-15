@@ -7,7 +7,8 @@
 package au.csiro.pathling;
 
 import static au.csiro.pathling.QueryHelpers.joinOnId;
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -18,6 +19,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -67,11 +69,27 @@ public abstract class QueryExecutor {
     this.terminologyClientFactory = terminologyClientFactory;
   }
 
+  /**
+   * Joins the datasets in a list together, using their resource identity columns.
+   * <p>
+   * Note that this should only be used in contexts where the input context is a single resource -
+   * it does not support joining using grouping columns.
+   */
   @Nonnull
-  protected ParserContext buildParserContext(@Nonnull final ResourceType resourceType) {
-    final ResourcePath inputContext = buildInputContext(resourceType);
-    return new ParserContext(inputContext, Optional.empty(), fhirContext, sparkSession,
-        resourceReader, terminologyClient, terminologyClientFactory);
+  protected static Dataset<Row> joinExpressions(@Nonnull final List<FhirPath> expressions) {
+    checkArgument(!expressions.isEmpty(), "expressions must not be empty");
+
+    FhirPath previous = expressions.get(0);
+    Dataset<Row> result = previous.getDataset();
+
+    for (int i = 1; i < expressions.size(); i++) {
+      final FhirPath current = expressions.get(i);
+      final Column idColumn = checkPresent(previous.getIdColumn());
+      result = joinOnId(result, idColumn, current, JoinType.LEFT_OUTER);
+      previous = current;
+    }
+
+    return result;
   }
 
   @Nonnull
@@ -83,20 +101,12 @@ public abstract class QueryExecutor {
   }
 
   @Nonnull
-  protected static Dataset<Row> joinExpressions(@Nonnull final List<FhirPath> expressions) {
-    check(!expressions.isEmpty());
+  protected ParserContext buildParserContext(@Nonnull final ResourceType resourceType) {
+    final ResourcePath inputContext = buildInputContext(resourceType);
+    checkPresent(inputContext.getIdColumn());
 
-    FhirPath previous = expressions.get(0);
-    Dataset<Row> result = previous.getDataset();
-
-    for (int i = 1; i < expressions.size(); i++) {
-      final FhirPath current = expressions.get(i);
-      check(previous.getIdColumn().isPresent());
-      result = joinOnId(result, previous.getIdColumn().get(), current, JoinType.LEFT_OUTER);
-      previous = current;
-    }
-
-    return result;
+    return new ParserContext(inputContext, fhirContext, sparkSession,
+        resourceReader, terminologyClient, terminologyClientFactory, Collections.emptyList());
   }
 
   @Nonnull

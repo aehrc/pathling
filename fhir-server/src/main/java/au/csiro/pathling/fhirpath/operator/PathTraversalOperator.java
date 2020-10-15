@@ -10,6 +10,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.explode_outer;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import java.util.Optional;
@@ -35,7 +36,10 @@ public class PathTraversalOperator {
    */
   @Nonnull
   public ElementPath invoke(@Nonnull final PathTraversalInput input) {
-    final FhirPath left = input.getLeft();
+    checkUserInput(input.getLeft() instanceof NonLiteralPath,
+        "Path traversal operator cannot be invoked on a literal value: " + input.getLeft()
+            .getExpression());
+    final NonLiteralPath left = (NonLiteralPath) input.getLeft();
     final String right = input.getRight();
 
     // If the input expression is the same as the input context, the child will be the start of the
@@ -61,7 +65,8 @@ public class PathTraversalOperator {
                                : explode_outer(field);
     final boolean singular = left.isSingular() && maxCardinalityOfOne;
 
-    return ElementPath.build(left, expression, leftDataset, valueColumn, singular, childDefinition);
+    return ElementPath.build(expression, leftDataset, left.getIdColumn(), valueColumn, singular,
+        left.getForeignResource(), left.getThisColumn(), childDefinition);
   }
 
 }

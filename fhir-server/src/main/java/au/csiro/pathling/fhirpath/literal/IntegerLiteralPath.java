@@ -31,8 +31,8 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
     Comparable, Numeric {
 
   @SuppressWarnings("WeakerAccess")
-  protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof IntegerType);
   }
@@ -48,9 +48,8 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
    */
   public static IntegerLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws NumberFormatException {
-    check(context.getIdColumn().isPresent());
     final int value = Integer.parseInt(fhirPath);
-    return new IntegerLiteralPath(context.getDataset(), context.getIdColumn().get(),
+    return new IntegerLiteralPath(context.getDataset(), context.getIdColumn(),
         new IntegerType(value));
   }
 
@@ -73,7 +72,8 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return Comparable.buildComparison(this, operation.getSparkFunction());
   }
 

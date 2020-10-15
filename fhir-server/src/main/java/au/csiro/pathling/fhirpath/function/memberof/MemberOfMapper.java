@@ -8,9 +8,9 @@ package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 
-import au.csiro.pathling.fhir.SimpleCoding;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.*;
 import java.util.function.Function;
@@ -85,7 +85,7 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     final Function<Row, MemberOfResult> keyMapper = row -> new MemberOfResult(row.getInt(0));
     final Function<Row, List<SimpleCoding>> valueMapper = row ->
         getCodingsFromRow(row.getStruct(1)).stream()
-            .filter(SimpleCoding::isNotNull)
+            .filter(SimpleCoding::isDefined)
             .collect(Collectors.toList());
     final Map<MemberOfResult, List<SimpleCoding>> hashesAndCodes = StreamSupport
         .stream(inputRowsIterable.spliterator(), false)
@@ -158,8 +158,8 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     } else {
       // Ask the terminology service to work out the intersection between the set of input codings
       // and the ValueSet identified by the URI in the argument.
-      log.info("Intersecting " + hashesAndCodes.size() + " concepts with " + valueSetUri
-          + " using terminology service");
+      log.info("Intersecting {} concepts with {} using terminology service", hashesAndCodes.size(),
+          valueSetUri);
       final ValueSet expansion = terminologyClient
           .expand(intersection, new IntegerType(hashesAndCodes.size()));
 
@@ -213,12 +213,12 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     @Nonnull
     Optional<String> version;
 
-    public boolean matchesCoding(@Nonnull final SimpleCoding coding) {
-      if (!system.isPresent() || coding.getSystem() == null) {
+    private boolean matchesCoding(@Nonnull final SimpleCoding coding) {
+      if (system.isEmpty() || coding.getSystem() == null) {
         return false;
       }
       final boolean eitherSideIsMissingVersion =
-          !version.isPresent() || coding.getVersion() == null;
+          version.isEmpty() || coding.getVersion() == null;
       final boolean versionAgnosticTest = system.get().equals(coding.getSystem());
       if (eitherSideIsMissingVersion) {
         return versionAgnosticTest;

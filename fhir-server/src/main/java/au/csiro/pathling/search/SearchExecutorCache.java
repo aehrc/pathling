@@ -43,10 +43,14 @@ public class SearchExecutorCache implements Cacheable {
    */
   public SearchExecutorCache(@Nonnull final Configuration configuration) {
     cache = CacheBuilder.newBuilder()
-        .maximumSize(configuration.getCaching().getMaxEntries())
+        .maximumSize(configuration.getCaching().getSearchBundleCacheSize())
         .build(new SearchExecutorCacheLoader());
   }
 
+  /**
+   * @param key a {@link SearchExecutorCacheKey}
+   * @return a (possibly cached) {@link IBundleProvider}
+   */
   @Nonnull
   public IBundleProvider get(@Nonnull final SearchExecutorCacheKey key) {
     return cache.getUnchecked(key);
@@ -147,13 +151,13 @@ public class SearchExecutorCache implements Cacheable {
       }
       final SearchExecutorCacheKey that = (SearchExecutorCacheKey) o;
       return subjectResource == that.subjectResource &&
-          ((!filters.isPresent() && !that.filters.isPresent())
+          ((filters.isEmpty() && that.filters.isEmpty())
               || (filters.toString().equals(that.filters.toString())));
     }
 
     @Override
     public int hashCode() {
-      if (!filters.isPresent()) {
+      if (filters.isEmpty()) {
         return Objects.hashCode(Optional.empty());
       } else {
         return Objects.hash(subjectResource, filters.toString());

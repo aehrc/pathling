@@ -6,8 +6,8 @@
 
 package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -23,7 +23,7 @@ public interface FhirPath {
   /**
    * Returns the FHIRPath expression that represents this path.
    *
-   * @return A FHIRPath string.
+   * @return a FHIRPath string
    */
   @Nonnull
   String getExpression();
@@ -41,7 +41,7 @@ public interface FhirPath {
    * This is optional as sometimes we can have paths that do not contain a resource identity, e.g. a
    * path representing the result of an aggregation over groupings.
    *
-   * @return A {@link Column}
+   * @return a {@link Column}
    */
   @Nonnull
   Optional<Column> getIdColumn();
@@ -49,7 +49,7 @@ public interface FhirPath {
   /**
    * Returns a {@link Column} within the dataset containing the values of the nodes.
    *
-   * @return A {@link Column}
+   * @return a {@link Column}
    */
   @Nonnull
   Column getValueColumn();
@@ -62,34 +62,19 @@ public interface FhirPath {
   boolean isSingular();
 
   /**
-   * Returns the specified child of this path, if there is one.
+   * Gets an ID {@link Column} from any of the inputs, if there is one.
    *
-   * @param name The name of the child element
-   * @return An {@link ElementDefinition} object
+   * @param inputs a collection of objects
+   * @return a {@link Column}, if one was found
    */
   @Nonnull
-  Optional<ElementDefinition> getChildElement(@Nonnull String name);
-
-  /**
-   * Returns the resource value column from the resource at the root of this path.
-   * <p>
-   * This is required for reverse reference resolution, where we need to get to the resource to be
-   * joined to the source of the reverse resolve operation.
-   *
-   * @return A {@link Column}
-   */
-  @Nonnull
-  Optional<Column> getOriginColumn();
-
-  /**
-   * Returns the resource type of the resource at the root of this path.
-   * <p>
-   * This is required for reverse reference resolution, where we need to get to the resource to be
-   * joined to the source of the reverse resolve operation.
-   *
-   * @return A {@link ResourceDefinition}
-   */
-  @Nonnull
-  Optional<ResourceDefinition> getOriginType();
+  static Optional<Column> findIdColumn(@Nonnull final Object... inputs) {
+    return Stream.of(inputs)
+        .filter(path -> path instanceof FhirPath)
+        .map(path -> (FhirPath) path)
+        .filter(fhirPath -> fhirPath.getIdColumn().isPresent())
+        .findFirst()
+        .flatMap(FhirPath::getIdColumn);
+  }
 
 }

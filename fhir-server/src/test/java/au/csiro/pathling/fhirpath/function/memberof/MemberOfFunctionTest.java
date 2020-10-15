@@ -13,7 +13,6 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -113,7 +112,7 @@ class MemberOfFunctionTest {
     when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
     // Prepare the inputs to the function.
-    check(inputExpression.getIdColumn().isPresent());
+    assertTrue(inputExpression.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputExpression.getIdColumn().get())
         .terminologyClient(terminologyClient)
@@ -282,7 +281,10 @@ class MemberOfFunctionTest {
   @Test
   public void throwsErrorIfInputTypeIsUnsupported() {
     final FhirPath mockContext = new ElementPathBuilder().build();
-    final FhirPath input = StringLiteralPath.fromString("some string", mockContext);
+    final ElementPath input = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.STRING)
+        .expression("name.given")
+        .build();
     final FhirPath argument = StringLiteralPath.fromString(MY_VALUE_SET_URL, mockContext);
 
     final ParserContext parserContext = new ParserContextBuilder()
@@ -295,7 +297,7 @@ class MemberOfFunctionTest {
 
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new MemberOfFunction().invoke(memberOfInput));
-    assertEquals("Input to memberOf function is of unsupported type: 'some string'",
+    assertEquals("Input to memberOf function is of unsupported type: name.given",
         error.getMessage());
   }
 

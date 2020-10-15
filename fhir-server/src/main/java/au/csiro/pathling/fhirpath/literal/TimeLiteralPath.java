@@ -29,8 +29,8 @@ import org.hl7.fhir.r4.model.Type;
 public class TimeLiteralPath extends LiteralPath implements Materializable<TimeType>, Comparable {
 
   @SuppressWarnings("WeakerAccess")
-  protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof TimeType);
   }
@@ -46,9 +46,8 @@ public class TimeLiteralPath extends LiteralPath implements Materializable<TimeT
   @Nonnull
   public static TimeLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
-    check(context.getIdColumn().isPresent());
     final String timeString = fhirPath.replaceFirst("^@T", "");
-    return new TimeLiteralPath(context.getDataset(), context.getIdColumn().get(),
+    return new TimeLiteralPath(context.getDataset(), context.getIdColumn(),
         new TimeType(timeString));
   }
 
@@ -70,7 +69,8 @@ public class TimeLiteralPath extends LiteralPath implements Materializable<TimeT
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return Comparable.buildComparison(this, operation.getSparkFunction());
   }
 
@@ -84,5 +84,5 @@ public class TimeLiteralPath extends LiteralPath implements Materializable<TimeT
   public Optional<TimeType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return TimePath.valueFromRow(row, columnNumber);
   }
-  
+
 }

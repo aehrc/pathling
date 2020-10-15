@@ -11,6 +11,7 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -35,7 +36,7 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
   @Override
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     checkNoArguments("count", input);
-    final FhirPath inputPath = input.getInput();
+    final NonLiteralPath inputPath = input.getInput();
     final String expression = expressionFromInput(input, NAME);
     // When we are counting resources, we use the distinct count. When we are counting elements, we
     // use a non-distinct count, to account for the fact that it is valid to have multiple elements

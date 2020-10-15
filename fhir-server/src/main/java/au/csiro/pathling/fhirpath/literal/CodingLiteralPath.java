@@ -35,8 +35,8 @@ import org.hl7.fhir.r4.model.Type;
 public class CodingLiteralPath extends LiteralPath implements Materializable<Coding>, Comparable {
 
   @SuppressWarnings("WeakerAccess")
-  protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof Coding);
   }
@@ -52,7 +52,6 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
    */
   public static CodingLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
-    check(context.getIdColumn().isPresent());
     final LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(fhirPath.split("\\|")));
     final Coding coding;
     if (codingTokens.size() == 2) {
@@ -64,7 +63,7 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
       throw new IllegalArgumentException(
           "Coding literal must be of form [system]|[code] or [system]|[version]|[code]");
     }
-    return new CodingLiteralPath(context.getDataset(), context.getIdColumn().get(), coding);
+    return new CodingLiteralPath(context.getDataset(), context.getIdColumn(), coding);
   }
 
   @Nonnull
@@ -101,7 +100,8 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return CodingPath.buildComparison(this, operation);
   }
 
@@ -115,5 +115,5 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   public Optional<Coding> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return CodingPath.valueFromRow(row, columnNumber);
   }
-  
+
 }

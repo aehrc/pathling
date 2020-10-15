@@ -56,7 +56,7 @@ public class CachingAggregateExecutor implements AggregateExecutor, Cacheable {
       @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory) {
     delegate = new FreshAggregateExecutor(configuration, fhirContext, sparkSession, resourceReader,
         terminologyClient, terminologyClientFactory);
-    cache = initializeCache(configuration.getCaching().getMaxEntries());
+    cache = initializeCache(configuration.getCaching().getAggregateRequestCacheSize());
   }
 
   private LoadingCache<AggregateRequest, AggregateResponse> initializeCache(
@@ -64,7 +64,7 @@ public class CachingAggregateExecutor implements AggregateExecutor, Cacheable {
     return CacheBuilder.newBuilder()
         .maximumSize(maximumSize)
         .build(
-            new CacheLoader<AggregateRequest, AggregateResponse>() {
+            new CacheLoader<>() {
               @Override
               public AggregateResponse load(@Nonnull final AggregateRequest request) {
                 return delegate.execute(request);
@@ -76,7 +76,7 @@ public class CachingAggregateExecutor implements AggregateExecutor, Cacheable {
   @Override
   public AggregateResponse execute(@Nonnull final AggregateRequest query) {
     try {
-      log.info("Received request: " + query);
+      log.info("Received request: {}", query);
       // We use `getUnchecked` here to avoid wrapping HAPI exceptions with a checked 
       // ExecutionException.
       return cache.getUnchecked(query);

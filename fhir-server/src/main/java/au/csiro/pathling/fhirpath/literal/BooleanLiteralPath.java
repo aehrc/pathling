@@ -30,8 +30,8 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
     Comparable {
 
   @SuppressWarnings("WeakerAccess")
-  protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof BooleanType);
   }
@@ -47,9 +47,8 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
   @Nonnull
   public static BooleanLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
-    check(context.getIdColumn().isPresent());
     final boolean value = fhirPath.equals("true");
-    return new BooleanLiteralPath(context.getDataset(), context.getIdColumn().get(),
+    return new BooleanLiteralPath(context.getDataset(), context.getIdColumn(),
         new BooleanType(value));
   }
 
@@ -71,7 +70,8 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return Comparable.buildComparison(this, operation.getSparkFunction());
   }
 
@@ -85,5 +85,5 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
   public Optional<BooleanType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return BooleanPath.valueFromRow(row, columnNumber);
   }
-  
+
 }

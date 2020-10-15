@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,7 +21,6 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.AggregationParserContextBuilder;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -72,7 +70,7 @@ class CountFunctionTest {
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
-    check(inputPath.getIdColumn().isPresent());
+    assertTrue(inputPath.getIdColumn().isPresent());
 
     final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn().get())
@@ -122,9 +120,9 @@ class CountFunctionTest {
     final Column valueColumn = inputDataset.col("value");
     final Column groupingColumn = inputDataset.col("gender_value");
     final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
-        Optional.of(idColumn), valueColumn, false, resourceDefinition);
+        Optional.of(idColumn), valueColumn, false, Optional.empty(), resourceDefinition);
 
-    final ParserContext parserContext = new AggregationParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder()
         .groupingColumns(Collections.singletonList(groupingColumn))
         .inputExpression("Patient")
         .build();

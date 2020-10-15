@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.joinOnId;
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
@@ -52,7 +52,7 @@ public class MathOperator implements Operator {
         "Right operand to " + type + " operator must be singular: " + right.getExpression());
 
     final String expression = buildExpression(input, type.toString());
-    final Dataset<Row> dataset = joinOnId(left, right, JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
 
     final Numeric leftNumeric = (Numeric) left;
     final Numeric rightNumeric = (Numeric) right;

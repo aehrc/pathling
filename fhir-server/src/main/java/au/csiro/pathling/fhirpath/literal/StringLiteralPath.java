@@ -34,8 +34,8 @@ import org.hl7.fhir.r4.model.Type;
 public class StringLiteralPath extends LiteralPath implements Materializable<PrimitiveType>,
     Comparable {
 
-  protected StringLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected StringLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof PrimitiveType);
   }
@@ -51,13 +51,12 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
   @Nonnull
   public static StringLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
-    check(context.getIdColumn().isPresent());
     // Remove the surrounding single quotes and unescape the string according to the rules within
     // the FHIRPath specification.
     String value = unSingleQuote(fhirPath);
     value = unescapeFhirPathString(value);
 
-    return new StringLiteralPath(context.getDataset(), context.getIdColumn().get(),
+    return new StringLiteralPath(context.getDataset(), context.getIdColumn(),
         new StringType(value));
   }
 
@@ -73,6 +72,7 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
     return "'" + escapeFhirPathString(getLiteralValue().getValueAsString()) + "'";
   }
 
+  @Nonnull
   @Override
   public PrimitiveType getLiteralValue() {
     return (PrimitiveType) literalValue;
@@ -100,7 +100,8 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return Comparable.buildComparison(this, operation.getSparkFunction());
   }
 

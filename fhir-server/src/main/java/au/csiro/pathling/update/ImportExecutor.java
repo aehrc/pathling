@@ -131,7 +131,7 @@ public class ImportExecutor {
           .map((MapFunction<String, IBaseResource>) json -> localFhirContextFactory
               .build().newJsonParser().parseResource(json), fhirEncoder);
 
-      log.info("Saving resources: " + resourceType.toCode());
+      log.info("Saving resources: {}", resourceType.toCode());
       resourceWriter.write(resourceType, resources);
     }
 
@@ -144,7 +144,7 @@ public class ImportExecutor {
 
     // Invalidate all caches following the import.
     cacheManager.invalidateAll();
-   
+
     // Construct a response.
     final OperationOutcome opOutcome = new OperationOutcome();
     final OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
