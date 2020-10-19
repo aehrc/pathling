@@ -107,8 +107,11 @@ public class MemberOfFunction implements NamedFunction {
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
+
+    // @TODO: EID FIX
     return ElementPath
-        .build(expression, dataset, prevIdColumn, valueColumn, inputPath.isSingular(),
+        .build(expression, dataset, prevIdColumn, Optional.empty(), valueColumn,
+            inputPath.isSingular(),
             inputPath.getForeignResource(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 

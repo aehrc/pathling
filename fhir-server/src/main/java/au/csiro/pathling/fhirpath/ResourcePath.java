@@ -44,10 +44,12 @@ public class ResourcePath extends NonLiteralPath {
    * @param definition the {@link ResourceDefinition} that will be used for subsequent path
    */
   public ResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<Column> thisColumn,
       @Nonnull final ResourceDefinition definition) {
-    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
+        thisColumn);
     this.definition = definition;
   }
 
@@ -72,6 +74,7 @@ public class ResourcePath extends NonLiteralPath {
     final Dataset<Row> rawDataset = resourceReader.read(resourceType);
     final DatasetWithIdsAndValue dataset = convertRawResource(rawDataset);
     return new ResourcePath(expression, dataset.getDataset(), Optional.of(dataset.getIdColumn()),
+        Optional.of(dataset.getEidColumn()),
         dataset.getValueColumn(), singular, Optional.empty(), definition);
   }
 
@@ -92,9 +95,11 @@ public class ResourcePath extends NonLiteralPath {
   @Nonnull
   @Override
   public ResourcePath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<Column> thisColumn) {
-    return new ResourcePath(expression, dataset, idColumn, valueColumn, singular, thisColumn,
+    return new ResourcePath(expression, dataset, idColumn, eidColumn, valueColumn, singular,
+        thisColumn,
         definition);
   }
 

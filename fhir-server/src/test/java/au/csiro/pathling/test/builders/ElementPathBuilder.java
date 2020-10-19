@@ -38,6 +38,9 @@ public class ElementPathBuilder {
   private Column idColumn;
 
   @Nonnull
+  private Column eidColumn;
+
+  @Nonnull
   private Column valueColumn;
 
   private boolean singular;
@@ -58,6 +61,7 @@ public class ElementPathBuilder {
     expression = "";
     dataset = SparkHelpers.getSparkSession().emptyDataFrame();
     idColumn = lit(null);
+    eidColumn = lit(null);
     valueColumn = lit(null);
     singular = false;
     fhirType = FHIRDefinedType.NULL;
@@ -68,6 +72,7 @@ public class ElementPathBuilder {
   public ElementPathBuilder idAndValueColumns() {
     final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset);
     idColumn = idAndValueColumns.getId();
+    eidColumn = idAndValueColumns.getEid();
     valueColumn = idAndValueColumns.getValue();
     return this;
   }
@@ -129,14 +134,16 @@ public class ElementPathBuilder {
   @Nonnull
   public ElementPath build() {
     return ElementPath
-        .build(expression, dataset, Optional.of(idColumn), valueColumn, singular,
+        .build(expression, dataset, Optional.of(idColumn), Optional.of(eidColumn), valueColumn,
+            singular,
             Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), fhirType);
   }
 
   @Nonnull
   public ElementPath buildDefined() {
     return ElementPath
-        .build(expression, dataset, Optional.of(idColumn), valueColumn, singular,
+        .build(expression, dataset, Optional.of(idColumn), Optional.of(eidColumn), valueColumn,
+            singular,
             Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), definition);
   }
 

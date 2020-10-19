@@ -155,7 +155,8 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     check(inputContext instanceof ResourcePath);
     final ResourceDefinition definition = ((ResourcePath) inputContext).getDefinition();
     final ResourcePath aggregationInputContext = new ResourcePath(inputContext.getExpression(),
-        groupingsAndFiltersDataset, inputContext.getIdColumn(), inputContext.getValueColumn(),
+        groupingsAndFiltersDataset, inputContext.getIdColumn(),
+        ((ResourcePath) inputContext).getEidColumn(), inputContext.getValueColumn(),
         inputContext.isSingular(), Optional.empty(), definition);
 
     // Parse the aggregations, and grab the updated grouping columns. When aggregations are

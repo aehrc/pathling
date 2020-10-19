@@ -41,6 +41,7 @@ public abstract class AggregateFunction {
      * @param expression an updated expression to describe the new FhirPath
      * @param dataset the new Dataset that can be used to evaluate this FhirPath against data
      * @param idColumn the new resource identity column
+     * @param eidColumn the new element identity column
      * @param valueColumn the new expression value column
      * @param singular the new singular value
      * @param thisColumn a column containing the collection being iterated, for cases where a path
@@ -48,7 +49,8 @@ public abstract class AggregateFunction {
      * @return a new instance of T
      */
     T create(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-        @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
+        @Nonnull Optional<Column> idColumn, @Nonnull Optional<Column> eidColumn,
+        @Nonnull Column valueColumn, boolean singular,
         @Nonnull Optional<Column> thisColumn);
   }
 
@@ -92,8 +94,9 @@ public abstract class AggregateFunction {
 
     return applyAggregation(context, dataset, inputs, aggregationColumn, expression,
         // create the result as an ElementPath of given FhirType
-        (expression1, dataset1, idColumn, valueColumn, singular, thisColumn) -> ElementPath
-            .build(expression1, dataset1, idColumn, valueColumn, true, Optional.empty(), thisColumn,
+        (expression1, dataset1, idColumn, eidColumn, valueColumn, singular, thisColumn) -> ElementPath
+            .build(expression1, dataset1, idColumn, eidColumn, valueColumn, true, Optional.empty(),
+                thisColumn,
                 fhirType));
   }
 
@@ -203,7 +206,8 @@ public abstract class AggregateFunction {
     final String valueColName = result.columns()[cursor];
     final Column valueColumn = result.col(valueColName);
 
-    return resultPathFactory.create(expression, result, newIdColumn, valueColumn,
+    // TODO: EID FIX
+    return resultPathFactory.create(expression, result, newIdColumn, Optional.empty(), valueColumn,
         true, newThisColumn);
   }
 

@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
@@ -38,7 +39,8 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   public DatasetAssert selectResult() {
     check(fhirPath.getIdColumn().isPresent());
     return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn())
+        .select(fhirPath.getIdColumn().get(), fhirPath.getIdColumn().get(),
+            fhirPath.getValueColumn())
         .orderBy(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
   }
 
@@ -65,8 +67,10 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   @Nonnull
   public DatasetAssert selectResultPreserveOrder() {
     check(fhirPath.getIdColumn().isPresent());
+    check(fhirPath instanceof NonLiteralPath);
     return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
+        .select(fhirPath.getIdColumn().get(), ((NonLiteralPath) fhirPath).getEidColumn().get(),
+            fhirPath.getValueColumn()));
   }
 
   @Nonnull

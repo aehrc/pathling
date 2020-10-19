@@ -42,10 +42,12 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
           NullLiteralPath.class);
 
   protected IntegerPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+        thisColumn,
         fhirType);
   }
 
@@ -141,6 +143,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getValueColumn().cast(DataTypes.LongType), targetValueColumn);
       final Optional<Column> idColumn = findIdColumn(source, target);
+      final Optional<Column> eidColumn = findEidColumn(source, target);
       final Optional<Column> thisColumn = findThisColumn(source, target);
 
       switch (operation) {
@@ -152,13 +155,13 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
           return ElementPath
-              .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
+              .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
                   thisColumn, fhirType);
         case DIVISION:
           final Column numerator = source.getValueColumn().cast(DecimalPath.getDecimalType());
           valueColumn = operation.getSparkFunction().apply(numerator, targetValueColumn);
           return ElementPath
-              .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
+              .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
                   thisColumn, FHIRDefinedType.DECIMAL);
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);

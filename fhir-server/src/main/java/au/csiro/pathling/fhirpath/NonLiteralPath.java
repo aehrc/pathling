@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.QueryHelpers.EID_COLUMN_SUFFIX;
 import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
 import static au.csiro.pathling.QueryHelpers.VALUE_COLUMN_SUFFIX;
 import static au.csiro.pathling.QueryHelpers.applySelection;
@@ -38,6 +39,9 @@ public abstract class NonLiteralPath implements FhirPath {
   protected final Optional<Column> idColumn;
 
   @Nonnull
+  protected final Optional<Column> eidColumn;
+
+  @Nonnull
   protected final Column valueColumn;
 
   protected final boolean singular;
@@ -60,7 +64,8 @@ public abstract class NonLiteralPath implements FhirPath {
   protected Optional<Column> thisColumn;
 
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn) {
     this.expression = expression;
@@ -70,11 +75,15 @@ public abstract class NonLiteralPath implements FhirPath {
 
     final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
+    final String eidColumnName = hash + EID_COLUMN_SUFFIX;
     final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
 
     Dataset<Row> hashedDataset = dataset;
     if (idColumn.isPresent()) {
       hashedDataset = dataset.withColumn(idColumnName, idColumn.get());
+    }
+    if (eidColumn.isPresent()) {
+      hashedDataset = hashedDataset.withColumn(eidColumnName, eidColumn.get());
     }
     hashedDataset = hashedDataset.withColumn(valueColumnName, valueColumn);
 
@@ -83,7 +92,15 @@ public abstract class NonLiteralPath implements FhirPath {
     } else {
       this.idColumn = Optional.empty();
     }
+
+    if (eidColumn.isPresent()) {
+      this.eidColumn = Optional.of(hashedDataset.col(eidColumnName));
+    } else {
+      this.eidColumn = Optional.empty();
+    }
     this.valueColumn = hashedDataset.col(valueColumnName);
+    // @TODO: EID OPT
+    // ONLY SELECT THE FIELDS STARTING WITH CURRENRT HASH
     this.dataset = applySelection(hashedDataset, this.idColumn);
   }
 
@@ -103,6 +120,7 @@ public abstract class NonLiteralPath implements FhirPath {
    * @param expression an updated expression to describe the new NonLiteralPath
    * @param dataset the new Dataset that can be used to evaluate this NonLiteralPath against data
    * @param idColumn the new resource identity column
+   * @param eidColumn the new element identity column
    * @param valueColumn the new expression value column
    * @param singular the new singular value
    * @param thisColumn a column containing the collection being iterated, for cases where a path is
@@ -111,7 +129,8 @@ public abstract class NonLiteralPath implements FhirPath {
    */
   @Nonnull
   public abstract NonLiteralPath copy(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-      @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
+      @Nonnull Optional<Column> idColumn, @Nonnull Optional<Column> eidColumn,
+      @Nonnull Column valueColumn, boolean singular,
       @Nonnull Optional<Column> thisColumn);
 
   /**
@@ -130,4 +149,20 @@ public abstract class NonLiteralPath implements FhirPath {
         .flatMap(NonLiteralPath::getThisColumn);
   }
 
+
+  /**
+   * Gets a this {@link Column} from any of the inputs, if there is one.
+   *
+   * @param inputs a collection of objects
+   * @return a {@link Column}, if one was found
+   */
+  @Nonnull
+  public static Optional<Column> findEidColumn(@Nonnull final Object... inputs) {
+    return Stream.of(inputs)
+        .filter(input -> input instanceof NonLiteralPath)
+        .map(path -> (NonLiteralPath) path)
+        .filter(path -> path.getEidColumn().isPresent())
+        .findFirst()
+        .flatMap(NonLiteralPath::getEidColumn);
+  }
 }

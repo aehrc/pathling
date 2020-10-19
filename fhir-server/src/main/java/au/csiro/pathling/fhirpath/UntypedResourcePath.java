@@ -43,10 +43,12 @@ public class UntypedResourcePath extends NonLiteralPath {
 
   protected UntypedResourcePath(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
-    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
+        thisColumn);
     this.typeColumn = typeColumn;
     this.possibleTypes = possibleTypes;
   }
@@ -65,6 +67,7 @@ public class UntypedResourcePath extends NonLiteralPath {
    */
   public static UntypedResourcePath build(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
@@ -74,7 +77,8 @@ public class UntypedResourcePath extends NonLiteralPath {
 
     final Dataset<Row> hashedDataset = dataset.withColumn(typeColumnName, typeColumn);
 
-    return new UntypedResourcePath(expression, hashedDataset, idColumn, valueColumn, singular,
+    return new UntypedResourcePath(expression, hashedDataset, idColumn, eidColumn, valueColumn,
+        singular,
         thisColumn, hashedDataset.col(typeColumnName), possibleTypes);
   }
 
@@ -88,9 +92,11 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Override
   public UntypedResourcePath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    return new UntypedResourcePath(expression, dataset, idColumn, valueColumn, singular, thisColumn,
+    return new UntypedResourcePath(expression, dataset, idColumn, eidColumn, valueColumn, singular,
+        thisColumn,
         typeColumn, possibleTypes);
   }
 

@@ -100,9 +100,11 @@ public class SubsumesFunction implements NamedFunction {
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
-    return ElementPath.build(expression, resultDataset, Optional.of(idColumn), valueColumn,
-        inputFhirPath.isSingular(), inputFhirPath.getForeignResource(),
-        inputFhirPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+    // @TODO: EID FIX
+    return ElementPath
+        .build(expression, resultDataset, Optional.of(idColumn), Optional.empty(), valueColumn,
+            inputFhirPath.isSingular(), inputFhirPath.getForeignResource(),
+            inputFhirPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 
   /**

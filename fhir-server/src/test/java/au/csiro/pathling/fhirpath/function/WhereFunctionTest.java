@@ -73,7 +73,8 @@ public class WhereFunctionTest {
         FhirHelpers.getFhirContext().getResourceDefinition(Encounter.class));
 
     final ResourcePath inputPath = new ResourcePath("reverseResolve(Encounter.subject)",
-        inputDataset, Optional.of(inputIdAndValue.getId()), inputIdAndValue.getValue(), false,
+        inputDataset, Optional.of(inputIdAndValue.getId()), Optional.of(inputIdAndValue.getEid()),
+        inputIdAndValue.getValue(), false,
         Optional.empty(), resourceDefinition);
 
     // Build an expression which represents the argument to the function. We assume that the value

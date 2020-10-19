@@ -33,7 +33,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import static au.csiro.pathling.test.builders.DatasetBuilder.makeHID;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEID;
 
 /**
  * @author John Grimes
@@ -65,18 +65,22 @@ public class PathTraversalOperatorTest {
         .singular(true)
         .build();
 
+
+    left.getDataset().show();
+
     final PathTraversalInput input = new PathTraversalInput(parserContext, left, "gender");
     final FhirPath result = new PathTraversalOperator().invoke(input);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEIDColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("abc", "female")
+        .withRow("abc", makeEID(0,0), "female")
         .build();
     assertThat(result)
         .isElementPath(StringPath.class)
         .isSingular()
-        .selectResult()
+        .selectResultPreserveOrder()
         .hasRows(expectedDataset);
   }
 
@@ -85,11 +89,11 @@ public class PathTraversalOperatorTest {
   public void manyTraversal() {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
-        .withHIDColumn()
+        .withEIDColumn()
         .withColumn("name", DataTypes.createArrayType(DataTypes.StringType))
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/abc1", makeHID(0), Arrays.asList(null, "Marie", null, "Anne"), true)
-        .withRow("Patient/abc2", makeHID(0), null, true)
+        .withRow("Patient/abc1", makeEID(0), Arrays.asList(null, "Marie", null, "Anne"), true)
+        .withRow("Patient/abc2", makeEID(0), null, true)
         .build();
     final ResourceReader resourceReader = mock(ResourceReader.class);
     when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
@@ -105,13 +109,13 @@ public class PathTraversalOperatorTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withHIDColumn()
+        .withEIDColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", makeHID(0, 0), null)
-        .withRow("Patient/abc1", makeHID(0, 1), "Marie")
-        .withRow("Patient/abc1", makeHID(0, 2), null)
-        .withRow("Patient/abc1", makeHID(0, 3), "Anne")
-        .withRow("Patient/abc2", makeHID(0, 0), null)
+        .withRow("Patient/abc1", makeEID(0, 0), null)
+        .withRow("Patient/abc1", makeEID(0, 1), "Marie")
+        .withRow("Patient/abc1", makeEID(0, 2), null)
+        .withRow("Patient/abc1", makeEID(0, 3), "Anne")
+        .withRow("Patient/abc2", makeEID(0, 0), null)
         .build();
     assertThat(result)
         .isElementPath(ElementPath.class)

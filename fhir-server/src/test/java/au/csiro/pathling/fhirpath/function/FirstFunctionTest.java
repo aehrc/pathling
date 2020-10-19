@@ -70,8 +70,10 @@ public class FirstFunctionTest {
 
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
+    // @TODO: EID FIX
     final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
-        Optional.of(idColumn), valueColumn, false, Optional.empty(), resourceDefinition);
+        Optional.of(idColumn), Optional.empty(), valueColumn, false, Optional.empty(),
+        resourceDefinition);
 
     final ParserContext parserContext = new ParserContextBuilder()
         .inputExpression("Patient")
@@ -121,9 +123,11 @@ public class FirstFunctionTest {
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
 
+    // @TODO: EID FIX
     final ResourcePath inputPath = new ResourcePath("Encounter.episodeOfCare.resolve()",
         inputDataset,
-        Optional.of(idColumn), valueColumn, false, Optional.empty(), resourceDefinition);
+        Optional.of(idColumn), Optional.empty(), valueColumn, false, Optional.empty(),
+        resourceDefinition);
 
     final ParserContext parserContext = new ParserContextBuilder()
         .inputExpression("Encounter")
@@ -238,8 +242,10 @@ public class FirstFunctionTest {
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
     final Column groupingColumn = inputDataset.col("gender_value");
+    // @TODO: EID FIX
     final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
-        Optional.of(idColumn), valueColumn, false, Optional.empty(), resourceDefinition);
+        Optional.of(idColumn), Optional.empty(), valueColumn, false, Optional.empty(),
+        resourceDefinition);
 
     final ParserContext parserContext = new ParserContextBuilder()
         .groupingColumns(Collections.singletonList(groupingColumn))

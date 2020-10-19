@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 
 /**
  * Provides the ability to move from one element to its child element, using the path selection
@@ -55,18 +56,25 @@ public class PathTraversalOperator {
 
     final Column leftValueColumn = left.getValueColumn();
     final Dataset<Row> leftDataset = left.getDataset();
+    final Column leftEIDColumn = left.getEidColumn().get();
 
     // If the element has a max cardinality of more than one, it will need to be "exploded" out into 
     // multiple rows.
     final Column field = leftValueColumn.getField(right);
     final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
+
+    // TODO: make also work for non-singular cases
+    final Column eidColumn = functions.concat(leftEIDColumn, functions.array(functions.lit(0)));
+
     final Column valueColumn = maxCardinalityOfOne
                                ? field
                                : explode_outer(field);
     final boolean singular = left.isSingular() && maxCardinalityOfOne;
 
-    return ElementPath.build(expression, leftDataset, left.getIdColumn(), valueColumn, singular,
-        left.getForeignResource(), left.getThisColumn(), childDefinition);
+    return ElementPath
+        .build(expression, leftDataset, left.getIdColumn(), Optional.of(eidColumn), valueColumn,
+            singular,
+            left.getForeignResource(), left.getThisColumn(), childDefinition);
   }
 
 }

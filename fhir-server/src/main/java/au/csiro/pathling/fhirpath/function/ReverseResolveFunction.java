@@ -17,6 +17,7 @@ import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.swing.text.html.Option;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -68,7 +69,9 @@ public class ReverseResolveFunction implements NamedFunction {
     final ResourcePath foreignResource = nonLiteralArgument.getForeignResource().get();
 
     final Optional<Column> thisColumn = inputPath.getThisColumn();
-    return new ResourcePath(expression, dataset, inputPath.getIdColumn(),
+    // @TODO: FIX EID
+    return new ResourcePath(expression, dataset, inputPath.getIdColumn(), input.getInput()
+        .getEidColumn(),
         foreignResource.getValueColumn(), false, thisColumn, foreignResource.getDefinition());
   }
 

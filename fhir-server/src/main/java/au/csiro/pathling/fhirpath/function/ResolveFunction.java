@@ -98,7 +98,9 @@ public class ResolveFunction implements NamedFunction {
         targetDataset.getIdColumn(), JoinType.LEFT_OUTER);
 
     final Optional<Column> inputId = referencePath.getIdColumn();
-    return new ResourcePath(expression, dataset, inputId, targetDataset.getValueColumn(),
+    final Optional<Column> inputEid = referencePath.getEidColumn();
+
+    return new ResourcePath(expression, dataset, inputId, inputEid, targetDataset.getValueColumn(),
         referencePath.isSingular(), referencePath.getThisColumn(), definition);
   }
 
@@ -137,7 +139,8 @@ public class ResolveFunction implements NamedFunction {
         JoinType.LEFT_OUTER);
 
     final Optional<Column> inputId = referencePath.getIdColumn();
-    return UntypedResourcePath.build(expression, dataset, inputId, valueColumn,
+    final Optional<Column> inputEid = referencePath.getEidColumn();
+    return UntypedResourcePath.build(expression, dataset, inputId, inputEid, valueColumn,
         referencePath.isSingular(), referencePath.getThisColumn(), typeColumn, referenceTypes);
   }
 

@@ -71,8 +71,10 @@ class OfTypeFunctionTest {
     final Column idColumn = inputDataset.col("id");
     final Column typeColumn = inputDataset.col("type");
     final Column valueColumn = inputDataset.col("value");
+    // @TODO: EID FIX
     final UntypedResourcePath inputPath = UntypedResourcePath
-        .build("subject.resolve()", inputDataset, Optional.of(idColumn), valueColumn, true,
+        .build("subject.resolve()", inputDataset, Optional.of(idColumn), Optional.empty(),
+            valueColumn, true,
             Optional.empty(), typeColumn,
             new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
 

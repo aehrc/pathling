@@ -58,7 +58,7 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public DatasetBuilder withHIDColumn() {
+  public DatasetBuilder withEIDColumn() {
     final StructField column = new StructField("hid",
         DataTypes.createArrayType(DataTypes.IntegerType), true, metadata);
     datasetColumns.add(column);
@@ -202,7 +202,7 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public static List<Integer> makeHID(Integer ... levels) {
+  public static List<Integer> makeEID(Integer ... levels) {
     return Arrays.asList(levels);
   }
 

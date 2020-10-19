@@ -43,10 +43,12 @@ public class ElementPath extends NonLiteralPath {
   private Optional<ElementDefinition> definition = Optional.empty();
 
   protected ElementPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+        thisColumn);
     this.fhirType = fhirType;
   }
 
@@ -70,14 +72,16 @@ public class ElementPath extends NonLiteralPath {
   @Nonnull
   public static ElementPath build(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> eidColumn, @Nonnull final Column valueColumn,
+      final boolean singular,
       @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
       final FHIRDefinedType fhirType = optionalFhirType.get();
       final ElementPath path = ElementPath
-          .build(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+          .build(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+              thisColumn,
               fhirType);
       path.definition = Optional.of(definition);
       return path;
@@ -106,16 +110,19 @@ public class ElementPath extends NonLiteralPath {
   @Nonnull
   public static ElementPath build(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    return getInstance(expression, dataset, idColumn, valueColumn, singular, foreignResource,
+    return getInstance(expression, dataset, idColumn, eidColumn, valueColumn, singular,
+        foreignResource,
         thisColumn, fhirType);
   }
 
   @Nonnull
   private static ElementPath getInstance(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
@@ -125,10 +132,12 @@ public class ElementPath extends NonLiteralPath {
     try {
       // Call its constructor and return.
       final Constructor<? extends ElementPath> constructor = elementPathClass
-          .getDeclaredConstructor(String.class, Dataset.class, Optional.class, Column.class,
+          .getDeclaredConstructor(String.class, Dataset.class, Optional.class, Optional.class,
+              Column.class,
               boolean.class, Optional.class, Optional.class, FHIRDefinedType.class);
       return constructor
-          .newInstance(expression, dataset, idColumn, valueColumn, singular, foreignResource,
+          .newInstance(expression, dataset, idColumn, eidColumn, valueColumn, singular,
+              foreignResource,
               thisColumn, fhirType);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
         InvocationTargetException e) {
@@ -146,15 +155,17 @@ public class ElementPath extends NonLiteralPath {
   @Override
   public ElementPath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
     return definition
         .map(elementDefinition -> ElementPath
-            .build(expression, dataset, idColumn, valueColumn, singular, foreignResource,
+            .build(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
                 thisColumn, elementDefinition))
         .orElseGet(
             () -> ElementPath
-                .build(expression, dataset, idColumn, valueColumn, singular, foreignResource,
+                .build(expression, dataset, idColumn, eidColumn, valueColumn, singular,
+                    foreignResource,
                     thisColumn, fhirType));
   }
 
