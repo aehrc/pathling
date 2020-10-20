@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -33,8 +34,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import static au.csiro.pathling.test.builders.DatasetBuilder.makeEID;
-
 /**
  * @author John Grimes
  */
@@ -54,7 +53,8 @@ public class PathTraversalOperatorTest {
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("abc", "female", true)
+        .withRow("Patient/abc1", "female", true)
+        .withRow("Patient/abc2", null, null)
         .build();
     final ResourceReader resourceReader = mock(ResourceReader.class);
     when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
@@ -64,7 +64,6 @@ public class PathTraversalOperatorTest {
         .resourceReader(resourceReader)
         .singular(true)
         .build();
-
 
     left.getDataset().show();
 
@@ -75,7 +74,8 @@ public class PathTraversalOperatorTest {
         .withIdColumn()
         .withEIDColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("abc", makeEID(0,0), "female")
+        .withRow("Patient/abc1", makeEID(0, 0), "female")
+        .withRow("Patient/abc2", null, null)
         .build();
     assertThat(result)
         .isElementPath(StringPath.class)
@@ -84,17 +84,15 @@ public class PathTraversalOperatorTest {
         .hasRows(expectedDataset);
   }
 
-
   @Test
   public void manyTraversal() {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
-        .withEIDColumn()
         .withColumn("name", DataTypes.createArrayType(DataTypes.StringType))
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/abc1", makeEID(0), Arrays.asList(null, "Marie", null, "Anne"), true)
-        .withRow("Patient/abc2", makeEID(0), Arrays.asList(), true)
-        .withRow("Patient/abc3", makeEID(0), null, true)
+        .withRow("Patient/abc1", Arrays.asList(null, "Marie", null, "Anne"), true)
+        .withRow("Patient/abc2", Arrays.asList(), true)
+        .withRow("Patient/abc3", null, true)
         .build();
     final ResourceReader resourceReader = mock(ResourceReader.class);
     when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
@@ -104,9 +102,6 @@ public class PathTraversalOperatorTest {
         .resourceReader(resourceReader)
         .singular(true)
         .build();
-
-    left.getDataset().select(left.getValueColumn()).collectAsList().stream().forEach(System.out::println);
-    left.getDataset().printSchema();
 
     final PathTraversalInput input = new PathTraversalInput(parserContext, left, "name");
     final FhirPath result = new PathTraversalOperator().invoke(input);

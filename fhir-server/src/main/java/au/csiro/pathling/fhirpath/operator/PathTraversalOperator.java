@@ -7,22 +7,19 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.posexplode_outer;
+import static org.apache.spark.sql.functions.*;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 
 /**
  * Provides the ability to move from one element to its child element, using the path selection
@@ -71,18 +68,16 @@ public class PathTraversalOperator {
 
     Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
         .map(leftDataset::col), maxCardinalityOfOne
-                                ? Stream.of(functions.lit(0).alias("index"), field.alias("field"))
+                                ? Stream.of((when(field.isNull(), lit(null)).otherwise(lit(0)))
+        .alias("index"), field.alias("field"))
                                 : Stream
                                     .of(posexplode_outer(field).as(new String[]{"index", "field"})))
         .toArray(l -> new Column[l]);
 
     Dataset<Row> explodedDataset = leftDataset.select(allColumns);
-
-    explodedDataset.show();
-
     // TODO: make also work for non-singular cases
-    final Column eidColumn = functions.when(explodedDataset.col("index").isNull(),null).otherwise(functions
-        .concat(leftEIDColumn, functions.array(explodedDataset.col("index"))));
+    final Column eidColumn = when(explodedDataset.col("index").isNull(), lit(null))
+        .otherwise(concat(leftEIDColumn, array(explodedDataset.col("index"))));
     final Column valueColumn = explodedDataset.col("field");
 
     final boolean singular = left.isSingular() && maxCardinalityOfOne;
