@@ -39,8 +39,7 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   public DatasetAssert selectResult() {
     check(fhirPath.getIdColumn().isPresent());
     return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getIdColumn().get(),
-            fhirPath.getValueColumn())
+        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn())
         .orderBy(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
   }
 

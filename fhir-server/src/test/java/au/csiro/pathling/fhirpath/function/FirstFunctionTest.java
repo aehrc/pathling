@@ -7,9 +7,14 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeRootEid;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import static org.apache.spark.sql.functions.*;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -30,6 +35,8 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.expressions.Window;
+import org.apache.spark.sql.expressions.WindowSpec;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -60,19 +67,21 @@ public class FirstFunctionTest {
         hapiDefinition);
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("gender", DataTypes.StringType)
         .withStructColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/abc1", RowFactory.create("Patient/abc1", "female", true))
-        .withRow("Patient/abc2", RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Patient/abc3", RowFactory.create("Patient/abc3", "male", true))
+        .withRow("Patient/abc1", makeRootEid(),RowFactory.create("Patient/abc1", "female", true))
+        .withRow("Patient/abc2", makeRootEid(), RowFactory.create("Patient/abc2", "female", false))
+        .withRow("Patient/abc3", makeRootEid(), RowFactory.create("Patient/abc3", "male", true))
         .buildWithStructValue();
 
     final Column idColumn = inputDataset.col("id");
+    final Column eidColumn = inputDataset.col("eid");
     final Column valueColumn = inputDataset.col("value");
-    // @TODO: EID FIX
+
     final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
-        Optional.of(idColumn), Optional.empty(), valueColumn, false, Optional.empty(),
+        Optional.of(idColumn), Optional.of(eidColumn), valueColumn, false, Optional.empty(),
         resourceDefinition);
 
     final ParserContext parserContext = new ParserContextBuilder()
@@ -107,26 +116,28 @@ public class FirstFunctionTest {
 
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("status", DataTypes.StringType)
-        .withRow("Encounter/xyz1", RowFactory.create("EpisodeOfCare/abc1", "planned"))
-        .withRow("Encounter/xyz1", RowFactory.create("EpisodeOfCare/abc2", "planned"))
-        .withRow("Encounter/xyz1", RowFactory.create("EpisodeOfCare/abc4", "active"))
-        .withRow("Encounter/xyz1", RowFactory.create("EpisodeOfCare/abc5", "active"))
-        .withRow("Encounter/xyz2", RowFactory.create("EpisodeOfCare/abc3", "active"))
-        .withRow("Encounter/xyz3", null)
-        .withRow("Encounter/xyz3", RowFactory.create("EpisodeOfCare/abc3", "waitlist"))
-        .withRow("Encounter/xyz4", null)
+        .withRow("Encounter/xyz1", makeEid(0,0), RowFactory.create("EpisodeOfCare/abc1", "planned"))
+        .withRow("Encounter/xyz1", makeEid(0,1), RowFactory.create("EpisodeOfCare/abc2", "planned"))
+        .withRow("Encounter/xyz1", makeEid(0,2), RowFactory.create("EpisodeOfCare/abc4", "active"))
+        .withRow("Encounter/xyz1", makeEid(0,3), RowFactory.create("EpisodeOfCare/abc5", "active"))
+        .withRow("Encounter/xyz2", makeEid(0,0), RowFactory.create("EpisodeOfCare/abc3", "active"))
+        .withRow("Encounter/xyz3", makeEid(0,0), null)
+        .withRow("Encounter/xyz3", makeEid(0,1), RowFactory.create("EpisodeOfCare/abc3", "waitlist"))
+        .withRow("Encounter/xyz4", null, null)
         .buildWithStructValue()
         .repartition(3);
 
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
+    final Column eidColumn = inputDataset.col("eid");
 
     // @TODO: EID FIX
     final ResourcePath inputPath = new ResourcePath("Encounter.episodeOfCare.resolve()",
         inputDataset,
-        Optional.of(idColumn), Optional.empty(), valueColumn, false, Optional.empty(),
+        Optional.of(idColumn), Optional.of(eidColumn), valueColumn, false, Optional.empty(),
         resourceDefinition);
 
     final ParserContext parserContext = new ParserContextBuilder()
@@ -166,21 +177,43 @@ public class FirstFunctionTest {
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "Jude")   // when: "two values"  expect: "Jude"
-        .withRow("Patient/abc1", "Mark")
-        .withRow("Patient/abc1", "Mark")
-        .withRow("Patient/abc1", "Mark")
-        .withRow("Patient/abc2", "Samuel") // when: "single value" expect: "Samuel"
-        .withRow("Patient/abc3", null)     // when: "leading null" expect: "Adam"
-        .withRow("Patient/abc3", "Adam")
-        .withRow("Patient/abc4", "John")  // when: "trailing null" expect: "John"
-        .withRow("Patient/abc4", null)
-        .withRow("Patient/abc5", null)    // when: "single null" expect: null
-        .withRow("Patient/abc6", null)    // when: "many nulls" expect: null
-        .withRow("Patient/abc6", null)
-        .build()
-        .repartition(3);
+        .withRow("Patient/abc1", makeEid(0,3), "Jude")   // when: "two values"  expect: "Jude"
+        .withRow("Patient/abc1", makeEid(0,2), "Mark")
+        .withRow("Patient/abc1", makeEid(0,1), "Mark")
+        .withRow("Patient/abc1", makeEid(0,0), "Zaak")
+        .withRow("Patient/abc2", makeEid(0,0), "Samuel") // when: "single value" expect: "Samuel"
+        .withRow("Patient/abc3", makeEid(0,1), "Adam") // when: "leading null" expect: "Adam"
+        .withRow("Patient/abc3", makeEid(0,0), null)
+        .withRow("Patient/abc4", makeEid(0,1), null) // when: "trailing null" expect: "John
+        .withRow("Patient/abc4", makeEid(0,0), "John")
+        .withRow("Patient/abc5", null, null)    // when: "single null" expect: null
+        .withRow("Patient/abc6", null, null)    // when: "many nulls" expect: null
+        .withRow("Patient/abc6", null, null)
+        .build();
+    final Column idColumn = inputDataset.col("id");
+    final Column valueColumn = inputDataset.col("value");
+    final Column eidColumn = inputDataset.col("eid");
+
+    inputDataset
+        .orderBy(eidColumn)
+        .groupBy(idColumn)
+        .agg(min(eidColumn), first(valueColumn, true))
+        .show();
+
+    WindowSpec spec = Window
+        .partitionBy(idColumn).orderBy(asc_nulls_last("eid"));
+    inputDataset
+        .select(idColumn, eidColumn, valueColumn, rank().over(spec).alias("rank"))
+        .where(col("rank").equalTo(1))
+        .show();
+
+
+
+    //fail();
+
+
 
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
@@ -209,7 +242,7 @@ public class FirstFunctionTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "Jude")
+        .withRow("Patient/abc1", "Zaak")
         .withRow("Patient/abc2", "Samuel")
         .withRow("Patient/abc3", "Adam")
         .withRow("Patient/abc4", "John")

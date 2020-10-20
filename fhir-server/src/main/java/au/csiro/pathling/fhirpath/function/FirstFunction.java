@@ -9,12 +9,15 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static org.apache.spark.sql.functions.first;
+import static org.apache.spark.sql.functions.min;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * This function allows the selection of only the first element of a collection.
@@ -39,7 +42,11 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     final Function<Column, Column> firstIgnoreNull = col -> first(col, true);
+    final Function<Column, Column> eidAggreation = col -> min(col);
 
-    return applyAggregationFunction(input.getContext(), inputPath, firstIgnoreNull, expression);
+    // need to somwhow pass extra final Function<Dataset<Row>, Dataset<Row>> datasetTransform = ds -> ds.sort()
+    final Function<FhirPath, Dataset<Row>> getDataset = fp -> fp.getDataset().sort(((NonLiteralPath)fp).getEidColumn().get());
+
+    return applyAggregationFunction(input.getContext(), inputPath, firstIgnoreNull, expression, true);
   }
 }

@@ -108,14 +108,19 @@ public abstract class AggregateFunction {
    * @param function the {@link Function} that will take a {@link Column}, and return another
    * Column
    * @param expression the FHIRPath expression for the result
+   * @param orderElements true is the aggreation requires elements to be ordered
    * @return a new {@link NonLiteralPath} representing the result of the same type of input
    */
   @Nonnull
   @SuppressWarnings("SameParameterValue")
   protected NonLiteralPath applyAggregationFunction(@Nonnull final ParserContext context,
       @Nonnull final NonLiteralPath input, @Nonnull final Function<Column, Column> function,
-      @Nonnull final String expression) {
-    return applyAggregation(context, input.getDataset(), Collections.singletonList(input),
+      @Nonnull final String expression, boolean orderElements) {
+
+    final Dataset<Row> dataset = orderElements && input.getEidColumn().isPresent()
+                           ? input.getDataset().orderBy(input.getEidColumn().get())
+                           : input.getDataset();
+    return applyAggregation(context, dataset, Collections.singletonList(input),
         function.apply(input.getValueColumn()), expression, input);
   }
 

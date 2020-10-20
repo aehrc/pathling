@@ -7,7 +7,7 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.builders.DatasetBuilder.makeEID;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -65,16 +65,14 @@ public class PathTraversalOperatorTest {
         .singular(true)
         .build();
 
-    left.getDataset().show();
-
     final PathTraversalInput input = new PathTraversalInput(parserContext, left, "gender");
     final FhirPath result = new PathTraversalOperator().invoke(input);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withEIDColumn()
+        .withEidColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", makeEID(0, 0), "female")
+        .withRow("Patient/abc1", makeEid(0, 0), "female")
         .withRow("Patient/abc2", null, null)
         .build();
     assertThat(result)
@@ -108,12 +106,12 @@ public class PathTraversalOperatorTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withEIDColumn()
+        .withEidColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", makeEID(0, 0), null)
-        .withRow("Patient/abc1", makeEID(0, 1), "Marie")
-        .withRow("Patient/abc1", makeEID(0, 2), null)
-        .withRow("Patient/abc1", makeEID(0, 3), "Anne")
+        .withRow("Patient/abc1", makeEid(0, 0), null)
+        .withRow("Patient/abc1", makeEid(0, 1), "Marie")
+        .withRow("Patient/abc1", makeEid(0, 2), null)
+        .withRow("Patient/abc1", makeEid(0, 3), "Anne")
         .withRow("Patient/abc2", null, null)
         .withRow("Patient/abc3", null, null)
         .build();

@@ -66,6 +66,10 @@ public class PathTraversalOperator {
 
     // this will be a bit complicated as we need to use select for pos explode
 
+    // TODO: EID
+    // Refactor and make work in case of empty eid
+
+
     Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
         .map(leftDataset::col), maxCardinalityOfOne
                                 ? Stream.of((when(field.isNull(), lit(null)).otherwise(lit(0)))
@@ -75,7 +79,6 @@ public class PathTraversalOperator {
         .toArray(l -> new Column[l]);
 
     Dataset<Row> explodedDataset = leftDataset.select(allColumns);
-    // TODO: make also work for non-singular cases
     final Column eidColumn = when(explodedDataset.col("index").isNull(), lit(null))
         .otherwise(concat(leftEIDColumn, array(explodedDataset.col("index"))));
     final Column valueColumn = explodedDataset.col("field");
