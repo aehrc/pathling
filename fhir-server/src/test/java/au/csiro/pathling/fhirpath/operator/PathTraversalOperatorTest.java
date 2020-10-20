@@ -93,7 +93,8 @@ public class PathTraversalOperatorTest {
         .withColumn("name", DataTypes.createArrayType(DataTypes.StringType))
         .withColumn("active", DataTypes.BooleanType)
         .withRow("Patient/abc1", makeEID(0), Arrays.asList(null, "Marie", null, "Anne"), true)
-        .withRow("Patient/abc2", makeEID(0), null, true)
+        .withRow("Patient/abc2", makeEID(0), Arrays.asList(), true)
+        .withRow("Patient/abc3", makeEID(0), null, true)
         .build();
     final ResourceReader resourceReader = mock(ResourceReader.class);
     when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
@@ -103,6 +104,9 @@ public class PathTraversalOperatorTest {
         .resourceReader(resourceReader)
         .singular(true)
         .build();
+
+    left.getDataset().select(left.getValueColumn()).collectAsList().stream().forEach(System.out::println);
+    left.getDataset().printSchema();
 
     final PathTraversalInput input = new PathTraversalInput(parserContext, left, "name");
     final FhirPath result = new PathTraversalOperator().invoke(input);
@@ -115,7 +119,8 @@ public class PathTraversalOperatorTest {
         .withRow("Patient/abc1", makeEID(0, 1), "Marie")
         .withRow("Patient/abc1", makeEID(0, 2), null)
         .withRow("Patient/abc1", makeEID(0, 3), "Anne")
-        .withRow("Patient/abc2", makeEID(0, 0), null)
+        .withRow("Patient/abc2", null, null)
+        .withRow("Patient/abc3", null, null)
         .build();
     assertThat(result)
         .isElementPath(ElementPath.class)

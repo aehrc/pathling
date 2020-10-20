@@ -7,13 +7,17 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.explode_outer;
+import static org.apache.spark.sql.functions.posexplode_outer;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -63,16 +67,28 @@ public class PathTraversalOperator {
     final Column field = leftValueColumn.getField(right);
     final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
 
-    // TODO: make also work for non-singular cases
-    final Column eidColumn = functions.concat(leftEIDColumn, functions.array(functions.lit(0)));
+    // this will be a bit complicated as we need to use select for pos explode
 
-    final Column valueColumn = maxCardinalityOfOne
-                               ? field
-                               : explode_outer(field);
+    Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
+        .map(leftDataset::col), maxCardinalityOfOne
+                                ? Stream.of(functions.lit(0).alias("index"), field.alias("field"))
+                                : Stream
+                                    .of(posexplode_outer(field).as(new String[]{"index", "field"})))
+        .toArray(l -> new Column[l]);
+
+    Dataset<Row> explodedDataset = leftDataset.select(allColumns);
+
+    explodedDataset.show();
+
+    // TODO: make also work for non-singular cases
+    final Column eidColumn = functions.when(explodedDataset.col("index").isNull(),null).otherwise(functions
+        .concat(leftEIDColumn, functions.array(explodedDataset.col("index"))));
+    final Column valueColumn = explodedDataset.col("field");
+
     final boolean singular = left.isSingular() && maxCardinalityOfOne;
 
     return ElementPath
-        .build(expression, leftDataset, left.getIdColumn(), Optional.of(eidColumn), valueColumn,
+        .build(expression, explodedDataset, left.getIdColumn(), Optional.of(eidColumn), valueColumn,
             singular,
             left.getForeignResource(), left.getThisColumn(), childDefinition);
   }
