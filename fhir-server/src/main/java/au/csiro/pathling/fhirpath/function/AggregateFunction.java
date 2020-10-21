@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -118,8 +119,8 @@ public abstract class AggregateFunction {
       @Nonnull final String expression, boolean orderElements) {
 
     final Dataset<Row> dataset = orderElements && input.getEidColumn().isPresent()
-                           ? input.getDataset().orderBy(input.getEidColumn().get())
-                           : input.getDataset();
+                                 ? input.getDataset().orderBy(input.getEidColumn().get())
+                                 : input.getDataset();
     return applyAggregation(context, dataset, Collections.singletonList(input),
         function.apply(input.getValueColumn()), expression, input);
   }
@@ -181,11 +182,17 @@ public abstract class AggregateFunction {
     // columns within the input paths that need to be preserved.
     final Column[] groupByArray = getGroupBy(groupingColumns, idColumn, thisColumn);
 
+    final Optional<Column> eidColumn = NonLiteralPath.findEidColumn(inputs.toArray());
+    final Optional<Column> eidAggColumn = eidColumn.map(functions::min);
     // Apply the aggregation.
-    final Dataset<Row> result = dataset.groupBy(groupByArray).agg(aggregationColumn);
+    final Dataset<Row> result = eidAggColumn.isPresent()
+                                ? dataset.groupBy(groupByArray)
+                                    .agg(aggregationColumn, eidAggColumn.get())
+                                : dataset.groupBy(groupByArray).agg(aggregationColumn);
 
     int cursor = 0;
     final Optional<Column> newIdColumn;
+
     if (idColumn.isPresent() && groupingColumns.isEmpty()) {
       // If there are no grouping columns, we just need to get the updated ID column.
       newIdColumn = Optional.of(result.col(result.columns()[0]));
@@ -209,10 +216,16 @@ public abstract class AggregateFunction {
 
     // The value column will be the final column, after all the other columns.
     final String valueColName = result.columns()[cursor];
+    cursor += 1;
     final Column valueColumn = result.col(valueColName);
 
-    // TODO: EID FIX
-    return resultPathFactory.create(expression, result, newIdColumn, Optional.empty(), valueColumn,
+    Optional<Column> newEidColumn = Optional.empty();
+    if (eidAggColumn.isPresent() && newIdColumn.isPresent()) {
+      final String eidValueColName = result.columns()[cursor];
+      newEidColumn = Optional.of(result.col(eidValueColName));
+    }
+
+    return resultPathFactory.create(expression, result, newIdColumn, newEidColumn, valueColumn,
         true, newThisColumn);
   }
 
