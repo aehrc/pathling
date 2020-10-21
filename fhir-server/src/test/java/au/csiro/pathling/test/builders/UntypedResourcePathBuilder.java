@@ -55,6 +55,7 @@ public class UntypedResourcePathBuilder {
     expression = "";
     dataset = SparkHelpers.getSparkSession().emptyDataFrame();
     idColumn = lit(null);
+    eidColumn = lit(null);
     valueColumn = lit(null);
     singular = false;
     typeColumn = lit(null);

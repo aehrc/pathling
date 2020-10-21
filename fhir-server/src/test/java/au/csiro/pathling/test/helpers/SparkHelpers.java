@@ -56,9 +56,8 @@ public abstract class SparkHelpers {
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset) {
     final Column idColumn = dataset.col("id");
-    final Column eidColumn = dataset.col("eid");
     final Column valueColumn = dataset.col("value");
-    return new IdAndValueColumns(idColumn, eidColumn, valueColumn);
+    return new IdAndValueColumns(idColumn, valueColumn);
   }
 
   @Nonnull
@@ -121,9 +120,6 @@ public abstract class SparkHelpers {
 
     @Nonnull
     Column id;
-
-    @Nonnull
-    Column eid;
 
     @Nonnull
     Column value;

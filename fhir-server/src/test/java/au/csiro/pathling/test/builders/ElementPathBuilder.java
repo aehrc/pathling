@@ -72,10 +72,16 @@ public class ElementPathBuilder {
   public ElementPathBuilder idAndValueColumns() {
     final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset);
     idColumn = idAndValueColumns.getId();
-    eidColumn = idAndValueColumns.getEid();
     valueColumn = idAndValueColumns.getValue();
     return this;
   }
+
+  @Nonnull
+  public ElementPathBuilder eidColumn() {
+    eidColumn = dataset.col("eid");
+    return this;
+  }
+
 
   @Nonnull
   public ElementPathBuilder expression(@Nonnull final String expression) {

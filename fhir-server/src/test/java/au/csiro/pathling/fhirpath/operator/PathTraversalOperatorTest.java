@@ -78,7 +78,7 @@ public class PathTraversalOperatorTest {
     assertThat(result)
         .isElementPath(StringPath.class)
         .isSingular()
-        .selectResultPreserveOrder()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 
@@ -120,7 +120,7 @@ public class PathTraversalOperatorTest {
         .hasExpression("Patient.name")
         .hasFhirType(FHIRDefinedType.HUMANNAME)
         .isNotSingular()
-        .selectResultPreserveOrder()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 

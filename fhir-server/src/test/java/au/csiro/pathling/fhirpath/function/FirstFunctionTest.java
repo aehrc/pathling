@@ -201,6 +201,7 @@ public class FirstFunctionTest {
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
         .idAndValueColumns()
+        .eidColumn()
         .expression("Patient.name")
         .build();
 

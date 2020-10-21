@@ -57,19 +57,11 @@ public class PathTraversalOperator {
 
     final Column leftValueColumn = left.getValueColumn();
     final Dataset<Row> leftDataset = left.getDataset();
-    final Column leftEIDColumn = left.getEidColumn().get();
 
     // If the element has a max cardinality of more than one, it will need to be "exploded" out into 
     // multiple rows.
     final Column field = leftValueColumn.getField(right);
     final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
-
-    // this will be a bit complicated as we need to use select for pos explode
-
-    // TODO: EID
-    // Refactor and make work in case of empty eid
-
-
     Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
         .map(leftDataset::col), maxCardinalityOfOne
                                 ? Stream.of((when(field.isNull(), lit(null)).otherwise(lit(0)))
@@ -79,14 +71,17 @@ public class PathTraversalOperator {
         .toArray(l -> new Column[l]);
 
     Dataset<Row> explodedDataset = leftDataset.select(allColumns);
-    final Column eidColumn = when(explodedDataset.col("index").isNull(), lit(null))
-        .otherwise(concat(leftEIDColumn, array(explodedDataset.col("index"))));
-    final Column valueColumn = explodedDataset.col("field");
 
+    // only construct EID column if presnt in left dataset
+    final Optional<Column> eidColumn = left.getEidColumn()
+        .map(eidCol -> when(explodedDataset.col("index").isNull(), lit(null))
+            .otherwise(concat(eidCol, array(explodedDataset.col("index")))));
+
+    final Column valueColumn = explodedDataset.col("field");
     final boolean singular = left.isSingular() && maxCardinalityOfOne;
 
     return ElementPath
-        .build(expression, explodedDataset, left.getIdColumn(), Optional.of(eidColumn), valueColumn,
+        .build(expression, explodedDataset, left.getIdColumn(), eidColumn, valueColumn,
             singular,
             left.getForeignResource(), left.getThisColumn(), childDefinition);
   }

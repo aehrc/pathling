@@ -118,9 +118,14 @@ public abstract class AggregateFunction {
       @Nonnull final NonLiteralPath input, @Nonnull final Function<Column, Column> function,
       @Nonnull final String expression, boolean orderElements) {
 
+    // @TODO: EID add a check if the dataset can be odered when ordering is required
+    // Fail or log warning?
     final Dataset<Row> dataset = orderElements && input.getEidColumn().isPresent()
                                  ? input.getDataset().orderBy(input.getEidColumn().get())
                                  : input.getDataset();
+
+
+    // @TODO: possibly also use the same function for EID column
     return applyAggregation(context, dataset, Collections.singletonList(input),
         function.apply(input.getValueColumn()), expression, input);
   }
@@ -183,6 +188,8 @@ public abstract class AggregateFunction {
     final Column[] groupByArray = getGroupBy(groupingColumns, idColumn, thisColumn);
 
     final Optional<Column> eidColumn = NonLiteralPath.findEidColumn(inputs.toArray());
+    // @TODO: EID consider replacing with first(skipNulls = true)
+    // or the actual aggregation function used on the value column
     final Optional<Column> eidAggColumn = eidColumn.map(functions::min);
     // Apply the aggregation.
     final Dataset<Row> result = eidAggColumn.isPresent()
