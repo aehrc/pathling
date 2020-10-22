@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.joinOnId;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.test.helpers.FhirHelpers.getFhirContext;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,6 +70,7 @@ class ReverseResolveFunctionTest {
         .withRow("Patient/1", "female", true)
         .withRow("Patient/2", "female", false)
         .withRow("Patient/3", "male", true)
+        .withRow("Patient/4", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
@@ -137,15 +139,17 @@ class ReverseResolveFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("status", DataTypes.StringType)
-        .withRow("Patient/1", RowFactory.create("Encounter/1", "planned"))
-        .withRow("Patient/2", RowFactory.create("Encounter/3", "triaged"))
-        .withRow("Patient/2", RowFactory.create("Encounter/4", "in-progress"))
-        .withRow("Patient/3", RowFactory.create("Encounter/2", "arrived"))
+        .withRow("Patient/1", makeEid(0, 0), RowFactory.create("Encounter/1", "planned"))
+        .withRow("Patient/2", makeEid(0, 0), RowFactory.create("Encounter/3", "triaged"))
+        .withRow("Patient/2", makeEid(0, 1), RowFactory.create("Encounter/4", "in-progress"))
+        .withRow("Patient/3", makeEid(0, 0), RowFactory.create("Encounter/2", "arrived"))
+        .withRow("Patient/4", null, null)
         .buildWithStructValue();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 

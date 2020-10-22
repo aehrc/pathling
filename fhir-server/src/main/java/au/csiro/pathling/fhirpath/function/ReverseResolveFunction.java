@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.joinOnReference;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static org.apache.spark.sql.functions.*;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -17,7 +18,6 @@ import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.swing.text.html.Option;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -73,13 +73,21 @@ public class ReverseResolveFunction implements NamedFunction {
 
     final Optional<Column> thisColumn = inputPath.getThisColumn();
 
-    // to compute new EID we need to use windowing function
-    WindowSpec windowSpec = Window
-        .partitionBy(inputPath.getIdColumn().get()).orderBy(foreignResource.getValueColumn());
-    Column newEidColumn = functions.concat(input.getInput()
-        .getEidColumn().get(), functions.array(functions.row_number().over(windowSpec)));
-    // @TODO: FIX EID
-    return new ResourcePath(expression, dataset, inputPath.getIdColumn(), Optional.of(newEidColumn),
+    // only construct EID column if present in the input dataset
+    final Optional<Column> newEidColumn = inputPath.getEidColumn()
+        .map(eidCol -> {
+          // @TODO: would be more efficient to test on foreign resource id but
+          // it is missing in the join
+          final Column foreignResourceValue = foreignResource.getValueColumn();
+          // @TODO: ?? is it possible to have eid without an id?
+          final WindowSpec windowSpec = Window
+              .partitionBy(inputPath.getIdColumn().get(), eidCol).orderBy(foreignResourceValue);
+          return when(foreignResourceValue.isNull(), lit(null))
+              .otherwise(
+                  concat(eidCol, array(row_number().over(windowSpec).minus(functions.lit(1)))));
+        });
+
+    return new ResourcePath(expression, dataset, inputPath.getIdColumn(), newEidColumn,
         foreignResource.getValueColumn(), false, thisColumn, foreignResource.getDefinition());
   }
 
