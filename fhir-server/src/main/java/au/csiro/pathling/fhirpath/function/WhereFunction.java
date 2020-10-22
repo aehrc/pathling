@@ -85,7 +85,8 @@ public class WhereFunction implements NamedFunction {
     }
 
     final String expression = expressionFromInput(input, NAME);
-    // @TODO: EID FIX
+
+    // TODO: EID FIX
     return inputPath
         .copy(expression, dataset, idColumn, Optional.empty(), thisColumn, inputPath.isSingular(),
             Optional.empty());

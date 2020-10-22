@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.firstNColumns;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -120,10 +121,12 @@ public abstract class AggregateFunction {
 
     // @TODO: EID add a check if the dataset can be odered when ordering is required
     // Fail or log warning?
+    check(input.getEidColumn().isPresent() || !orderElements || !context.getGroupingColumns()
+        .isEmpty());
+
     final Dataset<Row> dataset = orderElements && input.getEidColumn().isPresent()
                                  ? input.getDataset().orderBy(input.getEidColumn().get())
                                  : input.getDataset();
-
 
     // @TODO: possibly also use the same function for EID column
     return applyAggregation(context, dataset, Collections.singletonList(input),

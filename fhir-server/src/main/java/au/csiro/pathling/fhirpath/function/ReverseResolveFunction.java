@@ -21,6 +21,9 @@ import javax.swing.text.html.Option;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.expressions.Window;
+import org.apache.spark.sql.expressions.WindowSpec;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -69,9 +72,14 @@ public class ReverseResolveFunction implements NamedFunction {
     final ResourcePath foreignResource = nonLiteralArgument.getForeignResource().get();
 
     final Optional<Column> thisColumn = inputPath.getThisColumn();
+
+    // to compute new EID we need to use windowing function
+    WindowSpec windowSpec = Window
+        .partitionBy(inputPath.getIdColumn().get()).orderBy(foreignResource.getValueColumn());
+    Column newEidColumn = functions.concat(input.getInput()
+        .getEidColumn().get(), functions.array(functions.row_number().over(windowSpec)));
     // @TODO: FIX EID
-    return new ResourcePath(expression, dataset, inputPath.getIdColumn(), input.getInput()
-        .getEidColumn(),
+    return new ResourcePath(expression, dataset, inputPath.getIdColumn(), Optional.of(newEidColumn),
         foreignResource.getValueColumn(), false, thisColumn, foreignResource.getDefinition());
   }
 

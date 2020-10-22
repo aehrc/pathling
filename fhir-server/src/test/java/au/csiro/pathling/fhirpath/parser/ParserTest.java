@@ -73,7 +73,8 @@ public class ParserTest {
 
     mockReader = mock(ResourceReader.class);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
-        ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST);
+        ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
+        ResourceType.DIAGNOSTICREPORT);
     final FhirContext fhirContext = FhirHelpers.getFhirContext();
 
     final ResourcePath subjectResource = ResourcePath
@@ -368,4 +369,60 @@ public class ParserTest {
     assertEquals("Error parsing FHIRPath expression: missing ')' at '<EOF>'", error.getMessage());
   }
 
+  // @TODO: EID Tests
+  // Resructure
+
+  @Test
+  public void testOrderPropagationWithAggregateAndComparison() {
+
+    // @TODO: Add assertions
+    assertThatResultOf("name.given.count() = 2")
+        .selectOrderedResult()
+        .debugAllRows();
+  }
+
+
+  // @TODO: Enable when the issue with `where` and preserving $this.eid is sovled
+  @Test
+  @Disabled
+  public void testOrderPropagationWith() {
+
+    // TODO: Change to a non-trivial case?
+    assertThatResultOf("name.where($this.given.count() = 2)")
+        .selectOrderedResult()
+        .debugAllRows();
+  }
+
+
+  @Test
+  public void testOrderPropagationWithReverseResolveAndResolve() {
+
+    // @TODO: Add assertions
+    assertThatResultOf("reverseResolve(DiagnosticReport.subject).result.resolve().category.coding")
+        .selectOrderedResult()
+        .debugAllRows();
+  }
+
+
+  @Test
+  @Disabled
+  public void testOrderPropagationWithResolveAndTypeOf() {
+
+    // @TODO: Add assertions
+    assertThatResultOf(" generalPractitioner.resolve().ofType(Organization)")
+        .selectOrderedResult()
+        .debugAllRows();
+  }
+
+
+  @Test
+  @Disabled
+  public void testOrderWithReverseResolveAndWhere() {
+
+    // @TODO: Add assertions
+    assertThatResultOf(
+        "reverseResolve(Observation.subject).category.coding.where($this.first() = http://terminology.hl7.org/CodeSystem/observation-category|vital-signs)")
+        .selectOrderedResult()
+        .debugAllRows();
+  }
 }
