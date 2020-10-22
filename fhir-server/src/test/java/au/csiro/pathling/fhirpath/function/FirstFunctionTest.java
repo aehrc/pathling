@@ -310,5 +310,4 @@ public class FirstFunctionTest {
         "Arguments can not be passed to first function",
         error.getMessage());
   }
-
 }

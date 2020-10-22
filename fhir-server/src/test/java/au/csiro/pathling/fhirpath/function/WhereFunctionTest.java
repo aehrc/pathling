@@ -87,7 +87,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn().get())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputPath.getValueColumn())
+        .thisColumn(inputPath.makeThisColumn())
         .singular(true)
         .build();
 
@@ -147,7 +147,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn().get())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputPath.getValueColumn())
+        .thisColumn(inputPath.makeThisColumn())
         .singular(true)
         .build();
 
@@ -208,7 +208,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn().get())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputPath.getValueColumn())
+        .thisColumn(inputPath.makeThisColumn())
         .singular(true)
         .build();
 

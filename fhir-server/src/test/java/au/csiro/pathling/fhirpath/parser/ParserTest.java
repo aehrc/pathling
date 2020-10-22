@@ -374,13 +374,10 @@ public class ParserTest {
 
   @Test
   public void testOrderPropagationWithAggregateAndComparison() {
-
     // @TODO: Add assertions
     assertThatResultOf("name.given.count() = 2")
-        .selectOrderedResult()
-        .debugAllRows();
+        .selectOrderedResult();
   }
-
 
   // @TODO: Enable when the issue with `where` and preserving $this.eid is sovled
   @Test
@@ -393,16 +390,13 @@ public class ParserTest {
         .debugAllRows();
   }
 
-
   @Test
   public void testOrderPropagationWithReverseResolveAndResolve() {
 
     // @TODO: Add assertions
     assertThatResultOf("reverseResolve(DiagnosticReport.subject).result.resolve().category.coding")
-        .selectOrderedResult()
-        .debugAllRows();
+        .selectOrderedResult();
   }
-
 
   @Test
   @Disabled
@@ -413,7 +407,6 @@ public class ParserTest {
         .selectOrderedResult()
         .debugAllRows();
   }
-
 
   @Test
   @Disabled

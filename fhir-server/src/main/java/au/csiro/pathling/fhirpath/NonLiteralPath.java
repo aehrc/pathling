@@ -6,10 +6,7 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.QueryHelpers.EID_COLUMN_SUFFIX;
-import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
-import static au.csiro.pathling.QueryHelpers.VALUE_COLUMN_SUFFIX;
-import static au.csiro.pathling.QueryHelpers.applySelection;
+import static au.csiro.pathling.QueryHelpers.*;
 import static au.csiro.pathling.utilities.Strings.randomShortString;
 
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -20,6 +17,8 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Represents any FHIRPath expression which is not a literal.
@@ -98,7 +97,9 @@ public abstract class NonLiteralPath implements FhirPath {
     } else {
       this.eidColumn = Optional.empty();
     }
+
     this.valueColumn = hashedDataset.col(valueColumnName);
+
     // @TODO: EID OPT
     // ONLY SELECT THE FIELDS STARTING WITH CURRENRT HASH
     this.dataset = applySelection(hashedDataset, this.idColumn);
@@ -164,5 +165,22 @@ public abstract class NonLiteralPath implements FhirPath {
         .filter(path -> path.getEidColumn().isPresent())
         .findFirst()
         .flatMap(NonLiteralPath::getEidColumn);
+  }
+
+  /**
+   * Constructs a this column for this path as a structure with two fields `eid` and `value`.
+   *
+   * @return this column.
+   */
+  @Nonnull
+  public Column makeThisColumn() {
+    // Construct this based on input value and eid
+    // It is important to alias this column here as it is passed without
+    // renaming through {@link NonLiteralPath} constructor.
+    final String hash = randomShortString();
+    return functions.struct(
+        getEidColumn().orElseGet(() -> functions.lit(null).cast(DataTypes.IntegerType))
+            .alias("eid"),
+        getValueColumn().alias("value")).alias(hash + THIS_COLUMN_SUFFIX);
   }
 }

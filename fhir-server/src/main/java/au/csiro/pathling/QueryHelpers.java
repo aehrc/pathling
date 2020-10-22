@@ -53,6 +53,12 @@ public abstract class QueryHelpers {
    */
   public static final String TYPE_COLUMN_SUFFIX = "_type";
 
+
+  /**
+   * String used at the end of column names used for resource types.
+   */
+  public static final String THIS_COLUMN_SUFFIX = "_this";
+
   /**
    * @param dataset a {@link Dataset} representing a raw resource, with at least 2 columns
    * @return a Dataset with two columns: an ID column and a value column containing all of the
@@ -99,7 +105,7 @@ public abstract class QueryHelpers {
     idColumn.ifPresent(columns::add);
     final List<Column> preservedColumns = Stream.of(dataset.columns())
         .filter(column -> column.endsWith(EID_COLUMN_SUFFIX) ||
-            column.endsWith(VALUE_COLUMN_SUFFIX) || column.endsWith(TYPE_COLUMN_SUFFIX))
+            column.endsWith(VALUE_COLUMN_SUFFIX) || column.endsWith(TYPE_COLUMN_SUFFIX) || column.endsWith(THIS_COLUMN_SUFFIX))
         .map(dataset::col)
         .collect(Collectors.toList());
     columns.addAll(preservedColumns);

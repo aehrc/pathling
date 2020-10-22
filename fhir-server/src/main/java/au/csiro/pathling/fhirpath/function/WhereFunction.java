@@ -58,6 +58,8 @@ public class WhereFunction implements NamedFunction {
     // absence of a value).
     final Column argumentTrue = argumentPath.getValueColumn().equalTo(true);
     final Column thisColumn = argumentPath.getThisColumn().get();
+    final Column thisValue = thisColumn.getField("value");
+    final Column thisEid = thisColumn.getField("eid");
 
     final Dataset<Row> dataset;
     final Optional<Column> idColumn;
@@ -86,9 +88,9 @@ public class WhereFunction implements NamedFunction {
 
     final String expression = expressionFromInput(input, NAME);
 
-    // TODO: EID FIX
     return inputPath
-        .copy(expression, dataset, idColumn, Optional.empty(), thisColumn, inputPath.isSingular(),
+        .copy(expression, dataset, idColumn, Optional.of(thisEid), thisValue,
+            inputPath.isSingular(),
             Optional.empty());
   }
 
