@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,10 +29,7 @@ import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.functions;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
@@ -58,22 +56,27 @@ public class WhereFunctionTest {
 
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructTypeColumns(encounterStruct)
-        .withRow("Patient/abc1", RowFactory.create("Encounter/abc1", "in-progress"))
-        .withRow("Patient/abc1", RowFactory.create("Encounter/abc2", "finished"))
-        .withRow("Patient/abc2", RowFactory.create("Encounter/abc3", "in-progress"))
-        .withRow("Patient/abc3", RowFactory.create("Encounter/abc4", "in-progress"))
-        .withRow("Patient/abc3", RowFactory.create("Encounter/abc5", "finished"))
-        .withRow("Patient/abc4", RowFactory.create("Encounter/abc6", "finished"))
-        .withRow("Patient/abc4", RowFactory.create("Encounter/abc7", "finished"))
-        .withRow("Patient/abc5", null)
+        .withRow("Patient/abc1", makeEid(0, 1), RowFactory.create("Encounter/abc1", "in-progress"))
+        .withRow("Patient/abc1", makeEid(0, 0), RowFactory.create("Encounter/abc2", "finished"))
+        .withRow("Patient/abc2", makeEid(0, 0), RowFactory.create("Encounter/abc3", "in-progress"))
+        .withRow("Patient/abc3", makeEid(0, 1), RowFactory.create("Encounter/abc4", "in-progress"))
+        .withRow("Patient/abc3", makeEid(0, 0), RowFactory.create("Encounter/abc5", "finished"))
+        .withRow("Patient/abc4", makeEid(0, 1), RowFactory.create("Encounter/abc6", "finished"))
+        .withRow("Patient/abc4", makeEid(0, 0), RowFactory.create("Encounter/abc7", "finished"))
+        .withRow("Patient/abc5", makeEid(0, 1), RowFactory.create("Encounter/abc8", "in-progress"))
+        .withRow("Patient/abc5", makeEid(0, 0), RowFactory.create("Encounter/abc9", "in-progress"))
+        .withRow("Patient/abc6", null, null)
         .buildWithStructValue();
     final IdAndValueColumns inputIdAndValue = SparkHelpers.getIdAndValueColumns(inputDataset);
+    final Column eidColumn = SparkHelpers.getEidColumn(inputDataset);
+
     final ResourceDefinition resourceDefinition = new ResourceDefinition(ResourceType.ENCOUNTER,
         FhirHelpers.getFhirContext().getResourceDefinition(Encounter.class));
 
     final ResourcePath inputPath = new ResourcePath("reverseResolve(Encounter.subject)",
-        inputDataset, Optional.of(inputIdAndValue.getId()), Optional.empty(),
+        inputDataset, Optional.of(inputIdAndValue.getId()), Optional.of(eidColumn),
         inputIdAndValue.getValue(), false,
         Optional.empty(), resourceDefinition);
 
@@ -103,15 +106,18 @@ public class WhereFunctionTest {
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructTypeColumns(encounterStruct)
-        .withRow("Patient/abc1", RowFactory.create("Encounter/abc1", "in-progress"))
-        .withRow("Patient/abc2", RowFactory.create("Encounter/abc3", "in-progress"))
-        .withRow("Patient/abc3", RowFactory.create("Encounter/abc4", "in-progress"))
-        .withRow("Patient/abc4", null)
-        .withRow("Patient/abc5", null)
+        .withRow("Patient/abc1", makeEid(0, 1), RowFactory.create("Encounter/abc1", "in-progress"))
+        .withRow("Patient/abc2", makeEid(0, 0), RowFactory.create("Encounter/abc3", "in-progress"))
+        .withRow("Patient/abc3", makeEid(0, 1), RowFactory.create("Encounter/abc4", "in-progress"))
+        .withRow("Patient/abc4", null, null)
+        .withRow("Patient/abc5", makeEid(0, 0), RowFactory.create("Encounter/abc9", "in-progress"))
+        .withRow("Patient/abc5", makeEid(0, 1), RowFactory.create("Encounter/abc8", "in-progress"))
+        .withRow("Patient/abc6", null, null)
         .buildWithStructValue();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 
@@ -120,21 +126,23 @@ public class WhereFunctionTest {
     // Build an expression which represents the input to the function.
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "en")
-        .withRow("Patient/abc1", "es")
-        .withRow("Patient/abc2", "de")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "zh")
-        .withRow("Patient/abc4", "fr")
-        .withRow("Patient/abc4", "fr")
-        .withRow("Patient/abc5", null)
+        .withRow("Patient/abc1", makeEid(0, 1), "en")
+        .withRow("Patient/abc1", makeEid(0, 0), "es")
+        .withRow("Patient/abc2", makeEid(0, 0), "de")
+        .withRow("Patient/abc3", makeEid(0, 2), "en")
+        .withRow("Patient/abc3", makeEid(0, 1), "en")
+        .withRow("Patient/abc3", makeEid(0, 0), "zh")
+        .withRow("Patient/abc4", makeEid(0, 1), "fr")
+        .withRow("Patient/abc4", makeEid(0, 0), "fr")
+        .withRow("Patient/abc5", null, null)
         .build();
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(dataset)
         .idAndValueColumns()
+        .eidColumn()
         .singular(false)
         .build();
 
@@ -164,16 +172,17 @@ public class WhereFunctionTest {
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "en")
-        .withRow("Patient/abc2", null)
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc4", null)
-        .withRow("Patient/abc5", null)
+        .withRow("Patient/abc1", makeEid(0, 1), "en")
+        .withRow("Patient/abc2", null, null)
+        .withRow("Patient/abc3", makeEid(0, 1), "en")
+        .withRow("Patient/abc3", makeEid(0, 2), "en")
+        .withRow("Patient/abc4", null, null)
+        .withRow("Patient/abc5", null, null)
         .build();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 
@@ -182,19 +191,21 @@ public class WhereFunctionTest {
     // Build an expression which represents the input to the function.
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "en")
-        .withRow("Patient/abc1", "es")
-        .withRow("Patient/abc2", "de")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "zh")
-        .withRow("Patient/abc4", "ar")
+        .withRow("Patient/abc1", makeEid(0, 0), "en")
+        .withRow("Patient/abc1", makeEid(0, 1), "es")
+        .withRow("Patient/abc2", makeEid(0, 0), "de")
+        .withRow("Patient/abc3", makeEid(0, 0), "en")
+        .withRow("Patient/abc3", makeEid(0, 1), "en")
+        .withRow("Patient/abc3", makeEid(0, 2), "zh")
+        .withRow("Patient/abc4", makeEid(0, 0), "ar")
         .build();
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(dataset)
         .idAndValueColumns()
+        .eidColumn()
         .singular(false)
         .build();
 
@@ -224,14 +235,15 @@ public class WhereFunctionTest {
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "es")
-        .withRow("Patient/abc2", "de")
-        .withRow("Patient/abc3", "zh")
-        .withRow("Patient/abc4", "ar")
+        .withRow("Patient/abc1", makeEid(0, 1), "es")
+        .withRow("Patient/abc2", makeEid(0, 0), "de")
+        .withRow("Patient/abc3", makeEid(0, 2), "zh")
+        .withRow("Patient/abc4", makeEid(0, 0), "ar")
         .build();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 
