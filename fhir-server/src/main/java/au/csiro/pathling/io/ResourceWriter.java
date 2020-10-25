@@ -8,6 +8,7 @@ package au.csiro.pathling.io;
 
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.io.PersistenceScheme.fileNameForResource;
+import static org.apache.spark.sql.functions.asc;
 
 import au.csiro.pathling.Configuration;
 import javax.annotation.Nonnull;
@@ -48,7 +49,10 @@ public class ResourceWriter {
   public void write(@Nonnull final ResourceType resourceType, @Nonnull final Dataset resources) {
     final String tableUrl =
         warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
-    resources.write().mode(SaveMode.Overwrite).parquet(tableUrl);
+    resources.orderBy(asc("id"))
+        .write()
+        .mode(SaveMode.Overwrite)
+        .parquet(tableUrl);
   }
 
 }
