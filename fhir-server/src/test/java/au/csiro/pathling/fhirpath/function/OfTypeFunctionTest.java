@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -60,20 +61,32 @@ class OfTypeFunctionTest {
   void resolvesPolymorphicReference() {
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Encounter/xyz1", "Patient", RowFactory.create(null, "Patient/abc1", null))
-        .withRow("Encounter/xyz2", "Patient", RowFactory.create(null, "Patient/abc3", null))
-        .withRow("Encounter/xyz3", "Patient", RowFactory.create(null, "Patient/abc2", null))
-        .withRow("Encounter/xyz4", "Patient", RowFactory.create(null, "Patient/abc2", null))
-        .withRow("Encounter/xyz5", "Group", RowFactory.create(null, "Group/def1", null))
+        .withRow("Encounter/xyz1", makeEid(0, 1), "Patient",
+            RowFactory.create(null, "Patient/abc1", null))
+        .withRow("Encounter/xyz1", makeEid(0, 0), "Patient",
+            RowFactory.create(null, "Patient/abc2", null))
+        .withRow("Encounter/xyz2", makeEid(0, 0), "Patient",
+            RowFactory.create(null, "Patient/abc3", null))
+        .withRow("Encounter/xyz2", makeEid(0, 1), "Group",
+            RowFactory.create(null, "Group/def1", null))
+        .withRow("Encounter/xyz3", makeEid(0, 0), "Patient",
+            RowFactory.create(null, "Patient/abc2", null))
+        .withRow("Encounter/xyz4", makeEid(0, 0), "Patient",
+            RowFactory.create(null, "Patient/abc2", null))
+        .withRow("Encounter/xyz5", makeEid(0, 0), "Group",
+            RowFactory.create(null, "Group/def1", null))
+        .withRow("Encounter/xyz6", null, null, null)
         .buildWithStructValue();
     final Column idColumn = inputDataset.col("id");
+    final Column eidColumn = inputDataset.col("eid");
     final Column typeColumn = inputDataset.col("type");
     final Column valueColumn = inputDataset.col("value");
-    // @TODO: EID FIX
+
     final UntypedResourcePath inputPath = UntypedResourcePath
-        .build("subject.resolve()", inputDataset, Optional.of(idColumn), Optional.empty(),
+        .build("subject.resolve()", inputDataset, Optional.of(idColumn), Optional.of(eidColumn),
             valueColumn, true,
             Optional.empty(), typeColumn,
             new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
@@ -97,8 +110,8 @@ class OfTypeFunctionTest {
         .build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));
-    final NamedFunction count = NamedFunction.getInstance("ofType");
-    final FhirPath result = count.invoke(ofTypeInput);
+    final NamedFunction ofType = NamedFunction.getInstance("ofType");
+    final FhirPath result = ofType.invoke(ofTypeInput);
 
     assertTrue(result instanceof ResourcePath);
     assertThat((ResourcePath) result)
@@ -108,17 +121,24 @@ class OfTypeFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("gender", DataTypes.StringType)
         .withStructColumn("active", DataTypes.BooleanType)
-        .withRow("Encounter/xyz1", RowFactory.create("Patient/abc1", "female", true))
-        .withRow("Encounter/xyz2", RowFactory.create("Patient/abc3", "male", true))
-        .withRow("Encounter/xyz3", RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Encounter/xyz4", RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Encounter/xyz5", null)
+        .withRow("Encounter/xyz1", makeEid(0, 0),
+            RowFactory.create("Patient/abc2", "female", false))
+        .withRow("Encounter/xyz1", makeEid(0, 1), RowFactory.create("Patient/abc1", "female", true))
+        .withRow("Encounter/xyz2", makeEid(0, 0), RowFactory.create("Patient/abc3", "male", true))
+        .withRow("Encounter/xyz2", makeEid(0, 1), null)
+        .withRow("Encounter/xyz3", makeEid(0, 0),
+            RowFactory.create("Patient/abc2", "female", false))
+        .withRow("Encounter/xyz4", makeEid(0, 0),
+            RowFactory.create("Patient/abc2", "female", false))
+        .withRow("Encounter/xyz5", makeEid(0, 0), null)
+        .withRow("Encounter/xyz6", null, null)
         .buildWithStructValue();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 
