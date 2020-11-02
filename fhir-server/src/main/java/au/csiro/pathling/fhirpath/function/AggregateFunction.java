@@ -20,7 +20,6 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -99,7 +98,7 @@ public abstract class AggregateFunction {
         (expression1, dataset1, idColumn, eidColumn, valueColumn, singular, thisColumn) -> ElementPath
             .build(expression1, dataset1, idColumn, eidColumn, valueColumn, true, Optional.empty(),
                 thisColumn,
-                fhirType));
+                fhirType), Optional.empty());
   }
 
   /**
@@ -130,7 +129,7 @@ public abstract class AggregateFunction {
 
     // @TODO: possibly also use the same function for EID column
     return applyAggregation(context, dataset, Collections.singletonList(input),
-        function.apply(input.getValueColumn()), expression, input);
+        function.apply(input.getValueColumn()), expression, input, Optional.of(function));
   }
 
   /**
@@ -143,17 +142,19 @@ public abstract class AggregateFunction {
    * @param aggregationColumn a {@link Column} describing the aggregation
    * @param expression the FHIRPath expression for the result
    * @param contextPath the {@link NonLiteralPath} to use a prototype for result path
+   * @param eidAggFunction optional function to use for eid aggregation
    * @return a new {@link FhirPath} representing the result
    */
   @Nonnull
   private NonLiteralPath applyAggregation(@Nonnull final ParserContext context,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Collection<FhirPath> inputs,
       @Nonnull final Column aggregationColumn, @Nonnull final String expression,
-      @Nonnull final NonLiteralPath contextPath) {
+      @Nonnull final NonLiteralPath contextPath,
+      @Nonnull final Optional<Function<Column, Column>> eidAggFunction) {
 
     return applyAggregation(context, dataset, inputs, aggregationColumn, expression,
         // create the result as a copy of input path
-        contextPath::copy);
+        contextPath::copy, eidAggFunction);
   }
 
   /**
@@ -166,14 +167,15 @@ public abstract class AggregateFunction {
    * @param aggregationColumn a {@link Column} describing the aggregation
    * @param expression the FHIRPath expression for the result
    * @param resultPathFactory the {@link ResultPathFactory} factory to use to create the result
-   * path
+   * @param eidAggFunction optional function to use for eid aggregation path
    * @return a new {@link T} representing the result
    */
   @Nonnull
   private <T extends FhirPath> T applyAggregation(@Nonnull final ParserContext context,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Collection<FhirPath> inputs,
       @Nonnull final Column aggregationColumn, @Nonnull final String expression,
-      @Nonnull final ResultPathFactory<T> resultPathFactory) {
+      @Nonnull final ResultPathFactory<T> resultPathFactory,
+      @Nonnull final Optional<Function<Column, Column>> eidAggFunction) {
     final List<Column> groupingColumns = context.getGroupingColumns();
 
     // Use an ID column from any of the inputs.
@@ -191,9 +193,11 @@ public abstract class AggregateFunction {
     final Column[] groupByArray = getGroupBy(groupingColumns, idColumn, thisColumn);
 
     final Optional<Column> eidColumn = NonLiteralPath.findEidColumn(inputs.toArray());
-    // @TODO: EID consider replacing with first(skipNulls = true)
+
     // or the actual aggregation function used on the value column
-    final Optional<Column> eidAggColumn = eidColumn.map(functions::min);
+    final Optional<Column> eidAggColumn = eidAggFunction
+        .flatMap(f -> NonLiteralPath.findEidColumn(inputs.toArray()).map(f));
+
     // Apply the aggregation.
     final Dataset<Row> result = eidAggColumn.isPresent()
                                 ? dataset.groupBy(groupByArray)

@@ -376,7 +376,8 @@ public class ParserTest {
   public void testOrderPropagationWithAggregateAndComparison() {
     // @TODO: Add assertions
     assertThatResultOf("name.given.count() = 2")
-        .selectOrderedResult();
+        .isSingular()
+        .selectResult();
   }
 
   // @TODO: Enable when the issue with `where` and preserving $this.eid is sovled

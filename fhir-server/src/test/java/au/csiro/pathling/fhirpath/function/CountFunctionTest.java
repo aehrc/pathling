@@ -81,12 +81,6 @@ class CountFunctionTest {
     final NamedFunction count = NamedFunction.getInstance("count");
     final FhirPath result = count.invoke(countInput);
 
-    assertTrue(result instanceof IntegerPath);
-    assertThat((ElementPath) result)
-        .hasExpression("count()")
-        .isSingular()
-        .hasFhirType(FHIRDefinedType.UNSIGNEDINT);
-
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withValueColumn(DataTypes.LongType)
@@ -94,7 +88,13 @@ class CountFunctionTest {
         .withRow("Patient/abc2", 1L)
         .withRow("Patient/abc3", 1L)
         .build();
+
     assertThat(result)
+        .hasExpression("count()")
+        .isSingular()
+        .isElementPath(IntegerPath.class)
+        .isNotOrdered()
+        .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
         .selectResult()
         .hasRows(expectedDataset);
   }
@@ -112,17 +112,18 @@ class CountFunctionTest {
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("gender", DataTypes.StringType)
         .withStructColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/abc1", "female", RowFactory.create("Patient/abc1", "female", true))
-        .withRow("Patient/abc2", "female", RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Patient/abc2", "female", RowFactory.create("Patient/abc3", "male", true))
+        .withRow("Patient/abc1", "female", true, RowFactory.create("Patient/abc1", "female", true))
+        .withRow("Patient/abc2", "female", false,
+            RowFactory.create("Patient/abc2", "female", false))
+        .withRow("Patient/abc2", "male", true, RowFactory.create("Patient/abc3", "male", true))
         .buildWithStructValue();
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
     final Column groupingColumn = inputDataset.col("gender_value");
 
-    // @TODO: EID FIX
     final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
-        Optional.of(idColumn), Optional.empty(), valueColumn, false, Optional.empty(), resourceDefinition);
+        Optional.of(idColumn), Optional.empty(), valueColumn, false, Optional.empty(),
+        resourceDefinition);
 
     final ParserContext parserContext = new ParserContextBuilder()
         .groupingColumns(Collections.singletonList(groupingColumn))
@@ -133,20 +134,22 @@ class CountFunctionTest {
     final NamedFunction count = NamedFunction.getInstance("count");
     final FhirPath result = count.invoke(countInput);
 
-    assertTrue(result instanceof IntegerPath);
-    assertThat((ElementPath) result)
-        .hasExpression("count()")
-        .isSingular()
-        .hasFhirType(FHIRDefinedType.UNSIGNEDINT);
-
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("count", DataTypes.LongType)
         .withRow("female", 2L)
         .withRow("male", 1L)
         .build();
-    assertThat(expectedDataset)
+
+    assertThat(result)
+        .hasExpression("count()")
+        .isSingular()
+        .isElementPath(IntegerPath.class)
+        .isNotOrdered()
+        .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
+        .selectGroupingResult(Collections.singletonList(groupingColumn))
         .hasRows(expectedDataset);
+
   }
 
   @Test

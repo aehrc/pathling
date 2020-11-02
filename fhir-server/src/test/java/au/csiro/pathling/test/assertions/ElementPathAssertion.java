@@ -7,6 +7,7 @@
 package au.csiro.pathling.test.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import javax.annotation.Nonnull;
@@ -31,4 +32,8 @@ public class ElementPathAssertion extends FhirPathAssertion<ElementPathAssertion
     return this;
   }
 
+  public ElementPathAssertion isNotOrdered() {
+    assertFalse(fhirPath.getEidColumn().isPresent());
+    return this;
+  }
 }
