@@ -9,7 +9,9 @@ package au.csiro.pathling.test.fixtures;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.Arrays;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
 /**
@@ -32,10 +34,29 @@ public class PatientListBuilder {
       PATIENT_ID_2b36c1e2, PATIENT_ID_7001ad9c, PATIENT_ID_8ee183e2, PATIENT_ID_9360820c,
       PATIENT_ID_a7eb2ce7, PATIENT_ID_bbd33563, PATIENT_ID_beff242e, PATIENT_ID_e62e52ae);
 
-  public static DatasetBuilder allPatientsWithValue(@Nullable final Object value) {
+  public static DatasetBuilder allPatientsWithValue(@Nullable final Boolean value) {
+    return allPatientsWithValue(DataTypes.BooleanType, value);
+  }
+
+  public static DatasetBuilder allPatientsWithValue(@Nullable final Integer value) {
+    return allPatientsWithValue(DataTypes.IntegerType, value);
+  }
+
+  public static DatasetBuilder allPatientsWithValue(@Nullable final Long value) {
+    return allPatientsWithValue(DataTypes.LongType, value);
+  }
+
+  public static DatasetBuilder allPatientsWithValue(@Nullable final String value) {
+    return allPatientsWithValue(DataTypes.StringType, value);
+  }
+
+  public static DatasetBuilder allPatientsWithValue(@Nonnull final DataType valueType,
+      @Nullable final Object value) {
     return new DatasetBuilder()
         .withColumn("123abcd_id", DataTypes.StringType)
-        .withColumn("123abcd", DataTypes.BooleanType)
+        .withColumn("123abcd", valueType)
         .withIdsAndValue(value, PATIENT_ALL_IDS);
   }
+
+
 }

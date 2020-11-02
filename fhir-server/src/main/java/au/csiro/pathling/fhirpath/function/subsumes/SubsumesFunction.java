@@ -9,10 +9,7 @@ package au.csiro.pathling.fhirpath.function.subsumes;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.collect_set;
-import static org.apache.spark.sql.functions.explode_outer;
-import static org.apache.spark.sql.functions.when;
+import static org.apache.spark.sql.functions.*;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -48,6 +45,7 @@ import org.slf4j.MDC;
 public class SubsumesFunction implements NamedFunction {
 
   private static final String COL_ID = "id";
+  private static final String COL_EID = "eid";
   private static final String COL_VALUE = "value";
   private static final String COL_CODING = "coding";
   private static final String COL_CODING_SET = "codingSet";
@@ -102,7 +100,9 @@ public class SubsumesFunction implements NamedFunction {
     final String expression = expressionFromInput(input, functionName);
     // @TODO: EID FIX
     return ElementPath
-        .build(expression, resultDataset, Optional.of(idColumn), Optional.empty(), valueColumn,
+        .build(expression, resultDataset, Optional.of(idColumn),
+            inputFhirPath.getEidColumn().map(_c -> resultDataset.col(COL_EID)),
+            valueColumn,
             inputFhirPath.isSingular(), inputFhirPath.getForeignResource(),
             inputFhirPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
@@ -112,11 +112,11 @@ public class SubsumesFunction implements NamedFunction {
    * which joins for each id arrays representing input Codings or CodeableConcept with the array
    * representing all argument codings.
    *
-   * @see #toInputDataset(FhirPath)
+   * @see #toInputDataset(NonLiteralPath)
    * @see #toArgDataset(FhirPath)
    */
   @Nonnull
-  private Dataset<IdAndCodingSets> createJoinedDataset(@Nonnull final FhirPath inputFhirPath,
+  private Dataset<IdAndCodingSets> createJoinedDataset(@Nonnull final NonLiteralPath inputFhirPath,
       @Nonnull final FhirPath argFhirPath) {
 
     final Dataset<Row> inputCodingSet = toInputDataset(inputFhirPath);
@@ -126,6 +126,7 @@ public class SubsumesFunction implements NamedFunction {
     return inputCodingSet.join(argCodingSet,
         inputCodingSet.col(COL_ID).equalTo(argCodingSet.col(COL_ID)), "left_outer")
         .select(inputCodingSet.col(COL_ID).alias(COL_ID),
+            inputCodingSet.col(COL_EID).alias(COL_EID),
             inputCodingSet.col(COL_CODING_SET).alias(COL_INPUT_CODINGS),
             argCodingSet.col(COL_CODING_SET).alias(COL_ARG_CODINGS))
         .as(Encoders.bean(IdAndCodingSets.class));
@@ -142,7 +143,7 @@ public class SubsumesFunction implements NamedFunction {
    * @return input dataset
    */
   @Nonnull
-  private Dataset<Row> toInputDataset(@Nonnull final FhirPath fhirPath) {
+  private Dataset<Row> toInputDataset(@Nonnull final NonLiteralPath fhirPath) {
 
     assert (isCodingOrCodeableConcept(fhirPath));
 
@@ -152,9 +153,12 @@ public class SubsumesFunction implements NamedFunction {
                                   : array(fhirPath.getValueColumn());
 
     check(fhirPath.getIdColumn().isPresent());
+    final Column eidColumn = fhirPath.getEidColumn().orElse(lit(null))
+        .alias(COL_EID);
     return expressionDataset.select(fhirPath.getIdColumn().get().alias(COL_ID),
+        eidColumn,
         when(fhirPath.getValueColumn().isNotNull(), codingArrayCol)
-            .otherwise(null)
+            .otherwise(lit(null))
             .alias(COL_CODING_SET)
     );
   }

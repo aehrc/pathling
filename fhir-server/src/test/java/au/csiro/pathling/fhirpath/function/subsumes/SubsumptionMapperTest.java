@@ -59,15 +59,16 @@ public class SubsumptionMapperTest {
 
     final SubsumptionMapper mapper = new SubsumptionMapper("foo", terminologyClientFactory, false);
     final List<IdAndCodingSets> input = Arrays.asList(
-        new IdAndCodingSets("id1", Collections.singletonList(CODING1_VERSION1),
+        new IdAndCodingSets("id1", null, Collections.singletonList(CODING1_VERSION1),
             Collections.singletonList(CODING2_VERSION1)),
-        new IdAndCodingSets("id2", Collections.singletonList(CODING1_UNVERSIONED),
+        new IdAndCodingSets("id2", null, Collections.singletonList(CODING1_UNVERSIONED),
             Collections.singletonList(CODING1_VERSION1))
     );
     final Iterator<BooleanResult> result = mapper
         .call(input.iterator());
 
-    assertEquals(Arrays.asList(BooleanResult.of("id1", false), BooleanResult.of("id2", true)),
+    assertEquals(
+        Arrays.asList(BooleanResult.of("id1", null, false), BooleanResult.of("id2", null, true)),
         IteratorUtils.toList(result));
 
     // verify behaviour
@@ -98,18 +99,18 @@ public class SubsumptionMapperTest {
 
     final SubsumptionMapper mapper = new SubsumptionMapper("foo", terminologyClientFactory, false);
     final List<IdAndCodingSets> input = Arrays.asList(
-        new IdAndCodingSets("id-null-null",
+        new IdAndCodingSets("id-null-null", null,
             null, null),
-        new IdAndCodingSets("id-null-empty",
+        new IdAndCodingSets("id-null-empty", null,
             null, Collections.emptyList()),
-        new IdAndCodingSets("id-empty-null", Collections.emptyList(), null)
+        new IdAndCodingSets("id-empty-null", null, Collections.emptyList(), null)
     );
     final Iterator<BooleanResult> result = mapper
         .call(input.iterator());
 
-    assertEquals(Arrays.asList(BooleanResult.nullOf("id-null-null"),
-        BooleanResult.nullOf("id-null-empty"),
-        BooleanResult.of("id-empty-null", false)
+    assertEquals(Arrays.asList(BooleanResult.nullOf("id-null-null", null),
+        BooleanResult.nullOf("id-null-empty", null),
+        BooleanResult.of("id-empty-null", null, false)
         ),
         IteratorUtils.toList(result));
 
@@ -126,18 +127,18 @@ public class SubsumptionMapperTest {
 
     final SubsumptionMapper mapper = new SubsumptionMapper("foo", terminologyClientFactory, false);
     final List<IdAndCodingSets> input = Arrays.asList(
-        new IdAndCodingSets("id-null-code",
+        new IdAndCodingSets("id-null-code", null,
             Collections.singletonList(new SimpleCoding(SYSTEM1, null)),
             Collections.singletonList(new SimpleCoding(SYSTEM1, null))),
-        new IdAndCodingSets("id-null-system",
+        new IdAndCodingSets("id-null-system", null,
             Collections.singletonList(new SimpleCoding(null, "code1")),
             Collections.singletonList(new SimpleCoding(null, "code1")))
     );
     final Iterator<BooleanResult> result = mapper.call(input.iterator());
 
     assertEquals(Arrays.asList(
-        BooleanResult.of("id-null-code", false),
-        BooleanResult.of("id-null-system", false)
+        BooleanResult.of("id-null-code", null, false),
+        BooleanResult.of("id-null-system", null, false)
         ),
         IteratorUtils.toList(result));
 

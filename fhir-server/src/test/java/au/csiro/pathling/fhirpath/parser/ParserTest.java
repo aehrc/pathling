@@ -43,6 +43,7 @@ import java.util.HashSet;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
@@ -292,7 +293,7 @@ public class ParserTest {
   public void testWhereWithAggregateFunction() {
     assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
         .selectResult()
-        .hasRows(allPatientsWithValue(null)
+        .hasRows(allPatientsWithValue(DataTypes.StringType, null)
             .changeValue(PATIENT_ID_9360820c, "female"));
   }
 
@@ -304,7 +305,7 @@ public class ParserTest {
   public void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Karina848').gender")
         .selectResult()
-        .hasRows(allPatientsWithValue(null).changeValue(PATIENT_ID_9360820c, "female"));
+        .hasRows(allPatientsWithValue((String) null).changeValue(PATIENT_ID_9360820c, "female"));
   }
 
   /**
@@ -317,7 +318,7 @@ public class ParserTest {
     // TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
         .selectResult()
-        .hasRows(allPatientsWithValue(null));
+        .hasRows(allPatientsWithValue((Boolean) null));
   }
 
   @Test
@@ -342,7 +343,7 @@ public class ParserTest {
             + "                $this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\n"
             + "            ).first().authoredOn")
         .selectResult()
-        .hasRows(allPatientsWithValue(null));
+        .hasRows(allPatientsWithValue((String) null));
   }
 
   @Test
@@ -352,7 +353,7 @@ public class ParserTest {
     assertThatResultOf("where($this.name.first().family in contact.name.where("
         + "$this.given contains 'Joe').first().family).gender")
         .selectResult().
-        hasRows(allPatientsWithValue(null));
+        hasRows(allPatientsWithValue((String) null));
   }
 
   @Test

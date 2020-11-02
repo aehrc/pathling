@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.encoding;
 
 import java.io.Serializable;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
@@ -27,16 +28,20 @@ public class BooleanResult implements Serializable {
   private String id;
 
   @Nullable
+  private List<Integer> eid;
+
+  @Nullable
   private Boolean value;
 
   /**
    * Creates a NULL boolean result for given id.
    *
    * @param id the ID to use within the result
+   * @param eid the elementId to use with the result
    * @return NULL boolean result
    */
   @Nonnull
-  public static BooleanResult nullOf(@Nullable final String id) {
-    return new BooleanResult(id, null);
+  public static BooleanResult nullOf(@Nullable final String id, @Nullable final List<Integer> eid) {
+    return new BooleanResult(id, eid, null);
   }
 }

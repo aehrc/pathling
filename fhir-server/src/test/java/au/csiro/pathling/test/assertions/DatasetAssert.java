@@ -30,13 +30,14 @@ public class DatasetAssert {
 
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final List<Row> expected) {
-    assertEquals(expected, dataset.collectAsList());
+    final List<Row> actualRows = dataset.collectAsList();
+    assertEquals(expected, actualRows);
     return this;
   }
 
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final DatasetBuilder expected) {
-    return hasRows(expected.getRows());
+    return hasRows(expected.build());
   }
 
   @Nonnull

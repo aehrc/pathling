@@ -112,7 +112,7 @@ public class SubsumptionMapper
 
     return entries.stream().map(r -> {
       if (r.getInputCodings() == null) {
-        return BooleanResult.nullOf(r.getId());
+        return BooleanResult.nullOf(r.getId(), r.getEid());
       } else {
         final boolean result = (!inverted
                                 ? subsumeClosure
@@ -120,7 +120,7 @@ public class SubsumptionMapper
                                 :
                                 subsumeClosure
                                     .anyRelates(r.safeGetArgCodings(), r.safeGetInputCodings()));
-        return BooleanResult.of(r.getId(), result);
+        return BooleanResult.of(r.getId(), r.getEid(), result);
       }
     }).iterator();
   }
