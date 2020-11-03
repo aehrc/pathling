@@ -10,6 +10,7 @@ import static au.csiro.pathling.QueryHelpers.*;
 import static au.csiro.pathling.utilities.Strings.randomShortString;
 
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.utilities.Preconditions;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -103,6 +104,26 @@ public abstract class NonLiteralPath implements FhirPath {
     // @TODO: EID OPT
     // ONLY SELECT THE FIELDS STARTING WITH CURRENRT HASH
     this.dataset = applySelection(hashedDataset, this.idColumn);
+  }
+
+  @Override
+  public boolean hasOrder() {
+    return isSingular() || eidColumn.isPresent();
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> getOrderedDataset() {
+    Preconditions.checkState(hasOrder(), "Orderable path expected");
+    return eidColumn.map(c -> getDataset().orderBy(c)).orElse(getDataset());
+  }
+
+  @Nonnull
+  @Override
+  public Column getOrderingColumn() {
+    Preconditions.checkState(hasOrder(), "Orderable path expected");
+    return eidColumn.orElse(functions.lit(null))
+        .cast(DataTypes.createArrayType(DataTypes.IntegerType));
   }
 
   /**

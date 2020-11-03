@@ -24,6 +24,8 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Type;
 
@@ -131,6 +133,25 @@ public abstract class LiteralPath implements FhirPath {
   @Override
   public boolean isSingular() {
     return true;
+  }
+
+
+  @Override
+  public boolean hasOrder() {
+    return true;
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> getOrderedDataset() {
+    return getDataset();
+  }
+
+  @Nonnull
+  @Override
+  public Column getOrderingColumn() {
+    return functions.lit(null)
+        .cast(DataTypes.createArrayType(DataTypes.IntegerType));
   }
 
   /**

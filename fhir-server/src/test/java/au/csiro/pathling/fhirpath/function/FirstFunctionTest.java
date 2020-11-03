@@ -159,10 +159,10 @@ public class FirstFunctionTest {
         .withEidColumn()
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("status", DataTypes.StringType)
-        .withRow("Encounter/xyz1", makeEid(0, 0),
+        .withRow("Encounter/xyz1", null,
             RowFactory.create("EpisodeOfCare/abc1", "planned"))
-        .withRow("Encounter/xyz2", makeEid(0, 0), RowFactory.create("EpisodeOfCare/abc3", "active"))
-        .withRow("Encounter/xyz3", makeEid(0, 0),
+        .withRow("Encounter/xyz2", null, RowFactory.create("EpisodeOfCare/abc3", "active"))
+        .withRow("Encounter/xyz3", null,
             RowFactory.create("EpisodeOfCare/abc3", "waitlist"))
         .withRow("Encounter/xyz4", null, null)
         .buildWithStructValue();
@@ -226,10 +226,10 @@ public class FirstFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", makeEid(0, 0), "Zaak")
-        .withRow("Patient/abc2", makeEid(0, 0), "Samuel")
-        .withRow("Patient/abc3", makeEid(0, 0), "Adam")
-        .withRow("Patient/abc4", makeEid(0, 0), "John")
+        .withRow("Patient/abc1", null, "Zaak")
+        .withRow("Patient/abc2", null, "Samuel")
+        .withRow("Patient/abc3", null, "Adam")
+        .withRow("Patient/abc4", null, "John")
         .withRow("Patient/abc5", null, null)
         .withRow("Patient/abc6", null, null)
         .build();
@@ -268,29 +268,36 @@ public class FirstFunctionTest {
         .groupingColumns(Collections.singletonList(groupingColumn))
         .inputExpression("Patient")
         .build();
-    final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
+    final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
-    final NamedFunction count = NamedFunction.getInstance("first");
-    final FhirPath result = count.invoke(countInput);
+    final NamedFunction firstFunction = NamedFunction.getInstance("first");
 
-    assertTrue(result instanceof ResourcePath);
-    assertThat((ResourcePath) result)
-        .hasExpression("first()")
-        .isSingular()
-        .hasResourceType(ResourceType.PATIENT);
+    final IllegalStateException error = assertThrows(
+        IllegalStateException.class,
+        () -> firstFunction.invoke(firstInput));
+    assertEquals(
+        "Orderable path expected",
+        error.getMessage());
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
-        .withColumn("gender_value", DataTypes.StringType)
-        .withStructColumn("id", DataTypes.StringType)
-        .withStructColumn("gender", DataTypes.StringType)
-        .withStructColumn("active", DataTypes.BooleanType)
-        .withRow("female", RowFactory.create("Patient/abc2", "female", true))
-        .withRow("male", RowFactory.create("Patient/abc3", "male", false))
-        .buildWithStructValue();
-
-    assertThat(result)
-        .selectGroupingResult(Collections.singletonList(groupingColumn))
-        .hasRows(expectedDataset);
+    // final FhirPath result = count.invoke(countInput);
+    // assertTrue(result instanceof ResourcePath);
+    // assertThat((ResourcePath) result)
+    //     .hasExpression("first()")
+    //     .isSingular()
+    //     .hasResourceType(ResourceType.PATIENT);
+    //
+    // final Dataset<Row> expectedDataset = new DatasetBuilder()
+    //     .withColumn("gender_value", DataTypes.StringType)
+    //     .withStructColumn("id", DataTypes.StringType)
+    //     .withStructColumn("gender", DataTypes.StringType)
+    //     .withStructColumn("active", DataTypes.BooleanType)
+    //     .withRow("female", RowFactory.create("Patient/abc2", "female", true))
+    //     .withRow("male", RowFactory.create("Patient/abc3", "male", false))
+    //     .buildWithStructValue();
+    //
+    // assertThat(result)
+    //     .selectGroupingResult(Collections.singletonList(groupingColumn))
+    //     .hasRows(expectedDataset);
   }
 
   @Test

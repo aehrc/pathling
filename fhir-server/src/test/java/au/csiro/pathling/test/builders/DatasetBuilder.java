@@ -208,6 +208,6 @@ public class DatasetBuilder {
 
   @Nonnull
   public static List<Integer> makeRootEid() {
-    return Arrays.asList(0);
+    return null;
   }
 }

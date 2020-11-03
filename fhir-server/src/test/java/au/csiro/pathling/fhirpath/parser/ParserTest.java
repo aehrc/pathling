@@ -378,7 +378,7 @@ public class ParserTest {
     // @TODO: Add assertions
     assertThatResultOf("name.given.count() = 2")
         .isSingular()
-        .selectResult();
+        .selectOrderedResult();
   }
 
   // @TODO: Enable when the issue with `where` and preserving $this.eid is sovled
@@ -401,11 +401,10 @@ public class ParserTest {
   }
 
   @Test
-  @Disabled
   public void testOrderPropagationWithResolveAndTypeOf() {
 
     // @TODO: Add assertions
-    assertThatResultOf(" generalPractitioner.resolve().ofType(Organization)")
+    assertThatResultOf("generalPractitioner.resolve().ofType(Organization)")
         .selectOrderedResult()
         .debugAllRows();
   }

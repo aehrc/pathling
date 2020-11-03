@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.firstNColumns;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -98,7 +97,7 @@ public abstract class AggregateFunction {
         (expression1, dataset1, idColumn, eidColumn, valueColumn, singular, thisColumn) -> ElementPath
             .build(expression1, dataset1, idColumn, eidColumn, valueColumn, true, Optional.empty(),
                 thisColumn,
-                fhirType), Optional.empty());
+                fhirType));
   }
 
   /**
@@ -109,27 +108,21 @@ public abstract class AggregateFunction {
    * @param function the {@link Function} that will take a {@link Column}, and return another
    * Column
    * @param expression the FHIRPath expression for the result
-   * @param orderElements true is the aggreation requires elements to be ordered
+   * @param requiresOrder true is the aggreation requires elements to be ordered
    * @return a new {@link NonLiteralPath} representing the result of the same type of input
    */
   @Nonnull
   @SuppressWarnings("SameParameterValue")
   protected NonLiteralPath applyAggregationFunction(@Nonnull final ParserContext context,
       @Nonnull final NonLiteralPath input, @Nonnull final Function<Column, Column> function,
-      @Nonnull final String expression, boolean orderElements) {
+      @Nonnull final String expression, boolean requiresOrder) {
 
-    // @TODO: EID add a check if the dataset can be odered when ordering is required
-    // Fail or log warning?
-    check(input.getEidColumn().isPresent() || !orderElements || !context.getGroupingColumns()
-        .isEmpty());
-
-    final Dataset<Row> dataset = orderElements && input.getEidColumn().isPresent()
-                                 ? input.getDataset().orderBy(input.getEidColumn().get())
+    final Dataset<Row> dataset = requiresOrder
+                                 ? input.getOrderedDataset()
                                  : input.getDataset();
 
-    // @TODO: possibly also use the same function for EID column
     return applyAggregation(context, dataset, Collections.singletonList(input),
-        function.apply(input.getValueColumn()), expression, input, Optional.of(function));
+        function.apply(input.getValueColumn()), expression, input);
   }
 
   /**
@@ -142,19 +135,17 @@ public abstract class AggregateFunction {
    * @param aggregationColumn a {@link Column} describing the aggregation
    * @param expression the FHIRPath expression for the result
    * @param contextPath the {@link NonLiteralPath} to use a prototype for result path
-   * @param eidAggFunction optional function to use for eid aggregation
    * @return a new {@link FhirPath} representing the result
    */
   @Nonnull
   private NonLiteralPath applyAggregation(@Nonnull final ParserContext context,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Collection<FhirPath> inputs,
       @Nonnull final Column aggregationColumn, @Nonnull final String expression,
-      @Nonnull final NonLiteralPath contextPath,
-      @Nonnull final Optional<Function<Column, Column>> eidAggFunction) {
+      @Nonnull final NonLiteralPath contextPath) {
 
     return applyAggregation(context, dataset, inputs, aggregationColumn, expression,
         // create the result as a copy of input path
-        contextPath::copy, eidAggFunction);
+        contextPath::copy);
   }
 
   /**
@@ -167,15 +158,13 @@ public abstract class AggregateFunction {
    * @param aggregationColumn a {@link Column} describing the aggregation
    * @param expression the FHIRPath expression for the result
    * @param resultPathFactory the {@link ResultPathFactory} factory to use to create the result
-   * @param eidAggFunction optional function to use for eid aggregation path
    * @return a new {@link T} representing the result
    */
   @Nonnull
   private <T extends FhirPath> T applyAggregation(@Nonnull final ParserContext context,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Collection<FhirPath> inputs,
       @Nonnull final Column aggregationColumn, @Nonnull final String expression,
-      @Nonnull final ResultPathFactory<T> resultPathFactory,
-      @Nonnull final Optional<Function<Column, Column>> eidAggFunction) {
+      @Nonnull final ResultPathFactory<T> resultPathFactory) {
     final List<Column> groupingColumns = context.getGroupingColumns();
 
     // Use an ID column from any of the inputs.
@@ -194,15 +183,8 @@ public abstract class AggregateFunction {
 
     final Optional<Column> eidColumn = NonLiteralPath.findEidColumn(inputs.toArray());
 
-    // or the actual aggregation function used on the value column
-    final Optional<Column> eidAggColumn = eidAggFunction
-        .flatMap(f -> NonLiteralPath.findEidColumn(inputs.toArray()).map(f));
-
     // Apply the aggregation.
-    final Dataset<Row> result = eidAggColumn.isPresent()
-                                ? dataset.groupBy(groupByArray)
-                                    .agg(aggregationColumn, eidAggColumn.get())
-                                : dataset.groupBy(groupByArray).agg(aggregationColumn);
+    final Dataset<Row> result = dataset.groupBy(groupByArray).agg(aggregationColumn);
 
     int cursor = 0;
     final Optional<Column> newIdColumn;
@@ -233,13 +215,8 @@ public abstract class AggregateFunction {
     cursor += 1;
     final Column valueColumn = result.col(valueColName);
 
-    Optional<Column> newEidColumn = Optional.empty();
-    if (eidAggColumn.isPresent() && newIdColumn.isPresent()) {
-      final String eidValueColName = result.columns()[cursor];
-      newEidColumn = Optional.of(result.col(eidValueColName));
-    }
-
-    return resultPathFactory.create(expression, result, newIdColumn, newEidColumn, valueColumn,
+    // empty eid column as the result is singular
+    return resultPathFactory.create(expression, result, newIdColumn, Optional.empty(), valueColumn,
         true, newThisColumn);
   }
 

@@ -42,10 +42,6 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     final Function<Column, Column> firstIgnoreNull = col -> first(col, true);
-    final Function<Column, Column> eidAggreation = col -> min(col);
-
-    // need to somwhow pass extra final Function<Dataset<Row>, Dataset<Row>> datasetTransform = ds -> ds.sort()
-    final Function<FhirPath, Dataset<Row>> getDataset = fp -> fp.getDataset().sort(((NonLiteralPath)fp).getEidColumn().get());
 
     return applyAggregationFunction(input.getContext(), inputPath, firstIgnoreNull, expression, true);
   }

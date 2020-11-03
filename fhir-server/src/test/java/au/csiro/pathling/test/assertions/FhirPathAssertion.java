@@ -7,7 +7,6 @@
 package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -68,12 +67,10 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
     check(fhirPath.getIdColumn().isPresent());
     check(fhirPath instanceof NonLiteralPath);
     final NonLiteralPath nonLiteralPath = (NonLiteralPath) fhirPath;
-    checkPresent(nonLiteralPath.getEidColumn());
-
-    return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), nonLiteralPath.getEidColumn().get(),
+    return new DatasetAssert(fhirPath.getOrderedDataset()
+        .select(fhirPath.getIdColumn().get(), nonLiteralPath.getOrderingColumn(),
             fhirPath.getValueColumn())
-        .orderBy(fhirPath.getIdColumn().get(), nonLiteralPath.getEidColumn().get()));
+        .orderBy(fhirPath.getIdColumn().get(), nonLiteralPath.getOrderingColumn()));
   }
 
   @Nonnull
