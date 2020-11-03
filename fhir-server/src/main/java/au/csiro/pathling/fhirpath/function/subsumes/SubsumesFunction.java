@@ -27,6 +27,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.slf4j.MDC;
 
@@ -123,13 +124,14 @@ public class SubsumesFunction implements NamedFunction {
     final Dataset<Row> argCodingSet = toArgDataset(argFhirPath);
 
     // JOIN the input arg args datasets
-    return inputCodingSet.join(argCodingSet,
+    final Dataset<Row> joinedDataframe = inputCodingSet.join(argCodingSet,
         inputCodingSet.col(COL_ID).equalTo(argCodingSet.col(COL_ID)), "left_outer")
         .select(inputCodingSet.col(COL_ID).alias(COL_ID),
             inputCodingSet.col(COL_EID).alias(COL_EID),
             inputCodingSet.col(COL_CODING_SET).alias(COL_INPUT_CODINGS),
-            argCodingSet.col(COL_CODING_SET).alias(COL_ARG_CODINGS))
-        .as(Encoders.bean(IdAndCodingSets.class));
+            argCodingSet.col(COL_CODING_SET).alias(COL_ARG_CODINGS));
+
+    return joinedDataframe.as(Encoders.bean(IdAndCodingSets.class));
   }
 
   /**
@@ -153,8 +155,9 @@ public class SubsumesFunction implements NamedFunction {
                                   : array(fhirPath.getValueColumn());
 
     check(fhirPath.getIdColumn().isPresent());
-    final Column eidColumn = fhirPath.getEidColumn().orElse(lit(null))
-        .alias(COL_EID);
+    final Column eidColumn = fhirPath.getEidColumn()
+        .orElse(lit(null))
+        .cast(DataTypes.createArrayType(DataTypes.IntegerType)).alias(COL_EID);
     return expressionDataset.select(fhirPath.getIdColumn().get().alias(COL_ID),
         eidColumn,
         when(fhirPath.getValueColumn().isNotNull(), codingArrayCol)

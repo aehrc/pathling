@@ -133,6 +133,27 @@ public class SubsumesFunctionTest {
     return (CodingPath) inputExpression;
   }
 
+  private static CodingPath createSingularCodingInput() {
+    final Dataset<Row> dataset = new DatasetBuilder()
+        .withIdColumn()
+        .withStructTypeColumns(codingStructType())
+        .withRow(RES_ID1, rowFromCoding(CODING_SMALL))
+        .withRow(RES_ID2, rowFromCoding(CODING_MEDIUM))
+        .withRow(RES_ID3, rowFromCoding(CODING_LARGE))
+        .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
+        .withRow(RES_ID5, null /* NULL coding value */)
+        .buildWithStructValue();
+    final ElementPath inputExpression = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.CODING)
+        .dataset(dataset)
+        .idAndValueColumns()
+        .singular(true)
+        .build();
+
+    return (CodingPath) inputExpression;
+  }
+
+
   private static ElementPath createCodeableConceptInput() {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
@@ -367,8 +388,19 @@ public class SubsumesFunctionTest {
 
   @Test
   public void testAllNonNullTrueWhenSubsumesItself() {
-    assertSubsumesSuccess(createCodingInput(), createCodingInput())
-        .hasRows(expectedAllNonNull(true));
+
+    final DatasetBuilder expectedResult = new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, null, true)
+        .withRow(RES_ID2, null, true)
+        .withRow(RES_ID3, null, true)
+        .withRow(RES_ID4, null, true)
+        .withRow(RES_ID5, null, null);
+
+    assertSubsumesSuccess(createSingularCodingInput(), createSingularCodingInput())
+        .hasRows(expectedResult);
   }
 
 
