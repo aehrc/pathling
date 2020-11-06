@@ -97,7 +97,7 @@ public class FirstFunctionTest {
     @SuppressWarnings("UnnecessaryLocalVariable") final Dataset<Row> expectedDataset = inputDataset;
 
     assertThat(result)
-        .selectOrderedResult()
+        .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
 
@@ -132,7 +132,6 @@ public class FirstFunctionTest {
     final Column valueColumn = inputDataset.col("value");
     final Column eidColumn = inputDataset.col("eid");
 
-    // @TODO: EID FIX
     final ResourcePath inputPath = new ResourcePath("Encounter.episodeOfCare.resolve()",
         inputDataset,
         Optional.of(idColumn), Optional.of(eidColumn), valueColumn, false, Optional.empty(),
@@ -168,7 +167,7 @@ public class FirstFunctionTest {
         .buildWithStructValue();
 
     assertThat(result)
-        .selectOrderedResult()
+        .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
 
@@ -193,9 +192,6 @@ public class FirstFunctionTest {
         .withRow("Patient/abc6", null, null)    // when: "many nulls" expect: null
         .withRow("Patient/abc6", null, null)
         .build();
-    final Column idColumn = inputDataset.col("id");
-    final Column valueColumn = inputDataset.col("value");
-    final Column eidColumn = inputDataset.col("eid");
 
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
@@ -235,12 +231,12 @@ public class FirstFunctionTest {
         .build();
 
     assertThat(result)
-        .selectOrderedResult()
+        .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
 
   @Test
-  public void firstOfGrouping() {
+  public void illegalToCallFirstOnGrouping() {
     final RuntimeResourceDefinition hapiDefinition = fhirContext
         .getResourceDefinition(Patient.class);
     final ResourceDefinition resourceDefinition = new ResourceDefinition(ResourceType.PATIENT,
@@ -259,7 +255,7 @@ public class FirstFunctionTest {
     final Column idColumn = inputDataset.col("id");
     final Column valueColumn = inputDataset.col("value");
     final Column groupingColumn = inputDataset.col("gender_value");
-    // @TODO: EID FIX
+
     final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
         Optional.of(idColumn), Optional.empty(), valueColumn, false, Optional.empty(),
         resourceDefinition);
@@ -278,26 +274,6 @@ public class FirstFunctionTest {
     assertEquals(
         "Orderable path expected",
         error.getMessage());
-
-    // final FhirPath result = count.invoke(countInput);
-    // assertTrue(result instanceof ResourcePath);
-    // assertThat((ResourcePath) result)
-    //     .hasExpression("first()")
-    //     .isSingular()
-    //     .hasResourceType(ResourceType.PATIENT);
-    //
-    // final Dataset<Row> expectedDataset = new DatasetBuilder()
-    //     .withColumn("gender_value", DataTypes.StringType)
-    //     .withStructColumn("id", DataTypes.StringType)
-    //     .withStructColumn("gender", DataTypes.StringType)
-    //     .withStructColumn("active", DataTypes.BooleanType)
-    //     .withRow("female", RowFactory.create("Patient/abc2", "female", true))
-    //     .withRow("male", RowFactory.create("Patient/abc3", "male", false))
-    //     .buildWithStructValue();
-    //
-    // assertThat(result)
-    //     .selectGroupingResult(Collections.singletonList(groupingColumn))
-    //     .hasRows(expectedDataset);
   }
 
   @Test

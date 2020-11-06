@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockAvailableResourceTypes;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -63,16 +64,18 @@ class ResolveFunctionTest {
 
     final Dataset<Row> referenceDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Encounter/xyz1", RowFactory.create(null, "EpisodeOfCare/abc1", null))
-        .withRow("Encounter/xyz2", RowFactory.create(null, "EpisodeOfCare/abc3", null))
-        .withRow("Encounter/xyz3", RowFactory.create(null, "EpisodeOfCare/abc2", null))
-        .withRow("Encounter/xyz4", RowFactory.create(null, "EpisodeOfCare/abc2", null))
+        .withRow("Encounter/xyz1", makeEid(0), RowFactory.create(null, "EpisodeOfCare/abc1", null))
+        .withRow("Encounter/xyz2", makeEid(0), RowFactory.create(null, "EpisodeOfCare/abc3", null))
+        .withRow("Encounter/xyz3", makeEid(0), RowFactory.create(null, "EpisodeOfCare/abc2", null))
+        .withRow("Encounter/xyz4", makeEid(0), RowFactory.create(null, "EpisodeOfCare/abc2", null))
         .buildWithStructValue();
     final ElementPath referencePath = new ElementPathBuilder()
         .expression("Encounter.episodeOfCare")
         .dataset(referenceDataset)
         .idAndValueColumns()
+        .eidColumn()
         .singular(false)
         .definition(definition)
         .buildDefined();
@@ -189,14 +192,17 @@ class ResolveFunctionTest {
 
     final Dataset<Row> referenceDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Condition/xyz1", RowFactory.create(null, "Observation/abc1", null))
-        .withRow("Condition/xyz2", RowFactory.create(null, "ClinicalImpression/def1", null))
+        .withRow("Condition/xyz1", makeEid(0), RowFactory.create(null, "Observation/abc1", null))
+        .withRow("Condition/xyz2", makeEid(0),
+            RowFactory.create(null, "ClinicalImpression/def1", null))
         .buildWithStructValue();
     final ElementPath referencePath = new ElementPathBuilder()
         .expression("Condition.evidence.detail")
         .dataset(referenceDataset)
         .idAndValueColumns()
+        .eidColumn()
         .singular(false)
         .definition(definition)
         .buildDefined();

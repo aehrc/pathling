@@ -79,7 +79,7 @@ public class ParserTest {
     final FhirContext fhirContext = FhirHelpers.getFhirContext();
 
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "%resource", false);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "%resource", true);
 
     final ParserContext parserContext = new ParserContextBuilder()
         .fhirContext(fhirContext)
@@ -368,55 +368,5 @@ public class ParserTest {
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
     assertEquals("Error parsing FHIRPath expression: missing ')' at '<EOF>'", error.getMessage());
-  }
-
-  // @TODO: EID Tests
-  // Resructure
-
-  @Test
-  public void testOrderPropagationWithAggregateAndComparison() {
-    // @TODO: Add assertions
-    assertThatResultOf("name.given.count() = 2")
-        .isSingular()
-        .selectOrderedResult();
-  }
-
-  // @TODO: Enable when the issue with `where` and preserving $this.eid is sovled
-  @Test
-  @Disabled
-  public void testOrderPropagationWith() {
-
-    // TODO: Change to a non-trivial case?
-    assertThatResultOf("name.where($this.given.count() = 2)")
-        .selectOrderedResult()
-        .debugAllRows();
-  }
-
-  @Test
-  public void testOrderPropagationWithReverseResolveAndResolve() {
-
-    // @TODO: Add assertions
-    assertThatResultOf("reverseResolve(DiagnosticReport.subject).result.resolve().category.coding")
-        .selectOrderedResult();
-  }
-
-  @Test
-  public void testOrderPropagationWithResolveAndTypeOf() {
-
-    // @TODO: Add assertions
-    assertThatResultOf("generalPractitioner.resolve().ofType(Organization)")
-        .selectOrderedResult()
-        .debugAllRows();
-  }
-
-  @Test
-  @Disabled
-  public void testOrderWithReverseResolveAndWhere() {
-
-    // @TODO: Add assertions
-    assertThatResultOf(
-        "reverseResolve(Observation.subject).category.coding.where($this.first() = http://terminology.hl7.org/CodeSystem/observation-category|vital-signs)")
-        .selectOrderedResult()
-        .debugAllRows();
   }
 }

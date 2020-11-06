@@ -37,7 +37,7 @@ public class ElementPathBuilder {
   @Nonnull
   private Column idColumn;
 
-  @Nonnull
+  @Nullable
   private Column eidColumn;
 
   @Nonnull
@@ -61,7 +61,6 @@ public class ElementPathBuilder {
     expression = "";
     dataset = SparkHelpers.getSparkSession().emptyDataFrame();
     idColumn = lit(null);
-    eidColumn = lit(null);
     valueColumn = lit(null);
     singular = false;
     fhirType = FHIRDefinedType.NULL;
@@ -140,7 +139,8 @@ public class ElementPathBuilder {
   @Nonnull
   public ElementPath build() {
     return ElementPath
-        .build(expression, dataset, Optional.of(idColumn), Optional.of(eidColumn), valueColumn,
+        .build(expression, dataset, Optional.of(idColumn), Optional.ofNullable(eidColumn),
+            valueColumn,
             singular,
             Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), fhirType);
   }
@@ -148,7 +148,8 @@ public class ElementPathBuilder {
   @Nonnull
   public ElementPath buildDefined() {
     return ElementPath
-        .build(expression, dataset, Optional.of(idColumn), Optional.of(eidColumn), valueColumn,
+        .build(expression, dataset, Optional.of(idColumn), Optional.ofNullable(eidColumn),
+            valueColumn,
             singular,
             Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), definition);
   }

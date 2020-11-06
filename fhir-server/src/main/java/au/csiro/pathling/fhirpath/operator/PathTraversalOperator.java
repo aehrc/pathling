@@ -7,7 +7,9 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.posexplode_outer;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -62,28 +64,42 @@ public class PathTraversalOperator {
     // multiple rows.
     final Column field = leftValueColumn.getField(right);
     final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
-    Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
-        .map(leftDataset::col), maxCardinalityOfOne
-                                ? Stream.of((when(field.isNull(), lit(null)).otherwise(lit(0)))
-        .alias("index"), field.alias("field"))
-                                : Stream
-                                    .of(posexplode_outer(field).as(new String[]{"index", "field"})))
-        .toArray(l -> new Column[l]);
+    final boolean resultSingular = left.isSingular() && maxCardinalityOfOne;
 
-    Dataset<Row> explodedDataset = leftDataset.select(allColumns);
+    if (maxCardinalityOfOne) {
+      final Column valueColumn = field;
+      final Optional<Column> eidColumn = resultSingular
+                                         ? Optional.empty()
+                                         : left.getEidColumn();
+      return ElementPath
+          .build(expression, leftDataset, left.getIdColumn(), eidColumn, valueColumn,
+              resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
+    } else {
 
-    // only construct EID column if presnt in left dataset
-    final Optional<Column> eidColumn = left.getEidColumn()
-        .map(eidCol -> when(explodedDataset.col("index").isNull(), lit(null))
-            .otherwise(concat(eidCol, array(explodedDataset.col("index")))));
+      Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
+          .map(leftDataset::col), maxCardinalityOfOne
+                                  ? Stream.of((when(field.isNull(), lit(null)).otherwise(lit(0)))
+          .alias("index"), field.alias("field"))
+                                  : Stream
+                                      .of(posexplode_outer(field)
+                                          .as(new String[]{"index", "field"})))
+          .toArray(l -> new Column[l]);
 
-    final Column valueColumn = explodedDataset.col("field");
-    final boolean singular = left.isSingular() && maxCardinalityOfOne;
+      Dataset<Row> explodedDataset = leftDataset.select(allColumns);
 
-    return ElementPath
-        .build(expression, explodedDataset, left.getIdColumn(), eidColumn, valueColumn,
-            singular,
-            left.getForeignResource(), left.getThisColumn(), childDefinition);
+      final Column valueColumn = explodedDataset.col("field");
+
+      // only construct EID column if presnt in left dataset
+      final Optional<Column> eidColumn = resultSingular
+                                         ? Optional.empty()
+                                         :
+                                         Optional.of(left.expandEid(explodedDataset.col("index"),
+                                             explodedDataset.col("index")));
+
+      return ElementPath
+          .build(expression, explodedDataset, left.getIdColumn(), eidColumn, valueColumn,
+              resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
+    }
   }
 
 }

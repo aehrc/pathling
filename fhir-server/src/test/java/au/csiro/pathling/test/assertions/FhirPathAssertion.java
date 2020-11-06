@@ -38,9 +38,11 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   @Nonnull
   public DatasetAssert selectResult() {
     check(fhirPath.getIdColumn().isPresent());
-    return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn())
-        .orderBy(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
+    check(fhirPath instanceof NonLiteralPath);
+    return new DatasetAssert(fhirPath.getOrderedDataset()
+        .select(fhirPath.getIdColumn().get(),
+            fhirPath.getValueColumn())
+        .orderBy(fhirPath.getIdColumn().get(), fhirPath.getOrderingColumn()));
   }
 
 
@@ -63,22 +65,13 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   }
 
   @Nonnull
-  public DatasetAssert selectOrderedResult() {
+  public DatasetAssert selectOrderedResultWithEid() {
     check(fhirPath.getIdColumn().isPresent());
     check(fhirPath instanceof NonLiteralPath);
-    final NonLiteralPath nonLiteralPath = (NonLiteralPath) fhirPath;
     return new DatasetAssert(fhirPath.getOrderedDataset()
-        .select(fhirPath.getIdColumn().get(), nonLiteralPath.getOrderingColumn(),
+        .select(fhirPath.getIdColumn().get(), fhirPath.getOrderingColumn(),
             fhirPath.getValueColumn())
-        .orderBy(fhirPath.getIdColumn().get(), nonLiteralPath.getOrderingColumn()));
-  }
-
-  @Nonnull
-  public DatasetAssert selectResultPreserveOrder() {
-    check(fhirPath.getIdColumn().isPresent());
-    return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(),
-            fhirPath.getValueColumn()));
+        .orderBy(fhirPath.getIdColumn().get(), fhirPath.getOrderingColumn()));
   }
 
   @Nonnull

@@ -68,15 +68,20 @@ public abstract class NonLiteralPath implements FhirPath {
       @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn) {
+
+    // precondition: singular paths should have empty eidColumn
+    Preconditions.check(!singular || eidColumn.isEmpty());
+
+
     this.expression = expression;
     this.singular = singular;
     this.foreignResource = foreignResource;
-    this.thisColumn = thisColumn;
 
     final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
     final String eidColumnName = hash + EID_COLUMN_SUFFIX;
     final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
+    final String thisColumnName = hash + THIS_COLUMN_SUFFIX;
 
     Dataset<Row> hashedDataset = dataset;
     if (idColumn.isPresent()) {
@@ -85,7 +90,10 @@ public abstract class NonLiteralPath implements FhirPath {
     if (eidColumn.isPresent()) {
       hashedDataset = hashedDataset.withColumn(eidColumnName, eidColumn.get());
     }
-    hashedDataset = hashedDataset.withColumn(valueColumnName, valueColumn);
+
+    if (thisColumn.isPresent()) {
+      hashedDataset = hashedDataset.withColumn(thisColumnName, thisColumn.get());
+    }
 
     if (idColumn.isPresent()) {
       this.idColumn = Optional.of(hashedDataset.col(idColumnName));
@@ -99,6 +107,13 @@ public abstract class NonLiteralPath implements FhirPath {
       this.eidColumn = Optional.empty();
     }
 
+    if (thisColumn.isPresent()) {
+      this.thisColumn = Optional.of(hashedDataset.col(thisColumnName));
+    } else {
+      this.thisColumn = Optional.empty();
+    }
+
+    hashedDataset = hashedDataset.withColumn(valueColumnName, valueColumn);
     this.valueColumn = hashedDataset.col(valueColumnName);
 
     // @TODO: EID OPT
@@ -200,8 +215,22 @@ public abstract class NonLiteralPath implements FhirPath {
     // renaming through {@link NonLiteralPath} constructor.
     final String hash = randomShortString();
     return functions.struct(
-        getEidColumn().orElseGet(() -> functions.lit(null).cast(DataTypes.IntegerType))
-            .alias("eid"),
+        //functions.monotonically_increasing_id().alias("uuid"),
+        getOrderingColumn().alias("eid"),
         getValueColumn().alias("value")).alias(hash + THIS_COLUMN_SUFFIX);
   }
+
+  @Nonnull
+  public Column expandEid(Column indexColumn, Column valueColumn) {
+    final Column eidColumn = getOrderingColumn();
+    return functions.when(valueColumn.isNull(),
+        functions.lit(null).cast(DataTypes.createArrayType(DataTypes.IntegerType)))
+        .otherwise(
+            functions.when(eidColumn.isNull(), functions.array(indexColumn)).otherwise(
+                functions.concat(eidColumn, functions.array(indexColumn))
+            )
+        );
+  }
+
+
 }

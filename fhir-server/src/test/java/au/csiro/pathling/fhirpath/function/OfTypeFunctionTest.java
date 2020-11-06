@@ -64,19 +64,19 @@ class OfTypeFunctionTest {
         .withEidColumn()
         .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Encounter/xyz1", makeEid(0, 1), "Patient",
+        .withRow("Encounter/xyz1", makeEid(1), "Patient",
             RowFactory.create(null, "Patient/abc1", null))
-        .withRow("Encounter/xyz1", makeEid(0, 0), "Patient",
+        .withRow("Encounter/xyz1", makeEid(0), "Patient",
             RowFactory.create(null, "Patient/abc2", null))
-        .withRow("Encounter/xyz2", makeEid(0, 0), "Patient",
+        .withRow("Encounter/xyz2", makeEid(0), "Patient",
             RowFactory.create(null, "Patient/abc3", null))
-        .withRow("Encounter/xyz2", makeEid(0, 1), "Group",
+        .withRow("Encounter/xyz2", makeEid(1), "Group",
             RowFactory.create(null, "Group/def1", null))
-        .withRow("Encounter/xyz3", makeEid(0, 0), "Patient",
+        .withRow("Encounter/xyz3", makeEid(0), "Patient",
             RowFactory.create(null, "Patient/abc2", null))
-        .withRow("Encounter/xyz4", makeEid(0, 0), "Patient",
+        .withRow("Encounter/xyz4", makeEid(0), "Patient",
             RowFactory.create(null, "Patient/abc2", null))
-        .withRow("Encounter/xyz5", makeEid(0, 0), "Group",
+        .withRow("Encounter/xyz5", makeEid(0), "Group",
             RowFactory.create(null, "Group/def1", null))
         .withRow("Encounter/xyz6", null, null, null)
         .buildWithStructValue();
@@ -87,7 +87,7 @@ class OfTypeFunctionTest {
 
     final UntypedResourcePath inputPath = UntypedResourcePath
         .build("subject.resolve()", inputDataset, Optional.of(idColumn), Optional.of(eidColumn),
-            valueColumn, true,
+            valueColumn, false,
             Optional.empty(), typeColumn,
             new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
 
@@ -116,7 +116,7 @@ class OfTypeFunctionTest {
     assertTrue(result instanceof ResourcePath);
     assertThat((ResourcePath) result)
         .hasExpression("subject.resolve().ofType(Patient)")
-        .isSingular()
+        .isNotSingular()
         .hasResourceType(ResourceType.PATIENT);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
@@ -125,20 +125,20 @@ class OfTypeFunctionTest {
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("gender", DataTypes.StringType)
         .withStructColumn("active", DataTypes.BooleanType)
-        .withRow("Encounter/xyz1", makeEid(0, 0),
+        .withRow("Encounter/xyz1", makeEid(0),
             RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Encounter/xyz1", makeEid(0, 1), RowFactory.create("Patient/abc1", "female", true))
-        .withRow("Encounter/xyz2", makeEid(0, 0), RowFactory.create("Patient/abc3", "male", true))
-        .withRow("Encounter/xyz2", makeEid(0, 1), null)
-        .withRow("Encounter/xyz3", makeEid(0, 0),
+        .withRow("Encounter/xyz1", makeEid(1), RowFactory.create("Patient/abc1", "female", true))
+        .withRow("Encounter/xyz2", makeEid(0), RowFactory.create("Patient/abc3", "male", true))
+        .withRow("Encounter/xyz2", makeEid(1), null)
+        .withRow("Encounter/xyz3", makeEid(0),
             RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Encounter/xyz4", makeEid(0, 0),
+        .withRow("Encounter/xyz4", makeEid(0),
             RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Encounter/xyz5", makeEid(0, 0), null)
+        .withRow("Encounter/xyz5", makeEid(0), null)
         .withRow("Encounter/xyz6", null, null)
         .buildWithStructValue();
     assertThat(result)
-        .selectOrderedResult()
+        .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
 

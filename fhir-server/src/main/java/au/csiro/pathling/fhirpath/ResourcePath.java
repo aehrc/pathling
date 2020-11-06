@@ -74,7 +74,7 @@ public class ResourcePath extends NonLiteralPath {
     final Dataset<Row> rawDataset = resourceReader.read(resourceType);
     final DatasetWithIdsAndValue dataset = convertRawResource(rawDataset);
     return new ResourcePath(expression, dataset.getDataset(), Optional.of(dataset.getIdColumn()),
-        Optional.of(dataset.getEidColumn()),
+        Optional.empty(),
         dataset.getValueColumn(), singular, Optional.empty(), definition);
   }
 

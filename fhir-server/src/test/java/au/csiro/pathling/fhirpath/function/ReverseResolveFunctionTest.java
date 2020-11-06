@@ -75,7 +75,7 @@ class ReverseResolveFunctionTest {
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", true);
 
     final DatasetBuilder encounterDatasetBuilder = new DatasetBuilder()
         .withIdColumn()
@@ -142,14 +142,14 @@ class ReverseResolveFunctionTest {
         .withEidColumn()
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("status", DataTypes.StringType)
-        .withRow("Patient/1", makeEid(0, 0), RowFactory.create("Encounter/1", "planned"))
-        .withRow("Patient/2", makeEid(0, 0), RowFactory.create("Encounter/3", "triaged"))
-        .withRow("Patient/2", makeEid(0, 1), RowFactory.create("Encounter/4", "in-progress"))
-        .withRow("Patient/3", makeEid(0, 0), RowFactory.create("Encounter/2", "arrived"))
+        .withRow("Patient/1", makeEid(0), RowFactory.create("Encounter/1", "planned"))
+        .withRow("Patient/2", makeEid(0), RowFactory.create("Encounter/3", "triaged"))
+        .withRow("Patient/2", makeEid(1), RowFactory.create("Encounter/4", "in-progress"))
+        .withRow("Patient/3", makeEid(0), RowFactory.create("Encounter/2", "arrived"))
         .withRow("Patient/4", null, null)
         .buildWithStructValue();
     assertThat(result)
-        .selectOrderedResult()
+        .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
 

@@ -32,8 +32,4 @@ public class ElementPathAssertion extends FhirPathAssertion<ElementPathAssertion
     return this;
   }
 
-  public ElementPathAssertion isNotOrdered() {
-    assertFalse(fhirPath.getEidColumn().isPresent());
-    return this;
-  }
 }

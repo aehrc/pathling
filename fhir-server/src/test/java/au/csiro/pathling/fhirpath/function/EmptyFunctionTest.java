@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,22 +48,20 @@ public class EmptyFunctionTest {
     final ParserContext parserContext = new ParserContextBuilder().build();
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
-        .withEidColumn()
         .withValueColumn(codeableConceptStructType())
-        .withRow("Observation/abc1", null, null)
-        .withRow("Observation/abc2", makeEid(0, 0), null)
-        .withRow("Observation/abc2", makeEid(0, 1), null)
-        .withRow("Observation/abc3", makeEid(0, 0), rowFromCodeableConcept(concept1))
-        .withRow("Observation/abc4", makeEid(0, 0), rowFromCodeableConcept(concept1))
-        .withRow("Observation/abc4", makeEid(0, 1), null)
-        .withRow("Observation/abc5", makeEid(0, 0), rowFromCodeableConcept(concept1))
-        .withRow("Observation/abc5", makeEid(0, 1), rowFromCodeableConcept(concept2))
+        .withRow("Observation/abc1", null)
+        .withRow("Observation/abc2", null)
+        .withRow("Observation/abc2", null)
+        .withRow("Observation/abc3", rowFromCodeableConcept(concept1))
+        .withRow("Observation/abc4", rowFromCodeableConcept(concept1))
+        .withRow("Observation/abc4", null)
+        .withRow("Observation/abc5", rowFromCodeableConcept(concept1))
+        .withRow("Observation/abc5", rowFromCodeableConcept(concept2))
         .build();
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
         .idAndValueColumns()
-        .eidColumn()
         .expression("code")
         .build();
 
@@ -86,12 +83,10 @@ public class EmptyFunctionTest {
         .withRow("Observation/abc4", false)
         .withRow("Observation/abc5", false)
         .build();
-
     assertThat(result)
         .hasExpression("code.empty()")
         .isSingular()
         .isElementPath(BooleanPath.class)
-        .isNotOrdered()
         .selectResult()
         .hasRows(expectedDataset);
   }

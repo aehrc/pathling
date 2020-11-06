@@ -311,13 +311,13 @@ public class SubsumesFunctionTest {
   private DatasetAssert assertSubsumesSuccess(final NonLiteralPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumes"), inputExpression,
-        argumentExpression).selectOrderedResult();
+        argumentExpression).selectOrderedResultWithEid();
   }
 
   private DatasetAssert assertSubsumedBySuccess(final NonLiteralPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumedBy"), inputExpression,
-        argumentExpression).selectOrderedResult();
+        argumentExpression).selectOrderedResultWithEid();
   }
 
   //

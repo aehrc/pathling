@@ -53,9 +53,8 @@ public abstract class QueryHelpers {
    */
   public static final String TYPE_COLUMN_SUFFIX = "_type";
 
-
   /**
-   * String used at the end of column names used for resource types.
+   * String used at the end of column names used this column.
    */
   public static final String THIS_COLUMN_SUFFIX = "_this";
 
@@ -70,7 +69,6 @@ public abstract class QueryHelpers {
 
     final String hash = randomShortString();
     final String idColumnName = hash + ID_COLUMN_SUFFIX;
-    final String eidColumnName = hash + EID_COLUMN_SUFFIX;
     final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
 
     final String firstColumn = dataset.columns()[0];
@@ -78,15 +76,11 @@ public abstract class QueryHelpers {
         .copyOfRange(dataset.columns(), 1, dataset.columns().length);
 
     Dataset<Row> result = dataset.withColumn(idColumnName, dataset.col("id"));
-    // TODO: EID: initially the hid is set to array(0)
-    result = result.withColumn(eidColumnName, functions.array(functions.lit(0)));
     result = result.withColumn(valueColumnName, functions.struct(firstColumn, remainingColumns));
     final Column idColumn = result.col(idColumnName);
-    final Column eidColumn = result.col(eidColumnName);
     final Column valueColumn = result.col(valueColumnName);
 
-    return new DatasetWithIdsAndValue(result.select(idColumn, eidColumn, valueColumn), idColumn,
-        eidColumn, valueColumn);
+    return new DatasetWithIdsAndValue(result.select(idColumn, valueColumn), idColumn, valueColumn);
   }
 
   /**
@@ -105,7 +99,8 @@ public abstract class QueryHelpers {
     idColumn.ifPresent(columns::add);
     final List<Column> preservedColumns = Stream.of(dataset.columns())
         .filter(column -> column.endsWith(EID_COLUMN_SUFFIX) ||
-            column.endsWith(VALUE_COLUMN_SUFFIX) || column.endsWith(TYPE_COLUMN_SUFFIX) || column.endsWith(THIS_COLUMN_SUFFIX))
+            column.endsWith(VALUE_COLUMN_SUFFIX) || column.endsWith(TYPE_COLUMN_SUFFIX) || column
+            .endsWith(THIS_COLUMN_SUFFIX))
         .map(dataset::col)
         .collect(Collectors.toList());
     columns.addAll(preservedColumns);
@@ -504,9 +499,6 @@ public abstract class QueryHelpers {
 
     @Nonnull
     Column idColumn;
-
-    @Nonnull
-    Column eidColumn;
 
     @Nonnull
     Column valueColumn;

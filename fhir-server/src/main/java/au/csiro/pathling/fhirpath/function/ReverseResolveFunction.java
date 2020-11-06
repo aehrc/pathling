@@ -8,7 +8,8 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.joinOnReference;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.row_number;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -23,7 +24,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.expressions.WindowSpec;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -74,20 +74,15 @@ public class ReverseResolveFunction implements NamedFunction {
     final Optional<Column> thisColumn = inputPath.getThisColumn();
 
     // only construct EID column if present in the input dataset
-    final Optional<Column> newEidColumn = inputPath.getEidColumn()
-        .map(eidCol -> {
-          // @TODO: would be more efficient to test on foreign resource id but
-          // it is missing in the join
-          final Column foreignResourceValue = foreignResource.getValueColumn();
-          // @TODO: ?? is it possible to have eid without an id?
-          final WindowSpec windowSpec = Window
-              .partitionBy(inputPath.getIdColumn().get(), eidCol).orderBy(foreignResourceValue);
-          return when(foreignResourceValue.isNull(), lit(null))
-              .otherwise(
-                  concat(eidCol, array(row_number().over(windowSpec).minus(functions.lit(1)))));
-        });
+    final Column foreignResourceValue = foreignResource.getValueColumn();
+    // @TODO: ?? is it possible to have eid without an id?
+    final WindowSpec windowSpec = Window
+        .partitionBy(inputPath.getIdColumn().get(), inputPath.getOrderingColumn())
+        .orderBy(foreignResourceValue);
+    final Column newEidColumn = inputPath
+        .expandEid(row_number().over(windowSpec).minus(lit(1)), foreignResourceValue);
 
-    return new ResourcePath(expression, dataset, inputPath.getIdColumn(), newEidColumn,
+    return new ResourcePath(expression, dataset, inputPath.getIdColumn(), Optional.of(newEidColumn),
         foreignResource.getValueColumn(), false, thisColumn, foreignResource.getDefinition());
   }
 

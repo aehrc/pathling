@@ -32,7 +32,7 @@ public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResou
   @Nonnull
   public DatasetAssert selectUntypedResourceResult() {
     final Column idColumn = checkPresent(fhirPath.getIdColumn());
-    return new DatasetAssert(fhirPath.getDataset()
+    return new DatasetAssert(fhirPath.getOrderedDataset()
         .select(idColumn, fhirPath.getTypeColumn(), fhirPath.getValueColumn())
         .orderBy(idColumn, fhirPath.getTypeColumn(), fhirPath.getValueColumn()));
   }

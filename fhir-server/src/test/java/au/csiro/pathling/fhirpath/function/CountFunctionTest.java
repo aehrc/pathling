@@ -93,7 +93,6 @@ class CountFunctionTest {
         .hasExpression("count()")
         .isSingular()
         .isElementPath(IntegerPath.class)
-        .isNotOrdered()
         .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
         .selectResult()
         .hasRows(expectedDataset);
@@ -145,7 +144,6 @@ class CountFunctionTest {
         .hasExpression("count()")
         .isSingular()
         .isElementPath(IntegerPath.class)
-        .isNotOrdered()
         .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
         .selectGroupingResult(Collections.singletonList(groupingColumn))
         .hasRows(expectedDataset);
