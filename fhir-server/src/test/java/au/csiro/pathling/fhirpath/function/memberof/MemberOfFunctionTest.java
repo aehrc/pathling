@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
@@ -79,18 +80,22 @@ class MemberOfFunctionTest {
 
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructTypeColumns(codingStructType())
-        .withRow("Encounter/1", rowFromCoding(coding1))
-        .withRow("Encounter/2", rowFromCoding(coding2))
-        .withRow("Encounter/3", rowFromCoding(coding3))
-        .withRow("Encounter/4", rowFromCoding(coding4))
-        .withRow("Encounter/5", rowFromCoding(coding5))
+        .withRow("Encounter/1", makeEid(1), rowFromCoding(coding1))
+        .withRow("Encounter/1", makeEid(0), rowFromCoding(coding5))
+        .withRow("Encounter/2", makeEid(0), rowFromCoding(coding2))
+        .withRow("Encounter/3", makeEid(0), rowFromCoding(coding3))
+        .withRow("Encounter/4", makeEid(0), rowFromCoding(coding4))
+        .withRow("Encounter/5", makeEid(0), rowFromCoding(coding5))
+        .withRow("Encounter/6", null, null)
         .buildWithStructValue();
     final CodingPath inputExpression = (CodingPath) new ElementPathBuilder()
         .dataset(inputDataset)
         .idAndValueColumns()
+        .eidColumn()
         .expression("Encounter.class")
-        .singular(true)
+        .singular(false)
         .definition(definition)
         .buildDefined();
 
@@ -137,21 +142,25 @@ class MemberOfFunctionTest {
     // the sequence passed to MemberOfMapperAnswerer
     final Dataset<Row> expectedResult = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withValueColumn(DataTypes.BooleanType)
-        .withRow("Encounter/1", true)
-        .withRow("Encounter/2", false)
-        .withRow("Encounter/3", true)
-        .withRow("Encounter/4", true)
-        .withRow("Encounter/5", false)
+        .withRow("Encounter/1", makeEid(0), false)
+        .withRow("Encounter/1", makeEid(1), true)
+        .withRow("Encounter/2", makeEid(0), true)
+        .withRow("Encounter/3", makeEid(0), true)
+        .withRow("Encounter/4", makeEid(0), false)
+        .withRow("Encounter/5", makeEid(0), false)
+        // @TODO: should be null ???
+        .withRow("Encounter/6", null, false)
         .build();
 
     // Check the result.
-    assertThat((BooleanPath) result)
+    assertThat(result)
         .hasExpression("Encounter.class.memberOf('" + MY_VALUE_SET_URL + "')")
-        .isSingular()
-        .hasFhirType(FHIRDefinedType.BOOLEAN)
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .hasFhirType(FHIRDefinedType.BOOLEAN)
+        .isNotSingular()
+        .selectOrderedResultWithEid()
         .hasRows(expectedResult);
   }
 
