@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -38,10 +39,13 @@ import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.FhirHelpers.MemberOfMapperAnswerer;
 import au.csiro.pathling.test.helpers.FhirHelpers.MemberOfTxAnswerer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -94,20 +98,24 @@ class MemberOfFunctionTest {
         .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
 
     // Create a mock terminology client.
-    final TerminologyClient terminologyClient = mock(TerminologyClient.class);
+    final TerminologyClient terminologyClient = mock(TerminologyClient.class,
+        withSettings().serializable());
     final Answer<ValueSet> memberOfTxAnswerer = new MemberOfTxAnswerer(coding2, coding5);
     when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
     when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
         .thenAnswer(memberOfTxAnswerer);
 
     // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
-    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
+
+    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
+        withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     // Create a mock ValidateCodeMapper.
-    final MemberOfMapper mockCodeMapper = mock(MemberOfMapper.class);
+    final MemberOfMapper mockCodeMapper = mock(MemberOfMapper.class,
+        withSettings().serializable());
     final Answer<Iterator<MemberOfResult>> validateCodeMapperAnswerer =
-        new MemberOfMapperAnswerer(false, true, false, false, true);
+        new MemberOfMapperAnswerer(true, false, true, true, false);
     //noinspection unchecked
     when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
@@ -125,37 +133,26 @@ class MemberOfFunctionTest {
     // Invoke the function.
     final FhirPath result = new MemberOfFunction(mockCodeMapper).invoke(memberOfInput);
 
+    // The outcome is somehow random with regard to
+    // the sequence passed to MemberOfMapperAnswerer
+    final Dataset<Row> expectedResult = new DatasetBuilder()
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withRow("Encounter/1", true)
+        .withRow("Encounter/2", false)
+        .withRow("Encounter/3", true)
+        .withRow("Encounter/4", true)
+        .withRow("Encounter/5", false)
+        .build();
+
     // Check the result.
-    assertTrue(result instanceof BooleanPath);
     assertThat((BooleanPath) result)
         .hasExpression("Encounter.class.memberOf('" + MY_VALUE_SET_URL + "')")
         .isSingular()
-        .hasFhirType(FHIRDefinedType.BOOLEAN);
-
-    // Test the mapper.
-    final MemberOfMapper validateCodingMapper = new MemberOfMapper("xyz",
-        terminologyClientFactory,
-        MY_VALUE_SET_URL, FHIRDefinedType.CODING);
-    final Row inputCodingRow1 = RowFactory.create(1, rowFromCoding(coding1));
-    final Row inputCodingRow2 = RowFactory.create(2, rowFromCoding(coding2));
-    final Row inputCodingRow3 = RowFactory.create(3, rowFromCoding(coding3));
-    final Row inputCodingRow4 = RowFactory.create(4, rowFromCoding(coding4));
-    final Row inputCodingRow5 = RowFactory.create(5, rowFromCoding(coding5));
-    final List<Row> inputCodingRows = Arrays
-        .asList(inputCodingRow1, inputCodingRow2, inputCodingRow3, inputCodingRow4,
-            inputCodingRow5);
-    final List<MemberOfResult> results = new ArrayList<>();
-    validateCodingMapper.call(inputCodingRows.iterator()).forEachRemaining(results::add);
-
-    // Check the result dataset.
-    final List<MemberOfResult> expectedResults = Arrays.asList(
-        new MemberOfResult(1, false),
-        new MemberOfResult(2, true),
-        new MemberOfResult(3, false),
-        new MemberOfResult(4, false),
-        new MemberOfResult(5, true)
-    );
-    assertEquals(expectedResults, results);
+        .hasFhirType(FHIRDefinedType.BOOLEAN)
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(expectedResult);
   }
 
   @Test
@@ -205,7 +202,8 @@ class MemberOfFunctionTest {
         .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
 
     // Create a mock terminology client.
-    final TerminologyClient terminologyClient = mock(TerminologyClient.class);
+    final TerminologyClient terminologyClient = mock(TerminologyClient.class,
+        withSettings().serializable());
     final Answer<ValueSet> memberOfTxAnswerer = new MemberOfTxAnswerer(codeableConcept1,
         codeableConcept3, codeableConcept4);
     when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
@@ -213,15 +211,17 @@ class MemberOfFunctionTest {
         .thenAnswer(memberOfTxAnswerer);
 
     // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
-    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class);
+    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
+        withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     // Create a mock ValidateCodeMapper.
-    final MemberOfMapper mockCodeMapper = mock(MemberOfMapper.class);
+    final MemberOfMapper mockCodeMapper = mock(MemberOfMapper.class,
+        withSettings().serializable());
     final Answer<Iterator<MemberOfResult>> validateCodeMapperAnswerer = new MemberOfMapperAnswerer(
-        true,
-        false, true, true, false, false);
+        true, false, true, true, false, false);
     //noinspection unchecked
+
     when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
     // Prepare the inputs to the function.
@@ -236,45 +236,28 @@ class MemberOfFunctionTest {
     // Invoke the function.
     final FhirPath result = new MemberOfFunction(mockCodeMapper).invoke(memberOfInput);
 
+    // The outcome is somehow random with regard to
+    // the sequence passed to MemberOfMapperAnswerer
+    final Dataset<Row> expectedResult = new DatasetBuilder()
+        .withIdColumn()
+        .withValueColumn(DataTypes.BooleanType)
+        .withRow("DiagnosticReport/1", true)
+        .withRow("DiagnosticReport/2", false)
+        .withRow("DiagnosticReport/3", true)
+        .withRow("DiagnosticReport/4", true)
+        .withRow("DiagnosticReport/5", true)
+        .withRow("DiagnosticReport/6", false)
+        .build();
+
     // Check the result.
     assertTrue(result instanceof BooleanPath);
     assertThat((BooleanPath) result)
         .hasExpression("DiagnosticReport.code.memberOf('" + MY_VALUE_SET_URL + "')")
         .isSingular()
-        .hasFhirType(FHIRDefinedType.BOOLEAN);
-
-    // Test the mapper.
-    final MemberOfMapper memberOfMapper = new MemberOfMapper("xyz",
-        terminologyClientFactory,
-        MY_VALUE_SET_URL, FHIRDefinedType.CODEABLECONCEPT);
-    final Row inputCodeableConceptRow1 = RowFactory
-        .create(1, rowFromCodeableConcept(codeableConcept1));
-    final Row inputCodeableConceptRow2 = RowFactory
-        .create(2, rowFromCodeableConcept(codeableConcept2));
-    final Row inputCodeableConceptRow3 = RowFactory
-        .create(3, rowFromCodeableConcept(codeableConcept3));
-    final Row inputCodeableConceptRow4 = RowFactory
-        .create(4, rowFromCodeableConcept(codeableConcept4));
-    final Row inputCodeableConceptRow5 = RowFactory
-        .create(5, rowFromCodeableConcept(codeableConcept5));
-    final Row inputCodeableConceptRow6 = RowFactory
-        .create(6, rowFromCodeableConcept(codeableConcept6));
-    final List<Row> inputCodeableConceptRows = Arrays
-        .asList(inputCodeableConceptRow1, inputCodeableConceptRow2, inputCodeableConceptRow3,
-            inputCodeableConceptRow4, inputCodeableConceptRow5, inputCodeableConceptRow6);
-    final List<MemberOfResult> results = new ArrayList<>();
-    memberOfMapper.call(inputCodeableConceptRows.iterator()).forEachRemaining(results::add);
-
-    // Check the result dataset.
-    final List<MemberOfResult> expectedResults = Arrays.asList(
-        new MemberOfResult(1, true),
-        new MemberOfResult(2, false),
-        new MemberOfResult(3, true),
-        new MemberOfResult(4, true),
-        new MemberOfResult(5, false),
-        new MemberOfResult(6, true)
-    );
-    assertEquals(expectedResults, results);
+        .hasFhirType(FHIRDefinedType.BOOLEAN)
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(expectedResult);
   }
 
 
