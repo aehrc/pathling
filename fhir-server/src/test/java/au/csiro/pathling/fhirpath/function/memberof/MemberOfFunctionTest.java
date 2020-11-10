@@ -265,7 +265,7 @@ class MemberOfFunctionTest {
         .isSingular()
         .hasFhirType(FHIRDefinedType.BOOLEAN)
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedResult);
   }
 

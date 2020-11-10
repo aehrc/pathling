@@ -85,7 +85,7 @@ public class BooleanOperatorTest {
     final Operator booleanOperator = Operator.getInstance("and");
     final FhirPath result = booleanOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", false),
         RowFactory.create("abc2", null),
         RowFactory.create("abc3", false),
@@ -104,7 +104,7 @@ public class BooleanOperatorTest {
     final Operator booleanOperator = Operator.getInstance("or");
     final FhirPath result = booleanOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", true),
         RowFactory.create("abc2", true),
         RowFactory.create("abc3", true),
@@ -123,7 +123,7 @@ public class BooleanOperatorTest {
     final Operator booleanOperator = Operator.getInstance("xor");
     final FhirPath result = booleanOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", true),
         RowFactory.create("abc2", null),
         RowFactory.create("abc3", true),
@@ -142,7 +142,7 @@ public class BooleanOperatorTest {
     final Operator booleanOperator = Operator.getInstance("implies");
     final FhirPath result = booleanOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", false),
         RowFactory.create("abc2", null),
         RowFactory.create("abc3", true),
@@ -162,7 +162,7 @@ public class BooleanOperatorTest {
     final Operator booleanOperator = Operator.getInstance("and");
     final FhirPath result = booleanOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", false),
         RowFactory.create("abc2", null),
         RowFactory.create("abc3", true),
@@ -182,7 +182,7 @@ public class BooleanOperatorTest {
     final Operator booleanOperator = Operator.getInstance("and");
     final FhirPath result = booleanOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", true),
         RowFactory.create("abc2", true),
         RowFactory.create("abc3", false),

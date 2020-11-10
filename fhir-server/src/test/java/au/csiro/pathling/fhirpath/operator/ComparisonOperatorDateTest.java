@@ -94,7 +94,7 @@ class ComparisonOperatorDateTest {
         .withRow("Patient/abc3", true)
         .build();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 }

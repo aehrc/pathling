@@ -55,7 +55,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
- * @author Piotr Szul // @TODO: check for ordering in the initial dataset
+ * @author Piotr Szul
  */
 @Tag("UnitTest")
 public class SubsumesFunctionTest {

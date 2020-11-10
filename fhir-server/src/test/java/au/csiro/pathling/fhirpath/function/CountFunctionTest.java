@@ -94,7 +94,7 @@ class CountFunctionTest {
         .isSingular()
         .isElementPath(IntegerPath.class)
         .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 

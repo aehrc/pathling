@@ -108,7 +108,7 @@ class ResolveFunctionTest {
         .withRow("Encounter/xyz4", RowFactory.create("EpisodeOfCare/abc2", "waitlist"))
         .buildWithStructValue();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 

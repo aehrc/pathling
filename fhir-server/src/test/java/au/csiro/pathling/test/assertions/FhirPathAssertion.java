@@ -36,7 +36,7 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   }
 
   @Nonnull
-  public DatasetAssert selectResult() {
+  public DatasetAssert selectOrderedResult() {
     check(fhirPath.getIdColumn().isPresent());
     check(fhirPath instanceof NonLiteralPath);
     return new DatasetAssert(fhirPath.getOrderedDataset()

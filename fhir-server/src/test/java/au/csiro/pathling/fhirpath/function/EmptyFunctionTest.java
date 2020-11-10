@@ -87,7 +87,7 @@ public class EmptyFunctionTest {
         .hasExpression("code.empty()")
         .isSingular()
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 

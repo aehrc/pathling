@@ -94,7 +94,7 @@ public class FirstFunctionTest {
     @SuppressWarnings("UnnecessaryLocalVariable") final Dataset<Row> expectedDataset = inputDataset;
 
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 

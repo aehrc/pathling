@@ -115,12 +115,12 @@ public class ParserTest {
   public void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("name.suffix contains 'MD'")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
   }
 
@@ -128,12 +128,12 @@ public class ParserTest {
   public void testInOperator() {
     assertThatResultOf("'Wuckert783' in name.family")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("'MD' in name.suffix")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
   }
 
@@ -143,7 +143,7 @@ public class ParserTest {
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(true)
             .changeValue(PATIENT_ID_8ee183e2, false)
             .changeValue(PATIENT_ID_9360820c, false)
@@ -153,7 +153,7 @@ public class ParserTest {
     assertThatResultOf(
         "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(true).changeValue(PATIENT_ID_bbd33563, false));
   }
 
@@ -212,7 +212,7 @@ public class ParserTest {
     assertThatResultOf("reverseResolve(Condition.subject).code.coding.count()")
         .isElementPath(IntegerPath.class)
         .isSingular()
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(8L).changeValue(PATIENT_ID_121503c8, 10L)
             .changeValue(PATIENT_ID_2b36c1e2, 3L).changeValue(PATIENT_ID_7001ad9c, 5L)
             .changeValue(PATIENT_ID_9360820c, 16L).changeValue(PATIENT_ID_beff242e, 3L)
@@ -224,19 +224,19 @@ public class ParserTest {
     final DatasetBuilder expectedCountResult =
         allPatientsWithValue(1L).changeValue(PATIENT_ID_9360820c, 2L);
     assertThatResultOf("name.count()")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedCountResult);
 
     assertThatResultOf("name.family.count()")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedCountResult);
 
     assertThatResultOf("name.given.count()")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedCountResult);
 
     assertThatResultOf("name.prefix.count()")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
   }
 
@@ -255,21 +255,21 @@ public class ParserTest {
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false)
             .changeValue(PATIENT_ID_7001ad9c, true));
 
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false)
             .changeValue(PATIENT_ID_7001ad9c, true));
 
     // on the same collection should return all True (even though one is CodeableConcept)
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(true));
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
@@ -277,14 +277,14 @@ public class ParserTest {
         .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(true)
             .changeValue(PATIENT_ID_2b36c1e2, false)
             .changeValue(PATIENT_ID_bbd33563, false));
 
     assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
         + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false)
             .changeValue(PATIENT_ID_7001ad9c, true));
   }
@@ -292,7 +292,7 @@ public class ParserTest {
   @Test
   public void testWhereWithAggregateFunction() {
     assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(DataTypes.StringType, null)
             .changeValue(PATIENT_ID_9360820c, "female"));
   }
@@ -304,7 +304,7 @@ public class ParserTest {
   @Test
   public void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Karina848').gender")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue((String) null).changeValue(PATIENT_ID_9360820c, "female"));
   }
 
@@ -317,7 +317,7 @@ public class ParserTest {
 
     // TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue((Boolean) null));
   }
 
@@ -331,7 +331,7 @@ public class ParserTest {
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
             + ".subsumedBy(http://snomed.info/sct|127027008)).gender")
-        .selectResult();
+        .selectOrderedResult();
   }
 
   @Test
@@ -342,7 +342,7 @@ public class ParserTest {
         "reverseResolve(MedicationRequest.subject).where(\n"
             + "                $this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\n"
             + "            ).first().authoredOn")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue((String) null));
   }
 
@@ -352,14 +352,14 @@ public class ParserTest {
     // TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.where("
         + "$this.given contains 'Joe').first().family).gender")
-        .selectResult().
+        .selectOrderedResult().
         hasRows(allPatientsWithValue((String) null));
   }
 
   @Test
   public void testBooleanOperatorWithTwoLiterals() {
     assertThatResultOf("true and false")
-        .selectResult();
+        .selectOrderedResult();
   }
 
   @Test

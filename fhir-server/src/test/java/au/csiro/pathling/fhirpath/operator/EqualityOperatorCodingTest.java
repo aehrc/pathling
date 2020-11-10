@@ -95,7 +95,7 @@ public class EqualityOperatorCodingTest {
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", true),
         RowFactory.create("abc2", true),
         RowFactory.create("abc3", false),
@@ -112,7 +112,7 @@ public class EqualityOperatorCodingTest {
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", false),
         RowFactory.create("abc2", false),
         RowFactory.create("abc3", true),
@@ -129,7 +129,7 @@ public class EqualityOperatorCodingTest {
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", true),
         RowFactory.create("abc2", true),
         RowFactory.create("abc3", false),
@@ -146,7 +146,7 @@ public class EqualityOperatorCodingTest {
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", true),
         RowFactory.create("abc2", true),
         RowFactory.create("abc3", false),
@@ -163,7 +163,7 @@ public class EqualityOperatorCodingTest {
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", false),
         RowFactory.create("abc2", false),
         RowFactory.create("abc3", true),
@@ -180,7 +180,7 @@ public class EqualityOperatorCodingTest {
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", false),
         RowFactory.create("abc2", false),
         RowFactory.create("abc3", true),

@@ -27,7 +27,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.slf4j.MDC;
 
@@ -155,9 +154,7 @@ public class SubsumesFunction implements NamedFunction {
                                   : array(fhirPath.getValueColumn());
 
     check(fhirPath.getIdColumn().isPresent());
-    final Column eidColumn = fhirPath.getEidColumn()
-        .orElse(lit(null))
-        .cast(DataTypes.createArrayType(DataTypes.IntegerType)).alias(COL_EID);
+    final Column eidColumn = fhirPath.getOrderingColumn().alias(COL_EID);
     return expressionDataset.select(fhirPath.getIdColumn().get().alias(COL_ID),
         eidColumn,
         when(fhirPath.getValueColumn().isNotNull(), codingArrayCol)
