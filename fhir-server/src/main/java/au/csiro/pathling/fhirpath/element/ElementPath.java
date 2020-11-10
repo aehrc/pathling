@@ -62,6 +62,7 @@ public class ElementPath extends NonLiteralPath {
    * @param dataset a {@link Dataset} that can be used to evaluate this path against data
    * @param idColumn a {@link Column} within the dataset containing the identity of the subject
    * resource
+   * @param eidColumn a {@link Column} within the dataset containing the element identity
    * @param valueColumn a {@link Column} within the dataset containing the values of the nodes
    * @param singular an indicator of whether this path represents a single-valued collection
    * @param foreignResource a foreign resource this path originated from, if any
@@ -100,6 +101,7 @@ public class ElementPath extends NonLiteralPath {
    * @param dataset a {@link Dataset} that can be used to evaluate this path against data
    * @param idColumn a {@link Column} within the dataset containing the identity of the subject
    * resource
+   * @param eidColumn a {@link Column} within the dataset containing the element identity
    * @param valueColumn a {@link Column} within the dataset containing the values of the nodes
    * @param singular an indicator of whether this path represents a single-valued collection
    * @param foreignResource a foreign resource this path originated from, if any

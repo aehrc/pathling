@@ -11,7 +11,7 @@ import org.apache.spark.sql.types.DataTypes;
 
 
 /**
- * Describes a path that which elements can deterministically ordered.
+ * Describes a path which elements can deterministically ordered.
  *
  * @author Piotr Szul
  */
@@ -45,7 +45,8 @@ public interface Orderable {
   Dataset<Row> getOrderedDataset();
 
   /**
-   * Returns the column that can be used to order the dataset
+   * Returns the column that can be used to order the dataset. This is exposed to allow multi column
+   * ordering with unstable orderBy().
    *
    * @return A {@link Dataset}
    * @throws {@link java.lang.IllegalStateException} when the path cannot be ordered.
@@ -62,6 +63,5 @@ public interface Orderable {
   default void checkHasOrder() {
     Preconditions.checkState(hasOrder(), "Orderable path expected");
   }
-
 
 }

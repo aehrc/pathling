@@ -216,7 +216,7 @@ public abstract class NonLiteralPath implements FhirPath {
 
   /**
    * Constructs the new value of the eidColumn based on its current value in the parent path and the
-   * index and value of an element in the child path.
+   * index of an element in the child path.
    *
    * @param indexColumn the column with the child path element index
    * @return eid column for the child path

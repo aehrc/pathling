@@ -139,7 +139,7 @@ public class OrderableTest {
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
         .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "dam")
+        .withRow("Patient/abc1", "Adam")
         .build();
 
     final ElementPath testPath = new ElementPathBuilder()

@@ -39,7 +39,7 @@ public abstract class QueryHelpers {
   public static final String ID_COLUMN_SUFFIX = "_id";
 
   /**
-   * String used at the end of column names used for element identity (hid).
+   * String used at the end of column names used for element identity (eid).
    */
   public static final String EID_COLUMN_SUFFIX = "_eid";
 

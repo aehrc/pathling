@@ -89,7 +89,6 @@ public class WhereFunction implements NamedFunction {
     }
 
     final String expression = expressionFromInput(input, NAME);
-
     return inputPath
         .copy(expression, dataset, idColumn, inputPath.getEidColumn().map(c -> thisEid), thisValue,
             inputPath.isSingular(),

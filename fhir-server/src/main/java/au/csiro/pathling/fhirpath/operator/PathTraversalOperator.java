@@ -75,7 +75,7 @@ public class PathTraversalOperator {
     } else {
       // create a dataset with all existing columns and then posexpand the array value field
       // into `index` and `value` columns.
-      Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
+      final Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
           .map(leftDataset::col), Stream
           .of(posexplode_outer(field)
               .as(new String[]{"index", "value"})))

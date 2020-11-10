@@ -202,7 +202,7 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public static List<Integer> makeEid(Integer ... levels) {
+  public static List<Integer> makeEid(Integer... levels) {
     return Arrays.asList(levels);
   }
 

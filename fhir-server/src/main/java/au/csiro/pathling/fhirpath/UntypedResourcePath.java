@@ -58,6 +58,8 @@ public class UntypedResourcePath extends NonLiteralPath {
    * @param dataset A {@link Dataset} that can be used to evaluate this path against data
    * @param idColumn A {@link Column} within the dataset containing the identity of the subject
    * resource
+   * @param eidColumn A {@link Column} within the dataset containing the element identies of the
+   * nodes
    * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
    * @param singular An indicator of whether this path represents a single-valued collection
    * @param thisColumn collection values where this path originated from {@code $this}

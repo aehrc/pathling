@@ -34,7 +34,7 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   private Column idColumn;
 
-  @Nonnull
+  @Nullable
   private Column eidColumn;
 
   @Nonnull
@@ -55,7 +55,6 @@ public class UntypedResourcePathBuilder {
     expression = "";
     dataset = SparkHelpers.getSparkSession().emptyDataFrame();
     idColumn = lit(null);
-    eidColumn = lit(null);
     valueColumn = lit(null);
     singular = false;
     typeColumn = lit(null);
@@ -120,7 +119,8 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   public UntypedResourcePath build() {
     return UntypedResourcePath
-        .build(expression, dataset, Optional.of(idColumn), Optional.of(eidColumn), valueColumn,
+        .build(expression, dataset, Optional.of(idColumn), Optional.ofNullable(eidColumn),
+            valueColumn,
             singular, Optional.ofNullable(thisColumn), typeColumn, possibleTypes);
   }
 

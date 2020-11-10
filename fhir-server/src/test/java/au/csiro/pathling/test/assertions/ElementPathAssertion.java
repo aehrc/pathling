@@ -7,7 +7,6 @@
 package au.csiro.pathling.test.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import javax.annotation.Nonnull;

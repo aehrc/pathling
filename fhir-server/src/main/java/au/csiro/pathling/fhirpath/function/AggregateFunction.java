@@ -181,14 +181,11 @@ public abstract class AggregateFunction {
     // columns within the input paths that need to be preserved.
     final Column[] groupByArray = getGroupBy(groupingColumns, idColumn, thisColumn);
 
-    final Optional<Column> eidColumn = NonLiteralPath.findEidColumn(inputs.toArray());
-
     // Apply the aggregation.
     final Dataset<Row> result = dataset.groupBy(groupByArray).agg(aggregationColumn);
 
     int cursor = 0;
     final Optional<Column> newIdColumn;
-
     if (idColumn.isPresent() && groupingColumns.isEmpty()) {
       // If there are no grouping columns, we just need to get the updated ID column.
       newIdColumn = Optional.of(result.col(result.columns()[0]));
@@ -212,7 +209,6 @@ public abstract class AggregateFunction {
 
     // The value column will be the final column, after all the other columns.
     final String valueColName = result.columns()[cursor];
-    cursor += 1;
     final Column valueColumn = result.col(valueColName);
 
     // empty eid column as the result is singular

@@ -37,6 +37,8 @@ public class ResourcePath extends NonLiteralPath {
    * @param dataset a {@link Dataset} that can be used to evaluate this path against data
    * @param idColumn a {@link Column} within the dataset containing the identity of the subject
    * resource
+   * @param eidColumn a {@link Column} within the dataset containing the element identities of the
+   * nodes
    * @param valueColumn a {@link Column} within the dataset containing the values of the nodes
    * @param singular an indicator of whether this path represents a single-valued collection to each
    * FHIRPath type
@@ -73,6 +75,8 @@ public class ResourcePath extends NonLiteralPath {
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
     final Dataset<Row> rawDataset = resourceReader.read(resourceType);
     final DatasetWithIdsAndValue dataset = convertRawResource(rawDataset);
+
+    // if not singlar will result in non-orderable path
     return new ResourcePath(expression, dataset.getDataset(), Optional.of(dataset.getIdColumn()),
         Optional.empty(),
         dataset.getValueColumn(), singular, Optional.empty(), definition);

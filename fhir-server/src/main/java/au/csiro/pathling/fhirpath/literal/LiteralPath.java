@@ -133,7 +133,6 @@ public abstract class LiteralPath implements FhirPath {
     return true;
   }
 
-
   @Override
   public boolean hasOrder() {
     return true;

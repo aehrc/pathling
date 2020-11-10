@@ -99,7 +99,7 @@ public class SubsumesFunction implements NamedFunction {
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
-    // @TODO: EID FIX
+
     return ElementPath
         .build(expression, resultDataset, Optional.of(idColumn),
             inputFhirPath.getEidColumn().map(_c -> resultDataset.col(COL_EID)),
