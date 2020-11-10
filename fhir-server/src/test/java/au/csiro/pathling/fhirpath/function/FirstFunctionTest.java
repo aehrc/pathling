@@ -8,7 +8,6 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
-import static au.csiro.pathling.test.builders.DatasetBuilder.makeRootEid;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -62,21 +61,19 @@ public class FirstFunctionTest {
         hapiDefinition);
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
-        .withEidColumn()
         .withStructColumn("id", DataTypes.StringType)
         .withStructColumn("gender", DataTypes.StringType)
         .withStructColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/abc1", makeRootEid(), RowFactory.create("Patient/abc1", "female", true))
-        .withRow("Patient/abc2", makeRootEid(), RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Patient/abc3", makeRootEid(), RowFactory.create("Patient/abc3", "male", true))
+        .withRow("Patient/abc1", RowFactory.create("Patient/abc1", "female", true))
+        .withRow("Patient/abc2", RowFactory.create("Patient/abc2", "female", false))
+        .withRow("Patient/abc3", RowFactory.create("Patient/abc3", "male", true))
         .buildWithStructValue();
 
     final Column idColumn = inputDataset.col("id");
-    final Column eidColumn = inputDataset.col("eid");
     final Column valueColumn = inputDataset.col("value");
 
     final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
-        Optional.of(idColumn), Optional.of(eidColumn), valueColumn, false, Optional.empty(),
+        Optional.of(idColumn), Optional.empty(), valueColumn, true, Optional.empty(),
         resourceDefinition);
 
     final ParserContext parserContext = new ParserContextBuilder()
@@ -97,7 +94,7 @@ public class FirstFunctionTest {
     @SuppressWarnings("UnnecessaryLocalVariable") final Dataset<Row> expectedDataset = inputDataset;
 
     assertThat(result)
-        .selectOrderedResultWithEid()
+        .selectResult()
         .hasRows(expectedDataset);
   }
 
