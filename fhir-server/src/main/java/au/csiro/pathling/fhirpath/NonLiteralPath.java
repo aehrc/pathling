@@ -19,7 +19,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Represents any FHIRPath expression which is not a literal.
@@ -72,7 +71,6 @@ public abstract class NonLiteralPath implements FhirPath {
     // precondition: singular paths should have empty eidColumn
     Preconditions.check(!singular || eidColumn.isEmpty());
 
-
     this.expression = expression;
     this.singular = singular;
     this.foreignResource = foreignResource;
@@ -116,8 +114,6 @@ public abstract class NonLiteralPath implements FhirPath {
     hashedDataset = hashedDataset.withColumn(valueColumnName, valueColumn);
     this.valueColumn = hashedDataset.col(valueColumnName);
 
-    // @TODO: EID OPT
-    // ONLY SELECT THE FIELDS STARTING WITH CURRENRT HASH
     this.dataset = applySelection(hashedDataset, this.idColumn);
   }
 
@@ -129,16 +125,15 @@ public abstract class NonLiteralPath implements FhirPath {
   @Nonnull
   @Override
   public Dataset<Row> getOrderedDataset() {
-    Preconditions.checkState(hasOrder(), "Orderable path expected");
+    checkHasOrder();
     return eidColumn.map(c -> getDataset().orderBy(c)).orElse(getDataset());
   }
 
   @Nonnull
   @Override
   public Column getOrderingColumn() {
-    Preconditions.checkState(hasOrder(), "Orderable path expected");
-    return eidColumn.orElse(functions.lit(null))
-        .cast(DataTypes.createArrayType(DataTypes.IntegerType));
+    checkHasOrder();
+    return eidColumn.orElse(ORDERING_NULL_VALUE);
   }
 
   /**
@@ -188,7 +183,7 @@ public abstract class NonLiteralPath implements FhirPath {
 
 
   /**
-   * Gets a this {@link Column} from any of the inputs, if there is one.
+   * Gets a eid {@link Column} from any of the inputs, if there is one.
    *
    * @param inputs a collection of objects
    * @return a {@link Column}, if one was found
@@ -215,21 +210,26 @@ public abstract class NonLiteralPath implements FhirPath {
     // renaming through {@link NonLiteralPath} constructor.
     final String hash = randomShortString();
     return functions.struct(
-        //functions.monotonically_increasing_id().alias("uuid"),
         getOrderingColumn().alias("eid"),
         getValueColumn().alias("value")).alias(hash + THIS_COLUMN_SUFFIX);
   }
 
+  /**
+   * Constructs the new value of the eidColumn based on its current value in the parent path and the
+   * index and value of an element in the child path.
+   *
+   * @param indexColumn the column with the child path element index
+   * @return eid column for the child path
+   */
   @Nonnull
-  public Column expandEid(Column indexColumn, Column valueColumn) {
-    final Column eidColumn = getOrderingColumn();
-    return functions.when(valueColumn.isNull(),
-        functions.lit(null).cast(DataTypes.createArrayType(DataTypes.IntegerType)))
-        .otherwise(
-            functions.when(eidColumn.isNull(), functions.array(indexColumn)).otherwise(
-                functions.concat(eidColumn, functions.array(indexColumn))
-            )
-        );
+  public Column expandEid(@Nonnull final Column indexColumn) {
+    final Column indexAsArray = functions.array(indexColumn);
+    final Column compositeEid = getEidColumn()
+        .map(eid -> functions.when(eid.isNull(), ORDERING_NULL_VALUE).otherwise(
+            functions.concat(eid, indexAsArray))).orElse(indexAsArray);
+
+    return functions.when(indexColumn.isNull(), ORDERING_NULL_VALUE)
+        .otherwise(compositeEid);
   }
 
 

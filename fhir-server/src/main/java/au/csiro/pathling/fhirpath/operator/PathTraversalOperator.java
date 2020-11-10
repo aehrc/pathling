@@ -7,9 +7,7 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.posexplode_outer;
-import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -66,40 +64,31 @@ public class PathTraversalOperator {
     final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
     final boolean resultSingular = left.isSingular() && maxCardinalityOfOne;
 
+    final Column valueColumn;
+    final Optional<Column> eidColumnCandidate;
+    final Dataset<Row> resultDataset;
+
     if (maxCardinalityOfOne) {
-      final Column valueColumn = field;
-      final Optional<Column> eidColumn = resultSingular
-                                         ? Optional.empty()
-                                         : left.getEidColumn();
-      return ElementPath
-          .build(expression, leftDataset, left.getIdColumn(), eidColumn, valueColumn,
-              resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
+      valueColumn = field;
+      eidColumnCandidate = left.getEidColumn();
+      resultDataset = leftDataset;
     } else {
-
+      // create a dataset with all existing columns and then posexpand the array value field
+      // into `index` and `value` columns.
       Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
-          .map(leftDataset::col), maxCardinalityOfOne
-                                  ? Stream.of((when(field.isNull(), lit(null)).otherwise(lit(0)))
-          .alias("index"), field.alias("field"))
-                                  : Stream
-                                      .of(posexplode_outer(field)
-                                          .as(new String[]{"index", "field"})))
+          .map(leftDataset::col), Stream
+          .of(posexplode_outer(field)
+              .as(new String[]{"index", "value"})))
           .toArray(l -> new Column[l]);
-
-      Dataset<Row> explodedDataset = leftDataset.select(allColumns);
-
-      final Column valueColumn = explodedDataset.col("field");
-
-      // only construct EID column if presnt in left dataset
-      final Optional<Column> eidColumn = resultSingular
-                                         ? Optional.empty()
-                                         :
-                                         Optional.of(left.expandEid(explodedDataset.col("index"),
-                                             explodedDataset.col("index")));
-
-      return ElementPath
-          .build(expression, explodedDataset, left.getIdColumn(), eidColumn, valueColumn,
-              resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
+      resultDataset = leftDataset.select(allColumns);
+      valueColumn = resultDataset.col("value");
+      eidColumnCandidate = Optional.of(left.expandEid(resultDataset.col("index")));
     }
+    return ElementPath
+        .build(expression, resultDataset, left.getIdColumn(), resultSingular
+                                                              ? Optional.empty()
+                                                              : eidColumnCandidate, valueColumn,
+            resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
   }
 
 }

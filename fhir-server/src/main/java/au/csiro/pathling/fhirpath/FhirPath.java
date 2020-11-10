@@ -18,7 +18,7 @@ import org.apache.spark.sql.Row;
  *
  * @author John Grimes
  */
-public interface FhirPath {
+public interface FhirPath extends Orderable {
 
   /**
    * Returns the FHIRPath expression that represents this path.
@@ -60,24 +60,6 @@ public interface FhirPath {
    * @return {@code true} if this path represents a single-valued collection
    */
   boolean isSingular();
-
-  /**
-   * Returns an indicator of whether this path can be ordered in deterministic order.
-   *
-   * @return {@code true} if this path can be ordered in deterministic order
-   */
-  boolean hasOrder();
-
-  /**
-   * Returns ordered {@link Dataset} that can be used to evaluate this path against data.
-   *
-   * @return A {@link Dataset}
-   */
-  @Nonnull
-  Dataset<Row> getOrderedDataset();
-
-  @Nonnull
-  Column getOrderingColumn();
 
   /**
    * Gets an ID {@link Column} from any of the inputs, if there is one.
