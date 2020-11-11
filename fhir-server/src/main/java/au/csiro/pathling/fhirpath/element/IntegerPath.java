@@ -15,6 +15,7 @@ import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import com.google.common.collect.ImmutableSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -44,8 +45,8 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
   protected IntegerPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
-      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+      @Nonnull final Optional<List<Column>> thisColumns, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumns,
         fhirType);
   }
 
@@ -141,7 +142,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getValueColumn().cast(DataTypes.LongType), targetValueColumn);
       final Optional<Column> idColumn = findIdColumn(source, target);
-      final Optional<Column> thisColumn = findThisColumn(source, target);
+      final Optional<List<Column>> thisColumns = findThisColumns(source, target);
 
       switch (operation) {
         case ADDITION:
@@ -153,13 +154,13 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
           }
           return ElementPath
               .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
-                  thisColumn, fhirType);
+                  thisColumns, fhirType);
         case DIVISION:
           final Column numerator = source.getValueColumn().cast(DecimalPath.getDecimalType());
           valueColumn = operation.getSparkFunction().apply(numerator, targetValueColumn);
           return ElementPath
               .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
-                  thisColumn, FHIRDefinedType.DECIMAL);
+                  thisColumns, FHIRDefinedType.DECIMAL);
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

@@ -11,6 +11,7 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -23,6 +24,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * @author John Grimes
  */
+@SuppressWarnings("unused")
 public class UntypedResourcePathBuilder {
 
   @Nonnull
@@ -40,7 +42,7 @@ public class UntypedResourcePathBuilder {
   private boolean singular;
 
   @Nullable
-  private Column thisColumn;
+  private List<Column> thisColumns;
 
   @Nonnull
   private Column typeColumn;
@@ -89,8 +91,8 @@ public class UntypedResourcePathBuilder {
   }
 
   @Nonnull
-  public UntypedResourcePathBuilder thisColumn(@Nonnull final Column thisColumn) {
-    this.thisColumn = thisColumn;
+  public UntypedResourcePathBuilder thisColumns(@Nonnull final List<Column> thisColumns) {
+    this.thisColumns = thisColumns;
     return this;
   }
 
@@ -109,7 +111,7 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   public UntypedResourcePath build() {
     return UntypedResourcePath.build(expression, dataset, Optional.of(idColumn), valueColumn,
-        singular, Optional.ofNullable(thisColumn), typeColumn, possibleTypes);
+        singular, Optional.ofNullable(thisColumns), typeColumn, possibleTypes);
   }
 
 }

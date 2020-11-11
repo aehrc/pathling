@@ -25,6 +25,7 @@ import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -227,6 +228,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  // TODO: Re-enable when issue with join within where is resolved.
+  @Disabled
   void queryWithWhere() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
@@ -287,16 +290,19 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  // TODO: Re-enable when issue with join within where is resolved.
+  @Disabled
   void queryWithWhereAsComparisonOperand() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.MEDICATIONREQUEST);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("Number of patients", "count()")
-        .withGrouping("First prescription falls before 2018-05-06",
-            "@2018-05-06 > reverseResolve(MedicationRequest.subject).where("
+        .withGrouping("Prescription before 2018-05-06",
+            "reverseResolve(MedicationRequest.subject).where("
                 + "$this.medicationCodeableConcept.coding contains "
-                + "http://www.nlm.nih.gov/research/umls/rxnorm|243670).first().authoredOn")
+                + "http://www.nlm.nih.gov/research/umls/rxnorm|313782 "
+                + "and $this.authoredOn < @2019-06-21).count() > 0")
         .build();
 
     response = executor.execute(request);
@@ -338,6 +344,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  // TODO: Re-enable when issue with join within where is resolved.
+  @Disabled
   void queryWithWhereAndBoolean() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.OBSERVATION);
@@ -399,7 +407,11 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
+  /**
+   * @see <a href="https://github.com/aehrc/pathling/issues/151">#151</a>
+   */
   @Test
+  @Disabled
   void queryWithComparisonInAggregation() {
     subjectResource = ResourceType.CAREPLAN;
     mockResourceReader(subjectResource);
@@ -414,7 +426,11 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
+  /**
+   * @see <a href="https://github.com/aehrc/pathling/issues/151">#151</a>
+   */
   @Test
+  @Disabled
   void queryWithLiteralAggregation() {
     subjectResource = ResourceType.CAREPLAN;
     mockResourceReader(subjectResource);
@@ -426,6 +442,39 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     response = executor.execute(request);
     assertResponse("AggregateQueryTest/queryWithUriValueInGrouping.Parameters.json",
+        response);
+  }
+
+  @Test
+  // TODO: Re-enable when issue with join within where is resolved.
+  @Disabled
+  void queryWithWhereAndGroupedData() {
+    subjectResource = ResourceType.CAREPLAN;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Count is from 12 to 13", "count().where($this >= 12 and $this <= 13)")
+        .withGrouping("Status", "status")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithWhereAndGroupedData.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithMultipleGroupingsAndMembership() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "count()")
+        .withGrouping("Name prefix contains Mrs.", "name.prefix contains 'Mrs.'")
+        .withGrouping("Given name contains Karina848", "name.given contains 'Karina848'")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithMultipleGroupingsAndMembership.Parameters.json",
         response);
   }
 

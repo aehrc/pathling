@@ -15,6 +15,7 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,7 +50,7 @@ public class ElementPathBuilder {
   private ResourcePath foreignResource;
 
   @Nullable
-  private Column thisColumn;
+  private List<Column> thisColumns;
 
   @Nonnull
   private ElementDefinition definition;
@@ -68,7 +69,7 @@ public class ElementPathBuilder {
   public ElementPathBuilder idAndValueColumns() {
     final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset);
     idColumn = idAndValueColumns.getId();
-    valueColumn = idAndValueColumns.getValue();
+    valueColumn = idAndValueColumns.getValues().get(0);
     return this;
   }
 
@@ -115,8 +116,8 @@ public class ElementPathBuilder {
   }
 
   @Nonnull
-  public ElementPathBuilder thisColumn(@Nonnull final Column thisColumn) {
-    this.thisColumn = thisColumn;
+  public ElementPathBuilder thisColumns(@Nonnull final List<Column> thisColumns) {
+    this.thisColumns = thisColumns;
     return this;
   }
 
@@ -130,14 +131,14 @@ public class ElementPathBuilder {
   public ElementPath build() {
     return ElementPath
         .build(expression, dataset, Optional.of(idColumn), valueColumn, singular,
-            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), fhirType);
+            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumns), fhirType);
   }
 
   @Nonnull
   public ElementPath buildDefined() {
     return ElementPath
         .build(expression, dataset, Optional.of(idColumn), valueColumn, singular,
-            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), definition);
+            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumns), definition);
   }
 
 }

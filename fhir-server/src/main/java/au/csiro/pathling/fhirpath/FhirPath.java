@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -21,43 +22,34 @@ import org.apache.spark.sql.Row;
 public interface FhirPath {
 
   /**
-   * Returns the FHIRPath expression that represents this path.
-   *
-   * @return a FHIRPath string
+   * @return the FHIRPath expression that represents this path
    */
   @Nonnull
   String getExpression();
 
   /**
-   * Returns the {@link Dataset} that can be used to evaluate this path against data.
-   *
-   * @return A {@link Dataset}
+   * @return the {@link Dataset} that can be used to evaluate this path against data
    */
   @Nonnull
   Dataset<Row> getDataset();
 
   /**
-   * Returns a {@link Column} within the dataset containing the identity of the subject resource.
+   * @return a {@link Column} within the dataset containing the identity of the subject resource.
    * This is optional as sometimes we can have paths that do not contain a resource identity, e.g. a
    * path representing the result of an aggregation over groupings.
-   *
-   * @return a {@link Column}
    */
   @Nonnull
   Optional<Column> getIdColumn();
 
   /**
-   * Returns a {@link Column} within the dataset containing the values of the nodes.
-   *
-   * @return a {@link Column}
+   * @return a list of {@link Column} objects within the dataset containing the values of the nodes.
+   * Multiple columns are used in the case of resource values.
    */
   @Nonnull
-  Column getValueColumn();
+  List<Column> getValueColumns();
 
   /**
-   * Returns an indicator of whether this path represents a single-valued collection.
-   *
-   * @return {@code true} if this path represents a single-valued collection
+   * @return an indicator of whether this path represents a single-valued collection
    */
   boolean isSingular();
 

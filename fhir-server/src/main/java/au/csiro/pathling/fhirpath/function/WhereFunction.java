@@ -6,10 +6,10 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
 import static au.csiro.pathling.QueryHelpers.joinOnColumns;
 import static au.csiro.pathling.QueryHelpers.joinOnId;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomShortString;
@@ -50,14 +50,16 @@ public class WhereFunction implements NamedFunction {
     final NonLiteralPath argumentPath = (NonLiteralPath) input.getArguments().get(0);
     checkUserInput(argumentPath instanceof BooleanPath && argumentPath.isSingular(),
         "Argument to where function must be a singular Boolean: " + argumentPath.getExpression());
-    checkUserInput(argumentPath.getThisColumn().isPresent(),
+    checkUserInput(argumentPath.getThisColumns().isPresent(),
         "Argument to where function must be navigable from collection item (use $this): "
             + argumentPath.getExpression());
+    check(argumentPath.getValueColumns().size() == 1);
+    final Column argumentValue = argumentPath.getValueColumns().get(0);
 
     // The result is the input value if it is equal to true, or null otherwise (signifying the
     // absence of a value).
-    final Column argumentTrue = argumentPath.getValueColumn().equalTo(true);
-    final Column thisColumn = argumentPath.getThisColumn().get();
+    final Column argumentTrue = argumentValue.equalTo(true);
+    final List<Column> thisColumns = argumentPath.getThisColumns().get();
 
     final Dataset<Row> dataset;
     final Optional<Column> idColumn;
@@ -74,20 +76,18 @@ public class WhereFunction implements NamedFunction {
       idColumn = Optional.empty();
     } else {
       final Column argumentId = checkPresent(argumentPath.getIdColumn());
-      final String hash = randomShortString();
-      final String idColumnName = hash + ID_COLUMN_SUFFIX;
+      final String idColumnName = randomShortString();
       Dataset<Row> distinctIds = argumentDataset.withColumn(idColumnName, argumentId);
       final Column distinctIdCol = distinctIds.col(idColumnName);
       distinctIds = distinctIds.select(distinctIdCol).distinct();
-      dataset = joinOnId(distinctIds, distinctIdCol, argumentPath, Optional.of(argumentTrue),
-          JoinType.LEFT_OUTER);
-      idColumn = Optional.of(distinctIdCol);
+      dataset = joinOnId(argumentPath, distinctIds, distinctIdCol, Optional.of(argumentTrue),
+          JoinType.LEFT_SEMI);
+      idColumn = Optional.of(argumentId);
     }
 
     final String expression = expressionFromInput(input, NAME);
     return inputPath
-        .copy(expression, dataset, idColumn, thisColumn, inputPath.isSingular(),
-            Optional.empty());
+        .copy(expression, dataset, idColumn, thisColumns, inputPath.isSingular(), Optional.empty());
   }
 
 }

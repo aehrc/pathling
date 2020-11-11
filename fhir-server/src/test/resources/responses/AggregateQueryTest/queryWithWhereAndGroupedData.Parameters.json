@@ -6,15 +6,14 @@
       "part": [
         {
           "name": "label",
-          "valueCode": "stopped"
+          "valueCode": "completed"
         },
         {
-          "name": "result",
-          "valueUnsignedInt": 28
+          "name": "result"
         },
         {
           "name": "drillDown",
-          "valueString": "((status) = 'stopped') and (authoredOn < @2018 and authoredOn > @2000)"
+          "valueString": "(status) = 'completed'"
         }
       ]
     },
@@ -27,11 +26,11 @@
         },
         {
           "name": "result",
-          "valueUnsignedInt": 7
+          "valueUnsignedInt": 12
         },
         {
           "name": "drillDown",
-          "valueString": "((status) = 'active') and (authoredOn < @2018 and authoredOn > @2000)"
+          "valueString": "(status) = 'active'"
         }
       ]
     }

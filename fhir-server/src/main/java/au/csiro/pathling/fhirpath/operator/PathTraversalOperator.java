@@ -6,11 +6,13 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.explode_outer;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import java.util.Optional;
@@ -53,20 +55,38 @@ public class PathTraversalOperator {
     checkUserInput(optionalChild.isPresent(), "No such child: " + expression);
     final ElementDefinition childDefinition = optionalChild.get();
 
-    final Column leftValueColumn = left.getValueColumn();
     final Dataset<Row> leftDataset = left.getDataset();
 
-    // If the element has a max cardinality of more than one, it will need to be "exploded" out into 
+    // If the input path is a ResourcePath, we look for a bare column. Otherwise, we will need to
+    // extract it from a struct.
+    final Column field;
+    if (left instanceof ResourcePath) {
+      final ResourcePath resourcePath = (ResourcePath) left;
+      field = resourcePath.getElementColumn(right);
+    } else {
+      check(left.getValueColumns().size() == 1);
+      field = left.getValueColumns().get(0).getField(right);
+    }
+
+    // If the element has a max cardinality of more than one, it will need to be "exploded" out into
     // multiple rows.
-    final Column field = leftValueColumn.getField(right);
     final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
-    final Column valueColumn = maxCardinalityOfOne
-                               ? field
-                               : explode_outer(field);
+    final Column valueColumn;
+    final Dataset<Row> result;
+    if (maxCardinalityOfOne) {
+      valueColumn = field;
+      result = leftDataset;
+    } else {
+      // When using explode to generate rows for an array based column, we need to use `withColumn`
+      // as nesting of these expressions is not permitted within Spark.
+      final String valueColumnName = "_" + right + "_exploded";
+      result = leftDataset.withColumn(valueColumnName, explode_outer(field));
+      valueColumn = result.col(valueColumnName);
+    }
     final boolean singular = left.isSingular() && maxCardinalityOfOne;
 
-    return ElementPath.build(expression, leftDataset, left.getIdColumn(), valueColumn, singular,
-        left.getForeignResource(), left.getThisColumn(), childDefinition);
+    return ElementPath.build(expression, result, left.getIdColumn(), valueColumn, singular,
+        left.getForeignResource(), left.getThisColumns(), childDefinition);
   }
 
 }

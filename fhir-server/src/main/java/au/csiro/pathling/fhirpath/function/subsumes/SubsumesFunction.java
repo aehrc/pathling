@@ -102,7 +102,7 @@ public class SubsumesFunction implements NamedFunction {
     final String expression = expressionFromInput(input, functionName);
     return ElementPath.build(expression, resultDataset, Optional.of(idColumn), valueColumn,
         inputFhirPath.isSingular(), inputFhirPath.getForeignResource(),
-        inputFhirPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+        inputFhirPath.getThisColumns(), FHIRDefinedType.BOOLEAN);
   }
 
   /**
@@ -141,17 +141,19 @@ public class SubsumesFunction implements NamedFunction {
    */
   @Nonnull
   private Dataset<Row> toInputDataset(@Nonnull final FhirPath fhirPath) {
+    check(fhirPath.getValueColumns().size() == 1);
+    final Column valueColumn = fhirPath.getValueColumns().get(0);
 
     assert (isCodingOrCodeableConcept(fhirPath));
 
     final Dataset<Row> expressionDataset = fhirPath.getDataset();
     final Column codingArrayCol = (isCodeableConcept(fhirPath))
-                                  ? fhirPath.getValueColumn().getField(FIELD_CODING)
-                                  : array(fhirPath.getValueColumn());
+                                  ? valueColumn.getField(FIELD_CODING)
+                                  : array(valueColumn);
 
     check(fhirPath.getIdColumn().isPresent());
     return expressionDataset.select(fhirPath.getIdColumn().get().alias(COL_ID),
-        when(fhirPath.getValueColumn().isNotNull(), codingArrayCol)
+        when(valueColumn.isNotNull(), codingArrayCol)
             .otherwise(null)
             .alias(COL_CODING_SET)
     );
@@ -173,13 +175,15 @@ public class SubsumesFunction implements NamedFunction {
 
   @Nonnull
   private Dataset<Row> toArgDataset(@Nonnull final FhirPath fhirPath) {
+    check(fhirPath.getValueColumns().size() == 1);
+    final Column valueColumn = fhirPath.getValueColumns().get(0);
 
     assert (isCodingOrCodeableConcept(fhirPath));
 
     final Dataset<Row> expressionDataset = fhirPath.getDataset();
     final Column codingCol = (isCodeableConcept(fhirPath))
-                             ? explode_outer(fhirPath.getValueColumn().getField(FIELD_CODING))
-                             : fhirPath.getValueColumn();
+                             ? explode_outer(valueColumn.getField(FIELD_CODING))
+                             : valueColumn;
 
     check(fhirPath.getIdColumn().isPresent());
     final Dataset<Row> systemAndCodeDataset = expressionDataset

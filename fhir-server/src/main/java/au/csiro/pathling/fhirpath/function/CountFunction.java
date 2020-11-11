@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -38,18 +39,31 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     checkNoArguments("count", input);
     final NonLiteralPath inputPath = input.getInput();
     final String expression = expressionFromInput(input, NAME);
-    // When we are counting resources, we use the distinct count. When we are counting elements, we
-    // use a non-distinct count, to account for the fact that it is valid to have multiple elements
-    // with the same value.
-    final Function<Column, Column> countFunction = inputPath instanceof ResourcePath
-                                                   ? functions::countDistinct
-                                                   : functions::count;
+
+    final Function<Column, Column> countFunction;
+    final Column valueColumn;
+    if (inputPath instanceof ResourcePath) {
+      final ResourcePath resourcePath = (ResourcePath) inputPath;
+      // When we are counting resources, we use the distinct count to account for the fact that
+      // there may be duplicate IDs in the dataset.
+      countFunction = functions::countDistinct;
+      // The ID column is used as the input for the distinct count.
+      valueColumn = resourcePath.getElementColumn("id");
+    } else {
+      // When we are counting elements, we use a non-distinct count, to account for the fact that it
+      // is valid to have multiple elements with the same value.
+      check(inputPath.getValueColumns().size() == 1);
+      countFunction = functions::count;
+      // The current value column is used for the input to the non-distinct count.
+      valueColumn = inputPath.getValueColumns().get(0);
+    }
+
     // According to the FHIRPath specification, the count function must return 0 when invoked on an 
     // empty collection.
     final Function<Column, Column> count = (column) ->
         when(countFunction.apply(column).isNull(), 0L)
             .otherwise(countFunction.apply(column));
-    return applyAggregationFunction(input.getContext(), inputPath, count, expression,
+    return applyAggregationFunction(input.getContext(), inputPath, valueColumn, count, expression,
         FHIRDefinedType.UNSIGNEDINT);
   }
 

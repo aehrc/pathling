@@ -56,7 +56,7 @@ public class DrillDownBuilder {
   public String build() {
     // We use a Set here to avoid situations where we needlessly have the same condition in the
     // expression more than once.
-    final Set<String> fhirPaths = new HashSet<>();
+    final Collection<String> fhirPaths = new LinkedHashSet<>();
 
     // Add each of the grouping expressions, along with either equality or contains against the
     // group value to convert it in to a Boolean expression.
@@ -102,13 +102,13 @@ public class DrillDownBuilder {
   }
 
   @Nonnull
-  private Set<String> parenthesiseExpressions(@Nonnull final Set<String> fhirPaths) {
+  private List<String> parenthesiseExpressions(@Nonnull final Collection<String> fhirPaths) {
     if (fhirPaths.size() > 1) {
       return fhirPaths.stream()
           .map(Strings::parentheses)
-          .collect(Collectors.toSet());
+          .collect(Collectors.toList());
     } else {
-      return fhirPaths;
+      return new ArrayList<>(fhirPaths);
     }
   }
 

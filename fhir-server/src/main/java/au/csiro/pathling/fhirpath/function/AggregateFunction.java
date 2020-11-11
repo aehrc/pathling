@@ -15,6 +15,7 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -28,28 +29,19 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public abstract class AggregateFunction {
 
-  /**
-   * A factory that encapsulates creation of the aggregation result path
-   *
-   * @param <T> subtype of FhirPath to create
-   */
-  private interface ResultPathFactory<T extends FhirPath> {
+  @Nonnull
+  private static Column[] getGroupBy(@Nonnull final Collection<Column> groupingColumns,
+      @Nonnull final Optional<Column> idColumn, @Nonnull final Optional<List<Column>> thisColumn) {
+    final Set<Column> groupBy = new LinkedHashSet<>();
+    if (idColumn.isPresent() && groupingColumns.isEmpty()) {
+      groupBy.add(idColumn.get());
+    } else {
+      groupBy.addAll(groupingColumns);
+    }
 
-    /**
-     * Creates a subtype T of FhirPath
-     *
-     * @param expression an updated expression to describe the new FhirPath
-     * @param dataset the new Dataset that can be used to evaluate this FhirPath against data
-     * @param idColumn the new resource identity column
-     * @param valueColumn the new expression value column
-     * @param singular the new singular value
-     * @param thisColumn a column containing the collection being iterated, for cases where a path
-     * is being created to represent the {@code $this} keyword
-     * @return a new instance of T
-     */
-    T create(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-        @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
-        @Nonnull Optional<Column> thisColumn);
+    thisColumn.ifPresent(groupBy::addAll);
+
+    return groupBy.toArray(new Column[]{});
   }
 
   /**
@@ -57,6 +49,7 @@ public abstract class AggregateFunction {
    *
    * @param context the current {@link ParserContext}
    * @param input the {@link FhirPath} being aggregated
+   * @param valueColumn the {@link Column} that will be input to the function
    * @param function the {@link Function} that will take a {@link Column}, and return another
    * Column
    * @param expression the FHIRPath expression for the result
@@ -66,10 +59,11 @@ public abstract class AggregateFunction {
   @Nonnull
   @SuppressWarnings("SameParameterValue")
   protected ElementPath applyAggregationFunction(@Nonnull final ParserContext context,
-      @Nonnull final FhirPath input, @Nonnull final Function<Column, Column> function,
+      @Nonnull final FhirPath input, @Nonnull final Column valueColumn,
+      @Nonnull final Function<Column, Column> function,
       @Nonnull final String expression, @Nonnull final FHIRDefinedType fhirType) {
     return applyAggregation(context, input.getDataset(), Collections.singletonList(input),
-        function.apply(input.getValueColumn()), expression, fhirType);
+        function.apply(valueColumn), expression, fhirType);
   }
 
   /**
@@ -92,8 +86,8 @@ public abstract class AggregateFunction {
 
     return applyAggregation(context, dataset, inputs, aggregationColumn, expression,
         // create the result as an ElementPath of given FhirType
-        (expression1, dataset1, idColumn, valueColumn, singular, thisColumn) -> ElementPath
-            .build(expression1, dataset1, idColumn, valueColumn, true, Optional.empty(), thisColumn,
+        (exp, ds, idColumn, valueColumn, singular, thisColumns) -> ElementPath
+            .build(exp, ds, idColumn, valueColumn, true, Optional.empty(), thisColumns,
                 fhirType));
   }
 
@@ -112,8 +106,10 @@ public abstract class AggregateFunction {
   protected NonLiteralPath applyAggregationFunction(@Nonnull final ParserContext context,
       @Nonnull final NonLiteralPath input, @Nonnull final Function<Column, Column> function,
       @Nonnull final String expression) {
+    checkArgument(input.getValueColumns().size() == 1, "Input can only have one value column");
+    final Column valueColumn = input.getValueColumns().get(0);
     return applyAggregation(context, input.getDataset(), Collections.singletonList(input),
-        function.apply(input.getValueColumn()), expression, input);
+        function.apply(valueColumn), expression, input);
   }
 
   /**
@@ -136,7 +132,9 @@ public abstract class AggregateFunction {
 
     return applyAggregation(context, dataset, inputs, aggregationColumn, expression,
         // create the result as a copy of input path
-        contextPath::copy);
+        (exp, ds, idColumn, valueColumn, singular, thisColumns) -> contextPath
+            .copy(exp, ds, idColumn, Collections.singletonList(valueColumn), singular,
+                thisColumns));
   }
 
   /**
@@ -167,11 +165,11 @@ public abstract class AggregateFunction {
         "ID column should be present within inputs, or groupings should be present in context");
 
     // Check for a $this column in any of the inputs - if its present, it will need to be preserved.
-    final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(inputs.toArray());
+    final Optional<List<Column>> thisColumns = NonLiteralPath.findThisColumns(inputs.toArray());
 
     // Calculate the set of grouping columns based on the grouping columns in the context, plus any
     // columns within the input paths that need to be preserved.
-    final Column[] groupByArray = getGroupBy(groupingColumns, idColumn, thisColumn);
+    final Column[] groupByArray = getGroupBy(groupingColumns, idColumn, thisColumns);
 
     // Apply the aggregation.
     final Dataset<Row> result = dataset.groupBy(groupByArray).agg(aggregationColumn);
@@ -181,7 +179,9 @@ public abstract class AggregateFunction {
     if (idColumn.isPresent() && groupingColumns.isEmpty()) {
       // If there are no grouping columns, we just need to get the updated ID column.
       newIdColumn = Optional.of(result.col(result.columns()[0]));
-      cursor += 1;
+      cursor += thisColumns.isPresent() && thisColumns.get().contains(idColumn.get())
+                ? 0
+                : 1;
     } else {
       // If there are grouping columns, there will no longer be an ID column. The new grouping
       // columns will be the first columns in the table.
@@ -192,11 +192,15 @@ public abstract class AggregateFunction {
     }
 
     // Update the function input value column, if present.
-    Optional<Column> newThisColumn = Optional.empty();
-    if (thisColumn.isPresent()) {
-      final String thisValueColName = result.columns()[cursor];
-      newThisColumn = Optional.of(result.col(thisValueColName));
-      cursor += 1;
+    Optional<List<Column>> newThisColumns = Optional.empty();
+    if (thisColumns.isPresent()) {
+      final int numberOfThisCols = thisColumns.get().size();
+      final List<String> thisColumnNames = Arrays.asList(
+          Arrays.copyOfRange(result.columns(), cursor, cursor + numberOfThisCols));
+      newThisColumns = Optional.of(thisColumnNames.stream()
+          .map(result::col)
+          .collect(Collectors.toList()));
+      cursor += numberOfThisCols;
     }
 
     // The value column will be the final column, after all the other columns.
@@ -204,22 +208,31 @@ public abstract class AggregateFunction {
     final Column valueColumn = result.col(valueColName);
 
     return resultPathFactory.create(expression, result, newIdColumn, valueColumn,
-        true, newThisColumn);
+        true, newThisColumns);
   }
 
-  @Nonnull
-  private static Column[] getGroupBy(@Nonnull final Collection<Column> groupingColumns,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Optional<Column> thisColumn) {
-    final List<Column> groupBy = new ArrayList<>();
-    if (idColumn.isPresent() && groupingColumns.isEmpty()) {
-      groupBy.add(idColumn.get());
-    } else {
-      groupBy.addAll(groupingColumns);
-    }
+  /**
+   * A factory that encapsulates creation of the aggregation result path
+   *
+   * @param <T> subtype of FhirPath to create
+   */
+  private interface ResultPathFactory<T extends FhirPath> {
 
-    thisColumn.ifPresent(groupBy::add);
-
-    return groupBy.toArray(new Column[]{});
+    /**
+     * Creates a subtype T of FhirPath
+     *
+     * @param expression an updated expression to describe the new FhirPath
+     * @param dataset the new Dataset that can be used to evaluate this FhirPath against data
+     * @param idColumn the new resource identity column
+     * @param valueColumn the new expression value column
+     * @param singular the new singular value
+     * @param thisColumns a column containing the collection being iterated, for cases where a path
+     * is being created to represent the {@code $this} keyword
+     * @return a new instance of T
+     */
+    T create(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
+        @Nonnull Optional<Column> idColumn, @Nonnull Column valueColumn, boolean singular,
+        @Nonnull Optional<List<Column>> thisColumns);
   }
 
 }

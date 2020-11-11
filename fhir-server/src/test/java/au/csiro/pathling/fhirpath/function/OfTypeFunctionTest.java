@@ -68,16 +68,16 @@ class OfTypeFunctionTest {
         .withRow("Encounter/xyz4", "Patient", RowFactory.create(null, "Patient/abc2", null))
         .withRow("Encounter/xyz5", "Group", RowFactory.create(null, "Group/def1", null))
         .buildWithStructValue();
-    final Column idColumn = inputDataset.col("id");
+    final Column idColumn = inputDataset.col(inputDataset.columns()[0]);
     final Column typeColumn = inputDataset.col("type");
-    final Column valueColumn = inputDataset.col("value");
+    final Column valueColumn = inputDataset.col(inputDataset.columns()[2]);
     final UntypedResourcePath inputPath = UntypedResourcePath
         .build("subject.resolve()", inputDataset, Optional.of(idColumn), valueColumn, true,
             Optional.empty(), typeColumn,
             new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
 
     final Dataset<Row> argumentDataset = new DatasetBuilder()
-        .withIdColumn()
+        .withIdColumn("id")
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
         .withRow("Patient/abc1", "female", true)
@@ -106,15 +106,15 @@ class OfTypeFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withStructColumn("id", DataTypes.StringType)
-        .withStructColumn("gender", DataTypes.StringType)
-        .withStructColumn("active", DataTypes.BooleanType)
-        .withRow("Encounter/xyz1", RowFactory.create("Patient/abc1", "female", true))
-        .withRow("Encounter/xyz2", RowFactory.create("Patient/abc3", "male", true))
-        .withRow("Encounter/xyz3", RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Encounter/xyz4", RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Encounter/xyz5", null)
-        .buildWithStructValue();
+        .withColumn("id", DataTypes.StringType)
+        .withColumn("gender", DataTypes.StringType)
+        .withColumn("active", DataTypes.BooleanType)
+        .withRow("Encounter/xyz1", "Patient/abc1", "female", true)
+        .withRow("Encounter/xyz2", "Patient/abc3", "male", true)
+        .withRow("Encounter/xyz3", "Patient/abc2", "female", false)
+        .withRow("Encounter/xyz4", "Patient/abc2", "female", false)
+        .withRow("Encounter/xyz5", null, null, null)
+        .build();
     assertThat(result)
         .selectResult()
         .hasRows(expectedDataset);

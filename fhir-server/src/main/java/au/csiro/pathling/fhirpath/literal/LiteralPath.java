@@ -6,18 +6,15 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
-import static au.csiro.pathling.QueryHelpers.VALUE_COLUMN_SUFFIX;
-import static au.csiro.pathling.utilities.Strings.randomShortString;
+import static au.csiro.pathling.QueryHelpers.aliasColumns;
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.QueryHelpers;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.FhirPath;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -78,26 +75,16 @@ public abstract class LiteralPath implements FhirPath {
 
   protected LiteralPath(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
-    final String hash = randomShortString();
-    final String idColumnName = hash + ID_COLUMN_SUFFIX;
-    final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
-
     this.literalValue = literalValue;
     final Column valueColumn = buildValueColumn();
-
-    Dataset<Row> hashedDataset = dataset;
-    if (idColumn.isPresent()) {
-      hashedDataset = dataset.withColumn(idColumnName, idColumn.get());
-    }
-    hashedDataset = hashedDataset.withColumn(valueColumnName, valueColumn);
-
-    if (idColumn.isPresent()) {
-      this.idColumn = Optional.of(hashedDataset.col(idColumnName));
-    } else {
-      this.idColumn = Optional.empty();
-    }
-    this.valueColumn = hashedDataset.col(valueColumnName);
-    this.dataset = QueryHelpers.applySelection(hashedDataset, this.idColumn);
+    final List<Column> columns = new ArrayList<>();
+    idColumn.ifPresent(columns::add);
+    columns.add(valueColumn);
+    final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset, columns, true);
+    this.dataset = datasetWithColumnMap.getDataset();
+    final Map<Column, Column> columnMap = datasetWithColumnMap.getColumnMap();
+    this.idColumn = idColumn.flatMap(column -> Optional.of(columnMap.get(column)));
+    this.valueColumn = columnMap.get(valueColumn);
   }
 
   /**
@@ -147,6 +134,12 @@ public abstract class LiteralPath implements FhirPath {
   @Nonnull
   public Column buildValueColumn() {
     return lit(getJavaValue());
+  }
+
+  @Nonnull
+  @Override
+  public List<Column> getValueColumns() {
+    return Collections.singletonList(valueColumn);
   }
 
 }

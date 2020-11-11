@@ -12,8 +12,10 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Referrer;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -45,6 +47,7 @@ public class ReverseResolveFunction implements NamedFunction {
     final FhirPath argument = input.getArguments().get(0);
     checkUserInput(argument instanceof ReferencePath,
         "Argument to reverseResolve function must be a Reference: " + argument.getExpression());
+    final Referrer referencePath = (ReferencePath) argument;
 
     // Check that the input type is one of the possible types specified by the argument.
     final Set<ResourceType> argumentTypes = ((ReferencePath) argument).getResourceTypes();
@@ -55,7 +58,7 @@ public class ReverseResolveFunction implements NamedFunction {
 
     // Do a left outer join from the input to the argument dataset using the reference field in the
     // argument.
-    final Dataset<Row> dataset = joinOnReference(argument, inputPath, JoinType.RIGHT_OUTER);
+    final Dataset<Row> dataset = joinOnReference(referencePath, inputPath, JoinType.RIGHT_OUTER);
 
     // Check the argument for information about a foreign resource that it originated from - if it
     // not present, reverse reference resolution will not be possible.
@@ -67,9 +70,10 @@ public class ReverseResolveFunction implements NamedFunction {
             + "target resource type: " + expression);
     final ResourcePath foreignResource = nonLiteralArgument.getForeignResource().get();
 
-    final Optional<Column> thisColumn = inputPath.getThisColumn();
-    return new ResourcePath(expression, dataset, inputPath.getIdColumn(),
-        foreignResource.getValueColumn(), false, thisColumn, foreignResource.getDefinition());
+    final Optional<List<Column>> thisColumns = inputPath.getThisColumns();
+    return foreignResource
+        .copy(expression, dataset, inputPath.getIdColumn(), foreignResource.getValueColumns(),
+            false, thisColumns);
   }
 
 }

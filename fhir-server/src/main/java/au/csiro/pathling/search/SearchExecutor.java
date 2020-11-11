@@ -11,6 +11,7 @@ import static au.csiro.pathling.errors.ErrorHandling.handleError;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
@@ -19,6 +20,9 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
@@ -28,10 +32,7 @@ import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.StringOrListParam;
 import ca.uhn.fhir.rest.param.StringParam;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -105,25 +106,21 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
 
   @Nonnull
   private Dataset<Row> initializeDataset() {
-    final ParserContext context = buildParserContext(subjectResource);
-    final Dataset<Row> subjectDataset = context.getInputContext().getDataset();
-    final Optional<Column> subjectIdColumn = context.getInputContext().getIdColumn();
-    final Column subjectValueColumn = context.getInputContext().getValueColumn();
+    ResourcePath currentContext = ResourcePath
+        .build(getFhirContext(), getResourceReader(), subjectResource, subjectResource.toCode(),
+            true, true);
+    final Dataset<Row> subjectDataset = currentContext.getDataset();
+    final Optional<Column> subjectIdColumn = currentContext.getIdColumn();
     check(subjectIdColumn.isPresent());
 
-    Dataset<Row> dataset;
-    final Column idColumn;
-    final Column valueColumn;
+    final Dataset<Row> dataset;
 
     if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
       // If there are no filters, return all resources.
       dataset = subjectDataset;
-      idColumn = checkPresent(context.getInputContext().getIdColumn());
-      valueColumn = context.getInputContext().getValueColumn();
 
     } else {
-      final Parser parser = new Parser(context);
-      final List<FhirPath> fhirPaths = new ArrayList<>();
+      final Collection<FhirPath> fhirPaths = new ArrayList<>();
       @Nullable Column filterIdColumn = null;
       @Nullable Column filterColumn = null;
 
@@ -134,21 +131,33 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         @Nullable Column orColumn = null;
 
         for (final StringParam param : orParam.getValuesAsQueryTokens()) {
+          final ParserContext parserContext = buildParserContext(currentContext);
+          final Parser parser = new Parser(parserContext);
           final FhirPath fhirPath = parser.parse(param.getValue());
+          checkUserInput(fhirPath instanceof BooleanPath || fhirPath instanceof BooleanLiteralPath,
+              "Filter expression must be of Boolean type: " + fhirPath.getExpression());
+          check(fhirPath.getValueColumns().size() == 1);
+          final Column filterValue = fhirPath.getValueColumns().get(0);
 
           // Add each expression to a list that will later be joined.
           fhirPaths.add(fhirPath);
 
           // Combine all the OR columns with OR logic.
           orColumn = orColumn == null
-                     ? fhirPath.getValueColumn()
-                     : orColumn.or(fhirPath.getValueColumn());
+                     ? filterValue
+                     : orColumn.or(filterValue);
 
           // We save away the first encountered ID column so that we can use it later to join the
           // subject resource dataset with the joined filter datasets.
           if (filterIdColumn == null) {
             filterIdColumn = checkPresent(fhirPath.getIdColumn());
           }
+
+          // Update the context to build the next expression from the same dataset.
+          currentContext = currentContext
+              .copy(currentContext.getExpression(), fhirPath.getDataset(), fhirPath.getIdColumn(),
+                  fhirPath.getValueColumns(), currentContext.isSingular(),
+                  currentContext.getThisColumns());
         }
 
         // Combine all the columns at this level with AND logic.
@@ -160,20 +169,13 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       checkNotNull(filterColumn);
       check(!fhirPaths.isEmpty());
 
-      // Join all of the datasets from the parsed filter expressions together.
-      final Dataset<Row> filterDataset = joinExpressions(fhirPaths).where(filterColumn);
-
       // Get the full resources which are present in the filtered dataset.
       dataset = joinOnId(subjectDataset, subjectIdColumn.get(),
-          filterDataset.select(filterIdColumn), filterIdColumn, JoinType.LEFT_SEMI);
-      idColumn = subjectIdColumn.get();
-      valueColumn = subjectValueColumn;
+          currentContext.getDataset().select(filterIdColumn), filterIdColumn, JoinType.LEFT_SEMI);
     }
 
-    dataset = dataset.select(idColumn.as("id"), valueColumn.as("value"));
-
-    // We cache the dataset because we know it will be accessed for both the total and the
-    // record retrieval.
+    // We cache the dataset because we know it will be accessed for both the total and the record
+    // retrieval.
     dataset.cache();
 
     return dataset;
@@ -215,7 +217,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       checkNotNull(encoder);
       reportQueryPlan(resources);
 
-      return resources.select("value.*").as(encoder).collectAsList();
+      return resources.as(encoder).collectAsList();
     } catch (final Throwable e) {
       throw handleError(e);
     }

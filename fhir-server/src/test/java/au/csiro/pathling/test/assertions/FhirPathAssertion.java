@@ -37,9 +37,13 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   @Nonnull
   public DatasetAssert selectResult() {
     check(fhirPath.getIdColumn().isPresent());
+    final List<Column> selection = new ArrayList<>();
+    selection.add(fhirPath.getIdColumn().get());
+    selection.addAll(fhirPath.getValueColumns());
+    final Column[] selectionArray = selection.toArray(new Column[0]);
     return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn())
-        .orderBy(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
+        .select(selectionArray)
+        .orderBy(selectionArray));
   }
 
 
@@ -54,7 +58,7 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
     check(fhirPath.getIdColumn().isEmpty());
     check(!groupingColumns.isEmpty());
     final ArrayList<Column> allColumnsList = new ArrayList<>(groupingColumns);
-    allColumnsList.add(fhirPath.getValueColumn());
+    allColumnsList.addAll(fhirPath.getValueColumns());
     final Column[] allColumns = allColumnsList.toArray(new Column[0]);
     return new DatasetAssert(preserveOrder
                              ? fhirPath.getDataset().select(allColumns)
@@ -65,8 +69,11 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   @Nonnull
   public DatasetAssert selectResultPreserveOrder() {
     check(fhirPath.getIdColumn().isPresent());
-    return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
+    final List<Column> selection = new ArrayList<>();
+    selection.add(fhirPath.getIdColumn().get());
+    selection.addAll(fhirPath.getValueColumns());
+    final Column[] selectionArray = selection.toArray(new Column[0]);
+    return new DatasetAssert(fhirPath.getDataset().select(selectionArray));
   }
 
   @Nonnull

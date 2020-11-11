@@ -13,6 +13,7 @@ import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -52,10 +53,9 @@ public class OfTypeFunction implements NamedFunction {
     final Dataset<Row> dataset = joinOnReference(inputPath, resourcePath, JoinType.LEFT_OUTER);
 
     // Return a new resource path with the joined dataset, and the argument's value column.
-    final Optional<Column> thisColumn = inputPath.getThisColumn();
-    return new ResourcePath(expression, dataset, inputPath.getIdColumn(),
-        resourcePath.getValueColumn(), inputPath.isSingular(), thisColumn,
-        resourcePath.getDefinition());
+    final Optional<List<Column>> thisColumns = inputPath.getThisColumns();
+    return resourcePath.copy(expression, dataset, inputPath.getIdColumn(),
+        resourcePath.getValueColumns(), inputPath.isSingular(), thisColumns);
   }
 
 }

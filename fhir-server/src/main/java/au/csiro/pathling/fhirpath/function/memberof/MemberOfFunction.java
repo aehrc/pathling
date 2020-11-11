@@ -109,7 +109,7 @@ public class MemberOfFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
     return ElementPath
         .build(expression, dataset, prevIdColumn, valueColumn, inputPath.isSingular(),
-            inputPath.getForeignResource(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+            inputPath.getForeignResource(), inputPath.getThisColumns(), FHIRDefinedType.BOOLEAN);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

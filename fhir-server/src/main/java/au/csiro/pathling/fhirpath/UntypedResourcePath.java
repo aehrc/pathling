@@ -6,10 +6,9 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.QueryHelpers.TYPE_COLUMN_SUFFIX;
-import static au.csiro.pathling.utilities.Strings.randomShortString;
-
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -24,7 +23,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-public class UntypedResourcePath extends NonLiteralPath {
+public class UntypedResourcePath extends NonLiteralPath implements Referrer {
 
   /**
    * A {@link Column} within the dataset containing the resource type.
@@ -41,12 +40,12 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Getter
   private final Set<ResourceType> possibleTypes;
 
-  protected UntypedResourcePath(@Nonnull final String expression,
+  private UntypedResourcePath(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
+      @Nonnull final List<Column> valueColumns, final boolean singular,
+      @Nonnull final Optional<List<Column>> thisColumns, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
-    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
+    super(expression, dataset, idColumn, valueColumns, singular, Optional.empty(), thisColumns);
     this.typeColumn = typeColumn;
     this.possibleTypes = possibleTypes;
   }
@@ -58,7 +57,7 @@ public class UntypedResourcePath extends NonLiteralPath {
    * resource
    * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
    * @param singular An indicator of whether this path represents a single-valued collection
-   * @param thisColumn collection values where this path originated from {@code $this}
+   * @param thisColumns collection values where this path originated from {@code $this}
    * @param typeColumn A {@link Column} within the dataset containing the resource type
    * @param possibleTypes A set of {@link ResourceType} objects that describe the different types
    * @return a shiny new UntypedResourcePath
@@ -66,16 +65,18 @@ public class UntypedResourcePath extends NonLiteralPath {
   public static UntypedResourcePath build(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
+      @Nonnull final Optional<List<Column>> thisColumns, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
+    return new UntypedResourcePath(expression, dataset, idColumn,
+        Collections.singletonList(valueColumn), singular, thisColumns, typeColumn, possibleTypes);
+  }
 
-    final String hash = randomShortString();
-    final String typeColumnName = hash + TYPE_COLUMN_SUFFIX;
-
-    final Dataset<Row> hashedDataset = dataset.withColumn(typeColumnName, typeColumn);
-
-    return new UntypedResourcePath(expression, hashedDataset, idColumn, valueColumn, singular,
-        thisColumn, hashedDataset.col(typeColumnName), possibleTypes);
+  /**
+   * @return a {@link Column} within the dataset containing the resource reference
+   */
+  @Nonnull
+  public Column getValueColumn() {
+    return valueColumns.get(0);
   }
 
   @Nonnull
@@ -88,10 +89,10 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Override
   public UntypedResourcePath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn) {
-    return new UntypedResourcePath(expression, dataset, idColumn, valueColumn, singular, thisColumn,
-        typeColumn, possibleTypes);
+      @Nonnull final List<Column> valueColumns, final boolean singular,
+      @Nonnull final Optional<List<Column>> thisColumns) {
+    return new UntypedResourcePath(expression, dataset, idColumn, valueColumns, singular,
+        thisColumns, typeColumn, possibleTypes);
   }
 
 }

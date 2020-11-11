@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -55,8 +56,8 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
   protected DatePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
-      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+      @Nonnull final Optional<List<Column>> thisColumns, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumns,
         fhirType);
   }
 

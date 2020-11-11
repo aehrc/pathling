@@ -8,7 +8,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
-import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
+import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
@@ -17,6 +17,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -57,9 +58,13 @@ public class BooleanOperator implements Operator {
         "Right operand to " + type + " operator must be Boolean: " + right.getExpression());
     checkUserInput(right.isSingular(),
         "Right operand to " + type + " operator must be singular: " + right.getExpression());
+    checkUserInput(left.getValueColumns().size() == 1,
+        "Left operand is not supported for " + type + " operator: " + left.getExpression());
+    checkUserInput(right.getValueColumns().size() == 1,
+        "Right operand is not supported for " + type + " operator: " + right.getExpression());
 
-    final Column leftValue = left.getValueColumn();
-    final Column rightValue = right.getValueColumn();
+    final Column leftValue = left.getValueColumns().get(0);
+    final Column rightValue = right.getValueColumns().get(0);
 
     // Based on the type of operator, create the correct column expression.
     final Column valueColumn;
@@ -97,7 +102,7 @@ public class BooleanOperator implements Operator {
         left.getExpression() + " " + type + " " + right.getExpression();
     final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
     final Optional<Column> idColumn = findIdColumn(left, right);
-    final Optional<Column> thisColumn = findThisColumn(left, right);
+    final Optional<List<Column>> thisColumn = findThisColumns(left, right);
 
     return ElementPath
         .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),

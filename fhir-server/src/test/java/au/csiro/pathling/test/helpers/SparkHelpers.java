@@ -9,6 +9,8 @@ package au.csiro.pathling.test.helpers;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.spark.udf.CodingsEqual;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -23,7 +25,7 @@ import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import scala.Option;
-import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 import scala.collection.mutable.Buffer;
 
 /**
@@ -55,9 +57,19 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset) {
-    final Column idColumn = dataset.col("id");
-    final Column valueColumn = dataset.col("value");
-    return new IdAndValueColumns(idColumn, valueColumn);
+    final Column idColumn = dataset.col(dataset.columns()[0]);
+    final Column valueColumn = dataset.col(dataset.columns()[1]);
+    return new IdAndValueColumns(idColumn, Collections.singletonList(valueColumn));
+  }
+
+  @Nonnull
+  public static IdAndValueColumns getResourceIdAndValueColumns(
+      @Nonnull final Dataset<Row> dataset) {
+    final Column idColumn = dataset.col(dataset.columns()[0]);
+    final List<Column> valueColumns = Arrays.stream(dataset.columns())
+        .map(dataset::col)
+        .collect(Collectors.toList());
+    return new IdAndValueColumns(idColumn, valueColumns);
   }
 
   @Nonnull
@@ -107,7 +119,7 @@ public abstract class SparkHelpers {
 
     final List<Row> codings = coding.stream().map(SparkHelpers::rowFromCoding)
         .collect(Collectors.toList());
-    final Buffer<Row> buffer = JavaConversions.asScalaBuffer(codings);
+    final Buffer<Row> buffer = JavaConverters.asScalaBuffer(codings);
     checkNotNull(buffer);
 
     return new GenericRowWithSchema(
@@ -122,7 +134,7 @@ public abstract class SparkHelpers {
     Column id;
 
     @Nonnull
-    Column value;
+    List<Column> values;
 
   }
 

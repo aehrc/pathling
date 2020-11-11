@@ -46,7 +46,7 @@ public class PathTraversalOperatorTest {
   @Test
   public void simpleTraversal() {
     final Dataset<Row> leftDataset = new DatasetBuilder()
-        .withIdColumn()
+        .withIdColumn("id")
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
         .withRow("abc", "female", true)

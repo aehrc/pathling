@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
@@ -22,22 +21,15 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.builders.ResourcePathBuilder;
-import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.SparkHelpers;
-import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Optional;
+import java.util.List;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -51,42 +43,41 @@ public class WhereFunctionTest {
   // `Patient.reverseResolve(Encounter.subject).where($this.status = 'in-progress')`.
   @Test
   public void whereOnResource() {
-    final StructType encounterStruct = new StructType(new StructField[]{
-        DataTypes.createStructField("id", DataTypes.StringType, true),
-        DataTypes.createStructField("status", DataTypes.StringType, true)
-    });
-
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
-        .withStructTypeColumns(encounterStruct)
-        .withRow("Patient/abc1", RowFactory.create("Encounter/abc1", "in-progress"))
-        .withRow("Patient/abc1", RowFactory.create("Encounter/abc2", "finished"))
-        .withRow("Patient/abc2", RowFactory.create("Encounter/abc3", "in-progress"))
-        .withRow("Patient/abc3", RowFactory.create("Encounter/abc4", "in-progress"))
-        .withRow("Patient/abc3", RowFactory.create("Encounter/abc5", "finished"))
-        .withRow("Patient/abc4", RowFactory.create("Encounter/abc6", "finished"))
-        .withRow("Patient/abc4", RowFactory.create("Encounter/abc7", "finished"))
-        .withRow("Patient/abc5", null)
-        .buildWithStructValue();
-    final IdAndValueColumns inputIdAndValue = SparkHelpers.getIdAndValueColumns(inputDataset);
-    final ResourceDefinition resourceDefinition = new ResourceDefinition(ResourceType.ENCOUNTER,
-        FhirHelpers.getFhirContext().getResourceDefinition(Encounter.class));
+        .withIdColumn("id")
+        .withColumn("status", DataTypes.StringType)
+        .withRow("Patient/abc1", "Encounter/xyz1", "in-progress")
+        .withRow("Patient/abc1", "Encounter/xyz2", "finished")
+        .withRow("Patient/abc2", "Encounter/xyz3", "in-progress")
+        .withRow("Patient/abc3", "Encounter/xyz4", "in-progress")
+        .withRow("Patient/abc3", "Encounter/xyz5", "finished")
+        .withRow("Patient/abc4", "Encounter/xyz6", "finished")
+        .withRow("Patient/abc4", "Encounter/xyz7", "finished")
+        .withRow("Patient/abc5", null, null)
+        .build();
+    final Column idColumn = inputDataset.col(inputDataset.columns()[0]);
+    final List<Column> valueColumns = Arrays.asList(inputDataset.col(inputDataset.columns()[1]),
+        inputDataset.col(inputDataset.columns()[2]));
 
-    final ResourcePath inputPath = new ResourcePath("reverseResolve(Encounter.subject)",
-        inputDataset, Optional.of(inputIdAndValue.getId()), inputIdAndValue.getValue(), false,
-        Optional.empty(), resourceDefinition);
+    final ResourcePath inputPath = new ResourcePathBuilder()
+        .expression("reverseResolve(Encounter.subject)")
+        .dataset(inputDataset)
+        .idColumn(idColumn)
+        .valueColumns(valueColumns)
+        .buildCustom();
 
     // Build an expression which represents the argument to the function. We assume that the value
     // column from the input dataset is also present within the argument dataset.
     final Dataset<Row> argumentDataset = inputPath.getDataset()
-        .withColumn("value", inputPath.getValueColumn().getField("status").equalTo("in-progress"));
+        .withColumn("value", inputPath.getDataset().col("status").equalTo("in-progress"));
     assertTrue(inputPath.getIdColumn().isPresent());
     final ElementPath argumentPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn().get())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputPath.getValueColumn())
+        .thisColumns(inputPath.getValueColumns())
         .singular(true)
         .build();
 
@@ -102,13 +93,12 @@ public class WhereFunctionTest {
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withStructTypeColumns(encounterStruct)
-        .withRow("Patient/abc1", RowFactory.create("Encounter/abc1", "in-progress"))
-        .withRow("Patient/abc2", RowFactory.create("Encounter/abc3", "in-progress"))
-        .withRow("Patient/abc3", RowFactory.create("Encounter/abc4", "in-progress"))
-        .withRow("Patient/abc4", null)
-        .withRow("Patient/abc5", null)
-        .buildWithStructValue();
+        .withColumn("id", DataTypes.StringType)
+        .withColumn("status", DataTypes.StringType)
+        .withRow("Patient/abc1", "Encounter/xyz1", "in-progress")
+        .withRow("Patient/abc2", "Encounter/xyz3", "in-progress")
+        .withRow("Patient/abc3", "Encounter/xyz4", "in-progress")
+        .build();
     assertThat(result)
         .selectResult()
         .hasRows(expectedDataset);
@@ -146,7 +136,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn().get())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputPath.getValueColumn())
+        .thisColumns(inputPath.getValueColumns())
         .singular(true)
         .build();
 
@@ -165,11 +155,8 @@ public class WhereFunctionTest {
         .withIdColumn()
         .withValueColumn(DataTypes.StringType)
         .withRow("Patient/abc1", "en")
-        .withRow("Patient/abc2", null)
         .withRow("Patient/abc3", "en")
         .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc4", null)
-        .withRow("Patient/abc5", null)
         .build();
     assertThat(result)
         .selectResult()
@@ -207,7 +194,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn().get())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputPath.getValueColumn())
+        .thisColumns(inputPath.getValueColumns())
         .singular(true)
         .build();
 

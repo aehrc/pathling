@@ -39,9 +39,11 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Date;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -283,8 +285,7 @@ public class ParserTest {
   public void testWhereWithAggregateFunction() {
     assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
         .selectResult()
-        .hasRows(allPatientsWithValue(null)
-            .changeValue(PATIENT_ID_9360820c, "female"));
+        .hasRows(Collections.singletonList(RowFactory.create(PATIENT_ID_9360820c, "female")));
   }
 
   /**
@@ -295,7 +296,7 @@ public class ParserTest {
   public void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Karina848').gender")
         .selectResult()
-        .hasRows(allPatientsWithValue(null).changeValue(PATIENT_ID_9360820c, "female"));
+        .hasRows(Collections.singletonList(RowFactory.create(PATIENT_ID_9360820c, "female")));
   }
 
   /**
@@ -308,7 +309,7 @@ public class ParserTest {
     // TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
         .selectResult()
-        .hasRows(allPatientsWithValue(null));
+        .hasRows(Collections.emptyList());
   }
 
   @Test
@@ -320,8 +321,7 @@ public class ParserTest {
         "where($this.reverseResolve(Condition.subject).code"
             + ".subsumedBy(http://snomed.info/sct|40055000) contains true).gender")
         .selectResult()
-        .hasRows(allPatientsWithValue(null)
-            .changeValue(PATIENT_ID_7001ad9c, "female"));
+        .hasRows(Collections.singletonList(RowFactory.create(PATIENT_ID_7001ad9c, "female")));
   }
 
   @Test
@@ -329,11 +329,13 @@ public class ParserTest {
 
     // TODO: Change to a non-trivial case?
     assertThatResultOf(
-        "reverseResolve(MedicationRequest.subject).where(\n"
-            + "                $this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\n"
-            + "            ).first().authoredOn")
+        "reverseResolve(MedicationRequest.subject).where("
+            + "$this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/"
+            + "(<< 416897008|Tumour necrosis factor alpha inhibitor product| "
+            + "OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)'"
+            + ")).authoredOn")
         .selectResult()
-        .hasRows(allPatientsWithValue(null));
+        .hasRows(Collections.emptyList());
   }
 
   @Test
@@ -343,7 +345,7 @@ public class ParserTest {
     assertThatResultOf("where($this.name.first().family in contact.name.where("
         + "$this.given contains 'Joe').first().family).gender")
         .selectResult().
-        hasRows(allPatientsWithValue(null));
+        hasRows(Collections.emptyList());
   }
 
   @Test

@@ -6,26 +6,24 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.convertRawResource;
 import static au.csiro.pathling.QueryHelpers.joinOnReference;
 import static au.csiro.pathling.QueryHelpers.union;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Strings.randomShortString;
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithIdAndValue;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Optional;
@@ -82,27 +80,6 @@ public class ResolveFunction implements NamedFunction {
   }
 
   @Nonnull
-  private FhirPath resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
-      @Nonnull final ResourceReader resourceReader, @Nonnull final FhirContext fhirContext,
-      @Nonnull final Collection<ResourceType> referenceTypes, final String expression) {
-    // If this is a monomorphic reference, we just need to retrieve the appropriate table and
-    // create a dataset with the full resources.
-    final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
-    final RuntimeResourceDefinition hapiDefinition = fhirContext
-        .getResourceDefinition(resourceType.toCode());
-    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
-
-    final DatasetWithIdAndValue targetDataset = convertRawResource(
-        resourceReader.read(resourceType));
-    final Dataset<Row> dataset = joinOnReference(referencePath, targetDataset.getDataset(),
-        targetDataset.getIdColumn(), JoinType.LEFT_OUTER);
-
-    final Optional<Column> inputId = referencePath.getIdColumn();
-    return new ResourcePath(expression, dataset, inputId, targetDataset.getValueColumn(),
-        referencePath.isSingular(), referencePath.getThisColumn(), definition);
-  }
-
-  @Nonnull
   private static FhirPath resolvePolymorphicReference(@Nonnull final ReferencePath referencePath,
       @Nonnull final ResourceReader resourceReader, @Nonnull final Set<ResourceType> referenceTypes,
       final String expression) {
@@ -112,14 +89,13 @@ public class ResolveFunction implements NamedFunction {
     final Collection<Dataset<Row>> typeDatasets = new ArrayList<>();
     for (final ResourceType referenceType : referenceTypes) {
       if (resourceReader.getAvailableResourceTypes().contains(referenceType)) {
-        // Unfortunately we can't include the full content of the resource, as Spark won't tolerate 
+        // Unfortunately we can't include the full content of the resource, as Spark won't tolerate
         // the structure of two rows in the same dataset being different.
-        final DatasetWithIdAndValue typeDatasetWithColumns = convertRawResource(
-            resourceReader.read(referenceType));
-        Dataset<Row> typeDataset = typeDatasetWithColumns.getDataset()
+        final Dataset<Row> typeDatasetWithColumns = resourceReader.read(referenceType);
+        final Column idColumn = typeDatasetWithColumns.col("id");
+        Dataset<Row> typeDataset = typeDatasetWithColumns
             .withColumn("type", lit(referenceType.toCode()));
-        typeDataset = typeDataset
-            .select(typeDatasetWithColumns.getIdColumn(), typeDataset.col("type"));
+        typeDataset = typeDataset.select(idColumn, typeDataset.col("type"));
 
         typeDatasets.add(typeDataset);
       }
@@ -127,18 +103,46 @@ public class ResolveFunction implements NamedFunction {
     checkUserInput(!typeDatasets.isEmpty(),
         "No types within reference are available, cannot resolve: " + referencePath
             .getExpression());
-    final Dataset<Row> targetDataset = union(typeDatasets);
-    final Column targetId = targetDataset.col(targetDataset.columns()[0]);
+    final String idColumnName = randomShortString();
+    final String targetColumnName = randomShortString();
+    Dataset<Row> targetDataset = union(typeDatasets);
+    Column targetId = targetDataset.col(targetDataset.columns()[0]);
+    Column targetType = targetDataset.col(targetDataset.columns()[1]);
+    targetDataset = targetDataset
+        .withColumn(idColumnName, targetId)
+        .withColumn(targetColumnName, targetType);
+    targetId = targetDataset.col(idColumnName);
+    targetType = targetDataset.col(targetColumnName);
+    targetDataset = targetDataset.select(targetId, targetType);
 
     checkNotNull(targetId);
-    final Column typeColumn = targetDataset.col("type");
     final Column valueColumn = referencePath.getValueColumn();
     final Dataset<Row> dataset = joinOnReference(referencePath, targetDataset, targetId,
         JoinType.LEFT_OUTER);
 
     final Optional<Column> inputId = referencePath.getIdColumn();
     return UntypedResourcePath.build(expression, dataset, inputId, valueColumn,
-        referencePath.isSingular(), referencePath.getThisColumn(), typeColumn, referenceTypes);
+        referencePath.isSingular(), referencePath.getThisColumns(), targetType, referenceTypes);
+  }
+
+  @Nonnull
+  private FhirPath resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
+      @Nonnull final ResourceReader resourceReader, @Nonnull final FhirContext fhirContext,
+      @Nonnull final Collection<ResourceType> referenceTypes, final String expression) {
+    // If this is a monomorphic reference, we just need to retrieve the appropriate table and
+    // create a dataset with the full resources.
+    final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
+    final ResourcePath resourcePath = ResourcePath
+        .build(fhirContext, resourceReader, resourceType, expression, referencePath.isSingular());
+
+    // Join the resource dataset to the reference dataset.
+    final Column resourceIdColumn = checkPresent(resourcePath.getIdColumn());
+    final Dataset<Row> dataset = joinOnReference(referencePath, resourcePath.getDataset(),
+        resourceIdColumn, JoinType.LEFT_OUTER);
+
+    final Optional<Column> inputId = referencePath.getIdColumn();
+    return resourcePath.copy(expression, dataset, inputId, resourcePath.getValueColumns(),
+        referencePath.isSingular(), referencePath.getThisColumns());
   }
 
 }

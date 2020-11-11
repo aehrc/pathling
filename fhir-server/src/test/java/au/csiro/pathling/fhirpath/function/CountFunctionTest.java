@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.helpers.SparkHelpers.getResourceIdAndValueColumns;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,7 +16,6 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
@@ -24,19 +24,17 @@ import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
+import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Collections;
-import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -59,7 +57,7 @@ class CountFunctionTest {
   @Test
   public void countsByResourceIdentity() {
     final Dataset<Row> patientDataset = new DatasetBuilder()
-        .withIdColumn()
+        .withIdColumn("id")
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
         .withRow("Patient/abc1", "female", true)
@@ -101,26 +99,22 @@ class CountFunctionTest {
 
   @Test
   public void countsByGrouping() {
-    final RuntimeResourceDefinition hapiDefinition = fhirContext
-        .getResourceDefinition(Patient.class);
-    final ResourceDefinition resourceDefinition = new ResourceDefinition(ResourceType.PATIENT,
-        hapiDefinition);
     final Dataset<Row> inputDataset = new DatasetBuilder()
-        .withIdColumn()
-        .withColumn("gender_value", DataTypes.StringType)
+        .withIdColumn("id")
+        .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withStructColumn("id", DataTypes.StringType)
-        .withStructColumn("gender", DataTypes.StringType)
-        .withStructColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/abc1", "female", RowFactory.create("Patient/abc1", "female", true))
-        .withRow("Patient/abc2", "female", RowFactory.create("Patient/abc2", "female", false))
-        .withRow("Patient/abc2", "female", RowFactory.create("Patient/abc3", "male", true))
-        .buildWithStructValue();
-    final Column idColumn = inputDataset.col("id");
-    final Column valueColumn = inputDataset.col("value");
-    final Column groupingColumn = inputDataset.col("gender_value");
-    final ResourcePath inputPath = new ResourcePath("Patient", inputDataset,
-        Optional.of(idColumn), valueColumn, false, Optional.empty(), resourceDefinition);
+        .withRow("Patient/abc1", "female", true)
+        .withRow("Patient/abc2", "female", false)
+        .withRow("Patient/abc2", "male", true)
+        .build();
+    final IdAndValueColumns idAndValueColumns = getResourceIdAndValueColumns(inputDataset);
+    final Column groupingColumn = inputDataset.col("gender");
+    final ResourcePath inputPath = new ResourcePathBuilder()
+        .resourceType(ResourceType.PATIENT)
+        .dataset(inputDataset)
+        .idColumn(idAndValueColumns.getId())
+        .valueColumns(idAndValueColumns.getValues())
+        .buildCustom();
 
     final ParserContext parserContext = new ParserContextBuilder()
         .groupingColumns(Collections.singletonList(groupingColumn))

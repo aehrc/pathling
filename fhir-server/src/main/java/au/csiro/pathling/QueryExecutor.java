@@ -14,7 +14,6 @@ import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
@@ -28,7 +27,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Contains functionality common to query executors.
@@ -93,34 +91,27 @@ public abstract class QueryExecutor {
   }
 
   @Nonnull
-  private ResourcePath buildInputContext(@Nonnull final ResourceType resourceType) {
-    // The expression is a single-item collection in the case of a non-aggregation parse, as the
-    // input context is each individual resource within the dataset.
-    return ResourcePath
-        .build(fhirContext, resourceReader, resourceType, resourceType.toCode(), true);
-  }
-
-  @Nonnull
-  protected ParserContext buildParserContext(@Nonnull final ResourceType resourceType) {
-    final ResourcePath inputContext = buildInputContext(resourceType);
-    checkPresent(inputContext.getIdColumn());
-
-    return new ParserContext(inputContext, fhirContext, sparkSession,
-        resourceReader, terminologyClient, terminologyClientFactory, Collections.emptyList());
-  }
-
-  @Nonnull
   protected static Dataset<Row> applyFilters(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Collection<FhirPath> filters) {
     // Get the value column from each filter expression, and combine them with AND logic.
     final Optional<Column> filterCondition = filters.stream()
-        .map(FhirPath::getValueColumn)
+        .flatMap(filter -> filter.getValueColumns().stream())
         .reduce(Column::and);
 
     // Return a Dataset filtered using the combined filter conditions.
     return filterCondition.isPresent()
            ? dataset.filter(filterCondition.get())
            : dataset;
+  }
+
+  protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext) {
+    return buildParserContext(inputContext, Collections.emptyList());
+  }
+
+  protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
+      @Nonnull final List<Column> groupingColumns) {
+    return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
+        terminologyClient, terminologyClientFactory, groupingColumns);
   }
 
 }

@@ -16,6 +16,7 @@ import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import com.google.common.collect.ImmutableSet;
 import java.text.SimpleDateFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.function.BiFunction;
@@ -52,8 +53,8 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   protected DateTimePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
-      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+      @Nonnull final Optional<List<Column>> thisColumns, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumns,
         fhirType);
   }
 

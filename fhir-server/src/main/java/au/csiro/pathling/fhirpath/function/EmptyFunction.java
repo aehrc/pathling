@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.count;
 import static org.apache.spark.sql.functions.when;
 
@@ -39,7 +40,13 @@ public class EmptyFunction extends AggregateFunction implements NamedFunction {
     final Function<Column, Column> empty = col -> when(count(col).equalTo(0), true)
         .otherwise(false);
 
-    return applyAggregationFunction(input.getContext(), inputPath, empty, expression,
+    // If we encounter a path with multiple value columns (e.g. a ResourcePath), we use coalesce to 
+    // convert it to a single value, null or otherwise.
+    final Column inputColumn = inputPath.getValueColumns().size() == 1
+                               ? inputPath.getValueColumns().get(0)
+                               : coalesce(inputPath.getValueColumns().toArray(new Column[0]));
+
+    return applyAggregationFunction(input.getContext(), inputPath, inputColumn, empty, expression,
         FHIRDefinedType.BOOLEAN);
   }
 

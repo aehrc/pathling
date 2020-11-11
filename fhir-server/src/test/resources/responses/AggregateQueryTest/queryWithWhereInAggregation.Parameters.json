@@ -22,7 +22,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S) and ((gender) = 'female')"
+          "valueString": "((gender) = 'female') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S)"
         }
       ]
     },
@@ -47,7 +47,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S) and ((gender) = 'male')"
+          "valueString": "((gender) = 'male') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S)"
         }
       ]
     },
@@ -122,7 +122,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S) and ((gender) = 'male')"
+          "valueString": "((gender) = 'male') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S)"
         }
       ]
     }

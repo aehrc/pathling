@@ -78,7 +78,7 @@ class ResolveFunctionTest {
         .buildDefined();
 
     final Dataset<Row> episodeOfCareDataset = new DatasetBuilder()
-        .withIdColumn()
+        .withIdColumn("id")
         .withValueColumn(DataTypes.StringType)
         .withRow("EpisodeOfCare/abc1", "planned")
         .withRow("EpisodeOfCare/abc2", "waitlist")
@@ -97,13 +97,13 @@ class ResolveFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withStructColumn("id", DataTypes.StringType)
-        .withStructColumn("status", DataTypes.StringType)
-        .withRow("Encounter/xyz1", RowFactory.create("EpisodeOfCare/abc1", "planned"))
-        .withRow("Encounter/xyz2", RowFactory.create("EpisodeOfCare/abc3", "active"))
-        .withRow("Encounter/xyz3", RowFactory.create("EpisodeOfCare/abc2", "waitlist"))
-        .withRow("Encounter/xyz4", RowFactory.create("EpisodeOfCare/abc2", "waitlist"))
-        .buildWithStructValue();
+        .withColumn("id", DataTypes.StringType)
+        .withColumn("status", DataTypes.StringType)
+        .withRow("Encounter/xyz1", "EpisodeOfCare/abc1", "planned")
+        .withRow("Encounter/xyz2", "EpisodeOfCare/abc3", "active")
+        .withRow("Encounter/xyz3", "EpisodeOfCare/abc2", "waitlist")
+        .withRow("Encounter/xyz4", "EpisodeOfCare/abc2", "waitlist")
+        .build();
     assertThat(result)
         .selectResult()
         .hasRows(expectedDataset);
@@ -134,7 +134,7 @@ class ResolveFunctionTest {
         .buildDefined();
 
     final Dataset<Row> patientDataset = new DatasetBuilder()
-        .withIdColumn()
+        .withIdColumn("id")
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
         .withRow("Patient/abc1", "female", true)
@@ -145,7 +145,7 @@ class ResolveFunctionTest {
         .thenReturn(patientDataset);
 
     final Dataset<Row> groupDataset = new DatasetBuilder()
-        .withIdColumn()
+        .withIdColumn("id")
         .withColumn("name", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
         .withRow("Group/def1", "Some group", true)
@@ -202,7 +202,7 @@ class ResolveFunctionTest {
         .buildDefined();
 
     final Dataset<Row> observationDataset = new DatasetBuilder()
-        .withIdColumn()
+        .withIdColumn("id")
         .withValueColumn(DataTypes.StringType)
         .withRow("Observation/abc1", "registered")
         .build();
@@ -210,7 +210,7 @@ class ResolveFunctionTest {
         .thenReturn(observationDataset);
 
     final Dataset<Row> clinicalImpressionDataset = new DatasetBuilder()
-        .withIdColumn()
+        .withIdColumn("id")
         .withValueColumn(DataTypes.StringType)
         .withRow("ClinicalImpression/def1", "in-progress")
         .build();

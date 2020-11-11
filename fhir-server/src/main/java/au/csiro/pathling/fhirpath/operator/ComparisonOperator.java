@@ -8,7 +8,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
-import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
+import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumns;
 import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
@@ -18,6 +18,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -62,10 +63,10 @@ public class ComparisonOperator implements Operator {
     final Comparable rightComparable = (Comparable) right;
     final Column valueColumn = leftComparable.getComparison(type).apply(rightComparable);
     final Optional<Column> idColumn = findIdColumn(left, right);
-    final Optional<Column> thisColumn = findThisColumn(left, right);
+    final Optional<List<Column>> thisColumns = findThisColumns(left, right);
 
     return ElementPath.build(expression, dataset, idColumn, valueColumn, true,
-        Optional.empty(), thisColumn, FHIRDefinedType.BOOLEAN);
+        Optional.empty(), thisColumns, FHIRDefinedType.BOOLEAN);
   }
 
 }

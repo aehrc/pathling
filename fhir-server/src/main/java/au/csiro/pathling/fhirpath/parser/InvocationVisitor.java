@@ -174,8 +174,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // The `$this` path will be the same as the input, but with a different expression and it will
       // be singular as it represents the current item from the collection.
       final FhirPath thisPath = nonLiteral
-          .copy(NamedFunction.THIS, input.getDataset(), input.getIdColumn(), input.getValueColumn(),
-              true, Optional.of(input.getValueColumn()));
+          .copy(NamedFunction.THIS, input.getDataset(), input.getIdColumn(),
+              input.getValueColumns(),
+              true, Optional.of(input.getValueColumns()));
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this` 
       // expression.
