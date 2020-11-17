@@ -10,7 +10,6 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -30,7 +29,7 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
 
   @SuppressWarnings("WeakerAccess")
   protected NullLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn) {
+      @Nonnull final Column idColumn) {
     // We put a dummy String value in here as a placeholder so that we can satisfy the nullability 
     // constraints within LiteralValue. It is never accessed.
     super(dataset, idColumn, new StringType(EXPRESSION));

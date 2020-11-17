@@ -74,7 +74,6 @@ public class DrillDownBuilder {
   private void addGroupings(final Collection<String> fhirPaths) {
     for (int i = 0; i < groupings.size(); i++) {
       final FhirPath grouping = groupings.get(i);
-      checkArgument(grouping.getIdColumn().isPresent(), "fhirPaths must all contain ID columns");
       final Optional<Type> label = labels.get(i);
       if (label.isPresent()) {
         final String literal = LiteralPath

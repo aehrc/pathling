@@ -6,12 +6,7 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.QueryHelpers.aliasColumns;
-
-import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
-import au.csiro.pathling.QueryHelpers.DatasetWithColumns;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
-import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -35,10 +30,10 @@ public abstract class NonLiteralPath implements FhirPath {
   protected final Dataset<Row> dataset;
 
   @Nonnull
-  protected final Optional<Column> idColumn;
+  protected final Column idColumn;
 
   @Nonnull
-  protected final List<Column> valueColumns;
+  protected final Column valueColumn;
 
   protected final boolean singular;
 
@@ -57,22 +52,19 @@ public abstract class NonLiteralPath implements FhirPath {
    * to the argument (which has problems relating to the generation of duplicate rows).
    */
   @Nonnull
-  protected Optional<List<Column>> thisColumns;
+  protected Optional<Column> thisColumn;
 
-  @SuppressWarnings("TypeMayBeWeakened")
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final List<Column> valueColumns,
-      final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
-      @Nonnull final Optional<List<Column>> thisColumns) {
-    final DatasetWithColumns datasetAndValues = initializeDatasetAndValues(
-        dataset, valueColumns);
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<Column> thisColumn) {
     this.expression = expression;
-    this.dataset = datasetAndValues.getDataset();
+    this.dataset = dataset;
     this.idColumn = idColumn;
-    this.valueColumns = datasetAndValues.getColumns();
+    this.valueColumn = valueColumn;
     this.singular = singular;
     this.foreignResource = foreignResource;
-    this.thisColumns = thisColumns;
+    this.thisColumn = thisColumn;
   }
 
   /**
@@ -82,13 +74,13 @@ public abstract class NonLiteralPath implements FhirPath {
    * @return a {@link Column}, if one was found
    */
   @Nonnull
-  public static Optional<List<Column>> findThisColumns(@Nonnull final Object... inputs) {
+  public static Optional<Column> findThisColumn(@Nonnull final Object... inputs) {
     return Stream.of(inputs)
         .filter(input -> input instanceof NonLiteralPath)
         .map(path -> (NonLiteralPath) path)
-        .filter(path -> path.getThisColumns().isPresent())
+        .filter(path -> path.getThisColumn().isPresent())
         .findFirst()
-        .flatMap(NonLiteralPath::getThisColumns);
+        .flatMap(NonLiteralPath::getThisColumn);
   }
 
   /**
@@ -100,15 +92,6 @@ public abstract class NonLiteralPath implements FhirPath {
   @Nonnull
   public abstract Optional<ElementDefinition> getChildElement(@Nonnull final String name);
 
-  @Nonnull
-  protected DatasetWithColumns initializeDatasetAndValues(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final List<Column> valueColumns) {
-    final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset, valueColumns, true);
-    final Dataset<Row> aliasedDataset = datasetWithColumnMap.getDataset();
-    final List<Column> aliasedValueColumns = datasetWithColumnMap.getMappedColumns(valueColumns);
-    return new DatasetWithColumns(aliasedDataset, aliasedValueColumns);
-  }
-
   /**
    * Creates a copy of this NonLiteralPath with an updated {@link Dataset}, ID and value {@link
    * Column}s.
@@ -116,15 +99,15 @@ public abstract class NonLiteralPath implements FhirPath {
    * @param expression an updated expression to describe the new NonLiteralPath
    * @param dataset the new Dataset that can be used to evaluate this NonLiteralPath against data
    * @param idColumn the new resource identity column
-   * @param valueColumns the new expression value columns
+   * @param valueColumn the new expression value column
    * @param singular the new singular value
-   * @param thisColumns a list of columns containing the collection being iterated, for cases where
-   * a path is being created to represent the {@code $this} keyword
+   * @param thisColumn a list of columns containing the collection being iterated, for cases where a
+   * path is being created to represent the {@code $this} keyword
    * @return a new instance of NonLiteralPath
    */
   @Nonnull
   public abstract NonLiteralPath copy(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-      @Nonnull Optional<Column> idColumn, @Nonnull List<Column> valueColumns, boolean singular,
-      @Nonnull Optional<List<Column>> thisColumns);
+      @Nonnull Column idColumn, @Nonnull Column valueColumn, boolean singular,
+      @Nonnull Optional<Column> thisColumn);
 
 }

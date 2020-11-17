@@ -20,11 +20,8 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -57,12 +54,12 @@ public class ResourcePathBuilder {
   private Column idColumn;
 
   @Nonnull
-  private List<Column> valueColumns;
+  private Column valueColumn;
 
   private boolean singular;
 
   @Nullable
-  private List<Column> thisColumns;
+  private Column thisColumn;
 
   public ResourcePathBuilder() {
     fhirContext = mock(FhirContext.class);
@@ -73,11 +70,9 @@ public class ResourcePathBuilder {
     resourceType = ResourceType.PATIENT;
     expression = "Patient";
     idColumn = dataset.col(dataset.columns()[0]);
-    valueColumns = Stream.of(dataset.columns())
-        .map(dataset::col)
-        .collect(Collectors.toList());
+    valueColumn = idColumn;
     singular = false;
-    thisColumns = null;
+    thisColumn = null;
   }
 
   @Nonnull
@@ -117,8 +112,8 @@ public class ResourcePathBuilder {
   }
 
   @Nonnull
-  public ResourcePathBuilder valueColumns(final List<Column> valueColumns) {
-    this.valueColumns = valueColumns;
+  public ResourcePathBuilder valueColumn(final Column valueColumn) {
+    this.valueColumn = valueColumn;
     return this;
   }
 
@@ -129,8 +124,8 @@ public class ResourcePathBuilder {
   }
 
   @Nonnull
-  public ResourcePathBuilder thisColumns(final List<Column> thisColumns) {
-    this.thisColumns = thisColumns;
+  public ResourcePathBuilder thisColumn(final Column thisColumn) {
+    this.thisColumn = thisColumn;
     return this;
   }
 
@@ -153,12 +148,12 @@ public class ResourcePathBuilder {
 
     try {
       final Method build = ResourcePath.class
-          .getDeclaredMethod("build", String.class, Dataset.class, Optional.class, List.class,
+          .getDeclaredMethod("build", String.class, Dataset.class, Column.class, Column.class,
               boolean.class, Optional.class, ResourceDefinition.class, Map.class);
       build.setAccessible(true);
       return (ResourcePath) build
-          .invoke(ResourcePath.class, expression, dataset, Optional.of(idColumn), valueColumns,
-              singular, Optional.ofNullable(thisColumns), definition, elementsToColumns);
+          .invoke(ResourcePath.class, expression, dataset, idColumn, valueColumn,
+              singular, Optional.ofNullable(thisColumn), definition, elementsToColumns);
     } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
       throw new RuntimeException("Problem building ResourcePath", e);
     }

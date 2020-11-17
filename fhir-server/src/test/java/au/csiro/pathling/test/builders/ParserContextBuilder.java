@@ -59,7 +59,7 @@ public class ParserContextBuilder {
 
   public ParserContextBuilder() {
     inputContext = mock(FhirPath.class);
-    when(inputContext.getIdColumn()).thenReturn(Optional.of(lit(null)));
+    when(inputContext.getIdColumn()).thenReturn(lit(null));
     when(inputContext.getDataset()).thenReturn(SparkHelpers.getSparkSession().emptyDataFrame());
     fhirContext = FhirHelpers.getFhirContext();
     sparkSession = SparkHelpers.getSparkSession();
@@ -81,7 +81,7 @@ public class ParserContextBuilder {
 
   @Nonnull
   public ParserContextBuilder idColumn(@Nonnull final Column idColumn) {
-    when(inputContext.getIdColumn()).thenReturn(Optional.of(idColumn));
+    when(inputContext.getIdColumn()).thenReturn(idColumn);
     return this;
   }
 

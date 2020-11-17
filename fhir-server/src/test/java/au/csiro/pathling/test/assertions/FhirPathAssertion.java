@@ -16,6 +16,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -36,14 +37,11 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
 
   @Nonnull
   public DatasetAssert selectResult() {
-    check(fhirPath.getIdColumn().isPresent());
-    final List<Column> selection = new ArrayList<>();
-    selection.add(fhirPath.getIdColumn().get());
-    selection.addAll(fhirPath.getValueColumns());
-    final Column[] selectionArray = selection.toArray(new Column[0]);
+    final Column[] selection = Arrays.asList(fhirPath.getIdColumn(), fhirPath.getValueColumn())
+        .toArray(new Column[0]);
     return new DatasetAssert(fhirPath.getDataset()
-        .select(selectionArray)
-        .orderBy(selectionArray));
+        .select(selection)
+        .orderBy(selection));
   }
 
 
@@ -55,10 +53,9 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   @Nonnull
   public DatasetAssert selectGroupingResult(@Nonnull final List<Column> groupingColumns,
       final boolean preserveOrder) {
-    check(fhirPath.getIdColumn().isEmpty());
     check(!groupingColumns.isEmpty());
     final ArrayList<Column> allColumnsList = new ArrayList<>(groupingColumns);
-    allColumnsList.addAll(fhirPath.getValueColumns());
+    allColumnsList.add(fhirPath.getValueColumn());
     final Column[] allColumns = allColumnsList.toArray(new Column[0]);
     return new DatasetAssert(preserveOrder
                              ? fhirPath.getDataset().select(allColumns)
@@ -68,12 +65,9 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
 
   @Nonnull
   public DatasetAssert selectResultPreserveOrder() {
-    check(fhirPath.getIdColumn().isPresent());
-    final List<Column> selection = new ArrayList<>();
-    selection.add(fhirPath.getIdColumn().get());
-    selection.addAll(fhirPath.getValueColumns());
-    final Column[] selectionArray = selection.toArray(new Column[0]);
-    return new DatasetAssert(fhirPath.getDataset().select(selectionArray));
+    final Column[] selection = Arrays.asList(fhirPath.getIdColumn(), fhirPath.getValueColumn())
+        .toArray(new Column[0]);
+    return new DatasetAssert(fhirPath.getDataset().select(selection));
   }
 
   @Nonnull

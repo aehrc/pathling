@@ -6,11 +6,10 @@
 
 package au.csiro.pathling.search;
 
-import static au.csiro.pathling.QueryHelpers.joinOnId;
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.errors.ErrorHandling.handleError;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.Configuration;
@@ -110,8 +109,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         .build(getFhirContext(), getResourceReader(), subjectResource, subjectResource.toCode(),
             true, true);
     final Dataset<Row> subjectDataset = currentContext.getDataset();
-    final Optional<Column> subjectIdColumn = currentContext.getIdColumn();
-    check(subjectIdColumn.isPresent());
+    final Column subjectIdColumn = currentContext.getIdColumn();
 
     final Dataset<Row> dataset;
 
@@ -136,8 +134,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           final FhirPath fhirPath = parser.parse(param.getValue());
           checkUserInput(fhirPath instanceof BooleanPath || fhirPath instanceof BooleanLiteralPath,
               "Filter expression must be of Boolean type: " + fhirPath.getExpression());
-          check(fhirPath.getValueColumns().size() == 1);
-          final Column filterValue = fhirPath.getValueColumns().get(0);
+          final Column filterValue = fhirPath.getValueColumn();
 
           // Add each expression to a list that will later be joined.
           fhirPaths.add(fhirPath);
@@ -150,14 +147,14 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           // We save away the first encountered ID column so that we can use it later to join the
           // subject resource dataset with the joined filter datasets.
           if (filterIdColumn == null) {
-            filterIdColumn = checkPresent(fhirPath.getIdColumn());
+            filterIdColumn = fhirPath.getIdColumn();
           }
 
           // Update the context to build the next expression from the same dataset.
           currentContext = currentContext
               .copy(currentContext.getExpression(), fhirPath.getDataset(), fhirPath.getIdColumn(),
-                  fhirPath.getValueColumns(), currentContext.isSingular(),
-                  currentContext.getThisColumns());
+                  fhirPath.getValueColumn(), currentContext.isSingular(),
+                  currentContext.getThisColumn());
         }
 
         // Combine all the columns at this level with AND logic.
@@ -170,7 +167,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       check(!fhirPaths.isEmpty());
 
       // Get the full resources which are present in the filtered dataset.
-      dataset = joinOnId(subjectDataset, subjectIdColumn.get(),
+      dataset = join(subjectDataset, subjectIdColumn,
           currentContext.getDataset().select(filterIdColumn), filterIdColumn, JoinType.LEFT_SEMI);
     }
 
@@ -203,7 +200,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         // subtract them from the dataset using a left anti-join.
         final Dataset<Row> exclude = resources.limit(theFromIndex)
             .select(resources.col("id").alias("excludeId"));
-        resources = joinOnId(resources, resources.col("id"), exclude, exclude.col("excludeId"),
+        resources = join(resources, resources.col("id"), exclude, exclude.col("excludeId"),
             JoinType.LEFT_ANTI);
       }
       // The dataset is trimmed to the requested size.

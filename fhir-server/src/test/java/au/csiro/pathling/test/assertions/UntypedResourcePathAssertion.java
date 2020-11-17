@@ -6,14 +6,11 @@
 
 package au.csiro.pathling.test.assertions;
 
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -34,15 +31,12 @@ public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResou
 
   @Nonnull
   public DatasetAssert selectUntypedResourceResult() {
-    final Column idColumn = checkPresent(fhirPath.getIdColumn());
-    final List<Column> selection = new ArrayList<>();
-    selection.add(idColumn);
-    selection.add(fhirPath.getTypeColumn());
-    selection.addAll(fhirPath.getValueColumns());
-    final Column[] selectionArray = selection.toArray(new Column[0]);
+    final Column[] selection = Arrays
+        .asList(fhirPath.getIdColumn(), fhirPath.getTypeColumn(), fhirPath.getValueColumn())
+        .toArray(new Column[0]);
     return new DatasetAssert(fhirPath.getDataset()
-        .select(selectionArray)
-        .orderBy(selectionArray));
+        .select(selection)
+        .orderBy(selection));
   }
 
   @Nonnull

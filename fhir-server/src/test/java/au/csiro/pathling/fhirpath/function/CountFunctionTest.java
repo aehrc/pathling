@@ -68,10 +68,9 @@ class CountFunctionTest {
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
-    assertTrue(inputPath.getIdColumn().isPresent());
 
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputPath.getIdColumn().get())
+        .idColumn(inputPath.getIdColumn())
         .inputExpression("Patient")
         .build();
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
@@ -113,7 +112,7 @@ class CountFunctionTest {
         .resourceType(ResourceType.PATIENT)
         .dataset(inputDataset)
         .idColumn(idAndValueColumns.getId())
-        .valueColumns(idAndValueColumns.getValues())
+        .valueColumn(idAndValueColumns.getId())
         .buildCustom();
 
     final ParserContext parserContext = new ParserContextBuilder()

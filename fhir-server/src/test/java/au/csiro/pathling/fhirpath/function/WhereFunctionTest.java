@@ -9,7 +9,6 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -23,7 +22,6 @@ import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -57,27 +55,24 @@ public class WhereFunctionTest {
         .withRow("Patient/abc5", null, null)
         .build();
     final Column idColumn = inputDataset.col(inputDataset.columns()[0]);
-    final List<Column> valueColumns = Arrays.asList(inputDataset.col(inputDataset.columns()[1]),
-        inputDataset.col(inputDataset.columns()[2]));
 
     final ResourcePath inputPath = new ResourcePathBuilder()
         .expression("reverseResolve(Encounter.subject)")
         .dataset(inputDataset)
         .idColumn(idColumn)
-        .valueColumns(valueColumns)
+        .valueColumn(idColumn)
         .buildCustom();
 
     // Build an expression which represents the argument to the function. We assume that the value
     // column from the input dataset is also present within the argument dataset.
     final Dataset<Row> argumentDataset = inputPath.getDataset()
         .withColumn("value", inputPath.getDataset().col("status").equalTo("in-progress"));
-    assertTrue(inputPath.getIdColumn().isPresent());
     final ElementPath argumentPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
-        .idColumn(inputPath.getIdColumn().get())
+        .idColumn(inputPath.getIdColumn())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumns(inputPath.getValueColumns())
+        .thisColumn(inputPath.getValueColumn())
         .singular(true)
         .build();
 
@@ -130,13 +125,12 @@ public class WhereFunctionTest {
     // Build an expression which represents the argument to the function.
     final Dataset<Row> argumentDataset = inputPath.getDataset()
         .withColumn("value", inputPath.getValueColumn().equalTo("en"));
-    assertTrue(inputPath.getIdColumn().isPresent());
     final ElementPath argumentExpression = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
-        .idColumn(inputPath.getIdColumn().get())
+        .idColumn(inputPath.getIdColumn())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumns(inputPath.getValueColumns())
+        .thisColumn(inputPath.getValueColumn())
         .singular(true)
         .build();
 
@@ -188,13 +182,12 @@ public class WhereFunctionTest {
     final Dataset<Row> argumentDataset = inputPath.getDataset()
         .withColumn("value",
             functions.when(inputPath.getValueColumn().equalTo("en"), null).otherwise(true));
-    assertTrue(inputPath.getIdColumn().isPresent());
     final ElementPath argumentPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
-        .idColumn(inputPath.getIdColumn().get())
+        .idColumn(inputPath.getIdColumn())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumns(inputPath.getValueColumns())
+        .thisColumn(inputPath.getValueColumn())
         .singular(true)
         .build();
 

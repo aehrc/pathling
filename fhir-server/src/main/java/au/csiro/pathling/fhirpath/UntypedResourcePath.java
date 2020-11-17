@@ -6,9 +6,10 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.QueryHelpers.aliasColumn;
+
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -41,11 +42,11 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
   private final Set<ResourceType> possibleTypes;
 
   private UntypedResourcePath(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final List<Column> valueColumns, final boolean singular,
-      @Nonnull final Optional<List<Column>> thisColumns, @Nonnull final Column typeColumn,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
-    super(expression, dataset, idColumn, valueColumns, singular, Optional.empty(), thisColumns);
+    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
     this.typeColumn = typeColumn;
     this.possibleTypes = possibleTypes;
   }
@@ -57,26 +58,18 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
    * resource
    * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
    * @param singular An indicator of whether this path represents a single-valued collection
-   * @param thisColumns collection values where this path originated from {@code $this}
+   * @param thisColumn collection values where this path originated from {@code $this}
    * @param typeColumn A {@link Column} within the dataset containing the resource type
    * @param possibleTypes A set of {@link ResourceType} objects that describe the different types
    * @return a shiny new UntypedResourcePath
    */
   public static UntypedResourcePath build(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<List<Column>> thisColumns, @Nonnull final Column typeColumn,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
-    return new UntypedResourcePath(expression, dataset, idColumn,
-        Collections.singletonList(valueColumn), singular, thisColumns, typeColumn, possibleTypes);
-  }
-
-  /**
-   * @return a {@link Column} within the dataset containing the resource reference
-   */
-  @Nonnull
-  public Column getValueColumn() {
-    return valueColumns.get(0);
+    return new UntypedResourcePath(expression, dataset, idColumn, valueColumn, singular,
+        thisColumn, typeColumn, possibleTypes);
   }
 
   @Nonnull
@@ -88,11 +81,12 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
   @Nonnull
   @Override
   public UntypedResourcePath copy(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final List<Column> valueColumns, final boolean singular,
-      @Nonnull final Optional<List<Column>> thisColumns) {
-    return new UntypedResourcePath(expression, dataset, idColumn, valueColumns, singular,
-        thisColumns, typeColumn, possibleTypes);
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
+    final DatasetWithColumn datasetWithColumn = aliasColumn(dataset, valueColumn);
+    return new UntypedResourcePath(expression, datasetWithColumn.getDataset(), idColumn,
+        datasetWithColumn.getColumn(), singular, thisColumn, typeColumn, possibleTypes);
   }
 
 }

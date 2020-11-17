@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.expressions.WindowSpec;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -57,13 +58,9 @@ public class MembershipOperator extends AggregateFunction implements Operator {
     checkUserInput(element.isSingular(),
         "Element operand used with " + type + " operator is not singular: " + element
             .getExpression());
-    checkUserInput(left.getValueColumns().size() == 1,
-        "Left operand is not supported for use with " + type + " operator");
-    checkUserInput(right.getValueColumns().size() == 1,
-        "Right operand is not supported for use with " + type + " operator");
     checkArgumentsAreComparable(input, type.toString());
-    final Column elementValue = element.getValueColumns().get(0);
-    final Column collectionValue = collection.getValueColumns().get(0);
+    final Column elementValue = element.getValueColumn();
+    final Column collectionValue = collection.getValueColumn();
 
     final String expression = left.getExpression() + " " + type + " " + right.getExpression();
     final Comparable leftComparable = (Comparable) left;
@@ -78,15 +75,16 @@ public class MembershipOperator extends AggregateFunction implements Operator {
         .when(collectionValue.isNull(), lit(false))
         .otherwise(equality);
 
+    // We need to join the datasets in order to access values from both operands.
+    final Dataset<Row> dataset = join(left, right, JoinType.LEFT_OUTER);
+
     // In order to reduce the result to a single Boolean, we take the max of the boolean equality
     // values.
-    final Column aggColumn = max(equalityWithNullChecks).as("_value");
+    final WindowSpec window = getWindowSpec(input.getContext());
+    final Column valueColumn = max(equalityWithNullChecks).over(window);
 
-    // We need to join the datasets in order to access values from both operands.
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
-
-    return applyAggregation(input.getContext(), dataset, Arrays.asList(left, right), aggColumn,
-        expression, FHIRDefinedType.BOOLEAN);
+    return buildResult(dataset, window, Arrays.asList(left, right), valueColumn, expression,
+        FHIRDefinedType.BOOLEAN);
   }
 
   /**

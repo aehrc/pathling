@@ -14,7 +14,6 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.*;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -38,10 +37,10 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
   protected DecimalPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
-      @Nonnull final Optional<List<Column>> thisColumns, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumns,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
         fhirType);
   }
 
@@ -129,8 +128,8 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
           : target.getValueColumn();
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getValueColumn(), targetValueColumn);
-      final Optional<Column> idColumn = findIdColumn(source, target);
-      final Optional<List<Column>> thisColumns = findThisColumns(source, target);
+      final Column idColumn = findIdColumn(source, target);
+      final Optional<Column> thisColumn = findThisColumn(source, target);
 
       switch (operation) {
         case ADDITION:
@@ -140,13 +139,13 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
           valueColumn = valueColumn.cast(getDecimalType());
           return ElementPath
               .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
-                  thisColumns,
+                  thisColumn,
                   fhirType);
         case MODULUS:
           valueColumn = valueColumn.cast(DataTypes.LongType);
           return ElementPath
               .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
-                  thisColumns,
+                  thisColumn,
                   FHIRDefinedType.INTEGER);
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);

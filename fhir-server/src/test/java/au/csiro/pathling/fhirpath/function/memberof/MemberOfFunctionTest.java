@@ -112,9 +112,8 @@ class MemberOfFunctionTest {
     when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
     // Prepare the inputs to the function.
-    assertTrue(inputExpression.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputExpression.getIdColumn().get())
+        .idColumn(inputExpression.getIdColumn())
         .terminologyClient(terminologyClient)
         .terminologyClientFactory(terminologyClientFactory)
         .build();

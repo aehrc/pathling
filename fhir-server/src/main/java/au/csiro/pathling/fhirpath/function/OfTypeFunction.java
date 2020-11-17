@@ -6,14 +6,13 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.joinOnReference;
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -50,12 +49,15 @@ public class OfTypeFunction implements NamedFunction {
 
     // Do a left outer join to the resource dataset using the reference in the untyped dataset - the
     // result will be null in the rows that are not of the resource type nominated.
-    final Dataset<Row> dataset = joinOnReference(inputPath, resourcePath, JoinType.LEFT_OUTER);
+    final Column referenceColumn = inputPath.getValueColumn().getField("reference");
+    final Dataset<Row> dataset = join(inputPath.getDataset(), referenceColumn,
+        resourcePath.getDataset(), resourcePath.getIdColumn(), JoinType.LEFT_OUTER);
 
     // Return a new resource path with the joined dataset, and the argument's value column.
-    final Optional<List<Column>> thisColumns = inputPath.getThisColumns();
-    return resourcePath.copy(expression, dataset, inputPath.getIdColumn(),
-        resourcePath.getValueColumns(), inputPath.isSingular(), thisColumns);
+    final Optional<Column> thisColumn = inputPath.getThisColumn();
+    return resourcePath
+        .copy(expression, dataset, inputPath.getIdColumn(), resourcePath.getValueColumn(),
+            inputPath.isSingular(), thisColumn);
   }
 
 }

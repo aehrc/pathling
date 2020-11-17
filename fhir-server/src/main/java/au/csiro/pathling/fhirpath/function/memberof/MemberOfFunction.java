@@ -68,7 +68,7 @@ public class MemberOfFunction implements NamedFunction {
     final ParserContext inputContext = input.getContext();
 
     final Dataset<Row> prevDataset = inputPath.getDataset();
-    final Optional<Column> prevIdColumn = inputPath.getIdColumn();
+    final Column prevIdColumn = inputPath.getIdColumn();
     final Column prevValueColumn = inputPath.getValueColumn();
 
     // Prepare the data which will be used within the map operation. All of these things must be
@@ -109,7 +109,7 @@ public class MemberOfFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
     return ElementPath
         .build(expression, dataset, prevIdColumn, valueColumn, inputPath.isSingular(),
-            inputPath.getForeignResource(), inputPath.getThisColumns(), FHIRDefinedType.BOOLEAN);
+            inputPath.getForeignResource(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

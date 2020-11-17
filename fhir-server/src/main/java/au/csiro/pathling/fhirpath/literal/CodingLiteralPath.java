@@ -36,7 +36,7 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
 
   @SuppressWarnings("WeakerAccess")
   protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
+      @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof Coding);
   }

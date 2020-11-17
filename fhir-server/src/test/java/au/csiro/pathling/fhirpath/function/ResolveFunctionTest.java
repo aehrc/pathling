@@ -282,9 +282,8 @@ class ResolveFunctionTest {
 
   @Nonnull
   private NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
-    assertTrue(inputPath.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputPath.getIdColumn().get())
+        .idColumn(inputPath.getIdColumn())
         .resourceReader(mockReader)
         .build();
     return new NamedFunctionInput(parserContext, inputPath, Collections.emptyList());

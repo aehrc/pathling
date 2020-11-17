@@ -6,15 +6,13 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.QueryHelpers.aliasColumns;
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.FhirPath;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -61,7 +59,7 @@ public abstract class LiteralPath implements FhirPath {
 
   @Getter
   @Nonnull
-  protected Optional<Column> idColumn;
+  protected Column idColumn;
 
   @Getter
   @Nonnull
@@ -73,18 +71,12 @@ public abstract class LiteralPath implements FhirPath {
   @Getter
   protected Type literalValue;
 
-  protected LiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
+  protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Type literalValue) {
+    this.idColumn = idColumn;
     this.literalValue = literalValue;
-    final Column valueColumn = buildValueColumn();
-    final List<Column> columns = new ArrayList<>();
-    idColumn.ifPresent(columns::add);
-    columns.add(valueColumn);
-    final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset, columns, true);
-    this.dataset = datasetWithColumnMap.getDataset();
-    final Map<Column, Column> columnMap = datasetWithColumnMap.getColumnMap();
-    this.idColumn = idColumn.flatMap(column -> Optional.of(columnMap.get(column)));
-    this.valueColumn = columnMap.get(valueColumn);
+    this.dataset = dataset;
+    this.valueColumn = buildValueColumn();
   }
 
   /**
@@ -97,12 +89,12 @@ public abstract class LiteralPath implements FhirPath {
    */
   @Nonnull
   public static String expressionFor(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
+      @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
     final Class<? extends LiteralPath> literalPathClass = FHIR_TYPE_TO_FHIRPATH_TYPE
         .get(FHIRDefinedType.fromCode(literalValue.fhirType()));
     try {
       final Constructor<? extends LiteralPath> constructor = literalPathClass
-          .getDeclaredConstructor(Dataset.class, Optional.class, Type.class);
+          .getDeclaredConstructor(Dataset.class, Column.class, Type.class);
       final LiteralPath literalPath = constructor.newInstance(dataset, idColumn, literalValue);
       return literalPath.getExpression();
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
@@ -134,12 +126,6 @@ public abstract class LiteralPath implements FhirPath {
   @Nonnull
   public Column buildValueColumn() {
     return lit(getJavaValue());
-  }
-
-  @Nonnull
-  @Override
-  public List<Column> getValueColumns() {
-    return Collections.singletonList(valueColumn);
   }
 
 }

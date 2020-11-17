@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.joinOnId;
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.FhirHelpers.getFhirContext;
 import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
@@ -108,12 +108,11 @@ class ReverseResolveFunctionTest {
     final Column idColumn = idAndValueColumns.getId();
     final Column valueColumn = idAndValueColumns.getValues().get(0);
 
-    assertTrue(originPath.getIdColumn().isPresent());
-    final Dataset<Row> argumentDataset = joinOnId(originPath.getDataset(),
-        originPath.getIdColumn().get(), argumentDatasetPreJoin, idColumn, JoinType.LEFT_OUTER);
+    final Dataset<Row> argumentDataset = join(originPath.getDataset(),
+        originPath.getIdColumn(), argumentDatasetPreJoin, idColumn, JoinType.LEFT_OUTER);
     final FhirPath argumentPath = new ElementPathBuilder()
         .dataset(argumentDataset)
-        .idColumn(originPath.getIdColumn().get())
+        .idColumn(originPath.getIdColumn())
         .valueColumn(valueColumn)
         .expression("Encounter.subject")
         .singular(false)
@@ -121,9 +120,8 @@ class ReverseResolveFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    assertTrue(inputPath.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputPath.getIdColumn().get())
+        .idColumn(inputPath.getIdColumn())
         .resourceReader(mockReader)
         .inputExpression("Patient")
         .build();

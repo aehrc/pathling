@@ -72,7 +72,7 @@ class OfTypeFunctionTest {
     final Column typeColumn = inputDataset.col("type");
     final Column valueColumn = inputDataset.col(inputDataset.columns()[2]);
     final UntypedResourcePath inputPath = UntypedResourcePath
-        .build("subject.resolve()", inputDataset, Optional.of(idColumn), valueColumn, true,
+        .build("subject.resolve()", inputDataset, idColumn, valueColumn, true,
             Optional.empty(), typeColumn,
             new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
 
@@ -88,10 +88,9 @@ class OfTypeFunctionTest {
         .thenReturn(argumentDataset);
     final ResourcePath argumentPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
-    assertTrue(inputPath.getIdColumn().isPresent());
 
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputPath.getIdColumn().get())
+        .idColumn(inputPath.getIdColumn())
         .build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));

@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.function.subsumes;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.collect_set;
@@ -23,7 +22,6 @@ import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -100,9 +98,10 @@ public class SubsumesFunction implements NamedFunction {
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
-    return ElementPath.build(expression, resultDataset, Optional.of(idColumn), valueColumn,
-        inputFhirPath.isSingular(), inputFhirPath.getForeignResource(),
-        inputFhirPath.getThisColumns(), FHIRDefinedType.BOOLEAN);
+    return ElementPath
+        .build(expression, resultDataset, idColumn, valueColumn, inputFhirPath.isSingular(),
+            inputFhirPath.getForeignResource(), inputFhirPath.getThisColumn(),
+            FHIRDefinedType.BOOLEAN);
   }
 
   /**
@@ -141,8 +140,7 @@ public class SubsumesFunction implements NamedFunction {
    */
   @Nonnull
   private Dataset<Row> toInputDataset(@Nonnull final FhirPath fhirPath) {
-    check(fhirPath.getValueColumns().size() == 1);
-    final Column valueColumn = fhirPath.getValueColumns().get(0);
+    final Column valueColumn = fhirPath.getValueColumn();
 
     assert (isCodingOrCodeableConcept(fhirPath));
 
@@ -151,8 +149,7 @@ public class SubsumesFunction implements NamedFunction {
                                   ? valueColumn.getField(FIELD_CODING)
                                   : array(valueColumn);
 
-    check(fhirPath.getIdColumn().isPresent());
-    return expressionDataset.select(fhirPath.getIdColumn().get().alias(COL_ID),
+    return expressionDataset.select(fhirPath.getIdColumn().alias(COL_ID),
         when(valueColumn.isNotNull(), codingArrayCol)
             .otherwise(null)
             .alias(COL_CODING_SET)
@@ -175,8 +172,7 @@ public class SubsumesFunction implements NamedFunction {
 
   @Nonnull
   private Dataset<Row> toArgDataset(@Nonnull final FhirPath fhirPath) {
-    check(fhirPath.getValueColumns().size() == 1);
-    final Column valueColumn = fhirPath.getValueColumns().get(0);
+    final Column valueColumn = fhirPath.getValueColumn();
 
     assert (isCodingOrCodeableConcept(fhirPath));
 
@@ -185,9 +181,8 @@ public class SubsumesFunction implements NamedFunction {
                              ? explode_outer(valueColumn.getField(FIELD_CODING))
                              : valueColumn;
 
-    check(fhirPath.getIdColumn().isPresent());
     final Dataset<Row> systemAndCodeDataset = expressionDataset
-        .select(fhirPath.getIdColumn().get().alias(COL_ID), codingCol.alias(COL_CODING));
+        .select(fhirPath.getIdColumn().alias(COL_ID), codingCol.alias(COL_CODING));
 
     return systemAndCodeDataset
         .groupBy(systemAndCodeDataset.col(COL_ID))

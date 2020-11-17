@@ -31,7 +31,7 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
 
   @SuppressWarnings("WeakerAccess")
   protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
+      @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof BooleanType);
   }

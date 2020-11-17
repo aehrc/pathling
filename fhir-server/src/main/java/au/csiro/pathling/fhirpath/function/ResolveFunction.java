@@ -6,13 +6,12 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.joinOnReference;
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.QueryHelpers.union;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomShortString;
 import static org.apache.spark.sql.functions.lit;
@@ -26,7 +25,6 @@ import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -117,12 +115,13 @@ public class ResolveFunction implements NamedFunction {
 
     checkNotNull(targetId);
     final Column valueColumn = referencePath.getValueColumn();
-    final Dataset<Row> dataset = joinOnReference(referencePath, targetDataset, targetId,
-        JoinType.LEFT_OUTER);
+    final Column referenceColumn = valueColumn.getField("reference");
+    final Dataset<Row> dataset = join(referencePath.getDataset(), referenceColumn,
+        targetDataset, targetId, JoinType.LEFT_OUTER);
 
-    final Optional<Column> inputId = referencePath.getIdColumn();
+    final Column inputId = referencePath.getIdColumn();
     return UntypedResourcePath.build(expression, dataset, inputId, valueColumn,
-        referencePath.isSingular(), referencePath.getThisColumns(), targetType, referenceTypes);
+        referencePath.isSingular(), referencePath.getThisColumn(), targetType, referenceTypes);
   }
 
   @Nonnull
@@ -136,13 +135,14 @@ public class ResolveFunction implements NamedFunction {
         .build(fhirContext, resourceReader, resourceType, expression, referencePath.isSingular());
 
     // Join the resource dataset to the reference dataset.
-    final Column resourceIdColumn = checkPresent(resourcePath.getIdColumn());
-    final Dataset<Row> dataset = joinOnReference(referencePath, resourcePath.getDataset(),
-        resourceIdColumn, JoinType.LEFT_OUTER);
+    final Column resourceIdColumn = resourcePath.getIdColumn();
+    final Column referenceColumn = referencePath.getValueColumn().getField("reference");
+    final Dataset<Row> dataset = join(referencePath.getDataset(), referenceColumn,
+        resourcePath.getDataset(), resourceIdColumn, JoinType.LEFT_OUTER);
 
-    final Optional<Column> inputId = referencePath.getIdColumn();
-    return resourcePath.copy(expression, dataset, inputId, resourcePath.getValueColumns(),
-        referencePath.isSingular(), referencePath.getThisColumns());
+    final Column inputId = referencePath.getIdColumn();
+    return resourcePath.copy(expression, dataset, inputId, resourcePath.getValueColumn(),
+        referencePath.isSingular(), referencePath.getThisColumn());
   }
 
 }

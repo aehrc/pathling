@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.explode_outer;
 
@@ -64,29 +63,22 @@ public class PathTraversalOperator {
       final ResourcePath resourcePath = (ResourcePath) left;
       field = resourcePath.getElementColumn(right);
     } else {
-      check(left.getValueColumns().size() == 1);
-      field = left.getValueColumns().get(0).getField(right);
+      field = left.getValueColumn().getField(right);
     }
 
     // If the element has a max cardinality of more than one, it will need to be "exploded" out into
     // multiple rows.
     final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
     final Column valueColumn;
-    final Dataset<Row> result;
     if (maxCardinalityOfOne) {
       valueColumn = field;
-      result = leftDataset;
     } else {
-      // When using explode to generate rows for an array based column, we need to use `withColumn`
-      // as nesting of these expressions is not permitted within Spark.
-      final String valueColumnName = "_" + right + "_exploded";
-      result = leftDataset.withColumn(valueColumnName, explode_outer(field));
-      valueColumn = result.col(valueColumnName);
+      valueColumn = explode_outer(field);
     }
     final boolean singular = left.isSingular() && maxCardinalityOfOne;
 
-    return ElementPath.build(expression, result, left.getIdColumn(), valueColumn, singular,
-        left.getForeignResource(), left.getThisColumns(), childDefinition);
+    return ElementPath.build(expression, leftDataset, left.getIdColumn(), valueColumn, singular,
+        left.getForeignResource(), left.getThisColumn(), childDefinition);
   }
 
 }

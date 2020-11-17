@@ -6,11 +6,12 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.QueryHelpers.aliasColumn;
 import static au.csiro.pathling.QueryHelpers.aliasColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
-import au.csiro.pathling.QueryHelpers.DatasetWithColumns;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
@@ -40,11 +41,11 @@ public class ResourcePath extends NonLiteralPath {
   private final Map<String, Column> elementsToColumns;
 
   protected ResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final List<Column> valueColumns,
-      final boolean singular, @Nonnull final Optional<List<Column>> thisColumns,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final Optional<Column> thisColumn,
       @Nonnull final ResourceDefinition definition,
       @Nonnull final Map<String, Column> elementsToColumns) {
-    super(expression, dataset, idColumn, valueColumns, singular, Optional.empty(), thisColumns);
+    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
     this.definition = definition;
     this.elementsToColumns = elementsToColumns;
   }
@@ -63,31 +64,7 @@ public class ResourcePath extends NonLiteralPath {
   public static ResourcePath build(@Nonnull final FhirContext fhirContext,
       @Nonnull final ResourceReader resourceReader, @Nonnull final ResourceType resourceType,
       @Nonnull final String expression, final boolean singular) {
-    final String resourceCode = resourceType.toCode();
-    final RuntimeResourceDefinition hapiDefinition = fhirContext
-        .getResourceDefinition(resourceCode);
-    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
-    final Dataset<Row> dataset = resourceReader.read(resourceType);
-
-    final Column idColumn = dataset.col("id");
-    final List<Column> valueColumns = Arrays.stream(dataset.columns())
-        .map(dataset::col)
-        .collect(Collectors.toList());
-
-    final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset, valueColumns, false);
-    final Dataset<Row> aliasedDataset = datasetWithColumnMap.getDataset();
-    final Optional<Column> aliasedIdColumn = Optional
-        .of(datasetWithColumnMap.getColumnMap().get(idColumn));
-    final List<Column> aliasedValueColumns = datasetWithColumnMap.getMappedColumns(valueColumns);
-    final Map<String, Column> elementsToColumns = new HashMap<>();
-
-    // Build an element to column map, which can be used to retrieve columns by element name when
-    // performing path traversal.
-    datasetWithColumnMap.getColumnMap()
-        .forEach((source, target) -> elementsToColumns.put(source.toString(), target));
-
-    return new ResourcePath(expression, aliasedDataset, aliasedIdColumn, aliasedValueColumns,
-        singular, Optional.empty(), definition, elementsToColumns);
+    return build(fhirContext, resourceReader, resourceType, expression, singular, false);
   }
 
   /**
@@ -101,50 +78,61 @@ public class ResourcePath extends NonLiteralPath {
    * @param skipAliasing set to true to skip column aliasing
    * @return A shiny new ResourcePath
    */
-  @SuppressWarnings("DuplicatedCode")
   @Nonnull
   public static ResourcePath build(@Nonnull final FhirContext fhirContext,
       @Nonnull final ResourceReader resourceReader, @Nonnull final ResourceType resourceType,
       @Nonnull final String expression, final boolean singular, final boolean skipAliasing) {
-    if (!skipAliasing) {
-      return build(fhirContext, resourceReader, resourceType, expression, singular);
-    }
+
+    // Get the resource definition from HAPI.
     final String resourceCode = resourceType.toCode();
     final RuntimeResourceDefinition hapiDefinition = fhirContext
         .getResourceDefinition(resourceCode);
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
+
+    // Retrieve the dataset for the resource type using the supplied resource reader.
     final Dataset<Row> dataset = resourceReader.read(resourceType);
 
     final Column idColumn = dataset.col("id");
-    final List<Column> valueColumns = Arrays.stream(dataset.columns())
+    final List<Column> allColumns = Arrays.stream(dataset.columns())
         .map(dataset::col)
         .collect(Collectors.toList());
-    final Map<String, Column> elementsToColumns = new HashMap<>();
-    Stream.of(dataset.columns())
-        .forEach(columnName -> elementsToColumns.put(columnName, dataset.col(columnName)));
 
-    return new ResourcePath(expression, dataset, Optional.of(idColumn), valueColumns, singular,
+    final Dataset<Row> finalDataset;
+    final Column finalIdColumn;
+    final Map<String, Column> elementsToColumns = new HashMap<>();
+
+    if (skipAliasing) {
+      // If aliasing is disabled, the dataset will contain columns with the original element names.
+      // This is used for contexts where we need the original column names for encoding (e.g.
+      // search).
+      finalDataset = dataset;
+      finalIdColumn = idColumn;
+      Stream.of(dataset.columns())
+          .forEach(columnName -> elementsToColumns.put(columnName, dataset.col(columnName)));
+    } else {
+      // If aliasing is enabled, all columns in the dataset will be aliased, and the original
+      // columns will be dropped. This is to avoid column name clashes when doing joins.
+      final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset, allColumns, false);
+      finalDataset = datasetWithColumnMap.getDataset();
+      finalIdColumn = datasetWithColumnMap.getColumnMap().get(idColumn);
+      datasetWithColumnMap.getColumnMap()
+          .forEach((source, target) -> elementsToColumns.put(source.toString(), target));
+    }
+
+    // We use the ID column as the value column for a ResourcePath.
+    return new ResourcePath(expression, finalDataset, finalIdColumn, finalIdColumn, singular,
         Optional.empty(), definition, elementsToColumns);
   }
 
   @Nonnull
   private static ResourcePath build(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final List<Column> valueColumns, final boolean singular,
-      @Nonnull final Optional<List<Column>> thisColumns,
-      @Nonnull final ResourceDefinition definition,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final ResourceDefinition definition,
       @Nonnull final Map<String, Column> elementsToColumns) {
-    return new ResourcePath(expression, dataset, idColumn, valueColumns, singular,
-        thisColumns, definition, elementsToColumns);
-  }
-
-  @Nonnull
-  @Override
-  protected DatasetWithColumns initializeDatasetAndValues(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final List<Column> valueColumns) {
-    // We override the default dataset initialisation within NonLiteralPath - replacing it with
-    // context-aware initialisation in the builder methods.
-    return new DatasetWithColumns(dataset, valueColumns);
+    final DatasetWithColumn datasetWithColumn = aliasColumn(dataset, valueColumn);
+    return new ResourcePath(expression, datasetWithColumn.getDataset(), idColumn,
+        datasetWithColumn.getColumn(), singular, thisColumn, definition, elementsToColumns);
   }
 
   /**
@@ -174,10 +162,10 @@ public class ResourcePath extends NonLiteralPath {
   @Nonnull
   @Override
   public ResourcePath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final List<Column> valueColumns,
-      final boolean singular, @Nonnull final Optional<List<Column>> thisColumns) {
-    return build(expression, dataset, idColumn, valueColumns, singular, thisColumns,
-        definition, elementsToColumns);
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
+    return build(expression, dataset, idColumn, valueColumn, singular, thisColumn, definition,
+        elementsToColumns);
   }
 
 }

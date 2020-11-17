@@ -15,7 +15,6 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
-import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,7 +49,7 @@ public class ElementPathBuilder {
   private ResourcePath foreignResource;
 
   @Nullable
-  private List<Column> thisColumns;
+  private Column thisColumn;
 
   @Nonnull
   private ElementDefinition definition;
@@ -116,8 +115,8 @@ public class ElementPathBuilder {
   }
 
   @Nonnull
-  public ElementPathBuilder thisColumns(@Nonnull final List<Column> thisColumns) {
-    this.thisColumns = thisColumns;
+  public ElementPathBuilder thisColumn(@Nonnull final Column thisColumn) {
+    this.thisColumn = thisColumn;
     return this;
   }
 
@@ -130,15 +129,15 @@ public class ElementPathBuilder {
   @Nonnull
   public ElementPath build() {
     return ElementPath
-        .build(expression, dataset, Optional.of(idColumn), valueColumn, singular,
-            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumns), fhirType);
+        .build(expression, dataset, idColumn, valueColumn, singular,
+            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), fhirType);
   }
 
   @Nonnull
   public ElementPath buildDefined() {
     return ElementPath
-        .build(expression, dataset, Optional.of(idColumn), valueColumn, singular,
-            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumns), definition);
+        .build(expression, dataset, idColumn, valueColumn, singular,
+            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), definition);
   }
 
 }
