@@ -6,11 +6,14 @@
 
 package au.csiro.pathling.fhirpath.function.memberof;
 
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Strings.randomShortString;
 import static org.apache.spark.sql.functions.hash;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -67,9 +70,8 @@ public class MemberOfFunction implements NamedFunction {
     final StringLiteralPath argument = (StringLiteralPath) input.getArguments().get(0);
     final ParserContext inputContext = input.getContext();
 
-    final Dataset<Row> prevDataset = inputPath.getDataset();
-    final Column prevIdColumn = inputPath.getIdColumn();
-    final Column prevValueColumn = inputPath.getValueColumn();
+    final Column idColumn = inputPath.getIdColumn();
+    final Column conceptColumn = inputPath.getValueColumn();
 
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
@@ -85,30 +87,37 @@ public class MemberOfFunction implements NamedFunction {
         new MemberOfMapper(MDC.get("requestId"), terminologyClientFactory, valueSetUri,
             fhirType));
 
+    final Dataset<Row> dataset = inputPath.getDataset();
+    final Column conceptHashColumn = hash(conceptColumn);
+    final String resultAlias = randomShortString();
+    final String hashAlias = randomShortString();
+
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.
-    final Column prevValueHashColumn = hash(prevValueColumn);
-    final Dataset results = prevDataset
-        .select(prevValueHashColumn, prevValueColumn)
+    final Dataset<Row> results = dataset
+        .select(conceptHashColumn, conceptColumn)
         .dropDuplicates()
-        .filter(prevValueColumn.isNotNull())
-        .mapPartitions(mapper, Encoders.bean(MemberOfResult.class));
-    Column valueColumn = results.col("result");
-    final Column resultHashColumn = results.col("hash");
+        .filter(conceptColumn.isNotNull())
+        .mapPartitions(mapper, Encoders.bean(MemberOfResult.class))
+        .toDF();
+    final Dataset<Row> aliasedResults = results
+        .select(results.col("result").alias(resultAlias), results.col("hash").alias(hashAlias));
+    final Column resultColumn = aliasedResults.col(resultAlias);
+    final Column resultHashColumn = aliasedResults.col(hashAlias);
 
-    // We then join the input dataset to the validated codes, and select the validation result
-    // as the new value.
-    final Dataset<Row> dataset = prevDataset
-        .join(results, prevValueHashColumn.equalTo(resultHashColumn), "left_outer");
+    // We then join the input dataset to the validated codes, and select the validation result as
+    // the new value.
+    final Dataset<Row> finalDataset = join(dataset, conceptHashColumn, aliasedResults,
+        resultHashColumn, JoinType.LEFT_OUTER);
 
     // The conditional expression around the value column is required to deal with nulls. This
     // function should only ever return true or false.
-    valueColumn = when(valueColumn.isNull(), false).otherwise(valueColumn);
+    @Nonnull final Column valueColumn = when(resultColumn.isNull(), false).otherwise(resultColumn);
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
     return ElementPath
-        .build(expression, dataset, prevIdColumn, valueColumn, inputPath.isSingular(),
+        .build(expression, finalDataset, idColumn, valueColumn, inputPath.isSingular(),
             inputPath.getForeignResource(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 

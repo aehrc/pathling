@@ -19,7 +19,6 @@ import au.csiro.pathling.test.DefaultAnswer;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -55,7 +54,7 @@ public class ParserContextBuilder {
   private TerminologyClientFactory terminologyClientFactory;
 
   @Nonnull
-  private List<Column> groupingColumns;
+  private Optional<List<Column>> groupingColumns;
 
   public ParserContextBuilder() {
     inputContext = mock(FhirPath.class);
@@ -64,7 +63,7 @@ public class ParserContextBuilder {
     fhirContext = FhirHelpers.getFhirContext();
     sparkSession = SparkHelpers.getSparkSession();
     resourceReader = Mockito.mock(ResourceReader.class, new DefaultAnswer());
-    groupingColumns = Collections.emptyList();
+    groupingColumns = Optional.empty();
   }
 
   @Nonnull
@@ -125,7 +124,7 @@ public class ParserContextBuilder {
 
   @Nonnull
   public ParserContextBuilder groupingColumns(@Nonnull final List<Column> groupingColumns) {
-    this.groupingColumns = groupingColumns;
+    this.groupingColumns = Optional.of(groupingColumns);
     return this;
   }
 

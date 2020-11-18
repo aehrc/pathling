@@ -80,17 +80,21 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     final ParseResult filterResult = parseFilters(inputContext, query.getFilters());
     final ParseResult groupingResult = parseGroupings(
         filterResult.getCurrentContext(), query.getGroupings());
-    final List<Column> groupingColumns = groupingResult.getFhirPaths().stream()
+    final Optional<List<Column>> groupingColumns = Optional.of(groupingResult.getFhirPaths()
+        .stream()
         .map(FhirPath::getValueColumn)
-        .collect(Collectors.toList());
+        .collect(Collectors.toList()));
 
     // Apply filters.
     final Dataset<Row> filtered = applyFilters(groupingResult.currentContext.getDataset(),
         filterResult.getFhirPaths());
 
     // Parse and apply the aggregation expressions.
+    final ResourcePath aggregationContext = groupingResult.getCurrentContext()
+        .copy(inputContext.getExpression(), filtered, inputContext.getIdColumn(),
+            inputContext.getValueColumn(), false, Optional.empty());
     final ParseResult aggregationResult = parseAggregations(query.getAggregations(),
-        groupingResult.getCurrentContext(), groupingColumns);
+        aggregationContext, groupingColumns);
     final List<Column> aggregationColumns = aggregationResult.getFhirPaths().stream()
         .map(FhirPath::getValueColumn)
         .collect(Collectors.toList());
@@ -98,7 +102,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     // The final column selection will be the grouping columns, followed by the aggregation
     // columns.
     final List<Column> finalSelection = new ArrayList<>();
-    finalSelection.addAll(groupingColumns);
+    groupingColumns.ifPresent(finalSelection::addAll);
     finalSelection.addAll(aggregationColumns);
     final Dataset<Row> finalDataset = aggregationResult.getCurrentContext().getDataset()
         .select(finalSelection.toArray(new Column[0]));
@@ -119,15 +123,15 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
       final Parser parser = new Parser(parserContext);
       final FhirPath result = parser.parse(grouping.getExpression());
 
-      // Each grouping expression must evaluate to a Materializable path, or a user error will
-      // be thrown. There is no requirement for it to be singular, multiple values will result
-      // in the resource being counted within multiple different groupings.
+      // Each grouping expression must evaluate to a Materializable path, or a user error will be
+      // thrown. There is no requirement for it to be singular, multiple values will result in the
+      // resource being counted within multiple different groupings.
       checkUserInput(result instanceof Materializable,
           "Grouping expression is not of a supported type: " + grouping.getExpression());
 
       results.add(result);
       currentContext = currentContext.copy(inputContext.getExpression(), result.getDataset(),
-          result.getIdColumn(), result.getValueColumn(), inputContext.isSingular(),
+          inputContext.getIdColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
           inputContext.getThisColumn());
     }
 
@@ -154,7 +158,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
       results.add(result);
       currentContext = currentContext.copy(inputContext.getExpression(), result.getDataset(),
-          result.getIdColumn(), result.getValueColumn(), inputContext.isSingular(),
+          inputContext.getIdColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
           inputContext.getThisColumn());
     }
 
@@ -163,7 +167,8 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
   @Nonnull
   private ParseResult parseAggregations(@Nonnull final Iterable<Aggregation> aggregations,
-      @Nonnull final ResourcePath inputContext, @Nonnull final List<Column> groupingColumns) {
+      @Nonnull final ResourcePath inputContext,
+      @Nonnull final Optional<List<Column>> groupingColumns) {
     ResourcePath currentContext = inputContext;
     final List<FhirPath> results = new ArrayList<>();
 
@@ -182,7 +187,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
       results.add(result);
       currentContext = currentContext.copy(inputContext.getExpression(), result.getDataset(),
-          result.getIdColumn(), result.getValueColumn(), inputContext.isSingular(),
+          inputContext.getIdColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
           inputContext.getThisColumn());
     }
 

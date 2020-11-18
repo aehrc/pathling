@@ -13,7 +13,6 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -74,11 +73,11 @@ public abstract class QueryExecutor {
   }
 
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext) {
-    return buildParserContext(inputContext, Collections.emptyList());
+    return buildParserContext(inputContext, Optional.empty());
   }
 
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
-      @Nonnull final List<Column> groupingColumns) {
+      @Nonnull final Optional<List<Column>> groupingColumns) {
     return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
         terminologyClient, terminologyClientFactory, groupingColumns);
   }

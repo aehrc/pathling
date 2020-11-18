@@ -10,8 +10,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Strings.randomShortString;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -72,15 +70,9 @@ public abstract class QueryHelpers {
 
     // Create an aliased column for each of the new columns, and add it to the selection.
     for (final Column column : columns) {
-      final String alias;
-      // If the selection already contains the column, we don't add a new column to the selection.
-      if (selection.contains(column)) {
-        alias = column.toString();
-      } else {
-        alias = randomShortString();
-        final Column aliasedColumn = column.alias(alias);
-        selection.add(aliasedColumn);
-      }
+      final String alias = randomShortString();
+      final Column aliasedColumn = column.alias(alias);
+      selection.add(aliasedColumn);
       aliasToSourceColumn.put(alias, column);
     }
 
@@ -128,8 +120,21 @@ public abstract class QueryHelpers {
         .reduce(Column::and)
         .orElseThrow();
 
-    final Dataset<Row> trimmedRight = applySelection(right, Arrays.asList(aliasedLeft.columns()));
-    return aliasedLeft.join(trimmedRight, joinCondition, joinType.getSparkName());
+    // Preserve the columns within the join conditions within the right dataset.
+    final List<String> rightColumnNames = rightColumns.stream()
+        .map(Column::toString)
+        .collect(Collectors.toList());
+
+    // Exclude the columns on the right hand side of the join conditions from the left dataset.
+    final Dataset<Row> trimmedLeft = applySelection(aliasedLeft, Collections.emptyList(),
+        rightColumnNames);
+
+    // The right dataset will only contain columns that were not in the left dataset, with the 
+    // exception of the columns on the right hand side of the join conditions.
+    final Dataset<Row> trimmedRight = applySelection(right, rightColumnNames,
+        Arrays.asList(aliasedLeft.columns()));
+
+    return trimmedLeft.join(trimmedRight, joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -162,21 +167,8 @@ public abstract class QueryHelpers {
   @Nonnull
   public static Dataset<Row> join(@Nonnull final FhirPath left, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
-    // If one of the operands is a literal, we don't need to do the join.
-    if (left instanceof LiteralPath && right instanceof LiteralPath) {
-      // If both of the operands are literal, just return one of the datasets.
-      return left.getDataset();
-    } else if (left instanceof LiteralPath || right instanceof LiteralPath) {
-      // If one of the operands is literal, return the dataset of the non-literal path.
-      return Stream.of(left, right)
-          .filter(operand -> operand instanceof NonLiteralPath)
-          .map(FhirPath::getDataset)
-          .findFirst()
-          .orElseThrow();
-    } else {
-      return join(left.getDataset(), left.getIdColumn(), right.getDataset(), right.getIdColumn(),
-          joinType);
-    }
+    return join(left.getDataset(), left.getIdColumn(), right.getDataset(), right.getIdColumn(),
+        joinType);
   }
 
   /**
@@ -225,9 +217,9 @@ public abstract class QueryHelpers {
 
   @Nonnull
   private static Dataset<Row> applySelection(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Collection<String> excludes) {
+      @Nonnull final Collection<String> includes, @Nonnull final Collection<String> excludes) {
     return dataset.select(Stream.of(dataset.columns())
-        .filter(column -> !excludes.contains(column))
+        .filter(column -> includes.contains(column) || !excludes.contains(column))
         .map(dataset::col)
         .toArray(Column[]::new));
   }

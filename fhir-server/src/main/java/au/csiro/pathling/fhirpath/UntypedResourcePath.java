@@ -7,9 +7,12 @@
 package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.aliasColumn;
+import static au.csiro.pathling.QueryHelpers.aliasColumns;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -68,8 +71,15 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
-    return new UntypedResourcePath(expression, dataset, idColumn, valueColumn, singular,
-        thisColumn, typeColumn, possibleTypes);
+
+    final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset,
+        Arrays.asList(valueColumn, typeColumn), true);
+    final Dataset<Row> finalDataset = datasetWithColumnMap.getDataset();
+    final Column finalValueColumn = datasetWithColumnMap.getColumnMap().get(valueColumn);
+    final Column finalTypeColumn = datasetWithColumnMap.getColumnMap().get(typeColumn);
+
+    return new UntypedResourcePath(expression, finalDataset, idColumn, finalValueColumn, singular,
+        thisColumn, finalTypeColumn, possibleTypes);
   }
 
   @Nonnull

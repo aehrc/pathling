@@ -19,6 +19,7 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -48,7 +49,7 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
     final Column inputIdColumn = inputPath.getIdColumn();
     final Column inputValueColumn = inputPath.getValueColumn();
-    final List<Column> groupingColumns = input.getContext().getGroupingColumns();
+    final Optional<List<Column>> groupingColumns = input.getContext().getGroupingColumns();
 
     final Dataset<Row> dataset;
 
@@ -56,12 +57,12 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     // from the dataset.
     if (inputPath instanceof ResourcePath) {
       final WindowSpec window;
-      if (groupingColumns.isEmpty()) {
+      if (groupingColumns.isEmpty() || groupingColumns.get().isEmpty()) {
         window = Window.partitionBy(inputIdColumn).orderBy(inputIdColumn);
       } else {
         final List<Column> partitionBy = new ArrayList<>();
         partitionBy.add(inputIdColumn);
-        partitionBy.addAll(groupingColumns);
+        partitionBy.addAll(groupingColumns.get());
         final Column[] partitionByArray = partitionBy.toArray(new Column[0]);
         window = Window.partitionBy(partitionByArray).orderBy(partitionByArray);
       }
@@ -74,13 +75,12 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
 
     // Create a column representing the count, taking into account that an empty collection should
     // produce a count of zero.
-    final WindowSpec window = getWindowSpec(input.getContext());
-    final Column countColumn = count(inputValueColumn).over(window);
+    final Optional<WindowSpec> window = getWindowSpec(input.getContext());
+    final Column countColumn = columnOver(count(inputValueColumn), window);
     final Column valueColumn = when(countColumn.isNull(), 0L).otherwise(countColumn);
-    final DatasetWithColumn datasetWithColumn = aliasColumn(dataset, valueColumn);
 
-    return buildResult(datasetWithColumn.getDataset(), window, inputPath,
-        datasetWithColumn.getColumn(), expression, FHIRDefinedType.UNSIGNEDINT);
+    return buildResult(dataset, window, inputPath, valueColumn, expression,
+        FHIRDefinedType.UNSIGNEDINT);
   }
 
 }

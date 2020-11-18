@@ -6,11 +6,9 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.QueryHelpers.aliasColumn;
 import static au.csiro.pathling.QueryHelpers.aliasColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.ResourceReader;
@@ -124,17 +122,6 @@ public class ResourcePath extends NonLiteralPath {
         Optional.empty(), definition, elementsToColumns);
   }
 
-  @Nonnull
-  private static ResourcePath build(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn, @Nonnull final ResourceDefinition definition,
-      @Nonnull final Map<String, Column> elementsToColumns) {
-    final DatasetWithColumn datasetWithColumn = aliasColumn(dataset, valueColumn);
-    return new ResourcePath(expression, datasetWithColumn.getDataset(), idColumn,
-        datasetWithColumn.getColumn(), singular, thisColumn, definition, elementsToColumns);
-  }
-
   /**
    * @param elementName the name of the element
    * @return the {@link Column} within the dataset pertaining to this element
@@ -164,8 +151,8 @@ public class ResourcePath extends NonLiteralPath {
   public ResourcePath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    return build(expression, dataset, idColumn, valueColumn, singular, thisColumn, definition,
-        elementsToColumns);
+    return new ResourcePath(expression, dataset, idColumn, valueColumn, singular, thisColumn,
+        definition, elementsToColumns);
   }
 
 }

@@ -78,7 +78,7 @@ public class ParserContext {
    * data will be aggregated using them rather than the resource identity.
    */
   @Nonnull
-  private final List<Column> groupingColumns;
+  private final Optional<List<Column>> groupingColumns;
 
   /**
    * When within the context of function arguments, this is the {@link FhirPath} that represents the
@@ -103,7 +103,7 @@ public class ParserContext {
       @Nonnull final SparkSession sparkSession, @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyClient> terminologyClient,
       @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
-      @Nonnull final List<Column> groupingColumns) {
+      @Nonnull final Optional<List<Column>> groupingColumns) {
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;

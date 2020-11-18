@@ -12,8 +12,11 @@ import static org.apache.spark.sql.functions.first;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.expressions.WindowSpec;
 
 /**
@@ -36,11 +39,13 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
     checkNoArguments("first", input);
 
     final NonLiteralPath inputPath = input.getInput();
+    final Column valueColumn = inputPath.getValueColumn();
+    final Dataset<Row> dataset = inputPath.getDataset();
     final String expression = expressionFromInput(input, NAME);
 
-    final WindowSpec window = getWindowSpec(input.getContext());
-    final Column valueColumn = first(inputPath.getValueColumn(), true).over(window);
+    final Optional<WindowSpec> window = getWindowSpec(input.getContext());
+    final Column finalValueColumn = columnOver(first(valueColumn, true), window);
 
-    return buildResult(inputPath.getDataset(), window, inputPath, valueColumn, expression);
+    return buildResult(dataset, window, inputPath, finalValueColumn, expression);
   }
 }

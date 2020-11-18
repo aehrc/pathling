@@ -32,13 +32,43 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public abstract class AggregateFunction {
 
+  /**
+   * Get a {@link WindowSpec} appropriate for creating aggregation columns within the specified
+   * {@link ParserContext}.
+   *
+   * @param context the current ParserContext
+   * @return a WindowSpec, or the absence of one (which indicates that columns need to be scoped to
+   * all rows)
+   */
   @Nonnull
-  protected static WindowSpec getWindowSpec(@Nonnull final ParserContext context) {
-    final Column[] groupingColumns = context.getGroupingColumns().toArray(new Column[0]);
-    final Column idColumn = context.getInputContext().getIdColumn();
-    return (groupingColumns.length > 0
-            ? Window.partitionBy(groupingColumns).orderBy(groupingColumns)
-            : Window.partitionBy(idColumn).orderBy(idColumn));
+  protected static Optional<WindowSpec> getWindowSpec(@Nonnull final ParserContext context) {
+    if (context.getGroupingColumns().isPresent()) {
+      if (context.getGroupingColumns().get().size() == 0) {
+        // If there are no grouping columns, return an empty result to signify that the aggregation
+        // should be computed over all rows.
+        return Optional.empty();
+      }
+      final Column[] groupingColumns = context.getGroupingColumns().get().toArray(new Column[0]);
+      return Optional.of(Window.partitionBy(groupingColumns).orderBy(groupingColumns));
+    } else {
+      final Column idColumn = context.getInputContext().getIdColumn();
+      return Optional.of(Window.partitionBy(idColumn).orderBy(idColumn));
+    }
+  }
+
+  /**
+   * Create a windowing column using the specified (optional) {@link WindowSpec}.
+   *
+   * @param column the column to be transformed
+   * @param window the optional WindowSpec
+   * @return a new column with the WindowSpec applied
+   */
+  @Nonnull
+  protected static Column columnOver(@Nonnull final Column column,
+      @Nonnull final Optional<WindowSpec> window) {
+    return window.isPresent()
+           ? column.over(window.get())
+           : column.over();
   }
 
   /**
@@ -53,7 +83,7 @@ public abstract class AggregateFunction {
    */
   @Nonnull
   protected NonLiteralPath buildResult(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final WindowSpec window, @Nonnull final NonLiteralPath input,
+      @Nonnull final Optional<WindowSpec> window, @Nonnull final NonLiteralPath input,
       @Nonnull final Column valueColumn, @Nonnull final String expression) {
 
     return buildResult(dataset, window, Collections.singletonList(input), valueColumn, expression,
@@ -72,7 +102,7 @@ public abstract class AggregateFunction {
    */
   @Nonnull
   protected ElementPath buildResult(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final WindowSpec window, @Nonnull final FhirPath input,
+      @Nonnull final Optional<WindowSpec> window, @Nonnull final FhirPath input,
       @Nonnull final Column valueColumn, @Nonnull final String expression,
       @Nonnull final FHIRDefinedType fhirType) {
 
@@ -93,19 +123,19 @@ public abstract class AggregateFunction {
    */
   @Nonnull
   protected ElementPath buildResult(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final WindowSpec window, @Nonnull final Collection<FhirPath> inputs,
+      @Nonnull final Optional<WindowSpec> window, @Nonnull final Collection<FhirPath> inputs,
       @Nonnull final Column valueColumn, @Nonnull final String expression,
       @Nonnull final FHIRDefinedType fhirType) {
 
     return buildResult(dataset, window, inputs, valueColumn, expression,
-        // create the result as an ElementPath of given FhirType
+        // Create the result as an ElementPath of the given FHIR type.
         (exp, ds, id, value, singular, thisColumn) -> ElementPath
             .build(exp, ds, id, value, true, Optional.empty(), thisColumn, fhirType));
   }
 
   @Nonnull
   private <T extends FhirPath> T buildResult(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final WindowSpec window, @Nonnull final Collection<FhirPath> inputs,
+      @Nonnull final Optional<WindowSpec> window, @Nonnull final Collection<FhirPath> inputs,
       @Nonnull final Column valueColumn, @Nonnull final String expression,
       @Nonnull final ResultPathFactory<T> resultPathFactory) {
 
@@ -115,14 +145,24 @@ public abstract class AggregateFunction {
     // Get any this columns that may be present in the inputs.
     final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(inputs);
 
+    // Alias the value column, to ensure it gets executed over the results before filtering.
+    final DatasetWithColumn datasetWithValueColumn = aliasColumn(dataset, valueColumn);
+    final Dataset<Row> datasetWithValue = datasetWithValueColumn.getDataset();
+    final Column finalValueColumn = datasetWithValueColumn.getColumn();
+
     // Filter the result to contain a single row for each partition.
-    final DatasetWithColumn datasetWithColumn = aliasColumn(dataset,
-        row_number().over(window).equalTo(1));
-    final Dataset<Row> finalDataset = datasetWithColumn.getDataset()
-        .filter(datasetWithColumn.getColumn());
+    final Dataset<Row> finalDataset;
+    if (window.isPresent()) {
+      final Column rowNumber = columnOver(row_number(), window);
+      final DatasetWithColumn datasetWithColumn = aliasColumn(datasetWithValue,
+          rowNumber.equalTo(1));
+      finalDataset = datasetWithColumn.getDataset().filter(datasetWithColumn.getColumn());
+    } else {
+      finalDataset = datasetWithValue.limit(1);
+    }
 
     return resultPathFactory
-        .create(expression, finalDataset, idColumn, valueColumn, true, thisColumn);
+        .create(expression, finalDataset, idColumn, finalValueColumn, true, thisColumn);
   }
 
   /**

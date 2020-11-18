@@ -19,6 +19,7 @@ import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.function.AggregateFunction;
 import java.util.Arrays;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -80,8 +81,8 @@ public class MembershipOperator extends AggregateFunction implements Operator {
 
     // In order to reduce the result to a single Boolean, we take the max of the boolean equality
     // values.
-    final WindowSpec window = getWindowSpec(input.getContext());
-    final Column valueColumn = max(equalityWithNullChecks).over(window);
+    final Optional<WindowSpec> window = getWindowSpec(input.getContext());
+    final Column valueColumn = columnOver(max(equalityWithNullChecks), window);
 
     return buildResult(dataset, window, Arrays.asList(left, right), valueColumn, expression,
         FHIRDefinedType.BOOLEAN);
