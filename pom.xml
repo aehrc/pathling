@@ -38,7 +38,7 @@
 
   <properties>
     <project.majorVersion>2</project.majorVersion>
-    <hapiFhirVersion>4.2.0</hapiFhirVersion>
+    <hapiFhirVersion>5.2.0</hapiFhirVersion>
     <sparkVersion>2.4.7</sparkVersion>
     <sparkScalaVersion>2.11</sparkScalaVersion>
     <dockerJavaVersion>3.2.5</dockerJavaVersion>
