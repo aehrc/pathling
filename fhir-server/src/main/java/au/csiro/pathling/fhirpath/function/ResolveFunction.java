@@ -13,7 +13,7 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Strings.randomShortString;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
@@ -101,8 +101,8 @@ public class ResolveFunction implements NamedFunction {
     checkUserInput(!typeDatasets.isEmpty(),
         "No types within reference are available, cannot resolve: " + referencePath
             .getExpression());
-    final String idColumnName = randomShortString();
-    final String targetColumnName = randomShortString();
+    final String idColumnName = randomAlias();
+    final String targetColumnName = randomAlias();
     Dataset<Row> targetDataset = union(typeDatasets);
     Column targetId = targetDataset.col(targetDataset.columns()[0]);
     Column targetType = targetDataset.col(targetDataset.columns()[1]);
@@ -114,14 +114,13 @@ public class ResolveFunction implements NamedFunction {
     targetDataset = targetDataset.select(targetId, targetType);
 
     checkNotNull(targetId);
-    final Column valueColumn = referencePath.getValueColumn();
-    final Column referenceColumn = valueColumn.getField("reference");
+    final Column referenceColumn = referencePath.getReferenceColumn();
     final Dataset<Row> dataset = join(referencePath.getDataset(), referenceColumn,
         targetDataset, targetId, JoinType.LEFT_OUTER);
 
     final Column inputId = referencePath.getIdColumn();
-    return UntypedResourcePath.build(expression, dataset, inputId, valueColumn,
-        referencePath.isSingular(), referencePath.getThisColumn(), targetType, referenceTypes);
+    return UntypedResourcePath
+        .build(referencePath, expression, dataset, inputId, targetType, referenceTypes);
   }
 
   @Nonnull
@@ -136,7 +135,7 @@ public class ResolveFunction implements NamedFunction {
 
     // Join the resource dataset to the reference dataset.
     final Column resourceIdColumn = resourcePath.getIdColumn();
-    final Column referenceColumn = referencePath.getValueColumn().getField("reference");
+    final Column referenceColumn = referencePath.getReferenceColumn();
     final Dataset<Row> dataset = join(referencePath.getDataset(), referenceColumn,
         resourcePath.getDataset(), resourceIdColumn, JoinType.LEFT_OUTER);
 

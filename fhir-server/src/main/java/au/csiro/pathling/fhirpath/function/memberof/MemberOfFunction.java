@@ -9,7 +9,7 @@ package au.csiro.pathling.fhirpath.function.memberof;
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Strings.randomShortString;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.hash;
 import static org.apache.spark.sql.functions.when;
 
@@ -89,8 +89,8 @@ public class MemberOfFunction implements NamedFunction {
 
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column conceptHashColumn = hash(conceptColumn);
-    final String resultAlias = randomShortString();
-    final String hashAlias = randomShortString();
+    final String resultAlias = randomAlias();
+    final String hashAlias = randomAlias();
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.

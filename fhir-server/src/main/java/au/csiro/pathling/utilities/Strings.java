@@ -7,6 +7,8 @@
 package au.csiro.pathling.utilities;
 
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 
 /**
@@ -16,9 +18,11 @@ import javax.annotation.Nonnull;
  */
 public abstract class Strings {
 
+  private static final Pattern ALIAS_PATTERN = Pattern.compile("_[a-z0-9]{1,6}");
+
   /**
-   * @param value A String value
-   * @return The string surrounded by parentheses
+   * @param value a String value
+   * @return the string surrounded by parentheses
    */
   @Nonnull
   public static String parentheses(@Nonnull final String value) {
@@ -26,8 +30,8 @@ public abstract class Strings {
   }
 
   /**
-   * @param value A String surrounded by single quotes
-   * @return The unquoted String
+   * @param value a String surrounded by single quotes
+   * @return the unquoted String
    */
   @Nonnull
   public static String unSingleQuote(@Nonnull final String value) {
@@ -35,12 +39,21 @@ public abstract class Strings {
   }
 
   /**
-   * @return A short, random String
+   * @return a short, random String for use as a column alias
    */
   @Nonnull
-  public static String randomShortString() {
+  public static String randomAlias() {
     final int randomNumber = Math.abs(new Random().nextInt());
-    return Integer.toString(randomNumber, Character.MAX_RADIX);
+    return "_" + Integer.toString(randomNumber, Character.MAX_RADIX);
+  }
+
+  /**
+   * @param input a column name
+   * @return true if the column name looks like a randomly generated alias
+   */
+  public static boolean looksLikeAlias(@Nonnull final CharSequence input) {
+    final Matcher matcher = ALIAS_PATTERN.matcher(input);
+    return matcher.matches();
   }
 
 }

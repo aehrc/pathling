@@ -6,26 +6,17 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.aliasColumn;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static org.apache.spark.sql.functions.count;
-import static org.apache.spark.sql.functions.row_number;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.expressions.Window;
-import org.apache.spark.sql.expressions.WindowSpec;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -47,40 +38,30 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     checkNoArguments("count", input);
     final NonLiteralPath inputPath = input.getInput();
     final String expression = expressionFromInput(input, NAME);
-    final Column inputIdColumn = inputPath.getIdColumn();
-    final Column inputValueColumn = inputPath.getValueColumn();
-    final Optional<List<Column>> groupingColumns = input.getContext().getGroupingColumns();
 
-    final Dataset<Row> dataset;
-
-    // If the input is a ResourcePath, we need to make sure that we are counting distinct resources
-    // from the dataset.
+    final Function<Column, Column> countFunction;
+    final Column subjectColumn;
     if (inputPath instanceof ResourcePath) {
-      final WindowSpec window;
-      if (groupingColumns.isEmpty() || groupingColumns.get().isEmpty()) {
-        window = Window.partitionBy(inputIdColumn).orderBy(inputIdColumn);
-      } else {
-        final List<Column> partitionBy = new ArrayList<>();
-        partitionBy.add(inputIdColumn);
-        partitionBy.addAll(groupingColumns.get());
-        final Column[] partitionByArray = partitionBy.toArray(new Column[0]);
-        window = Window.partitionBy(partitionByArray).orderBy(partitionByArray);
-      }
-      final DatasetWithColumn datasetWithColumn = aliasColumn(inputPath.getDataset(),
-          row_number().over(window).equalTo(1));
-      dataset = datasetWithColumn.getDataset().filter(datasetWithColumn.getColumn());
+      // When we are counting resources, we use the distinct count to account for the fact that
+      // there may be duplicate IDs in the dataset.
+      countFunction = functions::countDistinct;
+      // The ID column is used as the input for the distinct count.
+      subjectColumn = inputPath.getIdColumn();
     } else {
-      dataset = inputPath.getDataset();
+      // When we are counting elements, we use a non-distinct count, to account for the fact that it
+      // is valid to have multiple elements with the same value.
+      countFunction = functions::count;
+      // The current value column is used for the input to the non-distinct count.
+      subjectColumn = inputPath.getValueColumn();
     }
 
-    // Create a column representing the count, taking into account that an empty collection should
-    // produce a count of zero.
-    final Optional<WindowSpec> window = getWindowSpec(input.getContext());
-    final Column countColumn = columnOver(count(inputValueColumn), window);
-    final Column valueColumn = when(countColumn.isNull(), 0L).otherwise(countColumn);
+    // According to the FHIRPath specification, the count function must return 0 when invoked on an
+    // empty collection.
+    final Column valueColumn = when(countFunction.apply(subjectColumn).isNull(), 0L)
+        .otherwise(countFunction.apply(subjectColumn));
 
-    return buildResult(dataset, window, inputPath, valueColumn, expression,
-        FHIRDefinedType.UNSIGNEDINT);
+    return buildResult(inputPath.getDataset(), input.getContext(), inputPath, valueColumn,
+        expression, FHIRDefinedType.UNSIGNEDINT);
   }
 
 }

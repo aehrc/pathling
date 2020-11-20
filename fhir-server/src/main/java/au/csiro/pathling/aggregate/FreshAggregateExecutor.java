@@ -130,9 +130,10 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
           "Grouping expression is not of a supported type: " + grouping.getExpression());
 
       results.add(result);
-      currentContext = currentContext.copy(inputContext.getExpression(), result.getDataset(),
-          inputContext.getIdColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
-          inputContext.getThisColumn());
+      currentContext = currentContext
+          .copy(inputContext.getExpression(), result.getDataset(), inputContext.getIdColumn(),
+              inputContext.getValueColumn(), inputContext.isSingular(),
+              inputContext.getThisColumn());
     }
 
     return new ParseResult(results, currentContext);

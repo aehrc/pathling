@@ -6,8 +6,6 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
-
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
@@ -128,7 +126,7 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
           : target.getValueColumn();
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getValueColumn(), targetValueColumn);
-      final Column idColumn = findIdColumn(source, target);
+      final Column idColumn = source.getIdColumn();
       final Optional<Column> thisColumn = findThisColumn(source, target);
 
       switch (operation) {

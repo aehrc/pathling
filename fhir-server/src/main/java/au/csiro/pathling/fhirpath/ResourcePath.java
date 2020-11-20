@@ -6,15 +6,20 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.QueryHelpers.aliasColumns;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.QueryHelpers.aliasAllColumns;
+import static au.csiro.pathling.QueryHelpers.createColumn;
+import static org.apache.spark.sql.functions.col;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.*;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -22,6 +27,7 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -90,14 +96,10 @@ public class ResourcePath extends NonLiteralPath {
     // Retrieve the dataset for the resource type using the supplied resource reader.
     final Dataset<Row> dataset = resourceReader.read(resourceType);
 
-    final Column idColumn = dataset.col("id");
-    final List<Column> allColumns = Arrays.stream(dataset.columns())
-        .map(dataset::col)
-        .collect(Collectors.toList());
-
-    final Dataset<Row> finalDataset;
+    final Column idColumn = col("id");
     final Column finalIdColumn;
-    final Map<String, Column> elementsToColumns = new HashMap<>();
+    final Dataset<Row> finalDataset;
+    final Map<String, Column> elementsToColumns;
 
     if (skipAliasing) {
       // If aliasing is disabled, the dataset will contain columns with the original element names.
@@ -105,16 +107,17 @@ public class ResourcePath extends NonLiteralPath {
       // search).
       finalDataset = dataset;
       finalIdColumn = idColumn;
-      Stream.of(dataset.columns())
-          .forEach(columnName -> elementsToColumns.put(columnName, dataset.col(columnName)));
+      elementsToColumns = Stream.of(dataset.columns())
+          .collect(Collectors.toMap(Function.identity(), functions::col, (a, b) -> null));
     } else {
       // If aliasing is enabled, all columns in the dataset will be aliased, and the original
       // columns will be dropped. This is to avoid column name clashes when doing joins.
-      final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset, allColumns, false);
+      final DatasetWithColumnMap datasetWithColumnMap = aliasAllColumns(dataset);
       finalDataset = datasetWithColumnMap.getDataset();
-      finalIdColumn = datasetWithColumnMap.getColumnMap().get(idColumn);
-      datasetWithColumnMap.getColumnMap()
-          .forEach((source, target) -> elementsToColumns.put(source.toString(), target));
+      final Map<Column, Column> columnMap = datasetWithColumnMap.getColumnMap();
+      elementsToColumns = columnMap.keySet().stream()
+          .collect(Collectors.toMap(Column::toString, columnMap::get, (a, b) -> null));
+      finalIdColumn = elementsToColumns.get(idColumn.toString());
     }
 
     // We use the ID column as the value column for a ResourcePath.
@@ -126,10 +129,9 @@ public class ResourcePath extends NonLiteralPath {
    * @param elementName the name of the element
    * @return the {@link Column} within the dataset pertaining to this element
    */
+  @Nonnull
   public Column getElementColumn(@Nonnull final String elementName) {
-    checkUserInput(elementsToColumns.containsKey(elementName),
-        "Requested element not present in source data: " + elementName);
-    return elementsToColumns.get(elementName);
+    return Objects.requireNonNull(elementsToColumns.get(elementName));
   }
 
   public ResourceType getResourceType() {
@@ -151,8 +153,9 @@ public class ResourcePath extends NonLiteralPath {
   public ResourcePath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    return new ResourcePath(expression, dataset, idColumn, valueColumn, singular, thisColumn,
-        definition, elementsToColumns);
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
+    return new ResourcePath(expression, datasetWithColumn.getDataset(), idColumn,
+        datasetWithColumn.getColumn(), singular, thisColumn, definition, elementsToColumns);
   }
 
 }

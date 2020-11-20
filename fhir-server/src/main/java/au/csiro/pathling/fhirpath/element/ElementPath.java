@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static au.csiro.pathling.QueryHelpers.aliasColumn;
+import static au.csiro.pathling.QueryHelpers.createColumn;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -127,7 +127,7 @@ public class ElementPath extends NonLiteralPath {
     final Class<? extends ElementPath> elementPathClass = ElementDefinition
         .elementClassForType(fhirType).orElse(ElementPath.class);
     // Alias the value column.
-    final DatasetWithColumn datasetWithColumn = aliasColumn(dataset, valueColumn);
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
     try {
       // Call its constructor and return.
       final Constructor<? extends ElementPath> constructor = elementPathClass

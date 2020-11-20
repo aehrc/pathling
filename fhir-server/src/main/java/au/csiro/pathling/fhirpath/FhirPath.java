@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath;
 
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -32,36 +31,20 @@ public interface FhirPath {
   Dataset<Row> getDataset();
 
   /**
-   * Gets an ID {@link Column} from any of the inputs, if there is one.
-   *
-   * @param inputs a collection of objects
-   * @return a {@link Column}, if one was found
-   */
-  @Nonnull
-  static Column findIdColumn(@Nonnull final Object... inputs) {
-    return Stream.of(inputs)
-        .filter(path -> path instanceof FhirPath)
-        .map(path -> (FhirPath) path)
-        .findFirst()
-        .orElseThrow()
-        .getIdColumn();
-  }
-
-  /**
    * @return a {@link Column} within the dataset containing the identity of the subject resource
    */
   @Nonnull
   Column getIdColumn();
 
   /**
-   * @return an indicator of whether this path represents a single-valued collection
-   */
-  boolean isSingular();
-
-  /**
    * @return a {@link Column} within the dataset containing the values of the nodes
    */
   @Nonnull
   Column getValueColumn();
+
+  /**
+   * @return an indicator of whether this path represents a single-valued collection
+   */
+  boolean isSingular();
 
 }

@@ -6,8 +6,6 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
-
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.*;
@@ -140,7 +138,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
           : target.getValueColumn();
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getValueColumn().cast(DataTypes.LongType), targetValueColumn);
-      final Column idColumn = findIdColumn(source, target);
+      final Column idColumn = source.getIdColumn();
       final Optional<Column> thisColumn = findThisColumn(source, target);
 
       switch (operation) {

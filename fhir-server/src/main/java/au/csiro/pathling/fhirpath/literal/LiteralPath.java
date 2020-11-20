@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.QueryHelpers.aliasColumn;
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
@@ -77,7 +77,7 @@ public abstract class LiteralPath implements FhirPath {
       @Nonnull final Type literalValue) {
     this.idColumn = idColumn;
     this.literalValue = literalValue;
-    final DatasetWithColumn datasetWithColumn = aliasColumn(dataset, buildValueColumn());
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, buildValueColumn());
     this.dataset = datasetWithColumn.getDataset();
     this.valueColumn = datasetWithColumn.getColumn();
   }

@@ -37,18 +37,15 @@ public interface Numeric {
       @Nonnull String expression, @Nonnull Dataset<Row> dataset);
 
   /**
-   * Returns a {@link Column} within the dataset containing the identity of the subject resource.
-   *
-   * @return A {@link Column}
+   * @return a {@link Column} within the dataset containing the identity of the subject resource
    */
   @Nonnull
   Column getIdColumn();
 
   /**
-   * Returns a {@link Column} within the dataset containing the values of the nodes.
-   *
-   * @return A {@link Column}
+   * @return a {@link Column} within the dataset containing the values of the nodes
    */
+  @Nonnull
   Column getValueColumn();
 
   /**

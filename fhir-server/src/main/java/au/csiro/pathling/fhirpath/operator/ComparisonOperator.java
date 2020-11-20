@@ -6,9 +6,8 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.aliasColumn;
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
 import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
@@ -63,9 +62,9 @@ public class ComparisonOperator implements Operator {
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;
     final Column valueColumn = leftComparable.getComparison(type).apply(rightComparable);
-    final Column idColumn = findIdColumn(left, right);
+    final Column idColumn = left.getIdColumn();
     final Optional<Column> thisColumn = findThisColumn(left, right);
-    final DatasetWithColumn datasetWithColumn = aliasColumn(dataset, valueColumn);
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
 
     return ElementPath
         .build(expression, datasetWithColumn.getDataset(), idColumn, datasetWithColumn.getColumn(),

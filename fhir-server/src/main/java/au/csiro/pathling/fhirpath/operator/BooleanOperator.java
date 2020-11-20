@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
 import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
@@ -95,7 +94,7 @@ public class BooleanOperator implements Operator {
 
     final String expression = left.getExpression() + " " + type + " " + right.getExpression();
     final Dataset<Row> dataset = join(left, right, JoinType.LEFT_OUTER);
-    final Column idColumn = findIdColumn(left, right);
+    final Column idColumn = left.getIdColumn();
     final Optional<Column> thisColumn = findThisColumn(left, right);
 
     return ElementPath

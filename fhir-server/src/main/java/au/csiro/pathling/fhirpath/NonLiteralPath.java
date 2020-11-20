@@ -6,7 +6,11 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -55,9 +59,18 @@ public abstract class NonLiteralPath implements FhirPath {
   protected Optional<Column> thisColumn;
 
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn) {
+
+    final List<String> datasetColumns = Arrays.asList(dataset.columns());
+    checkArgument(datasetColumns.contains(idColumn.toString()),
+        "ID column name not present in dataset");
+    checkArgument(datasetColumns.contains(valueColumn.toString()),
+        "Value column name not present in dataset");
+    thisColumn.ifPresent(col -> checkArgument(datasetColumns.contains(col.toString()),
+        "$this column name not present in dataset"));
+
     this.expression = expression;
     this.dataset = dataset;
     this.idColumn = idColumn;

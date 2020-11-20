@@ -6,12 +6,12 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.QueryHelpers.aliasColumn;
-import static au.csiro.pathling.QueryHelpers.aliasColumns;
+import static au.csiro.pathling.QueryHelpers.createColumn;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
-import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
@@ -27,10 +27,10 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-public class UntypedResourcePath extends NonLiteralPath implements Referrer {
+public class UntypedResourcePath extends NonLiteralPath {
 
   /**
-   * A {@link Column} within the dataset containing the resource type.
+   * A column within the dataset containing the resource type.
    */
   @Nonnull
   @Getter
@@ -50,36 +50,37 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
       @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
     super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
+
+    checkArgument(Arrays.asList(dataset.columns()).contains(typeColumn.toString()),
+        "Type column not present in dataset");
+
     this.typeColumn = typeColumn;
     this.possibleTypes = possibleTypes;
   }
 
   /**
-   * @param expression The FHIRPath representation of this path
-   * @param dataset A {@link Dataset} that can be used to evaluate this path against data
-   * @param idColumn A {@link Column} within the dataset containing the identity of the subject
-   * resource
-   * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
-   * @param singular An indicator of whether this path represents a single-valued collection
-   * @param thisColumn collection values where this path originated from {@code $this}
-   * @param typeColumn A {@link Column} within the dataset containing the resource type
-   * @param possibleTypes A set of {@link ResourceType} objects that describe the different types
+   * @param referencePath a {@link ReferencePath} to base the new UntypedResourcePath on
+   * @param expression the FHIRPath representation of this path
+   * @param dataset a {@link Dataset} that can be used to evaluate this path against data
+   * @param idColumn a column within the dataset containing the identity of the subject resource
+   * @param typeColumn a column within the dataset containing the resource type
+   * @param possibleTypes a set of {@link ResourceType} objects that describe the different types
    * @return a shiny new UntypedResourcePath
    */
-  public static UntypedResourcePath build(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
+  @Nonnull
+  public static UntypedResourcePath build(@Nonnull final ReferencePath referencePath,
+      @Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column idColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
 
-    final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset,
-        Arrays.asList(valueColumn, typeColumn), true);
-    final Dataset<Row> finalDataset = datasetWithColumnMap.getDataset();
-    final Column finalValueColumn = datasetWithColumnMap.getColumnMap().get(valueColumn);
-    final Column finalTypeColumn = datasetWithColumnMap.getColumnMap().get(typeColumn);
+    final Column valueColumn = referencePath.getValueColumn();
+    final DatasetWithColumn datasetWithType = createColumn(dataset, typeColumn);
+    final Dataset<Row> finalDataset = datasetWithType.getDataset();
+    final Column finalTypeColumn = datasetWithType.getColumn();
 
-    return new UntypedResourcePath(expression, finalDataset, idColumn, finalValueColumn, singular,
-        thisColumn, finalTypeColumn, possibleTypes);
+    return new UntypedResourcePath(expression, finalDataset, idColumn, valueColumn,
+        referencePath.isSingular(), referencePath.getThisColumn(), finalTypeColumn,
+        possibleTypes);
   }
 
   @Nonnull
@@ -94,7 +95,7 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
       @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    final DatasetWithColumn datasetWithColumn = aliasColumn(dataset, valueColumn);
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
     return new UntypedResourcePath(expression, datasetWithColumn.getDataset(), idColumn,
         datasetWithColumn.getColumn(), singular, thisColumn, typeColumn, possibleTypes);
   }

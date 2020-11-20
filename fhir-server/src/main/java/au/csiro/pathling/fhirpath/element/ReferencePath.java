@@ -42,4 +42,9 @@ public class ReferencePath extends ElementPath implements Referrer {
     }
   }
 
+  @Nonnull
+  public Column getReferenceColumn() {
+    return valueColumn.getField("reference");
+  }
+
 }

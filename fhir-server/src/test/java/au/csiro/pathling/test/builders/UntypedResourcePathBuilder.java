@@ -7,8 +7,11 @@
 package au.csiro.pathling.test.builders;
 
 import static org.apache.spark.sql.functions.lit;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
+import au.csiro.pathling.fhirpath.element.ReferencePath;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import java.util.Collections;
 import java.util.Optional;
@@ -109,8 +112,12 @@ public class UntypedResourcePathBuilder {
 
   @Nonnull
   public UntypedResourcePath build() {
-    return UntypedResourcePath.build(expression, dataset, idColumn, valueColumn,
-        singular, Optional.ofNullable(thisColumn), typeColumn, possibleTypes);
+    final ReferencePath referencePath = mock(ReferencePath.class);
+    when(referencePath.getValueColumn()).thenReturn(valueColumn);
+    when(referencePath.isSingular()).thenReturn(singular);
+    when(referencePath.getThisColumn()).thenReturn(Optional.ofNullable(thisColumn));
+    return UntypedResourcePath
+        .build(referencePath, expression, dataset, idColumn, typeColumn, possibleTypes);
   }
 
 }

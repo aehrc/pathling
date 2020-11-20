@@ -8,7 +8,7 @@ package au.csiro.pathling.test.builders;
 
 import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-import static au.csiro.pathling.utilities.Strings.randomShortString;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,7 +53,7 @@ public class DatasetBuilder {
 
   @Nonnull
   public DatasetBuilder withIdColumn() {
-    withIdColumn(randomShortString());
+    withIdColumn(randomAlias());
     return this;
   }
 
@@ -67,7 +67,7 @@ public class DatasetBuilder {
 
   @Nonnull
   public DatasetBuilder withValueColumn(@Nonnull final DataType dataType) {
-    final StructField column = new StructField(randomShortString(), dataType, true, metadata);
+    final StructField column = new StructField(randomAlias(), dataType, true, metadata);
     datasetColumns.add(column);
     return this;
   }
@@ -172,7 +172,7 @@ public class DatasetBuilder {
   public Dataset<Row> buildWithStructValue() {
     final List<StructField> columns = new ArrayList<>(datasetColumns);
     columns.add(new StructField(
-        randomShortString(),
+        randomAlias(),
         DataTypes.createStructType(structColumns),
         true,
         metadata));

@@ -7,9 +7,11 @@
 package au.csiro.pathling;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-import static au.csiro.pathling.utilities.Strings.randomShortString;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.utilities.Strings;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -28,19 +30,52 @@ import org.apache.spark.sql.Row;
 public abstract class QueryHelpers {
 
   /**
-   * Adds to the columns within a {@link Dataset} with an aliased versions of the supplied column.
+   * Adds to the columns within a {@link Dataset} with an aliased version of the supplied column.
    *
    * @param dataset the Dataset on which to perform the operation
    * @param column a new {@link Column}
-   * @return a new Dataset, along with the new column, as a {@link DatasetWithColumn}
+   * @return a new Dataset, along with the new column name, as a {@link DatasetWithColumn}
    */
   @Nonnull
-  public static DatasetWithColumn aliasColumn(@Nonnull final Dataset<Row> dataset,
+  public static DatasetWithColumn createColumn(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column column) {
     final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset,
-        Collections.singletonList(column), true);
+        Collections.singletonList(column));
     return new DatasetWithColumn(datasetWithColumnMap.getDataset(),
         datasetWithColumnMap.getColumnMap().get(column));
+  }
+
+  /**
+   * Adds to the columns within a {@link Dataset} with aliased versions of the supplied columns.
+   *
+   * @param dataset the Dataset on which to perform the operation
+   * @param columns the new {@link Column} objects
+   * @return a new Dataset, along with the new column names, as a {@link DatasetWithColumnMap}
+   */
+  @Nonnull
+  public static DatasetWithColumnMap createColumn(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column... columns) {
+    return aliasColumns(dataset, Arrays.asList(columns));
+  }
+
+  /**
+   * Replaces all unaliased columns within a {@link Dataset} with new aliased columns.
+   *
+   * @param dataset the Dataset on which to perform the operation
+   * @return a new Dataset, with a mapping from the old columns to the new as a {@link
+   * DatasetWithColumnMap}
+   */
+  @Nonnull
+  public static DatasetWithColumnMap aliasAllColumns(@Nonnull final Dataset<Row> dataset) {
+
+    final List<Column> columns = Stream.of(dataset.columns())
+        .map(dataset::col)
+        .collect(Collectors.toList());
+    final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset, columns);
+
+    final Dataset<Row> finalDataset = datasetWithColumnMap.getDataset();
+    final Map<Column, Column> columnMap = datasetWithColumnMap.getColumnMap();
+    return new DatasetWithColumnMap(finalDataset, columnMap);
   }
 
   /**
@@ -48,43 +83,31 @@ public abstract class QueryHelpers {
    *
    * @param dataset the Dataset on which to perform the operation
    * @param columns a list of new {@link Column} objects
-   * @param preserveColumns if set to true, preserves the existing columns in the dataset
    * @return a new Dataset, along with a map from the supplied columns to the new columns, as a
    * {@link DatasetWithColumnMap}
    */
   @Nonnull
-  public static DatasetWithColumnMap aliasColumns(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Iterable<Column> columns, final boolean preserveColumns) {
-    final Map<Column, Column> columnMap = new HashMap<>();
-    final Map<String, Column> aliasToSourceColumn = new HashMap<>();
-    final List<Column> selection = preserveColumns
-                                   ? Stream.of(dataset.columns())
-                                       // Column names starting with an underscore are used to
-                                       // denote a temporary column that is not retained within the
-                                       // dataset beyond the point at which it is converted into a
-                                       // aliased column.
-                                       .filter(columnName -> !columnName.startsWith("_"))
-                                       .map(dataset::col)
-                                       .collect(Collectors.toList())
-                                   : new ArrayList<>();
+  private static DatasetWithColumnMap aliasColumns(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Iterable<Column> columns) {
 
-    // Create an aliased column for each of the new columns, and add it to the selection.
+    final Map<Column, Column> columnMap = new HashMap<>();
+    final List<Column> selection = Stream.of(dataset.columns())
+        // Don't preserve anything that is not already aliased.
+        .filter(Strings::looksLikeAlias)
+        .map(dataset::col)
+        .collect(Collectors.toList());
+
+    // Create an aliased column for each of the new columns, and add it to the selection and the
+    // map.
     for (final Column column : columns) {
-      final String alias = randomShortString();
+      final String alias = randomAlias();
       final Column aliasedColumn = column.alias(alias);
       selection.add(aliasedColumn);
-      aliasToSourceColumn.put(alias, column);
+      columnMap.put(column, col(alias));
     }
 
     // Create a new dataset from the selection.
     final Dataset<Row> result = dataset.select(selection.toArray(new Column[0]));
-
-    // Harvest all of the resolved aliased columns from the new dataset, and create a map between
-    // the original source columns and these new columns.
-    for (final String alias : aliasToSourceColumn.keySet()) {
-      final Column finalColumn = result.col(alias);
-      columnMap.put(aliasToSourceColumn.get(alias), finalColumn);
-    }
 
     return new DatasetWithColumnMap(result, columnMap);
   }
@@ -99,8 +122,7 @@ public abstract class QueryHelpers {
    * @param right the second Dataset
    * @param rightColumns the columns for the second Dataset
    * @param joinType the type of join to use
-   * @return a {@link DatasetWithColumns} containing the joined Dataset and the columns that were
-   * used in the join
+   * @return the joined Dataset
    */
   @Nonnull
   public static Dataset<Row> join(@Nonnull final Dataset<Row> left,
@@ -112,7 +134,7 @@ public abstract class QueryHelpers {
     Dataset<Row> aliasedLeft = left;
     final Collection<Column> joinConditions = new ArrayList<>();
     for (int i = 0; i < leftColumns.size(); i++) {
-      final DatasetWithColumn leftWithColumn = aliasColumn(aliasedLeft, leftColumns.get(i));
+      final DatasetWithColumn leftWithColumn = createColumn(aliasedLeft, leftColumns.get(i));
       aliasedLeft = leftWithColumn.getDataset();
       joinConditions.add(leftWithColumn.getColumn().equalTo(rightColumns.get(i)));
     }
@@ -295,21 +317,6 @@ public abstract class QueryHelpers {
 
     @Nonnull
     Column column;
-
-  }
-
-  /**
-   * Represents a {@link Dataset} along with a list of {@link Column} objects that refer to columns
-   * within the Dataset.
-   */
-  @Value
-  public static class DatasetWithColumns {
-
-    @Nonnull
-    Dataset<Row> dataset;
-
-    @Nonnull
-    List<Column> columns;
 
   }
 

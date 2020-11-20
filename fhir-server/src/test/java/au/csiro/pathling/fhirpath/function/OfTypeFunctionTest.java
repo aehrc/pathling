@@ -30,7 +30,6 @@ import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -71,10 +70,15 @@ class OfTypeFunctionTest {
     final Column idColumn = inputDataset.col(inputDataset.columns()[0]);
     final Column typeColumn = inputDataset.col("type");
     final Column valueColumn = inputDataset.col(inputDataset.columns()[2]);
-    final UntypedResourcePath inputPath = UntypedResourcePath
-        .build("subject.resolve()", inputDataset, idColumn, valueColumn, true,
-            Optional.empty(), typeColumn,
-            new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)));
+    final UntypedResourcePath inputPath = new UntypedResourcePathBuilder()
+        .expression("subject.resolve()")
+        .dataset(inputDataset)
+        .idColumn(idColumn)
+        .valueColumn(valueColumn)
+        .singular(true)
+        .typeColumn(typeColumn)
+        .possibleTypes(new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)))
+        .build();
 
     final Dataset<Row> argumentDataset = new DatasetBuilder()
         .withIdColumn("id")
