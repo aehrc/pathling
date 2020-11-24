@@ -322,7 +322,7 @@ public class ParserTest {
         "where($this.reverseResolve(Condition.subject).code"
             + ".subsumedBy(http://snomed.info/sct|127027008)).gender")
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(null)
+        .hasRows(allPatientsWithValue((String) null)
             .changeValue(PATIENT_ID_7001ad9c, "female"));
   }
 
