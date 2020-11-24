@@ -84,6 +84,11 @@ public class UntypedResourcePath extends NonLiteralPath {
   }
 
   @Nonnull
+  public Column getReferenceColumn() {
+    return valueColumn.getField(ReferencePath.REFERENCE_FIELD_NAME);
+  }
+
+  @Nonnull
   @Override
   public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
     return Optional.empty();

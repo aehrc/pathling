@@ -9,10 +9,12 @@ package au.csiro.pathling.test.helpers;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static org.apache.spark.sql.functions.col;
 
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.spark.udf.CodingsEqual;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
@@ -31,6 +33,7 @@ import scala.collection.mutable.Buffer;
 /**
  * @author John Grimes
  */
+@SuppressWarnings("WeakerAccess")
 public abstract class SparkHelpers {
 
   @Nonnull
@@ -76,6 +79,15 @@ public abstract class SparkHelpers {
   }
 
   @Nonnull
+  public static StructType simpleCodingStructType() {
+    final Metadata metadata = new MetadataBuilder().build();
+    final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
+    final StructField version = new StructField("version", DataTypes.StringType, true, metadata);
+    final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
+    return new StructType(new StructField[]{system, version, code});
+  }
+
+  @Nonnull
   public static StructType codeableConceptStructType() {
     final Metadata metadata = new MetadataBuilder().build();
     final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
@@ -100,6 +112,20 @@ public abstract class SparkHelpers {
     return new GenericRowWithSchema(
         new Object[]{coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
             coding.getDisplay(), coding.getUserSelected()}, codingStructType());
+  }
+
+  @Nonnull
+  public static Row rowFromSimpleCoding(@Nonnull final SimpleCoding coding) {
+    return new GenericRowWithSchema(
+        new Object[]{coding.getSystem(), coding.getVersion(), coding.getCode()},
+        simpleCodingStructType());
+  }
+
+  @Nonnull
+  public static List<Row> rowsFromSimpleCodings(@Nonnull final SimpleCoding... codings) {
+    return Stream.of(codings)
+        .map(SparkHelpers::rowFromSimpleCoding)
+        .collect(Collectors.toList());
   }
 
   @Nonnull

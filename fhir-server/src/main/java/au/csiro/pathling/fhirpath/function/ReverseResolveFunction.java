@@ -12,7 +12,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.Referrer;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Optional;
@@ -46,7 +45,7 @@ public class ReverseResolveFunction implements NamedFunction {
     final FhirPath argument = input.getArguments().get(0);
     checkUserInput(argument instanceof ReferencePath,
         "Argument to reverseResolve function must be a Reference: " + argument.getExpression());
-    final Referrer referencePath = (ReferencePath) argument;
+    final ReferencePath referencePath = (ReferencePath) argument;
 
     // Check that the input type is one of the possible types specified by the argument.
     final Set<ResourceType> argumentTypes = ((ReferencePath) argument).getResourceTypes();
@@ -58,8 +57,8 @@ public class ReverseResolveFunction implements NamedFunction {
     // Do a left outer join from the input to the argument dataset using the reference field in the
     // argument.
     final Dataset<Row> dataset = join(referencePath.getDataset(),
-        referencePath.getValueColumn().getField("reference"), inputPath.getDataset(),
-        inputPath.getIdColumn(), JoinType.RIGHT_OUTER);
+        referencePath.getReferenceColumn(), inputPath.getDataset(), inputPath.getIdColumn(),
+        JoinType.RIGHT_OUTER);
 
     // Check the argument for information about a foreign resource that it originated from - if it
     // not present, reverse reference resolution will not be possible.

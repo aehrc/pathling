@@ -78,6 +78,27 @@ public class ResolveFunction implements NamedFunction {
   }
 
   @Nonnull
+  private FhirPath resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
+      @Nonnull final ResourceReader resourceReader, @Nonnull final FhirContext fhirContext,
+      @Nonnull final Collection<ResourceType> referenceTypes, final String expression) {
+    // If this is a monomorphic reference, we just need to retrieve the appropriate table and
+    // create a dataset with the full resources.
+    final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
+    final ResourcePath resourcePath = ResourcePath
+        .build(fhirContext, resourceReader, resourceType, expression, referencePath.isSingular());
+
+    // Join the resource dataset to the reference dataset.
+    final Column resourceIdColumn = resourcePath.getIdColumn();
+    final Column referenceColumn = referencePath.getReferenceColumn();
+    final Dataset<Row> dataset = join(referencePath.getDataset(), referenceColumn,
+        resourcePath.getDataset(), resourceIdColumn, JoinType.LEFT_OUTER);
+
+    final Column inputId = referencePath.getIdColumn();
+    return resourcePath.copy(expression, dataset, inputId, resourcePath.getValueColumn(),
+        referencePath.isSingular(), referencePath.getThisColumn());
+  }
+
+  @Nonnull
   private static FhirPath resolvePolymorphicReference(@Nonnull final ReferencePath referencePath,
       @Nonnull final ResourceReader resourceReader, @Nonnull final Set<ResourceType> referenceTypes,
       final String expression) {
@@ -121,27 +142,6 @@ public class ResolveFunction implements NamedFunction {
     final Column inputId = referencePath.getIdColumn();
     return UntypedResourcePath
         .build(referencePath, expression, dataset, inputId, targetType, referenceTypes);
-  }
-
-  @Nonnull
-  private FhirPath resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
-      @Nonnull final ResourceReader resourceReader, @Nonnull final FhirContext fhirContext,
-      @Nonnull final Collection<ResourceType> referenceTypes, final String expression) {
-    // If this is a monomorphic reference, we just need to retrieve the appropriate table and
-    // create a dataset with the full resources.
-    final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
-    final ResourcePath resourcePath = ResourcePath
-        .build(fhirContext, resourceReader, resourceType, expression, referencePath.isSingular());
-
-    // Join the resource dataset to the reference dataset.
-    final Column resourceIdColumn = resourcePath.getIdColumn();
-    final Column referenceColumn = referencePath.getReferenceColumn();
-    final Dataset<Row> dataset = join(referencePath.getDataset(), referenceColumn,
-        resourcePath.getDataset(), resourceIdColumn, JoinType.LEFT_OUTER);
-
-    final Column inputId = referencePath.getIdColumn();
-    return resourcePath.copy(expression, dataset, inputId, resourcePath.getValueColumn(),
-        referencePath.isSingular(), referencePath.getThisColumn());
   }
 
 }

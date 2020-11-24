@@ -49,6 +49,7 @@ public class ResourceWriter {
   public void write(@Nonnull final ResourceType resourceType, @Nonnull final Dataset resources) {
     final String tableUrl =
         warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
+    // We order the resources here to reduce the amount of sorting necessary at query time.
     resources.orderBy(asc("id"))
         .write()
         .mode(SaveMode.Overwrite)

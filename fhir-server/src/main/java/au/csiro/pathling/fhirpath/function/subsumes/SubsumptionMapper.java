@@ -10,7 +10,6 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
-import au.csiro.pathling.fhirpath.encoding.BooleanResult;
 import au.csiro.pathling.fhirpath.encoding.IdAndCodingSets;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import ca.uhn.fhir.rest.param.UriParam;
@@ -37,8 +36,8 @@ import org.slf4j.MDC;
  * Takes a set of Rows with schema: STRING id, ARRAY(CODING) inputCoding, ARRAY(CODING) argCodings
  * to check for a subsumption relation with a terminology server.
  * <p>
- * Returns a set of {@link BooleanResult} objects, which contain the identified and the status of
- * subsumption relation for each of input elements.
+ * Returns a set of Rows which additionally contain the status of subsumption relation for each of
+ * input elements.
  */
 @Slf4j
 public class SubsumptionMapper implements MapPartitionsFunction<Row, Row> {
