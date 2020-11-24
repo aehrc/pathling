@@ -47,7 +47,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -241,8 +240,6 @@ public class ParserTest {
   }
 
   @Test
-  // TODO: Re-enable along with subsumes function
-  @Disabled
   public void testSubsumesAndSubsumedBy() {
     // Setup mock terminology client
     when(terminologyClient.closure(any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
@@ -256,21 +253,19 @@ public class ParserTest {
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(false)
-            .changeValue(PATIENT_ID_7001ad9c, true));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-empty.csv");
 
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(false)
-            .changeValue(PATIENT_ID_7001ad9c, true));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy-empty.csv");
 
     // on the same collection should return all True (even though one is CodeableConcept)
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)")
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(true));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
     when(terminologyClient.closure(any(), any()))
@@ -278,15 +273,12 @@ public class ParserTest {
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(true)
-            .changeValue(PATIENT_ID_2b36c1e2, false)
-            .changeValue(PATIENT_ID_bbd33563, false));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes.csv");
 
     assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
         + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(false)
-            .changeValue(PATIENT_ID_7001ad9c, true));
+        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.csv");
   }
 
   @Test
@@ -322,16 +314,16 @@ public class ParserTest {
   }
 
   @Test
-  // TODO: Re-enable along with subsumes function
-  @Disabled
   public void testWhereWithSubsumes() {
-    // Setup mock terminology client
-    when(terminologyClient.closure(any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+    when(terminologyClient.closure(any(), any()))
+        .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
             + ".subsumedBy(http://snomed.info/sct|127027008)).gender")
-        .selectOrderedResult();
+        .selectOrderedResult()
+        .hasRows(allPatientsWithValue(null)
+            .changeValue(PATIENT_ID_7001ad9c, "female"));
   }
 
   @Test

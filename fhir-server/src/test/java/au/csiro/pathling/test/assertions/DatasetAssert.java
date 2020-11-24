@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.test.assertions;
 
+import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstCsv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -48,6 +49,12 @@ public class DatasetAssert {
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final Dataset<Row> expected) {
     return hasRows(expected.collectAsList());
+  }
+
+  @Nonnull
+  public DatasetAssert hasRows(@Nonnull final String expectedCsvPath) {
+    assertDatasetAgainstCsv(expectedCsvPath, dataset);
+    return this;
   }
 
   @Nonnull
