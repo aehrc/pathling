@@ -21,16 +21,12 @@ import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.builders.ResourcePathBuilder;
-import au.csiro.pathling.test.builders.UntypedResourcePathBuilder;
+import au.csiro.pathling.test.builders.*;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -61,37 +57,35 @@ class OfTypeFunctionTest {
         .withIdColumn()
         .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Encounter/xyz1", "Patient", RowFactory.create(null, "Patient/abc1", null))
-        .withRow("Encounter/xyz2", "Patient", RowFactory.create(null, "Patient/abc3", null))
-        .withRow("Encounter/xyz3", "Patient", RowFactory.create(null, "Patient/abc2", null))
-        .withRow("Encounter/xyz4", "Patient", RowFactory.create(null, "Patient/abc2", null))
-        .withRow("Encounter/xyz5", "Group", RowFactory.create(null, "Group/def1", null))
+        .withRow("Encounter/1", "Patient", RowFactory.create(null, "Patient/1", null))
+        .withRow("Encounter/2", "Patient", RowFactory.create(null, "Patient/3", null))
+        .withRow("Encounter/3", "Patient", RowFactory.create(null, "Patient/2", null))
+        .withRow("Encounter/4", "Patient", RowFactory.create(null, "Patient/2", null))
+        .withRow("Encounter/5", "Group", RowFactory.create(null, "Group/1", null))
         .buildWithStructValue();
-    final Column idColumn = inputDataset.col(inputDataset.columns()[0]);
-    final Column typeColumn = inputDataset.col("type");
-    final Column valueColumn = inputDataset.col(inputDataset.columns()[2]);
     final UntypedResourcePath inputPath = new UntypedResourcePathBuilder()
         .expression("subject.resolve()")
         .dataset(inputDataset)
-        .idColumn(idColumn)
-        .valueColumn(valueColumn)
+        .idTypeAndValueColumns()
         .singular(true)
-        .typeColumn(typeColumn)
         .possibleTypes(new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)))
         .build();
 
-    final Dataset<Row> argumentDataset = new DatasetBuilder()
-        .withIdColumn("id")
-        .withColumn("gender", DataTypes.StringType)
-        .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/abc1", "female", true)
-        .withRow("Patient/abc2", "female", false)
-        .withRow("Patient/abc3", "male", true)
+    final Dataset<Row> argumentDataset = new ResourceDatasetBuilder()
+        .withIdColumn()
+        .withColumn(DataTypes.StringType)
+        .withColumn(DataTypes.BooleanType)
+        .withRow("Patient/1", "female", true)
+        .withRow("Patient/2", "female", false)
+        .withRow("Patient/3", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(argumentDataset);
-    final ResourcePath argumentPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+    final ResourcePath argumentPath = new ResourcePathBuilder()
+        .resourceReader(mockReader)
+        .resourceType(ResourceType.PATIENT)
+        .expression("Patient")
+        .build();
 
     final ParserContext parserContext = new ParserContextBuilder()
         .idColumn(inputPath.getIdColumn())
@@ -109,14 +103,12 @@ class OfTypeFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withColumn("id", DataTypes.StringType)
-        .withColumn("gender", DataTypes.StringType)
-        .withColumn("active", DataTypes.BooleanType)
-        .withRow("Encounter/xyz1", "Patient/abc1", "female", true)
-        .withRow("Encounter/xyz2", "Patient/abc3", "male", true)
-        .withRow("Encounter/xyz3", "Patient/abc2", "female", false)
-        .withRow("Encounter/xyz4", "Patient/abc2", "female", false)
-        .withRow("Encounter/xyz5", null, null, null)
+        .withIdColumn()
+        .withRow("Encounter/1", "Patient/1")
+        .withRow("Encounter/2", "Patient/3")
+        .withRow("Encounter/3", "Patient/2")
+        .withRow("Encounter/4", "Patient/2")
+        .withRow("Encounter/5", null)
         .build();
     assertThat(result)
         .selectResult()

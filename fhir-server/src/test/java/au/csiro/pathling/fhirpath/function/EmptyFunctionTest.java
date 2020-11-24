@@ -48,7 +48,7 @@ public class EmptyFunctionTest {
     final ParserContext parserContext = new ParserContextBuilder().build();
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(codeableConceptStructType())
+        .withColumn(codeableConceptStructType())
         .withRow("Observation/abc1", null)
         .withRow("Observation/abc2", null)
         .withRow("Observation/abc2", null)
@@ -76,7 +76,7 @@ public class EmptyFunctionTest {
     // Check the result.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withRow("Observation/abc1", true)
         .withRow("Observation/abc2", true)
         .withRow("Observation/abc3", false)

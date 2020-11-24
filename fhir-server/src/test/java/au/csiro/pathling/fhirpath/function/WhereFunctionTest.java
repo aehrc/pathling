@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -22,7 +23,6 @@ import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import java.util.Arrays;
 import java.util.Collections;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
@@ -41,32 +41,30 @@ public class WhereFunctionTest {
   // `Patient.reverseResolve(Encounter.subject).where($this.status = 'in-progress')`.
   @Test
   public void whereOnResource() {
+    final String statusColumn = randomAlias();
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
-        .withIdColumn("id")
-        .withColumn("status", DataTypes.StringType)
-        .withRow("Patient/abc1", "Encounter/xyz1", "in-progress")
-        .withRow("Patient/abc1", "Encounter/xyz2", "finished")
-        .withRow("Patient/abc2", "Encounter/xyz3", "in-progress")
-        .withRow("Patient/abc3", "Encounter/xyz4", "in-progress")
-        .withRow("Patient/abc3", "Encounter/xyz5", "finished")
-        .withRow("Patient/abc4", "Encounter/xyz6", "finished")
-        .withRow("Patient/abc4", "Encounter/xyz7", "finished")
-        .withRow("Patient/abc5", null, null)
+        .withIdColumn()
+        .withColumn(statusColumn, DataTypes.StringType)
+        .withRow("Patient/1", "Encounter/1", "in-progress")
+        .withRow("Patient/1", "Encounter/2", "finished")
+        .withRow("Patient/2", "Encounter/3", "in-progress")
+        .withRow("Patient/3", "Encounter/4", "in-progress")
+        .withRow("Patient/3", "Encounter/5", "finished")
+        .withRow("Patient/4", "Encounter/6", "finished")
+        .withRow("Patient/4", "Encounter/7", "finished")
+        .withRow("Patient/5", null, null)
         .build();
-    final Column idColumn = inputDataset.col(inputDataset.columns()[0]);
-
     final ResourcePath inputPath = new ResourcePathBuilder()
         .expression("reverseResolve(Encounter.subject)")
         .dataset(inputDataset)
-        .idColumn(idColumn)
-        .valueColumn(idColumn)
+        .idAndValueColumns()
         .buildCustom();
 
     // Build an expression which represents the argument to the function. We assume that the value
     // column from the input dataset is also present within the argument dataset.
     final Dataset<Row> argumentDataset = inputPath.getDataset()
-        .withColumn("value", inputPath.getDataset().col("status").equalTo("in-progress"));
+        .withColumn("value", inputPath.getDataset().col(statusColumn).equalTo("in-progress"));
     final ElementPath argumentPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
@@ -88,11 +86,15 @@ public class WhereFunctionTest {
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withColumn("id", DataTypes.StringType)
-        .withColumn("status", DataTypes.StringType)
-        .withRow("Patient/abc1", "Encounter/xyz1", "in-progress")
-        .withRow("Patient/abc2", "Encounter/xyz3", "in-progress")
-        .withRow("Patient/abc3", "Encounter/xyz4", "in-progress")
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", null)
+        .withRow("Patient/1", "Patient/1")
+        .withRow("Patient/2", "Patient/2")
+        .withRow("Patient/3", null)
+        .withRow("Patient/3", "Patient/3")
+        .withRow("Patient/4", null)
+        .withRow("Patient/4", null)
+        .withRow("Patient/5", null)
         .build();
     assertThat(result)
         .selectResult()
@@ -104,16 +106,16 @@ public class WhereFunctionTest {
     // Build an expression which represents the input to the function.
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "en")
-        .withRow("Patient/abc1", "es")
-        .withRow("Patient/abc2", "de")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "zh")
-        .withRow("Patient/abc4", "fr")
-        .withRow("Patient/abc4", "fr")
-        .withRow("Patient/abc5", null)
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", "en")
+        .withRow("Patient/1", "es")
+        .withRow("Patient/2", "de")
+        .withRow("Patient/3", "en")
+        .withRow("Patient/3", "en")
+        .withRow("Patient/3", "zh")
+        .withRow("Patient/4", "fr")
+        .withRow("Patient/4", "fr")
+        .withRow("Patient/5", null)
         .build();
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
@@ -147,10 +149,16 @@ public class WhereFunctionTest {
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "en")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "en")
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", null)
+        .withRow("Patient/1", "en")
+        .withRow("Patient/2", null)
+        .withRow("Patient/3", null)
+        .withRow("Patient/3", "en")
+        .withRow("Patient/3", "en")
+        .withRow("Patient/4", null)
+        .withRow("Patient/4", null)
+        .withRow("Patient/5", null)
         .build();
     assertThat(result)
         .selectResult()
@@ -162,14 +170,14 @@ public class WhereFunctionTest {
     // Build an expression which represents the input to the function.
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "en")
-        .withRow("Patient/abc1", "es")
-        .withRow("Patient/abc2", "de")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "en")
-        .withRow("Patient/abc3", "zh")
-        .withRow("Patient/abc4", "ar")
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", "en")
+        .withRow("Patient/1", "es")
+        .withRow("Patient/2", "de")
+        .withRow("Patient/3", "en")
+        .withRow("Patient/3", "en")
+        .withRow("Patient/3", "zh")
+        .withRow("Patient/4", "ar")
         .build();
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
@@ -203,11 +211,14 @@ public class WhereFunctionTest {
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "es")
-        .withRow("Patient/abc2", "de")
-        .withRow("Patient/abc3", "zh")
-        .withRow("Patient/abc4", "ar")
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", null)
+        .withRow("Patient/1", "es")
+        .withRow("Patient/2", "de")
+        .withRow("Patient/3", null)
+        .withRow("Patient/3", null)
+        .withRow("Patient/3", "zh")
+        .withRow("Patient/4", "ar")
         .build();
     assertThat(result)
         .selectResult()

@@ -20,6 +20,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import org.apache.spark.sql.Dataset;
@@ -45,11 +46,10 @@ public class PathTraversalOperatorTest {
 
   @Test
   public void simpleTraversal() {
-    final Dataset<Row> leftDataset = new DatasetBuilder()
-        .withIdColumn("id")
+    final Dataset<Row> leftDataset = new ResourceDatasetBuilder()
+        .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
-        .withColumn("active", DataTypes.BooleanType)
-        .withRow("abc", "female", true)
+        .withRow("1", "female")
         .build();
     final ResourceReader resourceReader = mock(ResourceReader.class);
     when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
@@ -65,8 +65,8 @@ public class PathTraversalOperatorTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("abc", "female")
+        .withColumn(DataTypes.StringType)
+        .withRow("1", "female")
         .build();
     assertThat(result)
         .isElementPath(StringPath.class)

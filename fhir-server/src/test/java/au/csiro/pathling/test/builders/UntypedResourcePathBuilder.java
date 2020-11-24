@@ -6,13 +6,12 @@
 
 package au.csiro.pathling.test.builders;
 
-import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.col;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
@@ -21,6 +20,8 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -54,12 +55,24 @@ public class UntypedResourcePathBuilder {
 
   public UntypedResourcePathBuilder() {
     expression = "";
-    dataset = SparkHelpers.getSparkSession().emptyDataFrame();
-    idColumn = lit(null);
-    valueColumn = lit(null);
+    dataset = new DatasetBuilder()
+        .withIdColumn()
+        .withColumn(DataTypes.StringType)
+        .withColumn(DataTypes.StringType)
+        .build();
+    idColumn = col(dataset.columns()[0]);
+    valueColumn = col(dataset.columns()[1]);
+    typeColumn = col(dataset.columns()[2]);
     singular = false;
-    typeColumn = lit(null);
     possibleTypes = Collections.emptySet();
+  }
+
+  @Nonnull
+  public UntypedResourcePathBuilder idTypeAndValueColumns() {
+    idColumn = functions.col(dataset.columns()[0]);
+    typeColumn = functions.col(dataset.columns()[1]);
+    valueColumn = functions.col(dataset.columns()[2]);
+    return this;
   }
 
   @Nonnull

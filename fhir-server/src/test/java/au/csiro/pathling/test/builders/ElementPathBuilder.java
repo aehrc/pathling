@@ -7,13 +7,12 @@
 package au.csiro.pathling.test.builders;
 
 import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
-import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.col;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -21,6 +20,7 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -56,9 +56,12 @@ public class ElementPathBuilder {
 
   public ElementPathBuilder() {
     expression = "";
-    dataset = SparkHelpers.getSparkSession().emptyDataFrame();
-    idColumn = lit(null);
-    valueColumn = lit(null);
+    dataset = new DatasetBuilder()
+        .withIdColumn()
+        .withColumn(DataTypes.StringType)
+        .build();
+    idColumn = col(dataset.columns()[0]);
+    valueColumn = col(dataset.columns()[1]);
     singular = false;
     fhirType = FHIRDefinedType.NULL;
     definition = mock(ElementDefinition.class);

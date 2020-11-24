@@ -25,10 +25,7 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.builders.ResourcePathBuilder;
+import au.csiro.pathling.test.builders.*;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
@@ -64,8 +61,8 @@ class ReverseResolveFunctionTest {
 
   @Test
   public void reverseResolve() {
-    final Dataset<Row> patientDataset = new DatasetBuilder()
-        .withIdColumn("id")
+    final Dataset<Row> patientDataset = new ResourceDatasetBuilder()
+        .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
         .withRow("Patient/1", "female", true)
@@ -77,9 +74,9 @@ class ReverseResolveFunctionTest {
     final ResourcePath inputPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
 
-    final DatasetBuilder encounterDatasetBuilder = new DatasetBuilder()
-        .withIdColumn("id")
-        .withValueColumn(DataTypes.StringType)
+    final DatasetBuilder encounterDatasetBuilder = new ResourceDatasetBuilder()
+        .withIdColumn()
+        .withColumn("status", DataTypes.StringType)
         .withRow("Encounter/1", "planned")
         .withRow("Encounter/2", "arrived")
         .withRow("Encounter/3", "triaged")
@@ -138,12 +135,11 @@ class ReverseResolveFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withIdColumn("id")
-        .withColumn("status", DataTypes.StringType)
-        .withRow("Patient/1", "Encounter/1", "planned")
-        .withRow("Patient/2", "Encounter/3", "triaged")
-        .withRow("Patient/2", "Encounter/4", "in-progress")
-        .withRow("Patient/3", "Encounter/2", "arrived")
+        .withIdColumn()
+        .withRow("Patient/1", "Encounter/1")
+        .withRow("Patient/2", "Encounter/3")
+        .withRow("Patient/2", "Encounter/4")
+        .withRow("Patient/3", "Encounter/2")
         .build();
     assertThat(result)
         .selectResult()

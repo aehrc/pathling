@@ -52,38 +52,26 @@ public class DatasetBuilder {
   }
 
   @Nonnull
+  public DatasetBuilder withColumn(@Nonnull final DataType dataType) {
+    return withColumn(randomAlias(), dataType);
+  }
+
+  @Nonnull
+  public DatasetBuilder withColumn(@Nonnull final String columnName,
+      @Nonnull final DataType dataType) {
+    final StructField column = new StructField(columnName, dataType, true, metadata);
+    datasetColumns.add(column);
+    return this;
+  }
+
+  @Nonnull
   public DatasetBuilder withIdColumn() {
-    withIdColumn(randomAlias());
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withIdColumn(@Nonnull final String columnName) {
-    final StructField column = new StructField(columnName, DataTypes.StringType, true,
-        metadata);
-    datasetColumns.add(column);
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withValueColumn(@Nonnull final DataType dataType) {
-    final StructField column = new StructField(randomAlias(), dataType, true, metadata);
-    datasetColumns.add(column);
-    return this;
+    return withColumn(DataTypes.StringType);
   }
 
   @Nonnull
   public DatasetBuilder withTypeColumn() {
-    final StructField column = new StructField("type", DataTypes.StringType, true, metadata);
-    datasetColumns.add(column);
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withColumn(@Nonnull final String name, @Nonnull final DataType dataType) {
-    final StructField column = new StructField(name, dataType, true, metadata);
-    datasetColumns.add(column);
-    return this;
+    return withColumn(DataTypes.StringType);
   }
 
   @Nonnull

@@ -8,6 +8,8 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.explode_outer;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -61,7 +63,10 @@ public class PathTraversalOperator {
     final Column field;
     if (left instanceof ResourcePath) {
       final ResourcePath resourcePath = (ResourcePath) left;
-      field = resourcePath.getElementColumn(right);
+      // When the value column of the ResourcePath is null, the path traversal results in null. This
+      // can happen when attempting to do a path traversal on the result of a function like when.
+      field = when(resourcePath.getValueColumn().isNull(), lit(null))
+          .otherwise(resourcePath.getElementColumn(right));
     } else {
       field = left.getValueColumn().getField(right);
     }

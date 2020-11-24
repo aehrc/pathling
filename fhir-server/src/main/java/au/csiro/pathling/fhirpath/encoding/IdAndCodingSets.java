@@ -34,6 +34,18 @@ public class IdAndCodingSets implements Serializable {
   @Nullable
   private List<SimpleCoding> argCodings;
 
+  // public IdAndCodingSets(@Nonnull final Row inputRow) {
+  //   final int idIndex = inputRow.length() - 3;
+  //   final int inputCodingsIndex = inputRow.length() - 2;
+  //   final int argCodingsIndex = inputRow.length() - 1;
+  //   id = inputRow.getString(idIndex);
+  //   inputRow.getList(inputCodingsIndex).stream()
+  //       .map(item -> {
+  //         check(item instanceof Row);
+  //         final Row row = (Row) item;
+  //         return new SimpleCoding(row.fieldIndex());
+  //       })
+  // }
 
   /**
    * @return a list of {@link SimpleCoding} objects, or an empty list

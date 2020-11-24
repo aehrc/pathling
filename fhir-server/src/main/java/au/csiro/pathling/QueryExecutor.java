@@ -6,6 +6,10 @@
 
 package au.csiro.pathling;
 
+import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+
+import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -59,6 +63,29 @@ public abstract class QueryExecutor {
     this.resourceReader = resourceReader;
     this.terminologyClient = terminologyClient;
     this.terminologyClientFactory = terminologyClientFactory;
+  }
+
+  /**
+   * Joins the datasets in a list together, using their resource identity columns.
+   * <p>
+   * Note that this should only be used in contexts where the input context is a single resource -
+   * it does not support joining using grouping columns.
+   */
+  @Nonnull
+  protected static Dataset<Row> joinExpressions(@Nonnull final List<FhirPath> expressions) {
+    checkArgument(!expressions.isEmpty(), "expressions must not be empty");
+
+    FhirPath previous = expressions.get(0);
+    Dataset<Row> result = previous.getDataset();
+
+    for (int i = 1; i < expressions.size(); i++) {
+      final FhirPath current = expressions.get(i);
+      final Column idColumn = previous.getIdColumn();
+      result = join(result, idColumn, current, JoinType.LEFT_OUTER);
+      previous = current;
+    }
+
+    return result;
   }
 
   @Nonnull

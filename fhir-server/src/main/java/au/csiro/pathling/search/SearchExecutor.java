@@ -6,15 +6,15 @@
 
 package au.csiro.pathling.search;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.errors.ErrorHandling.handleError;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
@@ -105,11 +105,11 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
 
   @Nonnull
   private Dataset<Row> initializeDataset() {
-    ResourcePath currentContext = ResourcePath
+    final ResourcePath resourcePath = ResourcePath
         .build(getFhirContext(), getResourceReader(), subjectResource, subjectResource.toCode(),
             true, true);
-    final Dataset<Row> subjectDataset = currentContext.getDataset();
-    final Column subjectIdColumn = currentContext.getIdColumn();
+    final Dataset<Row> subjectDataset = resourcePath.getDataset();
+    final Column subjectIdColumn = resourcePath.getIdColumn();
 
     final Dataset<Row> dataset;
 
@@ -121,6 +121,10 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       final Collection<FhirPath> fhirPaths = new ArrayList<>();
       @Nullable Column filterIdColumn = null;
       @Nullable Column filterColumn = null;
+
+      ResourcePath currentContext = ResourcePath
+          .build(getFhirContext(), getResourceReader(), subjectResource, subjectResource.toCode(),
+              true);
 
       // Parse each of the supplied filter expressions, building up a filter column. This captures 
       // the AND/OR conditions possible through the FHIR API, see 
@@ -167,8 +171,11 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       check(!fhirPaths.isEmpty());
 
       // Get the full resources which are present in the filtered dataset.
-      dataset = join(subjectDataset, subjectIdColumn,
-          currentContext.getDataset().select(filterIdColumn), filterIdColumn, JoinType.LEFT_SEMI);
+      final String filterIdAlias = randomAlias();
+      final Dataset<Row> filteredIds = currentContext.getDataset().select(filterIdColumn.alias(
+          filterIdAlias));
+      dataset = subjectDataset
+          .join(filteredIds, subjectIdColumn.equalTo(col(filterIdAlias)), "left_semi");
     }
 
     // We cache the dataset because we know it will be accessed for both the total and the record
@@ -198,10 +205,11 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       if (theFromIndex != 0) {
         // Spark does not have an "offset" concept, so we create a list of rows to exclude and
         // subtract them from the dataset using a left anti-join.
+        final String excludeAlias = randomAlias();
         final Dataset<Row> exclude = resources.limit(theFromIndex)
-            .select(resources.col("id").alias("excludeId"));
-        resources = join(resources, resources.col("id"), exclude, exclude.col("excludeId"),
-            JoinType.LEFT_ANTI);
+            .select(resources.col("id").alias(excludeAlias));
+        resources = resources
+            .join(exclude, resources.col("id").equalTo(exclude.col(excludeAlias)), "left_anti");
       }
       // The dataset is trimmed to the requested size.
       if (theToIndex != 0) {

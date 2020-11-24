@@ -39,7 +39,7 @@ public class FirstFunctionTest {
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
+        .withColumn(DataTypes.StringType)
         .withRow("Patient/abc1", "Jude")   // when: "two values"  expect: "Jude"
         .withRow("Patient/abc1", "Mark")
         .withRow("Patient/abc2", "Samuel") // when: "single value" expect: "Samuel"
@@ -78,7 +78,7 @@ public class FirstFunctionTest {
     // expected result dataset
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
+        .withColumn(DataTypes.StringType)
         .withRow("Patient/abc1", "Jude")
         .withRow("Patient/abc2", "Samuel")
         .withRow("Patient/abc3", "Adam")

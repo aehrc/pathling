@@ -41,7 +41,7 @@ class ComparisonOperatorDateTest {
 
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
+        .withColumn(DataTypes.StringType)
         .withRow("Patient/abc1", "2013-06-10T15:33:22Z")
         .withRow("Patient/abc2", "2014-09-25T22:04:19+10:00")
         .withRow("Patient/abc3", "2018-05-18T11:03:55-05:00")
@@ -61,7 +61,7 @@ class ComparisonOperatorDateTest {
 
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
+        .withColumn(DataTypes.StringType)
         .withRow("Patient/abc1", "2013-06-10T12:33:22Z")
         .withRow("Patient/abc2", "2014-09-25T12:04:19Z")
         .withRow("Patient/abc3", "2018-05-19T11:03:55.123Z")
@@ -88,7 +88,7 @@ class ComparisonOperatorDateTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withRow("Patient/abc1", false)
         .withRow("Patient/abc2", true)
         .withRow("Patient/abc3", true)

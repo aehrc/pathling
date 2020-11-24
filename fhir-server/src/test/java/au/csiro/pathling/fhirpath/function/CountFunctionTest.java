@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.helpers.SparkHelpers.getResourceIdAndValueColumns;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,12 +20,8 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.builders.ResourcePathBuilder;
+import au.csiro.pathling.test.builders.*;
 import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import org.apache.spark.sql.Column;
@@ -56,13 +51,13 @@ class CountFunctionTest {
 
   @Test
   public void countsByResourceIdentity() {
-    final Dataset<Row> patientDataset = new DatasetBuilder()
-        .withIdColumn("id")
+    final Dataset<Row> patientDataset = new ResourceDatasetBuilder()
+        .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/abc1", "female", true)
-        .withRow("Patient/abc2", "female", false)
-        .withRow("Patient/abc3", "male", true)
+        .withRow("Patient/1", "female", true)
+        .withRow("Patient/2", "female", false)
+        .withRow("Patient/3", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
@@ -86,10 +81,10 @@ class CountFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.LongType)
-        .withRow("Patient/abc1", 1L)
-        .withRow("Patient/abc2", 1L)
-        .withRow("Patient/abc3", 1L)
+        .withColumn(DataTypes.LongType)
+        .withRow("Patient/1", 1L)
+        .withRow("Patient/2", 1L)
+        .withRow("Patient/3", 1L)
         .build();
     assertThat(result)
         .selectResult()
@@ -98,22 +93,21 @@ class CountFunctionTest {
 
   @Test
   public void countsByGrouping() {
-    final Dataset<Row> inputDataset = new DatasetBuilder()
-        .withIdColumn("id")
+    final Dataset<Row> inputDataset = new ResourceDatasetBuilder()
+        .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/abc1", "female", true)
-        .withRow("Patient/abc2", "female", false)
-        .withRow("Patient/abc2", "male", true)
+        .withRow("Patient/1", "female", true)
+        .withRow("Patient/2", "female", false)
+        .withRow("Patient/2", "male", true)
         .build();
-    final IdAndValueColumns idAndValueColumns = getResourceIdAndValueColumns(inputDataset);
-    final Column groupingColumn = inputDataset.col("gender");
+    when(mockReader.read(ResourceType.PATIENT)).thenReturn(inputDataset);
     final ResourcePath inputPath = new ResourcePathBuilder()
+        .resourceReader(mockReader)
         .resourceType(ResourceType.PATIENT)
-        .dataset(inputDataset)
-        .idColumn(idAndValueColumns.getId())
-        .valueColumn(idAndValueColumns.getId())
-        .buildCustom();
+        .expression("Patient")
+        .build();
+    final Column groupingColumn = inputPath.getElementColumn("gender");
 
     final ParserContext parserContext = new ParserContextBuilder()
         .groupingColumns(Collections.singletonList(groupingColumn))
@@ -131,8 +125,8 @@ class CountFunctionTest {
         .hasFhirType(FHIRDefinedType.UNSIGNEDINT);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
-        .withColumn("gender", DataTypes.StringType)
-        .withColumn("count", DataTypes.LongType)
+        .withColumn(DataTypes.StringType)
+        .withColumn(DataTypes.LongType)
         .withRow("female", 2L)
         .withRow("male", 1L)
         .build();

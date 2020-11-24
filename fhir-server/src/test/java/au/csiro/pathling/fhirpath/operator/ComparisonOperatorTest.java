@@ -113,7 +113,7 @@ public class ComparisonOperatorTest {
   private static TestParameters buildStringExpressions(final String name) {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
+        .withColumn(DataTypes.StringType)
         .withRow("abc1", "Evelyn")
         .withRow("abc2", "Evelyn")
         .withRow("abc3", "Jude")
@@ -129,7 +129,7 @@ public class ComparisonOperatorTest {
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
+        .withColumn(DataTypes.StringType)
         .withRow("abc1", "Evelyn")
         .withRow("abc2", "Jude")
         .withRow("abc3", "Evelyn")
@@ -150,7 +150,7 @@ public class ComparisonOperatorTest {
   private static TestParameters buildIntegerExpressions(final String name) {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.IntegerType)
+        .withColumn(DataTypes.IntegerType)
         .withRow("abc1", 1)
         .withRow("abc2", 1)
         .withRow("abc3", 2)
@@ -166,7 +166,7 @@ public class ComparisonOperatorTest {
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.IntegerType)
+        .withColumn(DataTypes.IntegerType)
         .withRow("abc1", 1)
         .withRow("abc2", 2)
         .withRow("abc3", 1)
@@ -187,7 +187,7 @@ public class ComparisonOperatorTest {
   private static TestParameters buildDecimalExpressions(final String name) {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.createDecimalType())
+        .withColumn(DataTypes.createDecimalType())
         .withRow("abc1", new BigDecimal("1.0"))
         .withRow("abc2", new BigDecimal("1.0"))
         .withRow("abc3", new BigDecimal("2.0"))
@@ -203,7 +203,7 @@ public class ComparisonOperatorTest {
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.createDecimalType())
+        .withColumn(DataTypes.createDecimalType())
         .withRow("abc1", new BigDecimal("1.0"))
         .withRow("abc2", new BigDecimal("2.0"))
         .withRow("abc3", new BigDecimal("1.0"))
@@ -227,7 +227,7 @@ public class ComparisonOperatorTest {
       final FHIRDefinedType fhirType) {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
+        .withColumn(DataTypes.StringType)
         .withRow("abc1", lesserDate)
         .withRow("abc2", lesserDate)
         .withRow("abc3", greaterDate)
@@ -243,7 +243,7 @@ public class ComparisonOperatorTest {
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
+        .withColumn(DataTypes.StringType)
         .withRow("abc1", lesserDate)
         .withRow("abc2", greaterDate)
         .withRow("abc3", lesserDate)

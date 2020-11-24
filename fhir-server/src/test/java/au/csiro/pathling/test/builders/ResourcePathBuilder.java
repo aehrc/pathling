@@ -6,10 +6,12 @@
 
 package au.csiro.pathling.test.builders;
 
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.ResourceReader;
@@ -17,17 +19,14 @@ import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -73,6 +72,13 @@ public class ResourcePathBuilder {
     valueColumn = idColumn;
     singular = false;
     thisColumn = null;
+  }
+
+  @Nonnull
+  public ResourcePathBuilder idAndValueColumns() {
+    idColumn = functions.col(dataset.columns()[0]);
+    valueColumn = idColumn;
+    return this;
   }
 
   @Nonnull
@@ -140,6 +146,7 @@ public class ResourcePathBuilder {
     final RuntimeResourceDefinition hapiDefinition = fhirContext
         .getResourceDefinition(resourceCode);
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, idColumn);
 
     final Map<String, Column> elementsToColumns = new HashMap<>();
     for (final String columnName : dataset.columns()) {
@@ -147,14 +154,14 @@ public class ResourcePathBuilder {
     }
 
     try {
-      final Method build = ResourcePath.class
-          .getDeclaredMethod("build", String.class, Dataset.class, Column.class, Column.class,
+      final Constructor<ResourcePath> constructor = ResourcePath.class
+          .getDeclaredConstructor(String.class, Dataset.class, Column.class, Column.class,
               boolean.class, Optional.class, ResourceDefinition.class, Map.class);
-      build.setAccessible(true);
-      return (ResourcePath) build
-          .invoke(ResourcePath.class, expression, dataset, idColumn, valueColumn,
-              singular, Optional.ofNullable(thisColumn), definition, elementsToColumns);
-    } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+      constructor.setAccessible(true);
+      return constructor.newInstance(expression, datasetWithColumn.getDataset(), idColumn,
+          datasetWithColumn.getColumn(), singular, Optional.ofNullable(thisColumn), definition,
+          elementsToColumns);
+    } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
       throw new RuntimeException("Problem building ResourcePath", e);
     }
   }

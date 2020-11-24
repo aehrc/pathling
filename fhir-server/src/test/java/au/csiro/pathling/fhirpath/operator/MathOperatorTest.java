@@ -98,7 +98,7 @@ public class MathOperatorTest {
       final boolean leftOperand) {
     final Dataset<Row> literalContextDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false, Arrays.asList("abc1", "abc2", "abc3", "abc4"))
         .build();
     final ElementPath literalContext = new ElementPathBuilder()
@@ -126,7 +126,7 @@ public class MathOperatorTest {
   private static FhirPath buildIntegerExpression(final boolean leftOperand) {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.IntegerType)
+        .withColumn(DataTypes.IntegerType)
         .withRow("abc1", leftOperand
                          ? 1
                          : 2)
@@ -149,7 +149,7 @@ public class MathOperatorTest {
   private static FhirPath buildDecimalExpression(final boolean leftOperand) {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.createDecimalType())
+        .withColumn(DataTypes.createDecimalType())
         .withRow("abc1", new BigDecimal(leftOperand
                                         ? "1.0"
                                         : "2.0"))

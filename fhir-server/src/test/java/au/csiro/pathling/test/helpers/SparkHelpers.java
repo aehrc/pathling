@@ -7,9 +7,9 @@
 package au.csiro.pathling.test.helpers;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.spark.udf.CodingsEqual;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -57,19 +57,9 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset) {
-    final Column idColumn = dataset.col(dataset.columns()[0]);
-    final Column valueColumn = dataset.col(dataset.columns()[1]);
+    final Column idColumn = col(dataset.columns()[0]);
+    final Column valueColumn = col(dataset.columns()[1]);
     return new IdAndValueColumns(idColumn, Collections.singletonList(valueColumn));
-  }
-
-  @Nonnull
-  public static IdAndValueColumns getResourceIdAndValueColumns(
-      @Nonnull final Dataset<Row> dataset) {
-    final Column idColumn = dataset.col(dataset.columns()[0]);
-    final List<Column> valueColumns = Arrays.stream(dataset.columns())
-        .map(dataset::col)
-        .collect(Collectors.toList());
-    return new IdAndValueColumns(idColumn, valueColumns);
   }
 
   @Nonnull

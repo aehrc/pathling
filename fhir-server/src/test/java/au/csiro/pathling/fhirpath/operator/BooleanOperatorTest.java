@@ -37,7 +37,7 @@ public class BooleanOperatorTest {
   public void setUp() {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withRow("abc1", true)
         .withRow("abc2", true)
         .withRow("abc3", false)
@@ -57,7 +57,7 @@ public class BooleanOperatorTest {
 
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withRow("abc1", false)
         .withRow("abc2", null)
         .withRow("abc3", true)

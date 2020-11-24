@@ -18,6 +18,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
+@SuppressWarnings("WeakerAccess")
 public class StringPrimitiveRowFixture extends PrimitiveRowFixture {
 
   private final static StructType STRING_SCHEMA =
@@ -69,7 +70,7 @@ public class StringPrimitiveRowFixture extends PrimitiveRowFixture {
   public static DatasetBuilder allStringsWithValue(final Object value) {
     return new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(value, STRING_ALL_IDS);
   }
 }

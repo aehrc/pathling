@@ -156,7 +156,7 @@ public class SubsumesFunctionTest {
   private static CodingLiteralPath createLiteralArgOrInput() {
     final Dataset<Row> literalContextDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false, ALL_RES_IDS)
         .build();
     final ElementPath literalContext = new ElementPathBuilder()
@@ -220,7 +220,7 @@ public class SubsumesFunctionTest {
   private static DatasetBuilder expectedSubsumes() {
     return new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withRow(RES_ID1, false)
         .withRow(RES_ID1, false)
         .withRow(RES_ID2, true)
@@ -235,7 +235,7 @@ public class SubsumesFunctionTest {
   private static DatasetBuilder expectedSubsumedBy() {
     return new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withRow(RES_ID1, true)
         .withRow(RES_ID1, false)
         .withRow(RES_ID2, true)
@@ -251,7 +251,7 @@ public class SubsumesFunctionTest {
   private static DatasetBuilder expectedAllNonNull(final boolean result) {
     return new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
+        .withColumn(DataTypes.BooleanType)
         .withRow(RES_ID1, result)
         .withRow(RES_ID1, result)
         .withRow(RES_ID2, result)

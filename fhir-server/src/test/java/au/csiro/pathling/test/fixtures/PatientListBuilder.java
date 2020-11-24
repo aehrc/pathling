@@ -34,8 +34,8 @@ public class PatientListBuilder {
 
   public static DatasetBuilder allPatientsWithValue(@Nullable final Object value) {
     return new DatasetBuilder()
-        .withColumn("123abcd_id", DataTypes.StringType)
-        .withColumn("123abcd", DataTypes.BooleanType)
+        .withColumn(DataTypes.StringType)
+        .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(value, PATIENT_ALL_IDS);
   }
 }
