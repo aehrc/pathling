@@ -40,8 +40,10 @@ public class WhereFunction implements NamedFunction {
         "Argument to where function cannot be a literal: " + input.getArguments().get(0)
             .getExpression());
     final NonLiteralPath argumentPath = (NonLiteralPath) input.getArguments().get(0);
+
     checkUserInput(argumentPath instanceof BooleanPath && argumentPath.isSingular(),
         "Argument to where function must be a singular Boolean: " + argumentPath.getExpression());
+
     checkUserInput(argumentPath.getThisColumn().isPresent(),
         "Argument to where function must be navigable from collection item (use $this): "
             + argumentPath.getExpression());
@@ -51,11 +53,15 @@ public class WhereFunction implements NamedFunction {
     // absence of a value).
     final Column idColumn = argumentPath.getIdColumn();
     final Column thisColumn = argumentPath.getThisColumn().get();
-    final Column valueColumn = when(argumentValue.equalTo(true), thisColumn).otherwise(lit(null));
+    final Column thisValue = thisColumn.getField("value");
+    final Column thisEid = thisColumn.getField("eid");
+
+    final Column valueColumn = when(argumentValue.equalTo(true), thisValue).otherwise(lit(null));
     final String expression = expressionFromInput(input, NAME);
 
     return inputPath
-        .copy(expression, argumentPath.getDataset(), idColumn, valueColumn, inputPath.isSingular(),
+        .copy(expression, argumentPath.getDataset(), idColumn,
+            inputPath.getEidColumn().map(c -> thisEid), valueColumn, inputPath.isSingular(),
             Optional.empty());
   }
 

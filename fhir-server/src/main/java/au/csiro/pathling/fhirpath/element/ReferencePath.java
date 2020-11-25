@@ -30,11 +30,12 @@ public class ReferencePath extends ElementPath {
   public static final String REFERENCE_FIELD_NAME = "reference";
 
   protected ReferencePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
-        fhirType);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+        thisColumn, fhirType);
   }
 
   @Nonnull

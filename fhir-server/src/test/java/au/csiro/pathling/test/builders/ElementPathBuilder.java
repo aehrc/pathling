@@ -37,6 +37,9 @@ public class ElementPathBuilder {
   @Nonnull
   private Column idColumn;
 
+  @Nullable
+  private Column eidColumn;
+
   @Nonnull
   private Column valueColumn;
 
@@ -74,6 +77,13 @@ public class ElementPathBuilder {
     valueColumn = idAndValueColumns.getValues().get(0);
     return this;
   }
+
+  @Nonnull
+  public ElementPathBuilder eidColumn() {
+    eidColumn = dataset.col("eid");
+    return this;
+  }
+
 
   @Nonnull
   public ElementPathBuilder expression(@Nonnull final String expression) {
@@ -132,15 +142,16 @@ public class ElementPathBuilder {
   @Nonnull
   public ElementPath build() {
     return ElementPath
-        .build(expression, dataset, idColumn, valueColumn, singular,
-            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), fhirType);
+        .build(expression, dataset, idColumn, Optional.ofNullable(eidColumn),
+            valueColumn, singular, Optional.ofNullable(foreignResource),
+            Optional.ofNullable(thisColumn), fhirType);
   }
 
   @Nonnull
   public ElementPath buildDefined() {
     return ElementPath
-        .build(expression, dataset, idColumn, valueColumn, singular,
-            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), definition);
+        .build(expression, dataset, idColumn, Optional.ofNullable(eidColumn),
+            valueColumn, singular, Optional.ofNullable(foreignResource),
+            Optional.ofNullable(thisColumn), definition);
   }
-
 }

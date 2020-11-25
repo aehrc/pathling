@@ -32,11 +32,12 @@ public class BooleanPath extends ElementPath implements Materializable<BooleanTy
       .of(BooleanPath.class, BooleanLiteralPath.class, NullLiteralPath.class);
 
   protected BooleanPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
-        fhirType);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+        thisColumn, fhirType);
   }
 
   @Nonnull

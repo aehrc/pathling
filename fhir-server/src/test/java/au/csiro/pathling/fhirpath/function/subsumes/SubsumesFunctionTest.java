@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function.subsumes;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
@@ -109,46 +110,71 @@ public class SubsumesFunctionTest {
   private static CodingPath createCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructTypeColumns(codingStructType())
-        .withRow(RES_ID1, rowFromCoding(CODING_SMALL))
-        .withRow(RES_ID2, rowFromCoding(CODING_MEDIUM))
-        .withRow(RES_ID3, rowFromCoding(CODING_LARGE))
-        .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
-        .withRow(RES_ID5, null /* NULL coding value */)
-        .withRow(RES_ID1, rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID2, rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID3, rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID4, rowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID1, makeEid(1), rowFromCoding(CODING_SMALL))
+        .withRow(RES_ID2, makeEid(1), rowFromCoding(CODING_MEDIUM))
+        .withRow(RES_ID3, makeEid(1), rowFromCoding(CODING_LARGE))
+        .withRow(RES_ID4, makeEid(1), rowFromCoding(CODING_OTHER1))
+        .withRow(RES_ID5, null, null /* NULL coding value */)
+        .withRow(RES_ID1, makeEid(0), rowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID2, makeEid(0), rowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID3, makeEid(0), rowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID4, makeEid(0), rowFromCoding(CODING_OTHER2))
         .buildWithStructValue();
     final ElementPath inputExpression = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndValueColumns()
+        .eidColumn()
         .singular(false)
         .build();
 
     return (CodingPath) inputExpression;
   }
 
+  private static CodingPath createSingularCodingInput() {
+    final Dataset<Row> dataset = new DatasetBuilder()
+        .withIdColumn()
+        .withStructTypeColumns(codingStructType())
+        .withRow(RES_ID1, rowFromCoding(CODING_SMALL))
+        .withRow(RES_ID2, rowFromCoding(CODING_MEDIUM))
+        .withRow(RES_ID3, rowFromCoding(CODING_LARGE))
+        .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
+        .withRow(RES_ID5, null /* NULL coding value */)
+        .buildWithStructValue();
+    final ElementPath inputExpression = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.CODING)
+        .dataset(dataset)
+        .idAndValueColumns()
+        .singular(true)
+        .build();
+
+    return (CodingPath) inputExpression;
+  }
+
+
   private static ElementPath createCodeableConceptInput() {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructTypeColumns(codeableConceptStructType())
-        .withRow(RES_ID1, codeableConceptRowFromCoding(CODING_SMALL))
-        .withRow(RES_ID2, codeableConceptRowFromCoding(CODING_MEDIUM))
-        .withRow(RES_ID3, codeableConceptRowFromCoding(CODING_LARGE))
-        .withRow(RES_ID4, codeableConceptRowFromCoding(CODING_OTHER1))
-        .withRow(RES_ID5, null /* NULL codeable concept value */)
-        .withRow(RES_ID1, codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID2, codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID3, codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID4, codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID1, makeEid(1), codeableConceptRowFromCoding(CODING_SMALL))
+        .withRow(RES_ID2, makeEid(1), codeableConceptRowFromCoding(CODING_MEDIUM))
+        .withRow(RES_ID3, makeEid(1), codeableConceptRowFromCoding(CODING_LARGE))
+        .withRow(RES_ID4, makeEid(1), codeableConceptRowFromCoding(CODING_OTHER1))
+        .withRow(RES_ID5, null, null /* NULL codeable concept value */)
+        .withRow(RES_ID1, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID2, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID3, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID4, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
         .buildWithStructValue();
 
     return new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
         .idAndValueColumns()
+        .eidColumn()
         .singular(false)
         .build();
   }
@@ -220,47 +246,50 @@ public class SubsumesFunctionTest {
   private static DatasetBuilder expectedSubsumes() {
     return new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withColumn(DataTypes.BooleanType)
-        .withRow(RES_ID1, false)
-        .withRow(RES_ID1, false)
-        .withRow(RES_ID2, true)
-        .withRow(RES_ID2, false)
-        .withRow(RES_ID3, true)
-        .withRow(RES_ID3, false)
-        .withRow(RES_ID4, false)
-        .withRow(RES_ID4, false)
-        .withRow(RES_ID5, null);
+        .withRow(RES_ID1, makeEid(0), false)
+        .withRow(RES_ID1, makeEid(1), false)
+        .withRow(RES_ID2, makeEid(0), false)
+        .withRow(RES_ID2, makeEid(1), true)
+        .withRow(RES_ID3, makeEid(0), false)
+        .withRow(RES_ID3, makeEid(1), true)
+        .withRow(RES_ID4, makeEid(0), false)
+        .withRow(RES_ID4, makeEid(1), false)
+        .withRow(RES_ID5, null, null);
   }
 
   private static DatasetBuilder expectedSubsumedBy() {
     return new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withColumn(DataTypes.BooleanType)
-        .withRow(RES_ID1, true)
-        .withRow(RES_ID1, false)
-        .withRow(RES_ID2, true)
-        .withRow(RES_ID2, false)
-        .withRow(RES_ID3, false)
-        .withRow(RES_ID3, false)
-        .withRow(RES_ID4, false)
-        .withRow(RES_ID4, false)
-        .withRow(RES_ID5, null);
+        .withRow(RES_ID1, makeEid(0), false)
+        .withRow(RES_ID1, makeEid(1), true)
+        .withRow(RES_ID2, makeEid(0), false)
+        .withRow(RES_ID2, makeEid(1), true)
+        .withRow(RES_ID3, makeEid(0), false)
+        .withRow(RES_ID3, makeEid(1), false)
+        .withRow(RES_ID4, makeEid(0), false)
+        .withRow(RES_ID4, makeEid(1), false)
+        .withRow(RES_ID5, null, null);
   }
 
   @Nonnull
   private static DatasetBuilder expectedAllNonNull(final boolean result) {
     return new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withColumn(DataTypes.BooleanType)
-        .withRow(RES_ID1, result)
-        .withRow(RES_ID1, result)
-        .withRow(RES_ID2, result)
-        .withRow(RES_ID2, result)
-        .withRow(RES_ID3, result)
-        .withRow(RES_ID3, result)
-        .withRow(RES_ID4, result)
-        .withRow(RES_ID4, result)
-        .withRow(RES_ID5, null);
+        .withRow(RES_ID1, makeEid(0), result)
+        .withRow(RES_ID1, makeEid(1), result)
+        .withRow(RES_ID2, makeEid(0), result)
+        .withRow(RES_ID2, makeEid(1), result)
+        .withRow(RES_ID3, makeEid(0), result)
+        .withRow(RES_ID3, makeEid(1), result)
+        .withRow(RES_ID4, makeEid(0), result)
+        .withRow(RES_ID4, makeEid(1), result)
+        .withRow(RES_ID5, null, null);
   }
 
   private FhirPathAssertion assertCallSuccess(final NamedFunction function,
@@ -282,13 +311,13 @@ public class SubsumesFunctionTest {
   private DatasetAssert assertSubsumesSuccess(final NonLiteralPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumes"), inputExpression,
-        argumentExpression).selectResultPreserveOrder();
+        argumentExpression).selectOrderedResultWithEid();
   }
 
   private DatasetAssert assertSubsumedBySuccess(final NonLiteralPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumedBy"), inputExpression,
-        argumentExpression).selectResultPreserveOrder();
+        argumentExpression).selectOrderedResultWithEid();
   }
 
   //
@@ -321,6 +350,7 @@ public class SubsumesFunctionTest {
 
   @Test
   public void testSubsumedByCodingWithCodeableConceptCorrectly() {
+
     assertSubsumedBySuccess(createCodingInput(), createCodeableConceptArg())
         .hasRows(expectedSubsumedBy());
   }
@@ -358,8 +388,19 @@ public class SubsumesFunctionTest {
 
   @Test
   public void testAllNonNullTrueWhenSubsumesItself() {
-    assertSubsumesSuccess(createCodingInput(), createCodingInput())
-        .hasRows(expectedAllNonNull(true));
+
+    final DatasetBuilder expectedResult = new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, null, true)
+        .withRow(RES_ID2, null, true)
+        .withRow(RES_ID3, null, true)
+        .withRow(RES_ID4, null, true)
+        .withRow(RES_ID5, null, null);
+
+    assertSubsumesSuccess(createSingularCodingInput(), createSingularCodingInput())
+        .hasRows(expectedResult);
   }
 
 

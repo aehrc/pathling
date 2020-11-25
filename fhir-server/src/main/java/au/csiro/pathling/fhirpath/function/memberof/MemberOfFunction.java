@@ -116,8 +116,10 @@ public class MemberOfFunction implements NamedFunction {
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
+
     return ElementPath
-        .build(expression, finalDataset, idColumn, valueColumn, inputPath.isSingular(),
+        .build(expression, finalDataset, idColumn, inputPath.getEidColumn(), valueColumn,
+            inputPath.isSingular(),
             inputPath.getForeignResource(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 

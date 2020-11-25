@@ -104,7 +104,8 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     // resource.
     final ResourcePath aggregationContext = inputContext
         .copy(inputContext.getExpression(), groupingsAndFiltersDataset, inputContext.getIdColumn(),
-            inputContext.getValueColumn(), inputContext.isSingular(), Optional.empty());
+            inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
+            Optional.empty());
     final ParserContext aggregationParserContext = buildParserContext(aggregationContext,
         groupingColumns);
     final Parser aggregationParser = new Parser(aggregationParserContext);

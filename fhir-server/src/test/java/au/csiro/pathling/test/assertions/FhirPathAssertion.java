@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
@@ -36,14 +37,14 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   }
 
   @Nonnull
-  public DatasetAssert selectResult() {
-    final Column[] selection = Arrays.asList(fhirPath.getIdColumn(), fhirPath.getValueColumn())
-        .toArray(new Column[0]);
-    return new DatasetAssert(fhirPath.getDataset()
-        .select(selection)
-        .orderBy(selection));
-  }
+  public DatasetAssert selectOrderedResult() {
+    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
+    final Column[] ordering = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn()};
 
+    return new DatasetAssert(fhirPath.getOrderedDataset()
+        .select(selection)
+        .orderBy(ordering));
+  }
 
   @Nonnull
   public DatasetAssert selectGroupingResult(@Nonnull final List<Column> groupingColumns) {
@@ -62,12 +63,15 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
                              : fhirPath.getDataset().select(allColumns).orderBy(allColumns));
   }
 
-
   @Nonnull
-  public DatasetAssert selectResultPreserveOrder() {
-    final Column[] selection = Arrays.asList(fhirPath.getIdColumn(), fhirPath.getValueColumn())
-        .toArray(new Column[0]);
-    return new DatasetAssert(fhirPath.getDataset().select(selection));
+  public DatasetAssert selectOrderedResultWithEid() {
+    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn(),
+        fhirPath.getValueColumn()};
+    final Column[] ordering = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn()};
+
+    return new DatasetAssert(fhirPath.getOrderedDataset()
+        .select(selection)
+        .orderBy(ordering));
   }
 
   @Nonnull
@@ -111,5 +115,4 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   private T self() {
     return (T) this;
   }
-
 }

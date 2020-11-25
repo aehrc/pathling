@@ -66,6 +66,11 @@ public abstract class SparkHelpers {
   }
 
   @Nonnull
+  public static Column getEidColumn(@Nonnull final Dataset<Row> dataset) {
+    return dataset.col("eid");
+  }
+
+  @Nonnull
   public static StructType codingStructType() {
     final Metadata metadata = new MetadataBuilder().build();
     final StructField id = new StructField("id", DataTypes.StringType, true, metadata);

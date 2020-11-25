@@ -25,6 +25,7 @@ import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -94,7 +95,9 @@ public class ResolveFunction implements NamedFunction {
         resourcePath.getDataset(), resourceIdColumn, JoinType.LEFT_OUTER);
 
     final Column inputId = referencePath.getIdColumn();
-    return resourcePath.copy(expression, dataset, inputId, resourcePath.getValueColumn(),
+    final Optional<Column> inputEid = referencePath.getEidColumn();
+
+    return resourcePath.copy(expression, dataset, inputId, inputEid, resourcePath.getValueColumn(),
         referencePath.isSingular(), referencePath.getThisColumn());
   }
 
@@ -140,8 +143,9 @@ public class ResolveFunction implements NamedFunction {
         targetDataset, targetId, JoinType.LEFT_OUTER);
 
     final Column inputId = referencePath.getIdColumn();
+    final Optional<Column> inputEid = referencePath.getEidColumn();
     return UntypedResourcePath
-        .build(referencePath, expression, dataset, inputId, targetType, referenceTypes);
+        .build(referencePath, expression, dataset, inputId, inputEid, targetType, referenceTypes);
   }
 
 }

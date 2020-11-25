@@ -9,7 +9,6 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -73,12 +72,6 @@ class CountFunctionTest {
     final NamedFunction count = NamedFunction.getInstance("count");
     final FhirPath result = count.invoke(countInput);
 
-    assertTrue(result instanceof IntegerPath);
-    assertThat((ElementPath) result)
-        .hasExpression("count()")
-        .isSingular()
-        .hasFhirType(FHIRDefinedType.UNSIGNEDINT);
-
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.LongType)
@@ -86,8 +79,13 @@ class CountFunctionTest {
         .withRow("Patient/2", 1L)
         .withRow("Patient/3", 1L)
         .build();
+
     assertThat(result)
-        .selectResult()
+        .hasExpression("count()")
+        .isSingular()
+        .isElementPath(IntegerPath.class)
+        .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 
@@ -118,20 +116,21 @@ class CountFunctionTest {
     final NamedFunction count = NamedFunction.getInstance("count");
     final FhirPath result = count.invoke(countInput);
 
-    assertTrue(result instanceof IntegerPath);
-    assertThat((ElementPath) result)
-        .hasExpression("count()")
-        .isSingular()
-        .hasFhirType(FHIRDefinedType.UNSIGNEDINT);
-
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withColumn(DataTypes.StringType)
         .withColumn(DataTypes.LongType)
         .withRow("female", 2L)
         .withRow("male", 1L)
         .build();
-    assertThat(expectedDataset)
+
+    assertThat(result)
+        .hasExpression("count()")
+        .isSingular()
+        .isElementPath(IntegerPath.class)
+        .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
+        .selectGroupingResult(Collections.singletonList(groupingColumn))
         .hasRows(expectedDataset);
+
   }
 
   @Test

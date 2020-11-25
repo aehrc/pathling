@@ -129,9 +129,10 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
         // a foreign resource reference.
+        // @TODO: EID - confirm that is should be singular here
         final ResourcePath path = ResourcePath
             .build(context.getFhirContext(), context.getResourceReader(), resourceType, fhirPath,
-                false);
+                true);
 
         // This resource path will get preserved within paths derived from this, so that we can come
         // back to it for things like reverse reference resolution.
@@ -172,10 +173,14 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
     final List<FhirPath> arguments = new ArrayList<>();
     if (paramList != null) {
       // The `$this` path will be the same as the input, but with a different expression and it will
-      // be singular as it represents the current item from the collection.
+      // be singular as it represents a single item.
+      // NOTE: This works because for $this the context for aggregation grouping on elements
+      // includes `id` and `this` columns.
+
       final FhirPath thisPath = nonLiteral
-          .copy(NamedFunction.THIS, input.getDataset(), input.getIdColumn(), input.getValueColumn(),
-              true, Optional.of(input.getValueColumn()));
+          .copy(NamedFunction.THIS, input.getDataset(), input.getIdColumn(),
+              Optional.empty(), input.getValueColumn(), true,
+              Optional.of(nonLiteral.makeThisColumn()));
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this` 
       // expression.

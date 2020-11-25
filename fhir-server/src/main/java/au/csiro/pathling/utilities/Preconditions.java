@@ -87,4 +87,17 @@ public class Preconditions {
     }
   }
 
+  /**
+   * Ensures the truth of an expression, throwing an {@link IllegalStateException} with the supplied
+   * message if it does not evaluate as true.
+   *
+   * @param expression The expression that should be true
+   * @param errorMessage The message to use if an error is thrown
+   */
+  public static void checkState(final boolean expression, @Nonnull final String errorMessage) {
+    if (!expression) {
+      throw new IllegalStateException(errorMessage);
+    }
+  }
+
 }

@@ -45,11 +45,13 @@ public class ResourcePath extends NonLiteralPath {
   private final Map<String, Column> elementsToColumns;
 
   protected ResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<Column> thisColumn,
       @Nonnull final ResourceDefinition definition,
       @Nonnull final Map<String, Column> elementsToColumns) {
-    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
+        thisColumn);
     this.definition = definition;
     this.elementsToColumns = elementsToColumns;
   }
@@ -121,7 +123,8 @@ public class ResourcePath extends NonLiteralPath {
     }
 
     // We use the ID column as the value column for a ResourcePath.
-    return new ResourcePath(expression, finalDataset, finalIdColumn, finalIdColumn, singular,
+    return new ResourcePath(expression, finalDataset, finalIdColumn, Optional.empty(),
+        finalIdColumn, singular,
         Optional.empty(), definition, elementsToColumns);
   }
 
@@ -151,10 +154,11 @@ public class ResourcePath extends NonLiteralPath {
   @Nonnull
   @Override
   public ResourcePath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
     final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
-    return new ResourcePath(expression, datasetWithColumn.getDataset(), idColumn,
+    return new ResourcePath(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
         datasetWithColumn.getColumn(), singular, thisColumn, definition, elementsToColumns);
   }
 

@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.fhirpath.NonLiteralPath.findEidColumn;
 import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
@@ -63,11 +64,13 @@ public class ComparisonOperator implements Operator {
     final Comparable rightComparable = (Comparable) right;
     final Column valueColumn = leftComparable.getComparison(type).apply(rightComparable);
     final Column idColumn = left.getIdColumn();
+    final Optional<Column> eidColumn = findEidColumn(left, right);
     final Optional<Column> thisColumn = findThisColumn(left, right);
     final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
 
     return ElementPath
-        .build(expression, datasetWithColumn.getDataset(), idColumn, datasetWithColumn.getColumn(),
+        .build(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
+            datasetWithColumn.getColumn(),
             true, Optional.empty(), thisColumn, FHIRDefinedType.BOOLEAN);
   }
 

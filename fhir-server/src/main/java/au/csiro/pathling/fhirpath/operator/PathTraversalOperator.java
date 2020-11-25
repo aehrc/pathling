@@ -7,8 +7,8 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.explode_outer;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.posexplode_outer;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -16,7 +16,9 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import java.util.Arrays;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -74,16 +76,33 @@ public class PathTraversalOperator {
     // If the element has a max cardinality of more than one, it will need to be "exploded" out into
     // multiple rows.
     final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
+    final boolean resultSingular = left.isSingular() && maxCardinalityOfOne;
+
     final Column valueColumn;
+    final Optional<Column> eidColumnCandidate;
+    final Dataset<Row> resultDataset;
+
     if (maxCardinalityOfOne) {
       valueColumn = field;
+      eidColumnCandidate = left.getEidColumn();
+      resultDataset = leftDataset;
     } else {
-      valueColumn = explode_outer(field);
+      // create a dataset with all existing columns and then posexpand the array value field
+      // into `index` and `value` columns.
+      final Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
+          .map(leftDataset::col), Stream
+          .of(posexplode_outer(field)
+              .as(new String[]{"index", "value"})))
+          .toArray(l -> new Column[l]);
+      resultDataset = leftDataset.select(allColumns);
+      valueColumn = resultDataset.col("value");
+      eidColumnCandidate = Optional.of(left.expandEid(resultDataset.col("index")));
     }
-    final boolean singular = left.isSingular() && maxCardinalityOfOne;
-
-    return ElementPath.build(expression, leftDataset, left.getIdColumn(), valueColumn, singular,
-        left.getForeignResource(), left.getThisColumn(), childDefinition);
+    return ElementPath
+        .build(expression, resultDataset, left.getIdColumn(), resultSingular
+                                                              ? Optional.empty()
+                                                              : eidColumnCandidate, valueColumn,
+            resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
   }
 
 }

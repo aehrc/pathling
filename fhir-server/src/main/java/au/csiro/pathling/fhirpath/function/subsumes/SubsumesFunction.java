@@ -61,7 +61,7 @@ public class SubsumesFunction implements NamedFunction {
    * The column name that this function uses to represent the result value.
    */
   public static final String COL_VALUE = "value";
-
+  
   private static final String COL_ARG_ID = "argId";
   private static final String COL_CODING = "coding";
   private static final String FIELD_CODING = "coding";
@@ -96,6 +96,7 @@ public class SubsumesFunction implements NamedFunction {
     final NonLiteralPath inputFhirPath = input.getInput();
     final Dataset<Row> idAndCodingSet = createJoinedDataset(input.getInput(),
         input.getArguments().get(0));
+
     final StructType resultSchema = SubsumptionMapper.createResultSchema(idAndCodingSet.schema());
 
     // Process the subsumption operation per partition, adding a result column to the dataset.
@@ -112,7 +113,8 @@ public class SubsumesFunction implements NamedFunction {
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
     return ElementPath
-        .build(expression, resultDataset, idColumn, valueColumn, inputFhirPath.isSingular(),
+        .build(expression, resultDataset, idColumn,
+            inputFhirPath.getEidColumn(), valueColumn, inputFhirPath.isSingular(),
             inputFhirPath.getForeignResource(), inputFhirPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }
@@ -233,5 +235,4 @@ public class SubsumesFunction implements NamedFunction {
         functionName + " function accepts " + pathRole + " of type Coding or CodeableConcept"
     );
   }
-
 }

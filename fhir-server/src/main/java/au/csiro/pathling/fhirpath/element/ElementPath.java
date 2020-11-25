@@ -46,10 +46,12 @@ public class ElementPath extends NonLiteralPath {
   private Optional<ElementDefinition> definition = Optional.empty();
 
   protected ElementPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+        thisColumn);
     this.fhirType = fhirType;
   }
 
@@ -63,6 +65,7 @@ public class ElementPath extends NonLiteralPath {
    * @param dataset a {@link Dataset} that can be used to evaluate this path against data
    * @param idColumn a {@link Column} within the dataset containing the identity of the subject
    * resource
+   * @param eidColumn a {@link Column} within the dataset containing the element identity
    * @param valueColumn a {@link Column} within the dataset containing the values of the nodes
    * @param singular an indicator of whether this path represents a single-valued collection
    * @param foreignResource a foreign resource this path originated from, if any
@@ -73,7 +76,8 @@ public class ElementPath extends NonLiteralPath {
   @Nonnull
   public static ElementPath build(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> eidColumn, @Nonnull final Column valueColumn,
+      final boolean singular,
       @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn,
       @Nonnull final ElementDefinition definition) {
@@ -81,7 +85,8 @@ public class ElementPath extends NonLiteralPath {
     if (optionalFhirType.isPresent()) {
       final FHIRDefinedType fhirType = optionalFhirType.get();
       final ElementPath path = ElementPath
-          .build(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
+          .build(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+              thisColumn,
               fhirType);
       path.definition = Optional.of(definition);
       return path;
@@ -100,6 +105,7 @@ public class ElementPath extends NonLiteralPath {
    * @param dataset a {@link Dataset} that can be used to evaluate this path against data
    * @param idColumn a {@link Column} within the dataset containing the identity of the subject
    * resource
+   * @param eidColumn a {@link Column} within the dataset containing the element identity
    * @param valueColumn a {@link Column} within the dataset containing the values of the nodes
    * @param singular an indicator of whether this path represents a single-valued collection
    * @param foreignResource a foreign resource this path originated from, if any
@@ -110,16 +116,19 @@ public class ElementPath extends NonLiteralPath {
   @Nonnull
   public static ElementPath build(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    return getInstance(expression, dataset, idColumn, valueColumn, singular, foreignResource,
+    return getInstance(expression, dataset, idColumn, eidColumn, valueColumn, singular,
+        foreignResource,
         thisColumn, fhirType);
   }
 
   @Nonnull
   private static ElementPath getInstance(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
@@ -131,10 +140,11 @@ public class ElementPath extends NonLiteralPath {
     try {
       // Call its constructor and return.
       final Constructor<? extends ElementPath> constructor = elementPathClass
-          .getDeclaredConstructor(String.class, Dataset.class, Column.class, Column.class,
+          .getDeclaredConstructor(String.class, Dataset.class, Column.class, Optional.class,
+              Column.class,
               boolean.class, Optional.class, Optional.class, FHIRDefinedType.class);
       return constructor
-          .newInstance(expression, datasetWithColumn.getDataset(), idColumn,
+          .newInstance(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
               datasetWithColumn.getColumn(), singular, foreignResource, thisColumn, fhirType);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
         InvocationTargetException e) {
@@ -151,15 +161,17 @@ public class ElementPath extends NonLiteralPath {
   @Nonnull
   @Override
   public ElementPath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
     return definition
         .map(elementDefinition -> ElementPath
-            .build(expression, dataset, idColumn, valueColumn, singular, foreignResource,
+            .build(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
                 thisColumn, elementDefinition))
         .orElseGet(
             () -> ElementPath
-                .build(expression, dataset, idColumn, valueColumn, singular, foreignResource,
+                .build(expression, dataset, idColumn, eidColumn, valueColumn, singular,
+                    foreignResource,
                     thisColumn, fhirType));
   }
 

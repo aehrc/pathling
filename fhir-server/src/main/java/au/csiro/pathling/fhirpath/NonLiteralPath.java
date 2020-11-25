@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -18,6 +19,7 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 
 /**
  * Represents any FHIRPath expression which is not a literal.
@@ -35,6 +37,9 @@ public abstract class NonLiteralPath implements FhirPath {
 
   @Nonnull
   protected final Column idColumn;
+
+  @Nonnull
+  protected final Optional<Column> eidColumn;
 
   @Nonnull
   protected final Column valueColumn;
@@ -59,7 +64,8 @@ public abstract class NonLiteralPath implements FhirPath {
   protected Optional<Column> thisColumn;
 
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn) {
 
@@ -71,9 +77,13 @@ public abstract class NonLiteralPath implements FhirPath {
     thisColumn.ifPresent(col -> checkArgument(datasetColumns.contains(col.toString()),
         "$this column name not present in dataset"));
 
+    // precondition: singular paths should have empty eidColumn
+    check(!singular || eidColumn.isEmpty());
+
     this.expression = expression;
     this.dataset = dataset;
     this.idColumn = idColumn;
+    this.eidColumn = eidColumn;
     this.valueColumn = valueColumn;
     this.singular = singular;
     this.foreignResource = foreignResource;
@@ -96,6 +106,25 @@ public abstract class NonLiteralPath implements FhirPath {
         .flatMap(NonLiteralPath::getThisColumn);
   }
 
+  @Override
+  public boolean hasOrder() {
+    return isSingular() || eidColumn.isPresent();
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> getOrderedDataset() {
+    checkHasOrder();
+    return eidColumn.map(c -> getDataset().orderBy(c)).orElse(getDataset());
+  }
+
+  @Nonnull
+  @Override
+  public Column getOrderingColumn() {
+    checkHasOrder();
+    return eidColumn.orElse(ORDERING_NULL_VALUE);
+  }
+
   /**
    * Returns the specified child of this path, if there is one.
    *
@@ -112,6 +141,7 @@ public abstract class NonLiteralPath implements FhirPath {
    * @param expression an updated expression to describe the new NonLiteralPath
    * @param dataset the new Dataset that can be used to evaluate this NonLiteralPath against data
    * @param idColumn the new resource identity column
+   * @param eidColumn the new element identity column
    * @param valueColumn the new expression value column
    * @param singular the new singular value
    * @param thisColumn a list of columns containing the collection being iterated, for cases where a
@@ -120,7 +150,66 @@ public abstract class NonLiteralPath implements FhirPath {
    */
   @Nonnull
   public abstract NonLiteralPath copy(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-      @Nonnull Column idColumn, @Nonnull Column valueColumn, boolean singular,
+      @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn,
+      @Nonnull Column valueColumn, boolean singular,
       @Nonnull Optional<Column> thisColumn);
+
+
+  /**
+   * Gets a eid {@link Column} from any of the inputs, if there is one.
+   *
+   * @param inputs a collection of objects
+   * @return a {@link Column}, if one was found
+   */
+  @Nonnull
+  public static Optional<Column> findEidColumn(@Nonnull final Object... inputs) {
+    return Stream.of(inputs)
+        .filter(input -> input instanceof NonLiteralPath)
+        .map(path -> (NonLiteralPath) path)
+        .filter(path -> path.getEidColumn().isPresent())
+        .findFirst()
+        .flatMap(NonLiteralPath::getEidColumn);
+  }
+
+  /**
+   * Constructs a this column for this path as a structure with two fields `eid` and `value`.
+   *
+   * @return this column.
+   */
+  @Nonnull
+  public Column makeThisColumn() {
+    // Construct this based on input value and eid
+    // It is important to alias this column here as it is passed without
+    // renaming through {@link NonLiteralPath} constructor.
+
+    // @TODO: Merge - the old code did the aliasing of this columnt
+    // which I belive was important for some reason
+    // final String hash = randomShortString();
+    // return functions.struct(
+    //     getOrderingColumn().alias("eid"),
+    //     getValueColumn().alias("value")).alias(hash + THIS_COLUMN_SUFFIX);
+
+    return functions.struct(
+        getOrderingColumn().alias("eid"),
+        getValueColumn().alias("value"));
+  }
+
+  /**
+   * Constructs the new value of the eidColumn based on its current value in the parent path and the
+   * index of an element in the child path.
+   *
+   * @param indexColumn the column with the child path element index
+   * @return eid column for the child path
+   */
+  @Nonnull
+  public Column expandEid(@Nonnull final Column indexColumn) {
+    final Column indexAsArray = functions.array(indexColumn);
+    final Column compositeEid = getEidColumn()
+        .map(eid -> functions.when(eid.isNull(), ORDERING_NULL_VALUE).otherwise(
+            functions.concat(eid, indexAsArray))).orElse(indexAsArray);
+
+    return functions.when(indexColumn.isNull(), ORDERING_NULL_VALUE)
+        .otherwise(compositeEid);
+  }
 
 }

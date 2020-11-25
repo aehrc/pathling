@@ -46,14 +46,15 @@ public class UntypedResourcePath extends NonLiteralPath {
 
   private UntypedResourcePath(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
-    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(), thisColumn);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
+        thisColumn);
 
     checkArgument(Arrays.asList(dataset.columns()).contains(typeColumn.toString()),
         "Type column not present in dataset");
-
     this.typeColumn = typeColumn;
     this.possibleTypes = possibleTypes;
   }
@@ -63,6 +64,7 @@ public class UntypedResourcePath extends NonLiteralPath {
    * @param expression the FHIRPath representation of this path
    * @param dataset a {@link Dataset} that can be used to evaluate this path against data
    * @param idColumn a column within the dataset containing the identity of the subject resource
+   * @param eidColumn a column within the dataset containing the element identities of the nodes
    * @param typeColumn a column within the dataset containing the resource type
    * @param possibleTypes a set of {@link ResourceType} objects that describe the different types
    * @return a shiny new UntypedResourcePath
@@ -70,7 +72,8 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Nonnull
   public static UntypedResourcePath build(@Nonnull final ReferencePath referencePath,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column typeColumn,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
 
     final Column valueColumn = referencePath.getValueColumn();
@@ -78,7 +81,7 @@ public class UntypedResourcePath extends NonLiteralPath {
     final Dataset<Row> finalDataset = datasetWithType.getDataset();
     final Column finalTypeColumn = datasetWithType.getColumn();
 
-    return new UntypedResourcePath(expression, finalDataset, idColumn, valueColumn,
+    return new UntypedResourcePath(expression, finalDataset, idColumn, eidColumn, valueColumn,
         referencePath.isSingular(), referencePath.getThisColumn(), finalTypeColumn,
         possibleTypes);
   }
@@ -98,10 +101,11 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Override
   public UntypedResourcePath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
     final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
-    return new UntypedResourcePath(expression, datasetWithColumn.getDataset(), idColumn,
+    return new UntypedResourcePath(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
         datasetWithColumn.getColumn(), singular, thisColumn, typeColumn, possibleTypes);
   }
 

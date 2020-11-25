@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -44,16 +46,19 @@ public class WhereFunctionTest {
     final String statusColumn = randomAlias();
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withIdColumn()
         .withColumn(statusColumn, DataTypes.StringType)
-        .withRow("Patient/1", "Encounter/1", "in-progress")
-        .withRow("Patient/1", "Encounter/2", "finished")
-        .withRow("Patient/2", "Encounter/3", "in-progress")
-        .withRow("Patient/3", "Encounter/4", "in-progress")
-        .withRow("Patient/3", "Encounter/5", "finished")
-        .withRow("Patient/4", "Encounter/6", "finished")
-        .withRow("Patient/4", "Encounter/7", "finished")
-        .withRow("Patient/5", null, null)
+        .withRow("Patient/1", makeEid(1), "Encounter/1", "in-progress")
+        .withRow("Patient/1", makeEid(0), "Encounter/2", "finished")
+        .withRow("Patient/2", makeEid(0), "Encounter/3", "in-progress")
+        .withRow("Patient/3", makeEid(1), "Encounter/4", "in-progress")
+        .withRow("Patient/3", makeEid(0), "Encounter/5", "finished")
+        .withRow("Patient/4", makeEid(1), "Encounter/6", "finished")
+        .withRow("Patient/4", makeEid(0), "Encounter/7", "finished")
+        .withRow("Patient/5", makeEid(1), "Encounter/8", "in-progress")
+        .withRow("Patient/5", makeEid(0), "Encounter/9", "in-progress")
+        .withRow("Patient/6", null, null)
         .build();
     final ResourcePath inputPath = new ResourcePathBuilder()
         .expression("reverseResolve(Encounter.subject)")
@@ -70,7 +75,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputPath.getValueColumn())
+        .thisColumn(inputPath.makeThisColumn())
         .singular(true)
         .build();
 
@@ -83,21 +88,30 @@ public class WhereFunctionTest {
     final NamedFunction whereFunction = NamedFunction.getInstance("where");
     final FhirPath result = whereFunction.invoke(whereInput);
 
+    // @TODO: WHERE ON EMPTY COLLECTIONS
+    // .withRow("Patient/1", null)
+    // .withRow("Patient/1", "Patient/1")
+    // .withRow("Patient/2", "Patient/2")
+    // .withRow("Patient/3", null)
+    // .withRow("Patient/3", "Patient/3")
+    // .withRow("Patient/4", null)
+    // .withRow("Patient/4", null)
+    // .withRow("Patient/5", null)
+
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", null)
-        .withRow("Patient/1", "Patient/1")
-        .withRow("Patient/2", "Patient/2")
-        .withRow("Patient/3", null)
-        .withRow("Patient/3", "Patient/3")
-        .withRow("Patient/4", null)
-        .withRow("Patient/4", null)
-        .withRow("Patient/5", null)
-        .build();
+        .withEidColumn()
+        .withRow("Patient/1", makeEid(1), RowFactory.create("Encounter/abc1", "in-progress"))
+        .withRow("Patient/2", makeEid(0), RowFactory.create("Encounter/abc3", "in-progress"))
+        .withRow("Patient/3", makeEid(1), RowFactory.create("Encounter/abc4", "in-progress"))
+        .withRow("Patient/4", null, null)
+        .withRow("Patient/5", makeEid(0), RowFactory.create("Encounter/abc9", "in-progress"))
+        .withRow("Patient/5", makeEid(1), RowFactory.create("Encounter/abc8", "in-progress"))
+        .withRow("Patient/6", null, null)
+        .buildWithStructValue();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
 
@@ -106,21 +120,23 @@ public class WhereFunctionTest {
     // Build an expression which represents the input to the function.
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", "en")
-        .withRow("Patient/1", "es")
-        .withRow("Patient/2", "de")
-        .withRow("Patient/3", "en")
-        .withRow("Patient/3", "en")
-        .withRow("Patient/3", "zh")
-        .withRow("Patient/4", "fr")
-        .withRow("Patient/4", "fr")
-        .withRow("Patient/5", null)
+        .withRow("Patient/1", makeEid(1), "en")
+        .withRow("Patient/1", makeEid(0), "es")
+        .withRow("Patient/2", makeEid(0), "de")
+        .withRow("Patient/3", makeEid(2), "en")
+        .withRow("Patient/3", makeEid(1), "en")
+        .withRow("Patient/3", makeEid(0), "zh")
+        .withRow("Patient/4", makeEid(1), "fr")
+        .withRow("Patient/4", makeEid(0), "fr")
+        .withRow("Patient/5", null, null)
         .build();
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(dataset)
         .idAndValueColumns()
+        .eidColumn()
         .singular(false)
         .build();
 
@@ -132,7 +148,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputPath.getValueColumn())
+        .thisColumn(inputPath.makeThisColumn())
         .singular(true)
         .build();
 
@@ -146,22 +162,31 @@ public class WhereFunctionTest {
     final NamedFunction whereFunction = NamedFunction.getInstance("where");
     final FhirPath result = whereFunction.invoke(whereInput);
 
+    // @TODO: WHERE ON EMPTY COLLECTIONS
+    // .withRow("Patient/1", null)
+    // .withRow("Patient/1", "en")
+    // .withRow("Patient/2", null)
+    // .withRow("Patient/3", null)
+    // .withRow("Patient/3", "en")
+    // .withRow("Patient/3", "en")
+    // .withRow("Patient/4", null)
+    // .withRow("Patient/4", null)
+    // .withRow("Patient/5", null)
+
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", null)
-        .withRow("Patient/1", "en")
-        .withRow("Patient/2", null)
-        .withRow("Patient/3", null)
-        .withRow("Patient/3", "en")
-        .withRow("Patient/3", "en")
-        .withRow("Patient/4", null)
-        .withRow("Patient/4", null)
-        .withRow("Patient/5", null)
+        .withRow("Patient/abc1", makeEid(1), "en")
+        .withRow("Patient/abc2", null, null)
+        .withRow("Patient/abc3", makeEid(1), "en")
+        .withRow("Patient/abc3", makeEid(2), "en")
+        .withRow("Patient/abc4", null, null)
+        .withRow("Patient/abc5", null, null)
         .build();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
 
@@ -170,19 +195,21 @@ public class WhereFunctionTest {
     // Build an expression which represents the input to the function.
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", "en")
-        .withRow("Patient/1", "es")
-        .withRow("Patient/2", "de")
-        .withRow("Patient/3", "en")
-        .withRow("Patient/3", "en")
-        .withRow("Patient/3", "zh")
-        .withRow("Patient/4", "ar")
+        .withRow("Patient/1", makeEid(0), "en")
+        .withRow("Patient/1", makeEid(1), "es")
+        .withRow("Patient/2", makeEid(0), "de")
+        .withRow("Patient/3", makeEid(0), "en")
+        .withRow("Patient/3", makeEid(1), "en")
+        .withRow("Patient/3", makeEid(2), "zh")
+        .withRow("Patient/4", makeEid(0), "ar")
         .build();
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(dataset)
         .idAndValueColumns()
+        .eidColumn()
         .singular(false)
         .build();
 
@@ -195,7 +222,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputPath.getValueColumn())
+        .thisColumn(inputPath.makeThisColumn())
         .singular(true)
         .build();
 
@@ -208,20 +235,27 @@ public class WhereFunctionTest {
     final NamedFunction whereFunction = NamedFunction.getInstance("where");
     final FhirPath result = whereFunction.invoke(whereInput);
 
+    // @TODO: WHERE ON EMPTY COLLECTIONS
+    // .withRow("Patient/1", null)
+    // .withRow("Patient/1", "es")
+    // .withRow("Patient/2", "de")
+    // .withRow("Patient/3", null)
+    // .withRow("Patient/3", null)
+    // .withRow("Patient/3", "zh")
+    // .withRow("Patient/4", "ar")
+
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", null)
-        .withRow("Patient/1", "es")
-        .withRow("Patient/2", "de")
-        .withRow("Patient/3", null)
-        .withRow("Patient/3", null)
-        .withRow("Patient/3", "zh")
-        .withRow("Patient/4", "ar")
+        .withRow("Patient/abc1", makeEid(1), "es")
+        .withRow("Patient/abc2", makeEid(0), "de")
+        .withRow("Patient/abc3", makeEid(2), "zh")
+        .withRow("Patient/abc4", makeEid(0), "ar")
         .build();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
 

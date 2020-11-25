@@ -29,6 +29,9 @@ public class IdAndCodingSets implements Serializable {
   private String id;
 
   @Nullable
+  private List<Integer> eid;
+
+  @Nullable
   private List<SimpleCoding> inputCodings;
 
   @Nullable

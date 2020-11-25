@@ -8,6 +8,9 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.row_number;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -20,6 +23,8 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.expressions.Window;
+import org.apache.spark.sql.expressions.WindowSpec;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -71,9 +76,24 @@ public class ReverseResolveFunction implements NamedFunction {
     final ResourcePath foreignResource = nonLiteralArgument.getForeignResource().get();
 
     final Optional<Column> thisColumn = inputPath.getThisColumn();
+
+    // @TODO: consider removing in the future once we separate ordering from element ID
+
+    // Create an synthetic eid column for reverse resolved resources
+    final Column foreignResourceValue = foreignResource.getValueColumn();
+    final WindowSpec windowSpec = Window
+        .partitionBy(inputPath.getIdColumn(), inputPath.getOrderingColumn())
+        .orderBy(foreignResourceValue);
+
+    // row_number() is 1-based and we use 0-based indexes thus (minus(1))
+    final Column foreginResourceIndex = when(foreignResourceValue.isNull(), lit(null))
+        .otherwise(row_number().over(windowSpec).minus(lit(1)));
+
+    final Column syntheticEid = inputPath.expandEid(foreginResourceIndex);
+
     return foreignResource
-        .copy(expression, dataset, inputPath.getIdColumn(), foreignResource.getValueColumn(),
+        .copy(expression, dataset, inputPath.getIdColumn(), Optional.of(syntheticEid),
+            foreignResource.getValueColumn(),
             false, thisColumn);
   }
-
 }

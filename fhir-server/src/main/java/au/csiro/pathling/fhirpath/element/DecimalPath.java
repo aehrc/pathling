@@ -35,11 +35,12 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
   protected DecimalPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn,
       final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, foreignResource, thisColumn,
-        fhirType);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+        thisColumn, fhirType);
   }
 
   @Nonnull
@@ -127,6 +128,7 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getValueColumn(), targetValueColumn);
       final Column idColumn = source.getIdColumn();
+      final Optional<Column> eidColumn = findEidColumn(source, target);
       final Optional<Column> thisColumn = findThisColumn(source, target);
 
       switch (operation) {
@@ -136,15 +138,13 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
         case DIVISION:
           valueColumn = valueColumn.cast(getDecimalType());
           return ElementPath
-              .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
-                  thisColumn,
-                  fhirType);
+              .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
+                  thisColumn, fhirType);
         case MODULUS:
           valueColumn = valueColumn.cast(DataTypes.LongType);
           return ElementPath
-              .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
-                  thisColumn,
-                  FHIRDefinedType.INTEGER);
+              .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
+                  thisColumn, FHIRDefinedType.INTEGER);
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

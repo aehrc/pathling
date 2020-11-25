@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.function.memberof.MemberOfResult;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.IParser;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -132,7 +133,8 @@ public class FhirHelpers {
    * Custom Mockito answerer for returning @{link MemberOfResult} objects based on the correlation
    * identifiers in the input Rows.
    */
-  public static class MemberOfMapperAnswerer implements Answer<Iterator<MemberOfResult>> {
+  public static class MemberOfMapperAnswerer implements Answer<Iterator<MemberOfResult>>,
+      Serializable {
 
     private final List<Boolean> expectedResults;
 

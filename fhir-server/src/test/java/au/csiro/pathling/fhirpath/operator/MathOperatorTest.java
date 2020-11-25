@@ -180,7 +180,7 @@ public class MathOperatorTest {
                          ? 3
                          : new BigDecimal("3.0");
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", value),
         RowFactory.create("abc2", parameters.isLeftTypeIsLiteral()
                                   ? value
@@ -206,7 +206,7 @@ public class MathOperatorTest {
                          ? -1
                          : new BigDecimal("-1.0");
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", value),
         RowFactory.create("abc2", parameters.isLeftTypeIsLiteral()
                                   ? value
@@ -232,7 +232,7 @@ public class MathOperatorTest {
                          ? 2
                          : new BigDecimal("2.0");
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", value),
         RowFactory.create("abc2", parameters.isLeftTypeIsLiteral()
                                   ? value
@@ -256,7 +256,7 @@ public class MathOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
     final Object value = new BigDecimal("0.5");
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", value),
         RowFactory.create("abc2", parameters.isLeftTypeIsLiteral()
                                   ? value
@@ -280,7 +280,7 @@ public class MathOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
     final Object value = 1;
 
-    assertThat(result).selectResult().hasRows(
+    assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("abc1", value),
         RowFactory.create("abc2", parameters.isLeftTypeIsLiteral()
                                   ? value

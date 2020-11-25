@@ -68,11 +68,12 @@ class ReverseResolveFunctionTest {
         .withRow("Patient/1", "female", true)
         .withRow("Patient/2", "female", false)
         .withRow("Patient/3", "male", true)
+        .withRow("Patient/4", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", true);
 
     final DatasetBuilder encounterDatasetBuilder = new ResourceDatasetBuilder()
         .withIdColumn()
@@ -142,7 +143,7 @@ class ReverseResolveFunctionTest {
         .withRow("Patient/3", "Encounter/2")
         .build();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 

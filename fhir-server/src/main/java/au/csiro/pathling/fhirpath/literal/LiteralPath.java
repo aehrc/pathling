@@ -115,6 +115,23 @@ public abstract class LiteralPath implements FhirPath {
     return true;
   }
 
+  @Override
+  public boolean hasOrder() {
+    return true;
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> getOrderedDataset() {
+    return getDataset();
+  }
+
+  @Nonnull
+  @Override
+  public Column getOrderingColumn() {
+    return ORDERING_NULL_VALUE;
+  }
+
   /**
    * Returns the Java object that represents the value of this literal.
    *

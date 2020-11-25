@@ -37,7 +37,7 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
     checkNoArguments("first", input);
 
     final NonLiteralPath inputPath = input.getInput();
-    final Dataset<Row> dataset = inputPath.getDataset();
+    final Dataset<Row> dataset = inputPath.getOrderedDataset();
     final String expression = expressionFromInput(input, NAME);
     final Column finalValueColumn = first(inputPath.getValueColumn(), true);
 

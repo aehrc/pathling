@@ -34,7 +34,7 @@ public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResou
     final Column[] selection = Arrays
         .asList(fhirPath.getIdColumn(), fhirPath.getTypeColumn(), fhirPath.getValueColumn())
         .toArray(new Column[0]);
-    return new DatasetAssert(fhirPath.getDataset()
+    return new DatasetAssert(fhirPath.getOrderedDataset()
         .select(selection)
         .orderBy(selection));
   }
@@ -45,5 +45,4 @@ public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResou
     assertEquals(typeSet, fhirPath.getPossibleTypes());
     return this;
   }
-
 }
