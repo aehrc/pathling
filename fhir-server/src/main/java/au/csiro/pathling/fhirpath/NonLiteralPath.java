@@ -76,6 +76,8 @@ public abstract class NonLiteralPath implements FhirPath {
         "Value column name not present in dataset");
     thisColumn.ifPresent(col -> checkArgument(datasetColumns.contains(col.toString()),
         "$this column name not present in dataset"));
+    eidColumn.ifPresent(col -> checkArgument(datasetColumns.contains(col.toString()),
+        "eid column name not present in dataset"));
 
     // precondition: singular paths should have empty eidColumn
     check(!singular || eidColumn.isEmpty());

@@ -37,8 +37,8 @@ public class ElementPathBuilder {
   @Nonnull
   private Column idColumn;
 
-  @Nullable
-  private Column eidColumn;
+  @Nonnull
+  private Optional<Column> eidColumn;
 
   @Nonnull
   private Column valueColumn;
@@ -65,6 +65,7 @@ public class ElementPathBuilder {
         .build();
     idColumn = col(dataset.columns()[0]);
     valueColumn = col(dataset.columns()[1]);
+    eidColumn = Optional.empty();
     singular = false;
     fhirType = FHIRDefinedType.NULL;
     definition = mock(ElementDefinition.class);
@@ -78,12 +79,15 @@ public class ElementPathBuilder {
     return this;
   }
 
+
   @Nonnull
-  public ElementPathBuilder eidColumn() {
-    eidColumn = dataset.col("eid");
+  public ElementPathBuilder idAndEidAndValueColumns() {
+    final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset, true);
+    idColumn = idAndValueColumns.getId();
+    eidColumn = idAndValueColumns.getEid();
+    valueColumn = idAndValueColumns.getValues().get(0);
     return this;
   }
-
 
   @Nonnull
   public ElementPathBuilder expression(@Nonnull final String expression) {
@@ -142,7 +146,7 @@ public class ElementPathBuilder {
   @Nonnull
   public ElementPath build() {
     return ElementPath
-        .build(expression, dataset, idColumn, Optional.ofNullable(eidColumn),
+        .build(expression, dataset, idColumn, eidColumn,
             valueColumn, singular, Optional.ofNullable(foreignResource),
             Optional.ofNullable(thisColumn), fhirType);
   }
@@ -150,7 +154,7 @@ public class ElementPathBuilder {
   @Nonnull
   public ElementPath buildDefined() {
     return ElementPath
-        .build(expression, dataset, idColumn, Optional.ofNullable(eidColumn),
+        .build(expression, dataset, idColumn, eidColumn,
             valueColumn, singular, Optional.ofNullable(foreignResource),
             Optional.ofNullable(thisColumn), definition);
   }

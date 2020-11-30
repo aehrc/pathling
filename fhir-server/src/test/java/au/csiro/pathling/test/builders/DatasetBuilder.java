@@ -10,6 +10,7 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 
+import au.csiro.pathling.fhirpath.Orderable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -58,12 +59,8 @@ public class DatasetBuilder {
 
   @Nonnull
   public DatasetBuilder withEidColumn() {
-    final StructField column = new StructField("eid",
-        DataTypes.createArrayType(DataTypes.IntegerType), true, metadata);
-    datasetColumns.add(column);
-    return this;
+    return withColumn(randomAlias(), Orderable.ORDERING_COLUMN_TYPE);
   }
-
 
   @Nonnull
   public DatasetBuilder withColumn(@Nonnull final String columnName,
@@ -202,8 +199,4 @@ public class DatasetBuilder {
     return Arrays.asList(levels);
   }
 
-  @Nonnull
-  public static List<Integer> makeRootEid() {
-    return null;
-  }
 }

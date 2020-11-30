@@ -13,6 +13,7 @@ import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.spark.udf.CodingsEqual;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -58,16 +59,22 @@ public abstract class SparkHelpers {
     return activeSession.get();
   }
 
+
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset) {
-    final Column idColumn = col(dataset.columns()[0]);
-    final Column valueColumn = col(dataset.columns()[1]);
-    return new IdAndValueColumns(idColumn, Collections.singletonList(valueColumn));
+    return getIdAndValueColumns(dataset, false);
   }
 
   @Nonnull
-  public static Column getEidColumn(@Nonnull final Dataset<Row> dataset) {
-    return dataset.col("eid");
+  public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset,
+      boolean hasEid) {
+    int colIndex = 0;
+    final Column idColumn = col(dataset.columns()[colIndex++]);
+    final Optional<Column> eidColum = hasEid
+                              ? Optional.of(col(dataset.columns()[colIndex++]))
+                              : Optional.empty();
+    final Column valueColumn = col(dataset.columns()[colIndex]);
+    return new IdAndValueColumns(idColumn, eidColum, Collections.singletonList(valueColumn));
   }
 
   @Nonnull
@@ -153,6 +160,9 @@ public abstract class SparkHelpers {
 
     @Nonnull
     Column id;
+
+    @Nonnull
+    Optional<Column> eid;
 
     @Nonnull
     List<Column> values;

@@ -24,6 +24,7 @@ import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.*;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -89,7 +90,7 @@ public class PathTraversalOperatorTest {
         .withColumn("name", DataTypes.createArrayType(DataTypes.StringType))
         .withColumn("active", DataTypes.BooleanType)
         .withRow("Patient/abc1", Arrays.asList(null, "Marie", null, "Anne"), true)
-        .withRow("Patient/abc2", Arrays.asList(), true)
+        .withRow("Patient/abc2", Collections.emptyList(), true)
         .withRow("Patient/abc3", null, true)
         .build();
     final ResourceReader resourceReader = mock(ResourceReader.class);
@@ -134,7 +135,7 @@ public class PathTraversalOperatorTest {
         .withRow("Patient/abc1", makeEid(1), RowFactory.create(Arrays.asList("Jude", "Adam")))
         .withRow("Patient/abc1", makeEid(0), RowFactory.create(Arrays.asList("Mark", "Alen", null)))
         // patient with empty list of given names
-        .withRow("Patient/abc2", makeEid(0), RowFactory.create(Arrays.asList()))
+        .withRow("Patient/abc2", makeEid(0), RowFactory.create(Collections.emptyList()))
         // no name in the first place
         .withRow("Patient/abc5", null, null)
         .buildWithStructValue();
@@ -145,8 +146,7 @@ public class PathTraversalOperatorTest {
     final ElementPath left = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .expression("Patient.name")
         .definition(definition.get())
         .buildDefined();
@@ -198,8 +198,7 @@ public class PathTraversalOperatorTest {
     final ElementPath left = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .expression("Patient.name")
         .definition(definition.get())
         .buildDefined();

@@ -75,8 +75,7 @@ class ResolveFunctionTest {
     final ElementPath referencePath = new ElementPathBuilder()
         .expression("Encounter.episodeOfCare")
         .dataset(referenceDataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .singular(false)
         .definition(definition)
         .buildDefined();
@@ -201,8 +200,7 @@ class ResolveFunctionTest {
     final ElementPath referencePath = new ElementPathBuilder()
         .expression("Condition.evidence.detail")
         .dataset(referenceDataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .singular(false)
         .definition(definition)
         .buildDefined();

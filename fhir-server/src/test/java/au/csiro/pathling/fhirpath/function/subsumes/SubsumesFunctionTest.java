@@ -125,8 +125,7 @@ public class SubsumesFunctionTest {
     final ElementPath inputExpression = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .singular(false)
         .build();
 
@@ -173,8 +172,7 @@ public class SubsumesFunctionTest {
     return new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .singular(false)
         .build();
   }

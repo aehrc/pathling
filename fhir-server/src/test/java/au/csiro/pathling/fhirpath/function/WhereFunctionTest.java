@@ -135,8 +135,7 @@ public class WhereFunctionTest {
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(dataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .singular(false)
         .build();
 
@@ -208,8 +207,7 @@ public class WhereFunctionTest {
     final ElementPath inputPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(dataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .singular(false)
         .build();
 

@@ -2,11 +2,13 @@ package au.csiro.pathling.fhirpath;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import java.util.Arrays;
+import java.util.Collections;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -43,11 +45,11 @@ public class NonLiteralPathTest {
 
     final Column newNonNullEid = testPath
         .expandEid(functions.lit(2));
-    assertEquals(Arrays.asList(2), inputDataset.select(newNonNullEid).first().getList(0));
+    assertEquals(Collections.singletonList(2), inputDataset.select(newNonNullEid).first().getList(0));
 
     final Column newNullEid = testPath
         .expandEid(functions.lit(null));
-    assertEquals(null, inputDataset.select(newNullEid).first().getList(0));
+    assertNull(inputDataset.select(newNullEid).first().getList(0));
   }
 
   @Test
@@ -65,8 +67,7 @@ public class NonLiteralPathTest {
     final ElementPath testPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .expression("Patient.name")
         .singular(false)
         .build();
@@ -79,16 +80,16 @@ public class NonLiteralPathTest {
         .expandEid(functions.lit(2));
     assertEquals(Arrays.asList(1, 3, 2),
         pathDataset.where(idCol.equalTo("Patient/abc1")).select(newNonNullEid).first().getList(0));
-    assertEquals(null,
+    assertNull(
         pathDataset.where(idCol.equalTo("Patient/abc2")).select(newNonNullEid).first().getList(0));
 
     // test  null eid
     final Column newNullEid = testPath
         .expandEid(functions.lit(null));
 
-    assertEquals(null,
+    assertNull(
         pathDataset.where(idCol.equalTo("Patient/abc1")).select(newNullEid).first().getList(0));
-    assertEquals(null,
+    assertNull(
         pathDataset.where(idCol.equalTo("Patient/abc2")).select(newNullEid).first().getList(0));
   }
 }

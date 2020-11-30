@@ -193,8 +193,7 @@ public class FirstFunctionTest {
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .expression("Patient.name")
         .build();
 

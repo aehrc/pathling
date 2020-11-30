@@ -100,8 +100,7 @@ public class OrderableTest {
     final ElementPath testPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .expression("Patient.name")
         .singular(false)
         .build();
@@ -151,8 +150,8 @@ public class OrderableTest {
         .build();
 
     assertFalse(testPath.hasOrder());
-    assertFailsOrderCheck(() -> testPath.checkHasOrder());
-    assertFailsOrderCheck(() -> testPath.getOrderedDataset());
-    assertFailsOrderCheck(() -> testPath.getOrderingColumn());
+    assertFailsOrderCheck(testPath::checkHasOrder);
+    assertFailsOrderCheck(testPath::getOrderedDataset);
+    assertFailsOrderCheck(testPath::getOrderingColumn);
   }
 }

@@ -92,8 +92,7 @@ class MemberOfFunctionTest {
         .buildWithStructValue();
     final CodingPath inputExpression = (CodingPath) new ElementPathBuilder()
         .dataset(inputDataset)
-        .idAndValueColumns()
-        .eidColumn()
+        .idAndEidAndValueColumns()
         .expression("Encounter.class")
         .singular(false)
         .definition(definition)
