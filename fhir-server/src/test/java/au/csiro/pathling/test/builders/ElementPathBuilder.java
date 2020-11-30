@@ -79,7 +79,6 @@ public class ElementPathBuilder {
     return this;
   }
 
-
   @Nonnull
   public ElementPathBuilder idAndEidAndValueColumns() {
     final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset, true);

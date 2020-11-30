@@ -16,7 +16,6 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
@@ -25,17 +24,13 @@ import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.*;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Collections;
-import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.EpisodeOfCare;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -69,7 +64,7 @@ public class FirstFunctionTest {
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", true);
 
     final ParserContext parserContext = new ParserContextBuilder()
         .inputExpression("Patient")
@@ -86,8 +81,13 @@ public class FirstFunctionTest {
         .isSingular()
         .hasResourceType(ResourceType.PATIENT);
 
-    @SuppressWarnings("UnnecessaryLocalVariable")
-    final Dataset<Row> expectedDataset = patientDataset;
+    final Dataset<Row> expectedDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", "Patient/1")
+        .withRow("Patient/2", "Patient/2")
+        .withRow("Patient/3", "Patient/3")
+        .build();
 
     assertThat(result)
         .selectOrderedResult()

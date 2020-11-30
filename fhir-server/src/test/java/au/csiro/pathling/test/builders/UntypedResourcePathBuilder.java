@@ -39,8 +39,8 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   private Column idColumn;
 
-  @Nullable
-  private Column eidColumn;
+  @Nonnull
+  private Optional<Column> eidColumn;
 
   @Nonnull
   private Column valueColumn;
@@ -58,6 +58,7 @@ public class UntypedResourcePathBuilder {
 
   public UntypedResourcePathBuilder() {
     expression = "";
+    eidColumn = Optional.empty();
     dataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
@@ -79,6 +80,15 @@ public class UntypedResourcePathBuilder {
   }
 
   @Nonnull
+  public UntypedResourcePathBuilder idEidTypeAndValueColumns() {
+    idColumn = functions.col(dataset.columns()[0]);
+    eidColumn = Optional.of(functions.col(dataset.columns()[1]));
+    typeColumn = functions.col(dataset.columns()[2]);
+    valueColumn = functions.col(dataset.columns()[3]);
+    return this;
+  }
+
+  @Nonnull
   public UntypedResourcePathBuilder expression(@Nonnull final String expression) {
     this.expression = expression;
     return this;
@@ -95,13 +105,6 @@ public class UntypedResourcePathBuilder {
     this.idColumn = idColumn;
     return this;
   }
-
-  @Nonnull
-  public UntypedResourcePathBuilder eidColumn(@Nonnull final Column eidColumn) {
-    this.eidColumn = eidColumn;
-    return this;
-  }
-
 
   @Nonnull
   public UntypedResourcePathBuilder valueColumn(@Nonnull final Column valueColumn) {
@@ -140,7 +143,7 @@ public class UntypedResourcePathBuilder {
     when(referencePath.isSingular()).thenReturn(singular);
     when(referencePath.getThisColumn()).thenReturn(Optional.ofNullable(thisColumn));
     return UntypedResourcePath
-        .build(referencePath, expression, dataset, idColumn, Optional.ofNullable(eidColumn),
+        .build(referencePath, expression, dataset, idColumn, eidColumn,
             typeColumn, possibleTypes);
   }
 

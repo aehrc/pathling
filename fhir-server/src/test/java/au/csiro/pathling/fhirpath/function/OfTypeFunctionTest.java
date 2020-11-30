@@ -61,25 +61,25 @@ class OfTypeFunctionTest {
         .withStructTypeColumns(referenceStructType())
         .withRow("Encounter/1", makeEid(1), "Patient",
             RowFactory.create(null, "Patient/1", null))
-        .withRow("Encounter/xyz1", makeEid(0), "Patient",
-            RowFactory.create(null, "Patient/abc2", null))
+        .withRow("Encounter/1", makeEid(0), "Patient",
+            RowFactory.create(null, "Patient/2", null))
         .withRow("Encounter/2", makeEid(0), "Patient",
             RowFactory.create(null, "Patient/3", null))
-        .withRow("Encounter/xyz2", makeEid(1), "Group",
-            RowFactory.create(null, "Group/def1", null))
+        .withRow("Encounter/2", makeEid(1), "Group",
+            RowFactory.create(null, "Group/1", null))
         .withRow("Encounter/3", makeEid(0), "Patient",
             RowFactory.create(null, "Patient/2", null))
         .withRow("Encounter/4", makeEid(0), "Patient",
             RowFactory.create(null, "Patient/2", null))
         .withRow("Encounter/5", makeEid(0), "Group",
             RowFactory.create(null, "Group/1", null))
-        .withRow("Encounter/xyz6", null, null, null)
+        .withRow("Encounter/6", null, null, null)
         .buildWithStructValue();
     final UntypedResourcePath inputPath = new UntypedResourcePathBuilder()
         .expression("subject.resolve()")
         .dataset(inputDataset)
-        .idTypeAndValueColumns()
-        .singular(true)
+        .idEidTypeAndValueColumns()
+        .singular(false)
         .possibleTypes(new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)))
         .build();
 
@@ -113,33 +113,18 @@ class OfTypeFunctionTest {
         .isNotSingular()
         .hasResourceType(ResourceType.PATIENT);
 
-    // @TODO: Fix expectations
-    //     .withIdColumn()
-    //     .withEidColumn()
-    //     .withStructColumn("id", DataTypes.StringType)
-    //     .withStructColumn("gender", DataTypes.StringType)
-    //     .withStructColumn("active", DataTypes.BooleanType)
-    //     .withRow("Encounter/xyz1", makeEid(0),
-    //         RowFactory.create("Patient/abc2", "female", false))
-    //     .withRow("Encounter/xyz1", makeEid(1), RowFactory.create("Patient/abc1", "female", true))
-    //     .withRow("Encounter/xyz2", makeEid(0), RowFactory.create("Patient/abc3", "male", true))
-    //     .withRow("Encounter/xyz2", makeEid(1), null)
-    //     .withRow("Encounter/xyz3", makeEid(0),
-    //         RowFactory.create("Patient/abc2", "female", false))
-    //     .withRow("Encounter/xyz4", makeEid(0),
-    //         RowFactory.create("Patient/abc2", "female", false))
-    //     .withRow("Encounter/xyz5", makeEid(0), null)
-    //     .withRow("Encounter/xyz6", null, null)
-    //     .buildWithStructValue();
-
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withIdColumn()
-        .withRow("Encounter/1", "Patient/1")
-        .withRow("Encounter/2", "Patient/3")
-        .withRow("Encounter/3", "Patient/2")
-        .withRow("Encounter/4", "Patient/2")
-        .withRow("Encounter/5", null)
+        .withEidColumn()
+        .withIdColumn() // this represrents value for a resource
+        .withRow("Encounter/1", makeEid(0), "Patient/2")
+        .withRow("Encounter/1", makeEid(1), "Patient/1")
+        .withRow("Encounter/2", makeEid(0), "Patient/3")
+        .withRow("Encounter/2", makeEid(1), null)
+        .withRow("Encounter/3", makeEid(0), "Patient/2")
+        .withRow("Encounter/4", makeEid(0), "Patient/2")
+        .withRow("Encounter/5", makeEid(0), null)
+        .withRow("Encounter/6", null, null)
         .build();
     assertThat(result)
         .selectOrderedResultWithEid()

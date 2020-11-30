@@ -53,7 +53,7 @@ public abstract class QueryHelpers {
    * @return a new Dataset, along with the new column names, as a {@link DatasetWithColumnMap}
    */
   @Nonnull
-  public static DatasetWithColumnMap createColumn(@Nonnull final Dataset<Row> dataset,
+  public static DatasetWithColumnMap createColumns(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column... columns) {
     return aliasColumns(dataset, Arrays.asList(columns));
   }
@@ -331,6 +331,11 @@ public abstract class QueryHelpers {
 
     @Nonnull
     Map<Column, Column> columnMap;
+
+    @Nonnull
+    public Column getColumn(@Nonnull Column originalColumn) {
+      return columnMap.get(originalColumn);
+    }
 
   }
 

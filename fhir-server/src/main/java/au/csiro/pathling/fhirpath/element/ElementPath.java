@@ -6,9 +6,9 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
+import static au.csiro.pathling.QueryHelpers.createColumns;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import java.lang.reflect.Constructor;
@@ -135,8 +135,10 @@ public class ElementPath extends NonLiteralPath {
     // Look up the class that represents an element with the specified FHIR type.
     final Class<? extends ElementPath> elementPathClass = ElementDefinition
         .elementClassForType(fhirType).orElse(ElementPath.class);
-    // Alias the value column.
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
+
+    DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
+        eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
+
     try {
       // Call its constructor and return.
       final Constructor<? extends ElementPath> constructor = elementPathClass
@@ -144,8 +146,10 @@ public class ElementPath extends NonLiteralPath {
               Column.class,
               boolean.class, Optional.class, Optional.class, FHIRDefinedType.class);
       return constructor
-          .newInstance(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
-              datasetWithColumn.getColumn(), singular, foreignResource, thisColumn, fhirType);
+          .newInstance(expression, datasetWithColumns.getDataset(), idColumn,
+              eidColumn.map(datasetWithColumns::getColumn),
+              datasetWithColumns.getColumn(valueColumn), singular, foreignResource, thisColumn,
+              fhirType);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
         InvocationTargetException e) {
       throw new RuntimeException("Problem building an ElementPath class", e);
