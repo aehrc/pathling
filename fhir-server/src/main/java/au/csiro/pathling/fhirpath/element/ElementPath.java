@@ -136,7 +136,7 @@ public class ElementPath extends NonLiteralPath {
     final Class<? extends ElementPath> elementPathClass = ElementDefinition
         .elementClassForType(fhirType).orElse(ElementPath.class);
 
-    DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
+    final DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
         eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
 
     try {

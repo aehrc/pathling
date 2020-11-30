@@ -141,6 +141,7 @@ class ReverseResolveFunctionTest {
         .withRow("Patient/2", "Encounter/3")
         .withRow("Patient/2", "Encounter/4")
         .withRow("Patient/3", "Encounter/2")
+        .withRow("Patient/4", null)
         .build();
     assertThat(result)
         .selectOrderedResult()

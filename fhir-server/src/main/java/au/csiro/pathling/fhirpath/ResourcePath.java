@@ -7,10 +7,9 @@
 package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.aliasAllColumns;
-import static au.csiro.pathling.QueryHelpers.createColumn;
+import static au.csiro.pathling.QueryHelpers.createColumns;
 import static org.apache.spark.sql.functions.col;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.ResourceReader;
@@ -157,9 +156,14 @@ public class ResourcePath extends NonLiteralPath {
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
-    return new ResourcePath(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
-        datasetWithColumn.getColumn(), singular, thisColumn, definition, elementsToColumns);
+
+    DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
+        eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
+
+    return new ResourcePath(expression, datasetWithColumns.getDataset(), idColumn,
+        eidColumn.map(datasetWithColumns::getColumn),
+        datasetWithColumns.getColumn(valueColumn), singular, thisColumn, definition,
+        elementsToColumns);
   }
 
 }
