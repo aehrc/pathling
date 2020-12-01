@@ -6,9 +6,11 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhir.FhirPathBaseVisitor;
 import au.csiro.pathling.fhir.FhirPathParser.FunctionInvocationContext;
 import au.csiro.pathling.fhir.FhirPathParser.MemberInvocationContext;
@@ -177,10 +179,14 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // NOTE: This works because for $this the context for aggregation grouping on elements
       // includes `id` and `this` columns.
 
+      // create and alias $this column
+      final DatasetWithColumn inputWithThis = createColumn(
+          input.getDataset(), nonLiteral.makeThisColumn());
+
       final FhirPath thisPath = nonLiteral
-          .copy(NamedFunction.THIS, input.getDataset(), input.getIdColumn(),
+          .copy(NamedFunction.THIS, inputWithThis.getDataset(), input.getIdColumn(),
               Optional.empty(), input.getValueColumn(), true,
-              Optional.of(nonLiteral.makeThisColumn()));
+              Optional.of(inputWithThis.getColumn()));
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this` 
       // expression.

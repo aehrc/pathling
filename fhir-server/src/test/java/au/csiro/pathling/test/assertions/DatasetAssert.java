@@ -15,6 +15,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 
 /**
  * @author Piotr Szul
@@ -75,6 +76,13 @@ public class DatasetAssert {
   @SuppressWarnings("unused")
   public DatasetAssert debugAllRows() {
     dataset.collectAsList().forEach(System.out::println);
+    return this;
+  }
+
+  @Nonnull
+  @SuppressWarnings("unused")
+  public DatasetAssert saveAllRowsToCsv(final String path) {
+    dataset.coalesce(1).write().mode(SaveMode.Overwrite).csv(path);
     return this;
   }
 }
