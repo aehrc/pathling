@@ -53,6 +53,9 @@ public class ResourcePathBuilder {
   private Column idColumn;
 
   @Nonnull
+  private Optional<Column> eidColumn = Optional.empty();
+
+  @Nonnull
   private Column valueColumn;
 
   private boolean singular;
@@ -77,6 +80,14 @@ public class ResourcePathBuilder {
   @Nonnull
   public ResourcePathBuilder idAndValueColumns() {
     idColumn = functions.col(dataset.columns()[0]);
+    valueColumn = idColumn;
+    return this;
+  }
+
+  @Nonnull
+  public ResourcePathBuilder idEidAndValueColumns() {
+    idColumn = functions.col(dataset.columns()[0]);
+    eidColumn = Optional.of(functions.col(dataset.columns()[1]));
     valueColumn = idColumn;
     return this;
   }
@@ -155,12 +166,13 @@ public class ResourcePathBuilder {
 
     try {
       final Constructor<ResourcePath> constructor = ResourcePath.class
-          .getDeclaredConstructor(String.class, Dataset.class, Column.class, Column.class,
-              boolean.class, Optional.class, ResourceDefinition.class, Map.class);
+          .getDeclaredConstructor(String.class, Dataset.class, Column.class, Optional.class,
+              Column.class, boolean.class, Optional.class, ResourceDefinition.class, Map.class);
       constructor.setAccessible(true);
-      return constructor.newInstance(expression, datasetWithColumn.getDataset(), idColumn,
-          datasetWithColumn.getColumn(), singular, Optional.ofNullable(thisColumn), definition,
-          elementsToColumns);
+      return constructor
+          .newInstance(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
+              datasetWithColumn.getColumn(), singular, Optional.ofNullable(thisColumn), definition,
+              elementsToColumns);
     } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
       throw new RuntimeException("Problem building ResourcePath", e);
     }
