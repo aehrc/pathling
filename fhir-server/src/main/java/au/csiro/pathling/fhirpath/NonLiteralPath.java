@@ -6,10 +6,15 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.QueryHelpers.createColumn;
+import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.function.NamedFunction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -156,7 +161,6 @@ public abstract class NonLiteralPath implements FhirPath {
       @Nonnull Column valueColumn, boolean singular,
       @Nonnull Optional<Column> thisColumn);
 
-
   /**
    * Gets a eid {@link Column} from any of the inputs, if there is one.
    *
@@ -174,23 +178,29 @@ public abstract class NonLiteralPath implements FhirPath {
   }
 
   /**
+   * Constructs $this path for the current path.
+   *
+   * @return $this path.
+   */
+  @Nonnull
+  public NonLiteralPath toThisPath() {
+    final DatasetWithColumn inputWithThis = createColumn(
+        this.getDataset(), this.makeThisColumn());
+
+    return copy(NamedFunction.THIS, inputWithThis.getDataset(), this.getIdColumn(),
+        Optional.empty(), this.getValueColumn(), true,
+        Optional.of(inputWithThis.getColumn()));
+  }
+
+
+  /**
    * Constructs a this column for this path as a structure with two fields `eid` and `value`.
    *
    * @return this column.
    */
   @Nonnull
-  public Column makeThisColumn() {
+  private Column makeThisColumn() {
     // Construct this based on input value and eid
-    // It is important to alias this column here as it is passed without
-    // renaming through {@link NonLiteralPath} constructor.
-
-    // @TODO: Merge - the old code did the aliasing of this columnt
-    // which I belive was important for some reason
-    // final String hash = randomShortString();
-    // return functions.struct(
-    //     getOrderingColumn().alias("eid"),
-    //     getValueColumn().alias("value")).alias(hash + THIS_COLUMN_SUFFIX);
-
     return functions.struct(
         getOrderingColumn().alias("eid"),
         getValueColumn().alias("value"));

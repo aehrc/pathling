@@ -7,9 +7,11 @@
 package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
+import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Arrays;
@@ -104,9 +106,13 @@ public class UntypedResourcePath extends NonLiteralPath {
       @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
-    return new UntypedResourcePath(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
-        datasetWithColumn.getColumn(), singular, thisColumn, typeColumn, possibleTypes);
+
+    DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
+        eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
+
+    return new UntypedResourcePath(expression, datasetWithColumns.getDataset(), idColumn,
+        eidColumn.map(datasetWithColumns::getColumn),
+        datasetWithColumns.getColumn(valueColumn), singular, thisColumn, typeColumn, possibleTypes);
   }
 
 }

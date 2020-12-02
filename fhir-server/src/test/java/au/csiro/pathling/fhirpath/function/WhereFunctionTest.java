@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
@@ -70,20 +71,18 @@ public class WhereFunctionTest {
     // Build an expression which represents the argument to the function. We assume that the value
     // column from the input dataset is also present within the argument dataset.
 
-    // @TODO: EID - Refactor common code
-    final DatasetWithColumn inputDatasetWithThis = createColumn(
-        inputPath.getDataset(), inputPath.makeThisColumn());
+    final NonLiteralPath thisPath = inputPath.toThisPath();
 
-    final Dataset<Row> argumentDataset = inputDatasetWithThis.getDataset()
+    final Dataset<Row> argumentDataset = thisPath.getDataset()
         .withColumn("value",
-            inputDatasetWithThis.getDataset().col(statusColumn).equalTo("in-progress"));
+            thisPath.getDataset().col(statusColumn).equalTo("in-progress"));
 
     final ElementPath argumentPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputDatasetWithThis.getColumn())
+        .thisColumn(thisPath.getThisColumn().get())
         .singular(true)
         .build();
 
@@ -142,11 +141,10 @@ public class WhereFunctionTest {
         .singular(false)
         .build();
 
-    final DatasetWithColumn inputDatasetWithThis = createColumn(
-        inputPath.getDataset(), inputPath.makeThisColumn());
+    final NonLiteralPath thisPath = inputPath.toThisPath();
 
     // Build an expression which represents the argument to the function.
-    final Dataset<Row> argumentDataset = inputDatasetWithThis.getDataset()
+    final Dataset<Row> argumentDataset = thisPath.getDataset()
         .withColumn("value", inputPath.getValueColumn().equalTo("en"));
 
     final ElementPath argumentExpression = new ElementPathBuilder()
@@ -154,7 +152,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputDatasetWithThis.getColumn())
+        .thisColumn(thisPath.getThisColumn().get())
         .singular(true)
         .build();
 
@@ -210,10 +208,10 @@ public class WhereFunctionTest {
         .singular(false)
         .build();
 
-    final DatasetWithColumn inputDatasetWithThis = createColumn(
-        inputPath.getDataset(), inputPath.makeThisColumn());
     // Build an expression which represents the argument to the function.
-    final Dataset<Row> argumentDataset = inputDatasetWithThis.getDataset()
+    final NonLiteralPath thisPath = inputPath.toThisPath();
+
+    final Dataset<Row> argumentDataset = thisPath.getDataset()
         .withColumn("value",
             functions.when(inputPath.getValueColumn().equalTo("en"), null).otherwise(true));
     final ElementPath argumentPath = new ElementPathBuilder()
@@ -221,7 +219,7 @@ public class WhereFunctionTest {
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
         .valueColumn(argumentDataset.col("value"))
-        .thisColumn(inputDatasetWithThis.getColumn())
+        .thisColumn(thisPath.getThisColumn().get())
         .singular(true)
         .build();
 

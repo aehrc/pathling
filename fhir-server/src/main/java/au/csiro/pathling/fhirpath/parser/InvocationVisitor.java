@@ -131,7 +131,6 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
         // a foreign resource reference.
-        // @TODO: EID - confirm that is should be singular here
         final ResourcePath path = ResourcePath
             .build(context.getFhirContext(), context.getResourceReader(), resourceType, fhirPath,
                 true);
@@ -180,13 +179,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // includes `id` and `this` columns.
 
       // create and alias $this column
-      final DatasetWithColumn inputWithThis = createColumn(
-          input.getDataset(), nonLiteral.makeThisColumn());
 
-      final FhirPath thisPath = nonLiteral
-          .copy(NamedFunction.THIS, inputWithThis.getDataset(), input.getIdColumn(),
-              Optional.empty(), input.getValueColumn(), true,
-              Optional.of(inputWithThis.getColumn()));
+      final FhirPath thisPath = nonLiteral.toThisPath();
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this` 
       // expression.
