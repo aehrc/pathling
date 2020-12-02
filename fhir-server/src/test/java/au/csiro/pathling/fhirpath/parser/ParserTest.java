@@ -288,8 +288,6 @@ public class ParserTest {
   }
 
   @Test
-  // TODO: Re-enable when issue with join within where is resolved.
-  @Disabled
   public void testWhereWithAggregateFunction() {
     assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
         .selectOrderedResult()
@@ -302,8 +300,6 @@ public class ParserTest {
    * the "element" operand to the membership operator.
    */
   @Test
-  // TODO: Re-enable when issue with join within where is resolved.
-  @Disabled
   public void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Karina848').gender")
         .selectOrderedResult()
@@ -315,26 +311,21 @@ public class ParserTest {
    * the "collection" operand to the membership operator.
    */
   @Test
-  // TODO: Re-enable when issue with join within where is resolved.
-  @Disabled
   public void testWhereWithInOperator() {
-
-    // TODO: Change to a non-trivial case?
+    // @TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue((Boolean) null));
   }
 
   @Test
-  // TODO: Re-enable when issue with join within where is resolved.
-  @Disabled
   public void testWhereWithSubsumes() {
     when(terminologyClient.closure(any(), any()))
         .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
-            + ".subsumedBy(http://snomed.info/sct|127027008)).gender")
+            + ".subsumedBy(http://snomed.info/sct|40055000) contains true).gender")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue((String) null)
             .changeValue(PATIENT_ID_7001ad9c, "female"));
@@ -365,8 +356,6 @@ public class ParserTest {
   }
 
   @Test
-  // TODO: Re-enable when issue with join within where is resolved.
-  @Disabled
   public void testAggregationFollowingNestedWhere() {
 
     // TODO: Change to a non-trivial case?

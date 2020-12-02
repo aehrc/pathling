@@ -136,7 +136,9 @@ public abstract class AggregateFunction {
     final Column[] remainingSelection = selection.stream().skip(1).toArray(Column[]::new);
 
     // Get any this columns that may be present in the inputs.
-    final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(inputs);
+    // @TODO: This is very error prone as a collection can be passed here instread of the arrray
+    // how to make it more stringent?
+    final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(inputs.toArray(new FhirPath[]{}));
 
     final Dataset<Row> finalDataset = dataset
         .groupBy(groupBy)
