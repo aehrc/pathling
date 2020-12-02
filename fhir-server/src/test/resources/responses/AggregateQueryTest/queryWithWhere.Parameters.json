@@ -5,15 +5,16 @@
       "name": "grouping",
       "part": [
         {
-          "name": "label"
+          "name": "label",
+          "valueCode": "confirmed"
         },
         {
           "name": "result",
-          "valueUnsignedInt": 5
+          "valueUnsignedInt": 6
         },
         {
           "name": "drillDown",
-          "valueString": "(reverseResolve(Condition.subject).where($this.onsetDateTime > @2010 and $this.onsetDateTime < @2011).verificationStatus.coding.code).empty()"
+          "valueString": "(reverseResolve(Condition.subject).where($this.onsetDateTime > @2010 and $this.onsetDateTime < @2011).verificationStatus.coding.code) contains 'confirmed'"
         }
       ]
     },
@@ -21,16 +22,15 @@
       "name": "grouping",
       "part": [
         {
-          "name": "label",
-          "valueCode": "confirmed"
+          "name": "label"
         },
         {
           "name": "result",
-          "valueUnsignedInt": 4
+          "valueUnsignedInt": 3
         },
         {
           "name": "drillDown",
-          "valueString": "(reverseResolve(Condition.subject).where($this.onsetDateTime > @2010 and $this.onsetDateTime < @2011).verificationStatus.coding.code) contains 'confirmed'"
+          "valueString": "(reverseResolve(Condition.subject).where($this.onsetDateTime > @2010 and $this.onsetDateTime < @2011).verificationStatus.coding.code).empty()"
         }
       ]
     }
