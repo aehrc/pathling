@@ -31,7 +31,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "(gender = 'female') and (reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009'))"
+          "valueString": "(reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009')) and (gender = 'female')"
         }
       ]
     }

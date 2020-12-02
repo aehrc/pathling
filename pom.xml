@@ -51,7 +51,7 @@
     <pathling.sparkVersion>3.0.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.dockerJavaVersion>3.2.1</pathling.dockerJavaVersion>
-    <pathling.hadoopVersion>2.7.7</pathling.hadoopVersion>
+    <pathling.hadoopVersion>2.9.2</pathling.hadoopVersion>
     <pathling.hadoopMirror>https://apache.mirror.digitalpacific.com.au/hadoop/common</pathling.hadoopMirror>
   </properties>
 
