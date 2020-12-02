@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -97,43 +98,29 @@ public class FirstFunctionTest {
   @Test
   public void firstOfUngroupedSubResources() {
 
-    // @TODO: Merge : FIX
-    /*
-    final RuntimeResourceDefinition hapiDefinition = fhirContext
-        .getResourceDefinition(EpisodeOfCare.class);
-    final ResourceDefinition resourceDefinition = new ResourceDefinition(ResourceType.EPISODEOFCARE,
-        hapiDefinition);
-
+    final String subresourceId = randomAlias();
+    final String statusColumn = randomAlias();
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
         .withEidColumn()
-        .withStructColumn("id", DataTypes.StringType)
-        .withStructColumn("status", DataTypes.StringType)
-        .withRow("Encounter/xyz1", makeEid(0, 0),
-            RowFactory.create("EpisodeOfCare/abc1", "planned"))
-        .withRow("Encounter/xyz1", makeEid(0, 1),
-            RowFactory.create("EpisodeOfCare/abc2", "planned"))
-        .withRow("Encounter/xyz1", makeEid(0, 2), RowFactory.create("EpisodeOfCare/abc4", "active"))
-        .withRow("Encounter/xyz1", makeEid(0, 3), RowFactory.create("EpisodeOfCare/abc5", "active"))
-        .withRow("Encounter/xyz2", makeEid(0, 0), RowFactory.create("EpisodeOfCare/abc3", "active"))
-        .withRow("Encounter/xyz3", makeEid(0, 0), null)
-        .withRow("Encounter/xyz3", makeEid(0, 1),
-            RowFactory.create("EpisodeOfCare/abc3", "waitlist"))
-        .withRow("Encounter/xyz4", null, null)
-        .buildWithStructValue()
-        .repartition(3);
-
-    final Column idColumn = inputDataset.col("id");
-    final Column valueColumn = inputDataset.col("value");
-    final Column eidColumn = inputDataset.col("eid");
-
-    final ResourcePath inputPath = new ResourcePath("Encounter.episodeOfCare.resolve()",
-        inputDataset,
-        Optional.of(idColumn), Optional.of(eidColumn), valueColumn, false, Optional.empty(),
-        resourceDefinition);
+        .withColumn(subresourceId, DataTypes.StringType)
+        .withColumn(statusColumn, DataTypes.StringType)
+        .withRow("Patient/1", makeEid(2), "Encounter/5", "in-progress")
+        .withRow("Patient/1", makeEid(1), "Encounter/1", "in-progress")
+        .withRow("Patient/1", makeEid(0), "Encounter/2", "finished")
+        .withRow("Patient/2", makeEid(0), "Encounter/3", "in-progress")
+        .withRow("Patient/3", null, null, null)
+        .build();
+    final ResourcePath inputPath = new ResourcePathBuilder()
+        .expression("reverseResolve(Encounter.subject)")
+        .dataset(inputDataset)
+        .idEidAndValueColumns()
+        .valueColumn(inputDataset.col(subresourceId))
+        .resourceType(ResourceType.ENCOUNTER)
+        .buildCustom();
 
     final ParserContext parserContext = new ParserContextBuilder()
-        .inputExpression("Encounter")
+        .inputExpression("Patient")
         .build();
 
     final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, inputPath,
@@ -141,31 +128,22 @@ public class FirstFunctionTest {
     final NamedFunction firstFunction = NamedFunction.getInstance("first");
     final FhirPath result = firstFunction.invoke(firstInput);
 
-    assertTrue(result instanceof ResourcePath);
-    assertThat((ResourcePath) result)
-        .hasExpression("Encounter.episodeOfCare.resolve().first()")
-        .isSingular()
-        .hasResourceType(ResourceType.EPISODEOFCARE);
-
-    // expected result dataset
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withEidColumn()
-        .withStructColumn("id", DataTypes.StringType)
-        .withStructColumn("status", DataTypes.StringType)
-        .withRow("Encounter/xyz1", null,
-            RowFactory.create("EpisodeOfCare/abc1", "planned"))
-        .withRow("Encounter/xyz2", null, RowFactory.create("EpisodeOfCare/abc3", "active"))
-        .withRow("Encounter/xyz3", null,
-            RowFactory.create("EpisodeOfCare/abc3", "waitlist"))
-        .withRow("Encounter/xyz4", null, null)
-        .buildWithStructValue();
+        .withIdColumn()
+        .withRow("Patient/1", null, "Encounter/2")
+        .withRow("Patient/2", null, "Encounter/3")
+        .withRow("Patient/3", null, null)
+        .build();
 
     assertThat(result)
+        .isResourcePath()
+        .hasExpression("reverseResolve(Encounter.subject).first()")
+        .isSingular()
+        .hasResourceType(ResourceType.ENCOUNTER)
         .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
-
-     */
   }
 
   @Test

@@ -154,8 +154,6 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
             filterIdColumn = fhirPath.getIdColumn();
           }
 
-          // @TODO: MERGE:
-          // Not sure what should be the source of EID here
           // Update the context to build the next expression from the same dataset.
           currentContext = currentContext
               .copy(currentContext.getExpression(), fhirPath.getDataset(), fhirPath.getIdColumn(),

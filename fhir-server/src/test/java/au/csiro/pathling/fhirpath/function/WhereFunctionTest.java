@@ -96,16 +96,6 @@ public class WhereFunctionTest {
     final NamedFunction whereFunction = NamedFunction.getInstance("where");
     final FhirPath result = whereFunction.invoke(whereInput);
 
-    // @TODO: WHERE ON EMPTY COLLECTIONS
-    // .withRow("Patient/1", null)
-    // .withRow("Patient/1", "Patient/1")
-    // .withRow("Patient/2", "Patient/2")
-    // .withRow("Patient/3", null)
-    // .withRow("Patient/3", "Patient/3")
-    // .withRow("Patient/4", null)
-    // .withRow("Patient/4", null)
-    // .withRow("Patient/5", null)
-
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
@@ -125,7 +115,7 @@ public class WhereFunctionTest {
 
     assertThat(result)
         .selectOrderedResultWithEid()
-        .debugRows();
+        .hasRows(expectedDataset);
   }
 
   @Test

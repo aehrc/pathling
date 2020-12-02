@@ -157,7 +157,8 @@ public class ResourcePathBuilder {
     final RuntimeResourceDefinition hapiDefinition = fhirContext
         .getResourceDefinition(resourceCode);
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset, idColumn);
+    // in most cases value column should be the same as id
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
 
     final Map<String, Column> elementsToColumns = new HashMap<>();
     for (final String columnName : dataset.columns()) {
