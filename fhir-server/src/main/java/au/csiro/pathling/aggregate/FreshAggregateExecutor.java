@@ -130,7 +130,10 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     groupingColumns.ifPresent(finalSelection::addAll);
     finalSelection.addAll(aggregationColumns);
     final Dataset<Row> finalDataset = joinedAggregations
-        .select(finalSelection.toArray(new Column[0]));
+        .select(finalSelection.toArray(new Column[0]))
+        // This is needed to cater for the scenario where a literal value is used within an
+        // aggregation expression.
+        .distinct();
 
     // Translate the result into a response object to be passed back to the user.
     return buildResponse(finalDataset, aggregations, groupings, filters);
