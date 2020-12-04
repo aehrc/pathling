@@ -410,7 +410,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
    * @see <a href="https://github.com/aehrc/pathling/issues/151">#151</a>
    */
   @Test
-  @Disabled
   void queryWithComparisonInAggregation() {
     subjectResource = ResourceType.CAREPLAN;
     mockResourceReader(subjectResource);
