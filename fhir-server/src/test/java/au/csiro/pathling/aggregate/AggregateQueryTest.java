@@ -361,8 +361,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  @Disabled
-    // @TODO: Fix expectations/implementation.
   void queryWithWhereInAggregation() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.OBSERVATION);
