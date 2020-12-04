@@ -156,14 +156,9 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
         .map(FhirPath::getDataset)
         .collect(Collectors.toList()));
 
-    Dataset<Row> result = datasets.get(0);
-
-    for (int i = 1; i < datasets.size(); i++) {
-      final Dataset<Row> current = datasets.get(i);
-      result = join(result, idColumn, current, idColumn, JoinType.LEFT_OUTER);
-    }
-
-    return result;
+    return datasets.stream()
+        .reduce((a, b) -> join(a, idColumn, b, idColumn, JoinType.LEFT_OUTER))
+        .orElseThrow();
   }
 
   @Nonnull
