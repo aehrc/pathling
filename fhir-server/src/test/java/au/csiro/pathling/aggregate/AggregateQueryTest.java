@@ -25,7 +25,6 @@ import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.ValueSet;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -428,7 +427,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
    * @see <a href="https://github.com/aehrc/pathling/issues/151">#151</a>
    */
   @Test
-  @Disabled
   void queryWithLiteralAggregation() {
     subjectResource = ResourceType.CAREPLAN;
     mockResourceReader(subjectResource);
@@ -439,7 +437,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
         .build();
 
     response = executor.execute(request);
-    assertResponse("AggregateQueryTest/queryWithUriValueInGrouping.Parameters.json",
+    assertResponse("AggregateQueryTest/queryWithLiteralAggregation.Parameters.json",
         response);
   }
 
