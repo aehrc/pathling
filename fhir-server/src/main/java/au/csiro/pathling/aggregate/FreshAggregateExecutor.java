@@ -6,10 +6,12 @@
 
 package au.csiro.pathling.aggregate;
 
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
+import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.aggregate.AggregateRequest.Aggregation;
 import au.csiro.pathling.aggregate.AggregateRequest.Grouping;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -82,11 +84,10 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     final List<FhirPath> groupings = parseGroupings(parser, query.getGroupings());
 
     // Join all filter and grouping expressions together.
-    final List<FhirPath> groupingsAndFilters = new ArrayList<>();
-    groupingsAndFilters.addAll(filters);
-    groupingsAndFilters.addAll(groupings);
+    final Column idColumn = inputContext.getIdColumn();
     Dataset<Row> groupingsAndFiltersDataset = filters.size() + groupings.size() > 0
-                                              ? joinExpressions(groupingsAndFilters)
+                                              ? joinGroupingsAndFilters(groupings, filters,
+        idColumn)
                                               : inputContext.getDataset();
 
     // Apply filters.
@@ -103,7 +104,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     // during the parse can use these columns for grouping, rather than the identity of each
     // resource.
     final ResourcePath aggregationContext = inputContext
-        .copy(inputContext.getExpression(), groupingsAndFiltersDataset, inputContext.getIdColumn(),
+        .copy(inputContext.getExpression(), groupingsAndFiltersDataset, idColumn,
             inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
             Optional.empty());
     final ParserContext aggregationParserContext = buildParserContext(aggregationContext,
@@ -133,6 +134,33 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
     // Translate the result into a response object to be passed back to the user.
     return buildResponse(finalDataset, aggregations, groupings, filters);
+  }
+
+  @Nonnull
+  private Dataset<Row> joinGroupingsAndFilters(@Nonnull final Collection<FhirPath> groupings,
+      @Nonnull final Collection<FhirPath> filters, @Nonnull final Column idColumn) {
+    final List<Dataset<Row>> datasets = groupings.stream()
+        .map(grouping -> {
+          // We need to remove any trailing null values from non-empty collections, so that aggregations
+          // do not count non-empty collections in the empty collection grouping. We do this by joining
+          // the distinct set of resource IDs to the dataset using an outer join, where the argument value
+          // is true.
+          final Dataset<Row> distinctIds = grouping.getDataset().select(idColumn).distinct();
+          return join(grouping.getDataset(), idColumn, distinctIds,
+              idColumn, grouping.getValueColumn().isNotNull(), JoinType.RIGHT_OUTER);
+        }).collect(Collectors.toList());
+    datasets.addAll(filters.stream()
+        .map(FhirPath::getDataset)
+        .collect(Collectors.toList()));
+
+    Dataset<Row> result = datasets.get(0);
+
+    for (int i = 1; i < datasets.size(); i++) {
+      final Dataset<Row> current = datasets.get(i);
+      result = join(result, idColumn, current, idColumn, JoinType.LEFT_OUTER);
+    }
+
+    return result;
   }
 
   @Nonnull
