@@ -6,11 +6,9 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhir.FhirPathBaseVisitor;
 import au.csiro.pathling.fhir.FhirPathParser.FunctionInvocationContext;
 import au.csiro.pathling.fhir.FhirPathParser.MemberInvocationContext;
@@ -25,7 +23,6 @@ import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -178,8 +175,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // NOTE: This works because for $this the context for aggregation grouping on elements
       // includes `id` and `this` columns.
 
-      // create and alias $this column
-
+      // Create and alias the $this column.
       final FhirPath thisPath = nonLiteral.toThisPath();
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this` 

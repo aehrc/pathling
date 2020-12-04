@@ -54,8 +54,8 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
 
   protected DatePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
     super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
         thisColumn, fhirType);

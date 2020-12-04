@@ -6,14 +6,13 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -77,6 +76,7 @@ public class WhereFunctionTest {
         .withColumn("value",
             thisPath.getDataset().col(statusColumn).equalTo("in-progress"));
 
+    assertTrue(thisPath.getThisColumn().isPresent());
     final ElementPath argumentPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
@@ -147,6 +147,7 @@ public class WhereFunctionTest {
     final Dataset<Row> argumentDataset = thisPath.getDataset()
         .withColumn("value", inputPath.getValueColumn().equalTo("en"));
 
+    assertTrue(thisPath.getThisColumn().isPresent());
     final ElementPath argumentExpression = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
@@ -214,6 +215,7 @@ public class WhereFunctionTest {
     final Dataset<Row> argumentDataset = thisPath.getDataset()
         .withColumn("value",
             functions.when(inputPath.getValueColumn().equalTo("en"), null).otherwise(true));
+    assertTrue(thisPath.getThisColumn().isPresent());
     final ElementPath argumentPath = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)

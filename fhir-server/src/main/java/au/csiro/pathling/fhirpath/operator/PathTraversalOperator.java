@@ -87,22 +87,24 @@ public class PathTraversalOperator {
       eidColumnCandidate = left.getEidColumn();
       resultDataset = leftDataset;
     } else {
-      // create a dataset with all existing columns and then posexpand the array value field
-      // into `index` and `value` columns.
+      // If the element has a cardinality of more than one, create a dataset with all existing
+      // columns and then explode the array value field into `index` and `value` columns using
+      // `posexplode_outer`.
       final Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
           .map(leftDataset::col), Stream
           .of(posexplode_outer(field)
               .as(new String[]{"index", "value"})))
-          .toArray(l -> new Column[l]);
+          .toArray(Column[]::new);
       resultDataset = leftDataset.select(allColumns);
       valueColumn = resultDataset.col("value");
       eidColumnCandidate = Optional.of(left.expandEid(resultDataset.col("index")));
     }
-    return ElementPath
-        .build(expression, resultDataset, left.getIdColumn(), resultSingular
-                                                              ? Optional.empty()
-                                                              : eidColumnCandidate, valueColumn,
-            resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
+
+    final Optional<Column> eidColumn = resultSingular
+                                       ? Optional.empty()
+                                       : eidColumnCandidate;
+    return ElementPath.build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,
+        resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
   }
 
 }

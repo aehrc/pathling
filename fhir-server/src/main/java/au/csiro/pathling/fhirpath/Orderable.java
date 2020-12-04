@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.utilities.Preconditions;
@@ -11,7 +17,7 @@ import org.apache.spark.sql.types.DataTypes;
 
 
 /**
- * Describes a path which elements can deterministically ordered.
+ * Describes a path for which elements can deterministically ordered.
  *
  * @author Piotr Szul
  */
@@ -19,24 +25,25 @@ import org.apache.spark.sql.types.DataTypes;
 public interface Orderable {
 
   /**
-   * The Spark SQL type of the ordering column
+   * The Spark SQL type of the ordering column.
    */
-  static DataType ORDERING_COLUMN_TYPE = DataTypes.createArrayType(DataTypes.IntegerType);
+  DataType ORDERING_COLUMN_TYPE = DataTypes.createArrayType(DataTypes.IntegerType);
+
   /**
-   * The typed NULL value for the odering column.
+   * The typed null value for the ordering column.
    */
-  static Column ORDERING_NULL_VALUE = functions.lit(null).cast(ORDERING_COLUMN_TYPE);
+  Column ORDERING_NULL_VALUE = functions.lit(null).cast(ORDERING_COLUMN_TYPE);
 
 
   /**
-   * Returns an indicator of whether this path can be ordered in deterministic order.
+   * Returns an indicator of whether this path can be ordered in a deterministic way.
    *
-   * @return {@code true} if this path can be ordered in deterministic order
+   * @return {@code true} if this path can be ordered
    */
   boolean hasOrder();
 
   /**
-   * Returns ordered {@link Dataset} that can be used to evaluate this path against data.
+   * Returns an ordered {@link Dataset} that can be used to evaluate this path against data.
    *
    * @return A {@link Dataset}
    * @throws {@link java.lang.IllegalStateException} when the path cannot be ordered.
@@ -45,7 +52,7 @@ public interface Orderable {
   Dataset<Row> getOrderedDataset();
 
   /**
-   * Returns the column that can be used to order the dataset. This is exposed to allow multi column
+   * Returns the column that can be used to order the dataset. This is exposed to allow multi-column
    * ordering with unstable orderBy().
    *
    * @return A {@link Dataset}
@@ -56,9 +63,7 @@ public interface Orderable {
 
 
   /**
-   * Fails if the path cannot be ordered.
-   *
-   * @throws {@link java.lang.IllegalStateException}
+   * @throws java.lang.IllegalStateException if the path cannot be ordered
    */
   default void checkHasOrder() {
     Preconditions.checkState(hasOrder(), "Orderable path expected");

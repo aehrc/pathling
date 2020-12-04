@@ -28,6 +28,7 @@ import org.apache.spark.sql.types.*;
  *
  * @author John Grimes
  */
+@SuppressWarnings("unused")
 public class DatasetBuilder {
 
   @Nonnull
@@ -195,7 +196,7 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public static List<Integer> makeEid(Integer... levels) {
+  public static List<Integer> makeEid(final Integer... levels) {
     return Arrays.asList(levels);
   }
 

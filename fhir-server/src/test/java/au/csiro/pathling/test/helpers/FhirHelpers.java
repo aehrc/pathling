@@ -32,6 +32,7 @@ import org.mockito.stubbing.Answer;
 /**
  * @author John Grimes
  */
+@SuppressWarnings("unused")
 public class FhirHelpers {
 
   private static final FhirContext FHIR_CONTEXT = FhirContext.forR4();
@@ -136,6 +137,7 @@ public class FhirHelpers {
   public static class MemberOfMapperAnswerer implements Answer<Iterator<MemberOfResult>>,
       Serializable {
 
+    private static final long serialVersionUID = -4277469595727802064L;
     private final List<Boolean> expectedResults;
 
     public MemberOfMapperAnswerer(@Nonnull final Boolean... expectedResults) {

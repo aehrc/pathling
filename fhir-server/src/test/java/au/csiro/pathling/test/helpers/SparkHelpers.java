@@ -59,7 +59,6 @@ public abstract class SparkHelpers {
     return activeSession.get();
   }
 
-
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset) {
     return getIdAndValueColumns(dataset, false);
@@ -67,12 +66,12 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset,
-      boolean hasEid) {
+      final boolean hasEid) {
     int colIndex = 0;
     final Column idColumn = col(dataset.columns()[colIndex++]);
     final Optional<Column> eidColum = hasEid
-                              ? Optional.of(col(dataset.columns()[colIndex++]))
-                              : Optional.empty();
+                                      ? Optional.of(col(dataset.columns()[colIndex++]))
+                                      : Optional.empty();
     final Column valueColumn = col(dataset.columns()[colIndex]);
     return new IdAndValueColumns(idColumn, eidColum, Collections.singletonList(valueColumn));
   }

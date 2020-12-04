@@ -36,8 +36,8 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
   private Optional<DateLiteralFormat> format;
 
   @SuppressWarnings("WeakerAccess")
-  protected DateLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
+  protected DateLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof DateType);
     format = Optional.empty();

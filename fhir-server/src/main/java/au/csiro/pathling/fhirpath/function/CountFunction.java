@@ -38,25 +38,22 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     checkNoArguments("count", input);
     final NonLiteralPath inputPath = input.getInput();
     final String expression = expressionFromInput(input, NAME);
-
     final Column subjectColumn = inputPath.getValueColumn();
-    final Function<Column, Column> countFunction;
-    if (inputPath instanceof ResourcePath) {
-      // When we are counting resources, we use the distinct count to account for the fact that
-      // there may be duplicate IDs in the dataset.
-      countFunction = functions::countDistinct;
-    } else {
-      // When we are counting elements, we use a non-distinct count, to account for the fact that it
-      // is valid to have multiple elements with the same value.
-      countFunction = functions::count;
-    }
+
+    // When we are counting resources, we use the distinct count to account for the fact that
+    // there may be duplicate IDs in the dataset.
+    // When we are counting elements, we use a non-distinct count, to account for the fact that it
+    // is valid to have multiple elements with the same value.
+    final Function<Column, Column> countFunction = inputPath instanceof ResourcePath
+                                                   ? functions::countDistinct
+                                                   : functions::count;
 
     // According to the FHIRPath specification, the count function must return 0 when invoked on an
     // empty collection.
     final Column valueColumn = when(countFunction.apply(subjectColumn).isNull(), 0L)
         .otherwise(countFunction.apply(subjectColumn));
 
-    return buildResult(inputPath.getDataset(), input.getContext(), inputPath, valueColumn,
+    return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath, valueColumn,
         expression, FHIRDefinedType.UNSIGNEDINT);
   }
 

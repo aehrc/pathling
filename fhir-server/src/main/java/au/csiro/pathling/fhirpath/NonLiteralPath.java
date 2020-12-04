@@ -68,8 +68,8 @@ public abstract class NonLiteralPath implements FhirPath {
 
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<ResourcePath> foreignResource,
       @Nonnull final Optional<Column> thisColumn) {
 
     final List<String> datasetColumns = Arrays.asList(dataset.columns());
@@ -82,7 +82,7 @@ public abstract class NonLiteralPath implements FhirPath {
     eidColumn.ifPresent(col -> checkArgument(datasetColumns.contains(col.toString()),
         "eid column name not present in dataset"));
 
-    // precondition: singular paths should have empty eidColumn
+    // Singular paths should have an empty element ID column.
     check(!singular || eidColumn.isEmpty());
 
     this.expression = expression;
@@ -140,27 +140,7 @@ public abstract class NonLiteralPath implements FhirPath {
   public abstract Optional<ElementDefinition> getChildElement(@Nonnull final String name);
 
   /**
-   * Creates a copy of this NonLiteralPath with an updated {@link Dataset}, ID and value {@link
-   * Column}s.
-   *
-   * @param expression an updated expression to describe the new NonLiteralPath
-   * @param dataset the new Dataset that can be used to evaluate this NonLiteralPath against data
-   * @param idColumn the new resource identity column
-   * @param eidColumn the new element identity column
-   * @param valueColumn the new expression value column
-   * @param singular the new singular value
-   * @param thisColumn a list of columns containing the collection being iterated, for cases where a
-   * path is being created to represent the {@code $this} keyword
-   * @return a new instance of NonLiteralPath
-   */
-  @Nonnull
-  public abstract NonLiteralPath copy(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-      @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn,
-      @Nonnull Column valueColumn, boolean singular,
-      @Nonnull Optional<Column> thisColumn);
-
-  /**
-   * Gets a eid {@link Column} from any of the inputs, if there is one.
+   * Get an element ID {@link Column} from any of the inputs, if there is one.
    *
    * @param inputs a collection of objects
    * @return a {@link Column}, if one was found
@@ -176,9 +156,28 @@ public abstract class NonLiteralPath implements FhirPath {
   }
 
   /**
-   * Constructs $this path for the current path.
+   * Creates a copy of this NonLiteralPath with an updated {@link Dataset}, ID and value {@link
+   * Column}s.
    *
-   * @return $this path.
+   * @param expression an updated expression to describe the new NonLiteralPath
+   * @param dataset the new Dataset that can be used to evaluate this NonLiteralPath against data
+   * @param idColumn the new resource identity column
+   * @param eidColumn the new element identity column
+   * @param valueColumn the new expression value column
+   * @param singular the new singular value
+   * @param thisColumn a list of columns containing the collection being iterated, for cases where a
+   * path is being created to represent the {@code $this} keyword
+   * @return a new instance of NonLiteralPath
+   */
+  @Nonnull
+  public abstract NonLiteralPath copy(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
+      @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn, @Nonnull Column valueColumn,
+      boolean singular, @Nonnull Optional<Column> thisColumn);
+
+  /**
+   * Construct a $this path based upon this path.
+   *
+   * @return a new NonLiteralPath
    */
   @Nonnull
   public NonLiteralPath toThisPath() {
@@ -192,24 +191,23 @@ public abstract class NonLiteralPath implements FhirPath {
 
 
   /**
-   * Constructs a this column for this path as a structure with two fields `eid` and `value`.
+   * Constructs a $this column for this path as a structure with two fields: `eid` and `value`.
    *
-   * @return this column.
+   * @return a new {@link Column}
    */
   @Nonnull
   private Column makeThisColumn() {
-    // Construct this based on input value and eid
     return functions.struct(
         getOrderingColumn().alias("eid"),
         getValueColumn().alias("value"));
   }
 
   /**
-   * Constructs the new value of the eidColumn based on its current value in the parent path and the
-   * index of an element in the child path.
+   * Construct the new value of the element ID column, based on its current value in the parent path
+   * and the index of an element in the child path.
    *
-   * @param indexColumn the column with the child path element index
-   * @return eid column for the child path
+   * @param indexColumn the {@link Column} with the child path element index
+   * @return an element ID Column for the child path
    */
   @Nonnull
   public Column expandEid(@Nonnull final Column indexColumn) {

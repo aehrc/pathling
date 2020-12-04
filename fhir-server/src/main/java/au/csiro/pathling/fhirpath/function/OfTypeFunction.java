@@ -55,10 +55,8 @@ public class OfTypeFunction implements NamedFunction {
 
     // Return a new resource path with the joined dataset, and the argument's value column.
     final Optional<Column> thisColumn = inputPath.getThisColumn();
-    return resourcePath
-        .copy(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(),
-            resourcePath.getValueColumn(),
-            inputPath.isSingular(), thisColumn);
+    return resourcePath.copy(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(),
+        resourcePath.getValueColumn(), inputPath.isSingular(), thisColumn);
   }
 
 }

@@ -46,9 +46,8 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Getter
   private final Set<ResourceType> possibleTypes;
 
-  private UntypedResourcePath(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Optional<Column> eidColumn,
+  private UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
@@ -75,8 +74,7 @@ public class UntypedResourcePath extends NonLiteralPath {
   public static UntypedResourcePath build(@Nonnull final ReferencePath referencePath,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column typeColumn,
-      @Nonnull final Set<ResourceType> possibleTypes) {
+      @Nonnull final Column typeColumn, @Nonnull final Set<ResourceType> possibleTypes) {
 
     final Column valueColumn = referencePath.getValueColumn();
     final DatasetWithColumn datasetWithType = createColumn(dataset, typeColumn);
@@ -103,11 +101,10 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Override
   public UntypedResourcePath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn) {
+      @Nonnull final Optional<Column> eidColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
 
-    DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
+    final DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
         eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
 
     return new UntypedResourcePath(expression, datasetWithColumns.getDataset(), idColumn,

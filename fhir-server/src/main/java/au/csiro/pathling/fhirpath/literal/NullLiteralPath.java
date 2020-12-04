@@ -28,8 +28,7 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
   private static final String EXPRESSION = "{}";
 
   @SuppressWarnings("WeakerAccess")
-  protected NullLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn) {
+  protected NullLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn) {
     // We put a dummy String value in here as a placeholder so that we can satisfy the nullability 
     // constraints within LiteralValue. It is never accessed.
     super(dataset, idColumn, new StringType(EXPRESSION));

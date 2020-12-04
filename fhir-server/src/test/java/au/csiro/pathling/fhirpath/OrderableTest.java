@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
@@ -19,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 /**
- * Test some basic Orderable behaviour across different FhirPath types
+ * Test some basic Orderable behaviour across different FhirPath types.
  *
  * @author Piotr Szul
  */
@@ -85,8 +91,17 @@ public class OrderableTest {
         .hasRows(expectedDataset);
   }
 
+  private static <T> void assertFailsOrderCheck(final Executable e) {
+    final IllegalStateException error = assertThrows(
+        IllegalStateException.class,
+        e);
+    assertEquals(
+        "Orderable path expected",
+        error.getMessage());
+  }
+
   @Test
-  public void testNonSingulaNonLiteralWithEidHasOrder() {
+  public void testNonSingularNonLiteralWithEidHasOrder() {
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
@@ -106,6 +121,7 @@ public class OrderableTest {
         .build();
 
     assertTrue(testPath.hasOrder());
+    assertTrue(testPath.getEidColumn().isPresent());
     assertEquals(testPath.getEidColumn().get(), testPath.getOrderingColumn());
     testPath.checkHasOrder();
 
@@ -121,15 +137,6 @@ public class OrderableTest {
     assertThat(testPath)
         .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
-  }
-
-  private static <T> void assertFailsOrderCheck(Executable e) {
-    final IllegalStateException error = assertThrows(
-        IllegalStateException.class,
-        e);
-    assertEquals(
-        "Orderable path expected",
-        error.getMessage());
   }
 
   @Test

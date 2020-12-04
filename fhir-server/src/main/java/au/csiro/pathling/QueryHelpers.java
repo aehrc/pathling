@@ -224,6 +224,10 @@ public abstract class QueryHelpers {
     final List<Column> rightColumns = new ArrayList<>();
     leftColumns.add(left.getIdColumn());
     rightColumns.add(right.getIdColumn());
+
+    // If the two paths are NonLiteralPaths, and they have $this columns, we need to add the element
+    // ID columns into the join condition. This is to prevent too many rows being generated when
+    // there are more rows than resources on either side of the join.
     final boolean nonLiteralJoin =
         left instanceof NonLiteralPath && right instanceof NonLiteralPath;
     if (nonLiteralJoin && ((NonLiteralPath) left).getThisColumn().isPresent()
@@ -231,6 +235,7 @@ public abstract class QueryHelpers {
       leftColumns.add(((NonLiteralPath) left).getThisColumn().get());
       rightColumns.add(((NonLiteralPath) right).getThisColumn().get());
     }
+
     return join(left.getDataset(), leftColumns, right.getDataset(), rightColumns, joinType);
   }
 

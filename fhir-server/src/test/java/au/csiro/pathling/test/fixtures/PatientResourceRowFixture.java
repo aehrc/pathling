@@ -20,7 +20,7 @@ import org.apache.spark.sql.types.*;
  * @author Piotr Szul
  */
 
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class PatientResourceRowFixture {
 
   public static StructType createPatientRowStruct() {

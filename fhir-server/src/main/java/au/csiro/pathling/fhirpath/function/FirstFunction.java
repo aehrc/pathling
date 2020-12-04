@@ -41,6 +41,7 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
     final Column finalValueColumn = first(inputPath.getValueColumn(), true);
 
-    return buildResult(dataset, input.getContext(), inputPath, finalValueColumn, expression);
+    return buildAggregateResult(dataset, input.getContext(), inputPath, finalValueColumn,
+        expression);
   }
 }

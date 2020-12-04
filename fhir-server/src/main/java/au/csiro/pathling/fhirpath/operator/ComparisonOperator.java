@@ -68,10 +68,8 @@ public class ComparisonOperator implements Operator {
     final Optional<Column> thisColumn = findThisColumn(left, right);
     final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
 
-    return ElementPath
-        .build(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
-            datasetWithColumn.getColumn(),
-            true, Optional.empty(), thisColumn, FHIRDefinedType.BOOLEAN);
+    return ElementPath.build(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
+        datasetWithColumn.getColumn(), true, Optional.empty(), thisColumn, FHIRDefinedType.BOOLEAN);
   }
 
 }

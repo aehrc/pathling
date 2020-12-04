@@ -47,11 +47,12 @@ public abstract class AggregateFunction {
    * @return a new {@link ElementPath} representing the result
    */
   @Nonnull
-  protected NonLiteralPath buildResult(@Nonnull final Dataset<Row> dataset,
+  protected NonLiteralPath buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final NonLiteralPath input,
       @Nonnull final Column valueColumn, @Nonnull final String expression) {
 
-    return buildResult(dataset, parserContext, Collections.singletonList(input), valueColumn,
+    return buildAggregateResult(dataset, parserContext, Collections.singletonList(input),
+        valueColumn,
         expression, input::copy);
   }
 
@@ -65,13 +66,15 @@ public abstract class AggregateFunction {
    * @param fhirType the {@link FHIRDefinedType} of the result
    * @return a new {@link ElementPath} representing the result
    */
+  @SuppressWarnings("SameParameterValue")
   @Nonnull
-  protected ElementPath buildResult(@Nonnull final Dataset<Row> dataset,
+  protected ElementPath buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final FhirPath input,
       @Nonnull final Column valueColumn, @Nonnull final String expression,
       @Nonnull final FHIRDefinedType fhirType) {
 
-    return buildResult(dataset, parserContext, Collections.singletonList(input), valueColumn,
+    return buildAggregateResult(dataset, parserContext, Collections.singletonList(input),
+        valueColumn,
         expression, fhirType);
   }
 
@@ -87,19 +90,19 @@ public abstract class AggregateFunction {
    * @return a new {@link ElementPath} representing the result
    */
   @Nonnull
-  protected ElementPath buildResult(@Nonnull final Dataset<Row> dataset,
+  protected ElementPath buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<FhirPath> inputs,
       @Nonnull final Column valueColumn, @Nonnull final String expression,
       @Nonnull final FHIRDefinedType fhirType) {
 
-    return buildResult(dataset, parserContext, inputs, valueColumn, expression,
+    return buildAggregateResult(dataset, parserContext, inputs, valueColumn, expression,
         // Create the result as an ElementPath of the given FHIR type.
         (exp, ds, id, eid, value, singular, thisColumn) -> ElementPath
             .build(exp, ds, id, eid, value, true, Optional.empty(), thisColumn, fhirType));
   }
 
   @Nonnull
-  private <T extends FhirPath> T buildResult(@Nonnull final Dataset<Row> dataset,
+  private <T extends FhirPath> T buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<FhirPath> inputs,
       @Nonnull final Column valueColumn, @Nonnull final String expression,
       @Nonnull final ResultPathFactory<T> resultPathFactory) {
@@ -136,9 +139,11 @@ public abstract class AggregateFunction {
     final Column[] remainingSelection = selection.stream().skip(1).toArray(Column[]::new);
 
     // Get any this columns that may be present in the inputs.
-    // @TODO: This is very error prone as a collection can be passed here instread of the arrray
-    // how to make it more stringent?
-    final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(inputs.toArray(new FhirPath[]{}));
+    // TODO: This is very error prone as a collection can be passed here instead of an array.
+    //  How can we make it more stringent?
+    @SuppressWarnings("ConfusingArgumentToVarargsMethod")
+    final Optional<Column> thisColumn = NonLiteralPath
+        .findThisColumn(inputs.toArray(new FhirPath[0]));
 
     final Dataset<Row> finalDataset = dataset
         .groupBy(groupBy)

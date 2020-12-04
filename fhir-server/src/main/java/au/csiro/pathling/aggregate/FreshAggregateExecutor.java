@@ -85,13 +85,12 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
     // Join all filter and grouping expressions together.
     final Column idColumn = inputContext.getIdColumn();
-    Dataset<Row> groupingsAndFiltersDataset = filters.size() + groupings.size() > 0
-                                              ? joinGroupingsAndFilters(groupings, filters,
-        idColumn)
-                                              : inputContext.getDataset();
+    Dataset<Row> groupingsAndFilters = filters.size() + groupings.size() > 0
+                                       ? joinGroupingsAndFilters(groupings, filters, idColumn)
+                                       : inputContext.getDataset();
 
     // Apply filters.
-    groupingsAndFiltersDataset = applyFilters(groupingsAndFiltersDataset, filters);
+    groupingsAndFilters = applyFilters(groupingsAndFilters, filters);
 
     // Create a new parser context for aggregation that includes the groupings.
     final Optional<List<Column>> groupingColumns = Optional.of(groupings.stream()
@@ -104,7 +103,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     // during the parse can use these columns for grouping, rather than the identity of each
     // resource.
     final ResourcePath aggregationContext = inputContext
-        .copy(inputContext.getExpression(), groupingsAndFiltersDataset, idColumn,
+        .copy(inputContext.getExpression(), groupingsAndFilters, idColumn,
             inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
             Optional.empty());
     final ParserContext aggregationParserContext = buildParserContext(aggregationContext,
@@ -144,10 +143,10 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
       @Nonnull final Collection<FhirPath> filters, @Nonnull final Column idColumn) {
     final List<Dataset<Row>> datasets = groupings.stream()
         .map(grouping -> {
-          // We need to remove any trailing null values from non-empty collections, so that aggregations
-          // do not count non-empty collections in the empty collection grouping. We do this by joining
-          // the distinct set of resource IDs to the dataset using an outer join, where the argument value
-          // is true.
+          // We need to remove any trailing null values from non-empty collections, so that
+          // aggregations do not count non-empty collections in the empty collection grouping. We do
+          // this by joining the distinct set of resource IDs to the dataset using an outer join,
+          // where the value is not null.
           final Dataset<Row> distinctIds = grouping.getDataset().select(idColumn).distinct();
           return join(grouping.getDataset(), idColumn, distinctIds,
               idColumn, grouping.getValueColumn().isNotNull(), JoinType.RIGHT_OUTER);

@@ -136,8 +136,7 @@ class MemberOfFunctionTest {
     // Invoke the function.
     final FhirPath result = new MemberOfFunction(mockCodeMapper).invoke(memberOfInput);
 
-    // The outcome is somehow random with regard to
-    // the sequence passed to MemberOfMapperAnswerer
+    // The outcome is somehow random with regard to the sequence passed to MemberOfMapperAnswerer.
     final Dataset<Row> expectedResult = new DatasetBuilder()
         .withIdColumn()
         .withEidColumn()

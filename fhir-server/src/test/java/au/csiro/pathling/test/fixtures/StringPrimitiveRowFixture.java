@@ -18,7 +18,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class StringPrimitiveRowFixture extends PrimitiveRowFixture {
 
   private final static StructType STRING_SCHEMA =

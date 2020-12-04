@@ -45,9 +45,8 @@ public class ResourcePath extends NonLiteralPath {
 
   protected ResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final Optional<Column> thisColumn,
-      @Nonnull final ResourceDefinition definition,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final ResourceDefinition definition,
       @Nonnull final Map<String, Column> elementsToColumns) {
     super(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
         thisColumn);
@@ -157,7 +156,7 @@ public class ResourcePath extends NonLiteralPath {
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
 
-    DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
+    final DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
         eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
 
     return new ResourcePath(expression, datasetWithColumns.getDataset(), idColumn,

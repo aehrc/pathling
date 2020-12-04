@@ -154,18 +154,18 @@ public class FirstFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", makeEid(0, 3), "Jude")   // when: "two values"  expect: "Jude"
-        .withRow("Patient/abc1", makeEid(0, 2), "Mark")
-        .withRow("Patient/abc1", makeEid(0, 1), "Mark")
-        .withRow("Patient/abc1", makeEid(0, 0), "Zaak")
-        .withRow("Patient/abc2", makeEid(0, 0), "Samuel") // when: "single value" expect: "Samuel"
-        .withRow("Patient/abc3", makeEid(0, 1), "Adam") // when: "leading null" expect: "Adam"
-        .withRow("Patient/abc3", makeEid(0, 0), null)
-        .withRow("Patient/abc4", makeEid(0, 1), null) // when: "trailing null" expect: "John
-        .withRow("Patient/abc4", makeEid(0, 0), "John")
-        .withRow("Patient/abc5", null, null)    // when: "single null" expect: null
-        .withRow("Patient/abc6", null, null)    // when: "many nulls" expect: null
-        .withRow("Patient/abc6", null, null)
+        .withRow("Patient/1", makeEid(0, 3), "Jude")   // when: "two values"  expect: "Jude"
+        .withRow("Patient/1", makeEid(0, 2), "Mark")
+        .withRow("Patient/1", makeEid(0, 1), "Mark")
+        .withRow("Patient/1", makeEid(0, 0), "Zaak")
+        .withRow("Patient/2", makeEid(0, 0), "Samuel") // when: "single value" expect: "Samuel"
+        .withRow("Patient/3", makeEid(0, 1), "Adam") // when: "leading null" expect: "Adam"
+        .withRow("Patient/3", makeEid(0, 0), null)
+        .withRow("Patient/4", makeEid(0, 1), null) // when: "trailing null" expect: "John
+        .withRow("Patient/4", makeEid(0, 0), "John")
+        .withRow("Patient/5", null, null)    // when: "single null" expect: null
+        .withRow("Patient/6", null, null)    // when: "many nulls" expect: null
+        .withRow("Patient/6", null, null)
         .build();
 
     final ElementPath input = new ElementPathBuilder()
@@ -196,12 +196,12 @@ public class FirstFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", null, "Zaak")
-        .withRow("Patient/abc2", null, "Samuel")
-        .withRow("Patient/abc3", null, "Adam")
-        .withRow("Patient/abc4", null, "John")
-        .withRow("Patient/abc5", null, null)
-        .withRow("Patient/abc6", null, null)
+        .withRow("Patient/1", null, "Zaak")
+        .withRow("Patient/2", null, "Samuel")
+        .withRow("Patient/3", null, "Adam")
+        .withRow("Patient/4", null, "John")
+        .withRow("Patient/5", null, null)
+        .withRow("Patient/6", null, null)
         .build();
 
     assertThat(result)

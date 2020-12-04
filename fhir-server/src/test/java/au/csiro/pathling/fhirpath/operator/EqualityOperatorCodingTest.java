@@ -53,13 +53,13 @@ public class EqualityOperatorCodingTest {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
-        .withRow("abc1", rowFromCoding(coding1))
-        .withRow("abc2", rowFromCoding(coding2))
-        .withRow("abc3", rowFromCoding(coding3))
-        .withRow("abc4", rowFromCoding(coding3))
-        .withRow("abc5", null)
-        .withRow("abc6", rowFromCoding(coding1))
-        .withRow("abc7", null)
+        .withRow("Patient/1", rowFromCoding(coding1))
+        .withRow("Patient/2", rowFromCoding(coding2))
+        .withRow("Patient/3", rowFromCoding(coding3))
+        .withRow("Patient/4", rowFromCoding(coding3))
+        .withRow("Patient/5", null)
+        .withRow("Patient/6", rowFromCoding(coding1))
+        .withRow("Patient/7", null)
         .buildWithStructValue();
     left = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
@@ -70,13 +70,13 @@ public class EqualityOperatorCodingTest {
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
-        .withRow("abc1", rowFromCoding(coding1))
-        .withRow("abc2", rowFromCoding(coding1))
-        .withRow("abc3", rowFromCoding(coding4))
-        .withRow("abc4", rowFromCoding(coding2))
-        .withRow("abc5", rowFromCoding(coding1))
-        .withRow("abc6", null)
-        .withRow("abc7", null)
+        .withRow("Patient/1", rowFromCoding(coding1))
+        .withRow("Patient/2", rowFromCoding(coding1))
+        .withRow("Patient/3", rowFromCoding(coding4))
+        .withRow("Patient/4", rowFromCoding(coding2))
+        .withRow("Patient/5", rowFromCoding(coding1))
+        .withRow("Patient/6", null)
+        .withRow("Patient/7", null)
         .buildWithStructValue();
     right = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
@@ -96,13 +96,13 @@ public class EqualityOperatorCodingTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("abc1", true),
-        RowFactory.create("abc2", true),
-        RowFactory.create("abc3", false),
-        RowFactory.create("abc4", false),
-        RowFactory.create("abc5", null),
-        RowFactory.create("abc6", null),
-        RowFactory.create("abc7", null)
+        RowFactory.create("Patient/1", true),
+        RowFactory.create("Patient/2", true),
+        RowFactory.create("Patient/3", false),
+        RowFactory.create("Patient/4", false),
+        RowFactory.create("Patient/5", null),
+        RowFactory.create("Patient/6", null),
+        RowFactory.create("Patient/7", null)
     );
   }
 
@@ -113,13 +113,13 @@ public class EqualityOperatorCodingTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("abc1", false),
-        RowFactory.create("abc2", false),
-        RowFactory.create("abc3", true),
-        RowFactory.create("abc4", true),
-        RowFactory.create("abc5", null),
-        RowFactory.create("abc6", null),
-        RowFactory.create("abc7", null)
+        RowFactory.create("Patient/1", false),
+        RowFactory.create("Patient/2", false),
+        RowFactory.create("Patient/3", true),
+        RowFactory.create("Patient/4", true),
+        RowFactory.create("Patient/5", null),
+        RowFactory.create("Patient/6", null),
+        RowFactory.create("Patient/7", null)
     );
   }
 
@@ -130,13 +130,13 @@ public class EqualityOperatorCodingTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("abc1", true),
-        RowFactory.create("abc2", true),
-        RowFactory.create("abc3", false),
-        RowFactory.create("abc4", true),
-        RowFactory.create("abc5", true),
-        RowFactory.create("abc6", null),
-        RowFactory.create("abc7", null)
+        RowFactory.create("Patient/1", true),
+        RowFactory.create("Patient/2", true),
+        RowFactory.create("Patient/3", false),
+        RowFactory.create("Patient/4", true),
+        RowFactory.create("Patient/5", true),
+        RowFactory.create("Patient/6", null),
+        RowFactory.create("Patient/7", null)
     );
   }
 
@@ -147,13 +147,13 @@ public class EqualityOperatorCodingTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("abc1", true),
-        RowFactory.create("abc2", true),
-        RowFactory.create("abc3", false),
-        RowFactory.create("abc4", false),
-        RowFactory.create("abc5", null),
-        RowFactory.create("abc6", true),
-        RowFactory.create("abc7", null)
+        RowFactory.create("Patient/1", true),
+        RowFactory.create("Patient/2", true),
+        RowFactory.create("Patient/3", false),
+        RowFactory.create("Patient/4", false),
+        RowFactory.create("Patient/5", null),
+        RowFactory.create("Patient/6", true),
+        RowFactory.create("Patient/7", null)
     );
   }
 
@@ -164,13 +164,13 @@ public class EqualityOperatorCodingTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("abc1", false),
-        RowFactory.create("abc2", false),
-        RowFactory.create("abc3", true),
-        RowFactory.create("abc4", false),
-        RowFactory.create("abc5", false),
-        RowFactory.create("abc6", null),
-        RowFactory.create("abc7", null)
+        RowFactory.create("Patient/1", false),
+        RowFactory.create("Patient/2", false),
+        RowFactory.create("Patient/3", true),
+        RowFactory.create("Patient/4", false),
+        RowFactory.create("Patient/5", false),
+        RowFactory.create("Patient/6", null),
+        RowFactory.create("Patient/7", null)
     );
   }
 
@@ -181,13 +181,13 @@ public class EqualityOperatorCodingTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("abc1", false),
-        RowFactory.create("abc2", false),
-        RowFactory.create("abc3", true),
-        RowFactory.create("abc4", true),
-        RowFactory.create("abc5", null),
-        RowFactory.create("abc6", false),
-        RowFactory.create("abc7", null)
+        RowFactory.create("Patient/1", false),
+        RowFactory.create("Patient/2", false),
+        RowFactory.create("Patient/3", true),
+        RowFactory.create("Patient/4", true),
+        RowFactory.create("Patient/5", null),
+        RowFactory.create("Patient/6", false),
+        RowFactory.create("Patient/7", null)
     );
   }
 

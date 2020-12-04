@@ -35,9 +35,6 @@ public class ParserContextBuilder {
   @Nonnull
   private FhirPath inputContext;
 
-  @Nullable
-  private FhirPath thisContext;
-
   @Nonnull
   private FhirContext fhirContext;
 
@@ -81,12 +78,6 @@ public class ParserContextBuilder {
   @Nonnull
   public ParserContextBuilder idColumn(@Nonnull final Column idColumn) {
     when(inputContext.getIdColumn()).thenReturn(idColumn);
-    return this;
-  }
-
-  @Nonnull
-  public ParserContextBuilder thisContext(@Nonnull final FhirPath thisContext) {
-    this.thisContext = thisContext;
     return this;
   }
 

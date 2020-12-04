@@ -1,5 +1,10 @@
-package au.csiro.pathling.fhirpath;
+/*
+ * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
 
+package au.csiro.pathling.fhirpath;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -19,7 +24,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test some basic NonLiteralPath behaviour
+ * Tests some basic NonLiteralPath behaviour.
  *
  * @author Piotr Szul
  */
@@ -45,7 +50,8 @@ public class NonLiteralPathTest {
 
     final Column newNonNullEid = testPath
         .expandEid(functions.lit(2));
-    assertEquals(Collections.singletonList(2), inputDataset.select(newNonNullEid).first().getList(0));
+    assertEquals(Collections.singletonList(2),
+        inputDataset.select(newNonNullEid).first().getList(0));
 
     final Column newNullEid = testPath
         .expandEid(functions.lit(null));
@@ -53,7 +59,7 @@ public class NonLiteralPathTest {
   }
 
   @Test
-  public void testNonSingulaNonLiteralEidExpansion() {
+  public void testNonSingularNonLiteralEidExpansion() {
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
@@ -75,7 +81,7 @@ public class NonLiteralPathTest {
     final Column idCol = testPath.getIdColumn();
     final Dataset<Row> pathDataset = testPath.getOrderedDataset();
 
-    // test non null eid
+    // Test non-null element ID.
     final Column newNonNullEid = testPath
         .expandEid(functions.lit(2));
     assertEquals(Arrays.asList(1, 3, 2),
@@ -83,7 +89,7 @@ public class NonLiteralPathTest {
     assertNull(
         pathDataset.where(idCol.equalTo("Patient/abc2")).select(newNonNullEid).first().getList(0));
 
-    // test  null eid
+    // Test null element ID.
     final Column newNullEid = testPath
         .expandEid(functions.lit(null));
 

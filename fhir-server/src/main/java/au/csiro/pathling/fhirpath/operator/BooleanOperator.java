@@ -101,8 +101,7 @@ public class BooleanOperator implements Operator {
 
     return ElementPath
         .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
-            thisColumn,
-            FHIRDefinedType.BOOLEAN);
+            thisColumn, FHIRDefinedType.BOOLEAN);
   }
 
   /**

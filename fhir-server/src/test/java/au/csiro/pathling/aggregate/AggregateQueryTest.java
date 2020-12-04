@@ -227,9 +227,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-    // @TODO: Fix expectations, possibly fix a bug on nulls in grouping expressions
-    // coming from the new implementation of `where` which produces multiple nulls
-    // per resource (of excluded elements).
   void queryWithWhere() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
@@ -290,8 +287,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-    // @TODO: Fix expectations - they response file seems to be outdated
-    // with regards to the query
   void queryWithWhereAsComparisonOperand() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.MEDICATIONREQUEST);

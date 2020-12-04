@@ -111,8 +111,8 @@ public class ResolveFunction implements NamedFunction {
     final Collection<Dataset<Row>> typeDatasets = new ArrayList<>();
     for (final ResourceType referenceType : referenceTypes) {
       if (resourceReader.getAvailableResourceTypes().contains(referenceType)) {
-        // Unfortunately we can't include the full content of the resource, as Spark won't tolerate
-        // the structure of two rows in the same dataset being different.
+        // We can't include the full content of the resource, as you can't union two datasets with
+        // different schema. The content of the resource is added later, when ofType is invoked.
         final Dataset<Row> typeDatasetWithColumns = resourceReader.read(referenceType);
         final Column idColumn = typeDatasetWithColumns.col("id");
         Dataset<Row> typeDataset = typeDatasetWithColumns

@@ -29,8 +29,8 @@ import org.hl7.fhir.r4.model.Type;
 public class TimeLiteralPath extends LiteralPath implements Materializable<TimeType>, Comparable {
 
   @SuppressWarnings("WeakerAccess")
-  protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
+  protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof TimeType);
   }

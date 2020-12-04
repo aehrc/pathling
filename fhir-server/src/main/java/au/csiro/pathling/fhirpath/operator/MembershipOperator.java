@@ -81,8 +81,8 @@ public class MembershipOperator extends AggregateFunction implements Operator {
     // values.
     final Column valueColumn = max(equalityWithNullChecks);
 
-    return buildResult(dataset, input.getContext(), Arrays.asList(left, right), valueColumn,
-        expression, FHIRDefinedType.BOOLEAN);
+    return buildAggregateResult(dataset, input.getContext(), Arrays.asList(left, right),
+        valueColumn, expression, FHIRDefinedType.BOOLEAN);
   }
 
   /**

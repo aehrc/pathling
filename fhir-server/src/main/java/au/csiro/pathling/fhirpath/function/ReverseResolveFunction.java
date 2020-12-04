@@ -77,19 +77,18 @@ public class ReverseResolveFunction implements NamedFunction {
 
     final Optional<Column> thisColumn = inputPath.getThisColumn();
 
-    // @TODO: consider removing in the future once we separate ordering from element ID
-
-    // Create an synthetic eid column for reverse resolved resources
+    // TODO: Consider removing in the future once we separate ordering from element ID.
+    // Create an synthetic element ID column for reverse resolved resources.
     final Column foreignResourceValue = foreignResource.getValueColumn();
     final WindowSpec windowSpec = Window
         .partitionBy(inputPath.getIdColumn(), inputPath.getOrderingColumn())
         .orderBy(foreignResourceValue);
 
-    // row_number() is 1-based and we use 0-based indexes thus (minus(1))
-    final Column foreginResourceIndex = when(foreignResourceValue.isNull(), lit(null))
+    // row_number() is 1-based and we use 0-based indexes - thus (minus(1)).
+    final Column foreignResourceIndex = when(foreignResourceValue.isNull(), lit(null))
         .otherwise(row_number().over(windowSpec).minus(lit(1)));
 
-    final Column syntheticEid = inputPath.expandEid(foreginResourceIndex);
+    final Column syntheticEid = inputPath.expandEid(foreignResourceIndex);
 
     return foreignResource
         .copy(expression, dataset, inputPath.getIdColumn(), Optional.of(syntheticEid),

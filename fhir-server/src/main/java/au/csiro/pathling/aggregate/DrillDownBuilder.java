@@ -67,7 +67,6 @@ public class DrillDownBuilder {
 
     // If there is more than one expression, wrap each expression in parentheses before joining
     // together with Boolean AND operators.
-
     return String.join(" and ", parenthesiseExpressions(fhirPaths));
   }
 
