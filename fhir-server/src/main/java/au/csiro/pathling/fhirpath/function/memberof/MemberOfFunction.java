@@ -11,7 +11,6 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.hash;
-import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
@@ -110,17 +109,13 @@ public class MemberOfFunction implements NamedFunction {
     final Dataset<Row> finalDataset = join(dataset, conceptHashColumn, aliasedResults,
         resultHashColumn, JoinType.LEFT_OUTER);
 
-    // The conditional expression around the value column is required to deal with nulls. This
-    // function should only ever return true or false.
-    @Nonnull final Column valueColumn = when(resultColumn.isNull(), false).otherwise(resultColumn);
-
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
 
     return ElementPath
-        .build(expression, finalDataset, idColumn, inputPath.getEidColumn(), valueColumn,
-            inputPath.isSingular(),
-            inputPath.getForeignResource(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+        .build(expression, finalDataset, idColumn, inputPath.getEidColumn(), resultColumn,
+            inputPath.isSingular(), inputPath.getForeignResource(), inputPath.getThisColumn(),
+            FHIRDefinedType.BOOLEAN);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

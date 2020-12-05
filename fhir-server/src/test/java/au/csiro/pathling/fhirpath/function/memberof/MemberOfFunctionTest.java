@@ -147,8 +147,7 @@ class MemberOfFunctionTest {
         .withRow("Encounter/3", makeEid(0), true)
         .withRow("Encounter/4", makeEid(0), false)
         .withRow("Encounter/5", makeEid(0), false)
-        // @TODO: Ask John: shouldn't it be null rather than false ???
-        .withRow("Encounter/6", null, false)
+        .withRow("Encounter/6", null, null)
         .build();
 
     // Check the result.
