@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
@@ -52,9 +53,8 @@ public class WhereFunction implements NamedFunction {
     // The result is the input value if it is equal to true, or null otherwise (signifying the
     // absence of a value).
     final Column idColumn = argumentPath.getIdColumn();
-    final Column thisColumn = argumentPath.getThisColumn().get();
-    final Column thisValue = thisColumn.getField("value");
-    final Column thisEid = thisColumn.getField("eid");
+    final Column thisValue = checkPresent(argumentPath.getThisValueColumn());
+    final Column thisEid = checkPresent(argumentPath.getThisOrderingColumn());
 
     final Column valueColumn = when(argumentValue.equalTo(true), thisValue).otherwise(lit(null));
     final String expression = expressionFromInput(input, NAME);

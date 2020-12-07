@@ -32,6 +32,9 @@ import org.apache.spark.sql.functions;
 @Getter
 public abstract class NonLiteralPath implements FhirPath {
 
+  private static final String THIS_ORDERING_COLUMN_NAME = "eid";
+  private static final String THIS_VALUE_COLUMN_NAME = "value";
+
   @Nonnull
   protected final String expression;
 
@@ -189,6 +192,15 @@ public abstract class NonLiteralPath implements FhirPath {
         Optional.of(inputWithThis.getColumn()));
   }
 
+  @Nonnull
+  public Optional<Column> getThisOrderingColumn() {
+    return getThisColumn().map(thisColumn -> thisColumn.getField(THIS_ORDERING_COLUMN_NAME));
+  }
+
+  @Nonnull
+  public Optional<Column> getThisValueColumn() {
+    return getThisColumn().map(thisColumn -> thisColumn.getField(THIS_VALUE_COLUMN_NAME));
+  }
 
   /**
    * Constructs a $this column for this path as a structure with two fields: `eid` and `value`.
@@ -198,8 +210,8 @@ public abstract class NonLiteralPath implements FhirPath {
   @Nonnull
   private Column makeThisColumn() {
     return functions.struct(
-        getOrderingColumn().alias("eid"),
-        getValueColumn().alias("value"));
+        getOrderingColumn().alias(THIS_ORDERING_COLUMN_NAME),
+        getValueColumn().alias(THIS_VALUE_COLUMN_NAME));
   }
 
   /**
