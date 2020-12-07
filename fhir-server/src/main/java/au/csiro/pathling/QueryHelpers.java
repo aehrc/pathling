@@ -230,10 +230,20 @@ public abstract class QueryHelpers {
     // there are more rows than resources on either side of the join.
     final boolean nonLiteralJoin =
         left instanceof NonLiteralPath && right instanceof NonLiteralPath;
-    if (nonLiteralJoin && ((NonLiteralPath) left).getThisColumn().isPresent()
-        && ((NonLiteralPath) right).getThisColumn().isPresent()) {
-      leftColumns.add(((NonLiteralPath) left).getThisColumn().get());
-      rightColumns.add(((NonLiteralPath) right).getThisColumn().get());
+    if (nonLiteralJoin) {
+      final NonLiteralPath nonLiteralLeft = (NonLiteralPath) left;
+      final NonLiteralPath nonLiteralRight = (NonLiteralPath) right;
+      if (nonLiteralLeft.getThisColumn().isPresent() && nonLiteralRight.getThisColumn()
+          .isPresent()) {
+        final Column leftColumn = nonLiteralLeft.getEidColumn().isPresent()
+                                  ? nonLiteralLeft.getEidColumn().get()
+                                  : nonLiteralLeft.getThisColumn().get();
+        final Column rightColumn = nonLiteralRight.getEidColumn().isPresent()
+                                   ? nonLiteralRight.getEidColumn().get()
+                                   : nonLiteralRight.getThisColumn().get();
+        leftColumns.add(leftColumn);
+        rightColumns.add(rightColumn);
+      }
     }
 
     return join(left.getDataset(), leftColumns, right.getDataset(), rightColumns, joinType);
