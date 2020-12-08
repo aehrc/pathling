@@ -31,8 +31,8 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
     Comparable, Numeric {
 
   @SuppressWarnings("WeakerAccess")
-  protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
+  protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof IntegerType);
   }

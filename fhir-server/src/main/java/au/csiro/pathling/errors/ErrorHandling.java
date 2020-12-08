@@ -10,6 +10,7 @@ import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.SparkException;
@@ -28,12 +29,12 @@ public class ErrorHandling {
     try {
       throw error;
 
-    } catch (final SparkException e) {
+    } catch (final SparkException | UncheckedExecutionException e) {
       // A SparkException is thrown when an error occurs inside a Spark job. In this case we unwrap
       // its cause and pass it back to this same method to be re-evaluated.
       @Nullable final Throwable cause = e.getCause();
       if (cause == null) {
-        return handleError(new RuntimeException("Unable to determine cause of SparkException"));
+        return new InternalErrorException("Unexpected error occurred", e);
       } else {
         return handleError(cause);
       }

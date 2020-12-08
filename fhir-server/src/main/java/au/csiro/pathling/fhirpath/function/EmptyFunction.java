@@ -8,14 +8,15 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static org.apache.spark.sql.functions.count;
-import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import java.util.function.Function;
+import au.csiro.pathling.fhirpath.element.ElementPath;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -24,7 +25,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#empty">empty</a>
  */
-public class EmptyFunction extends AggregateFunction implements NamedFunction {
+public class EmptyFunction implements NamedFunction {
 
   private static final String NAME = "empty";
 
@@ -35,12 +36,14 @@ public class EmptyFunction extends AggregateFunction implements NamedFunction {
     final NonLiteralPath inputPath = input.getInput();
     final String expression = expressionFromInput(input, "empty");
 
-    // "Empty" means that the group contains only null values.
-    final Function<Column, Column> empty = col -> when(count(col).equalTo(0), true)
-        .otherwise(false);
+    // We use the count function to determine whether there are zero items in the input collection.
+    final FhirPath countResult = new CountFunction().invoke(input);
+    final Dataset<Row> dataset = countResult.getDataset();
+    final Column valueColumn = countResult.getValueColumn().equalTo(0);
 
-    return applyAggregationFunction(input.getContext(), inputPath, empty, expression,
-        FHIRDefinedType.BOOLEAN);
+    return ElementPath
+        .build(expression, dataset, inputPath.getIdColumn(), Optional.empty(), valueColumn, true,
+            Optional.empty(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 
 }

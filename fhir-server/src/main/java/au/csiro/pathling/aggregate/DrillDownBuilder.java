@@ -56,7 +56,7 @@ public class DrillDownBuilder {
   public String build() {
     // We use a Set here to avoid situations where we needlessly have the same condition in the
     // expression more than once.
-    final Set<String> fhirPaths = new HashSet<>();
+    final Collection<String> fhirPaths = new LinkedHashSet<>();
 
     // Add each of the grouping expressions, along with either equality or contains against the
     // group value to convert it in to a Boolean expression.
@@ -67,14 +67,12 @@ public class DrillDownBuilder {
 
     // If there is more than one expression, wrap each expression in parentheses before joining
     // together with Boolean AND operators.
-
     return String.join(" and ", parenthesiseExpressions(fhirPaths));
   }
 
   private void addGroupings(final Collection<String> fhirPaths) {
     for (int i = 0; i < groupings.size(); i++) {
       final FhirPath grouping = groupings.get(i);
-      checkArgument(grouping.getIdColumn().isPresent(), "fhirPaths must all contain ID columns");
       final Optional<Type> label = labels.get(i);
       if (label.isPresent()) {
         final String literal = LiteralPath
@@ -102,13 +100,13 @@ public class DrillDownBuilder {
   }
 
   @Nonnull
-  private Set<String> parenthesiseExpressions(@Nonnull final Set<String> fhirPaths) {
+  private List<String> parenthesiseExpressions(@Nonnull final Collection<String> fhirPaths) {
     if (fhirPaths.size() > 1) {
       return fhirPaths.stream()
           .map(Strings::parentheses)
-          .collect(Collectors.toSet());
+          .collect(Collectors.toList());
     } else {
-      return fhirPaths;
+      return new ArrayList<>(fhirPaths);
     }
   }
 

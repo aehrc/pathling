@@ -23,7 +23,6 @@ import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -131,7 +130,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         // a foreign resource reference.
         final ResourcePath path = ResourcePath
             .build(context.getFhirContext(), context.getResourceReader(), resourceType, fhirPath,
-                false);
+                true);
 
         // This resource path will get preserved within paths derived from this, so that we can come
         // back to it for things like reverse reference resolution.
@@ -172,10 +171,12 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
     final List<FhirPath> arguments = new ArrayList<>();
     if (paramList != null) {
       // The `$this` path will be the same as the input, but with a different expression and it will
-      // be singular as it represents the current item from the collection.
-      final FhirPath thisPath = nonLiteral
-          .copy(NamedFunction.THIS, input.getDataset(), input.getIdColumn(), input.getValueColumn(),
-              true, Optional.of(input.getValueColumn()));
+      // be singular as it represents a single item.
+      // NOTE: This works because for $this the context for aggregation grouping on elements
+      // includes `id` and `this` columns.
+
+      // Create and alias the $this column.
+      final FhirPath thisPath = nonLiteral.toThisPath();
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this` 
       // expression.

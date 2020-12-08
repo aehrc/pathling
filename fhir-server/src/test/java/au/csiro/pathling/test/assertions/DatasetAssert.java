@@ -15,6 +15,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 
 /**
  * @author Piotr Szul
@@ -31,13 +32,14 @@ public class DatasetAssert {
 
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final List<Row> expected) {
-    assertEquals(expected, dataset.collectAsList());
+    final List<Row> actualRows = dataset.collectAsList();
+    assertEquals(expected, actualRows);
     return this;
   }
 
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final DatasetBuilder expected) {
-    return hasRows(expected.getRows());
+    return hasRows(expected.build());
   }
 
   @Nonnull
@@ -74,6 +76,13 @@ public class DatasetAssert {
   @SuppressWarnings("unused")
   public DatasetAssert debugAllRows() {
     dataset.collectAsList().forEach(System.out::println);
+    return this;
+  }
+
+  @Nonnull
+  @SuppressWarnings("unused")
+  public DatasetAssert saveAllRowsToCsv(final String path) {
+    dataset.coalesce(1).write().mode(SaveMode.Overwrite).csv(path);
     return this;
   }
 }

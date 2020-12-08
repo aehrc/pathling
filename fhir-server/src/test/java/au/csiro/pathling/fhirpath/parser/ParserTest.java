@@ -9,6 +9,7 @@ package au.csiro.pathling.fhirpath.parser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
 import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
+import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,6 +34,7 @@ import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.param.UriParam;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -40,10 +42,14 @@ import java.net.URL;
 import java.sql.Date;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Coding;
+import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -72,11 +78,12 @@ public class ParserTest {
 
     mockReader = mock(ResourceReader.class);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
-        ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST);
+        ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
+        ResourceType.DIAGNOSTICREPORT);
     final FhirContext fhirContext = FhirHelpers.getFhirContext();
 
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "%resource", false);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "%resource", true);
 
     final ParserContext parserContext = new ParserContextBuilder()
         .fhirContext(fhirContext)
@@ -112,12 +119,12 @@ public class ParserTest {
   public void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("name.suffix contains 'MD'")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
   }
 
@@ -125,12 +132,12 @@ public class ParserTest {
   public void testInOperator() {
     assertThatResultOf("'Wuckert783' in name.family")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("'MD' in name.suffix")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
   }
 
@@ -140,7 +147,7 @@ public class ParserTest {
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(true)
             .changeValue(PATIENT_ID_8ee183e2, false)
             .changeValue(PATIENT_ID_9360820c, false)
@@ -150,7 +157,7 @@ public class ParserTest {
     assertThatResultOf(
         "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(true).changeValue(PATIENT_ID_bbd33563, false));
   }
 
@@ -209,7 +216,7 @@ public class ParserTest {
     assertThatResultOf("reverseResolve(Condition.subject).code.coding.count()")
         .isElementPath(IntegerPath.class)
         .isSingular()
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(allPatientsWithValue(8L).changeValue(PATIENT_ID_121503c8, 10L)
             .changeValue(PATIENT_ID_2b36c1e2, 3L).changeValue(PATIENT_ID_7001ad9c, 5L)
             .changeValue(PATIENT_ID_9360820c, 16L).changeValue(PATIENT_ID_beff242e, 3L)
@@ -221,19 +228,19 @@ public class ParserTest {
     final DatasetBuilder expectedCountResult =
         allPatientsWithValue(1L).changeValue(PATIENT_ID_9360820c, 2L);
     assertThatResultOf("name.count()")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedCountResult);
 
     assertThatResultOf("name.family.count()")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedCountResult);
 
     assertThatResultOf("name.given.count()")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedCountResult);
 
     assertThatResultOf("name.prefix.count()")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
   }
 
@@ -250,19 +257,19 @@ public class ParserTest {
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-empty.csv");
 
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy-empty.csv");
 
     // on the same collection should return all True (even though one is CodeableConcept)
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
@@ -270,20 +277,20 @@ public class ParserTest {
         .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes.csv");
 
     assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
         + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
-        .selectResult()
+        .selectOrderedResult()
         .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.csv");
   }
 
   @Test
   public void testWhereWithAggregateFunction() {
     assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
-        .selectResult()
-        .hasRows(allPatientsWithValue(null)
+        .selectOrderedResult()
+        .hasRows(allPatientsWithValue(DataTypes.StringType, null)
             .changeValue(PATIENT_ID_9360820c, "female"));
   }
 
@@ -294,8 +301,8 @@ public class ParserTest {
   @Test
   public void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Karina848').gender")
-        .selectResult()
-        .hasRows(allPatientsWithValue(null).changeValue(PATIENT_ID_9360820c, "female"));
+        .selectOrderedResult()
+        .hasRows(allPatientsWithValue((String) null).changeValue(PATIENT_ID_9360820c, "female"));
   }
 
   /**
@@ -304,11 +311,10 @@ public class ParserTest {
    */
   @Test
   public void testWhereWithInOperator() {
-
-    // TODO: Change to a non-trivial case?
+    // @TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
-        .selectResult()
-        .hasRows(allPatientsWithValue(null));
+        .selectOrderedResult()
+        .hasRows(allPatientsWithValue((Boolean) null));
   }
 
   @Test
@@ -319,21 +325,33 @@ public class ParserTest {
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
             + ".subsumedBy(http://snomed.info/sct|40055000) contains true).gender")
-        .selectResult()
-        .hasRows(allPatientsWithValue(null)
+        .selectOrderedResult()
+        .hasRows(allPatientsWithValue((String) null)
             .changeValue(PATIENT_ID_7001ad9c, "female"));
   }
 
   @Test
   public void testWhereWithMemberOf() {
+    final Bundle mockSearch = (Bundle) FhirHelpers.getJsonParser().parseResource(
+        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.Bundle.json"));
+    final List<CodeSystem> codeSystems = mockSearch.getEntry().stream()
+        .map(entry -> (CodeSystem) entry.getResource())
+        .collect(Collectors.toList());
+    final ValueSet mockExpansion = (ValueSet) FhirHelpers.getJsonParser().parseResource(
+        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
 
-    // TODO: Change to a non-trivial case?
+    //noinspection unchecked
+    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
+        .thenReturn(codeSystems);
+    when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
+        .thenReturn(mockExpansion);
+
     assertThatResultOf(
-        "reverseResolve(MedicationRequest.subject).where(\n"
-            + "                $this.medicationCodeableConcept.memberOf('http://snomed.info/sct?fhir_vs=ecl/(<< 416897008|Tumour necrosis factor alpha inhibitor product| OR 408154002|Adalimumab 40mg injection solution 0.8mL prefilled syringe|)')\n"
-            + "            ).first().authoredOn")
-        .selectResult()
-        .hasRows(allPatientsWithValue(null));
+        "reverseResolve(Condition.subject).where("
+            + "$this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'))"
+            + ".recordedDate")
+        .selectOrderedResult()
+        .hasRows("responses/ParserTest/testWhereWithMemberOf.csv");
   }
 
   @Test
@@ -342,14 +360,14 @@ public class ParserTest {
     // TODO: Change to a non-trivial case?
     assertThatResultOf("where($this.name.first().family in contact.name.where("
         + "$this.given contains 'Joe').first().family).gender")
-        .selectResult().
-        hasRows(allPatientsWithValue(null));
+        .selectOrderedResult().
+        hasRows(allPatientsWithValue((String) null));
   }
 
   @Test
   public void testBooleanOperatorWithTwoLiterals() {
     assertThatResultOf("true and false")
-        .selectResult();
+        .selectOrderedResult();
   }
 
   @Test
@@ -359,5 +377,4 @@ public class ParserTest {
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
     assertEquals("Error parsing FHIRPath expression: missing ')' at '<EOF>'", error.getMessage());
   }
-
 }

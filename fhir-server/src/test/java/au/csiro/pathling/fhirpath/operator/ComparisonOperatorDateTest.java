@@ -41,10 +41,10 @@ class ComparisonOperatorDateTest {
 
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "2013-06-10T15:33:22Z")
-        .withRow("Patient/abc2", "2014-09-25T22:04:19+10:00")
-        .withRow("Patient/abc3", "2018-05-18T11:03:55-05:00")
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", "2013-06-10T15:33:22Z")
+        .withRow("Patient/2", "2014-09-25T22:04:19+10:00")
+        .withRow("Patient/3", "2018-05-18T11:03:55-05:00")
         .build();
     final ElementPath leftPath = new ElementPathBuilder()
         .dataset(leftDataset)
@@ -61,10 +61,10 @@ class ComparisonOperatorDateTest {
 
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "2013-06-10T12:33:22Z")
-        .withRow("Patient/abc2", "2014-09-25T12:04:19Z")
-        .withRow("Patient/abc3", "2018-05-19T11:03:55.123Z")
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", "2013-06-10T12:33:22Z")
+        .withRow("Patient/2", "2014-09-25T12:04:19Z")
+        .withRow("Patient/3", "2018-05-19T11:03:55.123Z")
         .build();
     final ElementPath rightPath = new ElementPathBuilder()
         .dataset(rightDataset)
@@ -88,13 +88,13 @@ class ComparisonOperatorDateTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.BooleanType)
-        .withRow("Patient/abc1", false)
-        .withRow("Patient/abc2", true)
-        .withRow("Patient/abc3", true)
+        .withColumn(DataTypes.BooleanType)
+        .withRow("Patient/1", false)
+        .withRow("Patient/2", true)
+        .withRow("Patient/3", true)
         .build();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 }

@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.test.fixtures;
 
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import java.util.Arrays;
 import java.util.List;
@@ -18,13 +20,14 @@ import org.apache.spark.sql.types.*;
 /**
  * @author Piotr Szul
  */
+@SuppressWarnings("WeakerAccess")
 public class CodingRowFixture extends PrimitiveRowFixture {
 
   public static StructType createCodingRowStruct() {
     final Metadata metadata = new MetadataBuilder().build();
     final StructType codingStruct = SparkHelpers.codingStructType();
-    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
-    final StructField codingField = new StructField("value", codingStruct, true, metadata);
+    final StructField id = new StructField(randomAlias(), DataTypes.StringType, true, metadata);
+    final StructField codingField = new StructField(randomAlias(), codingStruct, true, metadata);
     return new StructType(new StructField[]{id, codingField});
   }
 

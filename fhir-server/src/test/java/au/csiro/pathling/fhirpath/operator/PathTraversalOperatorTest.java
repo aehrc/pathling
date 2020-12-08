@@ -7,6 +7,8 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -15,16 +17,21 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.builders.ResourcePathBuilder;
+import au.csiro.pathling.test.builders.*;
 import au.csiro.pathling.test.helpers.FhirHelpers;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -44,12 +51,12 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void simpleTraversal() {
-    final Dataset<Row> leftDataset = new DatasetBuilder()
+  public void singularTraversalFromSingular() {
+    final Dataset<Row> leftDataset = new ResourceDatasetBuilder()
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
-        .withColumn("active", DataTypes.BooleanType)
-        .withRow("abc", "female", true)
+        .withRow("Patient/1", "female")
+        .withRow("Patient/2", null)
         .build();
     final ResourceReader resourceReader = mock(ResourceReader.class);
     when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
@@ -65,13 +72,160 @@ public class PathTraversalOperatorTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
-        .withRow("abc", "female")
+        .withEidColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", null, "female")
+        .withRow("Patient/2", null, null)
         .build();
     assertThat(result)
         .isElementPath(StringPath.class)
         .isSingular()
-        .selectResult()
+        .selectOrderedResultWithEid()
+        .hasRows(expectedDataset);
+  }
+
+  @Test
+  public void manyTraversalFromSingular() {
+    final Dataset<Row> leftDataset = new ResourceDatasetBuilder()
+        .withIdColumn()
+        .withColumn("name", DataTypes.createArrayType(DataTypes.StringType))
+        .withColumn("active", DataTypes.BooleanType)
+        .withRow("Patient/1", Arrays.asList(null, "Marie", null, "Anne"), true)
+        .withRow("Patient/2", Collections.emptyList(), true)
+        .withRow("Patient/3", null, true)
+        .build();
+    final ResourceReader resourceReader = mock(ResourceReader.class);
+    when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
+    final ResourcePath left = new ResourcePathBuilder()
+        .fhirContext(FhirHelpers.getFhirContext())
+        .resourceType(ResourceType.PATIENT)
+        .resourceReader(resourceReader)
+        .singular(true)
+        .build();
+
+    final PathTraversalInput input = new PathTraversalInput(parserContext, left, "name");
+    final FhirPath result = new PathTraversalOperator().invoke(input);
+
+    final Dataset<Row> expectedDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", makeEid(0), null)
+        .withRow("Patient/1", makeEid(1), "Marie")
+        .withRow("Patient/1", makeEid(2), null)
+        .withRow("Patient/1", makeEid(3), "Anne")
+        .withRow("Patient/2", null, null)
+        .withRow("Patient/3", null, null)
+        .build();
+    assertThat(result)
+        .isElementPath(ElementPath.class)
+        .hasExpression("Patient.name")
+        .hasFhirType(FHIRDefinedType.HUMANNAME)
+        .isNotSingular()
+        .selectOrderedResultWithEid()
+        .hasRows(expectedDataset);
+  }
+
+  @Test
+  public void manyTraversalFromNonSingular() {
+    final Dataset<Row> inputDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withStructColumn("given", DataTypes.createArrayType(DataTypes.StringType))
+        // patient with two names
+        .withRow("Patient/1", makeEid(1), RowFactory.create(Arrays.asList("Jude", "Adam")))
+        .withRow("Patient/1", makeEid(0), RowFactory.create(Arrays.asList("Mark", "Alen", null)))
+        // patient with empty list of given names
+        .withRow("Patient/2", makeEid(0), RowFactory.create(Collections.emptyList()))
+        // no name in the first place
+        .withRow("Patient/5", null, null)
+        .buildWithStructValue();
+
+    final Optional<ElementDefinition> definition = FhirHelpers
+        .getChildOfResource("Patient", "name");
+
+    assertTrue(definition.isPresent());
+    final ElementPath left = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.STRING)
+        .dataset(inputDataset)
+        .idAndEidAndValueColumns()
+        .expression("Patient.name")
+        .definition(definition.get())
+        .buildDefined();
+
+    final PathTraversalInput input = new PathTraversalInput(parserContext, left, "given");
+    final FhirPath result = new PathTraversalOperator().invoke(input);
+
+    final Dataset<Row> expectedDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", makeEid(0, 0), "Mark")
+        .withRow("Patient/1", makeEid(0, 1), "Alen")
+        .withRow("Patient/1", makeEid(0, 2), null)
+        .withRow("Patient/1", makeEid(1, 0), "Jude")
+        .withRow("Patient/1", makeEid(1, 1), "Adam")
+        .withRow("Patient/2", null, null)
+        .withRow("Patient/5", null, null)
+        .build();
+
+    assertThat(result)
+        .isElementPath(ElementPath.class)
+        .hasExpression("Patient.name.given")
+        .hasFhirType(FHIRDefinedType.STRING)
+        .isNotSingular()
+        .selectOrderedResultWithEid()
+        .hasRows(expectedDataset);
+  }
+
+  @Test
+  public void singularTraversalFromNonSingular() {
+    final Dataset<Row> inputDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withStructColumn("family", DataTypes.StringType)
+        // patient with two names
+        .withRow("Patient/1", makeEid(1), RowFactory.create("Jude"))
+        .withRow("Patient/1", makeEid(0), RowFactory.create("Mark"))
+        // patient with some null values
+        .withRow("Patient/2", makeEid(1), RowFactory.create("Adam"))
+        .withRow("Patient/2", makeEid(0), RowFactory.create((String) null))
+        // patient with empty list of given names
+        .withRow("Patient/5", null, null)
+        .buildWithStructValue();
+
+    final Optional<ElementDefinition> definition = FhirHelpers
+        .getChildOfResource("Patient", "name");
+
+    assertTrue(definition.isPresent());
+    final ElementPath left = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.STRING)
+        .dataset(inputDataset)
+        .idAndEidAndValueColumns()
+        .expression("Patient.name")
+        .definition(definition.get())
+        .buildDefined();
+
+    final PathTraversalInput input = new PathTraversalInput(parserContext, left, "family");
+    final FhirPath result = new PathTraversalOperator().invoke(input);
+
+    final Dataset<Row> expectedDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("Patient/1", makeEid(0), "Mark")
+        .withRow("Patient/1", makeEid(1), "Jude")
+        .withRow("Patient/2", makeEid(0), null)
+        .withRow("Patient/2", makeEid(1), "Adam")
+        .withRow("Patient/5", null, null)
+        .build();
+
+    assertThat(result)
+        .isElementPath(ElementPath.class)
+        .hasExpression("Patient.name.family")
+        .hasFhirType(FHIRDefinedType.STRING)
+        .isNotSingular()
+        .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
 

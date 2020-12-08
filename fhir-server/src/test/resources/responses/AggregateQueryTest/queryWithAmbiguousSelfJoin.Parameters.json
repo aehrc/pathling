@@ -31,7 +31,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "(authoredOn < @2018 and authoredOn > @2000) and ((status) = 'active')"
+          "valueString": "((status) = 'active') and (authoredOn < @2018 and authoredOn > @2000)"
         }
       ]
     }

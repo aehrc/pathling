@@ -7,13 +7,12 @@
 package au.csiro.pathling.test.builders;
 
 import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
-import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.col;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -21,6 +20,7 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -36,6 +36,9 @@ public class ElementPathBuilder {
 
   @Nonnull
   private Column idColumn;
+
+  @Nonnull
+  private Optional<Column> eidColumn;
 
   @Nonnull
   private Column valueColumn;
@@ -56,9 +59,13 @@ public class ElementPathBuilder {
 
   public ElementPathBuilder() {
     expression = "";
-    dataset = SparkHelpers.getSparkSession().emptyDataFrame();
-    idColumn = lit(null);
-    valueColumn = lit(null);
+    dataset = new DatasetBuilder()
+        .withIdColumn()
+        .withColumn(DataTypes.StringType)
+        .build();
+    idColumn = col(dataset.columns()[0]);
+    valueColumn = col(dataset.columns()[1]);
+    eidColumn = Optional.empty();
     singular = false;
     fhirType = FHIRDefinedType.NULL;
     definition = mock(ElementDefinition.class);
@@ -68,7 +75,16 @@ public class ElementPathBuilder {
   public ElementPathBuilder idAndValueColumns() {
     final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset);
     idColumn = idAndValueColumns.getId();
-    valueColumn = idAndValueColumns.getValue();
+    valueColumn = idAndValueColumns.getValues().get(0);
+    return this;
+  }
+
+  @Nonnull
+  public ElementPathBuilder idAndEidAndValueColumns() {
+    final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset, true);
+    idColumn = idAndValueColumns.getId();
+    eidColumn = idAndValueColumns.getEid();
+    valueColumn = idAndValueColumns.getValues().get(0);
     return this;
   }
 
@@ -129,15 +145,16 @@ public class ElementPathBuilder {
   @Nonnull
   public ElementPath build() {
     return ElementPath
-        .build(expression, dataset, Optional.of(idColumn), valueColumn, singular,
-            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), fhirType);
+        .build(expression, dataset, idColumn, eidColumn,
+            valueColumn, singular, Optional.ofNullable(foreignResource),
+            Optional.ofNullable(thisColumn), fhirType);
   }
 
   @Nonnull
   public ElementPath buildDefined() {
     return ElementPath
-        .build(expression, dataset, Optional.of(idColumn), valueColumn, singular,
-            Optional.ofNullable(foreignResource), Optional.ofNullable(thisColumn), definition);
+        .build(expression, dataset, idColumn, eidColumn,
+            valueColumn, singular, Optional.ofNullable(foreignResource),
+            Optional.ofNullable(thisColumn), definition);
   }
-
 }

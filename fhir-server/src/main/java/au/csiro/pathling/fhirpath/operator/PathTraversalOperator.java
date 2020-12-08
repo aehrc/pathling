@@ -7,13 +7,18 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.explode_outer;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.posexplode_outer;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import java.util.Arrays;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -53,20 +58,53 @@ public class PathTraversalOperator {
     checkUserInput(optionalChild.isPresent(), "No such child: " + expression);
     final ElementDefinition childDefinition = optionalChild.get();
 
-    final Column leftValueColumn = left.getValueColumn();
     final Dataset<Row> leftDataset = left.getDataset();
 
-    // If the element has a max cardinality of more than one, it will need to be "exploded" out into 
-    // multiple rows.
-    final Column field = leftValueColumn.getField(right);
-    final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
-    final Column valueColumn = maxCardinalityOfOne
-                               ? field
-                               : explode_outer(field);
-    final boolean singular = left.isSingular() && maxCardinalityOfOne;
+    // If the input path is a ResourcePath, we look for a bare column. Otherwise, we will need to
+    // extract it from a struct.
+    final Column field;
+    if (left instanceof ResourcePath) {
+      final ResourcePath resourcePath = (ResourcePath) left;
+      // When the value column of the ResourcePath is null, the path traversal results in null. This
+      // can happen when attempting to do a path traversal on the result of a function like when.
+      field = when(resourcePath.getValueColumn().isNull(), lit(null))
+          .otherwise(resourcePath.getElementColumn(right));
+    } else {
+      field = left.getValueColumn().getField(right);
+    }
 
-    return ElementPath.build(expression, leftDataset, left.getIdColumn(), valueColumn, singular,
-        left.getForeignResource(), left.getThisColumn(), childDefinition);
+    // If the element has a max cardinality of more than one, it will need to be "exploded" out into
+    // multiple rows.
+    final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
+    final boolean resultSingular = left.isSingular() && maxCardinalityOfOne;
+
+    final Column valueColumn;
+    final Optional<Column> eidColumnCandidate;
+    final Dataset<Row> resultDataset;
+
+    if (maxCardinalityOfOne) {
+      valueColumn = field;
+      eidColumnCandidate = left.getEidColumn();
+      resultDataset = leftDataset;
+    } else {
+      // If the element has a cardinality of more than one, create a dataset with all existing
+      // columns and then explode the array value field into `index` and `value` columns using
+      // `posexplode_outer`.
+      final Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
+          .map(leftDataset::col), Stream
+          .of(posexplode_outer(field)
+              .as(new String[]{"index", "value"})))
+          .toArray(Column[]::new);
+      resultDataset = leftDataset.select(allColumns);
+      valueColumn = resultDataset.col("value");
+      eidColumnCandidate = Optional.of(left.expandEid(resultDataset.col("index")));
+    }
+
+    final Optional<Column> eidColumn = resultSingular
+                                       ? Optional.empty()
+                                       : eidColumnCandidate;
+    return ElementPath.build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,
+        resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
   }
 
 }

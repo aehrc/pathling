@@ -60,7 +60,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((name.prefix) contains 'Ms.') and ((name.given) contains 'Cherryl901')"
+          "valueString": "((name.given) contains 'Cherryl901') and ((name.prefix) contains 'Ms.')"
         }
       ]
     },
@@ -102,7 +102,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((name.prefix) contains 'Mrs.') and ((name.given) contains 'Karina848')"
+          "valueString": "((name.given) contains 'Karina848') and ((name.prefix) contains 'Mrs.')"
         }
       ]
     },

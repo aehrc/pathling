@@ -7,29 +7,23 @@
 package au.csiro.pathling.fhirpath.function.subsumes;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.collect_set;
-import static org.apache.spark.sql.functions.explode_outer;
-import static org.apache.spark.sql.functions.when;
+import static org.apache.spark.sql.functions.*;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.encoding.BooleanResult;
-import au.csiro.pathling.fhirpath.encoding.IdAndCodingSets;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.catalyst.encoders.RowEncoder;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.slf4j.MDC;
 
@@ -47,14 +41,30 @@ import org.slf4j.MDC;
 @Slf4j
 public class SubsumesFunction implements NamedFunction {
 
-  private static final String COL_ID = "id";
-  private static final String COL_VALUE = "value";
-  private static final String COL_CODING = "coding";
-  private static final String COL_CODING_SET = "codingSet";
-  private static final String COL_INPUT_CODINGS = "inputCodings";
-  private static final String COL_ARG_CODINGS = "argCodings";
-  private static final String FIELD_CODING = "coding";
+  /**
+   * The column name that this function uses to represent resource ID within its working dataset.
+   */
+  public static final String COL_ID = "id";
 
+  /**
+   * The column name that this function uses to represent input codings within its working dataset.
+   */
+  public static final String COL_INPUT_CODINGS = "inputCodings";
+
+  /**
+   * The column name that this function uses to represent argument codings within its working
+   * dataset.
+   */
+  public static final String COL_ARG_CODINGS = "argCodings";
+
+  /**
+   * The column name that this function uses to represent the result value.
+   */
+  public static final String COL_VALUE = "value";
+  
+  private static final String COL_ARG_ID = "argId";
+  private static final String COL_CODING = "coding";
+  private static final String FIELD_CODING = "coding";
 
   private boolean inverted = false;
   private String functionName = "subsumes";
@@ -84,110 +94,104 @@ public class SubsumesFunction implements NamedFunction {
     validateInput(input);
 
     final NonLiteralPath inputFhirPath = input.getInput();
-    final Dataset<IdAndCodingSets> idAndCodingSet = createJoinedDataset(input.getInput(),
+    final Dataset<Row> idAndCodingSet = createJoinedDataset(input.getInput(),
         input.getArguments().get(0));
 
-    // apply subsumption relation per partition
+    final StructType resultSchema = SubsumptionMapper.createResultSchema(idAndCodingSet.schema());
+
+    // Process the subsumption operation per partition, adding a result column to the dataset.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final Dataset<Row> resultDataset = idAndCodingSet
         .mapPartitions(
             new SubsumptionMapper(MDC.get("requestId"),
                 input.getContext().getTerminologyClientFactory().get(), inverted),
-            Encoders.bean(BooleanResult.class)).toDF();
+            RowEncoder.apply(resultSchema));
 
-    final Column idColumn = resultDataset.col(COL_ID);
-    final Column valueColumn = resultDataset.col(COL_VALUE);
+    final Column idColumn = inputFhirPath.getIdColumn();
+    final Column valueColumn = col(COL_VALUE);
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
-    return ElementPath.build(expression, resultDataset, Optional.of(idColumn), valueColumn,
-        inputFhirPath.isSingular(), inputFhirPath.getForeignResource(),
-        inputFhirPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+    return ElementPath
+        .build(expression, resultDataset, idColumn,
+            inputFhirPath.getEidColumn(), valueColumn, inputFhirPath.isSingular(),
+            inputFhirPath.getForeignResource(), inputFhirPath.getThisColumn(),
+            FHIRDefinedType.BOOLEAN);
   }
 
   /**
-   * Creates a dataset with schema: STRING id, ARRAY(CODING) inputCoding, ARRAY(CODING) argCodings,
-   * which joins for each id arrays representing input Codings or CodeableConcept with the array
-   * representing all argument codings.
+   * Creates a dataset that preserves previous columns and adds three new ones: resource ID, input
+   * codings and argument codings.
    *
    * @see #toInputDataset(FhirPath)
    * @see #toArgDataset(FhirPath)
    */
   @Nonnull
-  private Dataset<IdAndCodingSets> createJoinedDataset(@Nonnull final FhirPath inputFhirPath,
+  private Dataset<Row> createJoinedDataset(@Nonnull final FhirPath inputFhirPath,
       @Nonnull final FhirPath argFhirPath) {
 
     final Dataset<Row> inputCodingSet = toInputDataset(inputFhirPath);
     final Dataset<Row> argCodingSet = toArgDataset(argFhirPath);
 
-    // JOIN the input arg args datasets
     return inputCodingSet.join(argCodingSet,
-        inputCodingSet.col(COL_ID).equalTo(argCodingSet.col(COL_ID)), "left_outer")
-        .select(inputCodingSet.col(COL_ID).alias(COL_ID),
-            inputCodingSet.col(COL_CODING_SET).alias(COL_INPUT_CODINGS),
-            argCodingSet.col(COL_CODING_SET).alias(COL_ARG_CODINGS))
-        .as(Encoders.bean(IdAndCodingSets.class));
+        col(COL_ID).equalTo(col(COL_ARG_ID)), "left_outer");
   }
 
   /**
-   * Converts the the input fhirpath to a dataset with schema: STRING id, ARRAY(struct CODING)
-   * codingSet Each CodeableConcept is converted to an array that includes all its coding. Each
-   * Coding is converted to an array that only includes this coding.
+   * Creates a {@link Dataset} with a new column, which is an array of all of the codings within the
+   * values. Each CodeableConcept is converted to an array that includes all its codings. Each
+   * Coding is converted to an array that only includes that coding.
    * <p>
-   * NULL Codings and CodeableConcepts are represented as NULL `codingSet`.
+   * Null Codings and CodeableConcepts are represented as null.
    *
-   * @param fhirPath to convert
-   * @return input dataset
+   * @param fhirPath the {@link FhirPath} object to convert
+   * @return the resulting Dataset
    */
   @Nonnull
   private Dataset<Row> toInputDataset(@Nonnull final FhirPath fhirPath) {
+    final Column valueColumn = fhirPath.getValueColumn();
 
     assert (isCodingOrCodeableConcept(fhirPath));
 
-    final Dataset<Row> expressionDataset = fhirPath.getDataset();
+    final Dataset<Row> expressionDataset = fhirPath.getDataset()
+        .withColumn(COL_ID, fhirPath.getIdColumn());
     final Column codingArrayCol = (isCodeableConcept(fhirPath))
-                                  ? fhirPath.getValueColumn().getField(FIELD_CODING)
-                                  : array(fhirPath.getValueColumn());
+                                  ? valueColumn.getField(FIELD_CODING)
+                                  : array(valueColumn);
 
-    check(fhirPath.getIdColumn().isPresent());
-    return expressionDataset.select(fhirPath.getIdColumn().get().alias(COL_ID),
-        when(fhirPath.getValueColumn().isNotNull(), codingArrayCol)
-            .otherwise(null)
-            .alias(COL_CODING_SET)
-    );
+    return expressionDataset.withColumn(COL_INPUT_CODINGS,
+        when(valueColumn.isNotNull(), codingArrayCol).otherwise(null));
   }
 
   /**
-   * Converts the the argument fhirpath to a dataset with schema: STRING id, ARRAY(struct CODING)
-   * codingSet
+   * Converts the the argument {@link FhirPath} to a Dataset with the schema: STRING id,
+   * ARRAY(struct CODING) codingSet.
    * <p>
-   * All directly provided Coding or all Codings from provided CodeableConcepts are collected in a
-   * single `array` per resource
+   * All codings are collected in a single `array` per resource.
    * <p>
-   * NULL Codings and CodeableConcepts are ignored. In case the resource does not have any non NULL
-   * elements an empty array created.
+   * Null Codings and CodeableConcepts are ignored. In the case where the resource does not have any
+   * non-null elements, an empty array will be created.
    *
    * @param fhirPath to convert
    * @return input dataset
    */
-
   @Nonnull
   private Dataset<Row> toArgDataset(@Nonnull final FhirPath fhirPath) {
+    final Column valueColumn = fhirPath.getValueColumn();
 
     assert (isCodingOrCodeableConcept(fhirPath));
 
     final Dataset<Row> expressionDataset = fhirPath.getDataset();
     final Column codingCol = (isCodeableConcept(fhirPath))
-                             ? explode_outer(fhirPath.getValueColumn().getField(FIELD_CODING))
-                             : fhirPath.getValueColumn();
+                             ? explode_outer(valueColumn.getField(FIELD_CODING))
+                             : valueColumn;
 
-    check(fhirPath.getIdColumn().isPresent());
     final Dataset<Row> systemAndCodeDataset = expressionDataset
-        .select(fhirPath.getIdColumn().get().alias(COL_ID), codingCol.alias(COL_CODING));
+        .select(fhirPath.getIdColumn().alias(COL_ARG_ID), codingCol.alias(COL_CODING));
 
     return systemAndCodeDataset
-        .groupBy(systemAndCodeDataset.col(COL_ID))
-        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_CODING_SET));
+        .groupBy(systemAndCodeDataset.col(COL_ARG_ID))
+        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_ARG_CODINGS));
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

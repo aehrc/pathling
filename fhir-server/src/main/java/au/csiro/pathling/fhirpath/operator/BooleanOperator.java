@@ -7,7 +7,7 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.FhirPath.findIdColumn;
+import static au.csiro.pathling.fhirpath.NonLiteralPath.findEidColumn;
 import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
@@ -93,14 +93,14 @@ public class BooleanOperator implements Operator {
         throw new AssertionError("Unsupported boolean operator encountered: " + type);
     }
 
-    final String expression =
-        left.getExpression() + " " + type + " " + right.getExpression();
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
-    final Optional<Column> idColumn = findIdColumn(left, right);
+    final String expression = left.getExpression() + " " + type + " " + right.getExpression();
+    final Dataset<Row> dataset = join(left, right, JoinType.LEFT_OUTER);
+    final Column idColumn = left.getIdColumn();
+    final Optional<Column> eidColumn = findEidColumn(left, right);
     final Optional<Column> thisColumn = findThisColumn(left, right);
 
     return ElementPath
-        .build(expression, dataset, idColumn, valueColumn, true, Optional.empty(),
+        .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
             thisColumn, FHIRDefinedType.BOOLEAN);
   }
 

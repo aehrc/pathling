@@ -12,9 +12,10 @@ import static org.apache.spark.sql.functions.first;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * This function allows the selection of only the first element of a collection.
@@ -36,10 +37,11 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
     checkNoArguments("first", input);
 
     final NonLiteralPath inputPath = input.getInput();
+    final Dataset<Row> dataset = inputPath.getOrderedDataset();
     final String expression = expressionFromInput(input, NAME);
+    final Column finalValueColumn = first(inputPath.getValueColumn(), true);
 
-    final Function<Column, Column> firstIgnoreNull = col -> first(col, true);
-
-    return applyAggregationFunction(input.getContext(), inputPath, firstIgnoreNull, expression);
+    return buildAggregateResult(dataset, input.getContext(), inputPath, finalValueColumn,
+        expression);
   }
 }

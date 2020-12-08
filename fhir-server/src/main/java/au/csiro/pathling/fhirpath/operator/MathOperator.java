@@ -52,7 +52,7 @@ public class MathOperator implements Operator {
         "Right operand to " + type + " operator must be singular: " + right.getExpression());
 
     final String expression = buildExpression(input, type.toString());
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = join(left, right, JoinType.LEFT_OUTER);
 
     final Numeric leftNumeric = (Numeric) left;
     final Numeric rightNumeric = (Numeric) right;

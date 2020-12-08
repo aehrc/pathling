@@ -6,8 +6,6 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -17,7 +15,6 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
-import lombok.Setter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.SparkSession;
 
@@ -81,8 +78,7 @@ public class ParserContext {
    * data will be aggregated using them rather than the resource identity.
    */
   @Nonnull
-  @Setter
-  private List<Column> groupingColumns;
+  private final Optional<List<Column>> groupingColumns;
 
   /**
    * When within the context of function arguments, this is the {@link FhirPath} that represents the
@@ -107,8 +103,7 @@ public class ParserContext {
       @Nonnull final SparkSession sparkSession, @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyClient> terminologyClient,
       @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
-      @Nonnull final List<Column> groupingColumns) {
-    checkArgument(inputContext.getIdColumn().isPresent(), "inputContext must have ID column");
+      @Nonnull final Optional<List<Column>> groupingColumns) {
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;

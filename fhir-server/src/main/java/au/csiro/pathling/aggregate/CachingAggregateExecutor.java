@@ -15,7 +15,6 @@ import ca.uhn.fhir.context.FhirContext;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -75,15 +74,10 @@ public class CachingAggregateExecutor implements AggregateExecutor, Cacheable {
 
   @Override
   public AggregateResponse execute(@Nonnull final AggregateRequest query) {
-    try {
-      log.info("Received request: {}", query);
-      // We use `getUnchecked` here to avoid wrapping HAPI exceptions with a checked 
-      // ExecutionException.
-      return cache.getUnchecked(query);
-
-    } catch (final UncheckedExecutionException e) {
-      throw new RuntimeException(e.getCause());
-    }
+    log.info("Received request: {}", query);
+    // We use `getUnchecked` here to avoid wrapping HAPI exceptions with a checked
+    // ExecutionException.
+    return cache.getUnchecked(query);
   }
 
   @Override

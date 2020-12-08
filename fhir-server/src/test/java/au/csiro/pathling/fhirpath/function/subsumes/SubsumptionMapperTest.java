@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.function.subsumes;
 
+import static au.csiro.pathling.test.helpers.SparkHelpers.rowsFromSimpleCodings;
+import static au.csiro.pathling.test.helpers.SparkHelpers.simpleCodingStructType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -18,9 +20,8 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
-import au.csiro.pathling.fhirpath.encoding.BooleanResult;
-import au.csiro.pathling.fhirpath.encoding.IdAndCodingSets;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
+import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.*;
@@ -28,6 +29,8 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.commons.collections4.IteratorUtils;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +52,18 @@ public class SubsumptionMapperTest {
   private TerminologyClient terminologyClient;
   private TerminologyClientFactory terminologyClientFactory;
 
+  @BeforeEach
+  public void setUp() {
+    // NOTE: We need to make TerminologyClient mock serializable so that the TerminologyClientFactory
+    // mock is serializable too.
+    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
+    terminologyClientFactory = mock(TerminologyClientFactory.class,
+        Mockito.withSettings().serializable());
+    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
+    when(terminologyClient.closure(any(), any()))
+        .thenReturn(ConceptMapFixtures.creatEmptyConceptMap());
+  }
+
   @Test
   @SuppressWarnings("ConstantConditions")
   public void testFiltersOutCodingsNotRecognizedByTerminologyServer() {
@@ -58,17 +73,33 @@ public class SubsumptionMapperTest {
         .thenReturn(Collections.singletonList(new CodeSystem()));
 
     final SubsumptionMapper mapper = new SubsumptionMapper("foo", terminologyClientFactory, false);
-    final List<IdAndCodingSets> input = Arrays.asList(
-        new IdAndCodingSets("id1", Collections.singletonList(CODING1_VERSION1),
-            Collections.singletonList(CODING2_VERSION1)),
-        new IdAndCodingSets("id2", Collections.singletonList(CODING1_UNVERSIONED),
-            Collections.singletonList(CODING1_VERSION1))
-    );
-    final Iterator<BooleanResult> result = mapper
-        .call(input.iterator());
+    final List<Row> input = new DatasetBuilder()
+        .withColumn("_abc123", DataTypes.StringType)
+        .withColumn("id", DataTypes.StringType)
+        .withColumn("inputCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withColumn("argCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withRow("female", "Patient/1", rowsFromSimpleCodings(CODING1_VERSION1),
+            rowsFromSimpleCodings(CODING2_VERSION1))
+        .withRow("male", "Patient/2", rowsFromSimpleCodings(CODING1_UNVERSIONED),
+            rowsFromSimpleCodings(CODING1_VERSION1))
+        .build()
+        .collectAsList();
 
-    assertEquals(Arrays.asList(BooleanResult.of("id1", false), BooleanResult.of("id2", true)),
-        IteratorUtils.toList(result));
+    final Iterator<Row> result = mapper.call(input.iterator());
+
+    final List<Row> expected = new DatasetBuilder()
+        .withColumn("_abc123", DataTypes.StringType)
+        .withColumn("id", DataTypes.StringType)
+        .withColumn("inputCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withColumn("argCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withColumn("value", DataTypes.BooleanType)
+        .withRow("female", "Patient/1", rowsFromSimpleCodings(CODING1_VERSION1),
+            rowsFromSimpleCodings(CODING2_VERSION1), false)
+        .withRow("male", "Patient/2", rowsFromSimpleCodings(CODING1_UNVERSIONED),
+            rowsFromSimpleCodings(CODING1_VERSION1), true)
+        .build()
+        .collectAsList();
+    assertEquals(expected, IteratorUtils.toList(result));
 
     // verify behaviour
     verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM1)), any());
@@ -80,38 +111,34 @@ public class SubsumptionMapperTest {
     verifyNoMoreInteractions(terminologyClient);
   }
 
-  @BeforeEach
-  public void setUp() {
-    // NOTE: We need to make TerminologyClient mock serializable so that the TerminologyClientFactory
-    // mock is serializable too.
-    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    terminologyClientFactory = mock(TerminologyClientFactory.class,
-        Mockito.withSettings().serializable());
-    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
-    when(terminologyClient.closure(any(), any()))
-        .thenReturn(ConceptMapFixtures.creatEmptyConceptMap());
-
-  }
-
   @Test
   public void testFiltersUndefineCodingSets() {
 
     final SubsumptionMapper mapper = new SubsumptionMapper("foo", terminologyClientFactory, false);
-    final List<IdAndCodingSets> input = Arrays.asList(
-        new IdAndCodingSets("id-null-null",
-            null, null),
-        new IdAndCodingSets("id-null-empty",
-            null, Collections.emptyList()),
-        new IdAndCodingSets("id-empty-null", Collections.emptyList(), null)
-    );
-    final Iterator<BooleanResult> result = mapper
-        .call(input.iterator());
+    final List<Row> input = new DatasetBuilder()
+        .withColumn("_abc123", DataTypes.StringType)
+        .withColumn("id", DataTypes.StringType)
+        .withColumn("inputCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withColumn("argCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withRow("female", "Patient/1", null, null)
+        .withRow("male", "Patient/2", null, Collections.emptyList())
+        .withRow("female", "Patient/3", Collections.emptyList(), null)
+        .build()
+        .collectAsList();
+    final Iterator<Row> result = mapper.call(input.iterator());
 
-    assertEquals(Arrays.asList(BooleanResult.nullOf("id-null-null"),
-        BooleanResult.nullOf("id-null-empty"),
-        BooleanResult.of("id-empty-null", false)
-        ),
-        IteratorUtils.toList(result));
+    final List<Row> expected = new DatasetBuilder()
+        .withColumn("_abc123", DataTypes.StringType)
+        .withColumn("id", DataTypes.StringType)
+        .withColumn("inputCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withColumn("argCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withColumn("value", DataTypes.BooleanType)
+        .withRow("female", "Patient/1", null, null, null)
+        .withRow("male", "Patient/2", null, Collections.emptyList(), null)
+        .withRow("female", "Patient/3", Collections.emptyList(), null, false)
+        .build()
+        .collectAsList();
+    assertEquals(expected, IteratorUtils.toList(result));
 
     // verify behaviour
     verify(terminologyClient).closure(any(), isNull());
@@ -125,21 +152,32 @@ public class SubsumptionMapperTest {
   public void testFiltersOutUndefinedCodings() {
 
     final SubsumptionMapper mapper = new SubsumptionMapper("foo", terminologyClientFactory, false);
-    final List<IdAndCodingSets> input = Arrays.asList(
-        new IdAndCodingSets("id-null-code",
-            Collections.singletonList(new SimpleCoding(SYSTEM1, null)),
-            Collections.singletonList(new SimpleCoding(SYSTEM1, null))),
-        new IdAndCodingSets("id-null-system",
-            Collections.singletonList(new SimpleCoding(null, "code1")),
-            Collections.singletonList(new SimpleCoding(null, "code1")))
-    );
-    final Iterator<BooleanResult> result = mapper.call(input.iterator());
+    final List<Row> input = new DatasetBuilder()
+        .withColumn("_abc123", DataTypes.StringType)
+        .withColumn("id", DataTypes.StringType)
+        .withColumn("inputCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withColumn("argCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withRow("female", "Patient/1", rowsFromSimpleCodings(new SimpleCoding(SYSTEM1, null)),
+            rowsFromSimpleCodings(new SimpleCoding(SYSTEM1, null)))
+        .withRow("male", "Patient/2", rowsFromSimpleCodings(new SimpleCoding(null, "code1")),
+            rowsFromSimpleCodings(new SimpleCoding(null, "code1")))
+        .build()
+        .collectAsList();
+    final Iterator<Row> result = mapper.call(input.iterator());
 
-    assertEquals(Arrays.asList(
-        BooleanResult.of("id-null-code", false),
-        BooleanResult.of("id-null-system", false)
-        ),
-        IteratorUtils.toList(result));
+    final List<Row> expected = new DatasetBuilder()
+        .withColumn("_abc123", DataTypes.StringType)
+        .withColumn("id", DataTypes.StringType)
+        .withColumn("inputCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withColumn("argCodings", DataTypes.createArrayType(simpleCodingStructType()))
+        .withColumn("value", DataTypes.BooleanType)
+        .withRow("female", "Patient/1", rowsFromSimpleCodings(new SimpleCoding(SYSTEM1, null)),
+            rowsFromSimpleCodings(new SimpleCoding(SYSTEM1, null)), false)
+        .withRow("male", "Patient/2", rowsFromSimpleCodings(new SimpleCoding(null, "code1")),
+            rowsFromSimpleCodings(new SimpleCoding(null, "code1")), false)
+        .build()
+        .collectAsList();
+    assertEquals(expected, IteratorUtils.toList(result));
 
     // verify behaviour
     verify(terminologyClient).closure(any(), isNull());
@@ -169,7 +207,9 @@ public class SubsumptionMapperTest {
           leftSet.size() == right.size() &&
           leftSet.equals(right.stream().map(SimpleCoding::new).collect(Collectors.toSet()));
     }
+
   }
+
 }
 
 

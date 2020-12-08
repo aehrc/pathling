@@ -58,6 +58,8 @@ public class MembershipOperator extends AggregateFunction implements Operator {
         "Element operand used with " + type + " operator is not singular: " + element
             .getExpression());
     checkArgumentsAreComparable(input, type.toString());
+    final Column elementValue = element.getValueColumn();
+    final Column collectionValue = collection.getValueColumn();
 
     final String expression = left.getExpression() + " " + type + " " + right.getExpression();
     final Comparable leftComparable = (Comparable) left;
@@ -68,19 +70,19 @@ public class MembershipOperator extends AggregateFunction implements Operator {
     // If the left-hand side of the operator (element) is empty, the result is empty. If the
     // right-hand side (collection) is empty, the result is false. Otherwise, a Boolean is returned
     // based on whether the element is present in the collection, using equality semantics.
-    final Column equalityWithNullChecks = when(element.getValueColumn().isNull(), lit(null))
-        .when(collection.getValueColumn().isNull(), lit(false))
+    final Column equalityWithNullChecks = when(elementValue.isNull(), lit(null))
+        .when(collectionValue.isNull(), lit(false))
         .otherwise(equality);
+
+    // We need to join the datasets in order to access values from both operands.
+    final Dataset<Row> dataset = join(left, right, JoinType.LEFT_OUTER);
 
     // In order to reduce the result to a single Boolean, we take the max of the boolean equality
     // values.
-    final Column aggColumn = max(equalityWithNullChecks).as("value");
+    final Column valueColumn = max(equalityWithNullChecks);
 
-    // Group by the grouping columns if present, or the ID column from the input.
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
-
-    return applyAggregation(input.getContext(), dataset, Arrays.asList(left, right), aggColumn,
-        expression, FHIRDefinedType.BOOLEAN);
+    return buildAggregateResult(dataset, input.getContext(), Arrays.asList(left, right),
+        valueColumn, expression, FHIRDefinedType.BOOLEAN);
   }
 
   /**

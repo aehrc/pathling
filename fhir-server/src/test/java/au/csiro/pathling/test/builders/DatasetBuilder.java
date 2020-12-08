@@ -8,7 +8,9 @@ package au.csiro.pathling.test.builders;
 
 import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 
+import au.csiro.pathling.fhirpath.Orderable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +28,7 @@ import org.apache.spark.sql.types.*;
  *
  * @author John Grimes
  */
+@SuppressWarnings("unused")
 public class DatasetBuilder {
 
   @Nonnull
@@ -51,31 +54,31 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public DatasetBuilder withIdColumn() {
-    final StructField column = new StructField("id", DataTypes.StringType, true, metadata);
+  public DatasetBuilder withColumn(@Nonnull final DataType dataType) {
+    return withColumn(randomAlias(), dataType);
+  }
+
+  @Nonnull
+  public DatasetBuilder withEidColumn() {
+    return withColumn(randomAlias(), Orderable.ORDERING_COLUMN_TYPE);
+  }
+
+  @Nonnull
+  public DatasetBuilder withColumn(@Nonnull final String columnName,
+      @Nonnull final DataType dataType) {
+    final StructField column = new StructField(columnName, dataType, true, metadata);
     datasetColumns.add(column);
     return this;
   }
 
   @Nonnull
-  public DatasetBuilder withValueColumn(@Nonnull final DataType dataType) {
-    final StructField column = new StructField("value", dataType, true, metadata);
-    datasetColumns.add(column);
-    return this;
+  public DatasetBuilder withIdColumn() {
+    return withColumn(DataTypes.StringType);
   }
 
   @Nonnull
   public DatasetBuilder withTypeColumn() {
-    final StructField column = new StructField("type", DataTypes.StringType, true, metadata);
-    datasetColumns.add(column);
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withColumn(@Nonnull final String name, @Nonnull final DataType dataType) {
-    final StructField column = new StructField(name, dataType, true, metadata);
-    datasetColumns.add(column);
-    return this;
+    return withColumn(DataTypes.StringType);
   }
 
   @Nonnull
@@ -164,7 +167,7 @@ public class DatasetBuilder {
   public Dataset<Row> buildWithStructValue() {
     final List<StructField> columns = new ArrayList<>(datasetColumns);
     columns.add(new StructField(
-        "value",
+        randomAlias(),
         DataTypes.createStructType(structColumns),
         true,
         metadata));
@@ -190,6 +193,11 @@ public class DatasetBuilder {
   @Nonnull
   public StructType getStructType() {
     return new StructType(datasetColumns.toArray(new StructField[]{}));
+  }
+
+  @Nonnull
+  public static List<Integer> makeEid(final Integer... levels) {
+    return Arrays.asList(levels);
   }
 
 }

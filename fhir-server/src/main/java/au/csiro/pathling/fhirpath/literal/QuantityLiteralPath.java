@@ -10,7 +10,6 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import java.math.BigDecimal;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
@@ -32,8 +31,8 @@ public class QuantityLiteralPath extends LiteralPath {
   private static final Pattern PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
   @SuppressWarnings("WeakerAccess")
-  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
+  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof Quantity);
   }

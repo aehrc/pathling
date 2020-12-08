@@ -6,18 +6,15 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.QueryHelpers.ID_COLUMN_SUFFIX;
-import static au.csiro.pathling.QueryHelpers.VALUE_COLUMN_SUFFIX;
-import static au.csiro.pathling.utilities.Strings.randomShortString;
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.QueryHelpers;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -64,7 +61,7 @@ public abstract class LiteralPath implements FhirPath {
 
   @Getter
   @Nonnull
-  protected Optional<Column> idColumn;
+  protected Column idColumn;
 
   @Getter
   @Nonnull
@@ -76,28 +73,13 @@ public abstract class LiteralPath implements FhirPath {
   @Getter
   protected Type literalValue;
 
-  protected LiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
-    final String hash = randomShortString();
-    final String idColumnName = hash + ID_COLUMN_SUFFIX;
-    final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
-
+  protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Type literalValue) {
+    this.idColumn = idColumn;
     this.literalValue = literalValue;
-    final Column valueColumn = buildValueColumn();
-
-    Dataset<Row> hashedDataset = dataset;
-    if (idColumn.isPresent()) {
-      hashedDataset = dataset.withColumn(idColumnName, idColumn.get());
-    }
-    hashedDataset = hashedDataset.withColumn(valueColumnName, valueColumn);
-
-    if (idColumn.isPresent()) {
-      this.idColumn = Optional.of(hashedDataset.col(idColumnName));
-    } else {
-      this.idColumn = Optional.empty();
-    }
-    this.valueColumn = hashedDataset.col(valueColumnName);
-    this.dataset = QueryHelpers.applySelection(hashedDataset, this.idColumn);
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, buildValueColumn());
+    this.dataset = datasetWithColumn.getDataset();
+    this.valueColumn = datasetWithColumn.getColumn();
   }
 
   /**
@@ -110,12 +92,12 @@ public abstract class LiteralPath implements FhirPath {
    */
   @Nonnull
   public static String expressionFor(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Type literalValue) {
+      @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
     final Class<? extends LiteralPath> literalPathClass = FHIR_TYPE_TO_FHIRPATH_TYPE
         .get(FHIRDefinedType.fromCode(literalValue.fhirType()));
     try {
       final Constructor<? extends LiteralPath> constructor = literalPathClass
-          .getDeclaredConstructor(Dataset.class, Optional.class, Type.class);
+          .getDeclaredConstructor(Dataset.class, Column.class, Type.class);
       final LiteralPath literalPath = constructor.newInstance(dataset, idColumn, literalValue);
       return literalPath.getExpression();
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
@@ -131,6 +113,23 @@ public abstract class LiteralPath implements FhirPath {
   @Override
   public boolean isSingular() {
     return true;
+  }
+
+  @Override
+  public boolean hasOrder() {
+    return true;
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> getOrderedDataset() {
+    return getDataset();
+  }
+
+  @Nonnull
+  @Override
+  public Column getOrderingColumn() {
+    return ORDERING_NULL_VALUE;
   }
 
   /**

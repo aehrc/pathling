@@ -87,7 +87,7 @@ public class MembershipOperatorTest {
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_1, false),
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_2, true),
@@ -122,7 +122,7 @@ public class MembershipOperatorTest {
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_1, false),
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_2, true),
@@ -146,7 +146,7 @@ public class MembershipOperatorTest {
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_3, false),
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_5, false));
@@ -173,7 +173,7 @@ public class MembershipOperatorTest {
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_1, null),
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_2, null),
@@ -199,7 +199,7 @@ public class MembershipOperatorTest {
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_1, true),
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_2, false),
@@ -224,7 +224,7 @@ public class MembershipOperatorTest {
 
     final FhirPath result = testOperator(operator, collection, element);
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_1, false),
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_2, true),

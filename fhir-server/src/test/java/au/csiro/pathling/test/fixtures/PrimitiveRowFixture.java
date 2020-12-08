@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.test.fixtures;
 
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+
 import org.apache.spark.sql.types.*;
 
 /**
@@ -21,8 +23,8 @@ public class PrimitiveRowFixture {
 
   public static StructType createPrimitiveRowStruct(final DataType dataType) {
     final Metadata metadata = new MetadataBuilder().build();
-    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
-    final StructField value = new StructField("value", dataType, true, metadata);
+    final StructField id = new StructField(randomAlias(), DataTypes.StringType, true, metadata);
+    final StructField value = new StructField(randomAlias(), dataType, true, metadata);
     return new StructType(new StructField[]{id, value});
   }
 

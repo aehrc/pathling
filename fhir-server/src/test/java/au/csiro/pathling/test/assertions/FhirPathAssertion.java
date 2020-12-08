@@ -35,13 +35,14 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   }
 
   @Nonnull
-  public DatasetAssert selectResult() {
-    check(fhirPath.getIdColumn().isPresent());
-    return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn())
-        .orderBy(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
-  }
+  public DatasetAssert selectOrderedResult() {
+    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
+    final Column[] ordering = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn()};
 
+    return new DatasetAssert(fhirPath.getOrderedDataset()
+        .select(selection)
+        .orderBy(ordering));
+  }
 
   @Nonnull
   public DatasetAssert selectGroupingResult(@Nonnull final List<Column> groupingColumns) {
@@ -51,7 +52,6 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   @Nonnull
   public DatasetAssert selectGroupingResult(@Nonnull final List<Column> groupingColumns,
       final boolean preserveOrder) {
-    check(fhirPath.getIdColumn().isEmpty());
     check(!groupingColumns.isEmpty());
     final ArrayList<Column> allColumnsList = new ArrayList<>(groupingColumns);
     allColumnsList.add(fhirPath.getValueColumn());
@@ -61,12 +61,15 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
                              : fhirPath.getDataset().select(allColumns).orderBy(allColumns));
   }
 
-
   @Nonnull
-  public DatasetAssert selectResultPreserveOrder() {
-    check(fhirPath.getIdColumn().isPresent());
-    return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
+  public DatasetAssert selectOrderedResultWithEid() {
+    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn(),
+        fhirPath.getValueColumn()};
+    final Column[] ordering = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn()};
+
+    return new DatasetAssert(fhirPath.getOrderedDataset()
+        .select(selection)
+        .orderBy(ordering));
   }
 
   @Nonnull
@@ -110,5 +113,4 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   private T self() {
     return (T) this;
   }
-
 }
