@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import au.csiro.pathling.fhirpath.ResourcePath;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
@@ -23,10 +24,18 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class ReferencePath extends ElementPath {
 
+  /**
+   * The name of the field within the value column that holds the ID of a foreign resource.
+   */
+  public static final String REFERENCE_FIELD_NAME = "reference";
+
   protected ReferencePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, fhirType);
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+        thisColumn, fhirType);
   }
 
   @Nonnull
@@ -36,6 +45,11 @@ public class ReferencePath extends ElementPath {
     } else {
       return Collections.emptySet();
     }
+  }
+
+  @Nonnull
+  public Column getReferenceColumn() {
+    return valueColumn.getField(REFERENCE_FIELD_NAME);
   }
 
 }

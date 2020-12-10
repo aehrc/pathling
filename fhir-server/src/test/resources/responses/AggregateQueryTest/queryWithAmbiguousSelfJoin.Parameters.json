@@ -14,7 +14,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((status) = 'stopped') and (authoredOn < @2018-01-01 and authoredOn > @2000-01-01)"
+          "valueString": "((status) = 'stopped') and (authoredOn < @2018 and authoredOn > @2000)"
         }
       ]
     },
@@ -31,7 +31,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((status) = 'active') and (authoredOn < @2018-01-01 and authoredOn > @2000-01-01)"
+          "valueString": "((status) = 'active') and (authoredOn < @2018 and authoredOn > @2000)"
         }
       ]
     }

@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function.subsumes;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
@@ -17,9 +18,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -35,18 +38,18 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptMapEntry;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -55,7 +58,6 @@ import org.mockito.Mockito;
  * @author Piotr Szul
  */
 @Tag("UnitTest")
-@Disabled
 public class SubsumesFunctionTest {
 
   private TerminologyClient terminologyClient;
@@ -102,10 +104,35 @@ public class SubsumesFunctionTest {
     terminologyClientFactory = mock(TerminologyClientFactory.class,
         Mockito.withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
-    when(terminologyClient.closure(any(), any(), any())).thenReturn(MAP_LARGE_MEDIUM_SMALL);
+    when(terminologyClient.closure(any(), any())).thenReturn(MAP_LARGE_MEDIUM_SMALL);
   }
 
   private static CodingPath createCodingInput() {
+    final Dataset<Row> dataset = new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withStructTypeColumns(codingStructType())
+        .withRow(RES_ID1, makeEid(1), rowFromCoding(CODING_SMALL))
+        .withRow(RES_ID2, makeEid(1), rowFromCoding(CODING_MEDIUM))
+        .withRow(RES_ID3, makeEid(1), rowFromCoding(CODING_LARGE))
+        .withRow(RES_ID4, makeEid(1), rowFromCoding(CODING_OTHER1))
+        .withRow(RES_ID5, null, null /* NULL coding value */)
+        .withRow(RES_ID1, makeEid(0), rowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID2, makeEid(0), rowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID3, makeEid(0), rowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID4, makeEid(0), rowFromCoding(CODING_OTHER2))
+        .buildWithStructValue();
+    final ElementPath inputExpression = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.CODING)
+        .dataset(dataset)
+        .idAndEidAndValueColumns()
+        .singular(false)
+        .build();
+
+    return (CodingPath) inputExpression;
+  }
+
+  private static CodingPath createSingularCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
@@ -114,45 +141,55 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID3, rowFromCoding(CODING_LARGE))
         .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
         .withRow(RES_ID5, null /* NULL coding value */)
-        .withRow(RES_ID1, rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID2, rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID3, rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID4, rowFromCoding(CODING_OTHER2))
         .buildWithStructValue();
     final ElementPath inputExpression = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
-        .singular(false)
+        .idAndValueColumns()
+        .singular(true)
         .build();
 
     return (CodingPath) inputExpression;
   }
 
+
   private static ElementPath createCodeableConceptInput() {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
+        .withEidColumn()
         .withStructTypeColumns(codeableConceptStructType())
-        .withRow(RES_ID1, codeableConceptRowFromCoding(CODING_SMALL))
-        .withRow(RES_ID2, codeableConceptRowFromCoding(CODING_MEDIUM))
-        .withRow(RES_ID3, codeableConceptRowFromCoding(CODING_LARGE))
-        .withRow(RES_ID4, codeableConceptRowFromCoding(CODING_OTHER1))
-        .withRow(RES_ID5, null /* NULL codeable concept value */)
-        .withRow(RES_ID1, codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID2, codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID3, codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID4, codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID1, makeEid(1), codeableConceptRowFromCoding(CODING_SMALL))
+        .withRow(RES_ID2, makeEid(1), codeableConceptRowFromCoding(CODING_MEDIUM))
+        .withRow(RES_ID3, makeEid(1), codeableConceptRowFromCoding(CODING_LARGE))
+        .withRow(RES_ID4, makeEid(1), codeableConceptRowFromCoding(CODING_OTHER1))
+        .withRow(RES_ID5, null, null /* NULL codeable concept value */)
+        .withRow(RES_ID1, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID2, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID3, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+        .withRow(RES_ID4, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
         .buildWithStructValue();
 
     return new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
+        .idAndEidAndValueColumns()
         .singular(false)
         .build();
   }
 
-  private static CodingLiteralPath createLiteralArg() {
+  private static CodingLiteralPath createLiteralArgOrInput() {
+    final Dataset<Row> literalContextDataset = new DatasetBuilder()
+        .withIdColumn()
+        .withColumn(DataTypes.BooleanType)
+        .withIdsAndValue(false, ALL_RES_IDS)
+        .build();
+    final ElementPath literalContext = new ElementPathBuilder()
+        .dataset(literalContextDataset)
+        .idAndValueColumns()
+        .build();
+
     return CodingLiteralPath.fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-        mock(FhirPath.class));
+        literalContext);
   }
 
   private static CodingPath createCodingArg() {
@@ -165,6 +202,7 @@ public class SubsumesFunctionTest {
     final ElementPath argument = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
+        .idAndValueColumns()
         .build();
 
     return (CodingPath) argument;
@@ -174,13 +212,16 @@ public class SubsumesFunctionTest {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
         .withStructTypeColumns(codeableConceptStructType())
-        .withIdValueRows(ALL_RES_IDS, id -> codeableConceptRowFromCoding(CODING_MEDIUM))
+        .withIdValueRows(ALL_RES_IDS,
+            id -> codeableConceptRowFromCoding(CODING_MEDIUM, CODING_OTHER5))
         .withIdValueRows(ALL_RES_IDS,
             id -> codeableConceptRowFromCoding(CODING_OTHER3, CODING_OTHER5))
         .buildWithStructValue();
+
     return new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
+        .idAndValueColumns()
         .build();
   }
 
@@ -190,32 +231,67 @@ public class SubsumesFunctionTest {
         .withStructTypeColumns(codingStructType())
         .withIdValueRows(ALL_RES_IDS, id -> null)
         .buildWithStructValue();
+
     final ElementPath argument = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
+        .idAndValueColumns()
         .build();
 
     return (CodingPath) argument;
   }
 
-  private static DatasetBuilder allFalse() {
-    return new DatasetBuilder().withIdsAndValue(false, ALL_RES_IDS);
-  }
-
-  private static DatasetBuilder allTrue() {
-    return new DatasetBuilder().withIdsAndValue(true, ALL_RES_IDS);
-  }
-
   private static DatasetBuilder expectedSubsumes() {
-    return allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID3));
+    return new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, makeEid(0), false)
+        .withRow(RES_ID1, makeEid(1), false)
+        .withRow(RES_ID2, makeEid(0), false)
+        .withRow(RES_ID2, makeEid(1), true)
+        .withRow(RES_ID3, makeEid(0), false)
+        .withRow(RES_ID3, makeEid(1), true)
+        .withRow(RES_ID4, makeEid(0), false)
+        .withRow(RES_ID4, makeEid(1), false)
+        .withRow(RES_ID5, null, null);
   }
 
   private static DatasetBuilder expectedSubsumedBy() {
-    return allFalse().changeValues(true, Arrays.asList(RES_ID2, RES_ID1));
+    return new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, makeEid(0), false)
+        .withRow(RES_ID1, makeEid(1), true)
+        .withRow(RES_ID2, makeEid(0), false)
+        .withRow(RES_ID2, makeEid(1), true)
+        .withRow(RES_ID3, makeEid(0), false)
+        .withRow(RES_ID3, makeEid(1), false)
+        .withRow(RES_ID4, makeEid(0), false)
+        .withRow(RES_ID4, makeEid(1), false)
+        .withRow(RES_ID5, null, null);
+  }
+
+  @Nonnull
+  private static DatasetBuilder expectedAllNonNull(final boolean result) {
+    return new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, makeEid(0), result)
+        .withRow(RES_ID1, makeEid(1), result)
+        .withRow(RES_ID2, makeEid(0), result)
+        .withRow(RES_ID2, makeEid(1), result)
+        .withRow(RES_ID3, makeEid(0), result)
+        .withRow(RES_ID3, makeEid(1), result)
+        .withRow(RES_ID4, makeEid(0), result)
+        .withRow(RES_ID4, makeEid(1), result)
+        .withRow(RES_ID5, null, null);
   }
 
   private FhirPathAssertion assertCallSuccess(final NamedFunction function,
-      final FhirPath inputExpression, final FhirPath argumentExpression) {
+      final NonLiteralPath inputExpression, final FhirPath argumentExpression) {
     final ParserContext parserContext = new ParserContextBuilder()
         .terminologyClient(terminologyClient)
         .terminologyClientFactory(terminologyClientFactory)
@@ -227,28 +303,30 @@ public class SubsumesFunctionTest {
 
     return assertThat(result)
         .isElementPath(BooleanPath.class)
-        .isSingular();
+        .preservesCardinalityOf(inputExpression);
   }
 
-  private DatasetAssert assertSubsumesSuccess(final FhirPath inputExpression,
+  private DatasetAssert assertSubsumesSuccess(final NonLiteralPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumes"), inputExpression,
-        argumentExpression).selectResult();
+        argumentExpression).selectOrderedResultWithEid();
   }
 
-  private DatasetAssert assertSubsumedBySuccess(final FhirPath inputExpression,
+  private DatasetAssert assertSubsumedBySuccess(final NonLiteralPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumedBy"), inputExpression,
-        argumentExpression).selectResult();
+        argumentExpression).selectOrderedResultWithEid();
   }
 
   //
   // Test subsumes on selected pairs of argument types
   // (Coding, CodingLiteral) && (CodeableConcept, Coding) && (Literal, CodeableConcept)
+  // plus (Coding, Coding)
   //
   @Test
   public void testSubsumesCodingWithLiteralCorrectly() {
-    assertSubsumesSuccess(createCodingInput(), createLiteralArg()).hasRows(expectedSubsumes());
+    assertSubsumesSuccess(createCodingInput(), createLiteralArgOrInput())
+        .hasRows(expectedSubsumes());
   }
 
   @Test
@@ -258,34 +336,35 @@ public class SubsumesFunctionTest {
   }
 
   @Test
-  public void testSubsumesLiteralWithCodeableConcepCorrectly() {
-    // call subsumes but expect subsumedBy result
-    // because input is switched with argument
-    assertSubsumesSuccess(createLiteralArg(), createCodeableConceptInput())
-        .hasRows(expectedSubsumedBy());
+  public void testSubsumesCodingWithCodingCorrectly() {
+    assertSubsumesSuccess(createCodingInput(), createCodingArg()).hasRows(expectedSubsumes());
   }
+
   //
   // Test subsumedBy on selected pairs of argument types
   // (Coding, CodeableConcept) && (CodeableConcept, Literal) && (Literal, Coding)
+  // plus (CodeableConcept, CodeableConcept)
   //
 
   @Test
   public void testSubsumedByCodingWithCodeableConceptCorrectly() {
+
     assertSubsumedBySuccess(createCodingInput(), createCodeableConceptArg())
         .hasRows(expectedSubsumedBy());
   }
 
   @Test
   public void testSubsumedByCodeableConceptWithLiteralCorrectly() {
-    assertSubsumedBySuccess(createCodeableConceptInput(), createLiteralArg())
+    assertSubsumedBySuccess(createCodeableConceptInput(), createLiteralArgOrInput())
         .hasRows(expectedSubsumedBy());
   }
 
   @Test
-  public void testSubsumedByLiteralWithCodingCorrectly() {
+  public void testSubsumedByCodeableConceptWithCodeableConceptCorrectly() {
     // call subsumedBy but expect subsumes result
     // because input is switched with argument
-    assertSubsumedBySuccess(createLiteralArg(), createCodingInput()).hasRows(expectedSubsumes());
+    assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptArg())
+        .hasRows(expectedSubsumedBy());
   }
 
   //
@@ -294,20 +373,39 @@ public class SubsumesFunctionTest {
 
   @Test
   public void testAllFalseWhenSubsumesNullCoding() {
-    // call subsumedBy but expect subsumes result
-    // because input is switched with argument
-    assertSubsumesSuccess(createCodingInput(), createNullCodingArg()).hasRows(allFalse());
+    assertSubsumesSuccess(createCodingInput(), createNullCodingArg())
+        .hasRows(expectedAllNonNull(false));
+  }
+
+  @Test
+  public void testAllFalseWhenSubsumedByNullCoding() {
     assertSubsumedBySuccess(createCodeableConceptInput(), createNullCodingArg())
-        .hasRows(allFalse());
+        .hasRows(expectedAllNonNull(false));
   }
 
 
   @Test
   public void testAllNonNullTrueWhenSubsumesItself() {
-    assertSubsumesSuccess(createCodingInput(), createCodeableConceptInput())
-        .hasRows(allTrue().changeValue(RES_ID5, false));
-    assertSubsumedBySuccess(createCodingInput(), createCodeableConceptInput())
-        .hasRows(allTrue().changeValue(RES_ID5, false));
+
+    final DatasetBuilder expectedResult = new DatasetBuilder()
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.BooleanType)
+        .withRow(RES_ID1, null, true)
+        .withRow(RES_ID2, null, true)
+        .withRow(RES_ID3, null, true)
+        .withRow(RES_ID4, null, true)
+        .withRow(RES_ID5, null, null);
+
+    assertSubsumesSuccess(createSingularCodingInput(), createSingularCodingInput())
+        .hasRows(expectedResult);
+  }
+
+
+  @Test
+  public void testAllNonNullTrueSubsumedByItself() {
+    assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptInput())
+        .hasRows(expectedAllNonNull(true));
   }
 
   //
@@ -316,84 +414,104 @@ public class SubsumesFunctionTest {
 
   @Test
   public void throwsErrorIfInputTypeIsUnsupported() {
-    final ParserContext parserContext = new ParserContextBuilder().build();
-    final StringLiteralPath input = StringLiteralPath
-        .fromString("'stringLiteral'", mock(FhirPath.class));
+    final ParserContext parserContext = new ParserContextBuilder()
+        .terminologyClient(mock(TerminologyClient.class))
+        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .build();
+
     final ElementPath argument = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
 
+    final ElementPath input = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.STRING)
+        .build();
+
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
-    final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumes");
-    final InvalidRequestException error = assertThrows(
-        InvalidRequestException.class,
+    final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumedBy");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
         () -> subsumesFunction.invoke(functionInput));
     assertEquals(
-        "subsumedBy function accepts input of type Coding or CodeableConcept: 'stringLiteral'",
+        "subsumedBy function accepts input of type Coding or CodeableConcept",
         error.getMessage());
   }
 
   @Test
   public void throwsErrorIfArgumentTypeIsUnsupported() {
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder()
+        .terminologyClient(mock(TerminologyClient.class))
+        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .build();
+
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
     final StringLiteralPath argument = StringLiteralPath
-        .fromString("'str'", mock(FhirPath.class));
+        .fromString("'str'", input);
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
     final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumes");
-    final InvalidRequestException error = assertThrows(
-        InvalidRequestException.class,
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
         () -> subsumesFunction.invoke(functionInput));
-    assertEquals("subsumes function accepts argument of type Coding or CodeableConcept: 'str'",
+    assertEquals("subsumes function accepts argument of type Coding or CodeableConcept",
         error.getMessage());
   }
 
-  @Test
-  public void throwsErrorIfBothArgumentsAreLiterals() {
-    final ParserContext parserContext = new ParserContextBuilder().build();
-    final CodingLiteralPath input = CodingLiteralPath
-        .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-            mock(FhirPath.class));
-    final CodingLiteralPath argument = CodingLiteralPath
-        .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-            mock(FhirPath.class));
-
-    final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
-        Collections.singletonList(argument));
-    final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumedBy");
-    final InvalidRequestException error = assertThrows(
-        InvalidRequestException.class,
-        () -> subsumesFunction.invoke(functionInput));
-    assertEquals("Input and argument cannot be both literals for subsumedBy function",
-        error.getMessage());
-  }
 
   @Test
   public void throwsErrorIfMoreThanOneArgument() {
-    final ParserContext parserContext = new ParserContextBuilder().build();
+
+    final ParserContext parserContext = new ParserContextBuilder()
+        .terminologyClient(mock(TerminologyClient.class))
+        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .build();
+
     final ElementPath input = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
+
     final CodingLiteralPath argument1 = CodingLiteralPath
         .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-            mock(FhirPath.class));
+            input);
+
     final CodingLiteralPath argument2 = CodingLiteralPath
         .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-            mock(FhirPath.class));
+            input);
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
         Arrays.asList(argument1, argument2));
     final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumes");
-    final InvalidRequestException error = assertThrows(
-        InvalidRequestException.class,
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
         () -> subsumesFunction.invoke(functionInput));
-    assertEquals("subsumes function accepts one argument of type Coding|CodeableConcept",
+    assertEquals("subsumes function accepts one argument of type Coding or CodeableConcept",
         error.getMessage());
   }
 
+  @Test
+  public void throwsErrorIfTerminologyServiceNotConfigured() {
+    final ElementPath input = new ElementPathBuilder()
+        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+        .build();
+
+    final CodingLiteralPath argument = CodingLiteralPath
+        .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
+            input);
+
+    final ParserContext context = new ParserContextBuilder()
+        .build();
+
+    final NamedFunctionInput functionInput = new NamedFunctionInput(context, input,
+        Collections.singletonList(argument));
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new SubsumesFunction().invoke(functionInput));
+    assertEquals(
+        "Attempt to call terminology function subsumes when terminology service has not been configured",
+        error.getMessage());
+  }
 }

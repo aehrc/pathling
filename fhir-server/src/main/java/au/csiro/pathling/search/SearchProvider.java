@@ -114,7 +114,7 @@ public class SearchProvider implements IResourceProvider {
    * of results
    */
   @Search(queryName = QUERY_NAME)
-  @SuppressWarnings({"UnusedReturnValue", "unused"})
+  @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search(
       @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters) {
     try {

@@ -49,7 +49,6 @@ public class QuantityLiteralPath extends LiteralPath {
   @Nonnull
   public static QuantityLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
-    check(context.getIdColumn().isPresent());
     final Matcher matcher = PATTERN.matcher(fhirPath);
     if (!matcher.matches()) {
       throw new IllegalArgumentException("Quantity literal has invalid format: " + fhirPath);
@@ -75,7 +74,7 @@ public class QuantityLiteralPath extends LiteralPath {
       }
     }
 
-    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn().get(), quantity);
+    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
   }
 
   @Nonnull

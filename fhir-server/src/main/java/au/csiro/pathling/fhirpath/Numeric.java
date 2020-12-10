@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath;
 
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -38,20 +37,15 @@ public interface Numeric {
       @Nonnull String expression, @Nonnull Dataset<Row> dataset);
 
   /**
-   * Returns a {@link Column} within the dataset containing the identity of the subject resource.
-   * This is optional as sometimes we can have paths that do not contain a resource identity, e.g. a
-   * path representing the result of an aggregation over groupings.
-   *
-   * @return A {@link Column}
+   * @return a {@link Column} within the dataset containing the identity of the subject resource
    */
   @Nonnull
-  Optional<Column> getIdColumn();
+  Column getIdColumn();
 
   /**
-   * Returns a {@link Column} within the dataset containing the values of the nodes.
-   *
-   * @return A {@link Column}
+   * @return a {@link Column} within the dataset containing the values of the nodes
    */
+  @Nonnull
   Column getValueColumn();
 
   /**

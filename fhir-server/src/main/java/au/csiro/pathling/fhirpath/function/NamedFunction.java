@@ -10,6 +10,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.function.memberof.MemberOfFunction;
+import au.csiro.pathling.fhirpath.function.subsumes.SubsumesFunction;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,7 +32,20 @@ public interface NamedFunction {
       .put("ofType", new OfTypeFunction())
       .put("reverseResolve", new ReverseResolveFunction())
       .put("memberOf", new MemberOfFunction())
+      .put("where", new WhereFunction())
+      .put("subsumes", new SubsumesFunction())
+      .put("subsumedBy", new SubsumesFunction(true))
+      .put("empty", new EmptyFunction())
+      .put("first", new FirstFunction())
       .build();
+
+  /**
+   * The FHIRPath expression for the $this keyword, used to access the current item in the
+   * collection in functions such as {@code where}.
+   *
+   * @see <a href="http://hl7.org/fhirpath/2018Sep/index.html#functions-2">Functions</a>
+   */
+  String THIS = "$this";
 
   /**
    * Invokes this function with the specified inputs.

@@ -6,14 +6,15 @@
 
 package au.csiro.pathling.fhirpath.function.memberof;
 
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.hash;
-import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
@@ -64,20 +65,19 @@ public class MemberOfFunction implements NamedFunction {
   @Override
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     validateInput(input);
-    final ElementPath inputResult = (ElementPath) input.getInput();
+    final ElementPath inputPath = (ElementPath) input.getInput();
     final StringLiteralPath argument = (StringLiteralPath) input.getArguments().get(0);
     final ParserContext inputContext = input.getContext();
 
-    final Dataset<Row> prevDataset = inputResult.getDataset();
-    final Optional<Column> prevIdColumn = inputResult.getIdColumn();
-    final Column prevValueColumn = inputResult.getValueColumn();
+    final Column idColumn = inputPath.getIdColumn();
+    final Column conceptColumn = inputPath.getValueColumn();
 
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final TerminologyClientFactory terminologyClientFactory = inputContext
         .getTerminologyClientFactory().get();
-    final FHIRDefinedType fhirType = inputResult.getFhirType();
+    final FHIRDefinedType fhirType = inputPath.getFhirType();
     final String valueSetUri = argument.getJavaValue();
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
@@ -86,30 +86,36 @@ public class MemberOfFunction implements NamedFunction {
         new MemberOfMapper(MDC.get("requestId"), terminologyClientFactory, valueSetUri,
             fhirType));
 
+    final Dataset<Row> dataset = inputPath.getDataset();
+    final Column conceptHashColumn = hash(conceptColumn);
+    final String resultAlias = randomAlias();
+    final String hashAlias = randomAlias();
+
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.
-    final Column prevValueHashColumn = hash(prevValueColumn);
-    final Dataset results = prevDataset
-        .select(prevValueHashColumn, prevValueColumn)
+    final Dataset<Row> results = dataset
+        .select(conceptHashColumn, conceptColumn)
         .dropDuplicates()
-        .filter(prevValueColumn.isNotNull())
-        .mapPartitions(mapper, Encoders.bean(MemberOfResult.class));
-    Column valueColumn = results.col("result");
-    final Column resultHashColumn = results.col("hash");
+        .filter(conceptColumn.isNotNull())
+        .mapPartitions(mapper, Encoders.bean(MemberOfResult.class))
+        .toDF();
+    final Dataset<Row> aliasedResults = results
+        .select(results.col("result").alias(resultAlias), results.col("hash").alias(hashAlias));
+    final Column resultColumn = aliasedResults.col(resultAlias);
+    final Column resultHashColumn = aliasedResults.col(hashAlias);
 
-    // We then join the input dataset to the validated codes, and select the validation result
-    // as the new value.
-    final Dataset<Row> dataset = prevDataset
-        .join(results, prevValueHashColumn.equalTo(resultHashColumn), "left_outer");
-
-    // The conditional expression around the value column is required to deal with nulls. This
-    // function should only ever return true or false.
-    valueColumn = when(valueColumn.isNull(), false).otherwise(valueColumn);
+    // We then join the input dataset to the validated codes, and select the validation result as
+    // the new value.
+    final Dataset<Row> finalDataset = join(dataset, conceptHashColumn, aliasedResults,
+        resultHashColumn, JoinType.LEFT_OUTER);
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
-    return new BooleanPath(expression, dataset, prevIdColumn, valueColumn, inputResult.isSingular(),
-        FHIRDefinedType.BOOLEAN);
+
+    return ElementPath
+        .build(expression, finalDataset, idColumn, inputPath.getEidColumn(), resultColumn,
+            inputPath.isSingular(), inputPath.getForeignResource(), inputPath.getThisColumn(),
+            FHIRDefinedType.BOOLEAN);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

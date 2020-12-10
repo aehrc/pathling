@@ -6,7 +6,8 @@
 
 package au.csiro.pathling.aggregate;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+import static au.csiro.pathling.utilities.Strings.parentheses;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
@@ -40,7 +41,7 @@ public class DrillDownBuilder {
    */
   public DrillDownBuilder(@Nonnull final List<Optional<Type>> labels,
       @Nonnull final List<FhirPath> groupings, @Nonnull final Collection<FhirPath> filters) {
-    check(labels.size() == groupings.size());
+    checkArgument(labels.size() == groupings.size(), "Labels should be same size as groupings");
     this.labels = labels;
     this.groupings = groupings;
     this.filters = filters;
@@ -55,7 +56,7 @@ public class DrillDownBuilder {
   public String build() {
     // We use a Set here to avoid situations where we needlessly have the same condition in the
     // expression more than once.
-    final Set<String> fhirPaths = new HashSet<>();
+    final Collection<String> fhirPaths = new LinkedHashSet<>();
 
     // Add each of the grouping expressions, along with either equality or contains against the
     // group value to convert it in to a Boolean expression.
@@ -66,18 +67,16 @@ public class DrillDownBuilder {
 
     // If there is more than one expression, wrap each expression in parentheses before joining
     // together with Boolean AND operators.
-
     return String.join(" and ", parenthesiseExpressions(fhirPaths));
   }
 
   private void addGroupings(final Collection<String> fhirPaths) {
     for (int i = 0; i < groupings.size(); i++) {
       final FhirPath grouping = groupings.get(i);
-      check(grouping.getIdColumn().isPresent());
       final Optional<Type> label = labels.get(i);
       if (label.isPresent()) {
         final String literal = LiteralPath
-            .expressionFor(grouping.getDataset(), grouping.getIdColumn().get(), label.get());
+            .expressionFor(grouping.getDataset(), grouping.getIdColumn(), label.get());
         final String equality = grouping.isSingular()
                                 ? " = "
                                 : " contains ";
@@ -85,11 +84,10 @@ public class DrillDownBuilder {
         // play well with the equality or membership operator due to precedence.
         final String expression = literal.equals("true")
                                   ? grouping.getExpression()
-                                  : Strings.parentheses(grouping.getExpression()) + equality
-                                      + literal;
+                                  : parentheses(grouping.getExpression()) + equality + literal;
         fhirPaths.add(expression);
       } else {
-        fhirPaths.add(grouping.getExpression() + ".empty()");
+        fhirPaths.add(parentheses(grouping.getExpression()) + ".empty()");
       }
     }
   }
@@ -102,13 +100,13 @@ public class DrillDownBuilder {
   }
 
   @Nonnull
-  private Set<String> parenthesiseExpressions(@Nonnull final Set<String> fhirPaths) {
+  private List<String> parenthesiseExpressions(@Nonnull final Collection<String> fhirPaths) {
     if (fhirPaths.size() > 1) {
       return fhirPaths.stream()
           .map(Strings::parentheses)
-          .collect(Collectors.toSet());
+          .collect(Collectors.toList());
     } else {
-      return fhirPaths;
+      return new ArrayList<>(fhirPaths);
     }
   }
 

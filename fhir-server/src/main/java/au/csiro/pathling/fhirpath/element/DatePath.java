@@ -10,6 +10,7 @@ import static org.apache.spark.sql.functions.to_timestamp;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -32,30 +33,32 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Slf4j
 public class DatePath extends ElementPath implements Materializable<DateType>, Comparable {
 
-  private static final SimpleDateFormat FULL_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
-  private static final SimpleDateFormat YEAR_MONTH_DATE_FORMAT = new SimpleDateFormat("yyyy-MM");
-  private static final SimpleDateFormat YEAR_ONLY_DATE_FORMAT = new SimpleDateFormat("yyyy");
+  private static final ThreadLocal<SimpleDateFormat> FULL_DATE_FORMAT = ThreadLocal
+      .withInitial(() -> {
+        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        format.setTimeZone(DateTimePath.getTimeZone());
+        return format;
+      });
+  private static final ThreadLocal<SimpleDateFormat> YEAR_MONTH_DATE_FORMAT = ThreadLocal
+      .withInitial(() -> {
+        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM");
+        format.setTimeZone(DateTimePath.getTimeZone());
+        return format;
+      });
+  private static final ThreadLocal<SimpleDateFormat> YEAR_ONLY_DATE_FORMAT = ThreadLocal
+      .withInitial(() -> {
+        final SimpleDateFormat format = new SimpleDateFormat("yyyy");
+        format.setTimeZone(DateTimePath.getTimeZone());
+        return format;
+      });
 
-  static {
-    FULL_DATE_FORMAT.setTimeZone(DateTimePath.getTimeZone());
-    YEAR_MONTH_DATE_FORMAT.setTimeZone(DateTimePath.getTimeZone());
-    YEAR_ONLY_DATE_FORMAT.setTimeZone(DateTimePath.getTimeZone());
-  }
-
-  /**
-   * @param expression The FHIRPath representation of this path
-   * @param dataset A {@link Dataset} that can be used to evaluate this path against data
-   * @param idColumn A {@link Column} within the dataset containing the identity of the subject
-   * resource
-   * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
-   * @param singular An indicator of whether this path represents a single-valued collection
-   * @param fhirType The FHIR datatype for this path, note that there can be more than one FHIR
-   * type
-   */
-  public DatePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, fhirType);
+  protected DatePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+        thisColumn, fhirType);
   }
 
   /**
@@ -75,15 +78,15 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
   }
 
   public static SimpleDateFormat getFullDateFormat() {
-    return FULL_DATE_FORMAT;
+    return FULL_DATE_FORMAT.get();
   }
 
   public static SimpleDateFormat getYearMonthDateFormat() {
-    return YEAR_MONTH_DATE_FORMAT;
+    return YEAR_MONTH_DATE_FORMAT.get();
   }
 
   public static SimpleDateFormat getYearOnlyDateFormat() {
-    return YEAR_ONLY_DATE_FORMAT;
+    return YEAR_ONLY_DATE_FORMAT.get();
   }
 
   @Nonnull
@@ -115,7 +118,8 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return DateTimePath.buildComparison(this, operation.getSparkFunction());
   }
 

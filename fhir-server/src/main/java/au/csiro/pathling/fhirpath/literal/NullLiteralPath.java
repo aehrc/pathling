@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
@@ -28,7 +27,8 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
 
   private static final String EXPRESSION = "{}";
 
-  private NullLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn) {
+  @SuppressWarnings("WeakerAccess")
+  protected NullLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn) {
     // We put a dummy String value in here as a placeholder so that we can satisfy the nullability 
     // constraints within LiteralValue. It is never accessed.
     super(dataset, idColumn, new StringType(EXPRESSION));
@@ -44,8 +44,7 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
    */
   @Nonnull
   public static NullLiteralPath build(@Nonnull final FhirPath context) {
-    check(context.getIdColumn().isPresent());
-    return new NullLiteralPath(context.getDataset(), context.getIdColumn().get());
+    return new NullLiteralPath(context.getDataset(), context.getIdColumn());
   }
 
   @Nonnull
@@ -61,7 +60,8 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     // Comparing an empty collection with anything always results in an empty collection.
     return (target) -> lit(null);
   }

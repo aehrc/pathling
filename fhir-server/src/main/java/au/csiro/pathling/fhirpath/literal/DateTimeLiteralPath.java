@@ -52,13 +52,11 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
    */
   public static DateTimeLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
-    check(context.getIdColumn().isPresent());
     final String dateTimeString = fhirPath.replaceFirst("^@", "");
     final java.util.Date date = DateTimePath.getDateFormat().parse(dateTimeString);
     final DateTimeType literalValue = new DateTimeType(date);
     literalValue.setTimeZone(DateTimePath.getTimeZone());
-    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn().get(),
-        literalValue);
+    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn(), literalValue);
   }
 
   @Nonnull
@@ -85,7 +83,8 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return DateTimePath.buildComparison(this, operation.getSparkFunction());
   }
 

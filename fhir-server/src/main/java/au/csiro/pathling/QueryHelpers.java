@@ -6,23 +6,22 @@
 
 package au.csiro.pathling;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-import static au.csiro.pathling.utilities.Strings.randomShortString;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.utilities.Strings;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 
 /**
  * Common functionality for executing queries using Spark.
@@ -32,190 +31,124 @@ import org.apache.spark.sql.functions;
 public abstract class QueryHelpers {
 
   /**
-   * String used at the end of column names used for resource identity.
-   */
-  public static final String ID_COLUMN_SUFFIX = "_id";
-
-  /**
-   * String used at the end of column names used for expression values.
-   */
-  public static final String VALUE_COLUMN_SUFFIX = "_value";
-
-  /**
-   * String used at the end of column names used for resource types.
-   */
-  public static final String TYPE_COLUMN_SUFFIX = "_type";
-
-  /**
-   * @param dataset A {@link Dataset} representing a raw resource, with at least 2 columns
-   * @return A Dataset with two columns: an ID column and a value column containing all of the
-   * columns from the original Dataset
+   * Adds to the columns within a {@link Dataset} with an aliased version of the supplied column.
+   *
+   * @param dataset the Dataset on which to perform the operation
+   * @param column a new {@link Column}
+   * @return a new Dataset, along with the new column name, as a {@link DatasetWithColumn}
    */
   @Nonnull
-  public static DatasetWithIdAndValue convertRawResource(@Nonnull final Dataset<Row> dataset) {
-    check(dataset.columns().length > 1);
-
-    final String hash = randomShortString();
-    final String idColumnName = hash + ID_COLUMN_SUFFIX;
-    final String valueColumnName = hash + VALUE_COLUMN_SUFFIX;
-
-    final String firstColumn = dataset.columns()[0];
-    final String[] remainingColumns = Arrays
-        .copyOfRange(dataset.columns(), 1, dataset.columns().length);
-
-    Dataset<Row> result = dataset.withColumn(idColumnName, dataset.col("id"));
-    result = result.withColumn(valueColumnName, functions.struct(firstColumn, remainingColumns));
-    final Column idColumn = result.col(idColumnName);
-    final Column valueColumn = result.col(valueColumnName);
-
-    return new DatasetWithIdAndValue(result.select(idColumn, valueColumn), idColumn, valueColumn);
+  public static DatasetWithColumn createColumn(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column column) {
+    final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset,
+        Collections.singletonList(column));
+    return new DatasetWithColumn(datasetWithColumnMap.getDataset(),
+        datasetWithColumnMap.getColumnMap().get(column));
   }
 
   /**
-   * Used for updating the grouping columns within the parser context, following aggregation.
+   * Adds to the columns within a {@link Dataset} with aliased versions of the supplied columns.
    *
-   * @param context the {@link ParserContext} to be updated with the new grouping columns
-   * @param dataset the {@link Dataset} resulting from the aggregation
-   * @param idColumn the resource identity column, if present
-   * @return an {@link IdAndValue} object containing the new ID and value columns for the result
+   * @param dataset the Dataset on which to perform the operation
+   * @param columns the new {@link Column} objects
+   * @return a new Dataset, along with the new column names, as a {@link DatasetWithColumnMap}
    */
   @Nonnull
-  public static IdAndValue updateGroupingColumns(@Nonnull final ParserContext context,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn) {
-    check(context.getGroupBy().isPresent() || idColumn.isPresent());
-
-    // The value column will be the column following each of the grouping columns.
-    final int numberOfGroupings = context.getGroupBy()
-        .flatMap(columns -> Optional.of(columns.length)).orElse(1);
-    final Column valueColumn = dataset.col(dataset.columns()[numberOfGroupings]);
-
-    // We need to update the grouping columns, as the aggregation erases any columns that were
-    // previously in the Dataset.
-    final List<Column> newGroupingColumns = firstNColumns(dataset, numberOfGroupings);
-    context.setGroupingColumns(newGroupingColumns);
-
-    return new IdAndValue(idColumn, valueColumn);
+  public static DatasetWithColumnMap createColumns(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column... columns) {
+    return aliasColumns(dataset, Arrays.asList(columns));
   }
 
   /**
-   * Filters a dataset to only the nominated ID column, plus any pre-existing value columns.
-   * Pre-existing ID columns are dropped out. p
+   * Replaces all unaliased columns within a {@link Dataset} with new aliased columns.
    *
-   * @param dataset the dataset to perform the operation upon
-   * @param idColumn the ID column to preserve
-   * @return a new {@link Dataset} with a subset of columns
+   * @param dataset the Dataset on which to perform the operation
+   * @return a new Dataset, with a mapping from the old columns to the new as a {@link
+   * DatasetWithColumnMap}
    */
   @Nonnull
-  public static Dataset<Row> applySelection(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn) {
-    // Preserve value columns in the existing dataset, drop any pre-existing ID columns.
-    final List<Column> columns = new ArrayList<>();
-    idColumn.ifPresent(columns::add);
-    final List<Column> preservedColumns = Stream.of(dataset.columns())
-        .filter(column ->
-            column.endsWith(VALUE_COLUMN_SUFFIX) || column.endsWith(TYPE_COLUMN_SUFFIX))
+  public static DatasetWithColumnMap aliasAllColumns(@Nonnull final Dataset<Row> dataset) {
+
+    final List<Column> columns = Stream.of(dataset.columns())
         .map(dataset::col)
         .collect(Collectors.toList());
-    columns.addAll(preservedColumns);
-    return dataset.select(columns.toArray(new Column[0]));
-  }
+    final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset, columns);
 
-  @Nonnull
-  private static Dataset<Row> selectJoinTarget(@Nonnull final Dataset<Row> target,
-      @Nonnull final Dataset<Row> source) {
-    final List<String> targetColumns = Arrays.asList(target.columns());
-    final List<String> sourceColumns = Arrays.asList(source.columns());
-    final HashSet<String> result = new HashSet<>(targetColumns);
-    result.removeAll(sourceColumns);
-    if (result.isEmpty()) {
-      return target;
-    } else {
-      final String[] columns = result.toArray(new String[0]);
-      if (result.size() == 1) {
-        return target.select(columns[0]);
-      } else {
-        final String[] remainingColumns = Arrays.copyOfRange(columns, 1, columns.length);
-        return target.select(columns[0], remainingColumns);
-      }
-    }
+    final Dataset<Row> finalDataset = datasetWithColumnMap.getDataset();
+    final Map<Column, Column> columnMap = datasetWithColumnMap.getColumnMap();
+    return new DatasetWithColumnMap(finalDataset, columnMap);
   }
 
   /**
-   * @param left A {@link FhirPath} expression
-   * @param right Another FhirPath expression
-   * @param joinType A {@link JoinType}
-   * @return A new {@link Dataset}
-   */
-  @Nonnull
-  public static Dataset<Row> joinOnId(@Nonnull final FhirPath left, @Nonnull final FhirPath right,
-      @Nonnull final JoinType joinType) {
-    // Don't do unnecessary joins between identical datasets.
-    if (left.getDataset().equals(right.getDataset())) {
-      return left.getDataset();
-    }
-    check(left.getIdColumn().isPresent());
-    check(right.getIdColumn().isPresent());
-    final Column joinCondition = left.getIdColumn().get().equalTo(right.getIdColumn().get());
-    final Dataset<Row> target = selectJoinTarget(right.getDataset(), left.getDataset());
-    return left.getDataset().join(target, joinCondition, joinType.getSparkName());
-  }
-
-  /**
-   * @param left A {@link Dataset}
-   * @param leftId The ID {@link Column} in the left Dataset
-   * @param right A {@link FhirPath} expression
-   * @param joinType A {@link JoinType}
-   * @return A new {@link Dataset}
-   */
-  @Nonnull
-  public static Dataset<Row> joinOnId(@Nonnull final Dataset<Row> left,
-      @Nonnull final Column leftId, @Nonnull final FhirPath right,
-      @Nonnull final JoinType joinType) {
-    // Don't do unnecessary joins between identical datasets.
-    if (left.equals(right.getDataset())) {
-      return left;
-    }
-    check(right.getIdColumn().isPresent());
-    final Column joinCondition = leftId.equalTo(right.getIdColumn().get());
-    final Dataset<Row> target = selectJoinTarget(right.getDataset(), left);
-    return left.join(target, joinCondition, joinType.getSparkName());
-  }
-
-  /**
-   * @param left A {@link Dataset}
-   * @param leftId The ID {@link Column} in the left Dataset
-   * @param right Another Dataset
-   * @param rightId The ID column in the right Dataset
-   * @param joinType A {@link JoinType}
-   * @return A new {@link Dataset}
-   */
-  @Nonnull
-  public static Dataset<Row> joinOnId(@Nonnull final Dataset<Row> left,
-      @Nonnull final Column leftId, @Nonnull final Dataset<Row> right,
-      @Nonnull final Column rightId, @Nonnull final JoinType joinType) {
-    // Don't do unnecessary joins between identical datasets.
-    if (left.equals(right)) {
-      return left;
-    }
-    final Column joinCondition = leftId.equalTo(rightId);
-    final Dataset<Row> target = selectJoinTarget(right, left);
-    return left.join(target, joinCondition, joinType.getSparkName());
-  }
-
-  /**
-   * Returns a list of the first N columns within a {@link Dataset}.
+   * Adds aliased versions of the supplied columns to a {@link Dataset}.
    *
-   * @param dataset the Dataset to get the columns from
-   * @param numberOfColumns the number of columns to take
-   * @return a list of {@link Column} objects
+   * @param dataset the Dataset on which to perform the operation
+   * @param columns a list of new {@link Column} objects
+   * @return a new Dataset, along with a map from the supplied columns to the new columns, as a
+   * {@link DatasetWithColumnMap}
    */
   @Nonnull
-  public static List<Column> firstNColumns(@Nonnull final Dataset<Row> dataset,
-      final int numberOfColumns) {
-    return Arrays.asList(dataset.columns()).subList(0, numberOfColumns)
-        .stream()
+  private static DatasetWithColumnMap aliasColumns(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Iterable<Column> columns) {
+
+    final Map<Column, Column> columnMap = new HashMap<>();
+    final List<Column> selection = Stream.of(dataset.columns())
+        // Don't preserve anything that is not already aliased.
+        .filter(Strings::looksLikeAlias)
         .map(dataset::col)
         .collect(Collectors.toList());
+
+    // Create an aliased column for each of the new columns, and add it to the selection and the
+    // map.
+    for (final Column column : columns) {
+      final String alias = randomAlias();
+      final Column aliasedColumn = column.alias(alias);
+      selection.add(aliasedColumn);
+      columnMap.put(column, col(alias));
+    }
+
+    // Create a new dataset from the selection.
+    final Dataset<Row> result = dataset.select(selection.toArray(new Column[0]));
+
+    return new DatasetWithColumnMap(result, columnMap);
+  }
+
+  private static Dataset<Row> join(@Nonnull final Dataset<Row> left,
+      @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
+      @Nonnull final List<Column> rightColumns, @Nonnull final Optional<Column> additionalCondition,
+      @Nonnull final JoinType joinType) {
+    checkArgument(leftColumns.size() == rightColumns.size(),
+        "Left columns should be same size as right columns");
+
+    Dataset<Row> aliasedLeft = left;
+    final Collection<Column> joinConditions = new ArrayList<>();
+    for (int i = 0; i < leftColumns.size(); i++) {
+      // We alias the join columns on the left hand side to disambiguate them from columns named the
+      // same on the right hand side.
+      final DatasetWithColumn leftWithColumn = createColumn(aliasedLeft, leftColumns.get(i));
+      aliasedLeft = leftWithColumn.getDataset();
+      joinConditions.add(leftWithColumn.getColumn().equalTo(rightColumns.get(i)));
+    }
+    additionalCondition.ifPresent(joinConditions::add);
+    final Column joinCondition = joinConditions.stream()
+        .reduce(Column::and)
+        .orElseThrow();
+
+    // Preserve the columns within the join conditions within the right dataset.
+    final List<String> rightColumnNames = rightColumns.stream()
+        .map(Column::toString)
+        .collect(Collectors.toList());
+
+    // Exclude the columns in the right dataset from the trimmed left dataset.
+    final Dataset<Row> trimmedLeft = applySelection(aliasedLeft, Collections.emptyList(),
+        rightColumnNames);
+
+    // The right dataset will only contain columns that were not in the left dataset, with the
+    // exception of the columns on the right hand side of the join conditions.
+    final Dataset<Row> trimmedRight = applySelection(right, rightColumnNames,
+        Arrays.asList(aliasedLeft.columns()));
+
+    return trimmedLeft.join(trimmedRight, joinCondition, joinType.getSparkName());
   }
 
   /**
@@ -228,76 +161,144 @@ public abstract class QueryHelpers {
    * @param right the second Dataset
    * @param rightColumns the columns for the second Dataset
    * @param joinType the type of join to use
-   * @return a {@link DatasetWithColumns} containing the joined Dataset and the columns that were
-   * used in the join
+   * @return the joined Dataset
    */
   @Nonnull
-  public static DatasetWithColumns joinOnColumns(@Nonnull final Dataset<Row> left,
-      @Nonnull final List<Column> leftColumns,
-      final Dataset<Row> right, @Nonnull final List<Column> rightColumns,
-      @Nonnull final JoinType joinType) {
-    check(leftColumns.size() == rightColumns.size());
-    // Don't do unnecessary joins between identical datasets.
-    if (left.equals(right)) {
-      return new DatasetWithColumns(left, leftColumns);
-    }
-
-    @Nullable Column joinCondition = null;
-    final Dataset<Row> leftAliased = left.as("left");
-    final Dataset<Row> rightAliased = right.as("right");
-
-    for (int i = 0; i < leftColumns.size(); i++) {
-      final Column leftColumn = leftAliased.col("left." + leftColumns.get(i));
-      final Column rightColumn = rightAliased.col("right." + rightColumns.get(i));
-      // We need to do an explicit null check here, otherwise the join will nullify the result of 
-      // the aggregation when the grouping value is null.
-      final Column columnsEqual = leftColumn.isNull().and(rightColumn.isNull())
-          .or(leftColumn.equalTo(rightColumn));
-      joinCondition = i == 0
-                      ? columnsEqual
-                      : joinCondition.and(columnsEqual);
-    }
-
-    final Dataset<Row> dataset = left.join(right, joinCondition, joinType.getSparkName());
-    return new DatasetWithColumns(dataset, leftColumns);
+  public static Dataset<Row> join(@Nonnull final Dataset<Row> left,
+      @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
+      @Nonnull final List<Column> rightColumns, @Nonnull final JoinType joinType) {
+    return join(left, leftColumns, right, rightColumns, Optional.empty(), joinType);
   }
 
   /**
-   * @param left A {@link FhirPath} expression
-   * @param right A {@link Dataset}
-   * @param rightId The ID {@link Column} in the right Dataset
-   * @param joinType A {@link JoinType}
-   * @return A new {@link Dataset}
+   * Joins a {@link Dataset} to another Dataset, using the equality of two columns.
+   *
+   * @param left a {@link Dataset}
+   * @param leftColumn the {@link Column} in the left Dataset
+   * @param right another Dataset
+   * @param rightColumn the column in the right Dataset
+   * @param joinType a {@link JoinType}
+   * @return a new {@link Dataset}
    */
   @Nonnull
-  public static Dataset<Row> joinOnReferenceAndId(@Nonnull final FhirPath left,
-      @Nonnull final Dataset<Row> right,
-      @Nonnull final Column rightId,
-      @Nonnull final JoinType joinType) {
-    @Nullable final Column reference = left.getValueColumn().getField("reference");
-    checkNotNull(reference);
-    final Column joinCondition = reference.equalTo(rightId);
-    final Dataset<Row> target = selectJoinTarget(right, left.getDataset());
-    return left.getDataset().join(target, joinCondition, joinType.getSparkName());
+  public static Dataset<Row> join(@Nonnull final Dataset<Row> left,
+      @Nonnull final Column leftColumn, @Nonnull final Dataset<Row> right,
+      @Nonnull final Column rightColumn, @Nonnull final JoinType joinType) {
+    return join(left, Collections.singletonList(leftColumn), right,
+        Collections.singletonList(rightColumn), joinType);
   }
 
   /**
-   * @param left A {@link FhirPath} expression
-   * @param right A {@link Dataset}
-   * @param rightReference The reference {@link Column} in the right Dataset
-   * @param joinType A {@link JoinType}
+   * Joins a {@link Dataset} to another Dataset, using the equality of two columns.
+   *
+   * @param left a {@link Dataset}
+   * @param leftColumn the {@link Column} in the left Dataset
+   * @param right another Dataset
+   * @param rightColumn the column in the right Dataset
+   * @param additionalCondition an additional Column to be added to the join condition, using AND
+   * @param joinType a {@link JoinType}
+   * @return a new {@link Dataset}
+   */
+  @Nonnull
+  public static Dataset<Row> join(@Nonnull final Dataset<Row> left,
+      @Nonnull final Column leftColumn, @Nonnull final Dataset<Row> right,
+      @Nonnull final Column rightColumn, @Nonnull final Column additionalCondition,
+      @Nonnull final JoinType joinType) {
+    return join(left, Collections.singletonList(leftColumn), right,
+        Collections.singletonList(rightColumn), Optional.of(additionalCondition), joinType);
+  }
+
+  /**
+   * Joins two {@link FhirPath} expressions, using equality between their respective resource ID
+   * columns.
+   *
+   * @param left a {@link FhirPath} expression
+   * @param right another FhirPath expression
+   * @param joinType a {@link JoinType}
+   * @return a new {@link Dataset}
+   */
+  @Nonnull
+  public static Dataset<Row> join(@Nonnull final FhirPath left, @Nonnull final FhirPath right,
+      @Nonnull final JoinType joinType) {
+    final List<Column> leftColumns = new ArrayList<>();
+    final List<Column> rightColumns = new ArrayList<>();
+    leftColumns.add(left.getIdColumn());
+    rightColumns.add(right.getIdColumn());
+
+    // If the two paths are NonLiteralPaths, and they have $this columns, we need to add the element
+    // ID columns into the join condition. This is to prevent too many rows being generated when
+    // there are more rows than resources on either side of the join.
+    final boolean nonLiteralJoin =
+        left instanceof NonLiteralPath && right instanceof NonLiteralPath;
+    if (nonLiteralJoin) {
+      final NonLiteralPath nonLiteralLeft = (NonLiteralPath) left;
+      final NonLiteralPath nonLiteralRight = (NonLiteralPath) right;
+      if (nonLiteralLeft.getThisColumn().isPresent() && nonLiteralRight.getThisColumn()
+          .isPresent()) {
+        final Column leftColumn = nonLiteralLeft.getEidColumn().isPresent()
+                                  ? nonLiteralLeft.getEidColumn().get()
+                                  : nonLiteralLeft.getThisColumn().get();
+        final Column rightColumn = nonLiteralRight.getEidColumn().isPresent()
+                                   ? nonLiteralRight.getEidColumn().get()
+                                   : nonLiteralRight.getThisColumn().get();
+        leftColumns.add(leftColumn);
+        rightColumns.add(rightColumn);
+      }
+    }
+
+    return join(left.getDataset(), leftColumns, right.getDataset(), rightColumns, joinType);
+  }
+
+  /**
+   * Joins a {@link Dataset} to a {@link FhirPath}, using equality between the resource ID in the
+   * FhirPath and the supplied column.
+   *
+   * @param left a {@link FhirPath} expression
+   * @param right a {@link Dataset}
+   * @param rightColumn the {@link Column} in the right Dataset
+   * @param joinType a {@link JoinType}
    * @return A new {@link Dataset}
    */
   @Nonnull
-  public static Dataset<Row> joinOnIdAndReference(@Nonnull final FhirPath left,
-      @Nonnull final Dataset<Row> right, @Nonnull final Column rightReference,
+  public static Dataset<Row> join(@Nonnull final FhirPath left, @Nonnull final Dataset<Row> right,
+      @Nonnull final Column rightColumn, @Nonnull final JoinType joinType) {
+    return join(left.getDataset(), left.getIdColumn(), right, rightColumn, joinType);
+  }
+
+  /**
+   * Joins a {@link Dataset} to a {@link FhirPath}, using equality between the resource ID in the
+   * FhirPath and the supplied column.
+   *
+   * @param left a {@link FhirPath} expression
+   * @param right a {@link Dataset}
+   * @param rightColumn the {@link Column} in the right Dataset
+   * @param additionalCondition an additional Column to be added to the join condition, using AND
+   * @param joinType a {@link JoinType}
+   * @return A new {@link Dataset}
+   */
+  @Nonnull
+  public static Dataset<Row> join(@Nonnull final FhirPath left, @Nonnull final Dataset<Row> right,
+      @Nonnull final Column rightColumn, @Nonnull final Column additionalCondition,
       @Nonnull final JoinType joinType) {
-    check(left.getIdColumn().isPresent());
-    @Nullable final Column reference = rightReference.getField("reference");
-    checkNotNull(reference);
-    final Column joinCondition = left.getIdColumn().get().equalTo(reference);
-    final Dataset<Row> target = selectJoinTarget(right, left.getDataset());
-    return left.getDataset().join(target, joinCondition, joinType.getSparkName());
+    return join(left.getDataset(), Collections.singletonList(left.getIdColumn()), right,
+        Collections.singletonList(rightColumn), Optional.of(additionalCondition), joinType);
+  }
+
+  /**
+   * Joins a {@link Dataset} to a {@link FhirPath}, using equality between the resource ID in the
+   * FhirPath and the supplied column.
+   *
+   * @param left a {@link Dataset}
+   * @param leftColumn the {@link Column} in the left Dataset
+   * @param right a {@link FhirPath} expression
+   * @param joinType a {@link JoinType}
+   * @return A new {@link Dataset}
+   */
+  @Nonnull
+  public static Dataset<Row> join(@Nonnull final Dataset<Row> left,
+      @Nonnull final Column leftColumn, @Nonnull final FhirPath right,
+      @Nonnull final JoinType joinType) {
+    return join(left, leftColumn, right.getDataset(), right.getIdColumn(), joinType);
   }
 
   /**
@@ -306,11 +307,18 @@ public abstract class QueryHelpers {
    */
   @Nonnull
   public static Dataset<Row> union(@Nonnull final Collection<Dataset<Row>> datasets) {
-    final Dataset<Row> result = datasets.stream()
+    return datasets.stream()
         .reduce(Dataset::union)
-        .orElse(null);
-    checkNotNull(result);
-    return result;
+        .orElseThrow();
+  }
+
+  @Nonnull
+  private static Dataset<Row> applySelection(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Collection<String> includes, @Nonnull final Collection<String> excludes) {
+    return dataset.select(Stream.of(dataset.columns())
+        .filter(column -> includes.contains(column) || !excludes.contains(column))
+        .map(dataset::col)
+        .toArray(Column[]::new));
   }
 
   /**
@@ -388,49 +396,25 @@ public abstract class QueryHelpers {
   }
 
   /**
-   * Represents a {@link Dataset} along with a list of {@link Column} objects that refer to columns
-   * within the Dataset.
+   * Represents a {@link Dataset} along with a map between two sets of columns.
    */
   @Value
-  public static class DatasetWithColumns {
+  public static class DatasetWithColumnMap {
 
     @Nonnull
     Dataset<Row> dataset;
 
     @Nonnull
-    List<Column> columns;
+    Map<Column, Column> columnMap;
 
-  }
-
-  /**
-   * Represents a {@link Dataset} along with a resource identity column and an expression value
-   * {@link Column}.
-   */
-  @Value
-  public static class DatasetWithIdAndValue {
-
+    /**
+     * @param originalColumn a Column on the left hand side of the Column map
+     * @return the corresponding target Column
+     */
     @Nonnull
-    Dataset<Row> dataset;
-
-    @Nonnull
-    Column idColumn;
-
-    @Nonnull
-    Column valueColumn;
-
-  }
-
-  /**
-   * A pair of {@link Column} objects that refer to the resource identity and expression value.
-   */
-  @Value
-  public static class IdAndValue {
-
-    @Nonnull
-    Optional<Column> idColumn;
-
-    @Nonnull
-    Column valueColumn;
+    public Column getColumn(@Nonnull final Column originalColumn) {
+      return columnMap.get(originalColumn);
+    }
 
   }
 

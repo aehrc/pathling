@@ -7,10 +7,15 @@
 package au.csiro.pathling.test.helpers;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static org.apache.spark.sql.functions.col;
 
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.spark.udf.CodingsEqual;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
@@ -23,12 +28,13 @@ import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import scala.Option;
-import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 import scala.collection.mutable.Buffer;
 
 /**
  * @author John Grimes
  */
+@SuppressWarnings("WeakerAccess")
 public abstract class SparkHelpers {
 
   @Nonnull
@@ -55,9 +61,19 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset) {
-    final Column idColumn = dataset.col("id");
-    final Column valueColumn = dataset.col("value");
-    return new IdAndValueColumns(idColumn, valueColumn);
+    return getIdAndValueColumns(dataset, false);
+  }
+
+  @Nonnull
+  public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset,
+      final boolean hasEid) {
+    int colIndex = 0;
+    final Column idColumn = col(dataset.columns()[colIndex++]);
+    final Optional<Column> eidColum = hasEid
+                                      ? Optional.of(col(dataset.columns()[colIndex++]))
+                                      : Optional.empty();
+    final Column valueColumn = col(dataset.columns()[colIndex]);
+    return new IdAndValueColumns(idColumn, eidColum, Collections.singletonList(valueColumn));
   }
 
   @Nonnull
@@ -71,6 +87,15 @@ public abstract class SparkHelpers {
     final StructField userSelected = new StructField("userSelected", DataTypes.BooleanType, true,
         metadata);
     return new StructType(new StructField[]{id, system, version, code, display, userSelected});
+  }
+
+  @Nonnull
+  public static StructType simpleCodingStructType() {
+    final Metadata metadata = new MetadataBuilder().build();
+    final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
+    final StructField version = new StructField("version", DataTypes.StringType, true, metadata);
+    final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
+    return new StructType(new StructField[]{system, version, code});
   }
 
   @Nonnull
@@ -101,13 +126,27 @@ public abstract class SparkHelpers {
   }
 
   @Nonnull
+  public static Row rowFromSimpleCoding(@Nonnull final SimpleCoding coding) {
+    return new GenericRowWithSchema(
+        new Object[]{coding.getSystem(), coding.getVersion(), coding.getCode()},
+        simpleCodingStructType());
+  }
+
+  @Nonnull
+  public static List<Row> rowsFromSimpleCodings(@Nonnull final SimpleCoding... codings) {
+    return Stream.of(codings)
+        .map(SparkHelpers::rowFromSimpleCoding)
+        .collect(Collectors.toList());
+  }
+
+  @Nonnull
   public static Row rowFromCodeableConcept(@Nonnull final CodeableConcept codeableConcept) {
     final List<Coding> coding = codeableConcept.getCoding();
     checkNotNull(coding);
 
     final List<Row> codings = coding.stream().map(SparkHelpers::rowFromCoding)
         .collect(Collectors.toList());
-    final Buffer<Row> buffer = JavaConversions.asScalaBuffer(codings);
+    final Buffer<Row> buffer = JavaConverters.asScalaBuffer(codings);
     checkNotNull(buffer);
 
     return new GenericRowWithSchema(
@@ -122,7 +161,10 @@ public abstract class SparkHelpers {
     Column id;
 
     @Nonnull
-    Column value;
+    Optional<Column> eid;
+
+    @Nonnull
+    List<Column> values;
 
   }
 

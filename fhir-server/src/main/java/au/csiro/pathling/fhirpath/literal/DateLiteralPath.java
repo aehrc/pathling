@@ -32,11 +32,15 @@ import org.hl7.fhir.r4.model.Type;
  */
 public class DateLiteralPath extends LiteralPath implements Materializable<DateType>, Comparable {
 
+  @Nonnull
+  private Optional<DateLiteralFormat> format;
+
   @SuppressWarnings("WeakerAccess")
   protected DateLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof DateType);
+    format = Optional.empty();
   }
 
   /**
@@ -50,31 +54,40 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
    */
   public static DateLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
-    check(context.getIdColumn().isPresent());
     final String dateString = fhirPath.replaceFirst("^@", "");
     java.util.Date date;
+    DateLiteralFormat format;
     // Try parsing out the date using the three possible formats, from full (most common) down to
     // the year only format.
     try {
       date = DatePath.getFullDateFormat().parse(dateString);
+      format = DateLiteralFormat.FULL;
     } catch (final ParseException e) {
       try {
         date = DatePath.getYearMonthDateFormat().parse(dateString);
+        format = DateLiteralFormat.YEAR_MONTH_DATE;
       } catch (final ParseException ex) {
         date = DatePath.getYearOnlyDateFormat().parse(dateString);
+        format = DateLiteralFormat.YEAR_ONLY;
       }
     }
 
-    return new DateLiteralPath(context.getDataset(), context.getIdColumn().get(),
+    final DateLiteralPath result = new DateLiteralPath(context.getDataset(), context.getIdColumn(),
         new DateType(date));
+    result.format = Optional.of(format);
+    return result;
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    // One the way back out, the date is always formatted using the "full" format, even if it was
-    // created from one of the shorter formats.
-    return "@" + DatePath.getFullDateFormat().format(getLiteralValue().getValue());
+    if (format.isEmpty() || format.get() == DateLiteralFormat.FULL) {
+      return "@" + DatePath.getFullDateFormat().format(getLiteralValue().getValue());
+    } else if (format.get() == DateLiteralFormat.YEAR_MONTH_DATE) {
+      return "@" + DatePath.getYearMonthDateFormat().format(getLiteralValue().getValue());
+    } else {
+      return "@" + DatePath.getYearOnlyDateFormat().format(getLiteralValue().getValue());
+    }
   }
 
   @Override
@@ -96,7 +109,8 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return DateTimePath.buildComparison(this, operation.getSparkFunction());
   }
 
@@ -109,6 +123,10 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
   @Override
   public Optional<DateType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return DatePath.valueFromRow(row, columnNumber);
+  }
+
+  private enum DateLiteralFormat {
+    FULL, YEAR_MONTH_DATE, YEAR_ONLY
   }
 
 }

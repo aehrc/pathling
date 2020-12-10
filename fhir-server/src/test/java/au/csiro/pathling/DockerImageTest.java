@@ -91,8 +91,8 @@ public class DockerImageTest {
         .build();
     httpClient = HttpClients.createDefault();
     jsonParser = FhirContext.forR4().newJsonParser();
-    log.info("Created DockerImageTest: version=" + VERSION + ", terminologyServiceUrl="
-        + TERMINOLOGY_SERVICE_URL + ", dockerRepository=" + DOCKER_REPOSITORY);
+    log.info("Created DockerImageTest: version={}, terminologyServiceUrl={}, dockerRepository={}",
+        VERSION, TERMINOLOGY_SERVICE_URL, DOCKER_REPOSITORY);
   }
 
   @Nonnull
@@ -241,8 +241,8 @@ public class DockerImageTest {
           "reverseResolve(Condition.subject)"
               + ".code"
               + ".memberOf('http://snomed.info/sct?fhir_vs=ecl/"
-              + "^ 32570581000036105|Problem/Diagnosis reference set| : "
-              + "<< 263502005|Clinical course| = << 90734009|Chronic|')"));
+              + "^ 32570581000036105 : "
+              + "<< 263502005 = << 90734009')"));
       final ParametersParameterComponent groupingLabel = new ParametersParameterComponent();
       groupingLabel.setName("label");
       groupingLabel.setValue(new StringType("Diagnosed with chronic disease?"));

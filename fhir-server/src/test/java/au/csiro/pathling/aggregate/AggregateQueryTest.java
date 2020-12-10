@@ -25,7 +25,6 @@ import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.ValueSet;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -56,8 +55,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // empty function
-  @Disabled
   void multipleGroupingsAndAggregations() {
     subjectResource = ResourceType.ENCOUNTER;
     mockResourceReader(subjectResource, ResourceType.ORGANIZATION);
@@ -93,7 +90,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  @Disabled
   void queryWithMathExpression() {
     subjectResource = ResourceType.CLAIM;
     mockResourceReader(subjectResource);
@@ -231,8 +227,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // where function
-  @Disabled
   void queryWithWhere() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
@@ -293,17 +287,17 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  @Disabled
   void queryWithWhereAsComparisonOperand() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(subjectResource, ResourceType.MEDICATIONREQUEST);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("Number of patients", "count()")
-        .withGrouping("First prescription falls before 2018-05-06",
-            "@2018-05-06 > reverseResolve(MedicationRequest.subject).where("
+        .withGrouping("Prescription before 2018-05-06",
+            "reverseResolve(MedicationRequest.subject).where("
                 + "$this.medicationCodeableConcept.coding contains "
-                + "http://www.nlm.nih.gov/research/umls/rxnorm|243670).first().authoredOn")
+                + "http://www.nlm.nih.gov/research/umls/rxnorm|313782 "
+                + "and $this.authoredOn < @2019-06-21).count() > 0")
         .build();
 
     response = executor.execute(request);
@@ -328,6 +322,68 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
+  @Test
+  void queryWithWhereAndMembership() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource, ResourceType.OBSERVATION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "count()")
+        .withGrouping(
+            "reverseResolve(Observation.subject).where($this.code.coding contains http://loinc.org|8302-2).status")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithWhereAndMembership.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithWhereAndBoolean() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource, ResourceType.OBSERVATION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "count()")
+        .withGrouping(
+            "where($this.gender = 'male' and $this.birthDate > @1990).communication.language.text")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithWhereAndBoolean.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithWhereInAggregation() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource, ResourceType.OBSERVATION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of female patients", "where($this.gender = 'female').count()")
+        .withGrouping("gender")
+        .withGrouping("maritalStatus.coding")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithWhereInAggregation.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithNestedAggregation() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "name.given contains 'Seymour882'")
+        .withGrouping("gender")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithNestedAggregation.Parameters.json",
+        response);
+  }
 
   @Test
   void queryWithNestedAggregationAndNoGroupings() {
@@ -345,8 +401,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
-  // empty function
-  @Disabled
   void queryWithUriValueInGrouping() {
     subjectResource = ResourceType.ENCOUNTER;
     mockResourceReader(subjectResource, ResourceType.CONDITION);
@@ -358,6 +412,73 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     response = executor.execute(request);
     assertResponse("AggregateQueryTest/queryWithUriValueInGrouping.Parameters.json",
+        response);
+  }
+
+  /**
+   * @see <a href="https://github.com/aehrc/pathling/issues/151">#151</a>
+   */
+  @Test
+  void queryWithComparisonInAggregation() {
+    subjectResource = ResourceType.CAREPLAN;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Expression containing literal", "count() = 12")
+        .withGrouping("Status", "status")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithComparisonInAggregation.Parameters.json",
+        response);
+  }
+
+  /**
+   * @see <a href="https://github.com/aehrc/pathling/issues/151">#151</a>
+   */
+  @Test
+  void queryWithLiteralAggregation() {
+    subjectResource = ResourceType.CAREPLAN;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("A literal value", "true")
+        .withGrouping("Status", "status")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithLiteralAggregation.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithWhereAndGroupedData() {
+    subjectResource = ResourceType.CAREPLAN;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Count is from 12 to 13", "count().where($this >= 12 and $this <= 13)")
+        .withGrouping("Status", "status")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithWhereAndGroupedData.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithMultipleGroupingsAndMembership() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of patients", "count()")
+        .withGrouping("Name prefix contains Mrs.", "name.prefix contains 'Mrs.'")
+        .withGrouping("Given name contains Karina848", "name.given contains 'Karina848'")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithMultipleGroupingsAndMembership.Parameters.json",
         response);
   }
 

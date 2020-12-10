@@ -6,11 +6,11 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.joinOnId;
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.FhirHelpers.getFhirContext;
+import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,11 +25,9 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.builders.ResourcePathBuilder;
+import au.csiro.pathling.test.builders.*;
 import au.csiro.pathling.test.helpers.FhirHelpers;
+import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
@@ -63,22 +61,23 @@ class ReverseResolveFunctionTest {
 
   @Test
   public void reverseResolve() {
-    final Dataset<Row> patientDataset = new DatasetBuilder()
+    final Dataset<Row> patientDataset = new ResourceDatasetBuilder()
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
         .withRow("Patient/1", "female", true)
         .withRow("Patient/2", "female", false)
         .withRow("Patient/3", "male", true)
+        .withRow("Patient/4", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", true);
 
-    final DatasetBuilder encounterDatasetBuilder = new DatasetBuilder()
+    final DatasetBuilder encounterDatasetBuilder = new ResourceDatasetBuilder()
         .withIdColumn()
-        .withValueColumn(DataTypes.StringType)
+        .withColumn("status", DataTypes.StringType)
         .withRow("Encounter/1", "planned")
         .withRow("Encounter/2", "arrived")
         .withRow("Encounter/3", "triaged")
@@ -103,25 +102,24 @@ class ReverseResolveFunctionTest {
         .withRow("Encounter/4", RowFactory.create(null, "Patient/2", null))
         .withRow("Encounter/5", RowFactory.create(null, "Group/def1", null))
         .buildWithStructValue();
-    final Column valueColumn = argumentDatasetPreJoin.col("value");
+    final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(argumentDatasetPreJoin);
+    final Column idColumn = idAndValueColumns.getId();
+    final Column valueColumn = idAndValueColumns.getValues().get(0);
 
-    check(originPath.getIdColumn().isPresent());
-    final Dataset<Row> argumentDataset = joinOnId(originPath.getDataset(),
-        originPath.getIdColumn().get(),
-        argumentDatasetPreJoin, argumentDatasetPreJoin.col("id"), JoinType.LEFT_OUTER);
+    final Dataset<Row> argumentDataset = join(originPath.getDataset(),
+        originPath.getIdColumn(), argumentDatasetPreJoin, idColumn, JoinType.LEFT_OUTER);
     final FhirPath argumentPath = new ElementPathBuilder()
         .dataset(argumentDataset)
-        .idColumn(originPath.getIdColumn().get())
+        .idColumn(originPath.getIdColumn())
         .valueColumn(valueColumn)
         .expression("Encounter.subject")
         .singular(false)
-        .parentPath(originPath)
+        .foreignResource(originPath)
         .definition(definition)
         .buildDefined();
 
-    check(inputPath.getIdColumn().isPresent());
     final ParserContext parserContext = new ParserContextBuilder()
-        .idColumn(inputPath.getIdColumn().get())
+        .idColumn(inputPath.getIdColumn())
         .resourceReader(mockReader)
         .inputExpression("Patient")
         .build();
@@ -138,15 +136,15 @@ class ReverseResolveFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
-        .withStructColumn("id", DataTypes.StringType)
-        .withStructColumn("status", DataTypes.StringType)
-        .withRow("Patient/1", RowFactory.create("Encounter/1", "planned"))
-        .withRow("Patient/2", RowFactory.create("Encounter/3", "triaged"))
-        .withRow("Patient/2", RowFactory.create("Encounter/4", "in-progress"))
-        .withRow("Patient/3", RowFactory.create("Encounter/2", "arrived"))
-        .buildWithStructValue();
+        .withIdColumn()
+        .withRow("Patient/1", "Encounter/1")
+        .withRow("Patient/2", "Encounter/3")
+        .withRow("Patient/2", "Encounter/4")
+        .withRow("Patient/3", "Encounter/2")
+        .withRow("Patient/4", null)
+        .build();
     assertThat(result)
-        .selectResult()
+        .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 

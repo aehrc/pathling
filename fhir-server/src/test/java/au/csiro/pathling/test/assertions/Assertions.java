@@ -6,18 +6,28 @@
 
 package au.csiro.pathling.test.assertions;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.TestHelpers;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import java.net.URL;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.json.JSONException;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
+@Slf4j
 public abstract class Assertions {
 
   @Nonnull
@@ -56,9 +66,27 @@ public abstract class Assertions {
     final String expectedJson;
     try {
       expectedJson = TestHelpers.getResourceAsString(expectedPath);
-      JSONAssert.assertEquals(expectedJson, actualJson, compareMode);
+      try {
+        JSONAssert.assertEquals(expectedJson, actualJson, compareMode);
+      } catch (final AssertionError e) {
+        final Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+        final JsonElement jsonElement = JsonParser.parseString(actualJson);
+        final String prettyJsonString = gson.toJson(jsonElement);
+        log.info("Expected response: {}", expectedJson);
+        log.info("Actual response: {}", prettyJsonString);
+        throw e;
+      }
     } catch (final JSONException e) {
       throw new RuntimeException("Problem checking JSON against test resource", e);
     }
+  }
+
+  public static void assertDatasetAgainstCsv(@Nonnull final String expectedCsvPath,
+      @Nonnull final Dataset<Row> actualDataset) {
+    final URL url = TestHelpers.getResourceAsUrl(expectedCsvPath);
+    final Dataset<Row> expectedDataset = SparkHelpers.getSparkSession().read()
+        .schema(actualDataset.schema())
+        .csv(url.toString());
+    assertEquals(expectedDataset.collectAsList(), actualDataset.collectAsList());
   }
 }

@@ -6,9 +6,15 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.QueryHelpers.TYPE_COLUMN_SUFFIX;
+import static au.csiro.pathling.QueryHelpers.createColumn;
+import static au.csiro.pathling.QueryHelpers.createColumns;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.element.ReferencePath;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -26,7 +32,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class UntypedResourcePath extends NonLiteralPath {
 
   /**
-   * A {@link Column} within the dataset containing the resource type.
+   * A column within the dataset containing the resource type.
    */
   @Nonnull
   @Getter
@@ -40,44 +46,70 @@ public class UntypedResourcePath extends NonLiteralPath {
   @Getter
   private final Set<ResourceType> possibleTypes;
 
-  protected UntypedResourcePath(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular, @Nonnull final Column typeColumn,
+  private UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
       @Nonnull final Set<ResourceType> possibleTypes) {
-    super(expression, dataset, idColumn, valueColumn, singular);
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
+        thisColumn);
+
+    checkArgument(Arrays.asList(dataset.columns()).contains(typeColumn.toString()),
+        "Type column not present in dataset");
     this.typeColumn = typeColumn;
     this.possibleTypes = possibleTypes;
   }
 
   /**
-   * @param expression The FHIRPath representation of this path
-   * @param dataset A {@link Dataset} that can be used to evaluate this path against data
-   * @param idColumn A {@link Column} within the dataset containing the identity of the subject
-   * resource
-   * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
-   * @param singular An indicator of whether this path represents a single-valued collection
-   * @param typeColumn A {@link Column} within the dataset containing the resource type
-   * @param possibleTypes A set of {@link ResourceType} objects that describe the different types
+   * @param referencePath a {@link ReferencePath} to base the new UntypedResourcePath on
+   * @param expression the FHIRPath representation of this path
+   * @param dataset a {@link Dataset} that can be used to evaluate this path against data
+   * @param idColumn a column within the dataset containing the identity of the subject resource
+   * @param eidColumn a column within the dataset containing the element identities of the nodes
+   * @param typeColumn a column within the dataset containing the resource type
+   * @param possibleTypes a set of {@link ResourceType} objects that describe the different types
    * @return a shiny new UntypedResourcePath
    */
-  public static UntypedResourcePath build(@Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final Optional<Column> idColumn,
-      @Nonnull final Column valueColumn, final boolean singular, @Nonnull final Column typeColumn,
-      @Nonnull final Set<ResourceType> possibleTypes) {
+  @Nonnull
+  public static UntypedResourcePath build(@Nonnull final ReferencePath referencePath,
+      @Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column typeColumn, @Nonnull final Set<ResourceType> possibleTypes) {
 
-    final String hash = Integer.toString(Math.abs(dataset.hashCode()), 36);
-    final String typeColumnName = hash + TYPE_COLUMN_SUFFIX;
+    final Column valueColumn = referencePath.getValueColumn();
+    final DatasetWithColumn datasetWithType = createColumn(dataset, typeColumn);
+    final Dataset<Row> finalDataset = datasetWithType.getDataset();
+    final Column finalTypeColumn = datasetWithType.getColumn();
 
-    final Dataset<Row> hashedDataset = dataset.withColumn(typeColumnName, typeColumn);
+    return new UntypedResourcePath(expression, finalDataset, idColumn, eidColumn, valueColumn,
+        referencePath.isSingular(), referencePath.getThisColumn(), finalTypeColumn,
+        possibleTypes);
+  }
 
-    return new UntypedResourcePath(expression, hashedDataset, idColumn, valueColumn, singular,
-        hashedDataset.col(typeColumnName), possibleTypes);
+  @Nonnull
+  public Column getReferenceColumn() {
+    return valueColumn.getField(ReferencePath.REFERENCE_FIELD_NAME);
   }
 
   @Nonnull
   @Override
   public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
     return Optional.empty();
+  }
+
+  @Nonnull
+  @Override
+  public UntypedResourcePath copy(@Nonnull final String expression,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Optional<Column> eidColumn, @Nonnull final Column valueColumn,
+      final boolean singular, @Nonnull final Optional<Column> thisColumn) {
+
+    final DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
+        eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
+
+    return new UntypedResourcePath(expression, datasetWithColumns.getDataset(), idColumn,
+        eidColumn.map(datasetWithColumns::getColumn),
+        datasetWithColumns.getColumn(valueColumn), singular, thisColumn, typeColumn, possibleTypes);
   }
 
 }

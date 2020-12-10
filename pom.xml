@@ -47,11 +47,11 @@
     <project.majorVersion>3</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     
-    <pathling.hapiFhirVersion>5.0.2</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>3.0.0</pathling.sparkVersion>
+    <pathling.hapiFhirVersion>5.1.0</pathling.hapiFhirVersion>
+    <pathling.sparkVersion>3.0.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.dockerJavaVersion>3.2.1</pathling.dockerJavaVersion>
-    <pathling.hadoopVersion>2.7.7</pathling.hadoopVersion>
+    <pathling.hadoopVersion>2.9.2</pathling.hadoopVersion>
     <pathling.hadoopMirror>https://apache.mirror.digitalpacific.com.au/hadoop/common</pathling.hadoopMirror>
   </properties>
 
@@ -227,8 +227,8 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
-            <source>1.8</source>
-            <target>1.8</target>
+            <source>11</source>
+            <target>11</target>
             <compilerArgs>
               <arg>-Xlint</arg>
             </compilerArgs>

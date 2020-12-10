@@ -20,6 +20,7 @@ import org.apache.spark.sql.types.*;
  * @author Piotr Szul
  */
 
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class PatientResourceRowFixture {
 
   public static StructType createPatientRowStruct() {
@@ -59,7 +60,7 @@ public class PatientResourceRowFixture {
   }
 
   public static DatasetBuilder allPatientsWithValue(final Object value) {
-    return new DatasetBuilder().withColumn("id", DataTypes.StringType)
-        .withColumn("value", DataTypes.BooleanType).withIdsAndValue(value, PATIENT_ALL_IDS);
+    return new DatasetBuilder().withColumn(DataTypes.StringType)
+        .withColumn(DataTypes.BooleanType).withIdsAndValue(value, PATIENT_ALL_IDS);
   }
 }

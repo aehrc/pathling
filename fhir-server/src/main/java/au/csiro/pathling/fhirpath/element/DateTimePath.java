@@ -10,6 +10,7 @@ import static org.apache.spark.sql.functions.to_timestamp;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -36,33 +37,25 @@ import org.hl7.fhir.r4.model.InstantType;
 public class DateTimePath extends ElementPath implements Materializable<BaseDateTimeType>,
     Comparable {
 
-  private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
-      "yyyy-MM-dd'T'HH:mm:ssXXX");
   private static final TimeZone TIME_ZONE = TimeZone.getTimeZone("GMT");
-
-  static {
-    DATE_FORMAT.setTimeZone(TIME_ZONE);
-  }
+  private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = ThreadLocal
+      .withInitial(() -> {
+        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
+        format.setTimeZone(TIME_ZONE);
+        return format;
+      });
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(DatePath.class, DateTimePath.class, DateLiteralPath.class, DateTimeLiteralPath.class,
           NullLiteralPath.class);
 
-  /**
-   * @param expression The FHIRPath representation of this path
-   * @param dataset A {@link Dataset} that can be used to evaluate this path against data
-   * @param idColumn A {@link Column} within the dataset containing the identity of the subject
-   * resource
-   * @param valueColumn A {@link Column} within the dataset containing the values of the nodes
-   * @param singular An indicator of whether this path represents a single-valued collection
-   * @param fhirType The FHIR datatype for this path, note that there can be more than one FHIR
-   * type
-   */
-  public DateTimePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<Column> idColumn, @Nonnull final Column valueColumn,
-      final boolean singular,
-      @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, singular, fhirType);
+  protected DateTimePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+        thisColumn, fhirType);
   }
 
   @Nonnull
@@ -116,7 +109,7 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   }
 
   public static SimpleDateFormat getDateFormat() {
-    return DATE_FORMAT;
+    return DATE_FORMAT.get();
   }
 
   public static TimeZone getTimeZone() {
@@ -129,7 +122,8 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return buildComparison(this, operation.getSparkFunction());
   }
 

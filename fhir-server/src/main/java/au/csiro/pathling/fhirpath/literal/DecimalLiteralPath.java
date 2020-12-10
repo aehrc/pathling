@@ -50,7 +50,6 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
    */
   public static DecimalLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws NumberFormatException {
-    check(context.getIdColumn().isPresent());
     final BigDecimal value = new BigDecimal(fhirPath);
 
     if (value.precision() > DecimalPath.getDecimalType().precision()) {
@@ -64,7 +63,7 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
               .scale() + "): " + fhirPath);
     }
 
-    return new DecimalLiteralPath(context.getDataset(), context.getIdColumn().get(),
+    return new DecimalLiteralPath(context.getDataset(), context.getIdColumn(),
         new DecimalType(value));
   }
 
@@ -87,7 +86,8 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
   }
 
   @Override
-  public Function<Comparable, Column> getComparison(final ComparisonOperation operation) {
+  @Nonnull
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return Comparable.buildComparison(this, operation.getSparkFunction());
   }
 

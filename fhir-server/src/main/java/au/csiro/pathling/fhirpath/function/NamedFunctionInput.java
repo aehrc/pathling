@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -26,7 +27,7 @@ public class NamedFunctionInput extends FunctionInput {
    * of the dot preceding the function invocation.
    */
   @Nonnull
-  private final FhirPath input;
+  private final NonLiteralPath input;
 
   /**
    * A list of expressions representing the arguments to the function, i.e. the expressions inside
@@ -37,13 +38,13 @@ public class NamedFunctionInput extends FunctionInput {
 
   /**
    * @param context The {@link ParserContext} that the function should be executed within
-   * @param input The {@link FhirPath} representing the expression on the left hand side of the
-   * function invocation
+   * @param input The {@link NonLiteralPath} representing the expression on the left hand side of
+   * the function invocation
    * @param arguments A list of {@link FhirPath} objects representing the arguments passed to the
    * function within the parentheses
    */
-  public NamedFunctionInput(@Nonnull final ParserContext context, @Nonnull final FhirPath input,
-      @Nonnull final List<FhirPath> arguments) {
+  public NamedFunctionInput(@Nonnull final ParserContext context,
+      @Nonnull final NonLiteralPath input, @Nonnull final List<FhirPath> arguments) {
     super(context);
     this.input = input;
     this.arguments = arguments;

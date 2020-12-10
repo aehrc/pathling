@@ -6,18 +6,19 @@
 
 package au.csiro.pathling.test.assertions;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import java.util.Arrays;
 import java.util.HashSet;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * @author John Grimes
  */
+@SuppressWarnings("UnusedReturnValue")
 public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResourcePathAssertion> {
 
   @Nonnull
@@ -30,11 +31,12 @@ public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResou
 
   @Nonnull
   public DatasetAssert selectUntypedResourceResult() {
-    check(fhirPath.getIdColumn().isPresent());
-    return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getTypeColumn(), fhirPath.getValueColumn())
-        .orderBy(fhirPath.getIdColumn().get(), fhirPath.getTypeColumn(),
-            fhirPath.getValueColumn()));
+    final Column[] selection = Arrays
+        .asList(fhirPath.getIdColumn(), fhirPath.getTypeColumn(), fhirPath.getValueColumn())
+        .toArray(new Column[0]);
+    return new DatasetAssert(fhirPath.getOrderedDataset()
+        .select(selection)
+        .orderBy(selection));
   }
 
   @Nonnull
@@ -43,5 +45,4 @@ public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResou
     assertEquals(typeSet, fhirPath.getPossibleTypes());
     return this;
   }
-
 }

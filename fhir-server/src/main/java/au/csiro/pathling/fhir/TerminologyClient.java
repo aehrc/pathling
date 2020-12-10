@@ -15,6 +15,7 @@ import ca.uhn.fhir.rest.param.UriParam;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
 
@@ -57,8 +58,6 @@ public interface TerminologyClient extends IRestfulClient {
    * @param name The name that defines the particular context for the subsumption based closure
    * table
    * @param concept Concepts to add to the closure table
-   * @param version A request to resynchronise - request to send all new entries since the nominated
-   * version was sent by the server
    * @return A list of new entries (code / system --> code/system) that the client should add to its
    * closure table. The only kind of entry mapping equivalences that can be returned are equal,
    * specializes, subsumes and unmatched
@@ -67,8 +66,7 @@ public interface TerminologyClient extends IRestfulClient {
    */
   @Operation(name = "$closure")
   ConceptMap closure(@OperationParam(name = "name") StringType name,
-      @OperationParam(name = "concept") List<Coding> concept,
-      @OperationParam(name = "version") StringType version);
+      @Nullable @OperationParam(name = "concept") List<Coding> concept);
 
   /**
    * Build a new instance using the supplied {@link FhirContext} and configuration options.

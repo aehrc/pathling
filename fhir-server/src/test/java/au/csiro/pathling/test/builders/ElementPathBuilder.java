@@ -7,20 +7,20 @@
 package au.csiro.pathling.test.builders;
 
 import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
-import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.col;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -29,13 +29,16 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class ElementPathBuilder {
 
   @Nonnull
-  private FhirPath parentPath;
-
-  @Nonnull
   private String expression;
 
   @Nonnull
   private Dataset<Row> dataset;
+
+  @Nonnull
+  private Column idColumn;
+
+  @Nonnull
+  private Optional<Column> eidColumn;
 
   @Nonnull
   private Column valueColumn;
@@ -43,36 +46,45 @@ public class ElementPathBuilder {
   private boolean singular;
 
   @Nonnull
-  private ElementDefinition definition;
-
-  @Nonnull
-  private Column idColumn;
-
-  @Nonnull
   private FHIRDefinedType fhirType;
 
+  @Nullable
+  private ResourcePath foreignResource;
+
+  @Nullable
+  private Column thisColumn;
+
+  @Nonnull
+  private ElementDefinition definition;
+
   public ElementPathBuilder() {
-    parentPath = mock(FhirPath.class);
     expression = "";
-    dataset = SparkHelpers.getSparkSession().emptyDataFrame();
-    valueColumn = lit(null);
+    dataset = new DatasetBuilder()
+        .withIdColumn()
+        .withColumn(DataTypes.StringType)
+        .build();
+    idColumn = col(dataset.columns()[0]);
+    valueColumn = col(dataset.columns()[1]);
+    eidColumn = Optional.empty();
     singular = false;
-    definition = mock(ElementDefinition.class);
-    idColumn = lit(null);
     fhirType = FHIRDefinedType.NULL;
+    definition = mock(ElementDefinition.class);
   }
 
   @Nonnull
   public ElementPathBuilder idAndValueColumns() {
     final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset);
     idColumn = idAndValueColumns.getId();
-    valueColumn = idAndValueColumns.getValue();
+    valueColumn = idAndValueColumns.getValues().get(0);
     return this;
   }
 
   @Nonnull
-  public ElementPathBuilder parentPath(@Nonnull final FhirPath parentPath) {
-    this.parentPath = parentPath;
+  public ElementPathBuilder idAndEidAndValueColumns() {
+    final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset, true);
+    idColumn = idAndValueColumns.getId();
+    eidColumn = idAndValueColumns.getEid();
+    valueColumn = idAndValueColumns.getValues().get(0);
     return this;
   }
 
@@ -89,6 +101,12 @@ public class ElementPathBuilder {
   }
 
   @Nonnull
+  public ElementPathBuilder idColumn(@Nonnull final Column idColumn) {
+    this.idColumn = idColumn;
+    return this;
+  }
+
+  @Nonnull
   public ElementPathBuilder valueColumn(@Nonnull final Column valueColumn) {
     this.valueColumn = valueColumn;
     return this;
@@ -101,37 +119,42 @@ public class ElementPathBuilder {
   }
 
   @Nonnull
-  public ElementPathBuilder definition(@Nonnull final ElementDefinition definition) {
-    this.definition = definition;
-    return this;
-  }
-
-  @Nonnull
-  public ElementPathBuilder idColumn(@Nonnull final Column idColumn) {
-    this.idColumn = idColumn;
-    return this;
-  }
-
-  @Nonnull
   public ElementPathBuilder fhirType(@Nonnull final FHIRDefinedType fhirType) {
     this.fhirType = fhirType;
     return this;
   }
 
   @Nonnull
+  public ElementPathBuilder foreignResource(@Nonnull final ResourcePath foreignResource) {
+    this.foreignResource = foreignResource;
+    return this;
+  }
+
+  @Nonnull
+  public ElementPathBuilder thisColumn(@Nonnull final Column thisColumn) {
+    this.thisColumn = thisColumn;
+    return this;
+  }
+
+  @Nonnull
+  public ElementPathBuilder definition(@Nonnull final ElementDefinition definition) {
+    this.definition = definition;
+    return this;
+  }
+
+  @Nonnull
   public ElementPath build() {
     return ElementPath
-        .build(expression, dataset, Optional.of(idColumn), valueColumn, singular, fhirType);
+        .build(expression, dataset, idColumn, eidColumn,
+            valueColumn, singular, Optional.ofNullable(foreignResource),
+            Optional.ofNullable(thisColumn), fhirType);
   }
 
   @Nonnull
   public ElementPath buildDefined() {
-    // This defaults the ID column to that of this path, if a parent path was not provided. This
-    // prevents us from having to create parent paths for every element path we create in the tests.
-    if (!parentPath.getIdColumn().isPresent()) {
-      when(parentPath.getIdColumn()).thenReturn(Optional.of(idColumn));
-    }
-    return ElementPath.build(parentPath, expression, dataset, valueColumn, singular, definition);
+    return ElementPath
+        .build(expression, dataset, idColumn, eidColumn,
+            valueColumn, singular, Optional.ofNullable(foreignResource),
+            Optional.ofNullable(thisColumn), definition);
   }
-
 }

@@ -15,12 +15,16 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.Column;
 
 /**
  * @author Piotr Szul
  * @author John Grimes
  */
+@SuppressWarnings("unused")
 public class FhirPathAssertion<T extends FhirPathAssertion> {
 
   @Nonnull
@@ -31,11 +35,41 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   }
 
   @Nonnull
-  public DatasetAssert selectResult() {
-    check(fhirPath.getIdColumn().isPresent());
-    return new DatasetAssert(fhirPath.getDataset()
-        .select(fhirPath.getIdColumn().get(), fhirPath.getValueColumn())
-        .orderBy(fhirPath.getIdColumn().get(), fhirPath.getValueColumn()));
+  public DatasetAssert selectOrderedResult() {
+    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
+    final Column[] ordering = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn()};
+
+    return new DatasetAssert(fhirPath.getOrderedDataset()
+        .select(selection)
+        .orderBy(ordering));
+  }
+
+  @Nonnull
+  public DatasetAssert selectGroupingResult(@Nonnull final List<Column> groupingColumns) {
+    return selectGroupingResult(groupingColumns, false);
+  }
+
+  @Nonnull
+  public DatasetAssert selectGroupingResult(@Nonnull final List<Column> groupingColumns,
+      final boolean preserveOrder) {
+    check(!groupingColumns.isEmpty());
+    final ArrayList<Column> allColumnsList = new ArrayList<>(groupingColumns);
+    allColumnsList.add(fhirPath.getValueColumn());
+    final Column[] allColumns = allColumnsList.toArray(new Column[0]);
+    return new DatasetAssert(preserveOrder
+                             ? fhirPath.getDataset().select(allColumns)
+                             : fhirPath.getDataset().select(allColumns).orderBy(allColumns));
+  }
+
+  @Nonnull
+  public DatasetAssert selectOrderedResultWithEid() {
+    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn(),
+        fhirPath.getValueColumn()};
+    final Column[] ordering = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn()};
+
+    return new DatasetAssert(fhirPath.getOrderedDataset()
+        .select(selection)
+        .orderBy(ordering));
   }
 
   @Nonnull
@@ -53,6 +87,12 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
     assertFalse(fhirPath.isSingular());
     return self();
   }
+
+  public T preservesCardinalityOf(final FhirPath otherFhirPath) {
+    assertEquals(otherFhirPath.isSingular(), fhirPath.isSingular());
+    return self();
+  }
+
 
   public ElementPathAssertion isElementPath(final Class<? extends ElementPath> ofType) {
     assertTrue(ofType.isAssignableFrom(fhirPath.getClass()));
@@ -73,5 +113,4 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   private T self() {
     return (T) this;
   }
-
 }

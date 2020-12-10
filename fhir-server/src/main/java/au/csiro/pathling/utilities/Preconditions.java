@@ -7,7 +7,9 @@
 package au.csiro.pathling.utilities;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -19,14 +21,27 @@ import javax.annotation.Nullable;
 public class Preconditions {
 
   /**
-   * Ensures the truth of an expression, throwing an IllegalArgumentException with the supplied
+   * Ensures the truth of an expression, throwing an {@link AssertionError} with the supplied
    * message if it does not evaluate as true.
    *
    * @param expression The expression that should be true
    */
   public static void check(final boolean expression) {
     if (!expression) {
-      throw new IllegalArgumentException();
+      throw new AssertionError();
+    }
+  }
+
+  /**
+   * Ensures the truth of an expression, throwing an {@link IllegalArgumentException} with the
+   * supplied message if it does not evaluate as true.
+   *
+   * @param expression The expression that should be true
+   * @param errorMessage The message to use if an error is thrown
+   */
+  public static void checkArgument(final boolean expression, @Nonnull final String errorMessage) {
+    if (!expression) {
+      throw new IllegalArgumentException(errorMessage);
     }
   }
 
@@ -43,6 +58,23 @@ public class Preconditions {
   }
 
   /**
+   * Ensures that an {@link Optional} value is present, throwing a {@link AssertionError} if it is
+   * not.
+   *
+   * @param object The object to check
+   * @param <T> The type of the object within the Optional
+   * @return The unwrapped object
+   */
+  @Nonnull
+  public static <T> T checkPresent(@Nonnull final Optional<T> object) {
+    try {
+      return object.orElseThrow();
+    } catch (final NoSuchElementException e) {
+      throw new AssertionError(e.getMessage(), e);
+    }
+  }
+
+  /**
    * Ensures the truth of an expression, throwing an {@link InvalidUserInputError} with the supplied
    * message if it does not evaluate as true.
    *
@@ -52,6 +84,19 @@ public class Preconditions {
   public static void checkUserInput(final boolean expression, @Nonnull final String errorMessage) {
     if (!expression) {
       throw new InvalidUserInputError(errorMessage);
+    }
+  }
+
+  /**
+   * Ensures the truth of an expression, throwing an {@link IllegalStateException} with the supplied
+   * message if it does not evaluate as true.
+   *
+   * @param expression The expression that should be true
+   * @param errorMessage The message to use if an error is thrown
+   */
+  public static void checkState(final boolean expression, @Nonnull final String errorMessage) {
+    if (!expression) {
+      throw new IllegalStateException(errorMessage);
     }
   }
 

@@ -6,14 +6,13 @@
 
 package au.csiro.pathling;
 
-import static au.csiro.pathling.QueryHelpers.joinOnId;
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
@@ -26,7 +25,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Contains functionality common to query executors.
@@ -67,32 +65,20 @@ public abstract class QueryExecutor {
     this.terminologyClientFactory = terminologyClientFactory;
   }
 
-  @Nonnull
-  protected ParserContext buildParserContext(@Nonnull final ResourceType resourceType) {
-    final ResourcePath inputContext = buildInputContext(resourceType);
-    return new ParserContext(inputContext, Optional.empty(), fhirContext, sparkSession,
-        resourceReader, terminologyClient, terminologyClientFactory);
-  }
-
-  @Nonnull
-  private ResourcePath buildInputContext(@Nonnull final ResourceType resourceType) {
-    // The expression is a single-item collection in the case of a non-aggregation parse, as the
-    // input context is each individual resource within the dataset.
-    return ResourcePath
-        .build(fhirContext, resourceReader, resourceType, resourceType.toCode(), true);
-  }
-
+  /**
+   * Joins the datasets in a list together, using their resource identity columns.
+   */
   @Nonnull
   protected static Dataset<Row> joinExpressions(@Nonnull final List<FhirPath> expressions) {
-    check(!expressions.isEmpty());
+    checkArgument(!expressions.isEmpty(), "expressions must not be empty");
 
     FhirPath previous = expressions.get(0);
     Dataset<Row> result = previous.getDataset();
 
     for (int i = 1; i < expressions.size(); i++) {
       final FhirPath current = expressions.get(i);
-      check(previous.getIdColumn().isPresent());
-      result = joinOnId(result, previous.getIdColumn().get(), current, JoinType.LEFT_OUTER);
+      final Column idColumn = previous.getIdColumn();
+      result = join(result, idColumn, current, JoinType.LEFT_OUTER);
       previous = current;
     }
 
@@ -103,14 +89,21 @@ public abstract class QueryExecutor {
   protected static Dataset<Row> applyFilters(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Collection<FhirPath> filters) {
     // Get the value column from each filter expression, and combine them with AND logic.
-    final Optional<Column> filterCondition = filters.stream()
+    return filters.stream()
         .map(FhirPath::getValueColumn)
-        .reduce(Column::and);
+        .reduce(Column::and)
+        .flatMap(filter -> Optional.of(dataset.filter(filter)))
+        .orElse(dataset);
+  }
 
-    // Return a Dataset filtered using the combined filter conditions.
-    return filterCondition.isPresent()
-           ? dataset.filter(filterCondition.get())
-           : dataset;
+  protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext) {
+    return buildParserContext(inputContext, Optional.empty());
+  }
+
+  protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
+      @Nonnull final Optional<List<Column>> groupingColumns) {
+    return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
+        terminologyClient, terminologyClientFactory, groupingColumns);
   }
 
 }

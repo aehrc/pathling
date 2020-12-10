@@ -6,21 +6,19 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.function.AggregateFunction;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.Optional;
+import java.util.Arrays;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -55,17 +53,15 @@ public class MembershipOperator extends AggregateFunction implements Operator {
     final FhirPath collection = type.equals(MembershipOperatorType.IN)
                                 ? right
                                 : left;
-    final ParserContext context = input.getContext();
-    final Optional<Column> leftIdColumn = left.getIdColumn();
 
     checkUserInput(element.isSingular(),
         "Element operand used with " + type + " operator is not singular: " + element
             .getExpression());
     checkArgumentsAreComparable(input, type.toString());
-    check(context.getGroupBy().isPresent() || leftIdColumn.isPresent());
+    final Column elementValue = element.getValueColumn();
+    final Column collectionValue = collection.getValueColumn();
 
-    final String expression =
-        left.getExpression() + " " + type + " " + right.getExpression();
+    final String expression = left.getExpression() + " " + type + " " + right.getExpression();
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;
     final Column equality = leftComparable.getComparison(ComparisonOperation.EQUALS)
@@ -74,19 +70,19 @@ public class MembershipOperator extends AggregateFunction implements Operator {
     // If the left-hand side of the operator (element) is empty, the result is empty. If the
     // right-hand side (collection) is empty, the result is false. Otherwise, a Boolean is returned
     // based on whether the element is present in the collection, using equality semantics.
-    final Column equalityWithNullChecks = when(element.getValueColumn().isNull(), lit(null))
-        .when(collection.getValueColumn().isNull(), lit(false))
+    final Column equalityWithNullChecks = when(elementValue.isNull(), lit(null))
+        .when(collectionValue.isNull(), lit(false))
         .otherwise(equality);
+
+    // We need to join the datasets in order to access values from both operands.
+    final Dataset<Row> dataset = join(left, right, JoinType.LEFT_OUTER);
 
     // In order to reduce the result to a single Boolean, we take the max of the boolean equality
     // values.
-    final Column aggColumn = max(equalityWithNullChecks).as("value");
+    final Column valueColumn = max(equalityWithNullChecks);
 
-    // Group by the grouping columns if present, or the ID column from the input.
-    final Dataset<Row> dataset = QueryHelpers.joinOnId(left, right, JoinType.LEFT_OUTER);
-
-    return applyAggregation(input.getContext(), dataset, left.getIdColumn(),
-        aggColumn, expression, FHIRDefinedType.BOOLEAN);
+    return buildAggregateResult(dataset, input.getContext(), Arrays.asList(left, right),
+        valueColumn, expression, FHIRDefinedType.BOOLEAN);
   }
 
   /**

@@ -128,7 +128,7 @@ public class ElementDefinition {
    */
   @Nonnull
   public Optional<FHIRDefinedType> getFhirType() {
-    if (!elementDefinition.isPresent()) {
+    if (elementDefinition.isEmpty()) {
       return Optional.empty();
     }
 
