@@ -7,9 +7,6 @@
         {
           "name": "result",
           "valueUnsignedInt": 20
-        },
-        {
-          "name": "drillDown"
         }
       ]
     }
