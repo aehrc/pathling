@@ -22,6 +22,7 @@ import ca.uhn.fhir.rest.param.StringAndListParam;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Getter;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.mockito.Mockito;
@@ -29,6 +30,7 @@ import org.mockito.Mockito;
 /**
  * @author John Grimes
  */
+@Getter
 public class SearchExecutorBuilder {
 
   @Nonnull
