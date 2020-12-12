@@ -1,4 +1,9 @@
-<a href="https://pathling.csiro.au"><img src="./media/logo-colour-detail-tight.svg" alt="Pathling logo" width="300"/></a>
+<a href="https://pathling.csiro.au">
+<picture>
+  <source srcset="./media/logo-colour-tight-dark.svg" media="(prefers-color-scheme: dark)"/>
+  <img src="./media/logo-colour-detail-tight.svg" alt="Pathling logo" width="300"/>
+</picture>
+</a>
 
 [![Test and deploy](https://github.com/aehrc/pathling/workflows/Test%20and%20deploy/badge.svg)](https://github.com/aehrc/pathling/actions?query=workflow%3A%22Test+and+deploy%22)
 
