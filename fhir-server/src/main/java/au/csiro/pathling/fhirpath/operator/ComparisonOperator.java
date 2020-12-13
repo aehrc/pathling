@@ -58,7 +58,7 @@ public class ComparisonOperator implements Operator {
     checkArgumentsAreComparable(input, type.toString());
 
     final String expression = buildExpression(input, type.toString());
-    final Dataset<Row> dataset = join(left, right, JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
 
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;

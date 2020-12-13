@@ -12,6 +12,7 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.utilities.Strings;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -212,37 +213,36 @@ public abstract class QueryHelpers {
    * Joins two {@link FhirPath} expressions, using equality between their respective resource ID
    * columns.
    *
+   * @param parserContext the current {@link ParserContext}
    * @param left a {@link FhirPath} expression
    * @param right another FhirPath expression
    * @param joinType a {@link JoinType}
    * @return a new {@link Dataset}
    */
   @Nonnull
-  public static Dataset<Row> join(@Nonnull final FhirPath left, @Nonnull final FhirPath right,
+  public static Dataset<Row> join(@Nonnull final ParserContext parserContext,
+      @Nonnull final FhirPath left, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
     final List<Column> leftColumns = new ArrayList<>();
     final List<Column> rightColumns = new ArrayList<>();
     leftColumns.add(left.getIdColumn());
     rightColumns.add(right.getIdColumn());
 
-    // If the two paths are NonLiteralPaths, and they have $this columns, we need to add the element
-    // ID columns into the join condition. This is to prevent too many rows being generated when
-    // there are more rows than resources on either side of the join.
-    final boolean nonLiteralJoin =
-        left instanceof NonLiteralPath && right instanceof NonLiteralPath;
-    if (nonLiteralJoin) {
-      final NonLiteralPath nonLiteralLeft = (NonLiteralPath) left;
-      final NonLiteralPath nonLiteralRight = (NonLiteralPath) right;
-      if (nonLiteralLeft.getThisColumn().isPresent() && nonLiteralRight.getThisColumn()
-          .isPresent()) {
-        final Column leftColumn = nonLiteralLeft.getEidColumn().isPresent()
-                                  ? nonLiteralLeft.getEidColumn().get()
-                                  : nonLiteralLeft.getThisColumn().get();
-        final Column rightColumn = nonLiteralRight.getEidColumn().isPresent()
-                                   ? nonLiteralRight.getEidColumn().get()
-                                   : nonLiteralRight.getThisColumn().get();
-        leftColumns.add(leftColumn);
-        rightColumns.add(rightColumn);
+    // If a $this context is present (i.e. the join is being performed within function arguments,
+    // with an item from the input collection as context), then we need to add the identity of the
+    // input element to the join. This is to prevent too many rows being generated when there are
+    // more rows than resources on either side of the join.
+    if (parserContext.getThisContext().isPresent()
+        && parserContext.getThisContext().get() instanceof NonLiteralPath
+        && left instanceof NonLiteralPath
+        && right instanceof NonLiteralPath) {
+      final NonLiteralPath nonLiteralThis = (NonLiteralPath) parserContext.getThisContext().get();
+      if (nonLiteralThis.getEidColumn().isPresent()) {
+        leftColumns.add(nonLiteralThis.getEidColumn().get());
+        rightColumns.add(nonLiteralThis.getEidColumn().get());
+      } else {
+        leftColumns.add(parserContext.getThisContext().get().getValueColumn());
+        rightColumns.add(parserContext.getThisContext().get().getValueColumn());
       }
     }
 

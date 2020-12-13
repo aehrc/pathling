@@ -75,7 +75,7 @@ public class MembershipOperator extends AggregateFunction implements Operator {
         .otherwise(equality);
 
     // We need to join the datasets in order to access values from both operands.
-    final Dataset<Row> dataset = join(left, right, JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
 
     // In order to reduce the result to a single Boolean, we take the max of the boolean equality
     // values.
