@@ -268,7 +268,7 @@ public class ParserTest {
 
     // on the same collection should return all True (even though one is CodeableConcept)
     assertThatResultOf(
-        "reverseResolve(Condition.subject).code.coding.subsumes(reverseResolve(Condition.subject).code)")
+        "reverseResolve(Condition.subject).code.coding.subsumes(%resource.reverseResolve(Condition.subject).code)")
         .selectOrderedResult()
         .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
 
@@ -303,18 +303,6 @@ public class ParserTest {
     assertThatResultOf("where($this.name.given contains 'Karina848').gender")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue((String) null).changeValue(PATIENT_ID_9360820c, "female"));
-  }
-
-  /**
-   * This tests that the value from the `$this` context gets preserved successfully, when used in
-   * the "collection" operand to the membership operator.
-   */
-  @Test
-  public void testWhereWithInOperator() {
-    // @TODO: Change to a non-trivial case?
-    assertThatResultOf("where($this.name.first().family in contact.name.family).gender")
-        .selectOrderedResult()
-        .hasRows(allPatientsWithValue((Boolean) null));
   }
 
   @Test
@@ -354,14 +342,18 @@ public class ParserTest {
         .hasRows("responses/ParserTest/testWhereWithMemberOf.csv");
   }
 
+  /**
+   * This tests that the value from the `$this` context gets preserved successfully, when used in
+   * the "collection" operand to the membership operator. It also tests that aggregation can be
+   * applied successfully following a nested where invocation.
+   */
   @Test
   public void testAggregationFollowingNestedWhere() {
-
-    // TODO: Change to a non-trivial case?
-    assertThatResultOf("where($this.name.first().family in contact.name.where("
-        + "$this.given contains 'Joe').first().family).gender")
-        .selectOrderedResult().
-        hasRows(allPatientsWithValue((String) null));
+    assertThatResultOf(
+        "where(name.where(use = 'official').first().given.first() in "
+            + "name.where(use = 'maiden').first().given).gender")
+        .selectOrderedResult()
+        .hasRows("responses/ParserTest/testAggregationFollowingNestedWhere.csv");
   }
 
   @Test

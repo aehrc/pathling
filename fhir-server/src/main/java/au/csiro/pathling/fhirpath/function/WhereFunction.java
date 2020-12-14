@@ -15,7 +15,6 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -62,7 +61,7 @@ public class WhereFunction implements NamedFunction {
     return inputPath
         .copy(expression, argumentPath.getDataset(), idColumn,
             inputPath.getEidColumn().map(c -> thisEid), valueColumn, inputPath.isSingular(),
-            Optional.empty());
+            inputPath.getThisColumn());
   }
 
 }
