@@ -6,8 +6,6 @@
 
 package au.csiro.pathling.aggregate;
 
-import static au.csiro.pathling.errors.ErrorHandling.handleError;
-
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -45,14 +43,10 @@ public class AggregateProvider {
       throw new InvalidRequestException("Missing Parameters resource");
     }
 
-    try {
-      final AggregateRequest query = AggregateRequest.from(parameters);
-      final AggregateResponse result = aggregateExecutor.execute(query);
-      return result.toParameters();
+    final AggregateRequest query = AggregateRequest.from(parameters);
+    final AggregateResponse result = aggregateExecutor.execute(query);
+    return result.toParameters();
 
-    } catch (final Throwable e) {
-      throw handleError(e);
-    }
   }
 
 }
