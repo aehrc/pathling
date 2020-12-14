@@ -50,10 +50,10 @@ public class DrillDownBuilder {
   /**
    * Generates the FHIRPath string.
    *
-   * @return A FHIRPath expression
+   * @return A FHIRPath expression, unless there are no groupings or filters
    */
   @Nonnull
-  public String build() {
+  public Optional<String> build() {
     // We use a Set here to avoid situations where we needlessly have the same condition in the
     // expression more than once.
     final Collection<String> fhirPaths = new LinkedHashSet<>();
@@ -67,7 +67,9 @@ public class DrillDownBuilder {
 
     // If there is more than one expression, wrap each expression in parentheses before joining
     // together with Boolean AND operators.
-    return String.join(" and ", parenthesiseExpressions(fhirPaths));
+    return fhirPaths.size() > 0
+           ? Optional.of(String.join(" and ", parenthesiseExpressions(fhirPaths)))
+           : Optional.empty();
   }
 
   private void addGroupings(final Collection<String> fhirPaths) {

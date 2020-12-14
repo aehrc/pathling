@@ -255,8 +255,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
       }
 
       // Build a drill-down FHIRPath expression for inclusion with the returned grouping.
-      final String drillDown = new DrillDownBuilder(labels, groupings, filters)
-          .build();
+      final Optional<String> drillDown = new DrillDownBuilder(labels, groupings, filters).build();
 
       return new AggregateResponse.Grouping(labels, results, drillDown);
     };

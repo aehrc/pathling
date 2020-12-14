@@ -83,18 +83,21 @@ public abstract class AggregateExecutorTest {
     if (response != null) {
       final Optional<Grouping> firstGroupingOptional = response.getGroupings()
           .stream()
+          .filter(grouping -> grouping.getDrillDown().isPresent())
           .findFirst();
-      assertTrue(firstGroupingOptional.isPresent());
-      final Grouping firstGrouping = firstGroupingOptional.get();
-      final String drillDown = firstGrouping.getDrillDown();
 
-      final StringAndListParam filters = new StringAndListParam();
-      filters.addAnd(new StringParam(drillDown));
-      final IBundleProvider searchExecutor = new SearchExecutor(configuration, fhirContext, spark,
-          resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory),
-          fhirEncoders, subjectResource, Optional.of(filters));
-      final List<IBaseResource> resources = searchExecutor.getResources(0, 100);
-      assertTrue(resources.size() > 0);
+      if (firstGroupingOptional.isPresent()) {
+        final Grouping firstGrouping = firstGroupingOptional.get();
+        assertTrue(firstGrouping.getDrillDown().isPresent());
+        final String drillDown = firstGrouping.getDrillDown().get();
+        final StringAndListParam filters = new StringAndListParam();
+        filters.addAnd(new StringParam(drillDown));
+        final IBundleProvider searchExecutor = new SearchExecutor(configuration, fhirContext, spark,
+            resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory),
+            fhirEncoders, subjectResource, Optional.of(filters));
+        final List<IBaseResource> resources = searchExecutor.getResources(0, 100);
+        assertTrue(resources.size() > 0);
+      }
     }
   }
 

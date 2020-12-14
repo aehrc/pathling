@@ -13,9 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Value;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -28,45 +26,28 @@ import org.hl7.fhir.r4.model.StringType;
  *
  * @author John Grimes
  */
-@Getter
-@EqualsAndHashCode
-@ToString
+@Value
 public class AggregateRequest {
 
   @Nonnull
-  private final ResourceType subjectResource;
+  ResourceType subjectResource;
 
   @Nonnull
-  private final List<Aggregation> aggregations;
+  List<Aggregation> aggregations;
 
   @Nonnull
-  private final List<Grouping> groupings;
+  List<Grouping> groupings;
 
   @Nonnull
-  private final List<String> filters;
+  List<String> filters;
 
   /**
-   * @param subjectResource The resource which will serve as the input context for each expression
-   * @param aggregations A set of aggregation expressions to execute over the data
-   * @param groupings Instructions on how the data should be grouped when aggregating
-   * @param filters The criteria by which the data should be filtered
-   */
-  public AggregateRequest(@Nonnull final ResourceType subjectResource,
-      @Nonnull final List<Aggregation> aggregations,
-      @Nonnull final List<Grouping> groupings, @Nonnull final List<String> filters) {
-    this.subjectResource = subjectResource;
-    this.aggregations = aggregations;
-    this.groupings = groupings;
-    this.filters = filters;
-  }
-
-  /**
-   * This constructor takes a {@link Parameters} resource (with the parameters defined within the
-   * "aggregate" OperationDefinition) and populates the values into a new {@link AggregateRequest}
-   * object.
+   * This static build method takes a {@link Parameters} resource (with the parameters defined
+   * within the "aggregate" OperationDefinition) and populates the values into a new {@link
+   * AggregateRequest} object.
    *
    * @param parameters a {@link Parameters} object
-   * @return an {@link AggregateRequest}
+   * @return an AggregateRequest
    */
   @Nonnull
   public static AggregateRequest from(@Nonnull final Parameters parameters) {
@@ -155,50 +136,28 @@ public class AggregateRequest {
   /**
    * Represents an aggregation parameter within an {@link AggregateRequest}.
    */
-  @Getter
-  @EqualsAndHashCode
-  @ToString
+  @Value
   public static class Aggregation {
 
     @Nonnull
-    private final Optional<String> label;
+    Optional<String> label;
 
     @Nonnull
-    private final String expression;
-
-    /**
-     * @param label A descriptive label for the aggregation, optional.
-     * @param expression The FHIRPath expression that describes the aggregation.
-     */
-    public Aggregation(@Nonnull final Optional<String> label, @Nonnull final String expression) {
-      this.label = label;
-      this.expression = expression;
-    }
+    String expression;
 
   }
 
   /**
    * Represents a grouping parameter within an {@link AggregateRequest}.
    */
-  @Getter
-  @EqualsAndHashCode
-  @ToString
+  @Value
   public static class Grouping {
 
     @Nonnull
-    private final Optional<String> label;
+    Optional<String> label;
 
     @Nonnull
-    private final String expression;
-
-    /**
-     * @param label A descriptive label for the grouping, optional.
-     * @param expression The FHIRPath expression that describes the grouping.
-     */
-    public Grouping(@Nonnull final Optional<String> label, @Nonnull final String expression) {
-      this.label = label;
-      this.expression = expression;
-    }
+    String expression;
 
   }
 
