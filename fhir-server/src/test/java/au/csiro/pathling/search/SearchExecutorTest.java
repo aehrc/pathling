@@ -100,6 +100,19 @@ class SearchExecutorTest {
     assertEquals("Filter expression must be of Boolean type: category.coding", error.getMessage());
   }
 
+  @Test
+  void throwsInvalidInputOnEmptyFilter() {
+    final StringAndListParam params = new StringAndListParam();
+    params.addAnd(new StringParam(""));
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> searchBuilder()
+            .withSubjectResource(ResourceType.CAREPLAN)
+            .withFilters(params)
+            .build());
+    assertEquals("Filter expression cannot be blank", error.getMessage());
+  }
+
   @Nonnull
   private SearchExecutorBuilder searchBuilder() {
     return new SearchExecutorBuilder(configuration, fhirContext, sparkSession,

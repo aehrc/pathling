@@ -135,7 +135,10 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         for (final StringParam param : orParam.getValuesAsQueryTokens()) {
           final ParserContext parserContext = buildParserContext(currentContext);
           final Parser parser = new Parser(parserContext);
-          final FhirPath fhirPath = parser.parse(param.getValue());
+          final String expression = param.getValue();
+          checkUserInput(!expression.isBlank(), "Filter expression cannot be blank");
+
+          final FhirPath fhirPath = parser.parse(expression);
           checkUserInput(fhirPath instanceof BooleanPath || fhirPath instanceof BooleanLiteralPath,
               "Filter expression must be of Boolean type: " + fhirPath.getExpression());
           final Column filterValue = fhirPath.getValueColumn();
