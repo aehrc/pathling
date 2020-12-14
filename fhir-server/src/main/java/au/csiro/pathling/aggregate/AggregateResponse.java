@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
+import lombok.Value;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
@@ -61,10 +62,13 @@ public class AggregateResponse {
             result.ifPresent(resultPart::setValue);
             groupingParameter.getPart().add(resultPart);
           });
-      final ParametersParameterComponent drillDownPart = new ParametersParameterComponent();
-      drillDownPart.setName("drillDown");
-      drillDownPart.setValue(new StringType(grouping.getDrillDown()));
-      groupingParameter.getPart().add(drillDownPart);
+      if (grouping.getDrillDown().isPresent()) {
+        final String drillDown = grouping.getDrillDown().get();
+        final ParametersParameterComponent drillDownPart = new ParametersParameterComponent();
+        drillDownPart.setName("drillDown");
+        drillDownPart.setValue(new StringType(drillDown));
+        groupingParameter.getPart().add(drillDownPart);
+      }
       parameters.getParameter().add(groupingParameter);
     });
     return parameters;
@@ -73,38 +77,22 @@ public class AggregateResponse {
   /**
    * Represents a grouped result within an {@link AggregateResponse}.
    */
-  @Getter
+  @Value
   public static class Grouping {
-
 
     @Nonnull
     // This is a list of Optionals to account for the fact that we can receive null labels here, 
     // which is valid when a grouping expression evaluates to an empty collection for some 
     // resources.
-    private final List<Optional<Type>> labels;
+    List<Optional<Type>> labels;
 
     @Nonnull
     // This is a list of Optionals to account for the fact that we can receive null results of 
     // aggregations.
-    private final List<Optional<Type>> results;
+    List<Optional<Type>> results;
 
     @Nonnull
-    private final String drillDown;
-
-    /**
-     * @param labels A distinct value resulting from the execution of a grouping expression, can be
-     * an empty collection
-     * @param results The result of the aggregation function for this set of labels, can be an empty
-     * collection
-     * @param drillDown A FHIRPath expression which can be used to retrieve the set of resources
-     * that are the members of this group
-     */
-    public Grouping(@Nonnull final List<Optional<Type>> labels,
-        @Nonnull final List<Optional<Type>> results, @Nonnull final String drillDown) {
-      this.labels = labels;
-      this.results = results;
-      this.drillDown = drillDown;
-    }
+    Optional<String> drillDown;
 
   }
 

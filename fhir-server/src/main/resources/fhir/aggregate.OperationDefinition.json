@@ -111,9 +111,9 @@
         {
           "name": "drillDown",
           "use": "out",
-          "min": 1,
+          "min": 0,
           "max": "1",
-          "documentation": "A FHIRPath expression that can be used as a filter to retrieve the set of resources that are members of this grouping.",
+          "documentation": "A FHIRPath expression that can be used as a filter to retrieve the set of resources that are members of this grouping. This will be omitted if there were no groupings or filters passed within the query.",
           "type": "string"
         }
       ]

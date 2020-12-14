@@ -376,12 +376,28 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "name.given contains 'Seymour882'")
+        .withAggregation("Number of given and family names",
+            "name.given.count() + name.family.count()")
         .withGrouping("gender")
         .build();
 
     response = executor.execute(request);
     assertResponse("AggregateQueryTest/queryWithNestedAggregation.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithNestedAggregationAndNoGroupings() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of given and family names",
+            "name.given.count() + name.family.count()")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithNestedAggregationAndNoGroupings.Parameters.json",
         response);
   }
 
