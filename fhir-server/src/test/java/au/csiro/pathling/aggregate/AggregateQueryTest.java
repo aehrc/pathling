@@ -487,6 +487,22 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  void queryWithNonSingularWhereFollowedByCount() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("Number of names with Karina848",
+            "name.where($this.given contains 'Karina848').count()")
+        .withFilter("id = 'Patient/9360820c-8602-4335-8b50-c88d627a0c20'")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithNonSingularWhereFollowedByCount.Parameters.json",
+        response);
+  }
+
+  @Test
   void throwsInvalidInputOnEmptyAggregation() {
     subjectResource = ResourceType.PATIENT;
 
