@@ -13,9 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Value;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -28,22 +26,20 @@ import org.hl7.fhir.r4.model.StringType;
  *
  * @author John Grimes
  */
-@Getter
-@EqualsAndHashCode
-@ToString
+@Value
 public class AggregateRequest {
 
   @Nonnull
-  private final ResourceType subjectResource;
+  ResourceType subjectResource;
 
   @Nonnull
-  private final List<Aggregation> aggregations;
+  List<Aggregation> aggregations;
 
   @Nonnull
-  private final List<Grouping> groupings;
+  List<Grouping> groupings;
 
   @Nonnull
-  private final List<String> filters;
+  List<String> filters;
 
   /**
    * @param subjectResource The resource which will serve as the input context for each expression
@@ -63,8 +59,9 @@ public class AggregateRequest {
   }
 
   /**
-   * This constructor takes a {@link Parameters} resource (with the parameters defined within the
-   * "aggregate" OperationDefinition) and populates the values into a new AggregateRequest object.
+   * This static build method takes a {@link Parameters} resource (with the parameters defined
+   * within the "aggregate" OperationDefinition) and populates the values into a new {@link
+   * AggregateRequest} object.
    *
    * @param parameters a {@link Parameters} object
    * @return an AggregateRequest
@@ -156,16 +153,14 @@ public class AggregateRequest {
   /**
    * Represents an aggregation parameter within an {@link AggregateRequest}.
    */
-  @Getter
-  @EqualsAndHashCode
-  @ToString
+  @Value
   public static class Aggregation {
 
     @Nonnull
-    private final Optional<String> label;
+    Optional<String> label;
 
     @Nonnull
-    private final String expression;
+    String expression;
 
     /**
      * @param label A descriptive label for the aggregation, optional.
@@ -182,16 +177,14 @@ public class AggregateRequest {
   /**
    * Represents a grouping parameter within an {@link AggregateRequest}.
    */
-  @Getter
-  @EqualsAndHashCode
-  @ToString
+  @Value
   public static class Grouping {
 
     @Nonnull
-    private final Optional<String> label;
+    Optional<String> label;
 
     @Nonnull
-    private final String expression;
+    String expression;
 
     /**
      * @param label A descriptive label for the grouping, optional.
