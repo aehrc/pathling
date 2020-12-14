@@ -119,6 +119,7 @@ class SearchExecutorTest {
         fhirEncoders);
   }
 
+  @SuppressWarnings("SameParameterValue")
   private void assertResponse(@Nonnull final String expectedPath,
       @Nonnull final IBundleProvider executor) {
     final IParser jsonParser = getJsonParser();

@@ -7,11 +7,14 @@
 package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.UriParam;
@@ -465,6 +468,41 @@ class AggregateQueryTest extends AggregateExecutorTest {
     response = executor.execute(request);
     assertResponse("AggregateQueryTest/queryWithMultipleGroupingsAndMembership.Parameters.json",
         response);
+  }
+
+  @Test
+  void throwsInvalidInputOnEmptyAggregation() {
+    subjectResource = ResourceType.PATIENT;
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new AggregateRequestBuilder(subjectResource)
+            .withAggregation("Number of patients", "")
+            .build());
+    assertEquals("Aggregation expression cannot be blank", error.getMessage());
+  }
+
+  @Test
+  void throwsInvalidInputOnEmptyGrouping() {
+    subjectResource = ResourceType.PATIENT;
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new AggregateRequestBuilder(subjectResource)
+            .withAggregation("Number of patients", "count()")
+            .withGrouping("Empty grouping", "")
+            .build());
+    assertEquals("Grouping expression cannot be blank", error.getMessage());
+  }
+
+  @Test
+  void throwsInvalidInputOnEmptyFilter() {
+    subjectResource = ResourceType.PATIENT;
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new AggregateRequestBuilder(subjectResource)
+            .withAggregation("Number of patients", "count()")
+            .withFilter("")
+            .build());
+    assertEquals("Filter expression cannot be blank", error.getMessage());
   }
 
 }

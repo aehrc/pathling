@@ -54,6 +54,8 @@ public class AggregateRequest {
   public AggregateRequest(@Nonnull final ResourceType subjectResource,
       @Nonnull final List<Aggregation> aggregations,
       @Nonnull final List<Grouping> groupings, @Nonnull final List<String> filters) {
+    checkUserInput(filters.stream().noneMatch(String::isBlank),
+        "Filter expression cannot be blank");
     this.subjectResource = subjectResource;
     this.aggregations = aggregations;
     this.groupings = groupings;
@@ -62,11 +64,10 @@ public class AggregateRequest {
 
   /**
    * This constructor takes a {@link Parameters} resource (with the parameters defined within the
-   * "aggregate" OperationDefinition) and populates the values into a new {@link AggregateRequest}
-   * object.
+   * "aggregate" OperationDefinition) and populates the values into a new AggregateRequest object.
    *
    * @param parameters a {@link Parameters} object
-   * @return an {@link AggregateRequest}
+   * @return an AggregateRequest
    */
   @Nonnull
   public static AggregateRequest from(@Nonnull final Parameters parameters) {
@@ -171,6 +172,7 @@ public class AggregateRequest {
      * @param expression The FHIRPath expression that describes the aggregation.
      */
     public Aggregation(@Nonnull final Optional<String> label, @Nonnull final String expression) {
+      checkUserInput(!expression.isBlank(), "Aggregation expression cannot be blank");
       this.label = label;
       this.expression = expression;
     }
@@ -196,6 +198,7 @@ public class AggregateRequest {
      * @param expression The FHIRPath expression that describes the grouping.
      */
     public Grouping(@Nonnull final Optional<String> label, @Nonnull final String expression) {
+      checkUserInput(!expression.isBlank(), "Grouping expression cannot be blank");
       this.label = label;
       this.expression = expression;
     }
