@@ -29,15 +29,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.spark.SparkException;
 
 /**
- * This class unifies exception handling
+ * This class unifies exception handling.
  *
  * @author Piotr Szul
  */
 @Interceptor
 public class ErrorHandlingInterceptor {
-
-  public ErrorHandlingInterceptor() {
-  }
 
   /**
    * HAPI hook to convert errors and exceptions to BaseServerResponseException
@@ -47,6 +44,7 @@ public class ErrorHandlingInterceptor {
    * @param throwable the exception to process
    * @param request the details of the request (Servlet API)
    * @param response the response that will be sent
+   * @return an exception of type {@link BaseServerResponseException}
    */
   @Hook(Pointcut.SERVER_PRE_PROCESS_OUTGOING_EXCEPTION)
   @SuppressWarnings("unused")
@@ -66,9 +64,12 @@ public class ErrorHandlingInterceptor {
     } catch (final SparkException | UncheckedExecutionException | InternalErrorException | InvocationTargetException e) {
       // A number of exceptions are being used to wrap the actual cause. In this case we unwrap
       // its cause and pass it back to this same method to be re-evaluated.
+      //
       // A SparkException is thrown when an error occurs inside a Spark job.
-      // InvocationTargetException wrapped in InternalErrorException is thrown when a non BaseServerResponseException
-      // is thrown from a IResouceProvider (see: ca.uhn.fhir.rest.server.method.BaseMethodBinding.invokeServerMethod )
+      //
+      // InvocationTargetException wrapped in InternalErrorException is thrown when a non
+      // BaseServerResponseException is thrown from a IResourceProvider
+      // (see: ca.uhn.fhir.rest.server.method.BaseMethodBinding.invokeServerMethod )
       @Nullable final Throwable cause = e.getCause();
       if (cause != null) {
         return doConvertError(cause);
@@ -109,11 +110,9 @@ public class ErrorHandlingInterceptor {
 
   @Nonnull
   private InternalErrorException internalServerError(final @Nonnull Throwable error) {
-    // pass the
     return error instanceof InternalErrorException
            ? (InternalErrorException) error
            : new InternalErrorException("Unexpected error occurred", error);
   }
-
 
 }

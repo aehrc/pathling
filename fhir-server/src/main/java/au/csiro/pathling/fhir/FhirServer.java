@@ -185,7 +185,7 @@ public class FhirServer extends RestfulServer {
       pagingProvider.setMaximumPageSize(MAX_PAGE_SIZE);
       setPagingProvider(pagingProvider);
 
-      // Register error handling interceptor
+      // Register error handling interceptor.
       registerInterceptor(new ErrorHandlingInterceptor());
 
       // Report errors to Sentry, if configured.
