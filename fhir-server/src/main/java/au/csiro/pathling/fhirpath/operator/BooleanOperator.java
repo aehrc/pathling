@@ -94,7 +94,7 @@ public class BooleanOperator implements Operator {
     }
 
     final String expression = left.getExpression() + " " + type + " " + right.getExpression();
-    final Dataset<Row> dataset = join(left, right, JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
     final Column idColumn = left.getIdColumn();
     final Optional<Column> eidColumn = findEidColumn(left, right);
     final Optional<Column> thisColumn = findThisColumn(left, right);

@@ -6,8 +6,6 @@
 
 package au.csiro.pathling.search;
 
-import static au.csiro.pathling.errors.ErrorHandling.handleError;
-
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -117,14 +115,9 @@ public class SearchProvider implements IResourceProvider {
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search(
       @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters) {
-    try {
-      final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
-      return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
-          terminologyClient, terminologyClientFactory, fhirEncoders,
-          subjectResource, Optional.ofNullable(filters));
-
-    } catch (final Throwable e) {
-      throw handleError(e);
-    }
+    final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
+    return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
+        terminologyClient, terminologyClientFactory, fhirEncoders,
+        subjectResource, Optional.ofNullable(filters));
   }
 }

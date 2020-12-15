@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
@@ -84,9 +83,6 @@ public abstract class NonLiteralPath implements FhirPath {
         "$this column name not present in dataset"));
     eidColumn.ifPresent(col -> checkArgument(datasetColumns.contains(col.toString()),
         "eid column name not present in dataset"));
-
-    // Singular paths should have an empty element ID column.
-    check(!singular || eidColumn.isEmpty());
 
     this.expression = expression;
     this.dataset = dataset;
@@ -188,7 +184,7 @@ public abstract class NonLiteralPath implements FhirPath {
         this.getDataset(), this.makeThisColumn());
 
     return copy(NamedFunction.THIS, inputWithThis.getDataset(), this.getIdColumn(),
-        Optional.empty(), this.getValueColumn(), true,
+        this.getEidColumn(), this.getValueColumn(), true,
         Optional.of(inputWithThis.getColumn()));
   }
 

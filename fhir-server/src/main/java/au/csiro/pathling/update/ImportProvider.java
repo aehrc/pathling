@@ -6,8 +6,6 @@
 
 package au.csiro.pathling.update;
 
-import static au.csiro.pathling.errors.ErrorHandling.handleError;
-
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import javax.annotation.Nonnull;
@@ -49,12 +47,7 @@ public class ImportProvider {
    */
   @Operation(name = "$import")
   public OperationOutcome importOperation(@ResourceParam final Parameters parameters) {
-    try {
-      return executor.execute(parameters);
-
-    } catch (final Throwable e) {
-      throw handleError(e);
-    }
+    return executor.execute(parameters);
   }
 
 }

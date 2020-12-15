@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.search;
 
-import static au.csiro.pathling.errors.ErrorHandling.handleError;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
@@ -191,44 +190,36 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Override
   @Nonnull
   public IPrimitiveType<Date> getPublished() {
-    try {
-      return new InstantType(new Date());
-    } catch (final Throwable e) {
-      throw handleError(e);
-    }
+    return new InstantType(new Date());
   }
 
   @Nonnull
   @Override
   public List<IBaseResource> getResources(final int theFromIndex, final int theToIndex) {
-    try {
-      log.info("Retrieving search results ({}-{})", theFromIndex + 1, theToIndex);
+    log.info("Retrieving search results ({}-{})", theFromIndex + 1, theToIndex);
 
-      Dataset<Row> resources = result;
-      if (theFromIndex != 0) {
-        // Spark does not have an "offset" concept, so we create a list of rows to exclude and
-        // subtract them from the dataset using a left anti-join.
-        final String excludeAlias = randomAlias();
-        final Dataset<Row> exclude = resources.limit(theFromIndex)
-            .select(resources.col("id").alias(excludeAlias));
-        resources = resources
-            .join(exclude, resources.col("id").equalTo(exclude.col(excludeAlias)), "left_anti");
-      }
-      // The dataset is trimmed to the requested size.
-      if (theToIndex != 0) {
-        resources = resources.limit(theToIndex - theFromIndex);
-      }
-
-      // The requested resources are encoded into HAPI FHIR objects, and then collected.
-      @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
-          .of(subjectResource.toCode());
-      checkNotNull(encoder);
-      reportQueryPlan(resources);
-
-      return resources.as(encoder).collectAsList();
-    } catch (final Throwable e) {
-      throw handleError(e);
+    Dataset<Row> resources = result;
+    if (theFromIndex != 0) {
+      // Spark does not have an "offset" concept, so we create a list of rows to exclude and
+      // subtract them from the dataset using a left anti-join.
+      final String excludeAlias = randomAlias();
+      final Dataset<Row> exclude = resources.limit(theFromIndex)
+          .select(resources.col("id").alias(excludeAlias));
+      resources = resources
+          .join(exclude, resources.col("id").equalTo(exclude.col(excludeAlias)), "left_anti");
     }
+    // The dataset is trimmed to the requested size.
+    if (theToIndex != 0) {
+      resources = resources.limit(theToIndex - theFromIndex);
+    }
+
+    // The requested resources are encoded into HAPI FHIR objects, and then collected.
+    @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
+        .of(subjectResource.toCode());
+    checkNotNull(encoder);
+    reportQueryPlan(resources);
+
+    return resources.as(encoder).collectAsList();
   }
 
   private void reportQueryPlan(@Nonnull final Dataset<Row> resources) {
@@ -253,15 +244,11 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Nullable
   @Override
   public Integer size() {
-    try {
-      if (count.isEmpty()) {
-        reportQueryPlan(result);
-        count = Optional.of(Math.toIntExact(result.count()));
-      }
-      return count.get();
-    } catch (final Throwable e) {
-      throw handleError(e);
+    if (count.isEmpty()) {
+      reportQueryPlan(result);
+      count = Optional.of(Math.toIntExact(result.count()));
     }
+    return count.get();
   }
 
   @Nonnull

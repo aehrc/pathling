@@ -122,7 +122,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
           // If the expression is not a resource reference, treat it as a path traversal from the
           // input context.
           final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
-              context.getInputContext(), fhirPath);
+              context.getThisContext().get(), fhirPath);
           return new PathTraversalOperator().invoke(pathTraversalInput);
         }
 
@@ -178,7 +178,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // Create and alias the $this column.
       final FhirPath thisPath = nonLiteral.toThisPath();
 
-      // Create a new ParserContext, which includes information about how to evaluate the `$this` 
+      // Create a new ParserContext, which includes information about how to evaluate the `$this`
       // expression.
       final ParserContext argumentContext = new ParserContext(context.getInputContext(),
           context.getFhirContext(), context.getSparkSession(),
