@@ -105,7 +105,22 @@ public class SearchProvider implements IResourceProvider {
   }
 
   /**
-   * Handles all search requests for the resource of the nominated type.
+   * Handles all search requests for the resource of the nominated type with no filters.
+   *
+   * @return A {@link SearchExecutor} which will generate the {@link org.hl7.fhir.r4.model.Bundle}
+   * of results
+   */
+  @Search
+  @SuppressWarnings({"UnusedReturnValue"})
+  public IBundleProvider search() {
+    final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
+    return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
+        terminologyClient, terminologyClientFactory, fhirEncoders,
+        subjectResource, Optional.empty());
+  }
+
+  /**
+   * Handles all search requests for the resource of the nominated type that contain filters.
    *
    * @param filters The AND/OR search parameters passed using the "filter" key
    * @return A {@link SearchExecutor} which will generate the {@link org.hl7.fhir.r4.model.Bundle}

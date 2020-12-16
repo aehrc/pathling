@@ -6,19 +6,27 @@
 
 package au.csiro.pathling;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertJson;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.test.helpers.TestHelpers;
+import java.net.URI;
+import java.net.URISyntaxException;
 import org.apache.catalina.webresources.TomcatURLStreamHandlerFactory;
-import org.json.JSONException;
+import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.TestPropertySource;
 
 /**
@@ -27,11 +35,14 @@ import org.springframework.test.context.TestPropertySource;
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @TestPropertySource(locations = {"classpath:/configuration/integration-test.properties"})
-class CapabilityStatementTest {
+public class SearchTest {
 
+  @Autowired
+  SparkSession spark;
+  @MockBean
+  ResourceReader resourceReader;
   @LocalServerPort
   private int port;
-
   @Autowired
   private TestRestTemplate restTemplate;
 
@@ -42,12 +53,12 @@ class CapabilityStatementTest {
   }
 
   @Test
-  void capabilityStatement() throws JSONException {
-    final String response = restTemplate
-        .getForObject("http://localhost:" + port + "/fhir/metadata",
-            String.class);
-    assertJson("responses/CapabilityStatementTest/capabilityStatement.CapabilityStatement.json",
-        response, JSONCompareMode.LENIENT);
+  void searchWithNoFilter() throws URISyntaxException {
+    TestHelpers.mockResourceReader(resourceReader, spark, ResourceType.PATIENT);
+    final String uri = "http://localhost:" + port + "/fhir/Patient?_summary=false";
+    final ResponseEntity<String> response = restTemplate
+        .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);
+    assertTrue(response.getStatusCode().is2xxSuccessful());
   }
 
 }
