@@ -93,7 +93,7 @@ public class ImportExecutor {
   public OperationOutcome execute(@Nonnull @ResourceParam final Parameters inParams) {
     // Parse and validate the JSON request.
     final List<ParametersParameterComponent> sourceParams = inParams.getParameter().stream()
-        .filter(param -> param.getName().equals("source")).collect(Collectors.toList());
+        .filter(param -> "source".equals(param.getName())).collect(Collectors.toList());
     if (sourceParams.isEmpty()) {
       throw new InvalidUserInputError("Must provide at least one source parameter");
     }
@@ -103,12 +103,12 @@ public class ImportExecutor {
     // the corresponding table in the warehouse.
     for (final ParametersParameterComponent sourceParam : sourceParams) {
       final ParametersParameterComponent resourceTypeParam = sourceParam.getPart().stream()
-          .filter(param -> param.getName().equals("resourceType"))
+          .filter(param -> "resourceType".equals(param.getName()))
           .findFirst()
           .orElseThrow(
               () -> new InvalidUserInputError("Must provide resourceType for each source"));
       final ParametersParameterComponent urlParam = sourceParam.getPart().stream()
-          .filter(param -> param.getName().equals("url"))
+          .filter(param -> "url".equals(param.getName()))
           .findFirst()
           .orElseThrow(
               () -> new InvalidUserInputError("Must provide url for each source"));
@@ -127,7 +127,7 @@ public class ImportExecutor {
       } catch (final Exception e) {
         throw new InvalidUserInputError("Error reading from URL: " + url, e);
       }
-      final Dataset resources = jsonStrings
+      final Dataset<IBaseResource> resources = jsonStrings
           .map((MapFunction<String, IBaseResource>) json -> localFhirContextFactory
               .build().newJsonParser().parseResource(json), fhirEncoder);
 
