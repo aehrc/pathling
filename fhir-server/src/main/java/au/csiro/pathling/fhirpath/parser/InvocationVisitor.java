@@ -22,10 +22,13 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.Column;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -176,14 +179,27 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // includes `id` and `this` columns.
 
       // Create and alias the $this column.
-      final FhirPath thisPath = nonLiteral.toThisPath();
+      final NonLiteralPath thisPath = nonLiteral.toThisPath();
+
+      // If the this context has an element ID, we need to add this to the grouping columns so that
+      // aggregations that occur within the arguments are in the context of an element, not the
+      // resource.
+      final Optional<List<Column>> argumentGroupings = thisPath.getEidColumn()
+          .map(column -> context.getGroupingColumns()
+              .map(groupings -> {
+                final List<Column> newGroupings = new ArrayList<>(groupings);
+                newGroupings.add(column);
+                return Optional.of(newGroupings);
+              })
+              .orElse(Optional.of(Arrays.asList(context.getInputContext().getIdColumn(), column))))
+          .orElse(context.getGroupingColumns());
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this`
       // expression.
       final ParserContext argumentContext = new ParserContext(context.getInputContext(),
           context.getFhirContext(), context.getSparkSession(),
           context.getResourceReader(), context.getTerminologyClient(),
-          context.getTerminologyClientFactory(), context.getGroupingColumns());
+          context.getTerminologyClientFactory(), argumentGroupings);
       argumentContext.setThisContext(thisPath);
 
       // Parse each of the expressions passed as arguments to the function.
