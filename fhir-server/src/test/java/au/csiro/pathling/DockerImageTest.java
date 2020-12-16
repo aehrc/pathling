@@ -223,31 +223,17 @@ public class DockerImageTest {
       // Add aggregation, number of patients.
       final ParametersParameterComponent aggregationParam = new ParametersParameterComponent();
       aggregationParam.setName("aggregation");
-      final ParametersParameterComponent aggregationExpression = new ParametersParameterComponent();
-      aggregationExpression.setName("expression");
-      aggregationExpression.setValue(new StringType("count()"));
-      final ParametersParameterComponent aggregationLabel = new ParametersParameterComponent();
-      aggregationLabel.setName("label");
-      aggregationLabel.setValue(new StringType("Number of patients"));
-      aggregationParam.getPart().add(aggregationExpression);
-      aggregationParam.getPart().add(aggregationLabel);
+      aggregationParam.setValue(new StringType("count()"));
 
       // Add grouping, has the patient been diagnosed with a chronic disease?
       final ParametersParameterComponent groupingParam = new ParametersParameterComponent();
       groupingParam.setName("grouping");
-      final ParametersParameterComponent groupingExpression = new ParametersParameterComponent();
-      groupingExpression.setName("expression");
-      groupingExpression.setValue(new StringType(
+      groupingParam.setValue(new StringType(
           "reverseResolve(Condition.subject)"
               + ".code"
               + ".memberOf('http://snomed.info/sct?fhir_vs=ecl/"
               + "^ 32570581000036105 : "
               + "<< 263502005 = << 90734009')"));
-      final ParametersParameterComponent groupingLabel = new ParametersParameterComponent();
-      groupingLabel.setName("label");
-      groupingLabel.setValue(new StringType("Diagnosed with chronic disease?"));
-      groupingParam.getPart().add(groupingExpression);
-      groupingParam.getPart().add(groupingLabel);
 
       // Add filter, females only.
       final ParametersParameterComponent filterParam = new ParametersParameterComponent();
