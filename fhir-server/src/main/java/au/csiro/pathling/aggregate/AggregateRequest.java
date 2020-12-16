@@ -31,7 +31,7 @@ public class AggregateRequest {
   private static final String AGGREGATION_PARAMETER = "aggregation";
   private static final String GROUPING_PARAMETER = "grouping";
   private static final String FILTER_PARAMETER = "filter";
- 
+
   @Nonnull
   ResourceType subjectResource;
 
@@ -53,6 +53,7 @@ public class AggregateRequest {
   public AggregateRequest(@Nonnull final ResourceType subjectResource,
       @Nonnull final List<String> aggregations, @Nonnull final List<String> groupings,
       @Nonnull final List<String> filters) {
+    checkUserInput(aggregations.size() > 0, "Query must have at least one aggregation expression");
     checkUserInput(aggregations.stream().noneMatch(String::isBlank),
         "Aggregation expression cannot be blank");
     checkUserInput(groupings.stream().noneMatch(String::isBlank),

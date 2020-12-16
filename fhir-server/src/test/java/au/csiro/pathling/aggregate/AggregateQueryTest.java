@@ -531,4 +531,13 @@ class AggregateQueryTest extends AggregateExecutorTest {
     assertEquals("Filter expression cannot be blank", error.getMessage());
   }
 
+  @Test
+  void throwsInvalidInputOnMissingAggregation() {
+    subjectResource = ResourceType.PATIENT;
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new AggregateRequestBuilder(subjectResource).build());
+    assertEquals("Query must have at least one aggregation expression", error.getMessage());
+  }
+
 }
