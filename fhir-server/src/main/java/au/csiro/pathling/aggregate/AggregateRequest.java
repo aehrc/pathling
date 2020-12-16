@@ -10,7 +10,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
@@ -29,14 +28,18 @@ import org.hl7.fhir.r4.model.StringType;
 @Value
 public class AggregateRequest {
 
+  private static final String AGGREGATION_PARAMETER = "aggregation";
+  private static final String GROUPING_PARAMETER = "grouping";
+  private static final String FILTER_PARAMETER = "filter";
+ 
   @Nonnull
   ResourceType subjectResource;
 
   @Nonnull
-  List<Aggregation> aggregations;
+  List<String> aggregations;
 
   @Nonnull
-  List<Grouping> groupings;
+  List<String> groupings;
 
   @Nonnull
   List<String> filters;
@@ -48,8 +51,12 @@ public class AggregateRequest {
    * @param filters The criteria by which the data should be filtered
    */
   public AggregateRequest(@Nonnull final ResourceType subjectResource,
-      @Nonnull final List<Aggregation> aggregations,
-      @Nonnull final List<Grouping> groupings, @Nonnull final List<String> filters) {
+      @Nonnull final List<String> aggregations, @Nonnull final List<String> groupings,
+      @Nonnull final List<String> filters) {
+    checkUserInput(aggregations.stream().noneMatch(String::isBlank),
+        "Aggregation expression cannot be blank");
+    checkUserInput(groupings.stream().noneMatch(String::isBlank),
+        "Grouping expression cannot be blank");
     checkUserInput(filters.stream().noneMatch(String::isBlank),
         "Filter expression cannot be blank");
     this.subjectResource = subjectResource;
@@ -69,9 +76,9 @@ public class AggregateRequest {
   @Nonnull
   public static AggregateRequest from(@Nonnull final Parameters parameters) {
     final ResourceType subjectResource = getSubjectResource(parameters);
-    final List<Aggregation> aggregations = getAggregations(parameters);
-    final List<Grouping> groupings = getGroupings(parameters);
-    final List<String> filters = getFilters(parameters);
+    final List<String> aggregations = getExpressions(parameters, AGGREGATION_PARAMETER);
+    final List<String> groupings = getExpressions(parameters, GROUPING_PARAMETER);
+    final List<String> filters = getExpressions(parameters, FILTER_PARAMETER);
 
     return new AggregateRequest(subjectResource, aggregations, groupings, filters);
   }
@@ -97,105 +104,13 @@ public class AggregateRequest {
   }
 
   @Nonnull
-  private static List<Aggregation> getAggregations(@Nonnull final Parameters parameters) {
+  private static List<String> getExpressions(@Nonnull final Parameters parameters,
+      @Nonnull final String parameter) {
     return parameters.getParameter().stream()
-        .filter(param -> param.getName().equals("aggregation"))
-        .map(aggregation -> {
-          final Optional<String> label = aggregation.getPart()
-              .stream()
-              .filter(
-                  part -> part.getName().equals("label") && part.getValue() instanceof StringType)
-              .findFirst()
-              .map(parameter -> parameter.getValue().toString());
-          final String expression = aggregation.getPart()
-              .stream()
-              .filter(part -> part.getName().equals("expression") &&
-                  part.getValue() instanceof StringType)
-              .findFirst()
-              .map(parameter -> parameter.getValue().toString())
-              .orElseThrow(() -> new InvalidUserInputError("Aggregation must have expression"));
-          return new Aggregation(label, expression);
-        })
+        .filter(
+            param -> param.getName().equals(parameter) && param.getValue() instanceof StringType)
+        .map(aggregation -> aggregation.getValue().toString())
         .collect(Collectors.toList());
-  }
-
-  @Nonnull
-  private static List<Grouping> getGroupings(@Nonnull final Parameters parameters) {
-    return parameters.getParameter().stream()
-        .filter(param -> param.getName().equals("grouping"))
-        .map(grouping -> {
-          final Optional<String> label = grouping.getPart()
-              .stream()
-              .filter(
-                  part -> part.getName().equals("label") && part.getValue() instanceof StringType)
-              .findFirst()
-              .map(parameter -> parameter.getValue().toString());
-          final String expression = grouping.getPart()
-              .stream()
-              .filter(part -> part.getName().equals("expression") &&
-                  part.getValue() instanceof StringType)
-              .findFirst()
-              .map(parameter -> parameter.getValue().toString())
-              .orElseThrow(() -> new InvalidUserInputError("Grouping must have expression"));
-          return new Grouping(label, expression);
-        })
-        .collect(Collectors.toList());
-  }
-
-  @Nonnull
-  private static List<String> getFilters(@Nonnull final Parameters parameters) {
-    return parameters.getParameter().stream()
-        .filter(param -> param.getName().equals("filter") && param.getValue() instanceof StringType)
-        .map(filter -> filter.getValue().toString())
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * Represents an aggregation parameter within an {@link AggregateRequest}.
-   */
-  @Value
-  public static class Aggregation {
-
-    @Nonnull
-    Optional<String> label;
-
-    @Nonnull
-    String expression;
-
-    /**
-     * @param label A descriptive label for the aggregation, optional.
-     * @param expression The FHIRPath expression that describes the aggregation.
-     */
-    public Aggregation(@Nonnull final Optional<String> label, @Nonnull final String expression) {
-      checkUserInput(!expression.isBlank(), "Aggregation expression cannot be blank");
-      this.label = label;
-      this.expression = expression;
-    }
-
-  }
-
-  /**
-   * Represents a grouping parameter within an {@link AggregateRequest}.
-   */
-  @Value
-  public static class Grouping {
-
-    @Nonnull
-    Optional<String> label;
-
-    @Nonnull
-    String expression;
-
-    /**
-     * @param label A descriptive label for the grouping, optional.
-     * @param expression The FHIRPath expression that describes the grouping.
-     */
-    public Grouping(@Nonnull final Optional<String> label, @Nonnull final String expression) {
-      checkUserInput(!expression.isBlank(), "Grouping expression cannot be blank");
-      this.label = label;
-      this.expression = expression;
-    }
-
   }
 
 }

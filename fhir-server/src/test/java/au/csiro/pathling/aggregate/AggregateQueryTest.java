@@ -49,8 +49,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("Gender", "gender")
+        .withAggregation("count()")
+        .withGrouping("gender")
         .build();
 
     response = executor.execute(request);
@@ -63,10 +63,10 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource, ResourceType.ORGANIZATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of encounters", "count()")
-        .withAggregation("Number of reasons", "reasonCode.count()")
-        .withGrouping("Class", "class.code")
-        .withGrouping("Reason", "reasonCode.coding.display")
+        .withAggregation("count()")
+        .withAggregation("reasonCode.count()")
+        .withGrouping("class.code")
+        .withGrouping("reasonCode.coding.display")
         .withFilter("status = 'finished'")
         .withFilter("serviceProvider.resolve().name = 'ST ELIZABETH\\'S MEDICAL CENTER'")
         .build();
@@ -83,8 +83,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of claims", "count()")
-        .withGrouping("Claim item sequence", "item.sequence")
+        .withAggregation("count()")
+        .withGrouping("item.sequence")
         .build();
 
     response = executor.execute(request);
@@ -98,8 +98,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of claims", "count()")
-        .withGrouping("First claim item sequence + 1", "item.sequence.first() + 1")
+        .withAggregation("count()")
+        .withGrouping("item.sequence.first() + 1")
         .build();
 
     response = executor.execute(request);
@@ -113,8 +113,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("Multiple birth?", "multipleBirthBoolean")
+        .withAggregation("count()")
+        .withGrouping("multipleBirthBoolean")
         .build();
 
     response = executor.execute(request);
@@ -128,7 +128,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
+        .withAggregation("count()")
         .withFilter("birthDate > @1980 and birthDate < @1990")
         .build();
 
@@ -143,8 +143,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource, ResourceType.PATIENT);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of allergies", "count()")
-        .withGrouping("Patient gender", "patient.resolve().gender")
+        .withAggregation("count()")
+        .withGrouping("patient.resolve().gender")
         .build();
 
     response = executor.execute(request);
@@ -157,8 +157,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource, ResourceType.PATIENT);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of reports", "count()")
-        .withGrouping("Patient active status", "subject.resolve().ofType(Patient).gender")
+        .withAggregation("count()")
+        .withGrouping("subject.resolve().ofType(Patient).gender")
         .build();
 
     response = executor.execute(request);
@@ -172,8 +172,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("Condition", "reverseResolve(Condition.subject).code.coding.display")
+        .withAggregation("count()")
+        .withGrouping("reverseResolve(Condition.subject).code.coding.display")
         .build();
 
     response = executor.execute(request);
@@ -187,8 +187,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("Condition", "reverseResolve(Condition.subject).code.coding.count()")
+        .withAggregation("count()")
+        .withGrouping("reverseResolve(Condition.subject).code.coding.count()")
         .build();
 
     response = executor.execute(request);
@@ -203,9 +203,9 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("Given name", "name.given")
-        .withGrouping("Name prefix", "name.prefix")
+        .withAggregation("count()")
+        .withGrouping("name.given")
+        .withGrouping("name.prefix")
         .build();
 
     response = executor.execute(request);
@@ -219,9 +219,9 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patient given names", "name.given.count()")
-        .withAggregation("Number of patient prefixes", "name.prefix.count()")
-        .withGrouping("Gender", "gender")
+        .withAggregation("name.given.count()")
+        .withAggregation("name.prefix.count()")
+        .withGrouping("gender")
         .build();
 
     response = executor.execute(request);
@@ -235,10 +235,9 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("2010 condition verification status",
-            "reverseResolve(Condition.subject).where($this.onsetDateTime > @2010 and "
-                + "$this.onsetDateTime < @2011).verificationStatus.coding.code")
+        .withAggregation("count()")
+        .withGrouping("reverseResolve(Condition.subject).where($this.onsetDateTime > @2010 and "
+            + "$this.onsetDateTime < @2011).verificationStatus.coding.code")
         .build();
 
     response = executor.execute(request);
@@ -265,9 +264,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     final String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("Condition in ED diagnosis reference set",
-            "reverseResolve(Condition.subject).code.memberOf('" + valueSetUrl + "')")
+        .withAggregation("count()")
+        .withGrouping("reverseResolve(Condition.subject).code.memberOf('" + valueSetUrl + "')")
         .build();
 
     response = executor.execute(request);
@@ -280,8 +278,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of prescriptions", "count()")
-        .withGrouping("Authored on", "authoredOn")
+        .withAggregation("count()")
+        .withGrouping("authoredOn")
         .build();
 
     response = executor.execute(request);
@@ -295,12 +293,11 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource, ResourceType.MEDICATIONREQUEST);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("Prescription before 2018-05-06",
-            "reverseResolve(MedicationRequest.subject).where("
-                + "$this.medicationCodeableConcept.coding contains "
-                + "http://www.nlm.nih.gov/research/umls/rxnorm|313782 "
-                + "and $this.authoredOn < @2019-06-21).count() > 0")
+        .withAggregation("count()")
+        .withGrouping("reverseResolve(MedicationRequest.subject).where("
+            + "$this.medicationCodeableConcept.coding contains "
+            + "http://www.nlm.nih.gov/research/umls/rxnorm|313782 "
+            + "and $this.authoredOn < @2019-06-21).count() > 0")
         .build();
 
     response = executor.execute(request);
@@ -315,8 +312,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of medication requests", "count()")
-        .withGrouping("Status", "status")
+        .withAggregation("count()")
+        .withGrouping("status")
         .withFilter("authoredOn < @2018 and authoredOn > @2000")
         .build();
 
@@ -331,7 +328,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource, ResourceType.OBSERVATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
+        .withAggregation("count()")
         .withGrouping(
             "reverseResolve(Observation.subject).where($this.code.coding contains http://loinc.org|8302-2).status")
         .build();
@@ -347,7 +344,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource, ResourceType.OBSERVATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
+        .withAggregation("count()")
         .withGrouping(
             "where($this.gender = 'male' and $this.birthDate > @1990).communication.language.text")
         .build();
@@ -363,7 +360,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource, ResourceType.OBSERVATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of female patients", "where($this.gender = 'female').count()")
+        .withAggregation("where($this.gender = 'female').count()")
         .withGrouping("gender")
         .withGrouping("maritalStatus.coding")
         .build();
@@ -379,8 +376,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of given and family names",
-            "name.given.count() + name.family.count()")
+        .withAggregation("name.given.count() + name.family.count()")
         .withGrouping("gender")
         .build();
 
@@ -395,8 +391,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of given and family names",
-            "name.given.count() + name.family.count()")
+        .withAggregation("name.given.count() + name.family.count()")
         .build();
 
     response = executor.execute(request);
@@ -410,8 +405,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource, ResourceType.CONDITION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of encounters", "count()")
-        .withGrouping("Code system", "reverseResolve(Condition.encounter).code.coding.system")
+        .withAggregation("count()")
+        .withGrouping("reverseResolve(Condition.encounter).code.coding.system")
         .build();
 
     response = executor.execute(request);
@@ -428,8 +423,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Expression containing literal", "count() = 12")
-        .withGrouping("Status", "status")
+        .withAggregation("count() = 12")
+        .withGrouping("status")
         .build();
 
     response = executor.execute(request);
@@ -446,8 +441,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("A literal value", "true")
-        .withGrouping("Status", "status")
+        .withAggregation("true")
+        .withGrouping("status")
         .build();
 
     response = executor.execute(request);
@@ -461,8 +456,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Count is from 12 to 13", "count().where($this >= 12 and $this <= 13)")
-        .withGrouping("Status", "status")
+        .withAggregation("count().where($this >= 12 and $this <= 13)")
+        .withGrouping("status")
         .build();
 
     response = executor.execute(request);
@@ -476,9 +471,9 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of patients", "count()")
-        .withGrouping("Name prefix contains Mrs.", "name.prefix contains 'Mrs.'")
-        .withGrouping("Given name contains Karina848", "name.given contains 'Karina848'")
+        .withAggregation("count()")
+        .withGrouping("name.prefix contains 'Mrs.'")
+        .withGrouping("name.given contains 'Karina848'")
         .build();
 
     response = executor.execute(request);
@@ -492,8 +487,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of names with Karina848",
-            "name.where($this.given contains 'Karina848').count()")
+        .withAggregation("name.where($this.given contains 'Karina848').count()")
         .withFilter("id = 'Patient/9360820c-8602-4335-8b50-c88d627a0c20'")
         .build();
 
@@ -508,7 +502,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new AggregateRequestBuilder(subjectResource)
-            .withAggregation("Number of patients", "")
+            .withAggregation("")
             .build());
     assertEquals("Aggregation expression cannot be blank", error.getMessage());
   }
@@ -519,8 +513,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new AggregateRequestBuilder(subjectResource)
-            .withAggregation("Number of patients", "count()")
-            .withGrouping("Empty grouping", "")
+            .withAggregation("count()")
+            .withGrouping("")
             .build());
     assertEquals("Grouping expression cannot be blank", error.getMessage());
   }
@@ -531,7 +525,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new AggregateRequestBuilder(subjectResource)
-            .withAggregation("Number of patients", "count()")
+            .withAggregation("count()")
             .withFilter("")
             .build());
     assertEquals("Filter expression cannot be blank", error.getMessage());

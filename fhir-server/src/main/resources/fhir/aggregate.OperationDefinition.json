@@ -32,50 +32,16 @@
       "use": "in",
       "min": 1,
       "max": "*",
-      "documentation": "An expression which is used to calculate a summary value from each grouping.",
-      "part": [
-        {
-          "name": "expression",
-          "use": "in",
-          "min": 1,
-          "max": "1",
-          "documentation": "A FHIRPath expression that defines the aggregation. The context is a collection of resources of the type specified in the subjectResource parameter. The expression must evaluate to a primitive value.",
-          "type": "string"
-        },
-        {
-          "name": "label",
-          "use": "in",
-          "min": 0,
-          "max": "1",
-          "documentation": "A short description for the aggregation, for display purposes.",
-          "type": "string"
-        }
-      ]
+      "documentation": "A FHIRPath expression which is used to calculate a summary value from each grouping. The context is a collection of resources of the type specified in the subjectResource parameter. The expression must evaluate to a primitive value.",
+      "type": "string"
     },
     {
       "name": "grouping",
       "use": "in",
       "min": 0,
       "max": "*",
-      "documentation": "A description of how to group aggregate results.",
-      "part": [
-        {
-          "name": "expression",
-          "use": "in",
-          "min": 1,
-          "max": "1",
-          "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine which groupings it should be counted within. The context is an individual resource of the type specified in the subjectResource parameter. The expression must evaluate to a primitive value.",
-          "type": "string"
-        },
-        {
-          "name": "label",
-          "use": "in",
-          "min": 0,
-          "max": "1",
-          "documentation": "A short description for the grouping, for display purposes.",
-          "type": "string"
-        }
-      ]
+      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine which groupings it should be counted within. The context is an individual resource of the type specified in the subjectResource parameter. The expression must evaluate to a primitive value.",
+      "type": "string"
     },
     {
       "name": "filter",

@@ -66,8 +66,8 @@ public class GroupingLiteralTest extends AggregateExecutorTest {
     mockResourceReader(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
-        .withAggregation("Number of medication requests", "count()")
-        .withGrouping("A literal", parameters.getFhirPath())
+        .withAggregation("count()")
+        .withGrouping(parameters.getFhirPath())
         .build();
 
     response = executor.execute(request);
