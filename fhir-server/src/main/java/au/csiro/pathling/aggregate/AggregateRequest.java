@@ -42,6 +42,23 @@ public class AggregateRequest {
   List<String> filters;
 
   /**
+   * @param subjectResource The resource which will serve as the input context for each expression
+   * @param aggregations A set of aggregation expressions to execute over the data
+   * @param groupings Instructions on how the data should be grouped when aggregating
+   * @param filters The criteria by which the data should be filtered
+   */
+  public AggregateRequest(@Nonnull final ResourceType subjectResource,
+      @Nonnull final List<Aggregation> aggregations,
+      @Nonnull final List<Grouping> groupings, @Nonnull final List<String> filters) {
+    checkUserInput(filters.stream().noneMatch(String::isBlank),
+        "Filter expression cannot be blank");
+    this.subjectResource = subjectResource;
+    this.aggregations = aggregations;
+    this.groupings = groupings;
+    this.filters = filters;
+  }
+
+  /**
    * This static build method takes a {@link Parameters} resource (with the parameters defined
    * within the "aggregate" OperationDefinition) and populates the values into a new {@link
    * AggregateRequest} object.
@@ -145,6 +162,16 @@ public class AggregateRequest {
     @Nonnull
     String expression;
 
+    /**
+     * @param label A descriptive label for the aggregation, optional.
+     * @param expression The FHIRPath expression that describes the aggregation.
+     */
+    public Aggregation(@Nonnull final Optional<String> label, @Nonnull final String expression) {
+      checkUserInput(!expression.isBlank(), "Aggregation expression cannot be blank");
+      this.label = label;
+      this.expression = expression;
+    }
+
   }
 
   /**
@@ -158,6 +185,16 @@ public class AggregateRequest {
 
     @Nonnull
     String expression;
+
+    /**
+     * @param label A descriptive label for the grouping, optional.
+     * @param expression The FHIRPath expression that describes the grouping.
+     */
+    public Grouping(@Nonnull final Optional<String> label, @Nonnull final String expression) {
+      checkUserInput(!expression.isBlank(), "Grouping expression cannot be blank");
+      this.label = label;
+      this.expression = expression;
+    }
 
   }
 

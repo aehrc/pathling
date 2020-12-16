@@ -134,7 +134,10 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         for (final StringParam param : orParam.getValuesAsQueryTokens()) {
           final ParserContext parserContext = buildParserContext(currentContext);
           final Parser parser = new Parser(parserContext);
-          final FhirPath fhirPath = parser.parse(param.getValue());
+          final String expression = param.getValue();
+          checkUserInput(!expression.isBlank(), "Filter expression cannot be blank");
+
+          final FhirPath fhirPath = parser.parse(expression);
           checkUserInput(fhirPath instanceof BooleanPath || fhirPath instanceof BooleanLiteralPath,
               "Filter expression must be of Boolean type: " + fhirPath.getExpression());
           final Column filterValue = fhirPath.getValueColumn();
@@ -156,9 +159,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           // Update the context to build the next expression from the same dataset.
           currentContext = currentContext
               .copy(currentContext.getExpression(), fhirPath.getDataset(), fhirPath.getIdColumn(),
-                  currentContext.getEidColumn(),
-                  fhirPath.getValueColumn(), currentContext.isSingular(),
-                  currentContext.getThisColumn());
+                  currentContext.getEidColumn(), fhirPath.getValueColumn(),
+                  currentContext.isSingular(), currentContext.getThisColumn());
         }
 
         // Combine all the columns at this level with AND logic.
@@ -173,7 +175,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       // Get the full resources which are present in the filtered dataset.
       final String filterIdAlias = randomAlias();
       final Dataset<Row> filteredIds = currentContext.getDataset().select(filterIdColumn.alias(
-          filterIdAlias));
+          filterIdAlias)).filter(filterColumn);
       dataset = subjectDataset
           .join(filteredIds, subjectIdColumn.equalTo(col(filterIdAlias)), "left_semi");
     }
