@@ -13,6 +13,7 @@ import au.csiro.pathling.errors.ResourceNotFoundError;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
+import ca.uhn.fhir.parser.DataFormatException;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
@@ -20,6 +21,7 @@ import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.lang.reflect.InvocationTargetException;
 import javax.annotation.Nonnull;
@@ -76,6 +78,8 @@ public class ErrorHandlingInterceptor {
       } else {
         return internalServerError(e);
       }
+    } catch (final DataFormatException e) {
+      return convertDataFormatException(e);
 
     } catch (final FhirClientConnectionException e) {
       // Special case for FhirClientConnectionException
@@ -106,6 +110,24 @@ public class ErrorHandlingInterceptor {
       return internalServerError(e);
     }
 
+  }
+
+  @Nonnull
+  BaseServerResponseException convertDataFormatException(@Nonnull final DataFormatException e) {
+    final Throwable cause = e.getCause();
+    if (cause == null) {
+      // a problem with constructing FHIR from JSON
+      return new InvalidRequestException("Invalid FHIR content: " + e.getMessage());
+    } else {
+      if (cause instanceof JsonParseException) {
+        // a problem with parsing JSON
+        return new InvalidRequestException("Invalid JSON content: " + cause.getMessage());
+      } else {
+        // an unknown problem with FHIR/JSON content
+        return new InvalidRequestException(
+            "Unknown problem while parsing FHIR/JSON content: " + cause.getMessage());
+      }
+    }
   }
 
   @Nonnull

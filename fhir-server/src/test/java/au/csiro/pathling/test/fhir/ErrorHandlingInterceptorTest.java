@@ -10,8 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhir.ErrorHandlingInterceptor;
+import ca.uhn.fhir.parser.DataFormatException;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.server.exceptions.*;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.lang.reflect.InvocationTargetException;
 import javax.annotation.Nonnull;
@@ -67,6 +69,8 @@ public class ErrorHandlingInterceptorTest {
   }
 
   @Test
+  @SuppressWarnings({"SerializableNonStaticInnerClassWithoutSerialVersionUID",
+      "SerializableInnerClassWithNonSerializableOuterClass"})
   public void wrapsBaseServerResponseExceptionsWithZeroStatus() {
     final BaseServerResponseException actualException = callInterceptor(
         new BaseServerResponseException(0, "IllegalStatus") {
@@ -83,4 +87,39 @@ public class ErrorHandlingInterceptorTest {
     assertEquals(503, actualException.getStatusCode());
     assertEquals("FhirClientConnectionException message", actualException.getMessage());
   }
+
+  @Test
+  public void convertsDataFormatExceptionsWithJsonError() {
+    final BaseServerResponseException actualException = callInterceptor(
+        new DataFormatException(new JsonParseException(null,
+            "Unexpected character ('{' (code 123)): was expecting double-quote to"
+                + " start field name\\n at [Source: UNKNOWN; line: 1, column: 3]")));
+    assertTrue(actualException instanceof InvalidRequestException);
+    assertEquals("Invalid JSON content: "
+            + "Unexpected character ('{' (code 123)): was expecting double-quote to"
+            + " start field name\\n at [Source: UNKNOWN; line: 1, column: 3]",
+        actualException.getMessage());
+  }
+
+  @Test
+  public void convertsDataFormatExceptionsWithFhirError() {
+    final BaseServerResponseException actualException = callInterceptor(
+        new DataFormatException(
+            "Invalid JSON content detected, missing required element: 'resourceType'"));
+    assertTrue(actualException instanceof InvalidRequestException);
+    assertEquals("Invalid FHIR content: "
+            + "Invalid JSON content detected, missing required element: 'resourceType'",
+        actualException.getMessage());
+  }
+
+  @Test
+  public void convertsDataFormatExceptionsWithUnknownError() {
+    final BaseServerResponseException actualException = callInterceptor(
+        new DataFormatException(new RuntimeException("Some Error")));
+    assertTrue(actualException instanceof InvalidRequestException);
+    assertEquals("Unknown problem while parsing FHIR/JSON content: "
+            + "Some Error",
+        actualException.getMessage());
+  }
+
 }
