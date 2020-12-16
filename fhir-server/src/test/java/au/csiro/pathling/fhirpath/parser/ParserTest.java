@@ -357,6 +357,14 @@ public class ParserTest {
   }
 
   @Test
+  public void testNestedWhereWithAggregationOnElement() {
+    assertThatResultOf(
+        "name.where('Karina848' in where(use contains 'maiden').given).family")
+        .selectOrderedResult()
+        .hasRows("responses/ParserTest/testNestedWhereWithAggregationOnElement.csv");
+  }
+
+  @Test
   public void testBooleanOperatorWithTwoLiterals() {
     assertThatResultOf("true and false")
         .selectOrderedResult();
