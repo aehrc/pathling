@@ -159,8 +159,10 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
     checkNotNull(functionIdentifier);
     final NamedFunction function = NamedFunction.getInstance(functionIdentifier);
 
+    // If there is no invoker, we use either the input context or the this context, depending on
+    // whether we are in the context of function arguments.
     final FhirPath input = invoker == null
-                           ? context.getInputContext()
+                           ? context.getThisContext().orElse(context.getInputContext())
                            : invoker;
 
     // A literal cannot be used as a function input.
