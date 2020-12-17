@@ -28,8 +28,8 @@ public class AccessRules {
   private final List<String> allowableSources;
 
   /**
-   * @param configuration A {@link Configuration} object which controls the behaviour of the
-   * UrlSource
+   * @param configuration a {@link Configuration} object which controls the behaviour of the
+   * AccessRules
    */
   public AccessRules(@Nonnull final Configuration configuration) {
 
@@ -46,12 +46,11 @@ public class AccessRules {
     }
   }
 
-
   /**
    * Checks if data import is allowed from given URL.
    *
-   * @param url The URL to check.
-   * @throws SecurityError if url is not an allowed import source.
+   * @param url the URL to check
+   * @throws SecurityError if the URL is not an allowed import source
    */
   public void checkCanImportFrom(@Nonnull final String url) {
     if (!canImportFrom(url)) {
@@ -62,5 +61,5 @@ public class AccessRules {
   private boolean canImportFrom(@Nonnull final String url) {
     return allowableSources.stream().anyMatch(url::startsWith);
   }
-  
+
 }

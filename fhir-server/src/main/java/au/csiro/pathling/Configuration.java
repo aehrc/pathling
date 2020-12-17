@@ -79,8 +79,7 @@ public class Configuration {
   @NotNull
   private Cors cors;
 
-  // handle the `import` property outside of lombok
-  // as import is java keyword.
+  // Handle the `import` property outside of Lombok, as import is a Java keyword.
   @Getter(AccessLevel.NONE)
   @Setter(AccessLevel.NONE)
   @NotNull
@@ -91,7 +90,7 @@ public class Configuration {
     return import_;
   }
 
-  public void setImport(@Nonnull Import import_) {
+  public void setImport(@Nonnull final Import import_) {
     this.import_ = import_;
   }
 
