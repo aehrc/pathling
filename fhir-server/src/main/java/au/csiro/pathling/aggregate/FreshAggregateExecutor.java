@@ -12,8 +12,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.aggregate.AggregateRequest.Aggregation;
-import au.csiro.pathling.aggregate.AggregateRequest.Grouping;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -162,16 +160,15 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
   @Nonnull
   private List<FhirPath> parseGroupings(@Nonnull final Parser parser,
-      @Nonnull final Collection<Grouping> groupings) {
+      @Nonnull final Collection<String> groupings) {
     return groupings.stream()
         .map(grouping -> {
-          final String expression = grouping.getExpression();
-          final FhirPath result = parser.parse(expression);
+          final FhirPath result = parser.parse(grouping);
           // Each grouping expression must evaluate to a Materializable path, or a user error will
           // be thrown. There is no requirement for it to be singular, multiple values will result
           // in the resource being counted within multiple different groupings.
           checkUserInput(result instanceof Materializable,
-              "Grouping expression is not of a supported type: " + expression);
+              "Grouping expression is not of a supported type: " + grouping);
           return result;
         }).collect(Collectors.toList());
   }
@@ -193,16 +190,15 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
   @Nonnull
   private List<FhirPath> parseAggregations(@Nonnull final Parser parser,
-      @Nonnull final Collection<Aggregation> aggregations) {
+      @Nonnull final Collection<String> aggregations) {
     return aggregations.stream().map(aggregation -> {
-      final String expression = aggregation.getExpression();
-      final FhirPath result = parser.parse(expression);
+      final FhirPath result = parser.parse(aggregation);
       // Aggregation expressions must evaluate to a singular, Materializable path, or a user error
       // will be returned.
       checkUserInput(result instanceof Materializable,
-          "Aggregation expression is not of a supported type: " + expression);
+          "Aggregation expression is not of a supported type: " + aggregation);
       checkUserInput(result.isSingular(),
-          "Aggregation expression does not evaluate to a singular value: " + expression);
+          "Aggregation expression does not evaluate to a singular value: " + aggregation);
       return result;
     }).collect(Collectors.toList());
   }

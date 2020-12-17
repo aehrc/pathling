@@ -6,11 +6,8 @@
 
 package au.csiro.pathling.aggregate;
 
-import au.csiro.pathling.aggregate.AggregateRequest.Aggregation;
-import au.csiro.pathling.aggregate.AggregateRequest.Grouping;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -23,10 +20,10 @@ public class AggregateRequestBuilder {
   private final ResourceType subjectResource;
 
   @Nonnull
-  private final List<Aggregation> aggregations;
+  private final List<String> aggregations;
 
   @Nonnull
-  private final List<Grouping> groupings;
+  private final List<String> groupings;
 
   @Nonnull
   private final List<String> filters;
@@ -38,30 +35,18 @@ public class AggregateRequestBuilder {
     filters = new ArrayList<>();
   }
 
-  public AggregateRequestBuilder withAggregation(@Nonnull final String label,
-      @Nonnull final String expression) {
-    aggregations.add(new Aggregation(Optional.of(label), expression));
-    return this;
-  }
-
   public AggregateRequestBuilder withAggregation(@Nonnull final String expression) {
-    aggregations.add(new Aggregation(Optional.empty(), expression));
-    return this;
-  }
-
-  public AggregateRequestBuilder withGrouping(@Nonnull final String label,
-      @Nonnull final String expression) {
-    groupings.add(new Grouping(Optional.of(label), expression));
+    aggregations.add(expression);
     return this;
   }
 
   public AggregateRequestBuilder withGrouping(@Nonnull final String expression) {
-    groupings.add(new Grouping(Optional.empty(), expression));
+    groupings.add(expression);
     return this;
   }
 
-  public AggregateRequestBuilder withFilter(@Nonnull final String filter) {
-    filters.add(filter);
+  public AggregateRequestBuilder withFilter(@Nonnull final String expression) {
+    filters.add(expression);
     return this;
   }
 
