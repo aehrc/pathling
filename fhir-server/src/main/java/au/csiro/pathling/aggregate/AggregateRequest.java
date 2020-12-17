@@ -87,7 +87,7 @@ public class AggregateRequest {
   @Nonnull
   private static ResourceType getSubjectResource(@Nonnull final Parameters parameters) {
     final ParametersParameterComponent subjectResourceParam = parameters.getParameter().stream()
-        .filter(param -> param.getName().equals("subjectResource"))
+        .filter(param -> "subjectResource".equals(param.getName()))
         .findFirst()
         .orElseThrow(
             () -> new InvalidUserInputError("There must be one subject resource parameter"));
@@ -108,9 +108,9 @@ public class AggregateRequest {
   private static List<String> getExpressions(@Nonnull final Parameters parameters,
       @Nonnull final String parameter) {
     return parameters.getParameter().stream()
-        .filter(
-            param -> param.getName().equals(parameter) && param.getValue() instanceof StringType)
-        .map(aggregation -> aggregation.getValue().toString())
+        .filter(param -> parameter.equals(param.getName())
+            && param.getValue() instanceof StringType)
+        .map(expression -> expression.getValue().toString())
         .collect(Collectors.toList());
   }
 
