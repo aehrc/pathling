@@ -100,6 +100,10 @@ pathling:
     #   - [header]
     maxAge: 600
 
+  import:
+    allowableSources:
+      - "file:///usr/share/staging"
+
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.
 # Here is the full list: https://spark.apache.org/docs/latest/configuration.html

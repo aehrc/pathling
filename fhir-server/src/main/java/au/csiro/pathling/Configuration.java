@@ -11,8 +11,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.*;
-import lombok.Data;
-import lombok.ToString;
+import lombok.*;
 import org.hibernate.validator.constraints.URL;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -79,6 +78,22 @@ public class Configuration {
 
   @NotNull
   private Cors cors;
+
+  // handle the `import` property outside of lombok
+  // as import is java keyword.
+  @Getter(AccessLevel.NONE)
+  @Setter(AccessLevel.NONE)
+  @NotNull
+  private Import import_;
+
+  @Nonnull
+  public Import getImport() {
+    return import_;
+  }
+
+  public void setImport(@Nonnull Import import_) {
+    this.import_ = import_;
+  }
 
   /**
    * Represents configuration that controls the behaviour of Apache Spark.
@@ -317,7 +332,7 @@ public class Configuration {
   }
 
   /**
-   * Configures the CORS functionality of the server.
+   * Configures the Import
    */
   @Data
   public static class Cors {
@@ -341,6 +356,20 @@ public class Configuration {
     public Optional<List<String>> getExposeHeaders() {
       return Optional.ofNullable(exposeHeaders);
     }
+
+  }
+
+  /**
+   * Represents configuration specific to import functionality.
+   */
+  @Data
+  public static class Import {
+
+    /**
+     * A set of URL prefixes which are allowable for use within the import operation.
+     */
+    @NotNull
+    private List<String> allowableSources;
 
   }
 
