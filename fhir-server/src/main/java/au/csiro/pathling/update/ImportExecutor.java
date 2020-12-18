@@ -9,7 +9,9 @@ package au.csiro.pathling.update;
 import au.csiro.pathling.caching.CacheManager;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.errors.SecurityError;
 import au.csiro.pathling.fhir.FhirContextFactory;
+import au.csiro.pathling.io.AccessRules;
 import au.csiro.pathling.io.PersistenceScheme;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResourceWriter;
@@ -61,6 +63,9 @@ public class ImportExecutor {
   @Nonnull
   private final CacheManager cacheManager;
 
+  @Nonnull
+  private final AccessRules accessRules;
+
   /**
    * @param spark A {@link SparkSession} for resolving Spark queries
    * @param resourceReader A {@link ResourceReader} for retrieving resources
@@ -69,18 +74,21 @@ public class ImportExecutor {
    * @param fhirContextFactory A {@link FhirContextFactory} for constructing {@link
    * ca.uhn.fhir.context.FhirContext} objects in the context of parallel processing
    * @param cacheManager A {@link CacheManager} for invalidating caches upon import
+   * @param accessRules A {@link AccessRules} for validating access to URLs
    */
   public ImportExecutor(@Nonnull final SparkSession spark,
       @Nonnull final ResourceReader resourceReader, @Nonnull final ResourceWriter resourceWriter,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final FhirContextFactory fhirContextFactory,
-      @Nonnull final CacheManager cacheManager) {
+      @Nonnull final CacheManager cacheManager,
+      @Nonnull final AccessRules accessRules) {
     this.spark = spark;
     this.resourceReader = resourceReader;
     this.resourceWriter = resourceWriter;
     this.fhirEncoders = fhirEncoders;
     this.fhirContextFactory = fhirContextFactory;
     this.cacheManager = cacheManager;
+    this.accessRules = accessRules;
   }
 
   /**
@@ -123,7 +131,10 @@ public class ImportExecutor {
       url = PersistenceScheme.convertS3ToS3aUrl(url);
       final Dataset<String> jsonStrings;
       try {
+        accessRules.checkCanImportFrom(url);
         jsonStrings = spark.read().textFile(url);
+      } catch (final SecurityError e) {
+        throw new InvalidUserInputError("Not allowed to import from URL: " + url, e);
       } catch (final Exception e) {
         throw new InvalidUserInputError("Error reading from URL: " + url, e);
       }
