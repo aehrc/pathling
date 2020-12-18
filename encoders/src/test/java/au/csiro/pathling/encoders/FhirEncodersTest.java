@@ -26,19 +26,8 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.Annotation;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Condition;
-import org.hl7.fhir.r4.model.DateTimeType;
-import org.hl7.fhir.r4.model.Encounter;
-import org.hl7.fhir.r4.model.IntegerType;
-import org.hl7.fhir.r4.model.Medication;
-import org.hl7.fhir.r4.model.MedicationRequest;
-import org.hl7.fhir.r4.model.Observation;
-import org.hl7.fhir.r4.model.Patient;
-import org.hl7.fhir.r4.model.Provenance;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityComponent;
-import org.hl7.fhir.r4.model.Quantity;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -52,23 +41,24 @@ public class FhirEncodersTest {
   private static final FhirEncoders encoders =
       FhirEncoders.forR4().getOrCreate();
   private static SparkSession spark;
-  private static Patient patient = TestData.newPatient();
+  private static final Patient patient = TestData.newPatient();
   private static Dataset<Patient> patientDataset;
   private static Patient decodedPatient;
 
-  private static Condition condition = TestData.newCondition();
+  private static final Condition condition = TestData.newCondition();
   private static Dataset<Condition> conditionsDataset;
   private static Condition decodedCondition;
 
-  private static Observation observation = TestData.newObservation();
+  private static final Condition conditionWithVersion = TestData.conditionWithVersion();
+  private static final Observation observation = TestData.newObservation();
+  private static final MedicationRequest medRequest = TestData.newMedRequest();
+  private static final Encounter encounter = TestData.newEncounter();
   private static Dataset<Observation> observationsDataset;
   private static Observation decodedObservation;
-
-  private static MedicationRequest medRequest = TestData.newMedRequest();
+  private static Dataset<Condition> conditionsWithVersionDataset;
   private static Dataset<MedicationRequest> medDataset;
   private static MedicationRequest decodedMedRequest;
-
-  private static Encounter encounter = TestData.newEncounter();
+  private static Condition decodedConditionWithVersion;
   private static Dataset<Encounter> encounterDataset;
   private static Encounter decodedEncounter;
 
@@ -89,6 +79,10 @@ public class FhirEncodersTest {
     conditionsDataset = spark.createDataset(ImmutableList.of(condition),
         encoders.of(Condition.class));
     decodedCondition = conditionsDataset.head();
+
+    conditionsWithVersionDataset = spark.createDataset(ImmutableList.of(conditionWithVersion),
+        encoders.of(Condition.class));
+    decodedConditionWithVersion = conditionsWithVersionDataset.head();
 
     observationsDataset = spark.createDataset(ImmutableList.of(observation),
         encoders.of(Observation.class));
@@ -114,7 +108,6 @@ public class FhirEncodersTest {
 
   @Test
   public void testResourceId() {
-
     Assert.assertEquals(condition.getId(),
         conditionsDataset.select("id").head().get(0));
     Assert.assertEquals(condition.getId(),
@@ -122,8 +115,21 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testResourceLanguage() {
+  public void testResourceWithVersionId() {
+    Assert.assertEquals("with-version",
+        conditionsWithVersionDataset.select("id").head().get(0));
 
+    // A current limitation of the implementation is that technical version information is not
+    // preserved on the way out.
+    //
+    // TODO: Work out a way to preserve the technical version information when serializing the data
+    //  back out.
+    Assert.assertEquals("with-version",
+        decodedConditionWithVersion.getId());
+  }
+
+  @Test
+  public void testResourceLanguage() {
     Assert.assertEquals(condition.getLanguage(),
         conditionsDataset.select("language").head().get(0));
     Assert.assertEquals(condition.getLanguage(),
@@ -132,7 +138,7 @@ public class FhirEncodersTest {
 
   @Test
   public void boundCode() {
-    Row coding = (Row) conditionsDataset.select("verificationStatus")
+    final Row coding = (Row) conditionsDataset.select("verificationStatus")
         .head()
         .getStruct(0)
         .getList(1)
@@ -173,12 +179,12 @@ public class FhirEncodersTest {
   @Test
   public void coding() {
 
-    Coding expectedCoding = condition.getSeverity().getCodingFirstRep();
-    Coding actualCoding = decodedCondition.getSeverity().getCodingFirstRep();
+    final Coding expectedCoding = condition.getSeverity().getCodingFirstRep();
+    final Coding actualCoding = decodedCondition.getSeverity().getCodingFirstRep();
 
     // Codings are a nested array, so we explode them into a table of the coding
     // fields so we can easily select and compare individual fields.
-    Dataset<Row> severityCodings = conditionsDataset
+    final Dataset<Row> severityCodings = conditionsDataset
         .select(functions.explode(conditionsDataset.col("severity.coding"))
             .alias("coding"))
         .select("coding.*") // Pull all fields in the coding to the top level.
@@ -226,11 +232,11 @@ public class FhirEncodersTest {
   @Test
   public void bigDecimal() {
 
-    BigDecimal originalDecimal = ((Quantity) observation.getValue()).getValue();
-    BigDecimal queriedDecimal = (BigDecimal) observationsDataset.select("valueQuantity.value")
+    final BigDecimal originalDecimal = ((Quantity) observation.getValue()).getValue();
+    final BigDecimal queriedDecimal = (BigDecimal) observationsDataset.select("valueQuantity.value")
         .head()
         .get(0);
-    int queriedDecimal_scale = observationsDataset.select("valueQuantity.value_scale")
+    final int queriedDecimal_scale = observationsDataset.select("valueQuantity.value_scale")
         .head()
         .getInt(0);
 
@@ -238,7 +244,7 @@ public class FhirEncodersTest {
     Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
     Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
 
-    BigDecimal decodedDecimal = ((Quantity) decodedObservation.getValue()).getValue();
+    final BigDecimal decodedDecimal = ((Quantity) decodedObservation.getValue()).getValue();
     // here we expect same value,  scale and precision
     Assert.assertEquals(originalDecimal, decodedDecimal);
 
@@ -253,7 +259,7 @@ public class FhirEncodersTest {
 
   @Test
   public void instant() {
-    Date originalInstant = TestData.TEST_DATE;
+    final Date originalInstant = TestData.TEST_DATE;
 
     Assert.assertEquals(originalInstant,
         observationsDataset.select("issued")
@@ -266,8 +272,8 @@ public class FhirEncodersTest {
   @Test
   public void annotation() throws FHIRException {
 
-    Annotation original = medRequest.getNoteFirstRep();
-    Annotation decoded = decodedMedRequest.getNoteFirstRep();
+    final Annotation original = medRequest.getNoteFirstRep();
+    final Annotation decoded = decodedMedRequest.getNoteFirstRep();
 
     Assert.assertEquals(original.getText(),
         medDataset.select(functions.expr("note[0].text")).head().get(0));
@@ -278,15 +284,14 @@ public class FhirEncodersTest {
 
   }
 
-
   @Test
   public void contained() throws FHIRException {
 
     // Contained resources should be put to the Contained list in order of the Encoder arguments
     Assert.assertTrue(decodedMedRequest.getContained().get(0) instanceof Medication);
 
-    Medication originalMedication = (Medication) medRequest.getContained().get(0);
-    Medication decodedMedication = (Medication) decodedMedRequest.getContained().get(0);
+    final Medication originalMedication = (Medication) medRequest.getContained().get(0);
+    final Medication decodedMedication = (Medication) decodedMedRequest.getContained().get(0);
 
     Assert.assertEquals(originalMedication.getId(), decodedMedication.getId());
     Assert.assertEquals(originalMedication.getIngredientFirstRep()
@@ -300,15 +305,15 @@ public class FhirEncodersTest {
 
     Assert.assertTrue(decodedMedRequest.getContained().get(1) instanceof Provenance);
 
-    Provenance decodedProvenance = (Provenance) decodedMedRequest.getContained().get(1);
-    Provenance originalProvenance = (Provenance) medRequest.getContained().get(1);
+    final Provenance decodedProvenance = (Provenance) decodedMedRequest.getContained().get(1);
+    final Provenance originalProvenance = (Provenance) medRequest.getContained().get(1);
 
     Assert.assertEquals(originalProvenance.getId(), decodedProvenance.getId());
     Assert.assertEquals(originalProvenance.getTargetFirstRep().getReference(),
         decodedProvenance.getTargetFirstRep().getReference());
 
-    ProvenanceEntityComponent originalEntity = originalProvenance.getEntityFirstRep();
-    ProvenanceEntityComponent decodedEntity = decodedProvenance.getEntityFirstRep();
+    final ProvenanceEntityComponent originalEntity = originalProvenance.getEntityFirstRep();
+    final ProvenanceEntityComponent decodedEntity = decodedProvenance.getEntityFirstRep();
 
     Assert.assertEquals(originalEntity.getRole(), decodedEntity.getRole());
     Assert.assertEquals(originalEntity.getWhat().getReference(),
@@ -328,7 +333,7 @@ public class FhirEncodersTest {
 
   @Test
   public void testEmptyAttributes() {
-    Map<String, String> attributes = decodedMedRequest.getText().getDiv().getAttributes();
+    final Map<String, String> attributes = decodedMedRequest.getText().getDiv().getAttributes();
 
     Assert.assertNotNull(attributes);
     Assert.assertEquals(0, attributes.size());
@@ -337,14 +342,14 @@ public class FhirEncodersTest {
   @Test
   public void testFromRdd() {
 
-    JavaSparkContext context = new JavaSparkContext(spark.sparkContext());
+    final JavaSparkContext context = new JavaSparkContext(spark.sparkContext());
 
-    JavaRDD<Condition> conditionRdd = context.parallelize(ImmutableList.of(condition));
+    final JavaRDD<Condition> conditionRdd = context.parallelize(ImmutableList.of(condition));
 
-    Dataset<Condition> ds = spark.createDataset(conditionRdd.rdd(),
+    final Dataset<Condition> ds = spark.createDataset(conditionRdd.rdd(),
         encoders.of(Condition.class));
 
-    Condition convertedCondition = ds.head();
+    final Condition convertedCondition = ds.head();
 
     Assert.assertEquals(condition.getId(),
         convertedCondition.getId());
@@ -353,17 +358,17 @@ public class FhirEncodersTest {
   @Test
   public void testFromParquet() throws IOException {
 
-    Path dirPath = Files.createTempDirectory("encoder_test");
+    final Path dirPath = Files.createTempDirectory("encoder_test");
 
-    String path = dirPath.resolve("out.parquet").toString();
+    final String path = dirPath.resolve("out.parquet").toString();
 
     conditionsDataset.write().save(path);
 
-    Dataset<Condition> ds = spark.read()
+    final Dataset<Condition> ds = spark.read()
         .parquet(path)
         .as(encoders.of(Condition.class));
 
-    Condition readCondition = ds.head();
+    final Condition readCondition = ds.head();
 
     Assert.assertEquals(condition.getId(),
         readCondition.getId());
