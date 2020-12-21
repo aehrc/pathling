@@ -24,14 +24,10 @@ jobs:
         run: |
           mvn verify -pl fhir-server -am -DskipShade \
           -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }}
-      - uses: actions/upload-artifact@v2
+      - name: Publish test results
+        uses: scacap/action-surefire-report@v1
         with:
-          name: encoders-surefire-reports
-          path: encoders/target/surefire-reports
-      - uses: actions/upload-artifact@v2
-        with:
-          name: fhir-server-surefire-reports
-          path: fhir-server/target/surefire-reports
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Tag and push server image
         run: |
           mvn dockerfile:tag@tag-major dockerfile:tag@tag-latest dockerfile:push@push-version \
