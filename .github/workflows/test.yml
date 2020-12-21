@@ -25,9 +25,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Test report
       - uses: actions/upload-artifact@v2
-          with:
-            name: encoders-surefire-reports
-            path: encoders/target/surefire-reports
+        with:
+          name: encoders-surefire-reports
+          path: encoders/target/surefire-reports
       - uses: actions/upload-artifact@v2
         with:
           name: fhir-server-surefire-reports
