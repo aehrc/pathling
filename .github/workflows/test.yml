@@ -12,21 +12,30 @@ jobs:
     name: Server
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up JDK
-      uses: actions/setup-java@v1
-      with:
-        java-version: 11
-    - name: Run the verify goal with Maven
-      run: mvn verify -pl fhir-server -am
-    - uses: actions/upload-artifact@v2
-      with:
-        name: encoders-surefire-reports
-        path: encoders/target/surefire-reports
-    - uses: actions/upload-artifact@v2
-      with:
-        name: fhir-server-surefire-reports
-        path: fhir-server/target/surefire-reports
+      - uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Run the verify goal with Maven
+        run: mvn verify -pl fhir-server -am
+      - name: Publish test results
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: Test report
+      - uses: actions/upload-artifact@v2
+        with:
+          name: encoders-surefire-reports
+          path: encoders/target/surefire-reports
+      - uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-surefire-reports
+          path: fhir-server/target/surefire-reports
+      - uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-timing-log
+          path: fhir-server/target/timing.log
   site:
     name: Site
     runs-on: ubuntu-latest
