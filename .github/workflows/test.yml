@@ -19,10 +19,10 @@ jobs:
           java-version: 11
       - name: Run the verify goal with Maven
         run: mvn verify -pl fhir-server -am
-    - name: Publish test results
-      uses: scacap/action-surefire-report@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish test results
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
   site:
     name: Site
     runs-on: ubuntu-latest
