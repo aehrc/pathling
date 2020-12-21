@@ -11,6 +11,16 @@
       <pattern>[%level] %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
+  <appender class="ch.qos.logback.core.FileAppender" name="TIMING">
+    <file>target/timing.log</file>
+    <append>false</append>
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+      <pattern>%msg%n</pattern>
+    </encoder>
+  </appender>
+  <logger level="INFO" name="au.csiro.pathling.test.TimingExtension">
+    <appender-ref ref="TIMING"/>
+  </logger>
   <logger level="INFO" name="au.csiro"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
