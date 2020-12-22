@@ -36,6 +36,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Test report
+          fail_on_test_failures: true
   site:
     name: Site
     runs-on: ubuntu-latest
