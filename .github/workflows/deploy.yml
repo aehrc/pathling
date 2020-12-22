@@ -23,12 +23,8 @@ jobs:
       - name: Run the verify goal with Maven
         run: |
           mvn verify -pl fhir-server -am -DskipShade \
-          -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }}
-      - name: Publish test results
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: Test report
+          -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }} \
+          --batch-mode -Dmaven.test.failure.ignore=true
       - uses: actions/upload-artifact@v2
         with:
           name: encoders-surefire-reports
@@ -41,6 +37,11 @@ jobs:
         with:
           name: fhir-server-timing-log
           path: fhir-server/target/timing.log
+      - name: Publish test results
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: Test report
       - name: Tag and push server image
         run: |
           mvn dockerfile:tag@tag-major dockerfile:tag@tag-latest dockerfile:push@push-version \
