@@ -58,9 +58,9 @@ public class FirstFunctionTest {
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/1", "female", true)
-        .withRow("Patient/2", "female", false)
-        .withRow("Patient/3", "male", true)
+        .withRow("patient-1", "female", true)
+        .withRow("patient-2", "female", false)
+        .withRow("patient-3", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
@@ -85,9 +85,9 @@ public class FirstFunctionTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", "Patient/1")
-        .withRow("Patient/2", "Patient/2")
-        .withRow("Patient/3", "Patient/3")
+        .withRow("patient-1", "patient-1")
+        .withRow("patient-2", "patient-2")
+        .withRow("patient-3", "patient-3")
         .build();
 
     assertThat(result)
@@ -105,11 +105,11 @@ public class FirstFunctionTest {
         .withEidColumn()
         .withColumn(subresourceId, DataTypes.StringType)
         .withColumn(statusColumn, DataTypes.StringType)
-        .withRow("Patient/1", makeEid(2), "Encounter/5", "in-progress")
-        .withRow("Patient/1", makeEid(1), "Encounter/1", "in-progress")
-        .withRow("Patient/1", makeEid(0), "Encounter/2", "finished")
-        .withRow("Patient/2", makeEid(0), "Encounter/3", "in-progress")
-        .withRow("Patient/3", null, null, null)
+        .withRow("patient-1", makeEid(2), "Encounter/5", "in-progress")
+        .withRow("patient-1", makeEid(1), "Encounter/1", "in-progress")
+        .withRow("patient-1", makeEid(0), "Encounter/2", "finished")
+        .withRow("patient-2", makeEid(0), "Encounter/3", "in-progress")
+        .withRow("patient-3", null, null, null)
         .build();
     final ResourcePath inputPath = new ResourcePathBuilder()
         .expression("reverseResolve(Encounter.subject)")
@@ -132,9 +132,9 @@ public class FirstFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withIdColumn()
-        .withRow("Patient/1", null, "Encounter/2")
-        .withRow("Patient/2", null, "Encounter/3")
-        .withRow("Patient/3", null, null)
+        .withRow("patient-1", null, "Encounter/2")
+        .withRow("patient-2", null, "Encounter/3")
+        .withRow("patient-3", null, null)
         .build();
 
     assertThat(result)
@@ -154,18 +154,18 @@ public class FirstFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", makeEid(0, 3), "Jude")   // when: "two values"  expect: "Jude"
-        .withRow("Patient/1", makeEid(0, 2), "Mark")
-        .withRow("Patient/1", makeEid(0, 1), "Mark")
-        .withRow("Patient/1", makeEid(0, 0), "Zaak")
-        .withRow("Patient/2", makeEid(0, 0), "Samuel") // when: "single value" expect: "Samuel"
-        .withRow("Patient/3", makeEid(0, 1), "Adam") // when: "leading null" expect: "Adam"
-        .withRow("Patient/3", makeEid(0, 0), null)
-        .withRow("Patient/4", makeEid(0, 1), null) // when: "trailing null" expect: "John
-        .withRow("Patient/4", makeEid(0, 0), "John")
-        .withRow("Patient/5", null, null)    // when: "single null" expect: null
-        .withRow("Patient/6", null, null)    // when: "many nulls" expect: null
-        .withRow("Patient/6", null, null)
+        .withRow("patient-1", makeEid(0, 3), "Jude")   // when: "two values"  expect: "Jude"
+        .withRow("patient-1", makeEid(0, 2), "Mark")
+        .withRow("patient-1", makeEid(0, 1), "Mark")
+        .withRow("patient-1", makeEid(0, 0), "Zaak")
+        .withRow("patient-2", makeEid(0, 0), "Samuel") // when: "single value" expect: "Samuel"
+        .withRow("patient-3", makeEid(0, 1), "Adam") // when: "leading null" expect: "Adam"
+        .withRow("patient-3", makeEid(0, 0), null)
+        .withRow("patient-4", makeEid(0, 1), null) // when: "trailing null" expect: "John
+        .withRow("patient-4", makeEid(0, 0), "John")
+        .withRow("patient-5", null, null)    // when: "single null" expect: null
+        .withRow("patient-6", null, null)    // when: "many nulls" expect: null
+        .withRow("patient-6", null, null)
         .build();
 
     final ElementPath input = new ElementPathBuilder()
@@ -196,12 +196,12 @@ public class FirstFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", null, "Zaak")
-        .withRow("Patient/2", null, "Samuel")
-        .withRow("Patient/3", null, "Adam")
-        .withRow("Patient/4", null, "John")
-        .withRow("Patient/5", null, null)
-        .withRow("Patient/6", null, null)
+        .withRow("patient-1", null, "Zaak")
+        .withRow("patient-2", null, "Samuel")
+        .withRow("patient-3", null, "Adam")
+        .withRow("patient-4", null, "John")
+        .withRow("patient-5", null, null)
+        .withRow("patient-6", null, null)
         .build();
 
     assertThat(result)
@@ -215,9 +215,9 @@ public class FirstFunctionTest {
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/1", "female", true)
-        .withRow("Patient/2", "female", false)
-        .withRow("Patient/2", "male", true)
+        .withRow("patient-1", "female", true)
+        .withRow("patient-2", "female", false)
+        .withRow("patient-2", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT)).thenReturn(inputDataset);
     final ResourcePath inputPath = new ResourcePathBuilder()

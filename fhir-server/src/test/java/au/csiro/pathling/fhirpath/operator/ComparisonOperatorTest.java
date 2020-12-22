@@ -114,12 +114,12 @@ public class ComparisonOperatorTest {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", "Evelyn")
-        .withRow("Patient/2", "Evelyn")
-        .withRow("Patient/3", "Jude")
-        .withRow("Patient/4", null)
-        .withRow("Patient/5", "Evelyn")
-        .withRow("Patient/6", null)
+        .withRow("patient-1", "Evelyn")
+        .withRow("patient-2", "Evelyn")
+        .withRow("patient-3", "Jude")
+        .withRow("patient-4", null)
+        .withRow("patient-5", "Evelyn")
+        .withRow("patient-6", null)
         .build();
     final ElementPath left = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
@@ -130,12 +130,12 @@ public class ComparisonOperatorTest {
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", "Evelyn")
-        .withRow("Patient/2", "Jude")
-        .withRow("Patient/3", "Evelyn")
-        .withRow("Patient/4", "Evelyn")
-        .withRow("Patient/5", null)
-        .withRow("Patient/6", null)
+        .withRow("patient-1", "Evelyn")
+        .withRow("patient-2", "Jude")
+        .withRow("patient-3", "Evelyn")
+        .withRow("patient-4", "Evelyn")
+        .withRow("patient-5", null)
+        .withRow("patient-6", null)
         .build();
     final ElementPath right = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.STRING)
@@ -151,12 +151,12 @@ public class ComparisonOperatorTest {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.IntegerType)
-        .withRow("Patient/1", 1)
-        .withRow("Patient/2", 1)
-        .withRow("Patient/3", 2)
-        .withRow("Patient/4", null)
-        .withRow("Patient/5", 1)
-        .withRow("Patient/6", null)
+        .withRow("patient-1", 1)
+        .withRow("patient-2", 1)
+        .withRow("patient-3", 2)
+        .withRow("patient-4", null)
+        .withRow("patient-5", 1)
+        .withRow("patient-6", null)
         .build();
     final ElementPath left = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.INTEGER)
@@ -167,12 +167,12 @@ public class ComparisonOperatorTest {
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.IntegerType)
-        .withRow("Patient/1", 1)
-        .withRow("Patient/2", 2)
-        .withRow("Patient/3", 1)
-        .withRow("Patient/4", 1)
-        .withRow("Patient/5", null)
-        .withRow("Patient/6", null)
+        .withRow("patient-1", 1)
+        .withRow("patient-2", 2)
+        .withRow("patient-3", 1)
+        .withRow("patient-4", 1)
+        .withRow("patient-5", null)
+        .withRow("patient-6", null)
         .build();
     final ElementPath right = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.INTEGER)
@@ -188,12 +188,12 @@ public class ComparisonOperatorTest {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.createDecimalType())
-        .withRow("Patient/1", new BigDecimal("1.0"))
-        .withRow("Patient/2", new BigDecimal("1.0"))
-        .withRow("Patient/3", new BigDecimal("2.0"))
-        .withRow("Patient/4", null)
-        .withRow("Patient/5", new BigDecimal("1.0"))
-        .withRow("Patient/6", null)
+        .withRow("patient-1", new BigDecimal("1.0"))
+        .withRow("patient-2", new BigDecimal("1.0"))
+        .withRow("patient-3", new BigDecimal("2.0"))
+        .withRow("patient-4", null)
+        .withRow("patient-5", new BigDecimal("1.0"))
+        .withRow("patient-6", null)
         .build();
     final ElementPath left = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.DECIMAL)
@@ -204,12 +204,12 @@ public class ComparisonOperatorTest {
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.createDecimalType())
-        .withRow("Patient/1", new BigDecimal("1.0"))
-        .withRow("Patient/2", new BigDecimal("2.0"))
-        .withRow("Patient/3", new BigDecimal("1.0"))
-        .withRow("Patient/4", new BigDecimal("1.0"))
-        .withRow("Patient/5", null)
-        .withRow("Patient/6", null)
+        .withRow("patient-1", new BigDecimal("1.0"))
+        .withRow("patient-2", new BigDecimal("2.0"))
+        .withRow("patient-3", new BigDecimal("1.0"))
+        .withRow("patient-4", new BigDecimal("1.0"))
+        .withRow("patient-5", null)
+        .withRow("patient-6", null)
         .build();
     final ElementPath right = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.DECIMAL)
@@ -228,12 +228,12 @@ public class ComparisonOperatorTest {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", lesserDate)
-        .withRow("Patient/2", lesserDate)
-        .withRow("Patient/3", greaterDate)
-        .withRow("Patient/4", null)
-        .withRow("Patient/5", lesserDate)
-        .withRow("Patient/6", null)
+        .withRow("patient-1", lesserDate)
+        .withRow("patient-2", lesserDate)
+        .withRow("patient-3", greaterDate)
+        .withRow("patient-4", null)
+        .withRow("patient-5", lesserDate)
+        .withRow("patient-6", null)
         .build();
     final ElementPath left = new ElementPathBuilder()
         .fhirType(fhirType)
@@ -244,12 +244,12 @@ public class ComparisonOperatorTest {
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", lesserDate)
-        .withRow("Patient/2", greaterDate)
-        .withRow("Patient/3", lesserDate)
-        .withRow("Patient/4", lesserDate)
-        .withRow("Patient/5", null)
-        .withRow("Patient/6", null)
+        .withRow("patient-1", lesserDate)
+        .withRow("patient-2", greaterDate)
+        .withRow("patient-3", lesserDate)
+        .withRow("patient-4", lesserDate)
+        .withRow("patient-5", null)
+        .withRow("patient-6", null)
         .build();
     final ElementPath right = new ElementPathBuilder()
         .fhirType(fhirType)
@@ -277,12 +277,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", true),
-        RowFactory.create("Patient/2", true),
-        RowFactory.create("Patient/3", false),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", true),
+        RowFactory.create("patient-3", false),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -295,12 +295,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", false),
-        RowFactory.create("Patient/2", true),
-        RowFactory.create("Patient/3", false),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", true),
+        RowFactory.create("patient-3", false),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -313,12 +313,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", true),
-        RowFactory.create("Patient/2", false),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -331,12 +331,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", false),
-        RowFactory.create("Patient/2", false),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -349,12 +349,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", true),
-        RowFactory.create("Patient/2", true),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", true),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", true),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", true),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -367,12 +367,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", false),
-        RowFactory.create("Patient/2", true),
-        RowFactory.create("Patient/3", false),
-        RowFactory.create("Patient/4", false),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", true),
+        RowFactory.create("patient-3", false),
+        RowFactory.create("patient-4", false),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -385,12 +385,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", true),
-        RowFactory.create("Patient/2", false),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", true),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", true),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -403,12 +403,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", false),
-        RowFactory.create("Patient/2", false),
-        RowFactory.create("Patient/3", false),
-        RowFactory.create("Patient/4", false),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-3", false),
+        RowFactory.create("patient-4", false),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -421,12 +421,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", true),
-        RowFactory.create("Patient/2", true),
-        RowFactory.create("Patient/3", false),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", true),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", true),
+        RowFactory.create("patient-3", false),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", true),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -439,12 +439,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", false),
-        RowFactory.create("Patient/2", false),
-        RowFactory.create("Patient/3", false),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", false),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-3", false),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", false),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -457,12 +457,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", true),
-        RowFactory.create("Patient/2", true),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", true),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", true),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", true),
+        RowFactory.create("patient-6", null)
     );
   }
 
@@ -475,12 +475,12 @@ public class ComparisonOperatorTest {
     final FhirPath result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", false),
-        RowFactory.create("Patient/2", false),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", false),
-        RowFactory.create("Patient/6", null)
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", false),
+        RowFactory.create("patient-6", null)
     );
   }
 

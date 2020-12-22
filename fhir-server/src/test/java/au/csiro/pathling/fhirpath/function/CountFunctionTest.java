@@ -54,9 +54,9 @@ class CountFunctionTest {
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/1", "female", true)
-        .withRow("Patient/2", "female", false)
-        .withRow("Patient/3", "male", true)
+        .withRow("patient-1", "female", true)
+        .withRow("patient-2", "female", false)
+        .withRow("patient-3", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
@@ -75,9 +75,9 @@ class CountFunctionTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.LongType)
-        .withRow("Patient/1", 1L)
-        .withRow("Patient/2", 1L)
-        .withRow("Patient/3", 1L)
+        .withRow("patient-1", 1L)
+        .withRow("patient-2", 1L)
+        .withRow("patient-3", 1L)
         .build();
 
     assertThat(result)
@@ -95,9 +95,9 @@ class CountFunctionTest {
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/1", "female", true)
-        .withRow("Patient/2", "female", false)
-        .withRow("Patient/2", "male", true)
+        .withRow("patient-1", "female", true)
+        .withRow("patient-2", "female", false)
+        .withRow("patient-2", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT)).thenReturn(inputDataset);
     final ResourcePath inputPath = new ResourcePathBuilder()

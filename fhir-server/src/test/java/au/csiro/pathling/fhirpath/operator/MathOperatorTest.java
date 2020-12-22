@@ -99,7 +99,8 @@ public class MathOperatorTest {
     final Dataset<Row> literalContextDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
-        .withIdsAndValue(false, Arrays.asList("Patient/1", "Patient/2", "Patient/3", "Patient/4"))
+        .withIdsAndValue(false, Arrays
+            .asList("patient-1", "patient-2", "patient-3", "patient-4"))
         .build();
     final ElementPath literalContext = new ElementPathBuilder()
         .dataset(literalContextDataset)
@@ -127,16 +128,16 @@ public class MathOperatorTest {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.IntegerType)
-        .withRow("Patient/1", leftOperand
+        .withRow("patient-1", leftOperand
                               ? 1
                               : 2)
-        .withRow("Patient/2", leftOperand
+        .withRow("patient-2", leftOperand
                               ? null
                               : 2)
-        .withRow("Patient/3", leftOperand
+        .withRow("patient-3", leftOperand
                               ? 1
                               : null)
-        .withRow("Patient/4", null)
+        .withRow("patient-4", null)
         .build();
     return new ElementPathBuilder()
         .fhirType(FHIRDefinedType.INTEGER)
@@ -150,16 +151,16 @@ public class MathOperatorTest {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.createDecimalType())
-        .withRow("Patient/1", new BigDecimal(leftOperand
+        .withRow("patient-1", new BigDecimal(leftOperand
                                              ? "1.0"
                                              : "2.0"))
-        .withRow("Patient/2", leftOperand
+        .withRow("patient-2", leftOperand
                               ? null
                               : new BigDecimal("2.0"))
-        .withRow("Patient/3", leftOperand
+        .withRow("patient-3", leftOperand
                               ? new BigDecimal("1.0")
                               : null)
-        .withRow("Patient/4", null)
+        .withRow("patient-4", null)
         .build();
     return new ElementPathBuilder()
         .fhirType(FHIRDefinedType.DECIMAL)
@@ -181,15 +182,15 @@ public class MathOperatorTest {
                          : new BigDecimal("3.0");
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", value),
-        RowFactory.create("Patient/2", parameters.isLeftTypeIsLiteral()
+        RowFactory.create("patient-1", value),
+        RowFactory.create("patient-2", parameters.isLeftTypeIsLiteral()
                                        ? value
                                        : null),
-        RowFactory.create("Patient/3", parameters.isRightTypeIsLiteral()
+        RowFactory.create("patient-3", parameters.isRightTypeIsLiteral()
                                        ? value
                                        : null),
         RowFactory
-            .create("Patient/4",
+            .create("patient-4",
                 parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
                 ? value
                 : null)
@@ -208,15 +209,15 @@ public class MathOperatorTest {
                          : new BigDecimal("-1.0");
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", value),
-        RowFactory.create("Patient/2", parameters.isLeftTypeIsLiteral()
+        RowFactory.create("patient-1", value),
+        RowFactory.create("patient-2", parameters.isLeftTypeIsLiteral()
                                        ? value
                                        : null),
-        RowFactory.create("Patient/3", parameters.isRightTypeIsLiteral()
+        RowFactory.create("patient-3", parameters.isRightTypeIsLiteral()
                                        ? value
                                        : null),
         RowFactory
-            .create("Patient/4",
+            .create("patient-4",
                 parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
                 ? value
                 : null)
@@ -235,15 +236,15 @@ public class MathOperatorTest {
                          : new BigDecimal("2.0");
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", value),
-        RowFactory.create("Patient/2", parameters.isLeftTypeIsLiteral()
+        RowFactory.create("patient-1", value),
+        RowFactory.create("patient-2", parameters.isLeftTypeIsLiteral()
                                        ? value
                                        : null),
-        RowFactory.create("Patient/3", parameters.isRightTypeIsLiteral()
+        RowFactory.create("patient-3", parameters.isRightTypeIsLiteral()
                                        ? value
                                        : null),
         RowFactory
-            .create("Patient/4",
+            .create("patient-4",
                 parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
                 ? value
                 : null)
@@ -260,15 +261,15 @@ public class MathOperatorTest {
     final Object value = new BigDecimal("0.5");
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", value),
-        RowFactory.create("Patient/2", parameters.isLeftTypeIsLiteral()
+        RowFactory.create("patient-1", value),
+        RowFactory.create("patient-2", parameters.isLeftTypeIsLiteral()
                                        ? value
                                        : null),
-        RowFactory.create("Patient/3", parameters.isRightTypeIsLiteral()
+        RowFactory.create("patient-3", parameters.isRightTypeIsLiteral()
                                        ? value
                                        : null),
         RowFactory
-            .create("Patient/4",
+            .create("patient-4",
                 parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
                 ? value
                 : null)
@@ -285,15 +286,15 @@ public class MathOperatorTest {
     final Object value = 1;
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", value),
-        RowFactory.create("Patient/2", parameters.isLeftTypeIsLiteral()
+        RowFactory.create("patient-1", value),
+        RowFactory.create("patient-2", parameters.isLeftTypeIsLiteral()
                                        ? value
                                        : null),
-        RowFactory.create("Patient/3", parameters.isRightTypeIsLiteral()
+        RowFactory.create("patient-3", parameters.isRightTypeIsLiteral()
                                        ? value
                                        : null),
         RowFactory
-            .create("Patient/4",
+            .create("patient-4",
                 parameters.isLeftTypeIsLiteral() && parameters.isRightTypeIsLiteral()
                 ? value
                 : null)
