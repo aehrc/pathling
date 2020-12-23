@@ -90,13 +90,6 @@ FHIRPath specifications is planned:
 - `aggregate` function (see
   [aggregate](https://hl7.org/fhirpath/#aggregateaggregator-expression-init-value-value))
 
-## Cell suppression
-
-A feature is planned to enable suppression of grouping values within the
-response of the [aggregate operation](./aggregate.html), based upon certain risk
-factors such as cell size. This would reduce the risk of re-identification when
-using Pathling to deploy aggregate-only data query services.
-
 ## Real-time updates
 
 Work is planned to address the real-time streaming use case by enabling create
@@ -108,6 +101,9 @@ real-time.
 Integration with [Apache Kafka](https://kafka.apache.org/) as a potential
 alternate source of incoming data will also be investigated.
 
+See 
+[(#162) Individual resource creation and update](https://github.com/aehrc/pathling/issues/162).
+
 ## Subscriptions
 
 Work is planned to implement
@@ -115,6 +111,8 @@ Work is planned to implement
 Pathling. Push messaging relating to changes within the data (using criteria
 described using FHIRPath expressions) could be used as an engine for driving
 sophisticated alert systems within the clinical setting.
+
+See [(#164) Subscriptions](https://github.com/aehrc/pathling/issues/164).
 
 ## Extension content
 
@@ -127,19 +125,7 @@ within databases, and implement the `extension` FHIRPath function (see
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)), to
 facilitate the use of extensions within expressions.
 
-## Authorisation enhancements
-
-This change will enhance the existing support for
-[SMART](https://hl7.org/fhir/smart-app-launch/index.html) authorisation within
-the Pathling server.
-
-Focus will be placed on the following areas:
-
-- Controlling access to individual records, versus aggregate data only
-- Obfuscation of aggregate results to reduce the risk of re-identification
-- How the presence of an associated
-  [Consent](https://hl7.org/fhir/R4/consent.html) resource might influence how
-  access to data is authorised
+See [(#163) Extension content](https://github.com/aehrc/pathling/issues/163).
 
 ## APIs for Python and R
 
@@ -160,6 +146,9 @@ It will be important for these libraries to be able to be installed into a local
 environment using language-native package management utilities, i.e.
 [pip](https://pypi.org/project/pip/) and [CRAN](https://cran.r-project.org/).
 
+See [(#194) Python integration](https://github.com/aehrc/pathling/issues/194) 
+and [(#193) R integration](https://github.com/aehrc/pathling/issues/193).
+
 ## Multi-tenancy
 
 This change will allow for the hosting of multiple databases by a single
@@ -171,3 +160,28 @@ Each database will expose its own FHIR endpoint, for example:
 myserver.com/database1/fhir
 myserver.com/database2/fhir
 ```
+
+## Authorisation enhancements
+
+This change will enhance the existing support for
+[SMART](https://hl7.org/fhir/smart-app-launch/index.html) authorisation within
+the Pathling server.
+
+Focus will be placed on the following areas:
+
+- Controlling access to individual records, versus aggregate data only
+- Obfuscation of aggregate results to reduce the risk of re-identification
+- How the presence of an associated
+  [Consent](https://hl7.org/fhir/R4/consent.html) resource might influence how
+  access to data is authorised
+
+## Cell suppression
+
+A feature is planned to enable suppression of grouping values within the
+response of the [aggregate operation](./aggregate.html), based upon certain risk
+factors such as cell size. This would reduce the risk of re-identification when
+using Pathling to deploy aggregate-only data query services.
+
+You can see more planned features, in greater detail, on the 
+[Pathling project board](https://github.com/aehrc/pathling/projects/1) on 
+GitHub.
