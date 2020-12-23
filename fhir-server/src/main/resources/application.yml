@@ -1,11 +1,4 @@
 pathling:
-  # The port which the server should bind to and listen for HTTP connections.
-  httpPort: 8080
-
-  # A prefix to add to the API endpoint, e.g. a value of /foo would cause the FHIR endpoint to be 
-  # changed to /foo/fhir.
-  httpBase: ""
-
   # Controls the description of this server as displayed within the FHIR CapabilityStatement.
   implementationDescription: Yet Another Pathling Server
 

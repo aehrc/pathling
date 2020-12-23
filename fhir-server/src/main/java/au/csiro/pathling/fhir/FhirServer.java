@@ -156,9 +156,7 @@ public class FhirServer extends RestfulServer {
       // Use a proxy address strategy, which allows proxies to control the server base address with
       // the use of the X-Forwarded-Host and X-Forwarded-Proto headers.
       final ApacheProxyAddressStrategy addressStrategy = ApacheProxyAddressStrategy.forHttp();
-      if (!configuration.getHttpBase().isEmpty()) {
-        addressStrategy.setServletPath(configuration.getHttpBase() + "/fhir");
-      }
+      addressStrategy.setServletPath("/fhir");
       setServerAddressStrategy(addressStrategy);
 
       // Register the import provider.

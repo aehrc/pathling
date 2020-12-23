@@ -20,7 +20,7 @@ literal expressions:
 - [Time](#time)
 - [Coding](#coding)
 
-See also: [Literals](https://hl7.org/fhirpath/2018Sep/index.html#literals) and
+See also: [Literals](https://hl7.org/fhirpath/#literals) and
 [Using FHIR types in expressions](https://hl7.org/fhir/R4/fhirpath.html#types)
 
 ## Boolean
