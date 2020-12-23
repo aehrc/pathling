@@ -50,7 +50,7 @@
     <pathling.hapiFhirVersion>5.2.0</pathling.hapiFhirVersion>
     <pathling.sparkVersion>3.0.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
-    <pathling.dockerJavaVersion>3.2.1</pathling.dockerJavaVersion>
+    <pathling.dockerJavaVersion>3.2.7</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>2.10.1</pathling.hadoopVersion>
     <pathling.hadoopMirror>https://apache.mirror.digitalpacific.com.au/hadoop/common</pathling.hadoopMirror>
   </properties>
