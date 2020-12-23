@@ -101,4 +101,4 @@ This is useful when the volume of data is large enough to warrant the use of
 compute and memory resources from more than a single server.
 
 You can get further information about this functionality
-[here](./deployment.html#apache-spark).
+[here](./configuration.html#apache-spark).

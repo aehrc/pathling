@@ -36,19 +36,6 @@ public class Configuration {
   private String version;
 
   /**
-   * The port which the server should bind to and listen for HTTP connections.
-   */
-  @NotNull
-  private Integer httpPort;
-
-  /**
-   * A prefix to add to the API endpoint, e.g. a value of {@code /foo} would cause the FHIR endpoint
-   * to be changed to {@code /foo/fhir}.
-   */
-  @NotNull
-  private String httpBase;
-
-  /**
    * Controls the description of this server displayed within the FHIR CapabilityStatement.
    */
   @NotNull

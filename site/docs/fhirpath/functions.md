@@ -125,7 +125,7 @@ based on whether each concept is a member of the
 <div class="callout info">
     The <code>memberOf</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../deployment.html#terminology-service">Configuration and deployment</a> for details.
+    <a href="../configuration.html#terminology-service">Configuration and deployment</a> for details.
 </div>
 
 See also:
@@ -153,7 +153,7 @@ Patient.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|7
 <div class="callout info">
     The <code>subsumes</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../deployment.html#terminology-service">Configuration and deployment</a> for details.
+    <a href="../configuration.html#terminology-service">Configuration and deployment</a> for details.
 </div>
 
 See also:
@@ -178,7 +178,7 @@ Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct
 <div class="callout info">
     The <code>subsumedBy</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../deployment.html#terminology-service">Configuration and deployment</a> for details.
+    <a href="../configuration.html#terminology-service">Configuration and deployment</a> for details.
 </div>
 
 See also:
@@ -270,4 +270,4 @@ Condition.subject.resolve().ofType(Patient).gender
 See also:
 [ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 
-Next: [Configuration and deployment](../deployment.html)
+Next: [Configuration](../configuration.html)

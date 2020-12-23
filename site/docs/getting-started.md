@@ -87,7 +87,7 @@ which will configure the CORS support in Pathling to allow a browser-based
 frontend application to integrate with the Pathling API.
 
 For a full list of all available configuration variables, see
-[Configuration and deployment](./deployment.html).
+[Configuration](./configuration.html).
 
 In the `volumes` section, we set up two volumes: one for storing the warehouse
 data files, and one for importing data. The first volume, named `pathling`, is
