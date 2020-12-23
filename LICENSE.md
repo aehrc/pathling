@@ -77,7 +77,7 @@ separate files distributed with the Software.
 * (MIT License) java jwt (com.auth0:java-jwt:3.10.3 - https://github.com/auth0/java-jwt)
 * (MIT License) jwks-rsa (com.auth0:jwks-rsa:0.11.0 - https://github.com/auth0/jwks-rsa-java)
 * (Apache License, Version 2.0) Jackson-core (com.fasterxml.jackson.core:jackson-core:2.10.3 - https://github.com/FasterXML/jackson-core)
-* (Apache License, Version 2.0) Woodstox (com.fasterxml.woodstox:woodstox-core:6.2.1 - https://github.com/FasterXML/woodstox)
+* (Apache License, Version 2.0) Woodstox (com.fasterxml.woodstox:woodstox-core:6.2.3 - https://github.com/FasterXML/woodstox)
 * (Apache License, Version 2.0) docker-java (com.github.docker-java:docker-java:3.2.7 - https://github.com/docker-java/docker-java)
 * (Apache License, Version 2.0) docker-java-transport-okhttp (com.github.docker-java:docker-java-transport-okhttp:3.2.7 - https://github.com/docker-java/docker-java)
 * (BSD License) Sentry-Java client (io.sentry:sentry:1.7.30 - https://github.com/getsentry/sentry-java/sentry)
