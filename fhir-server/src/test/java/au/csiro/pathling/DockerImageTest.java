@@ -131,7 +131,7 @@ public class DockerImageTest {
           .withExposedPorts(fhirServerPort)
           .withHostConfig(fhirServerHostConfig)
           .withEnv(
-              "PATHLING_TERMINOLOGY_SERVER_URL=" + TERMINOLOGY_SERVICE_URL)
+              "pathling.terminology.serverUrl=" + TERMINOLOGY_SERVICE_URL)
           .withName(FHIR_SERVER_CONTAINER_NAME)
           .exec();
 
