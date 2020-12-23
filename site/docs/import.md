@@ -7,7 +7,7 @@ parent: Documentation
 
 # Import
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-2)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-3)
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and the `$import` operation is an
