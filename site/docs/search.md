@@ -7,7 +7,7 @@ parent: Documentation
 
 # Search
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-2)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-3)
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and defines a
@@ -22,8 +22,12 @@ determines whether the resource will be included in the search result.
 As per the [FHIR search](https://hl7.org/fhir/R4/search.html#combining)
 specification, multiple instances of the search parameter are combined using
 Boolean AND logic, and multiple expressions can be provided within a single
-search parameter and delimited by commas to achieve OR logic. Composite search
-parameters (using the `$` notation) are not currently supported.
+search parameter and delimited by commas to achieve OR logic. In addition to 
+this, [FHIRPath boolean operators](./fhirpath/operators.html#boolean-logic) can 
+be used within expressions.
+
+Composite search parameters (using the `$` notation) are not currently 
+supported.
 
 ```
 GET [FHIR endpoint]/[resource type]?_query=fhirPath&filter=[FHIRPath expression]...
