@@ -316,6 +316,7 @@
                     <licenseMerge>GNU Lesser General Public License|GNU Lesser General Public License (LGPL), Version 2.1|LGPL 2.1</licenseMerge>
                     <licenseMerge>GNU General Public License v2.0 with Classpath Exception|GPL2 w/ CPE</licenseMerge>
                   </licenseMerges>
+                  <includeTransitiveDependencies>false</includeTransitiveDependencies>
                 </configuration>
               </execution>
               <execution>
@@ -324,6 +325,9 @@
                 <goals>
                   <goal>aggregate-download-licenses</goal>
                 </goals>
+                <configuration>
+                  <includeTransitiveDependencies>false</includeTransitiveDependencies>
+                </configuration>
               </execution>
             </executions>
           </plugin>
