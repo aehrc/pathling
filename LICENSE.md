@@ -76,7 +76,7 @@ separate files distributed with the Software.
 * (Eclipse Public License 1.0) (GNU Lesser General Public License) Logback Classic Module (ch.qos.logback:logback-classic:1.2.3 - http://logback.qos.ch/logback-classic)
 * (MIT License) java jwt (com.auth0:java-jwt:3.10.3 - https://github.com/auth0/java-jwt)
 * (MIT License) jwks-rsa (com.auth0:jwks-rsa:0.11.0 - https://github.com/auth0/jwks-rsa-java)
-* (Apache License, Version 2.0) Jackson-core (com.fasterxml.jackson.core:jackson-core:2.10.3 - https://github.com/FasterXML/jackson-core)
+* (Apache License, Version 2.0) Jackson-core (com.fasterxml.jackson.core:jackson-core:2.12.0 - https://github.com/FasterXML/jackson-core)
 * (Apache License, Version 2.0) Woodstox (com.fasterxml.woodstox:woodstox-core:6.2.3 - https://github.com/FasterXML/woodstox)
 * (Apache License, Version 2.0) docker-java (com.github.docker-java:docker-java:3.2.7 - https://github.com/docker-java/docker-java)
 * (Apache License, Version 2.0) docker-java-transport-okhttp (com.github.docker-java:docker-java-transport-okhttp:3.2.7 - https://github.com/docker-java/docker-java)
