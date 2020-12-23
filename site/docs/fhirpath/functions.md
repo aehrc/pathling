@@ -13,9 +13,6 @@ as input and produce another collection as output and may take parameters.
 
 The following functions are currently supported:
 
-- [resolve](#resolve)
-- [reverseResolve](#reverseresolve)
-- [ofType](#oftype)
 - [count](#count)
 - [first](#first)
 - [empty](#empty)
@@ -23,6 +20,9 @@ The following functions are currently supported:
 - [memberOf](#memberof)
 - [subsumes](#subsumes)
 - [subsumedBy](#subsumedby)
+- [resolve](#resolve)
+- [reverseResolve](#reverseresolve)
+- [ofType](#oftype)
 
 The notation used to describe the type signature of each function is as follows:
 
@@ -31,88 +31,6 @@ The notation used to describe the type signature of each function is as follows:
 ```
 
 See also: [Functions](https://hl7.org/fhirpath/#functions-2)
-
-## resolve
-
-```
-Reference -> resolve(): collection<Resource>
-```
-
-The `resolve` function is used to traverse references between FHIR resources.
-Given a collection of
-[References](https://hl7.org/fhir/R4/references.html#Reference), this function
-will return a collection of the resources to which they refer.
-
-Example:
-
-```
-AllergyIntolerance.patient.resolve().gender
-```
-
-<div class="callout warning">
-    Resolution of <code>uri</code> and <code>canonical</code> types (outside of <code>Reference.reference</code> is not 
-    currently supported.
-</div>
-
-<div class="callout warning">
-    Resolution of resources by identifier is not currently supported.
-</div>
-
-See also:
-[Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
-
-## reverseResolve
-
-```
-collection<Resource> -> reverseResolve(sourceReference: Reference): collection<Resource>
-```
-
-In FHIR, resource references are unidirectional, and often the source of the
-reference will be a resource type which is not the subject of the current path.
-
-The `reverseResolve` function takes a collection of Resources as input, and a
-[Reference](https://hl7.org/fhir/R4/references.html#Reference) as the argument.
-It returns a collection of all the parent resources of the source References
-that resolve to the input resource.
-
-Example:
-
-```
-Patient.reverseResolve(Encounter.subject).reasonCode
-```
-
-<div class="callout warning">
-    The <code>reverseResolve</code> function is not within the FHIRPath specification, and is currently unique to the 
-    Pathling implementation.
-</div>
-
-<div class="callout warning">
-    Resolution of resources by identifier is not currently supported.
-</div>
-
-## ofType
-
-```
-collection -> ofType(type: Resource): collection
-```
-
-Returns a collection that contains all items in the input collection that are of
-the given type. It is often necessary to use the `ofType` function in
-conjunction with the `resolve` function, to resolve references that are
-polymorphic.
-
-Example:
-
-```
-Condition.subject.resolve().ofType(Patient).gender
-```
-
-<div class="callout warning">
-    Only resource types are currently supported by this function.
-</div>
-
-See also:
-[ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 
 ## count
 
@@ -173,16 +91,18 @@ collection -> where(criteria: expression) : collection
 
 Returns a collection containing only those elements in the input collection for
 which the `criteria` expression evaluates to `true`. Elements for which the
-expression evaluates to `false` or an empty collection will not be included in
-the result.
+expression evaluates to `false` or an empty collection will return an empty 
+collection.
 
-The `$this` keyword is used within the criteria expression to refer to the item
-from the input collection currently under evaluation.
+The `$this` keyword can be used within the criteria expression to refer to the 
+item from the input collection currently under evaluation. The context inside
+the arguments is also set to the current item, so paths from the root are
+assumed to be path traversals from the current element.
 
 Example:
 
 ```
-Patient.reverseResolve(Condition.subject).where($this.recordedDate > @1960).severity
+Patient.reverseResolve(Condition.subject).where(recordedDate > @1960).severity
 ```
 
 See also:
@@ -198,7 +118,7 @@ The `memberOf` function can be invoked on a collection of
 [Coding](./data-types.html#coding) or
 [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept)
 values, returning a collection of [Boolean](./data-types.html#boolean) values
-based on whether the concept is a member of the
+based on whether each concept is a member of the
 [ValueSet](https://hl7.org/fhir/R4/valueset.html) with the specified
 [url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
 
@@ -217,19 +137,12 @@ See also:
 collection<Coding|CodeableConcept> -> subsumes(code: Coding|CodeableConcept) : collection<Boolean>
 ```
 
-When invoked on a [Coding](./data-types.html#coding)-valued element and the
-given code is Coding-valued, returns true if the source code is equivalent to
-the given code, or if the source code subsumes the given code (i.e. the source
-code is an ancestor of the given code in a subsumption hierarchy), and false
-otherwise.
-
-If the Codings are from different code systems, the relationships between the
-code systems must be well-defined or a run-time error is thrown.
-
-When the source or given elements are
-[CodeableConcepts](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept),
-returns true if any Coding in the source or given elements is equivalent to or
-subsumes the given code.
+This function takes a collection of [Coding](./data-types.html#coding) or 
+[CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept) 
+elements as input, and another collection as the argument. The result is a 
+collection with a Boolean value for each source concept, each value being true 
+if the concept subsumes any of the concepts within the argument collection, and 
+false otherwise.
 
 Example:
 
@@ -252,19 +165,9 @@ See also:
 collection<Coding|CodeableConcept> -> subsumedBy(code: Coding|CodeableConcept) : collection<Boolean>
 ```
 
-When invoked on a [Coding](./data-types.html#coding)-valued element and the
-given code is Coding-valued, returns true if the source code is equivalent to
-the given code, or if the source code is subsumed by the given code (i.e. the
-given code is an ancestor of the source code in a subsumption hierarchy), and
-false otherwise.
-
-If the Codings are from different code systems, the relationships between the
-code systems must be well-defined or a run-time error is thrown.
-
-When the source or given elements are
-[CodeableConcepts](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept),
-returns true if any Coding in the source or given elements is equivalent to or
-subsumed by the given code.
+The `subsumedBy` function is the inverse of the [subsumes](#subsumes) function,
+examining whether each input concept is _subsumed by_ any of the argument 
+concepts.
 
 Example:
 
@@ -280,5 +183,91 @@ Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
+
+## resolve
+
+```
+Reference -> resolve(): collection<Resource>
+```
+
+The `resolve` function is used to traverse references between FHIR resources.
+Given a collection of
+[References](https://hl7.org/fhir/R4/references.html#Reference), this function
+will return a collection of the resources to which they refer.
+
+Example:
+
+```
+AllergyIntolerance.patient.resolve().gender
+```
+
+<div class="callout warning">
+    The following types of references are not currently supported:
+    <ol>
+      <li>References to individual technical versions of a resource</li>
+      <li>Logical references (via <code>identifier</code>)</li>
+      <li>References to contained resources</li>
+      <li>Absolute literal references</li>
+    </ol>
+</div>
+
+See also:
+[Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
+
+## reverseResolve
+
+```
+collection<Resource> -> reverseResolve(sourceReference: Reference): collection<Resource>
+```
+
+In FHIR, resource references are unidirectional, and often the source of the
+reference will be a resource type which is not the subject of the current path.
+
+The `reverseResolve` function takes a collection of Resources as input, and a
+[Reference](https://hl7.org/fhir/R4/references.html#Reference) as the argument.
+It returns a collection of all the parent resources of the source References
+that resolve to the input resource.
+
+Example:
+
+```
+Patient.reverseResolve(Encounter.subject).reasonCode
+```
+
+<div class="callout warning">
+    The <code>reverseResolve</code> function is not within the FHIRPath 
+    specification, and is currently unique to the Pathling implementation.
+</div>
+
+<div class="callout warning">
+    The same caveats apply with regards to types of references supported as 
+    described in the <a href="#resolve">resolve</a> function.
+</div>
+
+## ofType
+
+```
+collection -> ofType(type: Resource): collection
+```
+
+Returns a collection that contains all items in the input collection that are of
+the given type. It is often necessary to use the `ofType` function in
+conjunction with the `resolve` function, to resolve references that are
+polymorphic.
+
+Example:
+
+```
+Condition.subject.resolve().ofType(Patient).gender
+```
+
+<div class="callout warning">
+    This function is currently only supported for use with the 
+    <a href="#resolve">resolve</a> function for the purpose of disambiguating 
+    polymorphic resource references.
+</div>
+
+See also:
+[ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 
 Next: [Configuration and deployment](../deployment.html)
