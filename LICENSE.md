@@ -68,11 +68,11 @@ agree to comply with the licence terms for these components as part of
 accessing the Software. Other third party software may also be identified in
 separate files distributed with the Software.
 
-* (Apache License, Version 2.0) HAPI FHIR - Core Library (ca.uhn.hapi.fhir:hapi-fhir-base:5.1.0 - http://jamesagnew.github.io/hapi-fhir/)
-* (Apache License, Version 2.0) HAPI FHIR - Client Framework (ca.uhn.hapi.fhir:hapi-fhir-client:5.1.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-client)
-* (Apache License, Version 2.0) HAPI FHIR - Server Framework (ca.uhn.hapi.fhir:hapi-fhir-server:5.1.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-server)
-* (Apache License, Version 2.0) HAPI FHIR Structures - FHIR R4 (ca.uhn.hapi.fhir:hapi-fhir-structures-r4:5.1.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-structures-r4)
-* (Apache License, Version 2.0) HAPI FHIR - Validation Resources (FHIR R4) (ca.uhn.hapi.fhir:hapi-fhir-validation-resources-r4:5.1.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-validation-resources-r4)
+* (Apache License, Version 2.0) HAPI FHIR - Core Library (ca.uhn.hapi.fhir:hapi-fhir-base:5.2.0 - http://jamesagnew.github.io/hapi-fhir/)
+* (Apache License, Version 2.0) HAPI FHIR - Client Framework (ca.uhn.hapi.fhir:hapi-fhir-client:5.2.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-client)
+* (Apache License, Version 2.0) HAPI FHIR - Server Framework (ca.uhn.hapi.fhir:hapi-fhir-server:5.2.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-server)
+* (Apache License, Version 2.0) HAPI FHIR Structures - FHIR R4 (ca.uhn.hapi.fhir:hapi-fhir-structures-r4:5.2.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-structures-r4)
+* (Apache License, Version 2.0) HAPI FHIR - Validation Resources (FHIR R4) (ca.uhn.hapi.fhir:hapi-fhir-validation-resources-r4:5.2.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-validation-resources-r4)
 * (Eclipse Public License 1.0) (GNU Lesser General Public License) Logback Classic Module (ch.qos.logback:logback-classic:1.2.3 - http://logback.qos.ch/logback-classic)
 * (MIT License) java jwt (com.auth0:java-jwt:3.10.3 - https://github.com/auth0/java-jwt)
 * (MIT License) jwks-rsa (com.auth0:jwks-rsa:0.11.0 - https://github.com/auth0/jwks-rsa-java)

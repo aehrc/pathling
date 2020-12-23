@@ -47,7 +47,7 @@
     <project.majorVersion>3</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     
-    <pathling.hapiFhirVersion>5.1.0</pathling.hapiFhirVersion>
+    <pathling.hapiFhirVersion>5.2.0</pathling.hapiFhirVersion>
     <pathling.sparkVersion>3.0.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.dockerJavaVersion>3.2.1</pathling.dockerJavaVersion>
@@ -327,7 +327,7 @@
                   <licenseMerges>
                     <licenseMerge>Apache License, Version 2.0|Apache Software License 2.0|The Apache
                       License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0
-                      License|Apache License 2.0
+                      License|Apache License 2.0|The Apache License, Version 2.0|Apache 2.0 License
                     </licenseMerge>
                     <licenseMerge>BSD License|BSD New|The BSD License|New BSD License</licenseMerge>
                     <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - v 1.0
