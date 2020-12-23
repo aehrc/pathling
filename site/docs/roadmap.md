@@ -10,7 +10,7 @@ parent: Documentation
 The roadmap for future development on Pathling is based upon the following
 themes:
 
-1. [Summarize operation](#summarize-operation)
+1. [Summarise operation](#summarise-operation)
 2. [Improved FHIRPath support](#improved-fhirpath-support)
 3. [Cell suppression](#cell-suppression)
 4. [Real-time updates](#real-time-updates)
@@ -20,9 +20,9 @@ themes:
 8. [APIs for Python and R](#apis-for-python-and-r)
 9. [Multi-tenancy](#multi-tenancy)
 
-## Summarize operation
+## Summarise operation
 
-This change will introduce a new operation called `summarize`. This operation is
+This change will introduce a new operation called `summarise`. This operation is
 designed for extracting data for use within other tools, such as statistical and
 machine learning models.
 
@@ -30,13 +30,13 @@ The operation takes a set of expressions that define columns in a tabular view
 of the data. A URL pointing to a delimited text file is returned, which contains
 the result of executing the expressions against each subject resource.
 
-<img src="/images/summarize.png" 
-     srcset="/images/summarize@2x.png 2x, /images/summarize.png 1x"
-     alt="Summarize operation" />
+<img src="/images/summarise.png" 
+     srcset="/images/summarise@2x.png 2x, /images/summarise.png 1x"
+     alt="Summarise operation" />
 
 ### Request
 
-The request for the `$summarize` operation is a
+The request for the `$summarise` operation is a
 [Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
@@ -60,7 +60,7 @@ following parameters:
 
 ### Response
 
-The response for the `$summarize` operation is a
+The response for the `$summarise` operation is a
 [Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
@@ -75,20 +75,20 @@ FHIRPath specifications is planned:
 - `translate` function (see
   [Terminology Service API](https://hl7.org/fhir/R4/fhirpath.html#txapi))
 - `select` function (see
-  [select](https://hl7.org/fhirpath/2018Sep/index.html#selectprojection-expression-collection))
+  [select](https://hl7.org/fhirpath/#selectprojection-expression-collection))
 - Various aggregate functions (`average`, `covarPop`, `covarSample`, `max`,
   `min`, `mean`, `stddevPop`, `stddevSample`, `sum`, `varPop`, `varSample`)
 - Date component functions (`toSeconds`, `toMinutes`, `toHours`, `dayOfMonth`,
   `dayOfWeek`, `weekOfYear`, `toMonthNumber`, `toQuarter`, `toYear`)
 - `dateFormat` function
 - `is` and `as` operators (see
-  [Types](https://hl7.org/fhirpath/2018Sep/index.html#types))
+  [Types](https://hl7.org/fhirpath/#types))
 - `Quantity` data type, including support for unit-aware operations using
   [UCUM](https://unitsofmeasure.org) (see
-  [Quantity](https://hl7.org/fhirpath/2018Sep/index.html#types) and
-  [Operations](https://hl7.org/fhirpath/2018Sep/index.html#operations))
+  [Quantity](https://hl7.org/fhirpath/#types) and
+  [Operations](https://hl7.org/fhirpath/#operations))
 - `aggregate` function (see
-  [aggregate](https://hl7.org/fhirpath/2018Sep/index.html#aggregateaggregator-expression-init-value-value))
+  [aggregate](https://hl7.org/fhirpath/#aggregateaggregator-expression-init-value-value))
 
 ## Cell suppression
 

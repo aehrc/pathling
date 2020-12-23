@@ -30,7 +30,7 @@ The notation used to describe the type signature of each function is as follows:
 [input type] -> [function name]([argument name]: [argument type], ...): [return type]
 ```
 
-See also: [Functions](https://hl7.org/fhirpath/2018Sep/index.html#functions-2)
+See also: [Functions](https://hl7.org/fhirpath/#functions-2)
 
 ## resolve
 
@@ -112,7 +112,7 @@ Condition.subject.resolve().ofType(Patient).gender
 </div>
 
 See also:
-[ofType](https://hl7.org/fhirpath/2018Sep/index.html#oftypetype-identifier-collection)
+[ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 
 ## count
 
@@ -129,7 +129,7 @@ Example:
 Patient.name.given.count()
 ```
 
-See also: [count](https://hl7.org/fhirpath/2018Sep/index.html#count-integer)
+See also: [count](https://hl7.org/fhirpath/#count-integer)
 
 ## first
 
@@ -147,7 +147,7 @@ Example:
 Patient.name.given.first()
 ```
 
-See also: [first](https://hl7.org/fhirpath/2018Sep/index.html#first-collection)
+See also: [first](https://hl7.org/fhirpath/#first-collection)
 
 ## empty
 
@@ -163,7 +163,7 @@ Example:
 Patient.reverseResolve(Condition.subject).empty()
 ```
 
-See also: [empty](https://hl7.org/fhirpath/2018Sep/index.html#empty-boolean)
+See also: [empty](https://hl7.org/fhirpath/#empty-boolean)
 
 ## where
 
@@ -186,7 +186,7 @@ Patient.reverseResolve(Condition.subject).where($this.recordedDate > @1960).seve
 ```
 
 See also:
-[where](https://hl7.org/fhirpath/2018Sep/index.html#wherecriteria-expression-collection)
+[where](https://hl7.org/fhirpath/#wherecriteria-expression-collection)
 
 ## memberOf
 

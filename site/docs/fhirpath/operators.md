@@ -20,7 +20,7 @@ Pathling:
 - [Boolean logic](#boolean-logic) (`and`, `or`, `xor` and `implies`)
 - [Membership](#membership) (`in` and `contains`)
 
-See also: [Operations](https://hl7.org/fhirpath/2018Sep/index.html#operations)
+See also: [Operations](https://hl7.org/fhirpath/#operations)
 
 ## Equality
 
@@ -37,7 +37,7 @@ Both operands must be of the same type, and must be singular.
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
 
-See also: [Equality](https://hl7.org/fhirpath/2018Sep/index.html#equality)
+See also: [Equality](https://hl7.org/fhirpath/#equality)
 
 ## Comparison
 
@@ -63,7 +63,7 @@ individual characters.
 
 All comparison operators return a [Boolean](./data-types.html#boolean) value.
 
-See also: [Comparison](https://hl7.org/fhirpath/2018Sep/index.html#comparison)
+See also: [Comparison](https://hl7.org/fhirpath/#comparison)
 
 ## Math
 
@@ -87,7 +87,7 @@ Both operands must be of the same type, and must be singular.
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
 
-See also: [Math](https://hl7.org/fhirpath/2018Sep/index.html#math)
+See also: [Math](https://hl7.org/fhirpath/#math)
 
 ## Boolean logic
 
@@ -104,7 +104,7 @@ Both operands to a Boolean operator must be singular
 All Boolean operators return a [Boolean](./data-types.html#boolean) value.
 
 See also:
-[Boolean logic](https://hl7.org/fhirpath/2018Sep/index.html#boolean-logic)
+[Boolean logic](https://hl7.org/fhirpath/#boolean-logic)
 
 ## Membership
 
@@ -124,6 +124,6 @@ multiple items, an error is returned.
 The `contains` operator is the inverse of `in`.
 
 See also:
-[Collections](https://hl7.org/fhirpath/2018Sep/index.html#collections-2)
+[Collections](https://hl7.org/fhirpath/#collections-2)
 
 Next: [Functions](./functions.html)
