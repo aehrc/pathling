@@ -37,7 +37,7 @@ public class RequestIdInterceptor {
     if (requestDetails != null) {
       final String requestId = requestDetails.getRequestId();
       MDC.put("requestId", requestId);
-      Sentry.getContext().addExtra("requestId", requestId);
+      Sentry.setExtra("requestId", requestId);
     } else {
       log.warn("Request ID interceptor invoked with missing request details");
     }
