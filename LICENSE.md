@@ -75,7 +75,7 @@ separate files distributed with the Software.
 * (Apache License, Version 2.0) HAPI FHIR - Validation Resources (FHIR R4) (ca.uhn.hapi.fhir:hapi-fhir-validation-resources-r4:5.2.0 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-validation-resources-r4)
 * (Eclipse Public License 1.0) (GNU Lesser General Public License) Logback Classic Module (ch.qos.logback:logback-classic:1.2.3 - http://logback.qos.ch/logback-classic)
 * (MIT License) java jwt (com.auth0:java-jwt:3.12.0 - https://github.com/auth0/java-jwt)
-* (MIT License) jwks-rsa (com.auth0:jwks-rsa:0.11.0 - https://github.com/auth0/jwks-rsa-java)
+* (MIT License) jwks-rsa (com.auth0:jwks-rsa:0.15.0 - https://github.com/auth0/jwks-rsa-java)
 * (Apache License, Version 2.0) Jackson-core (com.fasterxml.jackson.core:jackson-core:2.12.0 - https://github.com/FasterXML/jackson-core)
 * (Apache License, Version 2.0) Woodstox (com.fasterxml.woodstox:woodstox-core:6.2.3 - https://github.com/FasterXML/woodstox)
 * (Apache License, Version 2.0) docker-java (com.github.docker-java:docker-java:3.2.7 - https://github.com/docker-java/docker-java)
