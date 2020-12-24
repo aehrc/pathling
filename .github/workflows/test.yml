@@ -18,12 +18,7 @@ jobs:
         with:
           java-version: 11
       - name: Run the verify goal with Maven
-        run: mvn verify -pl fhir-server -am
-      - name: Publish test results
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: Test report
+        run: mvn --batch-mode verify -pl fhir-server -am -Dmaven.test.failure.ignore=true
       - uses: actions/upload-artifact@v2
         with:
           name: encoders-surefire-reports
@@ -36,6 +31,12 @@ jobs:
         with:
           name: fhir-server-timing-log
           path: fhir-server/target/timing.log
+      - name: Publish test results
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: Test report
+          fail_on_test_failures: true
   site:
     name: Site
     runs-on: ubuntu-latest

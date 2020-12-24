@@ -288,6 +288,14 @@
     <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
   </scm>
 
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/aehrc/pathling</url>
+    </repository>
+  </distributionManagement>
+
   <profiles>
     <profile>
       <id>licenses</id>
