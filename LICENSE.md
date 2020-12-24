@@ -80,7 +80,7 @@ separate files distributed with the Software.
 * (Apache License, Version 2.0) Woodstox (com.fasterxml.woodstox:woodstox-core:6.2.3 - https://github.com/FasterXML/woodstox)
 * (Apache License, Version 2.0) docker-java (com.github.docker-java:docker-java:3.2.7 - https://github.com/docker-java/docker-java)
 * (Apache License, Version 2.0) docker-java-transport-okhttp (com.github.docker-java:docker-java-transport-okhttp:3.2.7 - https://github.com/docker-java/docker-java)
-* (BSD License) Sentry-Java client (io.sentry:sentry:1.7.30 - https://github.com/getsentry/sentry-java/sentry)
+* (MIT) io.sentry:sentry (io.sentry:sentry:3.2.0 - https://github.com/getsentry/sentry-java)
 * (Eclipse Public License 1.0) JUnit (junit:junit:4.13 - http://junit.org)
 * (BSD License) ANTLR 4 Tool (org.antlr:antlr4:4.8-1 - http://www.antlr.org)
 * (Apache License, Version 2.0) Apache Hadoop Amazon Web Services support (org.apache.hadoop:hadoop-aws:2.10.1 - no url defined)

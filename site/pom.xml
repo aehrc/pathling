@@ -73,4 +73,31 @@
     </plugins>
   </build>
 
+  <profiles>
+    <profile>
+      <id>licenses</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>copy-license</id>
+                <phase>package</phase>
+                <configuration>
+                  <outputDirectory>${project.basedir}</outputDirectory>
+                  <skip>true</skip>
+                </configuration>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
 </project>
