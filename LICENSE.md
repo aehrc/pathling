@@ -82,7 +82,7 @@ separate files distributed with the Software.
 * (Apache License, Version 2.0) docker-java-transport-okhttp (com.github.docker-java:docker-java-transport-okhttp:3.2.7 - https://github.com/docker-java/docker-java)
 * (MIT) io.sentry:sentry (io.sentry:sentry:3.2.0 - https://github.com/getsentry/sentry-java)
 * (Eclipse Public License 1.0) JUnit (junit:junit:4.13 - http://junit.org)
-* (BSD License) ANTLR 4 Tool (org.antlr:antlr4:4.8-1 - http://www.antlr.org)
+* (BSD License) ANTLR 4 Tool (org.antlr:antlr4:4.9 - http://www.antlr.org)
 * (Apache License, Version 2.0) Apache Hadoop Amazon Web Services support (org.apache.hadoop:hadoop-aws:2.10.1 - no url defined)
 * (Apache License, Version 2.0) Spark Project Catalyst (org.apache.spark:spark-catalyst_2.12:3.0.1 - http://spark.apache.org/)
 * (Apache License, Version 2.0) Spark Project Core (org.apache.spark:spark-core_2.12:3.0.1 - http://spark.apache.org/)

@@ -17,7 +17,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <pathling.antlrVersion>4.8-1</pathling.antlrVersion>
+    <pathling.antlrVersion>4.9</pathling.antlrVersion>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
   </properties>
 
