@@ -91,7 +91,7 @@ separate files distributed with the Software.
 * (BSD License) commons-compiler (org.codehaus.janino:commons-compiler:3.0.9 - http://janino-compiler.github.io/commons-compiler/)
 * (BSD License) janino (org.codehaus.janino:janino:3.0.9 - http://janino-compiler.github.io/janino/)
 * (Apache License, Version 2.0) Hibernate Validator Engine (org.hibernate.validator:hibernate-validator:6.1.5.Final - http://hibernate.org/validator/hibernate-validator)
-* (MIT License) Project Lombok (org.projectlombok:lombok:1.18.12 - https://projectlombok.org)
+* (MIT License) Project Lombok (org.projectlombok:lombok:1.18.16 - https://projectlombok.org)
 * (MIT License) SLF4J API Module (org.slf4j:slf4j-api:1.7.30 - http://www.slf4j.org)
 * (Apache License, Version 2.0) spring-boot-configuration-processor (org.springframework.boot:spring-boot-configuration-processor:2.3.3.RELEASE - https://spring.io/projects/spring-boot)
 * (Apache License, Version 2.0) spring-boot-starter-test (org.springframework.boot:spring-boot-starter-test:2.3.3.RELEASE - https://spring.io/projects/spring-boot)
