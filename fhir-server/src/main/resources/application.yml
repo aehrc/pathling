@@ -6,6 +6,10 @@ pathling:
   # server, and between the server and the terminology service.
   verboseRequestLogging: false
 
+  # If this variable is set, all errors will be reported to a Sentry service, e.g.
+  # `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
+  # sentryDsn: [Sentry DSN]
+
   spark:
     # The name that Pathling will be identified as within the Spark cluster.
     appName: pathling
