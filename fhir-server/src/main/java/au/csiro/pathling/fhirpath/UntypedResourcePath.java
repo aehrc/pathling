@@ -29,7 +29,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-public class UntypedResourcePath extends NonLiteralPath {
+public class UntypedResourcePath extends NonLiteralPath implements Referrer {
 
   /**
    * A column within the dataset containing the resource type.
@@ -88,7 +88,18 @@ public class UntypedResourcePath extends NonLiteralPath {
 
   @Nonnull
   public Column getReferenceColumn() {
-    return valueColumn.getField(ReferencePath.REFERENCE_FIELD_NAME);
+    return valueColumn.getField(Referrer.REFERENCE_FIELD_NAME);
+  }
+
+  @Nonnull
+  public Column getResourceEquality(@Nonnull final ResourcePath resourcePath) {
+    return Referrer.resourceEqualityFor(this, resourcePath);
+  }
+
+  @Nonnull
+  public Column getResourceEquality(@Nonnull final Column targetId,
+      @Nonnull final Column targetCode) {
+    return Referrer.resourceEqualityFor(this, targetId, targetCode);
   }
 
   @Nonnull

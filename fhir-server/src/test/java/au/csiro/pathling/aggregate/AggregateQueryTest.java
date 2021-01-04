@@ -491,7 +491,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("name.where($this.given contains 'Karina848').count()")
-        .withFilter("id = 'Patient/9360820c-8602-4335-8b50-c88d627a0c20'")
+        .withFilter("id = '9360820c-8602-4335-8b50-c88d627a0c20'")
         .build();
 
     response = executor.execute(request);

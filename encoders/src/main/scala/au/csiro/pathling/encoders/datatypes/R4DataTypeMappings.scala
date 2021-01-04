@@ -20,7 +20,8 @@ import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
 import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
-import org.apache.spark.sql.types.{DataType, DataTypes, Decimal, ObjectType}
+import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
+import org.apache.spark.unsafe.types.UTF8String
 import org.hl7.fhir.instance.model.api.{IBaseBundle, IBaseDatatype, IBaseResource, IPrimitiveType}
 import org.hl7.fhir.r4.model._
 
@@ -130,6 +131,10 @@ class R4DataTypeMappings extends DataTypeMappings {
                                           primitive: RuntimePrimitiveDatatypeDefinition): Expression = {
 
     primitive.getImplementingClass match {
+
+      case idClass if idClass == classOf[org.hl7.fhir.r4.model.IdType] =>
+        StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
+          List(Invoke(inputObject, "getIdPart", ObjectType(classOf[String]))))
 
       // If the FHIR primitive is serialized as a string, convert it to UTF8.
       case cls if fhirPrimitiveToSparkTypes.get(cls).contains(DataTypes.StringType) =>

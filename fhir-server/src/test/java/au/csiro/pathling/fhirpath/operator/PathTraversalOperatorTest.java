@@ -55,8 +55,8 @@ public class PathTraversalOperatorTest {
     final Dataset<Row> leftDataset = new ResourceDatasetBuilder()
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
-        .withRow("Patient/1", "female")
-        .withRow("Patient/2", null)
+        .withRow("patient-1", "female")
+        .withRow("patient-2", null)
         .build();
     final ResourceReader resourceReader = mock(ResourceReader.class);
     when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
@@ -74,8 +74,8 @@ public class PathTraversalOperatorTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", null, "female")
-        .withRow("Patient/2", null, null)
+        .withRow("patient-1", null, "female")
+        .withRow("patient-2", null, null)
         .build();
     assertThat(result)
         .isElementPath(StringPath.class)
@@ -90,9 +90,9 @@ public class PathTraversalOperatorTest {
         .withIdColumn()
         .withColumn("name", DataTypes.createArrayType(DataTypes.StringType))
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/1", Arrays.asList(null, "Marie", null, "Anne"), true)
-        .withRow("Patient/2", Collections.emptyList(), true)
-        .withRow("Patient/3", null, true)
+        .withRow("patient-1", Arrays.asList(null, "Marie", null, "Anne"), true)
+        .withRow("patient-2", Collections.emptyList(), true)
+        .withRow("patient-3", null, true)
         .build();
     final ResourceReader resourceReader = mock(ResourceReader.class);
     when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
@@ -110,12 +110,12 @@ public class PathTraversalOperatorTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", makeEid(0), null)
-        .withRow("Patient/1", makeEid(1), "Marie")
-        .withRow("Patient/1", makeEid(2), null)
-        .withRow("Patient/1", makeEid(3), "Anne")
-        .withRow("Patient/2", null, null)
-        .withRow("Patient/3", null, null)
+        .withRow("patient-1", makeEid(0), null)
+        .withRow("patient-1", makeEid(1), "Marie")
+        .withRow("patient-1", makeEid(2), null)
+        .withRow("patient-1", makeEid(3), "Anne")
+        .withRow("patient-2", null, null)
+        .withRow("patient-3", null, null)
         .build();
     assertThat(result)
         .isElementPath(ElementPath.class)
@@ -133,12 +133,12 @@ public class PathTraversalOperatorTest {
         .withEidColumn()
         .withStructColumn("given", DataTypes.createArrayType(DataTypes.StringType))
         // patient with two names
-        .withRow("Patient/1", makeEid(1), RowFactory.create(Arrays.asList("Jude", "Adam")))
-        .withRow("Patient/1", makeEid(0), RowFactory.create(Arrays.asList("Mark", "Alen", null)))
+        .withRow("patient-1", makeEid(1), RowFactory.create(Arrays.asList("Jude", "Adam")))
+        .withRow("patient-1", makeEid(0), RowFactory.create(Arrays.asList("Mark", "Alen", null)))
         // patient with empty list of given names
-        .withRow("Patient/2", makeEid(0), RowFactory.create(Collections.emptyList()))
+        .withRow("patient-2", makeEid(0), RowFactory.create(Collections.emptyList()))
         // no name in the first place
-        .withRow("Patient/5", null, null)
+        .withRow("patient-5", null, null)
         .buildWithStructValue();
 
     final Optional<ElementDefinition> definition = FhirHelpers
@@ -160,13 +160,13 @@ public class PathTraversalOperatorTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", makeEid(0, 0), "Mark")
-        .withRow("Patient/1", makeEid(0, 1), "Alen")
-        .withRow("Patient/1", makeEid(0, 2), null)
-        .withRow("Patient/1", makeEid(1, 0), "Jude")
-        .withRow("Patient/1", makeEid(1, 1), "Adam")
-        .withRow("Patient/2", null, null)
-        .withRow("Patient/5", null, null)
+        .withRow("patient-1", makeEid(0, 0), "Mark")
+        .withRow("patient-1", makeEid(0, 1), "Alen")
+        .withRow("patient-1", makeEid(0, 2), null)
+        .withRow("patient-1", makeEid(1, 0), "Jude")
+        .withRow("patient-1", makeEid(1, 1), "Adam")
+        .withRow("patient-2", null, null)
+        .withRow("patient-5", null, null)
         .build();
 
     assertThat(result)
@@ -185,13 +185,13 @@ public class PathTraversalOperatorTest {
         .withEidColumn()
         .withStructColumn("family", DataTypes.StringType)
         // patient with two names
-        .withRow("Patient/1", makeEid(1), RowFactory.create("Jude"))
-        .withRow("Patient/1", makeEid(0), RowFactory.create("Mark"))
+        .withRow("patient-1", makeEid(1), RowFactory.create("Jude"))
+        .withRow("patient-1", makeEid(0), RowFactory.create("Mark"))
         // patient with some null values
-        .withRow("Patient/2", makeEid(1), RowFactory.create("Adam"))
-        .withRow("Patient/2", makeEid(0), RowFactory.create((String) null))
+        .withRow("patient-2", makeEid(1), RowFactory.create("Adam"))
+        .withRow("patient-2", makeEid(0), RowFactory.create((String) null))
         // patient with empty list of given names
-        .withRow("Patient/5", null, null)
+        .withRow("patient-5", null, null)
         .buildWithStructValue();
 
     final Optional<ElementDefinition> definition = FhirHelpers
@@ -213,11 +213,11 @@ public class PathTraversalOperatorTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", makeEid(0), "Mark")
-        .withRow("Patient/1", makeEid(1), "Jude")
-        .withRow("Patient/2", makeEid(0), null)
-        .withRow("Patient/2", makeEid(1), "Adam")
-        .withRow("Patient/5", null, null)
+        .withRow("patient-1", makeEid(0), "Mark")
+        .withRow("patient-1", makeEid(1), "Jude")
+        .withRow("patient-2", makeEid(0), null)
+        .withRow("patient-2", makeEid(1), "Adam")
+        .withRow("patient-5", null, null)
         .build();
 
     assertThat(result)
