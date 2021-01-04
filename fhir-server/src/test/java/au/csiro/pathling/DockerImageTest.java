@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -22,7 +22,8 @@ import com.github.dockerjava.api.model.Ports.Binding;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.DockerClientConfig;
-import com.github.dockerjava.okhttp.OkHttpDockerCmdExecFactory;
+import com.github.dockerjava.okhttp.OkDockerHttpClient;
+import com.github.dockerjava.okhttp.OkDockerHttpClient.Builder;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -86,8 +87,12 @@ public class DockerImageTest {
     final DockerClientConfig dockerClientConfig = DefaultDockerClientConfig
         .createDefaultConfigBuilder()
         .build();
+    final OkDockerHttpClient dockerHttpClient = new Builder()
+        .dockerHost(dockerClientConfig.getDockerHost())
+        .sslConfig(dockerClientConfig.getSSLConfig())
+        .build();
     dockerClient = DockerClientBuilder.getInstance(dockerClientConfig)
-        .withDockerCmdExecFactory(new OkHttpDockerCmdExecFactory())
+        .withDockerHttpClient(dockerHttpClient)
         .build();
     httpClient = HttpClients.createDefault();
     jsonParser = FhirContext.forR4().newJsonParser();
@@ -247,7 +252,7 @@ public class DockerImageTest {
 
       // Send a request to the `$query` operation on the FHIR server.
       final String requestString = jsonParser.encodeResourceToString(inParams);
-      final HttpPost queryRequest = new HttpPost("http://localhost:8091/fhir/$aggregate");
+      final HttpPost queryRequest = new HttpPost("http://localhost:8091/fhir/Patient/$aggregate");
       queryRequest.setEntity(new StringEntity(requestString));
       queryRequest.addHeader("Content-Type", "application/fhir+json");
       queryRequest.addHeader("Accept", "application/fhir+json");

@@ -16,7 +16,7 @@
   "implementation": {
     "description": "Yet Another Pathling Server"
   },
-  "fhirVersion": "4.0.0",
+  "fhirVersion": "4.0.1",
   "format": [
     "application/fhir+json",
     "application/fhir+xml"
@@ -41,6 +41,10 @@
           ],
           "operation": [
             {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-0"
+            },
+            {
               "name": "fhirPath",
               "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-0"
             }
@@ -48,10 +52,6 @@
         }
       ],
       "operation": [
-        {
-          "name": "aggregate",
-          "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-0"
-        },
         {
           "name": "import",
           "definition": "https://pathling.csiro.au/fhir/OperationDefinition/import-0"
