@@ -149,7 +149,7 @@ that are controlled by this configuration.
 
 ### Monitoring
 
-- `SENTRY_DSN` - If this variable is set, all errors will be reported to a
+- `pathling.sentryDsn` - If this variable is set, all errors will be reported to a
   [Sentry](https://sentry.io) service, e.g.
   `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
 

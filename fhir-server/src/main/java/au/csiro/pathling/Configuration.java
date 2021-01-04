@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -47,6 +47,18 @@ public class Configuration {
    */
   @NotNull
   private Boolean verboseRequestLogging;
+
+  /**
+   * If this variable is set, all errors will be reported to a Sentry service, e.g.
+   * `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
+   */
+  @Nullable
+  private String sentryDsn;
+
+  @Nonnull
+  public Optional<String> getSentryDsn() {
+    return Optional.ofNullable(sentryDsn);
+  }
 
   @NotNull
   private Spark spark;
