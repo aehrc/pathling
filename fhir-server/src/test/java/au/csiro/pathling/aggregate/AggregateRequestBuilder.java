@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -8,6 +8,7 @@ package au.csiro.pathling.aggregate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -51,7 +52,8 @@ public class AggregateRequestBuilder {
   }
 
   public AggregateRequest build() {
-    return new AggregateRequest(subjectResource, aggregations, groupings, filters);
+    return new AggregateRequest(subjectResource, Optional.of(aggregations), Optional.of(groupings),
+        Optional.of(filters));
   }
 
 }
