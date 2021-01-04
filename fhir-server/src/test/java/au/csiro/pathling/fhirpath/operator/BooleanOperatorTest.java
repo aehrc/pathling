@@ -38,14 +38,14 @@ public class BooleanOperatorTest {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
-        .withRow("Patient/1", true)
-        .withRow("Patient/2", true)
-        .withRow("Patient/3", false)
-        .withRow("Patient/4", false)
-        .withRow("Patient/5", null)
-        .withRow("Patient/6", null)
-        .withRow("Patient/7", true)
-        .withRow("Patient/8", null)
+        .withRow("patient-1", true)
+        .withRow("patient-2", true)
+        .withRow("patient-3", false)
+        .withRow("patient-4", false)
+        .withRow("patient-5", null)
+        .withRow("patient-6", null)
+        .withRow("patient-7", true)
+        .withRow("patient-8", null)
         .build();
     left = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
@@ -58,14 +58,14 @@ public class BooleanOperatorTest {
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
-        .withRow("Patient/1", false)
-        .withRow("Patient/2", null)
-        .withRow("Patient/3", true)
-        .withRow("Patient/4", null)
-        .withRow("Patient/5", true)
-        .withRow("Patient/6", false)
-        .withRow("Patient/7", true)
-        .withRow("Patient/8", null)
+        .withRow("patient-1", false)
+        .withRow("patient-2", null)
+        .withRow("patient-3", true)
+        .withRow("patient-4", null)
+        .withRow("patient-5", true)
+        .withRow("patient-6", false)
+        .withRow("patient-7", true)
+        .withRow("patient-8", null)
         .build();
     right = new ElementPathBuilder()
         .fhirType(FHIRDefinedType.BOOLEAN)
@@ -86,14 +86,14 @@ public class BooleanOperatorTest {
     final FhirPath result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", false),
-        RowFactory.create("Patient/2", null),
-        RowFactory.create("Patient/3", false),
-        RowFactory.create("Patient/4", false),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", false),
-        RowFactory.create("Patient/7", true),
-        RowFactory.create("Patient/8", null)
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", null),
+        RowFactory.create("patient-3", false),
+        RowFactory.create("patient-4", false),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", false),
+        RowFactory.create("patient-7", true),
+        RowFactory.create("patient-8", null)
     );
   }
 
@@ -105,14 +105,14 @@ public class BooleanOperatorTest {
     final FhirPath result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", true),
-        RowFactory.create("Patient/2", true),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", true),
-        RowFactory.create("Patient/6", null),
-        RowFactory.create("Patient/7", true),
-        RowFactory.create("Patient/8", null)
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", true),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", true),
+        RowFactory.create("patient-6", null),
+        RowFactory.create("patient-7", true),
+        RowFactory.create("patient-8", null)
     );
   }
 
@@ -124,14 +124,14 @@ public class BooleanOperatorTest {
     final FhirPath result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", true),
-        RowFactory.create("Patient/2", null),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null),
-        RowFactory.create("Patient/7", false),
-        RowFactory.create("Patient/8", null)
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", null),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null),
+        RowFactory.create("patient-7", false),
+        RowFactory.create("patient-8", null)
     );
   }
 
@@ -143,14 +143,14 @@ public class BooleanOperatorTest {
     final FhirPath result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", false),
-        RowFactory.create("Patient/2", null),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", true),
-        RowFactory.create("Patient/5", true),
-        RowFactory.create("Patient/6", null),
-        RowFactory.create("Patient/7", true),
-        RowFactory.create("Patient/8", null)
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", null),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", true),
+        RowFactory.create("patient-5", true),
+        RowFactory.create("patient-6", null),
+        RowFactory.create("patient-7", true),
+        RowFactory.create("patient-8", null)
     );
   }
 
@@ -163,14 +163,14 @@ public class BooleanOperatorTest {
     final FhirPath result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", false),
-        RowFactory.create("Patient/2", null),
-        RowFactory.create("Patient/3", true),
-        RowFactory.create("Patient/4", null),
-        RowFactory.create("Patient/5", true),
-        RowFactory.create("Patient/6", false),
-        RowFactory.create("Patient/7", true),
-        RowFactory.create("Patient/8", null)
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", null),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", null),
+        RowFactory.create("patient-5", true),
+        RowFactory.create("patient-6", false),
+        RowFactory.create("patient-7", true),
+        RowFactory.create("patient-8", null)
     );
   }
 
@@ -183,14 +183,14 @@ public class BooleanOperatorTest {
     final FhirPath result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("Patient/1", true),
-        RowFactory.create("Patient/2", true),
-        RowFactory.create("Patient/3", false),
-        RowFactory.create("Patient/4", false),
-        RowFactory.create("Patient/5", null),
-        RowFactory.create("Patient/6", null),
-        RowFactory.create("Patient/7", true),
-        RowFactory.create("Patient/8", null)
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", true),
+        RowFactory.create("patient-3", false),
+        RowFactory.create("patient-4", false),
+        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-6", null),
+        RowFactory.create("patient-7", true),
+        RowFactory.create("patient-8", null)
     );
   }
 }

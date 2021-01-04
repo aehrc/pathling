@@ -14,24 +14,9 @@ package au.csiro.pathling.encoders;
 
 import com.google.common.collect.ImmutableList;
 import java.util.Date;
-import org.hl7.fhir.r4.model.Annotation;
-import org.hl7.fhir.r4.model.CodeableConcept;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Condition;
-import org.hl7.fhir.r4.model.DateTimeType;
-import org.hl7.fhir.r4.model.Encounter;
-import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.IntegerType;
-import org.hl7.fhir.r4.model.Medication;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Medication.MedicationIngredientComponent;
-import org.hl7.fhir.r4.model.MedicationRequest;
-import org.hl7.fhir.r4.model.Narrative;
-import org.hl7.fhir.r4.model.Observation;
-import org.hl7.fhir.r4.model.Patient;
-import org.hl7.fhir.r4.model.Provenance;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
-import org.hl7.fhir.r4.model.Quantity;
-import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.codesystems.ConditionVerStatus;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
@@ -57,33 +42,33 @@ public class TestData {
    */
   public static Condition newCondition() {
 
-    Condition condition = new Condition();
+    final Condition condition = new Condition();
 
     // Condition based on example from FHIR:
     // https://www.hl7.org/fhir/condition-example.json.html
-    condition.setId("Condition/example");
+    condition.setId("example");
 
     condition.setLanguage("en_US");
 
     // Narrative text
-    Narrative narrative = new Narrative();
+    final Narrative narrative = new Narrative();
     narrative.setStatusAsString("generated");
     narrative.setDivAsString("This data was generated for test purposes.");
-    XhtmlNode node = new XhtmlNode();
+    final XhtmlNode node = new XhtmlNode();
     node.setNodeType(NodeType.Text);
     node.setValue("Severe burn of left ear (Date: 24-May 2012)");
     condition.setText(narrative);
 
     condition.setSubject(new Reference("Patient/example").setDisplay("Here is a display for you."));
 
-    CodeableConcept verificationStatus = new CodeableConcept();
+    final CodeableConcept verificationStatus = new CodeableConcept();
     verificationStatus.addCoding(new Coding(ConditionVerStatus.CONFIRMED.getSystem(),
         ConditionVerStatus.CONFIRMED.toCode(),
         ConditionVerStatus.CONFIRMED.getDisplay()));
     condition.setVerificationStatus(verificationStatus);
 
     // Condition code
-    CodeableConcept code = new CodeableConcept();
+    final CodeableConcept code = new CodeableConcept();
     code.addCoding()
         .setSystem("http://snomed.info/sct")
         .setCode("39065001")
@@ -91,7 +76,7 @@ public class TestData {
     condition.setSeverity(code);
 
     // Severity code
-    CodeableConcept severity = new CodeableConcept();
+    final CodeableConcept severity = new CodeableConcept();
     severity.addCoding()
         .setSystem("http://snomed.info/sct")
         .setCode("24484000")
@@ -100,10 +85,17 @@ public class TestData {
     condition.setSeverity(severity);
 
     // Onset date time
-    DateTimeType onset = new DateTimeType();
+    final DateTimeType onset = new DateTimeType();
     onset.setValueAsString("2012-05-24");
     condition.setOnset(onset);
 
+    return condition;
+  }
+
+  public static Condition conditionWithVersion() {
+    final Condition condition = new Condition();
+    final IdType id = new IdType("Condition", "with-version", "1");
+    condition.setIdElement(id);
     return condition;
   }
 
@@ -113,17 +105,17 @@ public class TestData {
   public static Observation newObservation() {
 
     // Observation based on https://www.hl7.org/FHIR/observation-example-bloodpressure.json.html
-    Observation observation = new Observation();
+    final Observation observation = new Observation();
 
     observation.setId("blood-pressure");
 
-    Identifier identifier = observation.addIdentifier();
+    final Identifier identifier = observation.addIdentifier();
     identifier.setSystem("urn:ietf:rfc:3986");
     identifier.setValue("urn:uuid:187e0c12-8dd2-67e2-99b2-bf273c878281");
 
     observation.setStatus(Observation.ObservationStatus.FINAL);
 
-    Quantity quantity = new Quantity();
+    final Quantity quantity = new Quantity();
     quantity.setValue(TEST_SMALL_DECIMAL);
     quantity.setUnit("mm[Hg]");
     observation.setValue(quantity);
@@ -140,7 +132,7 @@ public class TestData {
    */
   public static Patient newPatient() {
 
-    Patient patient = new Patient();
+    final Patient patient = new Patient();
 
     patient.setId("test-patient");
     patient.setMultipleBirth(new IntegerType(1));
@@ -153,13 +145,13 @@ public class TestData {
    */
   public static Medication newMedication() {
 
-    Medication medication = new Medication();
+    final Medication medication = new Medication();
 
     medication.setId("test-med");
 
-    MedicationIngredientComponent ingredient = new MedicationIngredientComponent();
+    final MedicationIngredientComponent ingredient = new MedicationIngredientComponent();
 
-    CodeableConcept item = new CodeableConcept();
+    final CodeableConcept item = new CodeableConcept();
     item.addCoding()
         .setSystem("test/ingredient/system")
         .setCode("test-code");
@@ -176,7 +168,7 @@ public class TestData {
    */
   public static Provenance newProvenance() {
 
-    Provenance provenance = new Provenance();
+    final Provenance provenance = new Provenance();
 
     provenance.setId("test-provenance");
 
@@ -194,12 +186,12 @@ public class TestData {
    */
   public static MedicationRequest newMedRequest() {
 
-    MedicationRequest medReq = new MedicationRequest();
+    final MedicationRequest medReq = new MedicationRequest();
 
     medReq.setId("test-med");
 
     // Medication code
-    CodeableConcept med = new CodeableConcept();
+    final CodeableConcept med = new CodeableConcept();
     med.addCoding()
         .setSystem("http://www.nlm.nih.gov/research/umls/rxnorm")
         .setCode("582620")
@@ -209,7 +201,7 @@ public class TestData {
 
     medReq.setMedication(med);
 
-    Annotation annotation = new Annotation();
+    final Annotation annotation = new Annotation();
 
     annotation.setText("Test medication note.");
 
@@ -230,9 +222,9 @@ public class TestData {
    * Returns a FHIR Coverage resource for testing purposes.
    */
   public static Encounter newEncounter() {
-    Encounter encounter = new Encounter();
+    final Encounter encounter = new Encounter();
 
-    Coding classCoding = new Coding();
+    final Coding classCoding = new Coding();
     classCoding.setSystem("http://terminology.hl7.org/CodeSystem/v3-ActCode");
     classCoding.setCode("AMB");
     encounter.setClass_(classCoding);

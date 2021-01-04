@@ -49,9 +49,9 @@ public class OfTypeFunction implements NamedFunction {
 
     // Do a left outer join to the resource dataset using the reference in the untyped dataset - the
     // result will be null in the rows that are not of the resource type nominated.
-    final Column referenceColumn = inputPath.getReferenceColumn();
-    final Dataset<Row> dataset = join(inputPath.getDataset(), referenceColumn,
-        resourcePath.getDataset(), resourcePath.getIdColumn(), JoinType.LEFT_OUTER);
+    final Column joinCondition = inputPath.getResourceEquality(resourcePath);
+    final Dataset<Row> dataset = join(inputPath.getDataset(), resourcePath.getDataset(),
+        joinCondition, JoinType.LEFT_OUTER);
 
     // Return a new resource path with the joined dataset, and the argument's value column.
     final Optional<Column> thisColumn = inputPath.getThisColumn();

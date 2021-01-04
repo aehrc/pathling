@@ -61,9 +61,9 @@ public class ReverseResolveFunction implements NamedFunction {
 
     // Do a left outer join from the input to the argument dataset using the reference field in the
     // argument.
-    final Dataset<Row> dataset = join(referencePath.getDataset(),
-        referencePath.getReferenceColumn(), inputPath.getDataset(), inputPath.getIdColumn(),
-        JoinType.RIGHT_OUTER);
+    final Column joinCondition = referencePath.getResourceEquality(inputPath);
+    final Dataset<Row> dataset = join(referencePath.getDataset(), inputPath.getDataset(),
+        joinCondition, JoinType.RIGHT_OUTER);
 
     // Check the argument for information about a foreign resource that it originated from - if it
     // not present, reverse reference resolution will not be possible.

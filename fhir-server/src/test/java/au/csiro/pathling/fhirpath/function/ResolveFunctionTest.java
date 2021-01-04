@@ -67,10 +67,14 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Encounter/1", makeEid(0), RowFactory.create(null, "EpisodeOfCare/1", null))
-        .withRow("Encounter/2", makeEid(0), RowFactory.create(null, "EpisodeOfCare/3", null))
-        .withRow("Encounter/3", makeEid(0), RowFactory.create(null, "EpisodeOfCare/2", null))
-        .withRow("Encounter/4", makeEid(0), RowFactory.create(null, "EpisodeOfCare/2", null))
+        .withRow("encounter-1", makeEid(0),
+            RowFactory.create(null, "EpisodeOfCare/episodeofcare-1", null))
+        .withRow("encounter-2", makeEid(0),
+            RowFactory.create(null, "EpisodeOfCare/episodeofcare-3", null))
+        .withRow("encounter-3", makeEid(0),
+            RowFactory.create(null, "EpisodeOfCare/episodeofcare-2", null))
+        .withRow("encounter-4", makeEid(0),
+            RowFactory.create(null, "EpisodeOfCare/episodeofcare-2", null))
         .buildWithStructValue();
     final ElementPath referencePath = new ElementPathBuilder()
         .expression("Encounter.episodeOfCare")
@@ -83,9 +87,9 @@ class ResolveFunctionTest {
     final Dataset<Row> episodeOfCareDataset = new ResourceDatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("EpisodeOfCare/1", "planned")
-        .withRow("EpisodeOfCare/2", "waitlist")
-        .withRow("EpisodeOfCare/3", "active")
+        .withRow("episodeofcare-1", "planned")
+        .withRow("episodeofcare-2", "waitlist")
+        .withRow("episodeofcare-3", "active")
         .build();
     when(mockReader.read(ResourceType.EPISODEOFCARE)).thenReturn(episodeOfCareDataset);
 
@@ -101,10 +105,10 @@ class ResolveFunctionTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Encounter/1", "EpisodeOfCare/1")
-        .withRow("Encounter/2", "EpisodeOfCare/3")
-        .withRow("Encounter/3", "EpisodeOfCare/2")
-        .withRow("Encounter/4", "EpisodeOfCare/2")
+        .withRow("encounter-1", "episodeofcare-1")
+        .withRow("encounter-2", "episodeofcare-3")
+        .withRow("encounter-3", "episodeofcare-2")
+        .withRow("encounter-4", "episodeofcare-2")
         .build();
     assertThat(result)
         .selectOrderedResult()
@@ -121,11 +125,11 @@ class ResolveFunctionTest {
     final Dataset<Row> referenceDataset = new DatasetBuilder()
         .withIdColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Encounter/1", RowFactory.create(null, "Patient/1", null))
-        .withRow("Encounter/2", RowFactory.create(null, "Patient/3", null))
-        .withRow("Encounter/3", RowFactory.create(null, "Patient/2", null))
-        .withRow("Encounter/4", RowFactory.create(null, "Patient/2", null))
-        .withRow("Encounter/5", RowFactory.create(null, "Group/1", null))
+        .withRow("encounter-1", RowFactory.create(null, "Patient/patient-1", null))
+        .withRow("encounter-2", RowFactory.create(null, "Patient/patient-3", null))
+        .withRow("encounter-3", RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-4", RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-5", RowFactory.create(null, "Group/group-1", null))
         .buildWithStructValue();
     final ElementPath referencePath = new ElementPathBuilder()
         .expression("Encounter.subject")
@@ -139,9 +143,9 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withColumn(DataTypes.BooleanType)
-        .withRow("Patient/1", "female", true)
-        .withRow("Patient/2", "female", false)
-        .withRow("Patient/3", "male", true)
+        .withRow("patient-1", "female", true)
+        .withRow("patient-2", "female", false)
+        .withRow("patient-3", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
@@ -150,7 +154,7 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withColumn(DataTypes.BooleanType)
-        .withRow("Group/1", "Some group", true)
+        .withRow("group-1", "Some group", true)
         .build();
     when(mockReader.read(ResourceType.GROUP))
         .thenReturn(groupDataset);
@@ -170,11 +174,11 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Encounter/1", "Patient", RowFactory.create(null, "Patient/1", null))
-        .withRow("Encounter/2", "Patient", RowFactory.create(null, "Patient/3", null))
-        .withRow("Encounter/3", "Patient", RowFactory.create(null, "Patient/2", null))
-        .withRow("Encounter/4", "Patient", RowFactory.create(null, "Patient/2", null))
-        .withRow("Encounter/5", "Group", RowFactory.create(null, "Group/1", null))
+        .withRow("encounter-1", "Patient", RowFactory.create(null, "Patient/patient-1", null))
+        .withRow("encounter-2", "Patient", RowFactory.create(null, "Patient/patient-3", null))
+        .withRow("encounter-3", "Patient", RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-4", "Patient", RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-5", "Group", RowFactory.create(null, "Group/group-1", null))
         .buildWithStructValue();
     assertThat((UntypedResourcePath) result)
         .selectUntypedResourceResult()
@@ -193,9 +197,10 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Condition/1", makeEid(0), RowFactory.create(null, "Observation/1", null))
-        .withRow("Condition/2", makeEid(0),
-            RowFactory.create(null, "ClinicalImpression/1", null))
+        .withRow("condition-1", makeEid(0),
+            RowFactory.create(null, "Observation/observation-1", null))
+        .withRow("condition-2", makeEid(0),
+            RowFactory.create(null, "ClinicalImpression/clinicalimpression-1", null))
         .buildWithStructValue();
     final ElementPath referencePath = new ElementPathBuilder()
         .expression("Condition.evidence.detail")
@@ -208,7 +213,7 @@ class ResolveFunctionTest {
     final Dataset<Row> observationDataset = new ResourceDatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Observation/1", "registered")
+        .withRow("observation-1", "registered")
         .build();
     when(mockReader.read(ResourceType.OBSERVATION))
         .thenReturn(observationDataset);
@@ -216,7 +221,7 @@ class ResolveFunctionTest {
     final Dataset<Row> clinicalImpressionDataset = new ResourceDatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("ClinicalImpression/1", "in-progress")
+        .withRow("clinicalimpression-1", "in-progress")
         .build();
     when(mockReader.read(ResourceType.CLINICALIMPRESSION))
         .thenReturn(clinicalImpressionDataset);
@@ -237,9 +242,10 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Condition/1", "Observation", RowFactory.create(null, "Observation/1", null))
-        .withRow("Condition/2", "ClinicalImpression",
-            RowFactory.create(null, "ClinicalImpression/1", null))
+        .withRow("condition-1", "Observation",
+            RowFactory.create(null, "Observation/observation-1", null))
+        .withRow("condition-2", "ClinicalImpression",
+            RowFactory.create(null, "ClinicalImpression/clinicalimpression-1", null))
         .buildWithStructValue();
     assertThat((UntypedResourcePath) result)
         .selectUntypedResourceResult()
