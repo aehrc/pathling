@@ -37,7 +37,7 @@
   <licenses>
     <license>
       <name>CSIRO Open Source Software Licence Agreement</name>
-      <comments>Variation of the BSD/MIT License</comments>
+      <url>https://github.com/aehrc/pathling/raw/master/LICENSE.md</url>
     </license>
   </licenses>
 
@@ -288,11 +288,36 @@
     <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
   </scm>
 
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/aehrc/pathling</url>
+    </repository>
+  </distributionManagement>
+
   <profiles>
     <profile>
       <id>licenses</id>
       <build>
         <plugins>
+          <plugin>
+            <artifactId>maven-clean-plugin</artifactId>
+            <configuration>
+              <filesets>
+                <fileset>
+                  <directory>${project.basedir}</directory>
+                  <includes>
+                    <include>LICENSE.md</include>
+                  </includes>
+                </fileset>
+                <fileset>
+                  <directory>${project.basedir}/licenses</directory>
+                </fileset>
+              </filesets>
+            </configuration>
+            <groupId>org.apache.maven.plugins</groupId>
+          </plugin>
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>license-maven-plugin</artifactId>
@@ -304,18 +329,20 @@
                   <goal>aggregate-add-third-party</goal>
                 </goals>
                 <configuration>
-                  <!-- This is required so that the plugin does not overwrite the results of the
-                  aggregated run with that of the execution for the single module. -->
-                  <thirdPartyFilename>AGGREGATED-THIRD-PARTY.txt</thirdPartyFilename>
+                  <excludedGroups>^au\.csiro\.</excludedGroups>
+                  <fileTemplate>fhir-server/src/main/resources/license-template.ftl</fileTemplate>
+                  <includeTransitiveDependencies>false</includeTransitiveDependencies>
                   <licenseMerges>
-                    <licenseMerge>Apache License 2.0|Apache 2|Apache 2.0|Apache 2.0 License|Apache License|Apache License (v2.0)|Apache License Version 2|Apache License, 2.0|Apache License, Version 2.0|Apache Software License - Version 2.0|Apache Software License 2.0|Apache v2|Apache-2.0|The Apache Software License, Version 2.0|The Apache License, Version 2.0|http://www.apache.org/licenses/LICENSE-2.0.txt</licenseMerge>
-                    <licenseMerge>BSD 3-Clause "New" or "Revised" License|BSD|BSD 2-Clause License|BSD 3 Clause|BSD 3-Clause|BSD 3-Clause "New" or "Revised" License (BSD-3-Clause)|BSD 3-clause|BSD License|BSD New|BSD licence|New BSD License|3-Clause BSD License|New BSD license|Revised BSD|BSD style|The New BSD License|The BSD License|The BSD 3-Clause License|http://asm.ow2.org/license.html|Java HTML Tidy License</licenseMerge>
-                    <licenseMerge>Common Development and Distribution License|CDDL + GPLv2 with classpath exception|CDDL 1.1|CDDL+GPL License|Dual license consisting of the CDDL v1.1 and GPL v2|COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0</licenseMerge>
-                    <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - Version 1.0|Eclipse Public License - v 1.0</licenseMerge>
-                    <licenseMerge>MIT License|MIT license</licenseMerge>
-                    <licenseMerge>GNU Lesser General Public License|GNU Lesser General Public License (LGPL), Version 2.1|LGPL 2.1</licenseMerge>
-                    <licenseMerge>GNU General Public License v2.0 with Classpath Exception|GPL2 w/ CPE</licenseMerge>
+                    <licenseMerge>Apache License, Version 2.0|Apache Software License 2.0|The Apache
+                      License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0
+                      License|Apache License 2.0
+                    </licenseMerge>
+                    <licenseMerge>BSD License|BSD New|The BSD License|New BSD License</licenseMerge>
+                    <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - v 1.0
+                    </licenseMerge>
+                    <licenseMerge>MIT License|The MIT License (MIT)|The MIT License</licenseMerge>
                   </licenseMerges>
+                  <thirdPartyFilename>LICENSE.md</thirdPartyFilename>
                 </configuration>
               </execution>
               <execution>
@@ -324,6 +351,49 @@
                 <goals>
                   <goal>aggregate-download-licenses</goal>
                 </goals>
+                <configuration>
+                  <includeTransitiveDependencies>false</includeTransitiveDependencies>
+                  <excludedGroups>^au\.csiro\.</excludedGroups>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <configuration>
+                  <outputDirectory>${project.basedir}</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>target/generated-sources/license</directory>
+                      <includes>
+                        <include>LICENSE.md</include>
+                      </includes>
+                    </resource>
+                  </resources>
+                </configuration>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <id>copy-license</id>
+                <phase>package</phase>
+              </execution>
+              <execution>
+                <configuration>
+                  <outputDirectory>${project.basedir}/licenses</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>target/generated-resources/licenses</directory>
+                    </resource>
+                  </resources>
+                </configuration>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <id>copy-third-party-licenses</id>
+                <phase>package</phase>
               </execution>
             </executions>
           </plugin>

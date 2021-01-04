@@ -11,11 +11,10 @@ Pathling is a server based on the
 functionality designed to ease the delivery of analytics-enabled apps and
 augment tasks related to health data analytics.
 
-Pathling is licensed under the
-[CSIRO Open Source Software Licence Agreement](https://github.com/aehrc/pathling/blob/master/LICENSE),
-which is a permissive licence based upon the BSD and MIT licences. This means
-that you are free to use, modify and redistribute the software as you wish, even
-for commercial purposes.
+Pathling is licensed under the 
+[CSIRO Open Source Software Licence Agreement](https://github.com/aehrc/pathling/blob/master/LICENSE). 
+This means that you are free to use, modify and redistribute the software as you 
+wish, even for commercial purposes.
 
 **Pathling is experimental software, use it at your own risk!** You can get a
 full description of the current set of known issues over on our
@@ -28,7 +27,7 @@ complexity. Linking data with clinical terminology adds a further degree of
 complexity, often requiring expert knowledge of coding systems and skill in the
 correct use of them within the analytic context.
 
-Generalized tools for data analytics and business intelligence do little to
+Generalised tools for data analytics and business intelligence do little to
 insulate their users from this complexity, as it is often impractical for them
 to cater for requirements unique to specialist areas such as health care. Users
 often deal with this complexity by writing large volumes of code to cover the
@@ -66,7 +65,7 @@ In summary, the operations available within Pathling are:
 3. [aggregate](./aggregate.html) - A "pivot table as an API", able to take in a
    set of expressions that describe aggregations, groupings and filters and
    return grouped aggregate data.
-4. [summarize](./roadmap.html#summarize-operation) _(currently under
+4. [summarise](./roadmap.html#summarise-operation) _(currently under
    development)_ - An operation that allows a client to describe a custom
    tabular extract of FHIR data, and retrieve it in bulk.
 
@@ -83,7 +82,7 @@ are currently under development.
 ## FHIRPath
 
 Pathling uses a language called
-[FHIRPath](https://hl7.org/fhirpath/2018Sep/index.html) to facilitate the
+[FHIRPath](https://hl7.org/fhirpath/) to facilitate the
 description of expressions within requests to these operations. FHIRPath is a
 language that is capable of navigating and extracting data from within the graph
 of resources and data types that FHIR uses as its data model. It provides a
@@ -102,4 +101,4 @@ This is useful when the volume of data is large enough to warrant the use of
 compute and memory resources from more than a single server.
 
 You can get further information about this functionality
-[here](./deployment.html#apache-spark).
+[here](./configuration.html#apache-spark).

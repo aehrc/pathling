@@ -14,30 +14,13 @@ returning some sort of result.
 The following operators are supported by the FHIRPath implementation within
 Pathling:
 
-- [Equality](#equality) (`=` and `!=`)
 - [Comparison](#comparison) (`<=`, `<`, `>` and `>=`)
+- [Equality](#equality) (`=` and `!=`)
 - [Math](#math) (`+`, `-`, `*`, `/` and `mod`)
 - [Boolean logic](#boolean-logic) (`and`, `or`, `xor` and `implies`)
 - [Membership](#membership) (`in` and `contains`)
 
-See also: [Operations](https://hl7.org/fhirpath/2018Sep/index.html#operations)
-
-## Equality
-
-The `=` operator returns `true` if the left operand is equal to the right
-operand, and a `false` otherwise. The `!=` is the inverse of the `=` operator.
-
-The equality operators can accept operands of type
-[String](./data-types.html#string), [Integer](./data-types.html#integer),
-[Decimal](./data-types.html#decimal), [Boolean](./data-types.html#boolean),
-[Date](./data-types.html#date) and [DateTime](./data-types.html#datetime).
-
-Both operands must be of the same type, and must be singular.
-
-If one or both of the operands is an empty collection, the operator will return
-an empty collection.
-
-See also: [Equality](https://hl7.org/fhirpath/2018Sep/index.html#equality)
+See also: [Operations](https://hl7.org/fhirpath/#operations)
 
 ## Comparison
 
@@ -48,12 +31,18 @@ The following comparison operators are supported:
 - `>` - Greater than
 - `>=` - Greater than or equal to
 
-The comparison operators can accept operands of type
-[String](./data-types.html#string), [Integer](./data-types.html#integer),
-[Decimal](./data-types.html#decimal), [Date](./data-types.html#date) and
-[DateTime](./data-types.html#datetime).
+Both operands must be must be singular, the table below shows the valid types 
+and their combinations.
 
-Both operands must be of the same type, and must be singular.
+|          | Boolean | String | Integer | Decimal | Date  | DateTime | Time  |
+| -------- | ------- | ------ | ------- | ------- | ----- | -------- | ----- | 
+| Boolean  | true    | false  | false   | false   | false | false    | false |
+| String   | false   | true   | false   | false   | false | false    | false |
+| Integer  | false   | false  | true    | true    | false | false    | false |
+| Decimal  | false   | false  | true    | true    | false | false    | false |
+| Date     | false   | false  | false   | false   | true  | true     | false |
+| DateTime | false   | false  | false   | false   | true  | true     | false |
+| Time     | false   | false  | false   | false   | true  | true     | true  |
 
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
@@ -63,7 +52,22 @@ individual characters.
 
 All comparison operators return a [Boolean](./data-types.html#boolean) value.
 
-See also: [Comparison](https://hl7.org/fhirpath/2018Sep/index.html#comparison)
+See also: [Comparison](https://hl7.org/fhirpath/#comparison)
+
+## Equality
+
+The `=` operator returns `true` if the left operand is equal to the right
+operand, and a `false` otherwise. The `!=` is the inverse of the `=` operator.
+
+Both operands must be singular. The valid types and their combinations is the 
+same as for the [Comparison operators](#comparison). In addition to this, 
+[Coding](http://localhost:4000/docs/fhirpath/data-types.html#coding) types can 
+be compared using the equality operators.
+
+If one or both of the operands is an empty collection, the operator will return
+an empty collection.
+
+See also: [Equality](https://hl7.org/fhirpath/#equality)
 
 ## Math
 
@@ -82,12 +86,12 @@ The type of the two operands can be mixed. `+`, `-` and `*` return the same type
 as the left operand, `/` returns [Decimal](./data-types.html#decimal) and `mod`
 returns [Integer](./data-types.html#integer).
 
-Both operands must be of the same type, and must be singular.
+Both operands must be singular.
 
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
 
-See also: [Math](https://hl7.org/fhirpath/2018Sep/index.html#math)
+See also: [Math](https://hl7.org/fhirpath/#math)
 
 ## Boolean logic
 
@@ -104,26 +108,23 @@ Both operands to a Boolean operator must be singular
 All Boolean operators return a [Boolean](./data-types.html#boolean) value.
 
 See also:
-[Boolean logic](https://hl7.org/fhirpath/2018Sep/index.html#boolean-logic)
+[Boolean logic](https://hl7.org/fhirpath/#boolean-logic)
 
 ## Membership
 
 The following membership operators are supported:
 
-- `in`
-- `contains`
+- `in` (`[element] in [collection]`)
+- `contains` (`[collection] contains [element]`)
 
-If the left operand is a collection with a single item, the `in` operator
-returns `true` if the item is in the right operand using [equality](#equality)
+If the element operand is a collection with a single item, the operator
+returns `true` if the item is in the collection using [equality](#equality)
 semantics.
 
-If the left-hand side of the operator is empty, the result is empty. If the
-right-hand side is empty, the result is `false`. If the left operand has
-multiple items, an error is returned.
-
-The `contains` operator is the inverse of `in`.
+If the element is empty, the result is empty. If the collection is empty, the 
+result is `false`. If the element has multiple items, an error is returned.
 
 See also:
-[Collections](https://hl7.org/fhirpath/2018Sep/index.html#collections-2)
+[Collections](https://hl7.org/fhirpath/#collections-2)
 
 Next: [Functions](./functions.html)

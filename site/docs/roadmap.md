@@ -10,7 +10,7 @@ parent: Documentation
 The roadmap for future development on Pathling is based upon the following
 themes:
 
-1. [Summarize operation](#summarize-operation)
+1. [Summarise operation](#summarise-operation)
 2. [Improved FHIRPath support](#improved-fhirpath-support)
 3. [Cell suppression](#cell-suppression)
 4. [Real-time updates](#real-time-updates)
@@ -20,9 +20,9 @@ themes:
 8. [APIs for Python and R](#apis-for-python-and-r)
 9. [Multi-tenancy](#multi-tenancy)
 
-## Summarize operation
+## Summarise operation
 
-This change will introduce a new operation called `summarize`. This operation is
+This change will introduce a new operation called `summarise`. This operation is
 designed for extracting data for use within other tools, such as statistical and
 machine learning models.
 
@@ -30,13 +30,13 @@ The operation takes a set of expressions that define columns in a tabular view
 of the data. A URL pointing to a delimited text file is returned, which contains
 the result of executing the expressions against each subject resource.
 
-<img src="/images/summarize.png" 
-     srcset="/images/summarize@2x.png 2x, /images/summarize.png 1x"
-     alt="Summarize operation" />
+<img src="/images/summarise.png" 
+     srcset="/images/summarise@2x.png 2x, /images/summarise.png 1x"
+     alt="Summarise operation" />
 
 ### Request
 
-The request for the `$summarize` operation is a
+The request for the `$summarise` operation is a
 [Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
@@ -60,7 +60,7 @@ following parameters:
 
 ### Response
 
-The response for the `$summarize` operation is a
+The response for the `$summarise` operation is a
 [Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
@@ -75,27 +75,20 @@ FHIRPath specifications is planned:
 - `translate` function (see
   [Terminology Service API](https://hl7.org/fhir/R4/fhirpath.html#txapi))
 - `select` function (see
-  [select](https://hl7.org/fhirpath/2018Sep/index.html#selectprojection-expression-collection))
+  [select](https://hl7.org/fhirpath/#selectprojection-expression-collection))
 - Various aggregate functions (`average`, `covarPop`, `covarSample`, `max`,
   `min`, `mean`, `stddevPop`, `stddevSample`, `sum`, `varPop`, `varSample`)
 - Date component functions (`toSeconds`, `toMinutes`, `toHours`, `dayOfMonth`,
   `dayOfWeek`, `weekOfYear`, `toMonthNumber`, `toQuarter`, `toYear`)
 - `dateFormat` function
 - `is` and `as` operators (see
-  [Types](https://hl7.org/fhirpath/2018Sep/index.html#types))
+  [Types](https://hl7.org/fhirpath/#types))
 - `Quantity` data type, including support for unit-aware operations using
   [UCUM](https://unitsofmeasure.org) (see
-  [Quantity](https://hl7.org/fhirpath/2018Sep/index.html#types) and
-  [Operations](https://hl7.org/fhirpath/2018Sep/index.html#operations))
+  [Quantity](https://hl7.org/fhirpath/#types) and
+  [Operations](https://hl7.org/fhirpath/#operations))
 - `aggregate` function (see
-  [aggregate](https://hl7.org/fhirpath/2018Sep/index.html#aggregateaggregator-expression-init-value-value))
-
-## Cell suppression
-
-A feature is planned to enable suppression of grouping values within the
-response of the [aggregate operation](./aggregate.html), based upon certain risk
-factors such as cell size. This would reduce the risk of re-identification when
-using Pathling to deploy aggregate-only data query services.
+  [aggregate](https://hl7.org/fhirpath/#aggregateaggregator-expression-init-value-value))
 
 ## Real-time updates
 
@@ -108,6 +101,9 @@ real-time.
 Integration with [Apache Kafka](https://kafka.apache.org/) as a potential
 alternate source of incoming data will also be investigated.
 
+See 
+[(#162) Individual resource creation and update](https://github.com/aehrc/pathling/issues/162).
+
 ## Subscriptions
 
 Work is planned to implement
@@ -115,6 +111,8 @@ Work is planned to implement
 Pathling. Push messaging relating to changes within the data (using criteria
 described using FHIRPath expressions) could be used as an engine for driving
 sophisticated alert systems within the clinical setting.
+
+See [(#164) Subscriptions](https://github.com/aehrc/pathling/issues/164).
 
 ## Extension content
 
@@ -127,19 +125,7 @@ within databases, and implement the `extension` FHIRPath function (see
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)), to
 facilitate the use of extensions within expressions.
 
-## Authorisation enhancements
-
-This change will enhance the existing support for
-[SMART](https://hl7.org/fhir/smart-app-launch/index.html) authorisation within
-the Pathling server.
-
-Focus will be placed on the following areas:
-
-- Controlling access to individual records, versus aggregate data only
-- Obfuscation of aggregate results to reduce the risk of re-identification
-- How the presence of an associated
-  [Consent](https://hl7.org/fhir/R4/consent.html) resource might influence how
-  access to data is authorised
+See [(#163) Extension content](https://github.com/aehrc/pathling/issues/163).
 
 ## APIs for Python and R
 
@@ -160,6 +146,9 @@ It will be important for these libraries to be able to be installed into a local
 environment using language-native package management utilities, i.e.
 [pip](https://pypi.org/project/pip/) and [CRAN](https://cran.r-project.org/).
 
+See [(#194) Python integration](https://github.com/aehrc/pathling/issues/194) 
+and [(#193) R integration](https://github.com/aehrc/pathling/issues/193).
+
 ## Multi-tenancy
 
 This change will allow for the hosting of multiple databases by a single
@@ -171,3 +160,28 @@ Each database will expose its own FHIR endpoint, for example:
 myserver.com/database1/fhir
 myserver.com/database2/fhir
 ```
+
+## Authorisation enhancements
+
+This change will enhance the existing support for
+[SMART](https://hl7.org/fhir/smart-app-launch/index.html) authorisation within
+the Pathling server.
+
+Focus will be placed on the following areas:
+
+- Controlling access to individual records, versus aggregate data only
+- Obfuscation of aggregate results to reduce the risk of re-identification
+- How the presence of an associated
+  [Consent](https://hl7.org/fhir/R4/consent.html) resource might influence how
+  access to data is authorised
+
+## Cell suppression
+
+A feature is planned to enable suppression of grouping values within the
+response of the [aggregate operation](./aggregate.html), based upon certain risk
+factors such as cell size. This would reduce the risk of re-identification when
+using Pathling to deploy aggregate-only data query services.
+
+You can see more planned features, in greater detail, on the 
+[Pathling project board](https://github.com/aehrc/pathling/projects/1) on 
+GitHub.
