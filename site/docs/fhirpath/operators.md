@@ -42,7 +42,7 @@ and their combinations.
 | Decimal  | false   | false  | true    | true    | false | false    | false |
 | Date     | false   | false  | false   | false   | true  | true     | false |
 | DateTime | false   | false  | false   | false   | true  | true     | false |
-| Time     | false   | false  | false   | false   | true  | true     | true  |
+| Time     | false   | false  | false   | false   | false | false    | true  |
 
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
