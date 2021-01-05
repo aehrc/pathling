@@ -12,7 +12,7 @@ functionality designed to ease the delivery of analytics-enabled apps and
 augment tasks related to health data analytics.
 
 Pathling is licensed under the 
-[CSIRO Open Source Software Licence Agreement](https://github.com/aehrc/pathling/blob/master/LICENSE). 
+[CSIRO Open Source Software Licence Agreement](https://github.com/aehrc/pathling/blob/master/LICENSE.md). 
 This means that you are free to use, modify and redistribute the software as you 
 wish, even for commercial purposes.
 
