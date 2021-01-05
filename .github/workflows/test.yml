@@ -19,6 +19,7 @@ jobs:
           java-version: 11
       - name: Run the verify goal with Maven
         run: mvn --batch-mode verify -pl fhir-server -am -Dmaven.test.failure.ignore=true
+        timeout-minutes: 30
       - uses: actions/upload-artifact@v2
         with:
           name: encoders-surefire-reports
