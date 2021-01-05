@@ -5,23 +5,30 @@
   ~ Software Licence Agreement.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>2.4.1</version>
-    <relativePath />
+    <relativePath/>
   </parent>
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
+  <version>3.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <organization>
-    <name>Australian e-Health Research Centre, CSIRO</name>
-    <url>https://aehrc.com/</url>
-  </organization>
+
+  <name>Pathling</name>
+  <description>
+    A server based on the HL7® FHIR® standard, implementing special functionality designed to ease
+    the delivery of analytics-enabled apps and augment tasks related to health data analytics.
+  </description>
+  <url>https://pathling.csiro.au</url>
+
   <developers>
     <developer>
       <name>John Grimes</name>
@@ -34,6 +41,11 @@
       <url>https://github.com/piotrszul</url>
     </developer>
   </developers>
+
+  <organization>
+    <name>Australian e-Health Research Centre, CSIRO</name>
+    <url>https://aehrc.com</url>
+  </organization>
   <licenses>
     <license>
       <name>CSIRO Open Source Software Licence Agreement</name>
@@ -41,18 +53,37 @@
     </license>
   </licenses>
 
-  <version>3.0.0-SNAPSHOT</version>
+  <scm>
+    <url>https://github.com/aehrc/pathling</url>
+    <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
+  </scm>
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/aehrc/pathling/issues</url>
+  </issueManagement>
+  <ciManagement>
+    <system>GitHub Actions</system>
+    <url>https://github.com/aehrc/pathling/actions</url>
+  </ciManagement>
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/aehrc/pathling</url>
+    </repository>
+  </distributionManagement>
 
   <properties>
     <project.majorVersion>3</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    
+
     <pathling.hapiFhirVersion>5.2.0</pathling.hapiFhirVersion>
     <pathling.sparkVersion>3.0.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.dockerJavaVersion>3.2.7</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>2.10.1</pathling.hadoopVersion>
-    <pathling.hadoopMirror>https://apache.mirror.digitalpacific.com.au/hadoop/common</pathling.hadoopMirror>
+    <pathling.hadoopMirror>https://apache.mirror.digitalpacific.com.au/hadoop/common
+    </pathling.hadoopMirror>
   </properties>
 
   <modules>
@@ -283,18 +314,6 @@
       </plugins>
     </pluginManagement>
   </build>
-  
-  <scm>
-    <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
-  </scm>
-
-  <distributionManagement>
-    <repository>
-      <id>github</id>
-      <name>GitHub Packages</name>
-      <url>https://maven.pkg.github.com/aehrc/pathling</url>
-    </repository>
-  </distributionManagement>
 
   <profiles>
     <profile>
