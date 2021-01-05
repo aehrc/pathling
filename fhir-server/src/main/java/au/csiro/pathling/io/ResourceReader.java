@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -17,7 +17,6 @@ import au.csiro.pathling.errors.UnexpectedServerError;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -175,17 +174,13 @@ public class ResourceReader implements Cacheable {
     if (cache == null) {
       return getDatasetForResourceType(resourceType);
     } else {
-      try {
-        return cache.getUnchecked(resourceType);
-      } catch (final UncheckedExecutionException e) {
-        throw new RuntimeException(e.getCause());
-      }
+      return cache.getUnchecked(resourceType);
     }
   }
 
   @Nonnull
   private Dataset<Row> getDatasetForResourceType(@Nonnull final ResourceType resourceType) {
-    if (!availableResourceTypes.contains(resourceType)) {
+    if (!getAvailableResourceTypes().contains(resourceType)) {
       throw new ResourceNotFoundError(
           "Requested resource type not available within selected database: " + resourceType
               .toCode());
