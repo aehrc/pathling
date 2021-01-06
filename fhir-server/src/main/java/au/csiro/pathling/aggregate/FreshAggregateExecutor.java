@@ -84,7 +84,8 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     // Join all filter and grouping expressions together.
     final Column idColumn = inputContext.getIdColumn();
     Dataset<Row> groupingsAndFilters = filters.size() + groupings.size() > 0
-                                       ? joinGroupingsAndFilters(groupings, filters, idColumn)
+                                       ? joinGroupingsAndFilters(inputContext, groupings, filters,
+        idColumn)
                                        : inputContext.getDataset();
 
     // Apply filters.
@@ -137,7 +138,8 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
   }
 
   @Nonnull
-  private Dataset<Row> joinGroupingsAndFilters(@Nonnull final Collection<FhirPath> groupings,
+  private Dataset<Row> joinGroupingsAndFilters(final FhirPath inputContext,
+      @Nonnull final Collection<FhirPath> groupings,
       @Nonnull final Collection<FhirPath> filters, @Nonnull final Column idColumn) {
     final List<Dataset<Row>> datasets = groupings.stream()
         .map(grouping -> {
@@ -145,8 +147,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
           // aggregations do not count non-empty collections in the empty collection grouping. We do
           // this by joining the distinct set of resource IDs to the dataset using an outer join,
           // where the value is not null.
-          final Dataset<Row> distinctIds = grouping.getDataset().select(idColumn).distinct();
-          return join(grouping.getDataset(), idColumn, distinctIds,
+          return join(grouping.getDataset(), idColumn, inputContext.getDataset(),
               idColumn, grouping.getValueColumn().isNotNull(), JoinType.RIGHT_OUTER);
         }).collect(Collectors.toList());
     datasets.addAll(filters.stream()
