@@ -6,7 +6,8 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.lit;
 
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -49,7 +50,7 @@ public interface Referrer {
     final Column targetId = resourcePath.getIdColumn();
     final Column targetCode = lit(resourcePath.getResourceType().toCode());
 
-    return Referrer.resourceEqualityFor(referrer, targetId, targetCode);
+    return Referrer.resourceEqualityFor(referrer, targetCode, targetId);
   }
 
   /**
@@ -57,28 +58,14 @@ public interface Referrer {
    * resource ID and code.
    *
    * @param referrer the Referrer that is the subject of the operation
-   * @param targetId the resource identity column to match
    * @param targetCode a column containing the resource code of the target
+   * @param targetId the resource identity column to match
    * @return a {@link Column} representing the matching condition
    */
   @Nonnull
   static Column resourceEqualityFor(@Nonnull final Referrer referrer,
-      @Nonnull final Column targetId,
-      @Nonnull final Column targetCode) {
-    final Column components = split(referrer.getReferenceColumn(), PATH_SEPARATOR, 2);
-    final Column numComponents = size(components);
-
-    final Column resourceCode = element_at(components, 1);
-    final Column resourceId = element_at(components, 2);
-
-    // If the resource type in the reference does not match the target resource, return null.
-    final Column idEquality = resourceId.equalTo(targetId);
-    final Column conditionalEquality = when(resourceCode.equalTo(
-        targetCode), idEquality).otherwise(null);
-
-    // If the reference does not look like a relative reference with only two path components,
-    // return null.
-    return when(numComponents.equalTo(2), conditionalEquality).otherwise(null);
+      @Nonnull final Column targetCode, @Nonnull final Column targetId) {
+    return referrer.getReferenceColumn().equalTo(concat(targetCode, lit(PATH_SEPARATOR), targetId));
   }
 
   /**

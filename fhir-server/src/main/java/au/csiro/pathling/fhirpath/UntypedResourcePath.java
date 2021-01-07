@@ -99,7 +99,7 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
   @Nonnull
   public Column getResourceEquality(@Nonnull final Column targetId,
       @Nonnull final Column targetCode) {
-    return Referrer.resourceEqualityFor(this, targetId, targetCode);
+    return Referrer.resourceEqualityFor(this, targetCode, targetId);
   }
 
   @Nonnull
