@@ -13,17 +13,20 @@ import static org.apache.spark.sql.functions.*;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.sql.SqlExtensions;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.encoders.RowEncoder;
-import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.slf4j.MDC;
 
@@ -61,7 +64,7 @@ public class SubsumesFunction implements NamedFunction {
    * The column name that this function uses to represent the result value.
    */
   public static final String COL_VALUE = "value";
-  
+
   private static final String COL_ARG_ID = "argId";
   private static final String COL_CODING = "coding";
   private static final String FIELD_CODING = "coding";
@@ -96,25 +99,28 @@ public class SubsumesFunction implements NamedFunction {
     final NonLiteralPath inputFhirPath = input.getInput();
     final Dataset<Row> idAndCodingSet = createJoinedDataset(input.getInput(),
         input.getArguments().get(0));
-
-    final StructType resultSchema = SubsumptionMapper.createResultSchema(idAndCodingSet.schema());
-
     // Process the subsumption operation per partition, adding a result column to the dataset.
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
-    final Dataset<Row> resultDataset = idAndCodingSet
-        .mapPartitions(
-            new SubsumptionMapper(MDC.get("requestId"),
-                input.getContext().getTerminologyClientFactory().get(), inverted),
-            RowEncoder.apply(resultSchema));
 
-    final Column idColumn = inputFhirPath.getIdColumn();
-    final Column valueColumn = col(COL_VALUE);
+    final Column codingPairCol = struct(idAndCodingSet.col(COL_INPUT_CODINGS),
+        idAndCodingSet.col(COL_ARG_CODINGS));
+
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    final SubsumptionMapperWithPreview mapper =
+        new SubsumptionMapperWithPreview(MDC.get("requestId"),
+            input.getContext().getTerminologyClientFactory().get(),
+            inverted);
+
+    final Dataset<Row> resultDataset = SqlExtensions
+        .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
+            SimpleCodingsDecoders::decodeListPair,
+            mapper, StructField.apply("result", DataTypes.BooleanType, true, Metadata.empty()));
+    final Column resultColumn = col("result");
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
     return ElementPath
-        .build(expression, resultDataset, idColumn,
-            inputFhirPath.getEidColumn(), valueColumn, inputFhirPath.isSingular(),
+        .build(expression, resultDataset, inputFhirPath.getIdColumn(),
+            inputFhirPath.getEidColumn(), resultColumn, inputFhirPath.isSingular(),
             inputFhirPath.getForeignResource(), inputFhirPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }

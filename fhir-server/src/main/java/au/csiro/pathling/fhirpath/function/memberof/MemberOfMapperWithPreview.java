@@ -6,25 +6,20 @@
 
 package au.csiro.pathling.fhirpath.function.memberof;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
-
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
+import au.csiro.pathling.sql.MapperWithPreview;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.function.MapPartitionsFunction;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.CanonicalType;
 import org.hl7.fhir.r4.model.CodeSystem;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
@@ -33,12 +28,12 @@ import org.hl7.fhir.r4.model.ValueSet.ValueSetComposeComponent;
 import org.slf4j.MDC;
 
 /**
- * Takes a set of Rows with two columns: (1) a correlation identifier, and; (2) a Coding or
- * CodeableConcept to validate. Returns a set of {@link MemberOfResult} objects, which contain the
- * correlation identifier and a boolean result.
+ * Takes a list of {{SimpleCoding}} and returns boolean result indicting if any of the codings
+ * belongs to given valueSet.
  */
 @Slf4j
-public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult> {
+public class MemberOfMapperWithPreview implements
+    MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> {
 
   private static final long serialVersionUID = 2879761794073649202L;
 
@@ -51,50 +46,37 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
   @Nonnull
   private final String valueSetUri;
 
-  @Nonnull
-  private final FHIRDefinedType fhirType;
 
   /**
    * @param requestId An identifier used alongside any logging that the mapper outputs
    * @param terminologyClientFactory Used to create instances of the terminology client on workers
    * @param valueSetUri The identifier of the ValueSet that codes will be validated against
-   * @param fhirType The type of the input, either Coding or CodeableConcept
    */
-  public MemberOfMapper(@Nonnull final String requestId,
+  public MemberOfMapperWithPreview(@Nonnull final String requestId,
       @Nonnull final TerminologyClientFactory terminologyClientFactory,
-      @Nonnull final String valueSetUri, @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final String valueSetUri) {
     this.requestId = requestId;
     this.terminologyClientFactory = terminologyClientFactory;
     this.valueSetUri = valueSetUri;
-    this.fhirType = fhirType;
   }
 
   @Override
   @Nonnull
-  public Iterator<MemberOfResult> call(@Nullable final Iterator<Row> inputRows) {
-    if (inputRows == null || !inputRows.hasNext()) {
-      return Collections.emptyIterator();
+  public Set<SimpleCoding> preview(@Nonnull final Iterator<List<SimpleCoding>> input) {
+    if (!input.hasNext()) {
+      return Collections.emptySet();
     }
-
-    // Add the request ID to the logging context, so that we can track the logging for this
-    // request across all workers.
     MDC.put("requestId", requestId);
 
-    // Get all the codings from the input rows, filtering out any incomplete ones.
-    final Iterable<Row> inputRowsIterable = () -> inputRows;
-    final Function<Row, MemberOfResult> keyMapper = row -> new MemberOfResult(row.getInt(0));
-    final Function<Row, List<SimpleCoding>> valueMapper = row ->
-        getCodingsFromRow(row.getStruct(1)).stream()
-            .filter(SimpleCoding::isDefined)
-            .collect(Collectors.toList());
-    final Map<MemberOfResult, List<SimpleCoding>> hashesAndCodes = StreamSupport
+    final Iterable<List<SimpleCoding>> inputRowsIterable = () -> input;
+    final Set<SimpleCoding> codings = StreamSupport
         .stream(inputRowsIterable.spliterator(), false)
-        .collect(Collectors.toMap(keyMapper, valueMapper));
+        .filter(Objects::nonNull)
+        .flatMap(List::stream)
+        .filter(Objects::nonNull)
+        .filter(SimpleCoding::isDefined)
+        .collect(Collectors.toSet());
 
-    // Get the unique set of code system URIs that are present within the codings.
-    final List<SimpleCoding> codings = hashesAndCodes.values().stream()
-        .flatMap(Collection::stream)
-        .collect(Collectors.toList());
     final Set<CodeSystemReference> codeSystems = codings.stream()
         .map(coding -> new CodeSystemReference(Optional.ofNullable(coding.getSystem()),
             Optional.ofNullable(coding.getVersion())))
@@ -158,10 +140,10 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
     } else {
       // Ask the terminology service to work out the intersection between the set of input codings
       // and the ValueSet identified by the URI in the argument.
-      log.info("Intersecting {} concepts with {} using terminology service", hashesAndCodes.size(),
+      log.info("Intersecting {} concepts with {} using terminology service", codings.size(),
           valueSetUri);
       final ValueSet expansion = terminologyClient
-          .expand(intersection, new IntegerType(hashesAndCodes.size()));
+          .expand(intersection, new IntegerType(codings.size()));
 
       // Build a set of SimpleCodings to represent the codings present in the intersection.
       expandedCodings = expansion.getExpansion().getContains().stream()
@@ -169,39 +151,16 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
               contains.getVersion()))
           .collect(Collectors.toSet());
     }
-
-    // Build a MemberOfResult for each of the input rows, with the result indicating whether that
-    // coding was present in the intersection.
-    final List<MemberOfResult> results = hashesAndCodes.keySet().stream()
-        .map(result -> new MemberOfResult(result.getHash(),
-            !Collections.disjoint(expandedCodings, hashesAndCodes.get(result))))
-        .collect(Collectors.toList());
-
-    return results.iterator();
+    return expandedCodings;
   }
 
-  @Nonnull
-  private List<SimpleCoding> getCodingsFromRow(@Nullable final Row inputCoding) {
-    if (inputCoding == null) {
-      return Collections.emptyList();
-    }
-    check(fhirType == FHIRDefinedType.CODING || fhirType == FHIRDefinedType.CODEABLECONCEPT);
-
-    if (fhirType == FHIRDefinedType.CODING) {
-      return Collections.singletonList(getCodingFromRow(inputCoding));
-    } else {
-      return inputCoding.getList(inputCoding.fieldIndex("coding")).stream()
-          .map(codingRow -> getCodingFromRow((Row) codingRow))
-          .collect(Collectors.toList());
-    }
-  }
-
-  @Nonnull
-  private static SimpleCoding getCodingFromRow(@Nonnull final Row inputCoding) {
-    final String system = inputCoding.getString(inputCoding.fieldIndex("system"));
-    final String code = inputCoding.getString(inputCoding.fieldIndex("code"));
-    final String version = inputCoding.getString(inputCoding.fieldIndex("version"));
-    return new SimpleCoding(system, code, version);
+  @Override
+  @Nullable
+  public Boolean call(@Nullable final List<SimpleCoding> input,
+      @Nonnull final Set<SimpleCoding> state) {
+    return input != null
+           ? !Collections.disjoint(state, input)
+           : null;
   }
 
   @Value
@@ -226,7 +185,6 @@ public class MemberOfMapper implements MapPartitionsFunction<Row, MemberOfResult
         return versionAgnosticTest && version.get().equals(coding.getVersion());
       }
     }
-
   }
 
 }

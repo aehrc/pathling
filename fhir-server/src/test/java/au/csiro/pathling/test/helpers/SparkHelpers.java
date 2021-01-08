@@ -11,6 +11,7 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.spark.udf.CodingsEqual;
+import au.csiro.pathling.sql.PathlingStrategy;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -54,6 +55,7 @@ public abstract class SparkHelpers {
           .config("spark.sql.autoBroadcastJoinThreshold", "-1")
           .getOrCreate();
       spark.udf().register("codings_equal", new CodingsEqual(), DataTypes.BooleanType);
+      PathlingStrategy.setup(spark);
       return spark;
     }
     return activeSession.get();
