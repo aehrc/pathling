@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+  ~ Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+  ~ Software Licence Agreement.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
+    <version>2.1.2-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>site</artifactId>
+  <packaging>pom</packaging>
+
+  <properties>
+    <siteDockerRepo>aehrc/pathling-site</siteDockerRepo>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>install</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <phase>initialize</phase>
+            <configuration>
+              <executable>bundle</executable>
+            </configuration>
+          </execution>
+          <execution>
+            <id>build</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <phase>compile</phase>
+            <configuration>
+              <executable>bundle</executable>
+              <arguments>
+                <argument>exec</argument>
+                <argument>jekyll</argument>
+                <argument>build</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>dockerfile-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build</goal>
+              <goal>push</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <repository>${siteDockerRepo}</repository>
+          <tag>${project.version}</tag>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

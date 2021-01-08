@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -39,7 +39,7 @@ public class OrderableTest {
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "Jude")   // when: "two values"  expect: "Jude"
+        .withRow("patient-1", "Jude")   // when: "two values"  expect: "Jude"
         .build();
 
     final ElementPath contextPath = new ElementPathBuilder()
@@ -63,7 +63,7 @@ public class OrderableTest {
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "Jude")   // when: "two values"  expect: "Jude"
+        .withRow("patient-1", "Jude")   // when: "two values"  expect: "Jude"
         .build();
 
     final ElementPath testPath = new ElementPathBuilder()
@@ -83,7 +83,7 @@ public class OrderableTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", null, "Jude")
+        .withRow("patient-1", null, "Jude")
         .build();
 
     assertThat(testPath)
@@ -107,9 +107,9 @@ public class OrderableTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", DatasetBuilder.makeEid(2, 3), "Adam")
-        .withRow("Patient/abc1", DatasetBuilder.makeEid(1, 3), "Jude")
-        .withRow("Patient/abc2", null, null)
+        .withRow("patient-1", DatasetBuilder.makeEid(2, 3), "Adam")
+        .withRow("patient-1", DatasetBuilder.makeEid(1, 3), "Jude")
+        .withRow("patient-2", null, null)
         .build();
 
     final ElementPath testPath = new ElementPathBuilder()
@@ -129,9 +129,9 @@ public class OrderableTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", DatasetBuilder.makeEid(1, 3), "Jude")
-        .withRow("Patient/abc1", DatasetBuilder.makeEid(2, 3), "Adam")
-        .withRow("Patient/abc2", null, null)
+        .withRow("patient-1", DatasetBuilder.makeEid(1, 3), "Jude")
+        .withRow("patient-1", DatasetBuilder.makeEid(2, 3), "Adam")
+        .withRow("patient-2", null, null)
         .build();
 
     assertThat(testPath)
@@ -145,7 +145,7 @@ public class OrderableTest {
     final Dataset<Row> inputDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/abc1", "Adam")
+        .withRow("patient-1", "Adam")
         .build();
 
     final ElementPath testPath = new ElementPathBuilder()

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -29,7 +29,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-public class UntypedResourcePath extends NonLiteralPath {
+public class UntypedResourcePath extends NonLiteralPath implements Referrer {
 
   /**
    * A column within the dataset containing the resource type.
@@ -88,7 +88,18 @@ public class UntypedResourcePath extends NonLiteralPath {
 
   @Nonnull
   public Column getReferenceColumn() {
-    return valueColumn.getField(ReferencePath.REFERENCE_FIELD_NAME);
+    return valueColumn.getField(Referrer.REFERENCE_FIELD_NAME);
+  }
+
+  @Nonnull
+  public Column getResourceEquality(@Nonnull final ResourcePath resourcePath) {
+    return Referrer.resourceEqualityFor(this, resourcePath);
+  }
+
+  @Nonnull
+  public Column getResourceEquality(@Nonnull final Column targetId,
+      @Nonnull final Column targetCode) {
+    return Referrer.resourceEqualityFor(this, targetCode, targetId);
   }
 
   @Nonnull

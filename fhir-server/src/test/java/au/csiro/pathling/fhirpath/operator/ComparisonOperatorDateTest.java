@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -42,9 +42,9 @@ class ComparisonOperatorDateTest {
     final Dataset<Row> leftDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", "2013-06-10T15:33:22Z")
-        .withRow("Patient/2", "2014-09-25T22:04:19+10:00")
-        .withRow("Patient/3", "2018-05-18T11:03:55-05:00")
+        .withRow("patient-1", "2013-06-10T15:33:22Z")
+        .withRow("patient-2", "2014-09-25T22:04:19+10:00")
+        .withRow("patient-3", "2018-05-18T11:03:55-05:00")
         .build();
     final ElementPath leftPath = new ElementPathBuilder()
         .dataset(leftDataset)
@@ -62,9 +62,9 @@ class ComparisonOperatorDateTest {
     final Dataset<Row> rightDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("Patient/1", "2013-06-10T12:33:22Z")
-        .withRow("Patient/2", "2014-09-25T12:04:19Z")
-        .withRow("Patient/3", "2018-05-19T11:03:55.123Z")
+        .withRow("patient-1", "2013-06-10T12:33:22Z")
+        .withRow("patient-2", "2014-09-25T12:04:19Z")
+        .withRow("patient-3", "2018-05-19T11:03:55.123Z")
         .build();
     final ElementPath rightPath = new ElementPathBuilder()
         .dataset(rightDataset)
@@ -89,9 +89,9 @@ class ComparisonOperatorDateTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
-        .withRow("Patient/1", false)
-        .withRow("Patient/2", true)
-        .withRow("Patient/3", true)
+        .withRow("patient-1", false)
+        .withRow("patient-2", true)
+        .withRow("patient-3", true)
         .build();
     assertThat(result)
         .selectOrderedResult()

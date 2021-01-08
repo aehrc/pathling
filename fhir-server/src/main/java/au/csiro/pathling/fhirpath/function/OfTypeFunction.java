@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -49,9 +49,9 @@ public class OfTypeFunction implements NamedFunction {
 
     // Do a left outer join to the resource dataset using the reference in the untyped dataset - the
     // result will be null in the rows that are not of the resource type nominated.
-    final Column referenceColumn = inputPath.getReferenceColumn();
-    final Dataset<Row> dataset = join(inputPath.getDataset(), referenceColumn,
-        resourcePath.getDataset(), resourcePath.getIdColumn(), JoinType.LEFT_OUTER);
+    final Column joinCondition = inputPath.getResourceEquality(resourcePath);
+    final Dataset<Row> dataset = join(inputPath.getDataset(), resourcePath.getDataset(),
+        joinCondition, JoinType.LEFT_OUTER);
 
     // Return a new resource path with the joined dataset, and the argument's value column.
     final Optional<Column> thisColumn = inputPath.getThisColumn();

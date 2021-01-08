@@ -56,12 +56,12 @@ several configuration parameters using environment variables.
 version: "3"
 services:
   pathling:
-    image: aehrc/pathling:latest
+    image: aehrc/pathling:3
     ports:
       - 8080:8080
     environment:
-      PATHLING_EXECUTOR_MEMORY: 6g
-      PATHLING_CORS_ALLOWED_ORIGINS: http://localhost:3000
+      spark.executor.memory: 6g
+      pathling.cors.allowedOrigins: http://localhost:3000
     volumes:
       - pathling:/usr/share/warehouse
       - /home/me/data:/usr/share/staging
@@ -77,17 +77,17 @@ directory. Then the following command can be issued to run the Pathling server:
 docker-compose up
 ```
 
-In this example, the `image` key is being used to refer to the latest version of
-the Pathling image on Docker Hub.
+In this example, the `image` key is being used to refer to the latest `3.x` 
+version of the Pathling image on Docker Hub.
 
-We are setting the `PATHLING_EXECUTOR_MEMORY` configuration variable to 6GB, to
+We are setting the `spark.executor.memory` configuration variable to 6GB, to
 give us a bit more memory with which to process our data. The
-`PATHLING_CORS_ALLOWED_ORIGINS` variable is set to `http://localhost:3000`,
+`pathling.cors.allowedOrigins` variable is set to `http://localhost:3000`,
 which will configure the CORS support in Pathling to allow a browser-based
 frontend application to integrate with the Pathling API.
 
 For a full list of all available configuration variables, see
-[Configuration and deployment](./deployment.html).
+[Configuration](./configuration.html).
 
 In the `volumes` section, we set up two volumes: one for storing the warehouse
 data files, and one for importing data. The first volume, named `pathling`, is

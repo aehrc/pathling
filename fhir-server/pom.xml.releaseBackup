@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+  ~ Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+  ~ Software Licence Agreement.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
+    <version>2.1.2-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>fhir-server</artifactId>
+  <packaging>jar</packaging>
+
+  <properties>
+    <jettyVersion>9.4.31.v20200723</jettyVersion>
+    <antlrVersion>4.8-1</antlrVersion>
+    <fhirServerDockerRepo>aehrc/pathling</fhirServerDockerRepo>
+  </properties>
+
+  <dependencies>
+    <!-- HAPI FHIR -->
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-base</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-client</artifactId>
+    </dependency>
+    <!-- Woodstox is used by HAPI for XML processing -->
+    <dependency>
+      <groupId>com.fasterxml.woodstox</groupId>
+      <artifactId>woodstox-core</artifactId>
+    </dependency>
+
+    <!-- Apache Spark -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_${sparkScalaVersion}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-aws</artifactId>
+    </dependency>
+
+    <!-- Encoders -->
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>encoders</artifactId>
+    </dependency>
+
+    <!-- Logging -->
+    <dependency>
+      <artifactId>logback-classic</artifactId>
+      <groupId>ch.qos.logback</groupId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <!-- Authorisation -->
+    <dependency>
+      <groupId>com.auth0</groupId>
+      <artifactId>java-jwt</artifactId>
+      <version>3.10.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.auth0</groupId>
+      <artifactId>jwks-rsa</artifactId>
+      <version>0.13.0</version>
+    </dependency>
+
+    <!-- ANTLR -->
+    <dependency>
+      <groupId>org.antlr</groupId>
+      <artifactId>antlr4</artifactId>
+      <version>${antlrVersion}</version>
+    </dependency>
+
+    <!-- Jetty -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>${jettyVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <version>${jettyVersion}</version>
+    </dependency>
+
+    <!-- Error monitoring -->
+    <dependency>
+      <groupId>io.sentry</groupId>
+      <artifactId>sentry</artifactId>
+    </dependency>
+
+    <!-- spring-web is required by CorsConfiguration, which is required by the CorsInterceptor -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-web</artifactId>
+      <version>5.2.8.RELEASE</version>
+    </dependency>
+
+    <!-- Testing -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.skyscreamer</groupId>
+      <artifactId>jsonassert</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.docker-java</groupId>
+      <artifactId>docker-java</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.docker-java</groupId>
+      <artifactId>docker-java-transport-okhttp</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-maven-plugin</artifactId>
+        <version>${antlrVersion}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>antlr4</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <visitor>true</visitor>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>dockerfile-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>build</id>
+            <goals>
+              <goal>build</goal>
+            </goals>
+            <configuration>
+              <tag>${project.version}</tag>
+              <buildArgs>
+                <VERSION>${project.version}</VERSION>
+                <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
+                <HADOOP_VERSION>${hadoopVersion}</HADOOP_VERSION>
+                <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+                <DEPENDENCY_PATH>target/dependency</DEPENDENCY_PATH>
+              </buildArgs>
+            </configuration>
+          </execution>
+          <execution>
+            <id>tag-major</id>
+            <phase>none</phase>
+            <goals>
+              <goal>tag</goal>
+            </goals>
+            <configuration>
+              <tag>${project.majorVersion}</tag>
+            </configuration>
+          </execution>
+          <execution>
+            <id>tag-latest</id>
+            <phase>none</phase>
+            <goals>
+              <goal>tag</goal>
+            </goals>
+            <configuration>
+              <tag>latest</tag>
+            </configuration>
+          </execution>
+          <execution>
+            <id>push-version</id>
+            <phase>none</phase>
+            <goals>
+              <goal>push</goal>
+            </goals>
+            <configuration>
+              <tag>${project.version}</tag>
+            </configuration>
+          </execution>
+          <execution>
+            <id>push-major</id>
+            <phase>none</phase>
+            <goals>
+              <goal>push</goal>
+            </goals>
+            <configuration>
+              <tag>${project.majorVersion}</tag>
+            </configuration>
+          </execution>
+          <execution>
+            <id>push-latest</id>
+            <phase>none</phase>
+            <goals>
+              <goal>push</goal>
+            </goals>
+            <configuration>
+              <tag>latest</tag>
+            </configuration>
+          </execution>
+        </executions>
+        <configuration>
+          <repository>${fhirServerDockerRepo}</repository>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <groups>au.csiro.pathling.UnitTest</groups>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <includes>
+            <include>**/*.java</include>
+          </includes>
+          <groups>au.csiro.pathling.SystemTest</groups>
+          <systemPropertyVariables>
+            <version>${project.version}</version>
+            <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
+            <dockerRepository>${fhirServerDockerRepo}</dockerRepository>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>shade</id>
+      <activation>
+        <property>
+          <name>skipShade</name>
+          <value>!true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>au.csiro.pathling.FhirServerContainer</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

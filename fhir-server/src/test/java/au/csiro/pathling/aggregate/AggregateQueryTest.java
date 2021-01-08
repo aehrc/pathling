@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -491,7 +491,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("name.where($this.given contains 'Karina848').count()")
-        .withFilter("id = 'Patient/9360820c-8602-4335-8b50-c88d627a0c20'")
+        .withFilter("id = '9360820c-8602-4335-8b50-c88d627a0c20'")
         .build();
 
     response = executor.execute(request);

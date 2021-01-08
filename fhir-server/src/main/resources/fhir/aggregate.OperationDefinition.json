@@ -1,38 +1,26 @@
 {
   "resourceType": "OperationDefinition",
-  "id": "aggregate-2",
-  "url": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-2",
+  "id": "aggregate-3",
+  "url": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3",
   "name": "aggregate",
   "title": "Pathling Aggregate Operation",
   "status": "active",
   "kind": "operation",
-  "experimental": true,
+  "experimental": false,
   "publisher": "Australian e-Health Research Centre, CSIRO",
   "description": "This operation allows a user to perform aggregate queries on data held within the FHIR server by specifying aggregation, grouping and filter expressions.",
   "affectsState": false,
   "code": "aggregate",
-  "system": true,
-  "type": false,
+  "system": false,
+  "type": true,
   "instance": false,
   "parameter": [
-    {
-      "name": "subjectResource",
-      "use": "in",
-      "min": 1,
-      "max": "1",
-      "documentation": "The subject resource that the expressions within this query are evaluated against.",
-      "type": "code",
-      "binding": {
-        "strength": "required",
-        "valueSet": "http://hl7.org/fhir/ValueSet/resource-types|4.0.0"
-      }
-    },
     {
       "name": "aggregation",
       "use": "in",
       "min": 1,
       "max": "*",
-      "documentation": "A FHIRPath expression which is used to calculate a summary value from each grouping. The context is a collection of resources of the type specified in the subjectResource parameter. The expression must evaluate to a primitive value.",
+      "documentation": "A FHIRPath expression which is used to calculate a summary value from each grouping. The context is a collection of resources of the type this operation was invoked against. The expression must evaluate to a primitive value.",
       "type": "string"
     },
     {
@@ -40,7 +28,7 @@
       "use": "in",
       "min": 0,
       "max": "*",
-      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine which groupings it should be counted within. The context is an individual resource of the type specified in the subjectResource parameter. The expression must evaluate to a primitive value.",
+      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine which groupings it should be counted within. The context is an individual resource of the type this operation was invoked against. The expression must evaluate to a primitive value.",
       "type": "string"
     },
     {
@@ -48,7 +36,7 @@
       "use": "in",
       "min": 0,
       "max": "*",
-      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine whether it is included within the result. The context is an individual resource of the type specified in the subjectResource parameter. The expression must evaluate to a singular Boolean value. Multiple filters are combined using AND logic.",
+      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine whether it is included within the result. The context is an individual resource of the type this operation was invoked against. The expression must evaluate to a singular Boolean value. Multiple filters are combined using AND logic.",
       "type": "string"
     },
     {

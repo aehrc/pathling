@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2020, Commonwealth Scientific
+ * These modifications are copyright © 2018-2021, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
  */
@@ -17,11 +17,7 @@ import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import scala.collection.JavaConversions;
@@ -65,10 +61,10 @@ public class FhirEncoders {
    * Consumers should generally use the {@link #forR4()} method, but this is made available for test
    * purposes and additional experimental mappings.
    *
-   * @param context  the FHIR context to use.
+   * @param context the FHIR context to use.
    * @param mappings mappings between Spark and FHIR data types.
    */
-  public FhirEncoders(FhirContext context, DataTypeMappings mappings) {
+  public FhirEncoders(final FhirContext context, final DataTypeMappings mappings) {
     this.context = context;
     this.mappings = mappings;
   }
@@ -80,7 +76,7 @@ public class FhirEncoders {
    * @param fhirVersion the version of FHIR to use
    * @return the FhirContext
    */
-  public static FhirContext contextFor(FhirVersionEnum fhirVersion) {
+  public static FhirContext contextFor(final FhirVersionEnum fhirVersion) {
 
     synchronized (FHIR_CONTEXTS) {
 
@@ -103,14 +99,14 @@ public class FhirEncoders {
    * @param fhirVersion the FHIR version for the data type mappings.
    * @return a DataTypeMappings instance.
    */
-  static DataTypeMappings mappingsFor(FhirVersionEnum fhirVersion) {
+  static DataTypeMappings mappingsFor(final FhirVersionEnum fhirVersion) {
 
     synchronized (DATA_TYPE_MAPPINGS) {
 
       DataTypeMappings mappings = DATA_TYPE_MAPPINGS.get(fhirVersion);
 
       if (mappings == null) {
-        String dataTypesClassName;
+        final String dataTypesClassName;
 
         if (fhirVersion == FhirVersionEnum.R4) {
           dataTypesClassName = "au.csiro.pathling.encoders.datatypes.R4DataTypeMappings";
@@ -124,7 +120,7 @@ public class FhirEncoders {
 
           DATA_TYPE_MAPPINGS.put(fhirVersion, mappings);
 
-        } catch (Exception createClassException) {
+        } catch (final Exception createClassException) {
 
           throw new IllegalStateException("Unable to create the data mappings "
               + dataTypesClassName
@@ -156,7 +152,7 @@ public class FhirEncoders {
    * @param fhirVersion the version of FHIR to use.
    * @return a builder for encoders.
    */
-  public static Builder forVersion(FhirVersionEnum fhirVersion) {
+  public static Builder forVersion(final FhirVersionEnum fhirVersion) {
     return new Builder(fhirVersion);
   }
 
@@ -164,10 +160,10 @@ public class FhirEncoders {
    * Returns an encoder for the given FHIR resource.
    *
    * @param type the type of the resource to encode.
-   * @param <T>  the type of the resource to be encoded.
+   * @param <T> the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(String type) {
+  public final <T extends IBaseResource> ExpressionEncoder<T> of(final String type) {
 
     return of(type, new String[]{});
   }
@@ -176,10 +172,10 @@ public class FhirEncoders {
    * Returns an encoder for the given FHIR resource.
    *
    * @param type the type of the resource to encode.
-   * @param <T>  the type of the resource to be encoded.
+   * @param <T> the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(Class<T> type) {
+  public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type) {
 
     return of(type, Collections.emptyList());
   }
@@ -188,19 +184,19 @@ public class FhirEncoders {
    * Returns an encoder for the given FHIR resource by name, as defined by the FHIR specification.
    *
    * @param resourceName the name of the FHIR resource to encode, such as "Encounter", "Condition",
-   *                     "Observation", etc.
-   * @param contained    the names of FHIR resources contained to the encoded resource.
-   * @param <T>          the type of the resource to be encoded.
+   * "Observation", etc.
+   * @param contained the names of FHIR resources contained to the encoded resource.
+   * @param <T> the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
-  public <T extends IBaseResource> ExpressionEncoder<T> of(String resourceName,
-      String... contained) {
+  public <T extends IBaseResource> ExpressionEncoder<T> of(final String resourceName,
+      final String... contained) {
 
-    RuntimeResourceDefinition definition = context.getResourceDefinition(resourceName);
+    final RuntimeResourceDefinition definition = context.getResourceDefinition(resourceName);
 
-    List<Class<? extends IBaseResource>> containedClasses = new ArrayList<>();
+    final List<Class<? extends IBaseResource>> containedClasses = new ArrayList<>();
 
-    for (String containedName : contained) {
+    for (final String containedName : contained) {
 
       containedClasses.add(context.getResourceDefinition(containedName).getImplementingClass());
     }
@@ -211,17 +207,17 @@ public class FhirEncoders {
   /**
    * Returns an encoder for the given FHIR resource.
    *
-   * @param type      the type of the resource to encode.
+   * @param type the type of the resource to encode.
    * @param contained a list of types for FHIR resources contained to the encoded resource.
-   * @param <T>       the type of the resource to be encoded.
+   * @param <T> the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(Class<T> type,
-      Class... contained) {
+  public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type,
+      final Class... contained) {
 
-    List<Class<? extends IBaseResource>> containedResourceList = new ArrayList<>();
+    final List<Class<? extends IBaseResource>> containedResourceList = new ArrayList<>();
 
-    for (Class element : contained) {
+    for (final Class element : contained) {
 
       if (IBaseResource.class.isAssignableFrom(element)) {
 
@@ -239,32 +235,32 @@ public class FhirEncoders {
   /**
    * Returns an encoder for the given FHIR resource.
    *
-   * @param type      the type of the resource to encode.
+   * @param type the type of the resource to encode.
    * @param contained a list of types for FHIR resources contained to the encoded resource.
-   * @param <T>       the type of the resource to be encoded.
+   * @param <T> the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(Class<T> type,
-      List<Class<? extends IBaseResource>> contained) {
+  public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type,
+      final List<Class<? extends IBaseResource>> contained) {
 
-    BaseRuntimeElementCompositeDefinition definition =
+    final BaseRuntimeElementCompositeDefinition definition =
         context.getResourceDefinition(type);
 
-    List<BaseRuntimeElementCompositeDefinition<?>> containedDefinitions = new ArrayList<>();
+    final List<BaseRuntimeElementCompositeDefinition<?>> containedDefinitions = new ArrayList<>();
 
-    for (Class<? extends IBaseResource> resource : contained) {
+    for (final Class<? extends IBaseResource> resource : contained) {
 
       containedDefinitions.add(context.getResourceDefinition(resource));
     }
 
-    StringBuilder keyBuilder = new StringBuilder(type.getName());
+    final StringBuilder keyBuilder = new StringBuilder(type.getName());
 
-    for (Class resource : contained) {
+    for (final Class resource : contained) {
 
       keyBuilder.append(resource.getName());
     }
 
-    int key = keyBuilder.toString().hashCode();
+    final int key = keyBuilder.toString().hashCode();
 
     synchronized (encoderCache) {
 
@@ -303,7 +299,7 @@ public class FhirEncoders {
 
     final FhirVersionEnum fhirVersion;
 
-    EncodersKey(FhirVersionEnum fhirVersion) {
+    EncodersKey(final FhirVersionEnum fhirVersion) {
       this.fhirVersion = fhirVersion;
     }
 
@@ -313,12 +309,12 @@ public class FhirEncoders {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
       if (!(obj instanceof EncodersKey)) {
         return false;
       }
 
-      EncodersKey that = (EncodersKey) obj;
+      final EncodersKey that = (EncodersKey) obj;
 
       return this.fhirVersion == that.fhirVersion;
     }
@@ -332,7 +328,7 @@ public class FhirEncoders {
 
     final FhirVersionEnum fhirVersion;
 
-    Builder(FhirVersionEnum fhirVersion) {
+    Builder(final FhirVersionEnum fhirVersion) {
 
       this.fhirVersion = fhirVersion;
     }
@@ -344,7 +340,7 @@ public class FhirEncoders {
      */
     public FhirEncoders getOrCreate() {
 
-      EncodersKey key = new EncodersKey(fhirVersion);
+      final EncodersKey key = new EncodersKey(fhirVersion);
 
       synchronized (ENCODERS) {
 
@@ -354,8 +350,8 @@ public class FhirEncoders {
         // so create one.
         if (encoders == null) {
 
-          FhirContext context = contextFor(fhirVersion);
-          DataTypeMappings mappings = mappingsFor(fhirVersion);
+          final FhirContext context = contextFor(fhirVersion);
+          final DataTypeMappings mappings = mappingsFor(fhirVersion);
 
           encoders = new FhirEncoders(context, mappings);
 

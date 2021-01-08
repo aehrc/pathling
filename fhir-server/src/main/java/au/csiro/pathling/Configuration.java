@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -36,19 +36,6 @@ public class Configuration {
   private String version;
 
   /**
-   * The port which the server should bind to and listen for HTTP connections.
-   */
-  @NotNull
-  private Integer httpPort;
-
-  /**
-   * A prefix to add to the API endpoint, e.g. a value of {@code /foo} would cause the FHIR endpoint
-   * to be changed to {@code /foo/fhir}.
-   */
-  @NotNull
-  private String httpBase;
-
-  /**
    * Controls the description of this server displayed within the FHIR CapabilityStatement.
    */
   @NotNull
@@ -60,6 +47,18 @@ public class Configuration {
    */
   @NotNull
   private Boolean verboseRequestLogging;
+
+  /**
+   * If this variable is set, all errors will be reported to a Sentry service, e.g.
+   * `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
+   */
+  @Nullable
+  private String sentryDsn;
+
+  @Nonnull
+  public Optional<String> getSentryDsn() {
+    return Optional.ofNullable(sentryDsn);
+  }
 
   @NotNull
   private Spark spark;

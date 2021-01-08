@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -135,7 +135,7 @@ public abstract class QueryHelpers {
         .reduce(Column::and)
         .orElseThrow();
 
-    // Preserve the columns within the join conditions within the right dataset.
+    final List<String> leftColumnNames = Arrays.asList(aliasedLeft.columns());
     final List<String> rightColumnNames = rightColumns.stream()
         .map(Column::toString)
         .collect(Collectors.toList());
@@ -146,8 +146,7 @@ public abstract class QueryHelpers {
 
     // The right dataset will only contain columns that were not in the left dataset, with the
     // exception of the columns on the right hand side of the join conditions.
-    final Dataset<Row> trimmedRight = applySelection(right, rightColumnNames,
-        Arrays.asList(aliasedLeft.columns()));
+    final Dataset<Row> trimmedRight = applySelection(right, rightColumnNames, leftColumnNames);
 
     return trimmedLeft.join(trimmedRight, joinCondition, joinType.getSparkName());
   }
@@ -207,6 +206,23 @@ public abstract class QueryHelpers {
       @Nonnull final JoinType joinType) {
     return join(left, Collections.singletonList(leftColumn), right,
         Collections.singletonList(rightColumn), Optional.of(additionalCondition), joinType);
+  }
+
+  /**
+   * Joins a {@link Dataset} to another Dataset, using a custom join condition.
+   *
+   * @param left a {@link Dataset}
+   * @param right another Dataset
+   * @param joinCondition a custom join condition
+   * @param joinType a {@link JoinType}
+   * @return a new {@link Dataset}
+   */
+  @Nonnull
+  public static Dataset<Row> join(@Nonnull final Dataset<Row> left,
+      @Nonnull final Dataset<Row> right, @Nonnull final Column joinCondition,
+      @Nonnull final JoinType joinType) {
+    return join(left, Collections.emptyList(), right, Collections.emptyList(),
+        Optional.of(joinCondition), joinType);
   }
 
   /**

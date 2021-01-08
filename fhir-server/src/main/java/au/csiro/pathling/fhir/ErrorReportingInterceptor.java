@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -16,13 +16,10 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import io.sentry.Sentry;
-import io.sentry.event.interfaces.HttpInterface;
-import java.util.Arrays;
-import java.util.Collection;
+import io.sentry.SentryEvent;
+import io.sentry.protocol.Request;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -67,7 +64,7 @@ public class ErrorReportingInterceptor {
       @Nullable final ServletRequestDetails servletRequestDetails,
       @Nullable final HttpServletRequest request, @Nullable final HttpServletResponse response,
       @Nullable final BaseServerResponseException exception) {
-    Sentry.getContext().addExtra("serverVersion", serverVersion);
+    Sentry.setExtra("serverVersion", serverVersion);
     // We only want to report 500 series errors, not errors such as resource not found and bad
     // request.
     final boolean errorReportable = exception != null && exception.getStatusCode() / 100 == 5;
@@ -76,57 +73,39 @@ public class ErrorReportingInterceptor {
                                         ? exception
                                         : exception.getCause();
       if (servletRequestDetails != null && request != null) {
-        final HttpInterface http = buildHttpInterface(servletRequestDetails, request);
-        Sentry.getContext().setHttp(http);
+        final SentryEvent event = new SentryEvent();
+        event.setRequest(buildSentryRequest(servletRequestDetails, request));
+        Sentry.captureEvent(event);
       } else {
         log.warn("Failed to capture HTTP request details for error");
       }
-      Sentry.capture(reportableError);
+      Sentry.captureException(reportableError);
     }
   }
 
   @Nonnull
-  private HttpInterface buildHttpInterface(
-      @Nonnull final ServletRequestDetails servletRequestDetails,
+  private Request buildSentryRequest(@Nonnull final ServletRequestDetails servletRequestDetails,
       @Nonnull final HttpServletRequest request) {
+    final Request sentryRequest = new Request();
+
     // Harvest details out of the servlet request, and HAPI's request object. The reason we need to
     // do this is that unfortunately HAPI clears the body of the request out of the
     // HttpServletRequest object, so we need to use the more verbose constructor. The other reason
     // is that we want to omit any identifying details of users, such as remoteAddr, for privacy
     // purposes.
-    final String requestUrl = servletRequestDetails.getCompleteUrl();
-    final String method = request.getMethod();
-    @SuppressWarnings("unchecked")
-    final Map<String, Collection<String>> parameters = (Map<String, Collection<String>>) (Object)
-        servletRequestDetails.getParameters().entrySet().stream()
-            .collect(Collectors.toMap(
-                Entry::getKey,
-                e -> Arrays.asList(e.getValue())
-            ));
-    final String queryString = request.getQueryString();
-    final Map<String, String> cookies = new HashMap<>();
-    final String serverName = request.getServerName();
-    final int serverPort = request.getServerPort();
-    final String localAddr = request.getLocalAddr();
-    final String localName = request.getLocalName();
-    final int localPort = request.getLocalPort();
-    final String protocol = request.getProtocol();
-    final boolean secure = request.isSecure();
-    final boolean asyncStarted = request.isAsyncStarted();
-    final String authType = request.getAuthType();
-    // This horrible casting hack (and the one in the assignment to parameters above) is here to
-    // get around a problem in Java which prevents us from assigning the Map with List values to
-    // a variable typed as a Map with Collection values.
-    @SuppressWarnings("unchecked") final Map<String, Collection<String>> headers =
-        (Map<String, Collection<String>>) (Object) servletRequestDetails.getHeaders();
-    String body = null;
+    sentryRequest.setUrl(servletRequestDetails.getCompleteUrl());
+    sentryRequest.setMethod(request.getMethod());
+    sentryRequest.setQueryString(request.getQueryString());
+    final Map<String, String> sentryHeaders = new HashMap<>();
+    for (final String key : servletRequestDetails.getHeaders().keySet()) {
+      sentryHeaders.put(key, String.join(",", servletRequestDetails.getHeaders().get(key)));
+    }
+    sentryRequest.setHeaders(sentryHeaders);
     if (servletRequestDetails.getResource() != null) {
-      body = jsonParser.encodeResourceToString(servletRequestDetails.getResource());
+      sentryRequest.setData(jsonParser.encodeResourceToString(servletRequestDetails.getResource()));
     }
 
-    return new HttpInterface(requestUrl, method, parameters, queryString,
-        cookies, null, serverName, serverPort, localAddr, localName, localPort, protocol,
-        secure, asyncStarted, authType, null, headers, body);
+    return sentryRequest;
   }
 
 }

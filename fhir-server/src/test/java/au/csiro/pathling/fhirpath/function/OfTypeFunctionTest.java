@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -59,21 +59,21 @@ class OfTypeFunctionTest {
         .withEidColumn()
         .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Encounter/1", makeEid(1), "Patient",
-            RowFactory.create(null, "Patient/1", null))
-        .withRow("Encounter/1", makeEid(0), "Patient",
-            RowFactory.create(null, "Patient/2", null))
-        .withRow("Encounter/2", makeEid(0), "Patient",
-            RowFactory.create(null, "Patient/3", null))
-        .withRow("Encounter/2", makeEid(1), "Group",
-            RowFactory.create(null, "Group/1", null))
-        .withRow("Encounter/3", makeEid(0), "Patient",
-            RowFactory.create(null, "Patient/2", null))
-        .withRow("Encounter/4", makeEid(0), "Patient",
-            RowFactory.create(null, "Patient/2", null))
-        .withRow("Encounter/5", makeEid(0), "Group",
-            RowFactory.create(null, "Group/1", null))
-        .withRow("Encounter/6", null, null, null)
+        .withRow("encounter-1", makeEid(1), "Patient",
+            RowFactory.create(null, "Patient/patient-1", null))
+        .withRow("encounter-1", makeEid(0), "Patient",
+            RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-2", makeEid(0), "Patient",
+            RowFactory.create(null, "Patient/patient-3", null))
+        .withRow("encounter-2", makeEid(1), "Group",
+            RowFactory.create(null, "Group/group-1", null))
+        .withRow("encounter-3", makeEid(0), "Patient",
+            RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-4", makeEid(0), "Patient",
+            RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-5", makeEid(0), "Group",
+            RowFactory.create(null, "Group/group-1", null))
+        .withRow("encounter-6", null, null, null)
         .buildWithStructValue();
     final UntypedResourcePath inputPath = new UntypedResourcePathBuilder()
         .expression("subject.resolve()")
@@ -87,9 +87,9 @@ class OfTypeFunctionTest {
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withColumn(DataTypes.BooleanType)
-        .withRow("Patient/1", "female", true)
-        .withRow("Patient/2", "female", false)
-        .withRow("Patient/3", "male", true)
+        .withRow("patient-1", "female", true)
+        .withRow("patient-2", "female", false)
+        .withRow("patient-3", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(argumentDataset);
@@ -116,15 +116,15 @@ class OfTypeFunctionTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withEidColumn()
-        .withIdColumn() // this represrents value for a resource
-        .withRow("Encounter/1", makeEid(0), "Patient/2")
-        .withRow("Encounter/1", makeEid(1), "Patient/1")
-        .withRow("Encounter/2", makeEid(0), "Patient/3")
-        .withRow("Encounter/2", makeEid(1), null)
-        .withRow("Encounter/3", makeEid(0), "Patient/2")
-        .withRow("Encounter/4", makeEid(0), "Patient/2")
-        .withRow("Encounter/5", makeEid(0), null)
-        .withRow("Encounter/6", null, null)
+        .withIdColumn() // this represents value for a resource
+        .withRow("encounter-1", makeEid(0), "patient-2")
+        .withRow("encounter-1", makeEid(1), "patient-1")
+        .withRow("encounter-2", makeEid(0), "patient-3")
+        .withRow("encounter-2", makeEid(1), null)
+        .withRow("encounter-3", makeEid(0), "patient-2")
+        .withRow("encounter-4", makeEid(0), "patient-2")
+        .withRow("encounter-5", makeEid(0), null)
+        .withRow("encounter-6", null, null)
         .build();
     assertThat(result)
         .selectOrderedResultWithEid()

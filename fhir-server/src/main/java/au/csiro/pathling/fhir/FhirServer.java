@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -8,6 +8,7 @@ package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Authorisation;
+import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateProvider;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.ResourceReader;
@@ -24,6 +25,8 @@ import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,6 +39,7 @@ import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.springframework.web.cors.CorsConfiguration;
 
@@ -72,7 +76,7 @@ public class FhirServer extends RestfulServer {
   private final Optional<TerminologyClientFactory> terminologyClientFactory;
 
   @Nonnull
-  private final AggregateProvider aggregateProvider;
+  private final AggregateExecutor aggregateExecutor;
 
   @Nonnull
   private final ImportProvider importProvider;
@@ -102,7 +106,7 @@ public class FhirServer extends RestfulServer {
    * @param terminologyClient A {@link TerminologyClient} for resolving FHIR terminology queries
    * @param terminologyClientFactory A {@link TerminologyClientFactory} for resolving FHIR
    * terminology queries during parallel processing
-   * @param aggregateProvider A {@link AggregateProvider} for receiving requests to the aggregate
+   * @param aggregateExecutor A {@link AggregateExecutor} for processing requests to the aggregate
    * operation
    * @param importProvider A {@link ImportProvider} for receiving requests to the import operation
    * @param operationDefinitionProvider A {@link OperationDefinitionProvider} for receiving requests
@@ -121,7 +125,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyClient> terminologyClient,
       @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
-      @Nonnull final AggregateProvider aggregateProvider,
+      @Nonnull final AggregateExecutor aggregateExecutor,
       @Nonnull final ImportProvider importProvider,
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
@@ -135,7 +139,7 @@ public class FhirServer extends RestfulServer {
     this.resourceReader = resourceReader;
     this.terminologyClient = terminologyClient;
     this.terminologyClientFactory = terminologyClientFactory;
-    this.aggregateProvider = aggregateProvider;
+    this.aggregateExecutor = aggregateExecutor;
     this.importProvider = importProvider;
     this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;
@@ -156,9 +160,7 @@ public class FhirServer extends RestfulServer {
       // Use a proxy address strategy, which allows proxies to control the server base address with
       // the use of the X-Forwarded-Host and X-Forwarded-Proto headers.
       final ApacheProxyAddressStrategy addressStrategy = ApacheProxyAddressStrategy.forHttp();
-      if (!configuration.getHttpBase().isEmpty()) {
-        addressStrategy.setServletPath(configuration.getHttpBase() + "/fhir");
-      }
+      addressStrategy.setServletPath("/fhir");
       setServerAddressStrategy(addressStrategy);
 
       // Register the import provider.
@@ -166,7 +168,7 @@ public class FhirServer extends RestfulServer {
 
       // Register query providers.
       final Collection<Object> providers = new ArrayList<>();
-      providers.add(aggregateProvider);
+      providers.addAll(buildAggregateProviders());
       providers.addAll(buildSearchProviders());
       registerProviders(providers);
 
@@ -198,6 +200,21 @@ public class FhirServer extends RestfulServer {
     } catch (final Exception e) {
       throw new ServletException("Error initializing AnalyticsServer", e);
     }
+  }
+
+  @Nonnull
+  private List<IResourceProvider> buildAggregateProviders() {
+    final List<IResourceProvider> providers = new ArrayList<>();
+
+    // Instantiate an aggregate provider for every resource type in FHIR.
+    for (final ResourceType resourceType : ResourceType.values()) {
+      final Class<? extends IBaseResource> resourceTypeClass = getFhirContext()
+          .getResourceDefinition(resourceType.name()).getImplementingClass();
+      final IResourceProvider aggregateProvider = new AggregateProvider(aggregateExecutor,
+          resourceTypeClass);
+      providers.add(aggregateProvider);
+    }
+    return providers;
   }
 
   @Nonnull
@@ -274,4 +291,22 @@ public class FhirServer extends RestfulServer {
     // within this method in the super.
   }
 
+  /**
+   * @param resourceClass a class that extends {@link IBaseResource}
+   * @return a {@link Enumerations.ResourceType} enum
+   */
+  @Nonnull
+  public static Enumerations.ResourceType resourceTypeFromClass(
+      @Nonnull final Class<? extends IBaseResource> resourceClass) {
+    try {
+      final Constructor<? extends IBaseResource> constructor = resourceClass.getConstructor();
+      final IBaseResource instance = constructor.newInstance();
+      return Enumerations.ResourceType.fromCode(instance.fhirType());
+    } catch (final NoSuchMethodException | IllegalAccessException | InstantiationException
+        | InvocationTargetException e) {
+      throw new RuntimeException("Problem determining FHIR type from resource class", e);
+    }
+  }
+
 }
+

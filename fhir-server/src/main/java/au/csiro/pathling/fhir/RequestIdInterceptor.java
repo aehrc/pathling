@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -37,7 +37,7 @@ public class RequestIdInterceptor {
     if (requestDetails != null) {
       final String requestId = requestDetails.getRequestId();
       MDC.put("requestId", requestId);
-      Sentry.getContext().addExtra("requestId", requestId);
+      Sentry.setExtra("requestId", requestId);
     } else {
       log.warn("Request ID interceptor invoked with missing request details");
     }

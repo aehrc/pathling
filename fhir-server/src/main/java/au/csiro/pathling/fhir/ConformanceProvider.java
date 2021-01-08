@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -96,7 +96,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     serverBase.ifPresent(implementation::setUrl);
     capabilityStatement.setImplementation(implementation);
 
-    capabilityStatement.setFhirVersion(FHIRVersion._4_0_0);
+    capabilityStatement.setFhirVersion(FHIRVersion._4_0_1);
     capabilityStatement.setFormat(
         Arrays.asList(new CodeType("application/fhir+json"), new CodeType("application/fhir+xml")));
     capabilityStatement.setRest(buildRestComponent());
@@ -157,17 +157,26 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     availableResourceTypes.add(Enumerations.ResourceType.OPERATIONDEFINITION);
 
     for (final Enumerations.ResourceType resourceType : availableResourceTypes) {
-      // Add the `fhirPath` search parameter to all resources.
       final CapabilityStatementRestResourceComponent resource =
           new CapabilityStatementRestResourceComponent(new CodeType(resourceType.toCode()));
       resource.setProfile(FHIR_RESOURCE_BASE + resourceType.toCode());
       final ResourceInteractionComponent interaction = new ResourceInteractionComponent();
       interaction.setCode(TypeRestfulInteraction.SEARCHTYPE);
       resource.getInteraction().add(interaction);
+
+      // Add the `aggregate` operation to all resources.
+      final CanonicalType aggregateOperationUri = new CanonicalType(getAggregateUri());
+      final CapabilityStatementRestResourceOperationComponent aggregateOperation =
+          new CapabilityStatementRestResourceOperationComponent(new StringType("aggregate"),
+              aggregateOperationUri);
+      resource.addOperation(aggregateOperation);
+
+      // Add the `fhirPath` search parameter to all resources.
       final CapabilityStatementRestResourceOperationComponent searchOperation = new CapabilityStatementRestResourceOperationComponent();
       searchOperation.setName("fhirPath");
       searchOperation.setDefinition(getSearchUri());
       resource.addOperation(searchOperation);
+
       resources.add(resource);
 
       // Save away the OperationDefinition resource, so that we can later add the read operation to
@@ -191,17 +200,12 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private List<CapabilityStatementRestResourceOperationComponent> buildOperations() {
     final List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
 
-    final CanonicalType aggregateOperationUri = new CanonicalType(getAggregateUri());
-    final CapabilityStatementRestResourceOperationComponent aggregateOperation =
-        new CapabilityStatementRestResourceOperationComponent(new StringType("aggregate"),
-            aggregateOperationUri);
-
+    // Add the `import` operation at the system level.
     final CanonicalType importOperationUri = new CanonicalType(getImportUri());
     final CapabilityStatementRestResourceOperationComponent importOperation =
         new CapabilityStatementRestResourceOperationComponent(new StringType("import"),
             importOperationUri);
 
-    operations.add(aggregateOperation);
     operations.add(importOperation);
     return operations;
   }

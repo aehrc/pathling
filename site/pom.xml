@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+  ~ Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
   ~ Software Licence Agreement.
   -->
@@ -72,5 +72,32 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>licenses</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>copy-license</id>
+                <phase>package</phase>
+                <configuration>
+                  <outputDirectory>${project.basedir}</outputDirectory>
+                  <skip>true</skip>
+                </configuration>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>

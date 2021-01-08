@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -65,10 +65,10 @@ class ReverseResolveFunctionTest {
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/1", "female", true)
-        .withRow("Patient/2", "female", false)
-        .withRow("Patient/3", "male", true)
-        .withRow("Patient/4", "male", true)
+        .withRow("patient-1", "female", true)
+        .withRow("patient-2", "female", false)
+        .withRow("patient-3", "male", true)
+        .withRow("patient-4", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
@@ -78,11 +78,11 @@ class ReverseResolveFunctionTest {
     final DatasetBuilder encounterDatasetBuilder = new ResourceDatasetBuilder()
         .withIdColumn()
         .withColumn("status", DataTypes.StringType)
-        .withRow("Encounter/1", "planned")
-        .withRow("Encounter/2", "arrived")
-        .withRow("Encounter/3", "triaged")
-        .withRow("Encounter/4", "in-progress")
-        .withRow("Encounter/5", "onleave");
+        .withRow("encounter-1", "planned")
+        .withRow("encounter-2", "arrived")
+        .withRow("encounter-3", "triaged")
+        .withRow("encounter-4", "in-progress")
+        .withRow("encounter-5", "onleave");
     final Dataset<Row> encounterDataset = encounterDatasetBuilder.build();
     when(mockReader.read(ResourceType.ENCOUNTER)).thenReturn(encounterDataset);
     final ResourcePath originPath = ResourcePath
@@ -96,11 +96,11 @@ class ReverseResolveFunctionTest {
     final Dataset<Row> argumentDatasetPreJoin = new DatasetBuilder()
         .withIdColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("Encounter/1", RowFactory.create(null, "Patient/1", null))
-        .withRow("Encounter/2", RowFactory.create(null, "Patient/3", null))
-        .withRow("Encounter/3", RowFactory.create(null, "Patient/2", null))
-        .withRow("Encounter/4", RowFactory.create(null, "Patient/2", null))
-        .withRow("Encounter/5", RowFactory.create(null, "Group/def1", null))
+        .withRow("encounter-1", RowFactory.create(null, "Patient/patient-1", null))
+        .withRow("encounter-2", RowFactory.create(null, "Patient/patient-3", null))
+        .withRow("encounter-3", RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-4", RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-5", RowFactory.create(null, "Group/group-1", null))
         .buildWithStructValue();
     final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(argumentDatasetPreJoin);
     final Column idColumn = idAndValueColumns.getId();
@@ -137,11 +137,11 @@ class ReverseResolveFunctionTest {
     final Dataset<Row> expectedDataset = new DatasetBuilder()
         .withIdColumn()
         .withIdColumn()
-        .withRow("Patient/1", "Encounter/1")
-        .withRow("Patient/2", "Encounter/3")
-        .withRow("Patient/2", "Encounter/4")
-        .withRow("Patient/3", "Encounter/2")
-        .withRow("Patient/4", null)
+        .withRow("patient-1", "encounter-1")
+        .withRow("patient-2", "encounter-3")
+        .withRow("patient-2", "encounter-4")
+        .withRow("patient-3", "encounter-2")
+        .withRow("patient-4", null)
         .build();
     assertThat(result)
         .selectOrderedResult()

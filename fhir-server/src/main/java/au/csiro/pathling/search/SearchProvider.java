@@ -1,10 +1,12 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
 
 package au.csiro.pathling.search;
+
+import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -68,6 +70,9 @@ public class SearchProvider implements IResourceProvider {
   @Nonnull
   private final Class<? extends IBaseResource> resourceClass;
 
+  @Nonnull
+  private final ResourceType resourceType;
+
   /**
    * @param configuration A {@link Configuration} object to control the behaviour of the executor
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
@@ -96,6 +101,7 @@ public class SearchProvider implements IResourceProvider {
     this.terminologyClientFactory = terminologyClientFactory;
     this.fhirEncoders = fhirEncoders;
     this.resourceClass = resourceClass;
+    resourceType = resourceTypeFromClass(resourceClass);
   }
 
   @Override
@@ -130,9 +136,8 @@ public class SearchProvider implements IResourceProvider {
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search(
       @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters) {
-    final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
     return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
         terminologyClient, terminologyClientFactory, fhirEncoders,
-        subjectResource, Optional.ofNullable(filters));
+        resourceType, Optional.ofNullable(filters));
   }
 }

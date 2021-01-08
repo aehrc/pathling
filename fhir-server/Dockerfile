@@ -1,10 +1,11 @@
-FROM openjdk:11
+FROM openjdk:11-jre-slim
 
-LABEL copyright="Copyright © 2018-2020, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source Software Licence Agreement." \
+LABEL copyright="Copyright © 2018-2021, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source Software Licence Agreement." \
   author="John Grimes <John.Grimes@csiro.au>"
 
-# Dependencies for Hadoop native support
 RUN apt-get update && apt-get install -y \
+  curl wget \
+  # Dependencies for Hadoop native support
   libsnappy-dev \
   libssl-dev \
   libzstd-dev
