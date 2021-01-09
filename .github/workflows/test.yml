@@ -38,6 +38,11 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Test report
           fail_on_test_failures: true
+      - name: Upload coverage to Codecov
+          uses: codecov/codecov-action@v1
+          with:
+            token: ${{ secrets.CODECOV_TOKEN }}
+            files: fhir-server/target/site/jacoco/jacoco.xml
   site:
     name: Site
     runs-on: ubuntu-latest
