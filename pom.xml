@@ -272,7 +272,7 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>-Xmx2g</argLine>
+            <argLine>@{argLine} -Xmx2g</argLine>
             <forkCount>1C</forkCount>
           </configuration>
         </plugin>

@@ -45,10 +45,10 @@ jobs:
           check_name: Test report
           fail_on_test_failures: true
       - name: Upload coverage to Codecov
-          uses: codecov/codecov-action@v1
-          with:
-            token: ${{ secrets.CODECOV_TOKEN }}
-            files: fhir-server/target/site/jacoco/jacoco.xml
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
       - name: Run the deploy goal with Maven
         run: mvn --batch-mode deploy -pl fhir-server,encoders -DskipTests -Ddockerfile.skip
       - name: Tag and push server image

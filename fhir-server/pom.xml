@@ -282,7 +282,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <groups>UnitTest,IntegrationTest</groups>
-          <argLine>@{argLine} -Xmx2g</argLine>
         </configuration>
       </plugin>
       <plugin>
