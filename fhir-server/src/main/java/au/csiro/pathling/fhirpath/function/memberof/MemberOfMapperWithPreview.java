@@ -28,8 +28,8 @@ import org.hl7.fhir.r4.model.ValueSet.ValueSetComposeComponent;
 import org.slf4j.MDC;
 
 /**
- * Takes a list of {{SimpleCoding}} and returns boolean result indicting if any of the codings
- * belongs to given valueSet.
+ * Takes a list of {@link SimpleCoding} and returns a Boolean result indicating if any of the
+ * codings belongs to the specified ValueSet.
  */
 @Slf4j
 public class MemberOfMapperWithPreview implements
@@ -45,7 +45,6 @@ public class MemberOfMapperWithPreview implements
 
   @Nonnull
   private final String valueSetUri;
-
 
   /**
    * @param requestId An identifier used alongside any logging that the mapper outputs

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -16,26 +16,26 @@ import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.util.GenericArrayData;
 
 /**
- * Object decoders for {{SimpleCoding}} and collections of it.
+ * Object decoders for {@link SimpleCoding} and collections of it.
  */
 public interface SimpleCodingsDecoders {
 
   @Nullable
-  private static String safeGetString(@Nonnull final InternalRow ir, int ordinal) {
+  private static String safeGetString(@Nonnull final InternalRow ir, final int ordinal) {
     return ir.isNullAt(ordinal)
            ? null
            : ir.getString(ordinal);
   }
 
   /**
-   * Decodes a simple coding from an {{InternalRow}} with struct[Coding]
+   * Decodes a simple coding from an {@link InternalRow} with struct[Coding]
    *
-   * @param row the InternalRow to decode.
-   * @return decoded SimpleCoding.
+   * @param row the InternalRow to decode
+   * @return decoded {@link SimpleCoding}
    */
   @Nullable
   static SimpleCoding decodeCoding(@Nullable final Object row) {
-    InternalRow ir = (InternalRow) row;
+    final InternalRow ir = (InternalRow) row;
     return ir != null
            ? new SimpleCoding(safeGetString(ir, 1), safeGetString(ir, 3), safeGetString(ir, 2))
            : null;
@@ -43,14 +43,14 @@ public interface SimpleCodingsDecoders {
 
 
   /**
-   * Decodes a list of SimpleCodings from an array(struct[Coding])
+   * Decodes a list of SimpleCodings from an {@code array(struct[Coding])}.
    *
-   * @param array the GenericArrayData to decode
-   * @return decoded list of SimpleCodings
+   * @param array the {@link GenericArrayData} to decode
+   * @return decoded list of {@link SimpleCoding}
    */
   @Nullable
   static List<SimpleCoding> decodeList(@Nullable final Object array) {
-    GenericArrayData arrayData = (GenericArrayData) array;
+    final GenericArrayData arrayData = (GenericArrayData) array;
     return array != null
            ? Stream.of(arrayData.array()).map(SimpleCodingsDecoders::decodeCoding)
                .collect(Collectors.toList())
@@ -59,15 +59,16 @@ public interface SimpleCodingsDecoders {
 
 
   /**
-   * Decodes a pair of list of codings from a struct(array(struct[Coding]), array(struct[Coding]))
+   * Decodes a pair of {@link List} of codings from a {@code struct(array(struct[Coding]),
+   * array(struct[Coding]))}
    *
-   * @param row the Internal row to decode
-   * @return the decoded pair of list of SimpleCodings
+   * @param row the {@link InternalRow} to decode
+   * @return the decoded pair of list of {@link SimpleCoding}
    */
   @Nullable
   static ImmutablePair<List<SimpleCoding>, List<SimpleCoding>> decodeListPair(
       @Nullable final Object row) {
-    InternalRow ir = (InternalRow) row;
+    @SuppressWarnings("TypeMayBeWeakened") final InternalRow ir = (InternalRow) row;
     return row != null
            ? ImmutablePair.of(decodeList(ir.getArray(0)), decodeList(ir.getArray(1)))
            : null;

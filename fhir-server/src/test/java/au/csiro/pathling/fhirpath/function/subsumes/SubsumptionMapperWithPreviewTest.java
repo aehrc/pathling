@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -59,6 +59,7 @@ public class SubsumptionMapperWithPreviewTest {
   }
 
   @Test
+  @SuppressWarnings("ConstantConditions")
   public void testFiltersOutCodingsNotRecognizedByTerminologyServer() {
 
     // setup SYSTEM1 as known system
@@ -75,8 +76,7 @@ public class SubsumptionMapperWithPreviewTest {
             ImmutablePair.of(Collections.singletonList(CODING1_UNVERSIONED),
                 Collections.singletonList(CODING1_VERSION1)));
 
-    //TODO: check the resulting closure
-    final Closure resultClosure = mapper.preview(inputPairs.iterator());
+    mapper.preview(inputPairs.iterator());
 
     // verify behaviour
     verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM1)), any());
@@ -101,8 +101,7 @@ public class SubsumptionMapperWithPreviewTest {
             ImmutablePair.of(Collections.emptyList(), null)
         );
 
-    //TODO: check the resulting closure
-    final Closure result = mapper.preview(inputPairs.iterator());
+    mapper.preview(inputPairs.iterator());
 
     // verify behaviour
     verify(terminologyClient).closure(any(), isNull());
@@ -125,8 +124,7 @@ public class SubsumptionMapperWithPreviewTest {
             ImmutablePair.of(Collections.singletonList(new SimpleCoding(null, "code1")),
                 Collections.singletonList(new SimpleCoding(null, "code1"))));
 
-    //TODO: check the resulting closure
-    final Closure result = mapper.preview(inputPairs.iterator());
+    mapper.preview(inputPairs.iterator());
 
     // verify behaviour
     verify(terminologyClient).closure(any(), isNull());

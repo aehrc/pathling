@@ -74,11 +74,11 @@ public class SubsumesFunctionTest {
   private static final Coding CODING_OTHER4 = new Coding(TEST_SYSTEM, "OTHER4", null);
   private static final Coding CODING_OTHER5 = new Coding(TEST_SYSTEM, "OTHER5", null);
 
-  private static final String RES_ID1 = "Condition/xyz1";
-  private static final String RES_ID2 = "Condition/xyz2";
-  private static final String RES_ID3 = "Condition/xyz3";
-  private static final String RES_ID4 = "Condition/xyz4";
-  private static final String RES_ID5 = "Condition/xyz5";
+  private static final String RES_ID1 = "condition-xyz1";
+  private static final String RES_ID2 = "condition-xyz2";
+  private static final String RES_ID3 = "condition-xyz3";
+  private static final String RES_ID4 = "condition-xyz4";
+  private static final String RES_ID5 = "condition-xyz5";
 
   // coding_large -- subsumes --> coding_medium --> subsumes --> coding_small
   private static final ConceptMap MAP_LARGE_MEDIUM_SMALL =

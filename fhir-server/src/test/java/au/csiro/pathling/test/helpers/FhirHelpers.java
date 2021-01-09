@@ -90,6 +90,7 @@ public class FhirHelpers {
    */
   public static class MemberOfTxAnswerer implements Answer<ValueSet>, Serializable {
 
+    private static final long serialVersionUID = -8343684022079397168L;
     private final Collection<Coding> validMembers;
 
     public MemberOfTxAnswerer(@Nonnull final Coding... validMembers) {

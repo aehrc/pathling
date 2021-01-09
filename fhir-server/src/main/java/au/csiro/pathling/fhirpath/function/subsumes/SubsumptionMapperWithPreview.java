@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -24,8 +24,8 @@ import org.hl7.fhir.r4.model.CodeSystem;
 import org.slf4j.MDC;
 
 /**
- * Takes a pair of list of {{SimpleCoding}}. Returns a boolean value indicating if any coding in the
- * left list is in the subsumption relation with any coding in the rigth list.
+ * Takes a pair of {@link List} of {@link SimpleCoding}. Returns a Boolean value indicating if any
+ * coding in the left list is in the subsumption relation with any coding in the right list.
  */
 @Slf4j
 public class SubsumptionMapperWithPreview implements
@@ -43,12 +43,10 @@ public class SubsumptionMapperWithPreview implements
 
 
   /**
-   * Constructor
-   *
-   * @param requestId An identifier used alongside any logging that the mapper outputs
+   * @param requestId an identifier used alongside any logging that the mapper outputs
    * @param terminologyClientFactory the factory to use to create the {@link
    * au.csiro.pathling.fhir.TerminologyClient}
-   * @param inverted if true checks for `subsumedBy` relation otherwise for `subsumes`
+   * @param inverted if true checks for `subsumedBy` relation, otherwise for `subsumes`
    */
   public SubsumptionMapperWithPreview(@Nonnull final String requestId,
       @Nonnull final TerminologyClientFactory terminologyClientFactory,

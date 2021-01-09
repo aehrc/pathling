@@ -55,17 +55,6 @@ public class MemberOfFunction implements NamedFunction {
     configuredMapper = Optional.empty();
   }
 
-  /**
-   * Returns a new instance of this function, with a pre-configured {@link
-   * MemberOfMapperWithPreview}.
-   *
-   * @param mapper An instance of {@link MemberOfMapperWithPreview} for use in retrieving results
-   * from the terminology service
-   */
-  public MemberOfFunction(@Nonnull final MemberOfMapperWithPreview mapper) {
-    configuredMapper = Optional.of(mapper);
-  }
-
   private boolean isCodeableConcept(@Nonnull final FhirPath fhirPath) {
     return (fhirPath instanceof ElementPath &&
         FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) fhirPath).getFhirType()));
@@ -92,7 +81,6 @@ public class MemberOfFunction implements NamedFunction {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final TerminologyClientFactory terminologyClientFactory = inputContext
         .getTerminologyClientFactory().get();
-    final FHIRDefinedType fhirType = inputPath.getFhirType();
     final String valueSetUri = argument.getJavaValue();
     final Dataset<Row> dataset = inputPath.getDataset();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -11,7 +11,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution._
 
 /**
- * Custom spark sql strategy with additional rules for custom pathling operations.
+ * Custom spark SQL strategy with additional rules for custom Pathling operations.
  */
 object PathlingStrategy extends Strategy {
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
@@ -26,9 +26,9 @@ object PathlingStrategy extends Strategy {
 
 
   /**
-   * Inject PathlingStrategy into given spark session.
+   * Injects PathlingStrategy into a given Spark session.
    *
-   * @param session spark session to add PathlingStrategy to
+   * @param session Spark session to add PathlingStrategy to
    */
   def setup(session: SparkSession): Unit = {
     if (!session.experimental.extraStrategies.contains(PathlingStrategy)) {

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -43,10 +43,12 @@ public class SqlExtensionsTest {
   static class TestMapperWithPreview implements
       MapperWithPreview<String, Integer, List<String>> {
 
+    private static final long serialVersionUID = -4978210449641957885L;
+
     @Override
     @Nonnull
     public List<String> preview(@Nonnull final Iterator<String> input) {
-      Iterable<String> iterable = () -> input;
+      final Iterable<String> iterable = () -> input;
       return StreamSupport
           .stream(iterable.spliterator(), false)
           .filter(Objects::nonNull)
@@ -63,15 +65,15 @@ public class SqlExtensionsTest {
   }
 
   @Test
-  public void testMapWithPartionPreview() {
+  public void testMapWithPartitionPreview() {
     final Dataset<Row> dataset = new DatasetBuilder()
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withRow("Patient/1", "value0", true)
-        .withRow("Patient/2", "value1", false)
-        .withRow("Patient/3", "value2", true)
-        .withRow("Patient/4", null, true)
+        .withRow("patient-1", "value0", true)
+        .withRow("patient-2", "value1", false)
+        .withRow("patient-3", "value2", true)
+        .withRow("patient-4", null, true)
         .build().repartition(1);
 
     final Dataset<Row> resultDataset = SqlExtensions.mapWithPartitionPreview(dataset,
@@ -86,10 +88,10 @@ public class SqlExtensionsTest {
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
         .withColumn("myResult", DataTypes.IntegerType)
-        .withRow("Patient/1", "value0", true, 0)
-        .withRow("Patient/2", "value1", false, 1)
-        .withRow("Patient/3", "value2", true, 2)
-        .withRow("Patient/4", null, true, null)
+        .withRow("patient-1", "value0", true, 0)
+        .withRow("patient-2", "value1", false, 1)
+        .withRow("patient-3", "value2", true, 2)
+        .withRow("patient-4", null, true, null)
         .build();
 
     new DatasetAssert(resultDataset).hasRows(expectedDataset);

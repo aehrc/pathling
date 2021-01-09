@@ -47,18 +47,18 @@ public class SubsumesFunction implements NamedFunction {
   /**
    * The column name that this function uses to represent resource ID within its working dataset.
    */
-  public static final String COL_ID = "id";
+  private static final String COL_ID = "id";
 
   /**
    * The column name that this function uses to represent input codings within its working dataset.
    */
-  public static final String COL_INPUT_CODINGS = "inputCodings";
+  private static final String COL_INPUT_CODINGS = "inputCodings";
 
   /**
    * The column name that this function uses to represent argument codings within its working
    * dataset.
    */
-  public static final String COL_ARG_CODINGS = "argCodings";
+  private static final String COL_ARG_CODINGS = "argCodings";
 
   /**
    * The column name that this function uses to represent the result value.
@@ -104,7 +104,7 @@ public class SubsumesFunction implements NamedFunction {
     final Column codingPairCol = struct(idAndCodingSet.col(COL_INPUT_CODINGS),
         idAndCodingSet.col(COL_ARG_CODINGS));
 
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    @SuppressWarnings({"OptionalGetWithoutIsPresent", "TypeMayBeWeakened"})
     final SubsumptionMapperWithPreview mapper =
         new SubsumptionMapperWithPreview(MDC.get("requestId"),
             input.getContext().getTerminologyClientFactory().get(),
