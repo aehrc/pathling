@@ -316,9 +316,52 @@
           <artifactId>jacoco-maven-plugin</artifactId>
           <version>0.8.6</version>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>jar-no-fork</id>
+              <goals>
+                <goal>jar-no-fork</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>jar</id>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <links>
+              <link>https://spark.apache.org/docs/latest/api/java/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
+            </links>
+            <detectLinks/>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </reporting>
 
   <profiles>
     <profile>

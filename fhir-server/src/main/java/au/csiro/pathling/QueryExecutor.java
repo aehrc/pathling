@@ -67,6 +67,9 @@ public abstract class QueryExecutor {
 
   /**
    * Joins the datasets in a list together, using their resource identity columns.
+   *
+   * @param expressions a list of expressions to join
+   * @return the joined {@link Dataset}
    */
   @Nonnull
   protected static Dataset<Row> joinExpressions(@Nonnull final List<FhirPath> expressions) {

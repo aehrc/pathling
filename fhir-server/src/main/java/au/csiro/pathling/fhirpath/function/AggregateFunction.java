@@ -41,6 +41,7 @@ public abstract class AggregateFunction {
    * that will be copied and used as a template for the new result.
    *
    * @param dataset the {@link Dataset} that will be used in the result
+   * @param parserContext the current {@link ParserContext}
    * @param input the {@link FhirPath} objects being aggregated
    * @param valueColumn a {@link Column} describing the resulting value
    * @param expression the FHIRPath expression for the result
@@ -60,6 +61,7 @@ public abstract class AggregateFunction {
    * Builds a result for an aggregation operation, with a single {@link FhirPath} object as input.
    *
    * @param dataset the {@link Dataset} that will be used in the result
+   * @param parserContext the current {@link ParserContext}
    * @param input the {@link FhirPath} objects being aggregated
    * @param valueColumn a {@link Column} describing the resulting value
    * @param expression the FHIRPath expression for the result
@@ -83,6 +85,7 @@ public abstract class AggregateFunction {
    * as input (e.g. in the case of a binary operator that performs aggregation).
    *
    * @param dataset the {@link Dataset} that will be used in the result
+   * @param parserContext the current {@link ParserContext}
    * @param inputs the {@link FhirPath} objects being aggregated
    * @param valueColumn a {@link Column} describing the resulting value
    * @param expression the FHIRPath expression for the result

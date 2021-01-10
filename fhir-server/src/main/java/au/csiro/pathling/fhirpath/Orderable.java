@@ -46,7 +46,7 @@ public interface Orderable {
    * Returns an ordered {@link Dataset} that can be used to evaluate this path against data.
    *
    * @return A {@link Dataset}
-   * @throws {@link java.lang.IllegalStateException} when the path cannot be ordered.
+   * @throws IllegalStateException when the path cannot be ordered
    */
   @Nonnull
   Dataset<Row> getOrderedDataset();
@@ -56,14 +56,14 @@ public interface Orderable {
    * ordering with unstable orderBy().
    *
    * @return A {@link Dataset}
-   * @throws {@link java.lang.IllegalStateException} when the path cannot be ordered.
+   * @throws IllegalStateException when the path cannot be ordered
    */
   @Nonnull
   Column getOrderingColumn();
 
 
   /**
-   * @throws java.lang.IllegalStateException if the path cannot be ordered
+   * @throws IllegalStateException if the path cannot be ordered
    */
   default void checkHasOrder() {
     Preconditions.checkState(hasOrder(), "Orderable path expected");
