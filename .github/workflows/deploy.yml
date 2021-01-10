@@ -58,6 +58,17 @@ jobs:
           -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }} \
           -Ddockerfile.username=${{ secrets.DOCKER_USERNAME }} \
           -Ddockerfile.password=${{ secrets.DOCKER_PASSWORD }}
+  javadocs:
+    name: Javadocs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Run the javadoc:javadoc goal with Maven
+        run: mvn --batch-mode javadoc:javadoc
   site:
     name: Site
     runs-on: ubuntu-latest
@@ -66,6 +77,14 @@ jobs:
         working-directory: ${{ github.workspace }}/site
     steps:
       - uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Run the javadoc:javadoc goal with Maven
+        run: mvn --batch-mode -pl fhir-server javadoc:javadoc
+      - name: Copy Javadocs into the site directory
+        run: cp -R fhir-server/target/site/apidocs site/docs/java
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
