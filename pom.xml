@@ -372,7 +372,10 @@
             <doctitle>Pathling ${project.version} API</doctitle>
             <windowtitle>Pathling ${project.version} API</windowtitle>
             <bottom><![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]></bottom>
-            <additionalJOption>--no-module-directories</additionalJOption>
+            <additionalJOptions>
+              <option>--no-module-directories</option>
+              <option>-Xdoclint:none</option>
+            </additionalJOptions>
           </configuration>
         </plugin>
       </plugins>

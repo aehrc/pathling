@@ -18,17 +18,23 @@ jobs:
         with:
           java-version: 11
       - name: Run the verify goal with Maven
-        run: mvn --batch-mode verify -pl fhir-server -am -Dmaven.test.failure.ignore=true
+        run: |
+          mvn --batch-mode verify \
+          -Pdocker \
+          -Dmaven.test.failure.ignore=true
         timeout-minutes: 30
-      - uses: actions/upload-artifact@v2
+      - name: Upload encoders test reports
+        uses: actions/upload-artifact@v2
         with:
           name: encoders-surefire-reports
           path: encoders/target/surefire-reports
-      - uses: actions/upload-artifact@v2
+      - name: Upload fhir-server test reports
+        uses: actions/upload-artifact@v2
         with:
           name: fhir-server-surefire-reports
           path: fhir-server/target/surefire-reports
-      - uses: actions/upload-artifact@v2
+      - name: Upload timing log
+        uses: actions/upload-artifact@v2
         with:
           name: fhir-server-timing-log
           path: fhir-server/target/timing.log
@@ -43,21 +49,3 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
-  site:
-    name: Site
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ github.workspace }}/site
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up JDK
-      uses: actions/setup-java@v1
-      with:
-        java-version: 11
-    - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 2.6.3
-    - name: Run the package goal with Maven
-      run: mvn --batch-mode -pl site package
