@@ -8,11 +8,12 @@ on:
     branches-ignore: [ master ]
 
 jobs:
-  server:
-    name: Server
+  test:
+    name: Build and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
       - name: Set up JDK
         uses: actions/setup-java@v1
         with:
