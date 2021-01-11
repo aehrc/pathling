@@ -17,9 +17,27 @@
   <artifactId>site</artifactId>
   <packaging>pom</packaging>
 
+  <name>Pathling Web Site</name>
+  <description>A web site that contains documentation for Pathling.</description>
+
   <properties>
     <siteDockerRepo>aehrc/pathling-site</siteDockerRepo>
   </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>encoders</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>fhir-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+  </dependencies>
 
   <build>
     <plugins>
@@ -68,6 +86,30 @@
         <configuration>
           <repository>${siteDockerRepo}</repository>
           <tag>${project.version}</tag>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>javadoc</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>javadoc</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <includeDependencySources>true</includeDependencySources>
+          <dependencySourceIncludes>
+            <include>au.csiro.pathling:*</include>
+          </dependencySourceIncludes>
+          <sourceFileExcludes>
+            <exclude>au/csiro/pathling/spark/Spark.java</exclude>
+          </sourceFileExcludes>
+          <reportOutputDirectory>${project.basedir}/docs</reportOutputDirectory>
+          <destDir>java</destDir>
         </configuration>
       </plugin>
     </plugins>

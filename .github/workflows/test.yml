@@ -55,15 +55,9 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 11
-    - name: Run the javadoc:javadoc goal with Maven
-      run: mvn --batch-mode -pl fhir-server javadoc:javadoc
-    - name: Copy Javadocs into the site directory
-      run: cp -R fhir-server/target/site/apidocs site/docs/java
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: 2.6.3
-    - name: Install the bundle
-      run: bundle
-    - name: Build the site with Jekyll
-      run: bundle exec jekyll build
+    - name: Run the package goal with Maven
+      run: mvn --batch-mode -pl site package
