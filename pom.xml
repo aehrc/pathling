@@ -249,7 +249,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>3.0.0-M1</version>
       </plugin>
     </plugins>
     <pluginManagement>
@@ -266,20 +265,47 @@
           </configuration>
         </plugin>
         <plugin>
+          <groupId>net.alchim31.maven</groupId>
+          <artifactId>scala-maven-plugin</artifactId>
+          <version>4.4.0</version>
+          <executions>
+            <execution>
+              <id>scala-compile-first</id>
+              <phase>process-resources</phase>
+              <goals>
+                <goal>add-source</goal>
+                <goal>compile</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>scala-test-compile</id>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>testCompile</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <source>11</source>
+            <target>11</target>
+            <args>
+              <arg>-feature</arg>
+            </args>
+          </configuration>
+        </plugin>
+        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.2</version>
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>-Xmx2g</argLine>
+            <argLine>@{argLine} -Xmx2g</argLine>
             <forkCount>1C</forkCount>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.22.2</version>
           <configuration>
             <argLine>-Xmx2g</argLine>
           </configuration>
@@ -310,6 +336,44 @@
               </configuration>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>0.8.6</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>jar-no-fork</id>
+              <goals>
+                <goal>jar-no-fork</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <configuration>
+            <links>
+              <link>https://spark.apache.org/docs/latest/api/java/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
+            </links>
+            <detectLinks/>
+            <doctitle>Pathling ${project.version} API</doctitle>
+            <windowtitle>Pathling ${project.version} API</windowtitle>
+            <bottom><![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]></bottom>
+            <additionalJOptions>
+              <option>--no-module-directories</option>
+              <option>-Xdoclint:none</option>
+            </additionalJOptions>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

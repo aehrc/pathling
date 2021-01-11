@@ -58,9 +58,9 @@ public interface TerminologyClient extends IRestfulClient {
    * @param name The name that defines the particular context for the subsumption based closure
    * table
    * @param concept Concepts to add to the closure table
-   * @return A list of new entries (code / system --> code/system) that the client should add to its
-   * closure table. The only kind of entry mapping equivalences that can be returned are equal,
-   * specializes, subsumes and unmatched
+   * @return A list of new entries ({@code code / system --> code/system}) that the client should
+   * add to its closure table. The only kind of entry mapping equivalences that can be returned are
+   * equal, specializes, subsumes and unmatched
    * @see <a href="https://www.hl7.org/fhir/R4/conceptmap-operation-closure.html">Operation $closure
    * on ConceptMap</a>
    */
