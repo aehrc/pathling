@@ -8,6 +8,7 @@ package au.csiro.pathling.test.builders;
 
 import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static au.csiro.pathling.utilities.Preconditions.checkState;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.fhirpath.Orderable;
@@ -186,7 +187,9 @@ public class DatasetBuilder {
 
     final Dataset<Row> dataFrame = spark.createDataFrame(datasetRows, schema);
     checkNotNull(dataFrame);
-
+    // needs to allow for empty datasets with 0 partitions
+    checkState(dataFrame.rdd().getNumPartitions() <= 1,
+        "at most one partition expected in test datasets constructed from rows, but got: " + dataFrame.rdd().getNumPartitions());
     return dataFrame;
   }
 

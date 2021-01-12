@@ -28,7 +28,6 @@ import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.sql.PathlingStrategy;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -71,8 +70,6 @@ public class ParserTest {
   @BeforeEach
   public void setUp() throws IOException {
     spark = getSparkSession();
-    PathlingStrategy.setup(spark);
-
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
     final TerminologyClientFactory terminologyClientFactory =
         mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());

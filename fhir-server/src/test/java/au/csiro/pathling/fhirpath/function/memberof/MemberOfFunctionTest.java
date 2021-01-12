@@ -85,7 +85,8 @@ class MemberOfFunctionTest {
         .withRow("encounter-4", makeEid(0), rowFromCoding(coding4))
         .withRow("encounter-5", makeEid(0), rowFromCoding(coding5))
         .withRow("encounter-6", null, null)
-        .buildWithStructValue().coalesce(1);
+        .buildWithStructValue();
+
     final CodingPath inputExpression = (CodingPath) new ElementPathBuilder()
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
@@ -185,8 +186,8 @@ class MemberOfFunctionTest {
         .withRow("diagnosticreport-5", rowFromCodeableConcept(codeableConcept5))
         .withRow("diagnosticreport-6", rowFromCodeableConcept(codeableConcept6))
         .withRow("diagnosticreport-7", null)
-        .buildWithStructValue()
-        .coalesce(1);
+        .buildWithStructValue();
+
     final ElementPath inputExpression = new ElementPathBuilder()
         .dataset(inputDataset)
         .idAndValueColumns()

@@ -8,6 +8,7 @@ package au.csiro.pathling.test;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.FhirContextFactory;
+import au.csiro.pathling.test.helpers.SparkHelpers;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.Objects;
@@ -37,13 +38,7 @@ public class TestDataImporter {
   }
 
   public void setUp() {
-    spark = SparkSession.builder()
-        .appName("pathling-test-import")
-        .config("spark.master", "local[*]")
-        .config("spark.sql.shuffle.partitions", "1")
-        .config("spark.driver.memory", "1g")
-        .config("spark.executor.memory", "1g")
-        .getOrCreate();
+    spark = SparkHelpers.getSparkSession();
   }
 
   private void run(final String[] args) {

@@ -46,12 +46,13 @@ public abstract class SparkHelpers {
     if (activeSession.isEmpty()) {
       final SparkSession spark = SparkSession.builder()
           .appName("pathling-test")
-          .config("spark.master", "local[*]")
+          // use one thread only to make it consistent between environments with
+          // varying number of CPU cores. This also sets the value
+          // of `spark.default.parallelism` to one, which results in one partition
+          // in datsets created from lists of rows.
+          .config("spark.master", "local[1]")
           .config("spark.driver.bindAddress", "localhost")
           .config("spark.sql.shuffle.partitions", "1")
-          .config("spark.dynamicAllocation.enabled", "true")
-          .config("spark.shuffle.service.enabled", "true")
-          .config("spark.scheduler.mode", "FAIR")
           .config("spark.sql.autoBroadcastJoinThreshold", "-1")
           .getOrCreate();
       spark.udf().register("codings_equal", new CodingsEqual(), DataTypes.BooleanType);
