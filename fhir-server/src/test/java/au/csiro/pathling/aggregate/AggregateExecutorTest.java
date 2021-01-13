@@ -37,12 +37,14 @@ import org.junit.jupiter.api.Tag;
 import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
 @SpringBootTest
 @Tag("IntegrationTest")
+@TestPropertySource(locations = {"classpath:/configuration/integration-test.properties"})
 @ActiveProfiles("test")
 public abstract class AggregateExecutorTest {
 

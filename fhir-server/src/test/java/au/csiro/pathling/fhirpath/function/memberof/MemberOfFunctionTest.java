@@ -38,20 +38,16 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.FhirHelpers.MemberOfMapperAnswerer;
 import au.csiro.pathling.test.helpers.FhirHelpers.MemberOfTxAnswerer;
+import ca.uhn.fhir.rest.param.UriParam;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.CodeableConcept;
-import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.IntegerType;
-import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
@@ -90,6 +86,7 @@ class MemberOfFunctionTest {
         .withRow("encounter-5", makeEid(0), rowFromCoding(coding5))
         .withRow("encounter-6", null, null)
         .buildWithStructValue();
+
     final CodingPath inputExpression = (CodingPath) new ElementPathBuilder()
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
@@ -108,20 +105,14 @@ class MemberOfFunctionTest {
     when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
     when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
         .thenAnswer(memberOfTxAnswerer);
-
+    // setup all systems as known
+    when(terminologyClient.searchCodeSystems(any(UriParam.class), any()))
+        .thenReturn(Collections.singletonList(new CodeSystem()));
     // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
 
     final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
         withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
-
-    // Create a mock ValidateCodeMapper.
-    final MemberOfMapper mockCodeMapper = mock(MemberOfMapper.class,
-        withSettings().serializable());
-    final Answer<Iterator<MemberOfResult>> validateCodeMapperAnswerer =
-        new MemberOfMapperAnswerer(true, false, true, true, false);
-    //noinspection unchecked
-    when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder()
@@ -134,19 +125,19 @@ class MemberOfFunctionTest {
         Collections.singletonList(argumentExpression));
 
     // Invoke the function.
-    final FhirPath result = new MemberOfFunction(mockCodeMapper).invoke(memberOfInput);
+    final FhirPath result = new MemberOfFunction().invoke(memberOfInput);
 
     // The outcome is somehow random with regard to the sequence passed to MemberOfMapperAnswerer.
     final Dataset<Row> expectedResult = new DatasetBuilder()
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
-        .withRow("encounter-1", makeEid(0), false)
-        .withRow("encounter-1", makeEid(1), true)
+        .withRow("encounter-1", makeEid(0), true)
+        .withRow("encounter-1", makeEid(1), false)
         .withRow("encounter-2", makeEid(0), true)
-        .withRow("encounter-3", makeEid(0), true)
+        .withRow("encounter-3", makeEid(0), false)
         .withRow("encounter-4", makeEid(0), false)
-        .withRow("encounter-5", makeEid(0), false)
+        .withRow("encounter-5", makeEid(0), true)
         .withRow("encounter-6", null, null)
         .build();
 
@@ -194,7 +185,9 @@ class MemberOfFunctionTest {
         .withRow("diagnosticreport-4", rowFromCodeableConcept(codeableConcept4))
         .withRow("diagnosticreport-5", rowFromCodeableConcept(codeableConcept5))
         .withRow("diagnosticreport-6", rowFromCodeableConcept(codeableConcept6))
+        .withRow("diagnosticreport-7", null)
         .buildWithStructValue();
+
     final ElementPath inputExpression = new ElementPathBuilder()
         .dataset(inputDataset)
         .idAndValueColumns()
@@ -214,20 +207,14 @@ class MemberOfFunctionTest {
     when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
     when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
         .thenAnswer(memberOfTxAnswerer);
+    // setup all systems as known
+    when(terminologyClient.searchCodeSystems(any(UriParam.class), any()))
+        .thenReturn(Collections.singletonList(new CodeSystem()));
 
     // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
     final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
         withSettings().serializable());
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
-
-    // Create a mock ValidateCodeMapper.
-    final MemberOfMapper mockCodeMapper = mock(MemberOfMapper.class,
-        withSettings().serializable());
-    final Answer<Iterator<MemberOfResult>> validateCodeMapperAnswerer = new MemberOfMapperAnswerer(
-        true, false, true, true, false, false);
-    //noinspection unchecked
-
-    when(mockCodeMapper.call(any(Iterator.class))).thenAnswer(validateCodeMapperAnswerer);
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder()
@@ -239,10 +226,8 @@ class MemberOfFunctionTest {
         Collections.singletonList(argumentExpression));
 
     // Invoke the function.
-    final FhirPath result = new MemberOfFunction(mockCodeMapper).invoke(memberOfInput);
+    final FhirPath result = new MemberOfFunction().invoke(memberOfInput);
 
-    // The outcome is somehow random with regard to
-    // the sequence passed to MemberOfMapperAnswerer
     final Dataset<Row> expectedResult = new DatasetBuilder()
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
@@ -250,8 +235,9 @@ class MemberOfFunctionTest {
         .withRow("diagnosticreport-2", false)
         .withRow("diagnosticreport-3", true)
         .withRow("diagnosticreport-4", true)
-        .withRow("diagnosticreport-5", true)
-        .withRow("diagnosticreport-6", false)
+        .withRow("diagnosticreport-5", false)
+        .withRow("diagnosticreport-6", true)
+        .withRow("diagnosticreport-7", null)
         .build();
 
     // Check the result.
@@ -264,7 +250,6 @@ class MemberOfFunctionTest {
         .selectOrderedResult()
         .hasRows(expectedResult);
   }
-
 
   @Test
   public void throwsErrorIfInputTypeIsUnsupported() {

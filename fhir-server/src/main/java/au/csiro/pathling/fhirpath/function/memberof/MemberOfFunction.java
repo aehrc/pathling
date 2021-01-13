@@ -6,26 +6,30 @@
 
 package au.csiro.pathling.fhirpath.function.memberof;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
-import static org.apache.spark.sql.functions.hash;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.sql.SqlExtensions;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.slf4j.MDC;
 
@@ -42,7 +46,7 @@ public class MemberOfFunction implements NamedFunction {
   private static final String NAME = "memberOf";
 
   @Nonnull
-  private final Optional<MemberOfMapper> configuredMapper;
+  private final Optional<MemberOfMapperWithPreview> configuredMapper;
 
   /**
    * Returns a new instance of this function.
@@ -51,14 +55,9 @@ public class MemberOfFunction implements NamedFunction {
     configuredMapper = Optional.empty();
   }
 
-  /**
-   * Returns a new instance of this function, with a pre-configured {@link MemberOfMapper}.
-   *
-   * @param mapper An instance of {@link MemberOfMapper} for use in retrieving results from the
-   * terminology service
-   */
-  public MemberOfFunction(@Nonnull final MemberOfMapper mapper) {
-    configuredMapper = Optional.of(mapper);
+  private boolean isCodeableConcept(@Nonnull final FhirPath fhirPath) {
+    return (fhirPath instanceof ElementPath &&
+        FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) fhirPath).getFhirType()));
   }
 
   @Nonnull
@@ -72,48 +71,39 @@ public class MemberOfFunction implements NamedFunction {
     final Column idColumn = inputPath.getIdColumn();
     final Column conceptColumn = inputPath.getValueColumn();
 
+    final Column codingArrayCol = (isCodeableConcept(inputPath))
+                                  ? conceptColumn.getField("coding")
+                                  : when(conceptColumn.isNotNull(), array(conceptColumn))
+                                      .otherwise(lit(null));
+
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final TerminologyClientFactory terminologyClientFactory = inputContext
         .getTerminologyClientFactory().get();
-    final FHIRDefinedType fhirType = inputPath.getFhirType();
     final String valueSetUri = argument.getJavaValue();
+    final Dataset<Row> dataset = inputPath.getDataset();
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
     // then create a new dataset with the boolean results.
-    final MemberOfMapper mapper = configuredMapper.orElseGet(() ->
-        new MemberOfMapper(MDC.get("requestId"), terminologyClientFactory, valueSetUri,
-            fhirType));
-
-    final Dataset<Row> dataset = inputPath.getDataset();
-    final Column conceptHashColumn = hash(conceptColumn);
-    final String resultAlias = randomAlias();
-    final String hashAlias = randomAlias();
+    final MemberOfMapperWithPreview mapper = configuredMapper.orElseGet(() ->
+        new MemberOfMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
+            valueSetUri));
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.
-    final Dataset<Row> results = dataset
-        .select(conceptHashColumn, conceptColumn)
-        .dropDuplicates()
-        .filter(conceptColumn.isNotNull())
-        .mapPartitions(mapper, Encoders.bean(MemberOfResult.class))
-        .toDF();
-    final Dataset<Row> aliasedResults = results
-        .select(results.col("result").alias(resultAlias), results.col("hash").alias(hashAlias));
-    final Column resultColumn = aliasedResults.col(resultAlias);
-    final Column resultHashColumn = aliasedResults.col(hashAlias);
-
-    // We then join the input dataset to the validated codes, and select the validation result as
-    // the new value.
-    final Dataset<Row> finalDataset = join(dataset, conceptHashColumn, aliasedResults,
-        resultHashColumn, JoinType.LEFT_OUTER);
+    final Dataset<Row> resultDataset = SqlExtensions
+        .mapWithPartitionPreview(dataset, codingArrayCol,
+            SimpleCodingsDecoders::decodeList,
+            mapper,
+            StructField.apply("result", DataTypes.BooleanType, true, Metadata.empty()));
+    final Column resultColumn = col("result");
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
 
     return ElementPath
-        .build(expression, finalDataset, idColumn, inputPath.getEidColumn(), resultColumn,
+        .build(expression, resultDataset, idColumn, inputPath.getEidColumn(), resultColumn,
             inputPath.isSingular(), inputPath.getForeignResource(), inputPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }

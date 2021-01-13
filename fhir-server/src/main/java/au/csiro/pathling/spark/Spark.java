@@ -9,6 +9,7 @@ package au.csiro.pathling.spark;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Storage.Aws;
 import au.csiro.pathling.spark.udf.CodingsEqual;
+import au.csiro.pathling.sql.PathlingStrategy;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -49,6 +50,7 @@ public class Spark {
 
     // Configure user defined functions.
     spark.udf().register("codings_equal", new CodingsEqual(), DataTypes.BooleanType);
+    PathlingStrategy.setup(spark);
 
     // Configure AWS driver and credentials.
     final Aws awsConfig = configuration.getStorage().getAws();
@@ -74,7 +76,7 @@ public class Spark {
     propertySources.stream()
         .filter(propertySource -> propertySource instanceof EnumerablePropertySource)
         .flatMap(propertySource -> Arrays
-            .stream(((EnumerablePropertySource) propertySource).getPropertyNames()))
+            .stream(((EnumerablePropertySource<?>) propertySource).getPropertyNames()))
         .filter(property -> property.startsWith("spark."))
         .forEach(property -> System.setProperty(property,
             Objects.requireNonNull(resolver.getProperty(property))));

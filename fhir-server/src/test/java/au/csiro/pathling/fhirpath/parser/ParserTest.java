@@ -41,10 +41,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Date;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -73,7 +70,6 @@ public class ParserTest {
   @BeforeEach
   public void setUp() throws IOException {
     spark = getSparkSession();
-
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
     final TerminologyClientFactory terminologyClientFactory =
         mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
@@ -114,6 +110,7 @@ public class ParserTest {
     }
   }
 
+  @SuppressWarnings("rawtypes")
   private FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
   }
@@ -249,7 +246,10 @@ public class ParserTest {
 
   @Test
   public void testSubsumesAndSubsumedBy() {
-    // Setup mock terminology client
+    final List<CodeSystem> codeSystems = Collections.singletonList(new CodeSystem());
+    //noinspection unchecked
+    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
+        .thenReturn(codeSystems);  // Setup mock terminology client
     when(terminologyClient.closure(any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
 
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
@@ -310,6 +310,10 @@ public class ParserTest {
 
   @Test
   public void testWhereWithSubsumes() {
+    final List<CodeSystem> codeSystems = Collections.singletonList(new CodeSystem());
+    //noinspection unchecked
+    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
+        .thenReturn(codeSystems);
     when(terminologyClient.closure(any(), any()))
         .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
 

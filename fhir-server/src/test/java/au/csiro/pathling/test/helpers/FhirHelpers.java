@@ -10,7 +10,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
-import au.csiro.pathling.fhirpath.function.memberof.MemberOfResult;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.IParser;
@@ -18,8 +17,6 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import org.apache.commons.collections.IteratorUtils;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -91,8 +88,9 @@ public class FhirHelpers {
    * Custom Mockito answerer for returning a mock response from the terminology server in response
    * to calculating a ValueSet intersection using {@code $expand}.
    */
-  public static class MemberOfTxAnswerer implements Answer<ValueSet> {
+  public static class MemberOfTxAnswerer implements Answer<ValueSet>, Serializable {
 
+    private static final long serialVersionUID = -8343684022079397168L;
     private final Collection<Coding> validMembers;
 
     public MemberOfTxAnswerer(@Nonnull final Coding... validMembers) {
@@ -126,39 +124,6 @@ public class FhirHelpers {
       expansion.setContains(contains);
       answer.setExpansion(expansion);
       return answer;
-    }
-
-  }
-
-  /**
-   * Custom Mockito answerer for returning @{link MemberOfResult} objects based on the correlation
-   * identifiers in the input Rows.
-   */
-  public static class MemberOfMapperAnswerer implements Answer<Iterator<MemberOfResult>>,
-      Serializable {
-
-    private static final long serialVersionUID = -4277469595727802064L;
-    private final List<Boolean> expectedResults;
-
-    public MemberOfMapperAnswerer(@Nonnull final Boolean... expectedResults) {
-      this.expectedResults = Arrays.asList(expectedResults);
-    }
-
-    @Override
-    @Nonnull
-    public Iterator<MemberOfResult> answer(@Nonnull final InvocationOnMock invocation) {
-      final List rows = IteratorUtils.toList(invocation.getArgument(0));
-      final Collection<MemberOfResult> results = new ArrayList<>();
-
-      for (int i = 0; i < rows.size(); i++) {
-        final Row row = (Row) rows.get(i);
-        final int hash = row.getInt(0);
-        final boolean resultValue = expectedResults.get(i);
-        final MemberOfResult result = new MemberOfResult(hash, resultValue);
-        results.add(result);
-      }
-
-      return results.iterator();
     }
 
   }

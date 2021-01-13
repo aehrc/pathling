@@ -44,6 +44,7 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
@@ -51,6 +52,7 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 @Tag("IntegrationTest")
 @ActiveProfiles("test")
+@TestPropertySource(locations = {"classpath:/configuration/integration-test.properties"})
 class SearchExecutorTest {
 
   private final Configuration configuration;
