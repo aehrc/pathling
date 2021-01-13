@@ -44,7 +44,7 @@ import org.springframework.test.context.TestPropertySource;
  */
 @SpringBootTest
 @Tag("IntegrationTest")
-@TestPropertySource(locations = {"classpath:/configuration/authorisation-enabled.properties"})
+@TestPropertySource(locations = {"classpath:/configuration/integration-test.properties"})
 @ActiveProfiles("test")
 public abstract class AggregateExecutorTest {
 
