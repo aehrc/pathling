@@ -21,7 +21,7 @@
   <description>A web site that contains documentation for Pathling.</description>
 
   <properties>
-    <siteDockerRepo>aehrc/pathling-site</siteDockerRepo>
+    <pathling.siteDockerRepo>aehrc/pathling-site</pathling.siteDockerRepo>
   </properties>
 
   <dependencies>
@@ -168,7 +168,7 @@
               </execution>
             </executions>
             <configuration>
-              <repository>${siteDockerRepo}</repository>
+              <repository>${pathling.siteDockerRepo}</repository>
               <tag>${project.version}</tag>
             </configuration>
           </plugin>
