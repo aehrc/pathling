@@ -44,11 +44,10 @@ The branching strategy is very simple and is based on
 long-lived branches, all changes are made via pull requests and will be the 
 subject of an issue branch that is created from and targeting `master`.
 
-We release frequently, and sometimes we will make use of a short-lived release 
-branch to aggregate more than one PR into a new version.
+We release frequently, and sometimes we will make use of a short-lived branch to 
+aggregate more than one PR into a new version.
 
-The Maven POM version on `master` will be either a release version, or a version 
-of the form `[latest release version]-master-SNAPSHOT`. Builds are always 
+Maven POM versions on `master` are always release versions. Builds are always 
 verified to be green within CI before merging to master. Merging to master 
 automatically triggers publishing of artifacts and deployment of the software to 
 production environments such as the Pathling web site and sandbox instance.
