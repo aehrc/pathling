@@ -31,6 +31,8 @@ jobs:
           -Pdocker \
           -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }} \
           -Dmaven.test.failure.ignore=true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 30
       - name: Upload encoders test reports
         uses: actions/upload-artifact@v2
