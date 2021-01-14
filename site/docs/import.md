@@ -7,7 +7,7 @@ parent: Documentation
 
 # Import
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-2)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-3)
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and the `$import` operation is an
@@ -25,7 +25,7 @@ Currently Pathling supports retrieval of NDJSON files from
 [Amazon S3](https://aws.amazon.com/s3/) (`s3://`),
 [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`) and
 filesystem (`file://`) URLs. Authentication is supported for S3, see
-[Configuration and deployment](./deployment.html) for details.
+[Configuration](./configuration.html) for details.
 
 ```
 POST [FHIR endpoint]/$import

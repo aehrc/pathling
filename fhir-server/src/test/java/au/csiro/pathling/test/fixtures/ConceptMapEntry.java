@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -22,7 +22,8 @@ public class ConceptMapEntry {
   private final Coding target;
   private final ConceptMapEquivalence equivalence;
 
-  private ConceptMapEntry(Coding source, Coding target, ConceptMapEquivalence equivalence) {
+  private ConceptMapEntry(final Coding source, final Coding target,
+      final ConceptMapEquivalence equivalence) {
     this.source = source;
     this.target = target;
     this.equivalence = equivalence;
@@ -40,16 +41,16 @@ public class ConceptMapEntry {
     return equivalence;
   }
 
-  public static ConceptMapEntry of(Coding source, Coding target,
-      ConceptMapEquivalence equivalence) {
+  public static ConceptMapEntry of(final Coding source, final Coding target,
+      final ConceptMapEquivalence equivalence) {
     return new ConceptMapEntry(source, target, equivalence);
   }
 
-  public static ConceptMapEntry subsumesOf(Coding source, Coding target) {
+  public static ConceptMapEntry subsumesOf(final Coding source, final Coding target) {
     return of(source, target, ConceptMapEquivalence.SUBSUMES);
   }
 
-  public static ConceptMapEntry specializesOf(Coding source, Coding target) {
+  public static ConceptMapEntry specializesOf(final Coding source, final Coding target) {
     return of(source, target, ConceptMapEquivalence.SPECIALIZES);
   }
 }

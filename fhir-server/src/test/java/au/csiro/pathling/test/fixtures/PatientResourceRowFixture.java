@@ -1,11 +1,12 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
 
 package au.csiro.pathling.test.fixtures;
 
+import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -14,22 +15,24 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.*;
-import au.csiro.pathling.test.DatasetBuilder;
 
 /**
  * @author Piotr Szul
  */
 
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class PatientResourceRowFixture {
 
   public static StructType createPatientRowStruct() {
-    Metadata metadata = new MetadataBuilder().build();
-    StructField genderColumn = new StructField("gender", DataTypes.StringType, true, metadata);
-    StructField activeColumn = new StructField("active", DataTypes.BooleanType, true, metadata);
-    StructType resourceStruct = new StructType(new StructField[] {genderColumn, activeColumn});
-    StructField id = new StructField("123abcd_id", DataTypes.StringType, false, metadata);
-    StructField resource = new StructField("123abcd", resourceStruct, false, metadata);
-    return new StructType(new StructField[] {id, resource});
+    final Metadata metadata = new MetadataBuilder().build();
+    final StructField genderColumn = new StructField("gender", DataTypes.StringType, true,
+        metadata);
+    final StructField activeColumn = new StructField("active", DataTypes.BooleanType, true,
+        metadata);
+    final StructType resourceStruct = new StructType(new StructField[]{genderColumn, activeColumn});
+    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
+    final StructField resource = new StructField("value", resourceStruct, true, metadata);
+    return new StructType(new StructField[]{id, resource});
   }
 
   public static final StructType SCHEMA = createPatientRowStruct();
@@ -48,16 +51,16 @@ public class PatientResourceRowFixture {
 
   public final static List<Row> NO_ROWS = Collections.emptyList();
 
-  public static Dataset<Row> createCompleteDataset(SparkSession spark) {
+  public static Dataset<Row> createCompleteDataset(final SparkSession spark) {
     return spark.createDataFrame(PATIENT_ALL_ROWS, SCHEMA);
   }
 
-  public static Dataset<Row> createEmptyDataset(SparkSession spark) {
+  public static Dataset<Row> createEmptyDataset(final SparkSession spark) {
     return spark.createDataFrame(NO_ROWS, SCHEMA);
   }
 
-  public static DatasetBuilder allPatientsWithValue(Object value) {
-    return new DatasetBuilder().withColumn("123abcd_id", DataTypes.StringType)
-        .withColumn("123abcd", DataTypes.BooleanType).withIdsAndValue(value, PATIENT_ALL_IDS);
+  public static DatasetBuilder allPatientsWithValue(final Object value) {
+    return new DatasetBuilder().withColumn(DataTypes.StringType)
+        .withColumn(DataTypes.BooleanType).withIdsAndValue(value, PATIENT_ALL_IDS);
   }
 }

@@ -1,20 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+  ~ Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
   ~ Software Licence Agreement.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.4.1</version>
+    <relativePath/>
+  </parent>
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
+  <version>3.0.0</version>
   <packaging>pom</packaging>
-  <organization>
-    <name>Australian e-Health Research Centre, CSIRO</name>
-    <url>https://aehrc.com/</url>
-  </organization>
+
+  <name>Pathling</name>
+  <description>
+    A server based on the HL7® FHIR® standard, implementing special functionality designed to ease
+    the delivery of analytics-enabled apps and augment tasks related to health data analytics.
+  </description>
+  <url>https://pathling.csiro.au</url>
+
   <developers>
     <developer>
       <name>John Grimes</name>
@@ -27,24 +41,49 @@
       <url>https://github.com/piotrszul</url>
     </developer>
   </developers>
+
+  <organization>
+    <name>Australian e-Health Research Centre, CSIRO</name>
+    <url>https://aehrc.com</url>
+  </organization>
   <licenses>
     <license>
       <name>CSIRO Open Source Software Licence Agreement</name>
-      <comments>Variation of the BSD/MIT License</comments>
+      <url>https://github.com/aehrc/pathling/raw/master/LICENSE.md</url>
     </license>
   </licenses>
 
-  <version>2.1.2</version>
+  <scm>
+    <url>https://github.com/aehrc/pathling</url>
+    <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
+  </scm>
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/aehrc/pathling/issues</url>
+  </issueManagement>
+  <ciManagement>
+    <system>GitHub Actions</system>
+    <url>https://github.com/aehrc/pathling/actions</url>
+  </ciManagement>
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/aehrc/pathling</url>
+    </repository>
+  </distributionManagement>
 
   <properties>
-    <project.majorVersion>2</project.majorVersion>
-    <hapiFhirVersion>4.2.0</hapiFhirVersion>
-    <sparkVersion>2.4.7</sparkVersion>
-    <sparkScalaVersion>2.11</sparkScalaVersion>
-    <dockerJavaVersion>3.2.5</dockerJavaVersion>
-    <hadoopVersion>2.7.7</hadoopVersion>
-    <hadoopMirror>https://mirror.aarnet.edu.au/pub/apache/hadoop/common</hadoopMirror>
+    <project.majorVersion>3</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <pathling.hapiFhirVersion>5.2.0</pathling.hapiFhirVersion>
+    <pathling.sparkVersion>3.0.1</pathling.sparkVersion>
+    <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
+    <pathling.dockerJavaVersion>3.2.7</pathling.dockerJavaVersion>
+    <pathling.hadoopVersion>2.10.1</pathling.hadoopVersion>
+    <pathling.hadoopMirror>https://apache.mirror.digitalpacific.com.au/hadoop/common
+    </pathling.hadoopMirror>
   </properties>
 
   <modules>
@@ -65,45 +104,40 @@
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-base</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-structures-r4</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-validation-resources-r4</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-server</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-client</artifactId>
-        <version>${hapiFhirVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>ca.uhn.hapi.fhir</groupId>
-        <artifactId>org.hl7.fhir.utilities</artifactId>
-        <version>${hapiFhirVersion}</version>
+        <version>${pathling.hapiFhirVersion}</version>
       </dependency>
       <!-- Woodstox is used by HAPI for XML processing -->
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
         <artifactId>woodstox-core</artifactId>
-        <version>6.2.1</version>
+        <version>6.2.3</version>
       </dependency>
 
       <!-- Apache Spark -->
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-core_${sparkScalaVersion}</artifactId>
-        <version>${sparkVersion}</version>
+        <artifactId>spark-core_${pathling.sparkScalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
         <exclusions>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -113,28 +147,28 @@
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
-        <version>${sparkVersion}</version>
+        <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-catalyst_${sparkScalaVersion}</artifactId>
-        <version>${sparkVersion}</version>
+        <artifactId>spark-catalyst_${pathling.sparkScalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
-        <artifactId>spark-hive_${sparkScalaVersion}</artifactId>
-        <version>${sparkVersion}</version>
+        <artifactId>spark-hive_${pathling.sparkScalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client</artifactId>
-        <version>${hadoopVersion}</version>
+        <version>${pathling.hadoopVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-aws</artifactId>
-        <version>${hadoopVersion}</version>
+        <version>${pathling.hadoopVersion}</version>
         <exclusions>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -146,6 +180,21 @@
           </exclusion>
         </exclusions>
       </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>2.12.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.janino</groupId>
+        <artifactId>janino</artifactId>
+        <version>3.0.9</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.janino</groupId>
+        <artifactId>commons-compiler</artifactId>
+        <version>3.0.9</version>
+      </dependency>
 
       <!-- Encoders -->
       <dependency>
@@ -154,61 +203,43 @@
         <version>${project.version}</version>
       </dependency>
 
-      <!-- Logging -->
-      <dependency>
-        <artifactId>logback-classic</artifactId>
-        <groupId>ch.qos.logback</groupId>
-        <version>1.2.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>1.7.30</version>
-      </dependency>
-
       <!-- Error monitoring -->
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>1.7.30</version>
+        <version>3.2.0</version>
       </dependency>
 
       <!-- Testing -->
       <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.13</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.assertj</groupId>
-        <artifactId>assertj-core</artifactId>
-        <version>3.17.2</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.skyscreamer</groupId>
-        <artifactId>jsonassert</artifactId>
-        <version>1.5.0</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-core</artifactId>
-        <version>3.5.10</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>com.github.docker-java</groupId>
         <artifactId>docker-java</artifactId>
-        <version>${dockerJavaVersion}</version>
+        <version>${pathling.dockerJavaVersion}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>com.github.docker-java</groupId>
         <artifactId>docker-java-transport-okhttp</artifactId>
-        <version>${dockerJavaVersion}</version>
+        <version>${pathling.dockerJavaVersion}</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.skyscreamer</groupId>
+        <artifactId>jsonassert</artifactId>
+        <exclusions>
+          <exclusion>
+            <groupId>com.vaadin.external.google</groupId>
+            <artifactId>android-json</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <!-- Lombok -->
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>1.18.16</version>
+        <scope>provided</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -218,7 +249,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>3.0.0-M1</version>
       </plugin>
     </plugins>
     <pluginManagement>
@@ -227,27 +257,55 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
-            <source>1.8</source>
-            <target>1.8</target>
+            <source>11</source>
+            <target>11</target>
             <compilerArgs>
               <arg>-Xlint</arg>
             </compilerArgs>
           </configuration>
         </plugin>
         <plugin>
+          <groupId>net.alchim31.maven</groupId>
+          <artifactId>scala-maven-plugin</artifactId>
+          <version>4.4.0</version>
+          <executions>
+            <execution>
+              <id>scala-compile-first</id>
+              <phase>process-resources</phase>
+              <goals>
+                <goal>add-source</goal>
+                <goal>compile</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>scala-test-compile</id>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>testCompile</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <source>11</source>
+            <target>11</target>
+            <args>
+              <arg>-feature</arg>
+            </args>
+          </configuration>
+        </plugin>
+        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.2</version>
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>-Xmx2g</argLine>
+            <argLine>@{argLine} -Xmx2g</argLine>
+            <forkCount>1C</forkCount>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.22.2</version>
           <configuration>
             <argLine>-Xmx2g</argLine>
           </configuration>
@@ -256,16 +314,6 @@
           <groupId>com.spotify</groupId>
           <artifactId>dockerfile-maven-plugin</artifactId>
           <version>1.4.13</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.3</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.1.2</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -289,20 +337,70 @@
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>0.8.6</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>jar-no-fork</id>
+              <goals>
+                <goal>jar-no-fork</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <configuration>
+            <links>
+              <link>https://spark.apache.org/docs/latest/api/java/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
+            </links>
+            <detectLinks/>
+            <doctitle>Pathling ${project.version} API</doctitle>
+            <windowtitle>Pathling ${project.version} API</windowtitle>
+            <bottom><![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]></bottom>
+            <additionalJOptions>
+              <option>--no-module-directories</option>
+              <option>-Xdoclint:none</option>
+            </additionalJOptions>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
-  
-  <scm>
-    <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
-    <tag>v2.1.2</tag>
-  </scm>
 
   <profiles>
     <profile>
       <id>licenses</id>
       <build>
         <plugins>
+          <plugin>
+            <artifactId>maven-clean-plugin</artifactId>
+            <configuration>
+              <filesets>
+                <fileset>
+                  <directory>${project.basedir}</directory>
+                  <includes>
+                    <include>LICENSE.md</include>
+                  </includes>
+                </fileset>
+                <fileset>
+                  <directory>${project.basedir}/licenses</directory>
+                </fileset>
+              </filesets>
+            </configuration>
+            <groupId>org.apache.maven.plugins</groupId>
+          </plugin>
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>license-maven-plugin</artifactId>
@@ -314,18 +412,20 @@
                   <goal>aggregate-add-third-party</goal>
                 </goals>
                 <configuration>
-                  <!-- This is required so that the plugin does not overwrite the results of the
-                  aggregated run with that of the execution for the single module. -->
-                  <thirdPartyFilename>AGGREGATED-THIRD-PARTY.txt</thirdPartyFilename>
+                  <excludedGroups>^au\.csiro\.</excludedGroups>
+                  <fileTemplate>fhir-server/src/main/resources/license-template.ftl</fileTemplate>
+                  <includeTransitiveDependencies>false</includeTransitiveDependencies>
                   <licenseMerges>
-                    <licenseMerge>Apache License 2.0|Apache 2|Apache 2.0|Apache 2.0 License|Apache License|Apache License (v2.0)|Apache License Version 2|Apache License, 2.0|Apache License, Version 2.0|Apache Software License - Version 2.0|Apache Software License 2.0|Apache v2|Apache-2.0|The Apache Software License, Version 2.0|The Apache License, Version 2.0|http://www.apache.org/licenses/LICENSE-2.0.txt</licenseMerge>
-                    <licenseMerge>BSD 3-Clause "New" or "Revised" License|BSD|BSD 2-Clause License|BSD 3 Clause|BSD 3-Clause|BSD 3-Clause "New" or "Revised" License (BSD-3-Clause)|BSD 3-clause|BSD License|BSD New|BSD licence|New BSD License|3-Clause BSD License|New BSD license|Revised BSD|BSD style|The New BSD License|The BSD License|The BSD 3-Clause License|http://asm.ow2.org/license.html|Java HTML Tidy License</licenseMerge>
-                    <licenseMerge>Common Development and Distribution License|CDDL + GPLv2 with classpath exception|CDDL 1.1|CDDL+GPL License|Dual license consisting of the CDDL v1.1 and GPL v2|COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0</licenseMerge>
-                    <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - Version 1.0|Eclipse Public License - v 1.0</licenseMerge>
-                    <licenseMerge>MIT License|MIT license</licenseMerge>
-                    <licenseMerge>GNU Lesser General Public License|GNU Lesser General Public License (LGPL), Version 2.1|LGPL 2.1</licenseMerge>
-                    <licenseMerge>GNU General Public License v2.0 with Classpath Exception|GPL2 w/ CPE</licenseMerge>
+                    <licenseMerge>Apache License, Version 2.0|Apache Software License 2.0|The Apache
+                      License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0
+                      License|Apache License 2.0|The Apache License, Version 2.0|Apache 2.0 License
+                    </licenseMerge>
+                    <licenseMerge>BSD License|BSD New|The BSD License|New BSD License</licenseMerge>
+                    <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - v 1.0
+                    </licenseMerge>
+                    <licenseMerge>MIT License|The MIT License (MIT)|The MIT License</licenseMerge>
                   </licenseMerges>
+                  <thirdPartyFilename>LICENSE.md</thirdPartyFilename>
                 </configuration>
               </execution>
               <execution>
@@ -334,6 +434,49 @@
                 <goals>
                   <goal>aggregate-download-licenses</goal>
                 </goals>
+                <configuration>
+                  <includeTransitiveDependencies>false</includeTransitiveDependencies>
+                  <excludedGroups>^au\.csiro\.</excludedGroups>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <configuration>
+                  <outputDirectory>${project.basedir}</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>target/generated-sources/license</directory>
+                      <includes>
+                        <include>LICENSE.md</include>
+                      </includes>
+                    </resource>
+                  </resources>
+                </configuration>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <id>copy-license</id>
+                <phase>package</phase>
+              </execution>
+              <execution>
+                <configuration>
+                  <outputDirectory>${project.basedir}/licenses</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>target/generated-resources/licenses</directory>
+                    </resource>
+                  </resources>
+                </configuration>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <id>copy-third-party-licenses</id>
+                <phase>package</phase>
               </execution>
             </executions>
           </plugin>

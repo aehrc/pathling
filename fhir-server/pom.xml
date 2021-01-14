@@ -1,29 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+  ~ Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
   ~ Software Licence Agreement.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>2.1.2</version>
-    <relativePath>../pom.xml</relativePath>
+    <version>3.0.0</version>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
 
+  <name>Pathling Server</name>
+  <description>A server that exposes Pathling functionality through a FHIR API.</description>
+
   <properties>
-    <jettyVersion>9.4.31.v20200723</jettyVersion>
-    <antlrVersion>4.8-1</antlrVersion>
-    <fhirServerDockerRepo>aehrc/pathling</fhirServerDockerRepo>
+    <pathling.antlrVersion>4.9</pathling.antlrVersion>
+    <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
   </properties>
 
   <dependencies>
+    <!-- Spring Boot -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+    </dependency>
+
     <!-- HAPI FHIR -->
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
@@ -50,15 +68,19 @@
     <!-- Apache Spark -->
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${sparkScalaVersion}</artifactId>
+      <artifactId>spark-core_${pathling.sparkScalaVersion}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_${sparkScalaVersion}</artifactId>
+      <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-aws</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
     </dependency>
 
     <!-- Encoders -->
@@ -81,31 +103,19 @@
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
-      <version>3.10.3</version>
+      <version>3.12.0</version>
     </dependency>
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>jwks-rsa</artifactId>
-      <version>0.13.0</version>
+      <version>0.15.0</version>
     </dependency>
 
     <!-- ANTLR -->
     <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr4</artifactId>
-      <version>${antlrVersion}</version>
-    </dependency>
-
-    <!-- Jetty -->
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-server</artifactId>
-      <version>${jettyVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-servlet</artifactId>
-      <version>${jettyVersion}</version>
+      <version>${pathling.antlrVersion}</version>
     </dependency>
 
     <!-- Error monitoring -->
@@ -114,29 +124,17 @@
       <artifactId>sentry</artifactId>
     </dependency>
 
-    <!-- spring-web is required by CorsConfiguration, which is required by the CorsInterceptor -->
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-web</artifactId>
-      <version>5.2.8.RELEASE</version>
-    </dependency>
-
     <!-- Testing -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.skyscreamer</groupId>
-      <artifactId>jsonassert</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.junit.vintage</groupId>
+          <artifactId>junit-vintage-engine</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.github.docker-java</groupId>
@@ -146,14 +144,24 @@
       <groupId>com.github.docker-java</groupId>
       <artifactId>docker-java-transport-okhttp</artifactId>
     </dependency>
+
+    <!-- Lombok -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
       <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.antlr</groupId>
         <artifactId>antlr4-maven-plugin</artifactId>
-        <version>${antlrVersion}</version>
+        <version>${pathling.antlrVersion}</version>
         <executions>
           <execution>
             <goals>
@@ -167,119 +175,79 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>com.spotify</groupId>
-        <artifactId>dockerfile-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>build</id>
-            <goals>
-              <goal>build</goal>
-            </goals>
-            <configuration>
-              <tag>${project.version}</tag>
-              <buildArgs>
-                <VERSION>${project.version}</VERSION>
-                <HADOOP_MIRROR>${hadoopMirror}</HADOOP_MIRROR>
-                <HADOOP_VERSION>${hadoopVersion}</HADOOP_VERSION>
-                <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
-                <DEPENDENCY_PATH>target/dependency</DEPENDENCY_PATH>
-              </buildArgs>
-            </configuration>
-          </execution>
-          <execution>
-            <id>tag-major</id>
-            <phase>none</phase>
-            <goals>
-              <goal>tag</goal>
-            </goals>
-            <configuration>
-              <tag>${project.majorVersion}</tag>
-            </configuration>
-          </execution>
-          <execution>
-            <id>tag-latest</id>
-            <phase>none</phase>
-            <goals>
-              <goal>tag</goal>
-            </goals>
-            <configuration>
-              <tag>latest</tag>
-            </configuration>
-          </execution>
-          <execution>
-            <id>push-version</id>
-            <phase>none</phase>
-            <goals>
-              <goal>push</goal>
-            </goals>
-            <configuration>
-              <tag>${project.version}</tag>
-            </configuration>
-          </execution>
-          <execution>
-            <id>push-major</id>
-            <phase>none</phase>
-            <goals>
-              <goal>push</goal>
-            </goals>
-            <configuration>
-              <tag>${project.majorVersion}</tag>
-            </configuration>
-          </execution>
-          <execution>
-            <id>push-latest</id>
-            <phase>none</phase>
-            <goals>
-              <goal>push</goal>
-            </goals>
-            <configuration>
-              <tag>latest</tag>
-            </configuration>
-          </execution>
-        </executions>
+        <artifactId>maven-clean-plugin</artifactId>
         <configuration>
-          <repository>${fhirServerDockerRepo}</repository>
+          <filesets>
+            <fileset>
+              <directory>${project.basedir}/src/test/resources/test-data/parquet</directory>
+              <includes>
+                <include>*.parquet</include>
+              </includes>
+            </fileset>
+          </filesets>
         </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <groups>au.csiro.pathling.UnitTest</groups>
+          <groups>UnitTest,IntegrationTest</groups>
         </configuration>
       </plugin>
       <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-failsafe-plugin</artifactId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
         <executions>
           <execution>
+            <id>prepare-agent</id>
             <goals>
-              <goal>integration-test</goal>
-              <goal>verify</goal>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>4.4.0</version>
+        <executions>
+          <execution>
+            <id>scala-compile-first</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>add-source</goal>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>scala-test-compile</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>testCompile</goal>
             </goals>
           </execution>
         </executions>
         <configuration>
-          <includes>
-            <include>**/*.java</include>
-          </includes>
-          <groups>au.csiro.pathling.SystemTest</groups>
-          <systemPropertyVariables>
-            <version>${project.version}</version>
-            <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
-            <dockerRepository>${fhirServerDockerRepo}</dockerRepository>
-          </systemPropertyVariables>
+          <source>11</source>
+          <target>11</target>
+          <args>
+            <arg>-feature</arg>
+          </args>
         </configuration>
       </plugin>
     </plugins>
@@ -287,43 +255,137 @@
 
   <profiles>
     <profile>
-      <id>shade</id>
+      <id>import-test-data</id>
       <activation>
         <property>
-          <name>skipShade</name>
-          <value>!true</value>
+          <name>!skipTests</name>
         </property>
       </activation>
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-shade-plugin</artifactId>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
             <executions>
               <execution>
+                <id>import-test-data</id>
+                <phase>process-test-classes</phase>
                 <goals>
-                  <goal>shade</goal>
+                  <goal>java</goal>
                 </goals>
               </execution>
             </executions>
             <configuration>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>au.csiro.pathling.FhirServerContainer</mainClass>
-                </transformer>
-              </transformers>
-              <filters>
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-              <createDependencyReducedPom>false</createDependencyReducedPom>
-              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <mainClass>au.csiro.pathling.test.TestDataImporter</mainClass>
+              <arguments>
+                <argument>${project.basedir}/src/test/resources/test-data/fhir</argument>
+                <argument>${project.basedir}/src/test/resources/test-data/parquet</argument>
+              </arguments>
+              <classpathScope>test</classpathScope>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>docker</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <includes>
+                <include>**/*.java</include>
+              </includes>
+              <groups>SystemTest</groups>
+              <systemPropertyVariables>
+                <version>${project.version}</version>
+                <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
+                <dockerRepository>${pathling.fhirServerDockerRepo}</dockerRepository>
+              </systemPropertyVariables>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>com.spotify</groupId>
+            <artifactId>dockerfile-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>build</id>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+                <configuration>
+                  <tag>${project.version}</tag>
+                  <buildArgs>
+                    <VERSION>${project.version}</VERSION>
+                    <HADOOP_MIRROR>${pathling.hadoopMirror}</HADOOP_MIRROR>
+                    <HADOOP_VERSION>${pathling.hadoopVersion}</HADOOP_VERSION>
+                    <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+                  </buildArgs>
+                </configuration>
+              </execution>
+              <execution>
+                <id>tag-major</id>
+                <phase>none</phase>
+                <goals>
+                  <goal>tag</goal>
+                </goals>
+                <configuration>
+                  <tag>${project.majorVersion}</tag>
+                </configuration>
+              </execution>
+              <execution>
+                <id>tag-latest</id>
+                <phase>none</phase>
+                <goals>
+                  <goal>tag</goal>
+                </goals>
+                <configuration>
+                  <tag>latest</tag>
+                </configuration>
+              </execution>
+              <execution>
+                <id>push-version</id>
+                <phase>none</phase>
+                <goals>
+                  <goal>push</goal>
+                </goals>
+                <configuration>
+                  <tag>${project.version}</tag>
+                </configuration>
+              </execution>
+              <execution>
+                <id>push-major</id>
+                <phase>none</phase>
+                <goals>
+                  <goal>push</goal>
+                </goals>
+                <configuration>
+                  <tag>${project.majorVersion}</tag>
+                </configuration>
+              </execution>
+              <execution>
+                <id>push-latest</id>
+                <phase>none</phase>
+                <goals>
+                  <goal>push</goal>
+                </goals>
+                <configuration>
+                  <tag>latest</tag>
+                </configuration>
+              </execution>
+            </executions>
+            <configuration>
+              <repository>${pathling.fhirServerDockerRepo}</repository>
             </configuration>
           </plugin>
         </plugins>

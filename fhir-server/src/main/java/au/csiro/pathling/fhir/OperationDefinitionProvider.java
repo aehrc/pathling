@@ -1,23 +1,33 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Versioning.getMajorVersion;
+
+import au.csiro.pathling.Configuration;
+import au.csiro.pathling.errors.ResourceNotFoundError;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import com.google.common.collect.ImmutableMap;
 import java.io.InputStream;
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.r4.model.OperationDefinition;
+import org.springframework.stereotype.Component;
 
 /**
  * This class is used for serving up the OperationDefinition resources which describe this server's
@@ -25,27 +35,32 @@ import org.hl7.fhir.r4.model.OperationDefinition;
  *
  * @author John Grimes
  */
+@Component
 public class OperationDefinitionProvider implements IResourceProvider {
 
-  private final AnalyticsServerConfiguration configuration;
+  @Nonnull
+  private final Configuration configuration;
+
+  @Nonnull
   private final IParser jsonParser;
-  private Map<String, String> idToResourcePath;
 
-  private static final Map<String, OperationDefinition> resourceCache = new HashMap<>();
+  @Nonnull
+  private final Map<String, OperationDefinition> resources;
 
-  public OperationDefinitionProvider(AnalyticsServerConfiguration configuration,
-      FhirContext fhirContext) {
+  private OperationDefinitionProvider(@Nonnull final Configuration configuration,
+      @Nonnull final FhirContext fhirContext) {
     this.configuration = configuration;
     jsonParser = fhirContext.newJsonParser();
 
-    idToResourcePath = new HashMap<String, String>() {{
-      put("OperationDefinition/aggregate-" + configuration.getMajorVersion(),
-          "fhir/aggregate.OperationDefinition.json");
-      put("OperationDefinition/import-" + configuration.getMajorVersion(),
-          "fhir/import.OperationDefinition.json");
-      put("OperationDefinition/search-" + configuration.getMajorVersion(),
-          "fhir/search.OperationDefinition.json");
-    }};
+    final List<String> operations = Arrays.asList("aggregate", "import", "search");
+    final ImmutableMap.Builder<String, OperationDefinition> mapBuilder = new ImmutableMap.Builder<>();
+    for (final String operation : operations) {
+      final String id =
+          "OperationDefinition/" + operation + "-" + getMajorVersion(configuration.getVersion());
+      final String path = "fhir/" + operation + ".OperationDefinition.json";
+      mapBuilder.put(id, load(path));
+    }
+    resources = mapBuilder.build();
   }
 
   @Override
@@ -53,23 +68,32 @@ public class OperationDefinitionProvider implements IResourceProvider {
     return OperationDefinition.class;
   }
 
-  @Read()
-  public OperationDefinition getOperationDefinitionById(@IdParam IdType id) {
-    return getResource(id.getValueAsString());
+  /**
+   * Handles all read requests to the OperationDefinition resource.
+   *
+   * @param id the ID of the desired OperationDefinition
+   * @return an {@link OperationDefinition} resource
+   */
+  @Read
+  @SuppressWarnings("unused")
+  public OperationDefinition getOperationDefinitionById(@Nullable @IdParam final IIdType id) {
+    checkUserInput(id != null, "Missing ID parameter");
+
+    final String idString = id.getValue();
+    final OperationDefinition resource = resources.get(idString);
+    if (resource == null) {
+      throw new ResourceNotFoundError("OperationDefinition not found: " + idString);
+    }
+    return resource;
   }
 
-  private OperationDefinition getResource(String id) {
-    OperationDefinition cached = resourceCache.get(id);
-    if (cached != null) {
-      return cached;
-    }
-    String resourcePath = idToResourcePath.get(id);
-    if (resourcePath == null) {
-      throw new ResourceNotFoundException("OperationDefinition not found: " + id);
-    }
-    InputStream resourceStream = Thread.currentThread().getContextClassLoader()
+  @Nonnull
+  private OperationDefinition load(@Nonnull final String resourcePath) {
+    @Nullable final InputStream resourceStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(resourcePath);
-    OperationDefinition operationDefinition = (OperationDefinition) jsonParser
+    checkNotNull(resourceStream);
+
+    final OperationDefinition operationDefinition = (OperationDefinition) jsonParser
         .parseResource(resourceStream);
     operationDefinition.setVersion(configuration.getVersion());
     return operationDefinition;

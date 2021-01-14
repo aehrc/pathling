@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2020, Commonwealth Scientific
+ * These modifications are copyright © 2018-2021, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
  */
@@ -18,14 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.spark.sql.types.ArrayType;
-import org.apache.spark.sql.types.BooleanType;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DecimalType;
-import org.apache.spark.sql.types.StringType;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
-import org.apache.spark.sql.types.TimestampType;
+import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
@@ -46,18 +39,18 @@ public class SchemaConverterTest {
   /**
    * Returns the type of a nested field.
    */
-  DataType getField(DataType dataType, boolean isNullable, String... names) {
+  DataType getField(final DataType dataType, final boolean isNullable, final String... names) {
 
-    StructType schema = dataType instanceof ArrayType
-        ? (StructType) ((ArrayType) dataType).elementType()
-        : (StructType) dataType;
+    final StructType schema = dataType instanceof ArrayType
+                              ? (StructType) ((ArrayType) dataType).elementType()
+                              : (StructType) dataType;
 
-    StructField field = Arrays.stream(schema.fields())
+    final StructField field = Arrays.stream(schema.fields())
         .filter(sf -> sf.name().equalsIgnoreCase(names[0]))
         .findFirst()
         .get();
 
-    DataType child = field.dataType();
+    final DataType child = field.dataType();
 
     // Recurse through children if there are more names.
     if (names.length == 1) {
@@ -87,7 +80,7 @@ public class SchemaConverterTest {
   @Test
   public void codingToStruct() {
 
-    DataType codingType = getField(conditionSchema, true, "severity", "coding");
+    final DataType codingType = getField(conditionSchema, true, "severity", "coding");
 
     Assert.assertTrue(getField(codingType, true, "system") instanceof StringType);
     Assert.assertTrue(getField(codingType, true, "version") instanceof StringType);
@@ -99,7 +92,7 @@ public class SchemaConverterTest {
   @Test
   public void codeableConceptToStruct() {
 
-    DataType codeableType = getField(conditionSchema, true, "severity");
+    final DataType codeableType = getField(conditionSchema, true, "severity");
 
     Assert.assertTrue(codeableType instanceof StructType);
     Assert.assertTrue(getField(codeableType, true, "coding") instanceof ArrayType);
@@ -129,12 +122,12 @@ public class SchemaConverterTest {
 
   @Test
   public void orderChoiceFields() {
-    List<String> expectedFields = Arrays
+    final List<String> expectedFields = Arrays
         .asList("valueBoolean", "valueCodeableConcept", "valueDateTime",
             "valueInteger", "valuePeriod", "valueQuantity", "valueRange",
             "valueRatio", "valueSampledData", "valueString", "valueTime");
 
-    List<String> actualFields = Stream.of(observationSchema.fieldNames())
+    final List<String> actualFields = Stream.of(observationSchema.fieldNames())
         .filter(fn -> fn.startsWith("value"))
         .collect(Collectors.toList());
 

@@ -1,0 +1,22 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "foo"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 51
+        },
+        {
+          "name": "drillDown",
+          "valueString": "('foo') = 'foo'"
+        }
+      ]
+    }
+  ]
+}

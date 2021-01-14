@@ -8,38 +8,49 @@ on:
     branches-ignore: [ master ]
 
 jobs:
-  server:
-    name: Server
+  test:
+    name: Build and test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up JDK 1.8
-      uses: actions/setup-java@v1
-      with:
-        java-version: 1.8
-    - name: Run the verify goal with Maven
-      run: mvn verify -pl fhir-server -am
-    - uses: actions/upload-artifact@v2
-      with:
-        name: encoders-surefire-reports
-        path: encoders/target/surefire-reports
-    - uses: actions/upload-artifact@v2
-      with:
-        name: fhir-server-surefire-reports
-        path: fhir-server/target/surefire-reports
-  site:
-    name: Site
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ github.workspace }}/site
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 2.6.3
-    - name: Install the bundle
-      run: bundle
-    - name: Build the site with Jekyll
-      run: bundle exec jekyll build
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.6.3
+      - name: Run the verify goal with Maven
+        run: |
+          mvn --batch-mode verify \
+          -Pdocker \
+          -Dmaven.test.failure.ignore=true
+        timeout-minutes: 30
+      - name: Upload encoders test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: encoders-surefire-reports
+          path: encoders/target/surefire-reports
+      - name: Upload fhir-server test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-surefire-reports
+          path: fhir-server/target/surefire-reports
+      - name: Upload timing log
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-timing-log
+          path: fhir-server/target/timing.log
+      - name: Publish test results
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: Test report
+          fail_on_test_failures: true
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml

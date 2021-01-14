@@ -1,0 +1,122 @@
+pathling:
+  # Controls the description of this server as displayed within the FHIR CapabilityStatement.
+  implementationDescription: Yet Another Pathling Server
+
+  # Setting this option to true will enable additional logging of the details of requests to the 
+  # server, and between the server and the terminology service.
+  verboseRequestLogging: false
+
+  # If this variable is set, all errors will be reported to a Sentry service, e.g.
+  # `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
+  # sentryDsn: [Sentry DSN]
+
+  spark:
+    # The name that Pathling will be identified as within the Spark cluster.
+    appName: pathling
+
+    # Setting this option to true will enable additional logging relating to the query plan used to
+    # execute queries.
+    explainQueries: false
+
+  storage:
+    # The base URL at which Pathling will look for data files, and where it will save data received
+    # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://)
+    # URL.
+    warehouseUrl: file:///usr/share/warehouse
+
+    # The subdirectory within the warehouse path used to read and write data.
+    databaseName: default
+
+    # Configuration relating to accessing data hosted within Amazon Web Services.
+    aws:
+      # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
+      anonymousAccess: true
+      # Authentication details for connecting to protected Amazon S3 locations.
+      # accessKeyId: [AWS access key ID]
+      # secretAccessKey: [AWS secret access key]
+
+  terminology:
+    # Enables the use of terminology functions.
+    enabled: true
+
+    # The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology 
+    # queries. The server listed here is suitable for low volume testing purposes only.
+    serverUrl: https://r4.ontoserver.csiro.au/fhir
+    
+    # The maximum period (in milliseconds) that the server should wait for incoming data from the
+    # terminology service.
+    socketTimeout: 60000
+
+  auth:
+    # Enables SMART authorisation.
+    enabled: false
+
+    # Provides the URL of a JSON Web Key Set from which the signing key for incoming bearer tokens
+    # can be retrieved.
+    # jwksUrl: [JWKS URL]
+
+    # Configures the issuing domain for bearer tokens, which will be checked against the claims
+    # within incoming bearer tokens.
+    # issuer: [issuer]
+
+    # Configures the audience for bearer tokens, which is the FHIR endpoint that tokens are
+    # intended to be authorised for.
+    # audience: [audience]
+
+    # Provides the URL which will be advertised as the authorization endpoint.
+    # authorizeUrl: [authorization URL]
+    
+    # Provides the URL which will be advertised as the token endpoint.
+    # tokenUrl: [token URL]
+
+    # Provides the URL which will be advertised as the token revocation endpoint.
+    # revokeUrl: [token revocation URL]
+
+  caching:
+    # Controls whether request caching is enabled.
+    enabled: true
+
+    # Controls the maximum number of cache entries held in memory for each of the individual cache
+    # types. You can disable a particular type of caching by setting this number to zero.
+    aggregateRequestCacheSize: 100
+    searchBundleCacheSize: 100
+    searchPageCacheSize: 100
+    resourceReaderCacheSize: 100
+
+  # This section configures the CORS functionality of the server.
+  # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+  cors:
+    allowedOrigins:
+      - "*"
+    allowedMethods:
+      - GET
+      - POST
+    allowedHeaders:
+      - Content-Type
+    # exposeHeaders:
+    #   - [header]
+    maxAge: 600
+
+  import:
+    allowableSources:
+      - "file:///usr/share/staging"
+
+# Use this section to set or override any Spark configuration parameter. Tuning these parameters is
+# essential to get the optimal performance for your dataset.
+# Here is the full list: https://spark.apache.org/docs/latest/configuration.html
+spark:
+  master: local[*]
+  executor:
+    memory: 1g
+  sql:
+    autoBroadcastJoinThreshold: -1
+    adaptive:
+      enabled: true
+    shuffle:
+      service:
+        enabled: true
+      partitions: 2
+  scheduler:
+    mode: FAIR
+  dynamicAllocation:
+    enabled: true

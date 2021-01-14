@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2020, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
@@ -26,9 +27,9 @@ public interface ConceptMapFixtures {
   ConceptMap CM_EMPTY = creatEmptyConceptMap();
 
 
-  static Coding newVersionedCoding(String system, String code, String version,
-      String description) {
-    Coding newCoding = new Coding(system, code, description);
+  static Coding newVersionedCoding(final String system, final String code, final String version,
+      @Nullable final String description) {
+    final Coding newCoding = new Coding(system, code, description);
     newCoding.setVersion(version);
     return newCoding;
   }
@@ -53,7 +54,7 @@ public interface ConceptMapFixtures {
     private final String system;
     private final String version;
 
-    private VersionedSystem(String system, String version) {
+    private VersionedSystem(final String system, final String version) {
       super();
       this.system = system;
       this.version = version;
@@ -81,7 +82,7 @@ public interface ConceptMapFixtures {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
       if (this == obj) {
         return true;
       }
@@ -91,7 +92,7 @@ public interface ConceptMapFixtures {
       if (getClass() != obj.getClass()) {
         return false;
       }
-      VersionedSystem other = (VersionedSystem) obj;
+      final VersionedSystem other = (VersionedSystem) obj;
       if (system == null) {
         if (other.system != null) {
           return false;
@@ -106,14 +107,14 @@ public interface ConceptMapFixtures {
       }
     }
 
-    public static VersionedSystem fromCoding(Coding coding) {
+    public static VersionedSystem fromCoding(final Coding coding) {
       return new VersionedSystem(coding.getSystem(), coding.getVersion());
     }
   }
 
 
   static Pair<VersionedSystem, VersionedSystem> getVersionedSystems(
-      ConceptMapEntry mapping) {
+      final ConceptMapEntry mapping) {
     return Pair.of(VersionedSystem.fromCoding(mapping.getSource()),
         VersionedSystem.fromCoding(mapping.getTarget()));
   }
@@ -125,9 +126,9 @@ public interface ConceptMapFixtures {
     return result;
   }
 
-  static ConceptMap createConceptMap(ConceptMapEntry... mappings) {
+  static ConceptMap createConceptMap(final ConceptMapEntry... mappings) {
 
-    Map<Pair<VersionedSystem, VersionedSystem>, List<ConceptMapEntry>> mappingsBySystem =
+    final Map<Pair<VersionedSystem, VersionedSystem>, List<ConceptMapEntry>> mappingsBySystem =
         Stream.of(mappings).collect(Collectors.groupingBy(ConceptMapFixtures::getVersionedSystems));
 
     final ConceptMap result = creatEmptyConceptMap();
@@ -138,9 +139,9 @@ public interface ConceptMapFixtures {
       group.setTarget(srcAndTarget.getRight().getSystem());
       group.setTargetVersion(srcAndTarget.getRight().getVersion());
       systemMappins.forEach(m -> {
-        SourceElementComponent sourceElement = group.addElement();
+        final SourceElementComponent sourceElement = group.addElement();
         sourceElement.setCode(m.getSource().getCode());
-        TargetElementComponent targetElemnt = sourceElement.addTarget();
+        final TargetElementComponent targetElemnt = sourceElement.addTarget();
         targetElemnt.setCode(m.getTarget().getCode());
         targetElemnt.setEquivalence(m.getEquivalence());
       });

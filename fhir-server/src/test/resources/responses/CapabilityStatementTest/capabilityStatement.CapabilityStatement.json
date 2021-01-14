@@ -1,0 +1,62 @@
+{
+  "resourceType": "CapabilityStatement",
+  "url": "https://pathling.csiro.au/fhir/CapabilityStatement/pathling-fhir-api-0",
+  "version": "0.0.0-test",
+  "name": "pathling-fhir-api",
+  "title": "Pathling FHIR API",
+  "status": "active",
+  "experimental": true,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "copyright": "Dedicated to the public domain via CC0: https://creativecommons.org/publicdomain/zero/1.0/",
+  "kind": "instance",
+  "software": {
+    "name": "Pathling",
+    "version": "0.0.0-test"
+  },
+  "implementation": {
+    "description": "Yet Another Pathling Server"
+  },
+  "fhirVersion": "4.0.1",
+  "format": [
+    "application/fhir+json",
+    "application/fhir+xml"
+  ],
+  "rest": [
+    {
+      "mode": "server",
+      "security": {
+        "cors": true
+      },
+      "resource": [
+        {
+          "type": "OperationDefinition",
+          "profile": "http://hl7.org/fhir/StructureDefinition/OperationDefinition",
+          "interaction": [
+            {
+              "code": "search-type"
+            },
+            {
+              "code": "read"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-0"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-0"
+            }
+          ]
+        }
+      ],
+      "operation": [
+        {
+          "name": "import",
+          "definition": "https://pathling.csiro.au/fhir/OperationDefinition/import-0"
+        }
+      ]
+    }
+  ]
+}

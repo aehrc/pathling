@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2020, Commonwealth Scientific
+ * These modifications are copyright © 2018-2021, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
  */
@@ -67,16 +67,11 @@ private[encoders] object EncoderBuilder {
 
     val serializers = encoderBuilder.serializer(inputObject, definition, contained)
 
-    assert(schema.fields.length == serializers.size,
-      "Must have a serializer for each field.")
-
     val deserializer = encoderBuilder.compositeToDeserializer(definition, None, contained)
 
     new ExpressionEncoder(
-      schema,
-      flat = false,
       serializers,
-      deserializer = deserializer,
+      deserializer,
       ClassTag(fhirClass))
   }
 }
@@ -324,7 +319,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
   private def serializer(inputObject: Expression,
                          definition: BaseRuntimeElementCompositeDefinition[_],
                          contained: Seq[BaseRuntimeElementCompositeDefinition[_]]):
-  Seq[Expression] = {
+  Expression = {
 
     // Map to (name, value, name, value) expressions for child elements.
     val childFields: Seq[Expression] =
@@ -350,10 +345,8 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       Nil
     }
 
-    // The fields are (name, expr) tuples, so just get the expressions for the top level.
-    (childFields ++ containedChildren).grouped(2)
-      .map(group => group.get(1))
-      .toList
+    val struct = CreateNamedStruct(childFields ++ containedChildren)
+    If(IsNull(struct), Literal.create(null, struct.dataType), struct)
   }
 
   private def listToDeserializer(definition: BaseRuntimeElementDefinition[_ <: IBase],

@@ -2,4 +2,5 @@
 !Dockerfile
 !target/*.jar
 !run.sh
-target/*-shaded.jar
+target/*.jar.original
+target/*-docker-info.jar
