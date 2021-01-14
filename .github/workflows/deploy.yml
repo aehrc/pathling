@@ -70,6 +70,7 @@ jobs:
           mvn --batch-mode deploy \
           -Pdocker \
           -DskipTests \
+          -Dmaven.deploy.skip \
           -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }} \
           -Ddockerfile.username=${{ secrets.DOCKER_USERNAME }} \
           -Ddockerfile.password=${{ secrets.DOCKER_PASSWORD }}

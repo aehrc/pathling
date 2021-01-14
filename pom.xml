@@ -65,13 +65,6 @@
     <system>GitHub Actions</system>
     <url>https://github.com/aehrc/pathling/actions</url>
   </ciManagement>
-  <distributionManagement>
-    <repository>
-      <id>github</id>
-      <name>GitHub Packages</name>
-      <url>https://maven.pkg.github.com/aehrc/pathling</url>
-    </repository>
-  </distributionManagement>
 
   <properties>
     <project.majorVersion>3</project.majorVersion>
