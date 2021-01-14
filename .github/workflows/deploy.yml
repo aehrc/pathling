@@ -32,14 +32,12 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Run the deploy goal with Maven
+      - name: Run the verify goal with Maven
         run: |
-          mvn --batch-mode deploy \
+          mvn --batch-mode verify \
           -Pdocker \
           -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }} \
           -Dmaven.test.failure.ignore=true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 30
       - name: Upload encoders test reports
         uses: actions/upload-artifact@v2
@@ -67,10 +65,13 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
-      - name: Tag and push server image
+      - name: Run the deploy goal with Maven
         run: |
-          mvn dockerfile:tag@tag-major dockerfile:tag@tag-latest dockerfile:push@push-version \
-          dockerfile:push@push-major dockerfile:push@push-latest -pl fhir-server \
+          mvn --batch-mode deploy \
+          -Pdocker \
+          -DskipTests \
           -Dpathling.fhirServerDockerRepo=${{ secrets.FHIR_SERVER_DOCKER_REPO }} \
           -Ddockerfile.username=${{ secrets.DOCKER_USERNAME }} \
           -Ddockerfile.password=${{ secrets.DOCKER_PASSWORD }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
