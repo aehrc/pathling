@@ -72,5 +72,4 @@ jobs:
           -Dmaven.deploy.skip \
           -Ddockerfile.username=${{ secrets.DOCKER_USERNAME }} \
           -Ddockerfile.password=${{ secrets.DOCKER_PASSWORD }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        timeout-minutes: 30
