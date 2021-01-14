@@ -169,7 +169,7 @@
             </executions>
             <configuration>
               <repository>${pathling.siteDockerRepo}</repository>
-              <tag>${project.version}</tag>
+              <tag>latest</tag>
             </configuration>
           </plugin>
         </plugins>
