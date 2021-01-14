@@ -25,6 +25,13 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 2.6.3
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
       - name: Run the deploy goal with Maven
         run: |
           mvn --batch-mode deploy \
