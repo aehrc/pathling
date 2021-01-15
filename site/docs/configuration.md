@@ -41,6 +41,11 @@ supported by the Spring Boot framework (see
 Additionally, you can set any variable supported by Spring Boot, see 
 [Spring Boot Reference Documentation: Common Application properties](https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#common-application-properties).
 
+### Import
+
+- `pathling.import.allowableSources` - (default: `file:///usr/share/staging`) A 
+  set of URL prefixes which are allowable for use within the import operation.
+
 ### Storage
 
 - `pathling.storage.warehouseUrl` - (default: `file:///usr/share/warehouse`) The 
