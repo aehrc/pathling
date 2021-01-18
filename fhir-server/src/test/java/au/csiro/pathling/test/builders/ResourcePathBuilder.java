@@ -16,7 +16,6 @@ import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.lang.reflect.Constructor;
@@ -63,10 +62,9 @@ public class ResourcePathBuilder {
   @Nullable
   private Column thisColumn;
 
-  public ResourcePathBuilder() {
+  public ResourcePathBuilder(@Nonnull final SparkSession spark) {
     fhirContext = mock(FhirContext.class);
     resourceReader = mock(ResourceReader.class);
-    final SparkSession spark = SparkHelpers.getSparkSession();
     dataset = PatientResourceRowFixture.createCompleteDataset(spark);
     when(resourceReader.read(any(ResourceType.class))).thenReturn(dataset);
     resourceType = ResourceType.PATIENT;

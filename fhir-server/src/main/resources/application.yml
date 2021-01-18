@@ -1,3 +1,9 @@
+spring:
+  profiles:
+    active:
+      - core
+      - server
+
 pathling:
   # Controls the description of this server as displayed within the FHIR CapabilityStatement.
   implementationDescription: Yet Another Pathling Server

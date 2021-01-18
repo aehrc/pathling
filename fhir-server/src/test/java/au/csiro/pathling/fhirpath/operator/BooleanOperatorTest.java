@@ -14,20 +14,31 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
+import ca.uhn.fhir.context.FhirContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.jupiter.api.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
 @Tag("UnitTest")
 public class BooleanOperatorTest {
+
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
 
   private FhirPath left;
   private FhirPath right;
@@ -35,7 +46,7 @@ public class BooleanOperatorTest {
 
   @Before
   public void setUp() {
-    final Dataset<Row> leftDataset = new DatasetBuilder()
+    final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("patient-1", true)
@@ -47,7 +58,7 @@ public class BooleanOperatorTest {
         .withRow("patient-7", true)
         .withRow("patient-8", null)
         .build();
-    left = new ElementPathBuilder()
+    left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(leftDataset)
         .idAndValueColumns()
@@ -55,7 +66,7 @@ public class BooleanOperatorTest {
         .expression("estimatedAge")
         .build();
 
-    final Dataset<Row> rightDataset = new DatasetBuilder()
+    final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("patient-1", false)
@@ -67,7 +78,7 @@ public class BooleanOperatorTest {
         .withRow("patient-7", true)
         .withRow("patient-8", null)
         .build();
-    right = new ElementPathBuilder()
+    right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(rightDataset)
         .idAndValueColumns()
@@ -75,7 +86,7 @@ public class BooleanOperatorTest {
         .expression("deceasedBoolean")
         .build();
 
-    parserContext = new ParserContextBuilder().build();
+    parserContext = new ParserContextBuilder(spark, fhirContext).build();
   }
 
   @Test

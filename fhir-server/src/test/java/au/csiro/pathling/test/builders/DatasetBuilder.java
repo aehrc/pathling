@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.test.builders;
 
-import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkState;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
@@ -29,7 +28,6 @@ import org.apache.spark.sql.types.*;
  *
  * @author John Grimes
  */
-@SuppressWarnings("unused")
 public class DatasetBuilder {
 
   @Nonnull
@@ -47,8 +45,8 @@ public class DatasetBuilder {
   @Nonnull
   private final List<StructField> structColumns = new ArrayList<>();
 
-  public DatasetBuilder() {
-    spark = getSparkSession();
+  public DatasetBuilder(@Nonnull final SparkSession spark) {
+    this.spark = spark;
     final Metadata metadata = new MetadataBuilder().build();
     checkNotNull(metadata);
     this.metadata = metadata;
@@ -176,11 +174,6 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public List<Row> getRows() {
-    return datasetRows;
-  }
-
-  @Nonnull
   private Dataset<Row> getDataset(@Nonnull final List<StructField> columns) {
     final StructType schema;
     schema = new StructType(columns.toArray(new StructField[]{}));
@@ -189,7 +182,8 @@ public class DatasetBuilder {
     checkNotNull(dataFrame);
     // needs to allow for empty datasets with 0 partitions
     checkState(dataFrame.rdd().getNumPartitions() <= 1,
-        "at most one partition expected in test datasets constructed from rows, but got: " + dataFrame.rdd().getNumPartitions());
+        "at most one partition expected in test datasets constructed from rows, but got: "
+            + dataFrame.rdd().getNumPartitions());
     return dataFrame;
   }
 

@@ -27,22 +27,23 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-@TestPropertySource(locations = {"classpath:/configuration/integration-test.properties"})
 public class SearchTest {
 
   @Autowired
   SparkSession spark;
+
   @MockBean
   ResourceReader resourceReader;
+
   @LocalServerPort
   private int port;
+
   @Autowired
   private TestRestTemplate restTemplate;
 

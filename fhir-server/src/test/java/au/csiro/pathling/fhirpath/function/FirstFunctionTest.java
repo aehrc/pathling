@@ -23,38 +23,44 @@ import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.*;
-import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author Piotr Szul
  */
+@SpringBootTest
 @Tag("UnitTest")
 public class FirstFunctionTest {
 
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
   private FhirContext fhirContext;
   private ResourceReader mockReader;
 
   @BeforeEach
   void setUp() {
-    fhirContext = FhirHelpers.getFhirContext();
     mockReader = mock(ResourceReader.class);
   }
 
   @Test
   public void firstOfRootResources() {
 
-    final Dataset<Row> patientDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
@@ -67,7 +73,7 @@ public class FirstFunctionTest {
     final ResourcePath inputPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", true);
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputExpression("Patient")
         .build();
 
@@ -82,7 +88,7 @@ public class FirstFunctionTest {
         .isSingular()
         .hasResourceType(ResourceType.PATIENT);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "patient-1")
@@ -100,7 +106,7 @@ public class FirstFunctionTest {
 
     final String subresourceId = randomAlias();
     final String statusColumn = randomAlias();
-    final Dataset<Row> inputDataset = new DatasetBuilder()
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(subresourceId, DataTypes.StringType)
@@ -111,7 +117,7 @@ public class FirstFunctionTest {
         .withRow("patient-2", makeEid(0), "Encounter/3", "in-progress")
         .withRow("patient-3", null, null, null)
         .build();
-    final ResourcePath inputPath = new ResourcePathBuilder()
+    final ResourcePath inputPath = new ResourcePathBuilder(spark)
         .expression("reverseResolve(Encounter.subject)")
         .dataset(inputDataset)
         .idEidAndValueColumns()
@@ -119,7 +125,7 @@ public class FirstFunctionTest {
         .resourceType(ResourceType.ENCOUNTER)
         .buildCustom();
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputExpression("Patient")
         .build();
 
@@ -128,7 +134,7 @@ public class FirstFunctionTest {
     final NamedFunction firstFunction = NamedFunction.getInstance("first");
     final FhirPath result = firstFunction.invoke(firstInput);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withIdColumn()
@@ -150,7 +156,7 @@ public class FirstFunctionTest {
   public void firstOfUngroupedElements() {
 
     // Check the result.
-    final Dataset<Row> inputDataset = new DatasetBuilder()
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
@@ -168,14 +174,14 @@ public class FirstFunctionTest {
         .withRow("patient-6", null, null)
         .build();
 
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
         .expression("Patient.name")
         .build();
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputExpression("Patient.name")
         .build();
 
@@ -192,7 +198,7 @@ public class FirstFunctionTest {
         .hasFhirType(FHIRDefinedType.STRING);
 
     // expected result dataset
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
@@ -211,7 +217,7 @@ public class FirstFunctionTest {
 
   @Test
   public void illegalToCallFirstOnGrouping() {
-    final Dataset<Row> inputDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> inputDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
@@ -220,7 +226,7 @@ public class FirstFunctionTest {
         .withRow("patient-2", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT)).thenReturn(inputDataset);
-    final ResourcePath inputPath = new ResourcePathBuilder()
+    final ResourcePath inputPath = new ResourcePathBuilder(spark)
         .resourceReader(mockReader)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
@@ -228,7 +234,7 @@ public class FirstFunctionTest {
 
     final Column groupingColumn = inputPath.getElementColumn("gender");
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(groupingColumn))
         .inputExpression("Patient")
         .build();
@@ -246,9 +252,9 @@ public class FirstFunctionTest {
 
   @Test
   public void inputMustNotContainArguments() {
-    final ElementPath inputPath = new ElementPathBuilder().build();
-    final ElementPath argumentPath = new ElementPathBuilder().build();
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ElementPath inputPath = new ElementPathBuilder(spark).build();
+    final ElementPath argumentPath = new ElementPathBuilder(spark).build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
 
     final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));

@@ -1,0 +1,23 @@
+spring:
+  profiles:
+    active: test
+  main:
+    banner-mode: off
+
+pathling:
+  version: 0.0.0-test
+  warehouseUrl: file:///some/nonexistent/path
+  terminology:
+    serverUrl: https://somenonexistenttxserver.com/fhir
+
+spark:
+  master: local[1]
+  driver:
+    bindAddress: localhost
+    host: localhost
+  sql:
+    shuffle:
+      partitions: 1
+      autoBroadcastJoinThreshold: -1
+  ui:
+    enabled: false
