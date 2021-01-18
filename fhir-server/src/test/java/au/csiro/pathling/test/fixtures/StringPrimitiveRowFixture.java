@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.test.fixtures;
 
-import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -66,11 +65,5 @@ public class StringPrimitiveRowFixture extends PrimitiveRowFixture {
   public static Dataset<Row> createEmptyDataset(final SparkSession spark) {
     return spark.createDataFrame(NO_ROWS, STRING_SCHEMA);
   }
-
-  public static DatasetBuilder allStringsWithValue(final Object value) {
-    return new DatasetBuilder()
-        .withIdColumn()
-        .withColumn(DataTypes.BooleanType)
-        .withIdsAndValue(value, STRING_ALL_IDS);
-  }
+ 
 }

@@ -19,14 +19,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-@TestPropertySource(locations = {"classpath:/configuration/integration-test.properties"})
 class CapabilityStatementTest {
 
   @LocalServerPort

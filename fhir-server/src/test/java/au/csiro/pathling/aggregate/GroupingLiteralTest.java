@@ -6,30 +6,19 @@
 
 package au.csiro.pathling.aggregate;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.encoders.FhirEncoders;
-import ca.uhn.fhir.context.FhirContext;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author John Grimes
  */
 @Slf4j
 public class GroupingLiteralTest extends AggregateExecutorTest {
-
-  @Autowired
-  public GroupingLiteralTest(final Configuration configuration, final FhirContext fhirContext,
-      final SparkSession spark, final FhirEncoders fhirEncoders) {
-    super(configuration, fhirContext, spark, fhirEncoders);
-  }
 
   public static Stream<TestParameters> parameters() {
     return Stream

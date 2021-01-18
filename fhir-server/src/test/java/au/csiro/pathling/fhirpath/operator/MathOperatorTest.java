@@ -16,6 +16,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
+import ca.uhn.fhir.context.FhirContext;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,18 +28,31 @@ import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
+@TestInstance(Lifecycle.PER_CLASS)
 @Tag("UnitTest")
 public class MathOperatorTest {
+
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
 
   private static final List<String> EXPRESSION_TYPES = Arrays
       .asList("Integer", "Decimal", "Integer (literal)", "Decimal (literal)");
@@ -46,7 +60,7 @@ public class MathOperatorTest {
 
   @BeforeEach
   void setUp() {
-    parserContext = new ParserContextBuilder().build();
+    parserContext = new ParserContextBuilder(spark, fhirContext).build();
   }
 
   @Value
@@ -74,7 +88,7 @@ public class MathOperatorTest {
 
   }
 
-  public static Stream<TestParameters> parameters() {
+  public Stream<TestParameters> parameters() {
     final Collection<TestParameters> parameters = new ArrayList<>();
     for (final String leftType : EXPRESSION_TYPES) {
       for (final String rightType : EXPRESSION_TYPES) {
@@ -94,15 +108,15 @@ public class MathOperatorTest {
     return parameters.stream();
   }
 
-  private static FhirPath getExpressionForType(final String expressionType,
+  private FhirPath getExpressionForType(final String expressionType,
       final boolean leftOperand) {
-    final Dataset<Row> literalContextDataset = new DatasetBuilder()
+    final Dataset<Row> literalContextDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false, Arrays
             .asList("patient-1", "patient-2", "patient-3", "patient-4"))
         .build();
-    final ElementPath literalContext = new ElementPathBuilder()
+    final ElementPath literalContext = new ElementPathBuilder(spark)
         .dataset(literalContextDataset)
         .idAndValueColumns()
         .build();
@@ -124,8 +138,8 @@ public class MathOperatorTest {
     }
   }
 
-  private static FhirPath buildIntegerExpression(final boolean leftOperand) {
-    final Dataset<Row> dataset = new DatasetBuilder()
+  private FhirPath buildIntegerExpression(final boolean leftOperand) {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("patient-1", leftOperand
@@ -139,7 +153,7 @@ public class MathOperatorTest {
                               : null)
         .withRow("patient-4", null)
         .build();
-    return new ElementPathBuilder()
+    return new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .dataset(dataset)
         .idAndValueColumns()
@@ -147,8 +161,8 @@ public class MathOperatorTest {
         .build();
   }
 
-  private static FhirPath buildDecimalExpression(final boolean leftOperand) {
-    final Dataset<Row> dataset = new DatasetBuilder()
+  private FhirPath buildDecimalExpression(final boolean leftOperand) {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.createDecimalType())
         .withRow("patient-1", new BigDecimal(leftOperand
@@ -162,7 +176,7 @@ public class MathOperatorTest {
                               : null)
         .withRow("patient-4", null)
         .build();
-    return new ElementPathBuilder()
+    return new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DECIMAL)
         .dataset(dataset)
         .idAndValueColumns()

@@ -18,20 +18,31 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
+import ca.uhn.fhir.context.FhirContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
 @Tag("UnitTest")
 public class EqualityOperatorCodingTest {
+
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
 
   private FhirPath left;
   private FhirPath right;
@@ -40,7 +51,7 @@ public class EqualityOperatorCodingTest {
 
   @BeforeEach
   public void setUp() {
-    parserContext = new ParserContextBuilder().build();
+    parserContext = new ParserContextBuilder(spark, fhirContext).build();
 
     final Coding coding1 = new Coding(SNOMED_URL, "56459004", null);
     coding1.setVersion("http://snomed.info/sct/32506021000036107/version/20191231");
@@ -50,7 +61,7 @@ public class EqualityOperatorCodingTest {
     final Coding coding4 = new Coding(LOINC_URL, "57711-4", null);
     coding4.setVersion("2.29");
 
-    final Dataset<Row> leftDataset = new DatasetBuilder()
+    final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
         .withRow("patient-1", rowFromCoding(coding1))
@@ -61,13 +72,13 @@ public class EqualityOperatorCodingTest {
         .withRow("patient-6", rowFromCoding(coding1))
         .withRow("patient-7", null)
         .buildWithStructValue();
-    left = new ElementPathBuilder()
+    left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .singular(true)
         .dataset(leftDataset)
         .idAndValueColumns()
         .build();
-    final Dataset<Row> rightDataset = new DatasetBuilder()
+    final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
         .withRow("patient-1", rowFromCoding(coding1))
@@ -78,7 +89,7 @@ public class EqualityOperatorCodingTest {
         .withRow("patient-6", null)
         .withRow("patient-7", null)
         .buildWithStructValue();
-    right = new ElementPathBuilder()
+    right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .singular(true)
         .dataset(rightDataset)
