@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling;
+package au.csiro.pathling.test.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -29,7 +29,7 @@ import org.springframework.test.context.TestPropertySource;
  */
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-@TestPropertySource(locations = {"classpath:/configuration/authorisation-enabled.properties"})
+@TestPropertySource(locations = {"classpath:/configuration/authorisation.properties"})
 class AuthorisationTest {
 
   @LocalServerPort

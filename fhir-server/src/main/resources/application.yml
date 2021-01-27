@@ -7,8 +7,11 @@ pathling:
   verboseRequestLogging: false
 
   # If this variable is set, all errors will be reported to a Sentry service, e.g.
-  # `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
+  # `https://abc123@sentry.io/123456`.
   # sentryDsn: [Sentry DSN]
+
+  # This variable sets the environment that each Sentry report is tagged with.
+  # sentryEnvironment: [environment]
 
   spark:
     # The name that Pathling will be identified as within the Spark cluster.

@@ -139,10 +139,18 @@
     <dependency>
       <groupId>com.github.docker-java</groupId>
       <artifactId>docker-java</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.github.docker-java</groupId>
       <artifactId>docker-java-transport-okhttp</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.tomakehurst</groupId>
+      <artifactId>wiremock-jre8</artifactId>
+      <version>2.27.2</version>
+      <scope>test</scope>
     </dependency>
 
     <!-- Lombok -->
@@ -190,9 +198,36 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <groups>UnitTest,IntegrationTest</groups>
-        </configuration>
+        <executions>
+          <execution>
+            <id>default-test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <groups>UnitTest</groups>
+              <systemPropertyVariables>
+                <spring.profiles.active>unit-test</spring.profiles.active>
+              </systemPropertyVariables>
+            </configuration>
+          </execution>
+          <execution>
+            <id>integration-test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <groups>IntegrationTest</groups>
+              <systemPropertyVariables>
+                <spring.profiles.active>core,server,integration-test</spring.profiles.active>
+                <pathling.storage.warehouseUrl>
+                  file://${project.basedir}/src/test/resources/test-data
+                </pathling.storage.warehouseUrl>
+                <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+              </systemPropertyVariables>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>net.alchim31.maven</groupId>
@@ -248,11 +283,26 @@
             </executions>
             <configuration>
               <mainClass>au.csiro.pathling.test.TestDataImporter</mainClass>
+              <systemProperties>
+                <property>
+                  <key>spring.profiles.active</key>
+                  <value>spark,fhir,cli</value>
+                </property>
+                <property>
+                  <key>pathling.version</key>
+                  <value>${project.version}</value>
+                </property>
+                <property>
+                  <key>pathling.terminology.enabled</key>
+                  <value>false</value>
+                </property>
+              </systemProperties>
               <arguments>
                 <argument>${project.basedir}/src/test/resources/test-data/fhir</argument>
                 <argument>${project.basedir}/src/test/resources/test-data/parquet</argument>
               </arguments>
               <classpathScope>test</classpathScope>
+              <cleanupDaemonThreads>false</cleanupDaemonThreads>
             </configuration>
           </plugin>
         </plugins>
@@ -279,9 +329,14 @@
               </includes>
               <groups>SystemTest</groups>
               <systemPropertyVariables>
-                <version>${project.version}</version>
-                <terminologyServiceUrl>https://r4.ontoserver.csiro.au/fhir</terminologyServiceUrl>
-                <dockerRepository>${pathling.fhirServerDockerRepo}</dockerRepository>
+                <pathling.systemTest.version>${project.version}</pathling.systemTest.version>
+                <pathling.systemTest.terminology.serverUrl>
+                  https://r4.ontoserver.csiro.au/fhir
+                </pathling.systemTest.terminology.serverUrl>
+                <pathling.systemTest.dockerRepository>
+                  ${pathling.fhirServerDockerRepo}
+                </pathling.systemTest.dockerRepository>
+                <spring.profiles.active>system-test</spring.profiles.active>
               </systemPropertyVariables>
             </configuration>
           </plugin>

@@ -10,9 +10,8 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Versioning.getMajorVersion;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.errors.ResourceNotFoundError;
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Read;
@@ -38,8 +37,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class OperationDefinitionProvider implements IResourceProvider {
 
-  @Nonnull
-  private final Configuration configuration;
+  private static final String UNKNOWN_VERSION = "UNKNOWN";
 
   @Nonnull
   private final IParser jsonParser;
@@ -47,16 +45,20 @@ public class OperationDefinitionProvider implements IResourceProvider {
   @Nonnull
   private final Map<String, OperationDefinition> resources;
 
-  private OperationDefinitionProvider(@Nonnull final Configuration configuration,
-      @Nonnull final FhirContext fhirContext) {
-    this.configuration = configuration;
-    jsonParser = fhirContext.newJsonParser();
+  @Nonnull
+  private final PathlingVersion version;
+
+  private OperationDefinitionProvider(@Nonnull final IParser jsonParser,
+      @Nonnull final PathlingVersion version) {
+    this.jsonParser = jsonParser;
+    this.version = version;
 
     final List<String> operations = Arrays.asList("aggregate", "import", "search");
     final ImmutableMap.Builder<String, OperationDefinition> mapBuilder = new ImmutableMap.Builder<>();
     for (final String operation : operations) {
       final String id =
-          "OperationDefinition/" + operation + "-" + getMajorVersion(configuration.getVersion());
+          "OperationDefinition/" + operation + "-" + getMajorVersion(
+              version.getMajorVersion().orElse("UNKNOWN"));
       final String path = "fhir/" + operation + ".OperationDefinition.json";
       mapBuilder.put(id, load(path));
     }
@@ -95,7 +97,7 @@ public class OperationDefinitionProvider implements IResourceProvider {
 
     final OperationDefinition operationDefinition = (OperationDefinition) jsonParser
         .parseResource(resourceStream);
-    operationDefinition.setVersion(configuration.getVersion());
+    operationDefinition.setVersion(version.getBuildVersion().orElse(UNKNOWN_VERSION));
     return operationDefinition;
   }
 

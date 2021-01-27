@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhir;
 
-import au.csiro.pathling.Configuration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
@@ -38,15 +37,10 @@ import org.springframework.stereotype.Component;
 public class ErrorReportingInterceptor {
 
   @Nonnull
-  private final String serverVersion;
-
-  @Nonnull
   private final IParser jsonParser;
 
-  private ErrorReportingInterceptor(@Nonnull final Configuration configuration,
-      @Nonnull final FhirContext fhirContext) {
+  private ErrorReportingInterceptor(@Nonnull final FhirContext fhirContext) {
     jsonParser = fhirContext.newJsonParser();
-    this.serverVersion = configuration.getVersion();
   }
 
   /**
@@ -64,7 +58,6 @@ public class ErrorReportingInterceptor {
       @Nullable final ServletRequestDetails servletRequestDetails,
       @Nullable final HttpServletRequest request, @Nullable final HttpServletResponse response,
       @Nullable final BaseServerResponseException exception) {
-    Sentry.setExtra("serverVersion", serverVersion);
     // We only want to report 500 series errors, not errors such as resource not found and bad
     // request.
     final boolean errorReportable = exception != null && exception.getStatusCode() / 100 == 5;
@@ -73,13 +66,13 @@ public class ErrorReportingInterceptor {
                                         ? exception
                                         : exception.getCause();
       if (servletRequestDetails != null && request != null) {
-        final SentryEvent event = new SentryEvent();
+        final SentryEvent event = new SentryEvent(reportableError);
         event.setRequest(buildSentryRequest(servletRequestDetails, request));
         Sentry.captureEvent(event);
       } else {
         log.warn("Failed to capture HTTP request details for error");
+        Sentry.captureException(reportableError);
       }
-      Sentry.captureException(reportableError);
     }
   }
 

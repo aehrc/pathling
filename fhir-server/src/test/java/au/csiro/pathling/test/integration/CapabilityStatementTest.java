@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling;
+package au.csiro.pathling.test.integration;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 

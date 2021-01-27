@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling;
+package au.csiro.pathling.test.system;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static java.lang.Runtime.getRuntime;

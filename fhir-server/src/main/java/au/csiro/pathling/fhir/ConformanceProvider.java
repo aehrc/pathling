@@ -6,10 +6,9 @@
 
 package au.csiro.pathling.fhir;
 
-import static au.csiro.pathling.utilities.Versioning.getMajorVersion;
-
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Authorisation;
+import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -39,12 +38,15 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
 
   private static final String URI_BASE = "https://pathling.csiro.au/fhir";
   private static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
+
   private static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   private static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
   private static final String SMART_OAUTH_URI = "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris";
 
+  private static final String UNKNOWN_VERSION = "UNKNOWN";
+
   @Nonnull
-  private final au.csiro.pathling.Configuration configuration;
+  private final Configuration configuration;
 
   @Nonnull
   private final ResourceReader resourceReader;
@@ -52,16 +54,21 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Nonnull
   private Optional<RestfulServer> restfulServer;
 
+  @Nonnull
+  private final PathlingVersion version;
+
   /**
    * @param configuration A {@link Configuration} object controlling the behaviour of the capability
    * statement
    * @param resourceReader A {@link ResourceReader} to use in checking which resources are
    * available
+   * @param version A {@link PathlingVersion} object containing version information for the server
    */
   public ConformanceProvider(@Nonnull final Configuration configuration,
-      @Nonnull final ResourceReader resourceReader) {
+      @Nonnull final ResourceReader resourceReader, @Nonnull final PathlingVersion version) {
     this.configuration = configuration;
     this.resourceReader = resourceReader;
+    this.version = version;
     restfulServer = Optional.empty();
   }
 
@@ -74,7 +81,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
 
     final CapabilityStatement capabilityStatement = new CapabilityStatement();
     capabilityStatement.setUrl(getCapabilityUri());
-    capabilityStatement.setVersion(configuration.getVersion());
+    capabilityStatement.setVersion(version.getBuildVersion().orElse(UNKNOWN_VERSION));
     capabilityStatement.setTitle("Pathling FHIR API");
     capabilityStatement.setName("pathling-fhir-api");
     capabilityStatement.setStatus(PublicationStatus.ACTIVE);
@@ -86,7 +93,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
 
     final CapabilityStatementSoftwareComponent software = new CapabilityStatementSoftwareComponent(
         new StringType("Pathling"));
-    software.setVersion(configuration.getVersion());
+    software.setVersion(version.getDescriptiveVersion().orElse(UNKNOWN_VERSION));
     capabilityStatement.setSoftware(software);
 
     final CapabilityStatementImplementationComponent implementation =
@@ -212,24 +219,26 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
 
   @Nonnull
   private String getCapabilityUri() {
-    return URI_BASE + "/CapabilityStatement/pathling-fhir-api-" + getMajorVersion(
-        configuration.getVersion());
+    return URI_BASE + "/CapabilityStatement/pathling-fhir-api-" + version.getMajorVersion()
+        .orElse(UNKNOWN_VERSION);
   }
 
   @Nonnull
   private String getSearchUri() {
-    return URI_BASE + "/OperationDefinition/search-" + getMajorVersion(configuration.getVersion());
+    return URI_BASE + "/OperationDefinition/search-" + version.getMajorVersion()
+        .orElse(UNKNOWN_VERSION);
   }
 
   @Nonnull
   private String getAggregateUri() {
-    return URI_BASE + "/OperationDefinition/aggregate-" + getMajorVersion(
-        configuration.getVersion());
+    return URI_BASE + "/OperationDefinition/aggregate-" + version.getMajorVersion()
+        .orElse(UNKNOWN_VERSION);
   }
 
   @Nonnull
   private String getImportUri() {
-    return URI_BASE + "/OperationDefinition/import-" + getMajorVersion(configuration.getVersion());
+    return URI_BASE + "/OperationDefinition/import-" + version.getMajorVersion()
+        .orElse(UNKNOWN_VERSION);
   }
 
   @Override

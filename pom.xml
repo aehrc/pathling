@@ -239,8 +239,8 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
+        <groupId>pl.project13.maven</groupId>
+        <artifactId>git-commit-id-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -367,7 +367,9 @@
             <detectLinks/>
             <doctitle>Pathling ${project.version} API</doctitle>
             <windowtitle>Pathling ${project.version} API</windowtitle>
-            <bottom><![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]></bottom>
+            <bottom>
+              <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
+            </bottom>
             <additionalJOptions>
               <option>--no-module-directories</option>
               <option>-Xdoclint:none</option>
