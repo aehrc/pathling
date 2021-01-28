@@ -21,6 +21,7 @@ supported by the Spring Boot framework (see
 
 - `server.port` - (default: `8080`) The port which the server should bind
   to and listen for HTTP connections.
+  
 - `server.servlet.context-path` - A prefix to add to the API endpoint, e.g. a 
   value of `/foo` would cause the FHIR endpoint to be changed to `/foo/fhir`.
 - `pathling.verboseRequestLogging` - (default: `false`) Setting this option to
@@ -155,8 +156,9 @@ that are controlled by this configuration.
 ### Monitoring
 
 - `pathling.sentryDsn` - If this variable is set, all errors will be reported to a
-  [Sentry](https://sentry.io) service, e.g.
-  `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
+  [Sentry](https://sentry.io) service, e.g. `https://abc123@sentry.io/123456`.
+- `pathling.sentryEnvironment` - If this variable is set, this will be sent as
+  the environment when reporting errors to Sentry.
 
 ## Server base
 

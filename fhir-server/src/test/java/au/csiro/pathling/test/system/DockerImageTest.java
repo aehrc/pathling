@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling;
+package au.csiro.pathling.test.system;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static java.lang.Runtime.getRuntime;
@@ -61,12 +61,14 @@ import org.junit.jupiter.api.Test;
 public class DockerImageTest {
 
   private static final String FHIR_SERVER_CONTAINER_NAME = "pathling-test-fhir-server";
-  private static final String FHIR_SERVER_STAGING_PATH = "/usr/share/staging/test";
+  private static final String FHIR_SERVER_STAGING_PATH = "/usr/share/staging";
 
   // These system properties need to be set.
-  private static final String VERSION = System.getProperty("version");
-  private static final String TERMINOLOGY_SERVICE_URL = System.getProperty("terminologyServiceUrl");
-  private static final String DOCKER_REPOSITORY = System.getProperty("dockerRepository");
+  private static final String VERSION = System.getProperty("pathling.systemTest.version");
+  private static final String TERMINOLOGY_SERVICE_URL = System
+      .getProperty("pathling.systemTest.terminology.serverUrl");
+  private static final String DOCKER_REPOSITORY = System
+      .getProperty("pathling.systemTest.dockerRepository");
 
   @Nonnull
   private final DockerClient dockerClient;
@@ -96,7 +98,9 @@ public class DockerImageTest {
         .build();
     httpClient = HttpClients.createDefault();
     jsonParser = FhirContext.forR4().newJsonParser();
-    log.info("Created DockerImageTest: version={}, terminologyServiceUrl={}, dockerRepository={}",
+    log.info("Created DockerImageTest: pathling.systemTest.version={}, "
+            + "pathling.systemTest.terminology.serverUrl={}, "
+            + "pathling.systemTest.dockerRepository={}",
         VERSION, TERMINOLOGY_SERVICE_URL, DOCKER_REPOSITORY);
   }
 

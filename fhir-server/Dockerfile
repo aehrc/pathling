@@ -22,7 +22,8 @@ RUN cd /opt && ln -s hadoop-${HADOOP_VERSION} hadoop
 ARG JAR_FILE
 COPY $JAR_FILE /pathling.jar
 
-RUN mkdir -p /usr/share/staging/test
+RUN mkdir -p /usr/share/staging
+RUN mkdir -p /usr/share/warehouse/default
 
 ARG VERSION
 ENV PATHLING_VERSION=$VERSION

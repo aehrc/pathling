@@ -18,16 +18,23 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.unsafe.types.UTF8String;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 
+@SpringBootTest
 @Tag("UnitTest")
 public class SqlExtensionsTest {
+
+  @Autowired
+  private SparkSession spark;
 
   @Nullable
   private static String stringDecoder(@Nullable final Object value) {
@@ -66,7 +73,7 @@ public class SqlExtensionsTest {
 
   @Test
   public void testMapWithPartitionPreview() {
-    final Dataset<Row> dataset = new DatasetBuilder()
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
@@ -83,7 +90,7 @@ public class SqlExtensionsTest {
         new StructField("myResult", DataTypes.IntegerType, true, Metadata.empty())
     );
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)

@@ -1,7 +1,6 @@
 {
   "resourceType": "CapabilityStatement",
-  "url": "https://pathling.csiro.au/fhir/CapabilityStatement/pathling-fhir-api-0",
-  "version": "0.0.0-test",
+  "url": "https://pathling.csiro.au/fhir/CapabilityStatement/pathling-fhir-api-3",
   "name": "pathling-fhir-api",
   "title": "Pathling FHIR API",
   "status": "active",
@@ -10,8 +9,7 @@
   "copyright": "Dedicated to the public domain via CC0: https://creativecommons.org/publicdomain/zero/1.0/",
   "kind": "instance",
   "software": {
-    "name": "Pathling",
-    "version": "0.0.0-test"
+    "name": "Pathling"
   },
   "implementation": {
     "description": "Yet Another Pathling Server"
@@ -29,6 +27,234 @@
       },
       "resource": [
         {
+          "type": "AllergyIntolerance",
+          "profile": "http://hl7.org/fhir/StructureDefinition/AllergyIntolerance",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "CarePlan",
+          "profile": "http://hl7.org/fhir/StructureDefinition/CarePlan",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Claim",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Claim",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Condition",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Condition",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "DiagnosticReport",
+          "profile": "http://hl7.org/fhir/StructureDefinition/DiagnosticReport",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Encounter",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Encounter",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "ExplanationOfBenefit",
+          "profile": "http://hl7.org/fhir/StructureDefinition/ExplanationOfBenefit",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Goal",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Goal",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "ImagingStudy",
+          "profile": "http://hl7.org/fhir/StructureDefinition/ImagingStudy",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Immunization",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Immunization",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "MedicationRequest",
+          "profile": "http://hl7.org/fhir/StructureDefinition/MedicationRequest",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Observation",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Observation",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
           "type": "OperationDefinition",
           "profile": "http://hl7.org/fhir/StructureDefinition/OperationDefinition",
           "interaction": [
@@ -42,11 +268,87 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-0"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-0"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Organization",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Organization",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Patient",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Patient",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Practitioner",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Practitioner",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+            }
+          ]
+        },
+        {
+          "type": "Procedure",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Procedure",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
             }
           ]
         }
@@ -54,7 +356,7 @@
       "operation": [
         {
           "name": "import",
-          "definition": "https://pathling.csiro.au/fhir/OperationDefinition/import-0"
+          "definition": "https://pathling.csiro.au/fhir/OperationDefinition/import-3"
         }
       ]
     }

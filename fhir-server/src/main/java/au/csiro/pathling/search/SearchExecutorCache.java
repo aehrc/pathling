@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
+@Profile("core")
 public class SearchExecutorCache implements Cacheable {
 
   @Nonnull

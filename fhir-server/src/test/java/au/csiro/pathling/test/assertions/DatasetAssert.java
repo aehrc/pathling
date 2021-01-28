@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.SparkSession;
 
 /**
  * @author Piotr Szul
@@ -53,8 +54,9 @@ public class DatasetAssert {
   }
 
   @Nonnull
-  public DatasetAssert hasRows(@Nonnull final String expectedCsvPath) {
-    assertDatasetAgainstCsv(expectedCsvPath, dataset);
+  public DatasetAssert hasRows(@Nonnull final SparkSession spark,
+      @Nonnull final String expectedCsvPath) {
+    assertDatasetAgainstCsv(spark, expectedCsvPath, dataset);
     return this;
   }
 

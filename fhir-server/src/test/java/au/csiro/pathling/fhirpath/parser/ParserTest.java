@@ -8,7 +8,6 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
-import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -33,8 +32,8 @@ import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
-import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.io.File;
 import java.io.IOException;
@@ -53,42 +52,48 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author Piotr Szul
  */
+@SpringBootTest
 @Tag("UnitTest")
 @ExtendWith(TimingExtension.class)
 public class ParserTest {
 
+  @Autowired
   private SparkSession spark;
-  private ResourceReader mockReader;
-  private Parser parser;
+
+  @Autowired
+  private FhirContext fhirContext;
+
+  @Autowired
   private TerminologyClient terminologyClient;
+
+  @Autowired
+  private TerminologyClientFactory terminologyClientFactory;
+
+  @Autowired
+  private IParser jsonParser;
+
+  private Parser parser;
+  private ResourceReader mockReader;
 
   @BeforeEach
   public void setUp() throws IOException {
-    spark = getSparkSession();
-    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    final TerminologyClientFactory terminologyClientFactory =
-        mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
-    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
-
     mockReader = mock(ResourceReader.class);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
         ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
         ResourceType.DIAGNOSTICREPORT);
-    final FhirContext fhirContext = FhirHelpers.getFhirContext();
 
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "%resource", true);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
 
-    final ParserContext parserContext = new ParserContextBuilder()
-        .fhirContext(fhirContext)
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyClientFactory)
         .terminologyClient(terminologyClient)
-        .sparkSession(spark)
         .resourceReader(mockReader)
         .inputContext(subjectResource)
         .build();
@@ -120,12 +125,14 @@ public class ParserTest {
     assertThatResultOf("name.family contains 'Wuckert783'")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
+        .hasRows(allPatientsWithValue(spark, false)
+            .changeValue(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("name.suffix contains 'MD'")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
+        .hasRows(allPatientsWithValue(spark, false)
+            .changeValue(PATIENT_ID_8ee183e2, true));
   }
 
   @Test
@@ -133,12 +140,14 @@ public class ParserTest {
     assertThatResultOf("'Wuckert783' in name.family")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_9360820c, true));
+        .hasRows(allPatientsWithValue(spark, false)
+            .changeValue(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("'MD' in name.suffix")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(false).changeValue(PATIENT_ID_8ee183e2, true));
+        .hasRows(allPatientsWithValue(spark, false)
+            .changeValue(PATIENT_ID_8ee183e2, true));
   }
 
   @Test
@@ -148,7 +157,7 @@ public class ParserTest {
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(true)
+        .hasRows(allPatientsWithValue(spark, true)
             .changeValue(PATIENT_ID_8ee183e2, false)
             .changeValue(PATIENT_ID_9360820c, false)
             .changeValue(PATIENT_ID_beff242e, false));
@@ -158,7 +167,8 @@ public class ParserTest {
         "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(true).changeValue(PATIENT_ID_bbd33563, false));
+        .hasRows(allPatientsWithValue(spark, true)
+            .changeValue(PATIENT_ID_bbd33563, false));
   }
 
   @Test
@@ -217,16 +227,19 @@ public class ParserTest {
         .isElementPath(IntegerPath.class)
         .isSingular()
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(8L).changeValue(PATIENT_ID_121503c8, 10L)
-            .changeValue(PATIENT_ID_2b36c1e2, 3L).changeValue(PATIENT_ID_7001ad9c, 5L)
-            .changeValue(PATIENT_ID_9360820c, 16L).changeValue(PATIENT_ID_beff242e, 3L)
-            .changeValue(PATIENT_ID_bbd33563, 10L));
+        .hasRows(
+            allPatientsWithValue(spark, 8L)
+                .changeValue(PATIENT_ID_121503c8, 10L)
+                .changeValue(PATIENT_ID_2b36c1e2, 3L).changeValue(PATIENT_ID_7001ad9c, 5L)
+                .changeValue(PATIENT_ID_9360820c, 16L).changeValue(PATIENT_ID_beff242e, 3L)
+                .changeValue(PATIENT_ID_bbd33563, 10L));
   }
 
   @Test
   public void testCount() {
     final DatasetBuilder expectedCountResult =
-        allPatientsWithValue(1L).changeValue(PATIENT_ID_9360820c, 2L);
+        allPatientsWithValue(spark, 1L)
+            .changeValue(PATIENT_ID_9360820c, 2L);
     assertThatResultOf("name.count()")
         .selectOrderedResult()
         .hasRows(expectedCountResult);
@@ -261,19 +274,19 @@ public class ParserTest {
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-empty.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-empty.csv");
 
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy-empty.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy-empty.csv");
 
     // on the same collection should return all True (even though one is CodeableConcept)
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.coding.subsumes(%resource.reverseResolve(Condition.subject).code)")
         .selectOrderedResult()
-        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
     when(terminologyClient.closure(any(), any()))
@@ -281,19 +294,19 @@ public class ParserTest {
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .selectOrderedResult()
-        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumes.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes.csv");
 
     assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
         + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
         .selectOrderedResult()
-        .hasRows("responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.csv");
   }
 
   @Test
   public void testWhereWithAggregateFunction() {
     assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(DataTypes.StringType, null)
+        .hasRows(allPatientsWithValue(spark, DataTypes.StringType, null)
             .changeValue(PATIENT_ID_9360820c, "female"));
   }
 
@@ -305,7 +318,8 @@ public class ParserTest {
   public void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Karina848').gender")
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue((String) null).changeValue(PATIENT_ID_9360820c, "female"));
+        .hasRows(allPatientsWithValue(spark, (String) null)
+            .changeValue(PATIENT_ID_9360820c, "female"));
   }
 
   @Test
@@ -321,18 +335,18 @@ public class ParserTest {
         "where($this.reverseResolve(Condition.subject).code"
             + ".subsumedBy(http://snomed.info/sct|40055000) contains true).gender")
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue((String) null)
+        .hasRows(allPatientsWithValue(spark, (String) null)
             .changeValue(PATIENT_ID_7001ad9c, "female"));
   }
 
   @Test
   public void testWhereWithMemberOf() {
-    final Bundle mockSearch = (Bundle) FhirHelpers.getJsonParser().parseResource(
+    final Bundle mockSearch = (Bundle) jsonParser.parseResource(
         getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.Bundle.json"));
     final List<CodeSystem> codeSystems = mockSearch.getEntry().stream()
         .map(entry -> (CodeSystem) entry.getResource())
         .collect(Collectors.toList());
-    final ValueSet mockExpansion = (ValueSet) FhirHelpers.getJsonParser().parseResource(
+    final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
         getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
 
     //noinspection unchecked
@@ -346,7 +360,7 @@ public class ParserTest {
             + "$this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'))"
             + ".recordedDate")
         .selectOrderedResult()
-        .hasRows("responses/ParserTest/testWhereWithMemberOf.csv");
+        .hasRows(spark, "responses/ParserTest/testWhereWithMemberOf.csv");
   }
 
   /**
@@ -360,7 +374,7 @@ public class ParserTest {
         "where(name.where(use = 'official').first().given.first() in "
             + "name.where(use = 'maiden').first().given).gender")
         .selectOrderedResult()
-        .hasRows("responses/ParserTest/testAggregationFollowingNestedWhere.csv");
+        .hasRows(spark, "responses/ParserTest/testAggregationFollowingNestedWhere.csv");
   }
 
   @Test
@@ -368,13 +382,40 @@ public class ParserTest {
     assertThatResultOf(
         "name.where('Karina848' in where(use contains 'maiden').given).family")
         .selectOrderedResult()
-        .hasRows("responses/ParserTest/testNestedWhereWithAggregationOnElement.csv");
+        .hasRows(spark, "responses/ParserTest/testNestedWhereWithAggregationOnElement.csv");
   }
 
   @Test
   public void testBooleanOperatorWithTwoLiterals() {
     assertThatResultOf("true and false")
         .selectOrderedResult();
+  }
+
+  @Test
+  public void testQueryWithExternalConstantInWhere() {
+    assertThatResultOf(
+        "name.family.where($this = %resource.name.family.first())")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+
+    assertThatResultOf(
+        "name.family.where($this = %context.name.family.first())")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+
+    assertThatResultOf(
+        "name.family.where(%resource.name.family.first() = $this)")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+  }
+
+  @Test
+  public void testExternalConstantHasCorrectExpression() {
+    assertThatResultOf("%resource")
+        .hasExpression("%resource");
+
+    assertThatResultOf("%context")
+        .hasExpression("%context");
   }
 
   @Test

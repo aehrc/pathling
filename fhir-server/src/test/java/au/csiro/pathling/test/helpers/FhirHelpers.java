@@ -12,7 +12,6 @@ import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import ca.uhn.fhir.parser.IParser;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,63 +24,24 @@ import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionComponent;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.springframework.stereotype.Component;
 
 /**
  * @author John Grimes
  */
-@SuppressWarnings("unused")
+@Component
 public class FhirHelpers {
 
-  private static final FhirContext FHIR_CONTEXT = FhirContext.forR4();
-  private static final IParser JSON_PARSER = FHIR_CONTEXT.newJsonParser();
-
   @Nonnull
-  public static FhirContext getFhirContext() {
-    return FHIR_CONTEXT;
-  }
-
-  @Nonnull
-  public static IParser getJsonParser() {
-    return JSON_PARSER;
-  }
-
-  @Nonnull
-  public static Optional<ElementDefinition> getChildOfResource(@Nonnull final String resourceCode,
+  public static Optional<ElementDefinition> getChildOfResource(
+      @Nonnull final FhirContext fhirContext, @Nonnull final String resourceCode,
       @Nonnull final String elementName) {
-    final RuntimeResourceDefinition hapiDefinition = getFhirContext()
+    final RuntimeResourceDefinition hapiDefinition = fhirContext
         .getResourceDefinition(resourceCode);
     checkNotNull(hapiDefinition);
     final ResourceDefinition definition = new ResourceDefinition(
         ResourceType.fromCode(resourceCode), hapiDefinition);
     return definition.getChildElement(elementName);
-  }
-
-  private static boolean codingsAreEqual(@Nonnull final Coding coding1,
-      @Nonnull final Coding coding2) {
-    return coding1.getUserSelected() == coding2.getUserSelected() &&
-        Objects.equals(coding1.getSystem(), coding2.getSystem()) &&
-        Objects.equals(coding1.getVersion(), coding2.getVersion()) &&
-        Objects.equals(coding1.getCode(), coding2.getCode()) &&
-        Objects.equals(coding1.getDisplay(), coding2.getDisplay());
-  }
-
-  private static boolean codeableConceptsAreEqual(@Nonnull final CodeableConcept codeableConcept1,
-      @Nonnull final CodeableConcept codeableConcept2) {
-    final List<Coding> coding1 = codeableConcept1.getCoding();
-    final List<Coding> coding2 = codeableConcept2.getCoding();
-    checkNotNull(coding1);
-    checkNotNull(coding2);
-
-    final Iterator<Coding> iterator1 = coding1.iterator();
-    final Iterator<Coding> iterator2 = coding2.iterator();
-    while (iterator1.hasNext()) {
-      final Coding next1 = iterator1.next();
-      final Coding next2 = iterator2.next();
-      if (next1 == null || next2 == null || !codingsAreEqual(next1, next2)) {
-        return false;
-      }
-    }
-    return Objects.equals(codeableConcept1.getText(), codeableConcept2.getText());
   }
 
   /**

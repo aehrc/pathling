@@ -30,12 +30,6 @@ import org.springframework.validation.annotation.Validated;
 public class Configuration {
 
   /**
-   * The version number to advertise for this server, e.g. in the capability statement.
-   */
-  @NotBlank
-  private String version;
-
-  /**
    * Controls the description of this server displayed within the FHIR CapabilityStatement.
    */
   @NotNull
@@ -50,14 +44,25 @@ public class Configuration {
 
   /**
    * If this variable is set, all errors will be reported to a Sentry service, e.g.
-   * `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
+   * `https://abc123@sentry.io/123456`.
    */
   @Nullable
   private String sentryDsn;
 
+  /**
+   * Sets the environment that will be sent with Sentry reports.
+   */
+  @Nullable
+  private String sentryEnvironment;
+
   @Nonnull
   public Optional<String> getSentryDsn() {
     return Optional.ofNullable(sentryDsn);
+  }
+
+  @Nonnull
+  public Optional<String> getSentryEnvironment() {
+    return Optional.ofNullable(sentryEnvironment);
   }
 
   @NotNull

@@ -7,12 +7,17 @@
 package au.csiro.pathling.test.builders;
 
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 
 /**
  * @author John Grimes
  */
 public class ResourceDatasetBuilder extends DatasetBuilder {
+
+  public ResourceDatasetBuilder(@Nonnull final SparkSession spark) {
+    super(spark);
+  }
 
   @Nonnull
   @Override

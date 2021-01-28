@@ -15,6 +15,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
+import ca.uhn.fhir.context.FhirContext;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.stream.Stream;
@@ -23,28 +24,41 @@ import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
+@TestInstance(Lifecycle.PER_CLASS)
 @Tag("UnitTest")
 public class ComparisonOperatorTest {
+
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
 
   private ParserContext parserContext;
 
   @BeforeEach
   void setUp() {
-    parserContext = new ParserContextBuilder().build();
+    parserContext = new ParserContextBuilder(spark, fhirContext).build();
   }
 
   @Value
-  private static class TestParameters {
+  static class TestParameters {
 
     @Nonnull
     String name;
@@ -65,7 +79,7 @@ public class ComparisonOperatorTest {
 
   }
 
-  public static Stream<TestParameters> parameters() {
+  public Stream<TestParameters> parameters() {
     return Stream.of(
         "String",
         "Integer",
@@ -74,10 +88,10 @@ public class ComparisonOperatorTest {
         "Date",
         "Date (YYYY-MM)",
         "Date (YYYY)"
-    ).map(ComparisonOperatorTest::buildTestParameters);
+    ).map(this::buildTestParameters);
   }
 
-  private static TestParameters buildTestParameters(@Nonnull final String name) {
+  private TestParameters buildTestParameters(@Nonnull final String name) {
     switch (name) {
       case "String":
         return buildStringExpressions(name);
@@ -110,8 +124,8 @@ public class ComparisonOperatorTest {
     }
   }
 
-  private static TestParameters buildStringExpressions(final String name) {
-    final Dataset<Row> leftDataset = new DatasetBuilder()
+  private TestParameters buildStringExpressions(final String name) {
+    final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "Evelyn")
@@ -121,13 +135,13 @@ public class ComparisonOperatorTest {
         .withRow("patient-5", "Evelyn")
         .withRow("patient-6", null)
         .build();
-    final ElementPath left = new ElementPathBuilder()
+    final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(leftDataset)
         .idAndValueColumns()
         .singular(true)
         .build();
-    final Dataset<Row> rightDataset = new DatasetBuilder()
+    final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "Evelyn")
@@ -137,7 +151,7 @@ public class ComparisonOperatorTest {
         .withRow("patient-5", null)
         .withRow("patient-6", null)
         .build();
-    final ElementPath right = new ElementPathBuilder()
+    final ElementPath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(rightDataset)
         .idAndValueColumns()
@@ -147,8 +161,8 @@ public class ComparisonOperatorTest {
     return new TestParameters(name, left, right, literal);
   }
 
-  private static TestParameters buildIntegerExpressions(final String name) {
-    final Dataset<Row> leftDataset = new DatasetBuilder()
+  private TestParameters buildIntegerExpressions(final String name) {
+    final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("patient-1", 1)
@@ -158,13 +172,13 @@ public class ComparisonOperatorTest {
         .withRow("patient-5", 1)
         .withRow("patient-6", null)
         .build();
-    final ElementPath left = new ElementPathBuilder()
+    final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .dataset(leftDataset)
         .idAndValueColumns()
         .singular(true)
         .build();
-    final Dataset<Row> rightDataset = new DatasetBuilder()
+    final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("patient-1", 1)
@@ -174,7 +188,7 @@ public class ComparisonOperatorTest {
         .withRow("patient-5", null)
         .withRow("patient-6", null)
         .build();
-    final ElementPath right = new ElementPathBuilder()
+    final ElementPath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .dataset(rightDataset)
         .idAndValueColumns()
@@ -184,8 +198,8 @@ public class ComparisonOperatorTest {
     return new TestParameters(name, left, right, literal);
   }
 
-  private static TestParameters buildDecimalExpressions(final String name) {
-    final Dataset<Row> leftDataset = new DatasetBuilder()
+  private TestParameters buildDecimalExpressions(final String name) {
+    final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.createDecimalType())
         .withRow("patient-1", new BigDecimal("1.0"))
@@ -195,13 +209,13 @@ public class ComparisonOperatorTest {
         .withRow("patient-5", new BigDecimal("1.0"))
         .withRow("patient-6", null)
         .build();
-    final ElementPath left = new ElementPathBuilder()
+    final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DECIMAL)
         .dataset(leftDataset)
         .idAndValueColumns()
         .singular(true)
         .build();
-    final Dataset<Row> rightDataset = new DatasetBuilder()
+    final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.createDecimalType())
         .withRow("patient-1", new BigDecimal("1.0"))
@@ -211,7 +225,7 @@ public class ComparisonOperatorTest {
         .withRow("patient-5", null)
         .withRow("patient-6", null)
         .build();
-    final ElementPath right = new ElementPathBuilder()
+    final ElementPath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DECIMAL)
         .dataset(rightDataset)
         .idAndValueColumns()
@@ -221,11 +235,11 @@ public class ComparisonOperatorTest {
     return new TestParameters(name, left, right, literal);
   }
 
-  private static TestParameters buildDateTimeExpressions(final String name,
+  private TestParameters buildDateTimeExpressions(final String name,
       final String lesserDate,
       final String greaterDate,
       final FHIRDefinedType fhirType) {
-    final Dataset<Row> leftDataset = new DatasetBuilder()
+    final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", lesserDate)
@@ -235,13 +249,13 @@ public class ComparisonOperatorTest {
         .withRow("patient-5", lesserDate)
         .withRow("patient-6", null)
         .build();
-    final ElementPath left = new ElementPathBuilder()
+    final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(fhirType)
         .dataset(leftDataset)
         .idAndValueColumns()
         .singular(true)
         .build();
-    final Dataset<Row> rightDataset = new DatasetBuilder()
+    final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", lesserDate)
@@ -251,7 +265,7 @@ public class ComparisonOperatorTest {
         .withRow("patient-5", null)
         .withRow("patient-6", null)
         .build();
-    final ElementPath right = new ElementPathBuilder()
+    final ElementPath right = new ElementPathBuilder(spark)
         .fhirType(fhirType)
         .dataset(rightDataset)
         .idAndValueColumns()

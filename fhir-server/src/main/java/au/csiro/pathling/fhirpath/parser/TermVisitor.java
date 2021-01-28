@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
@@ -15,6 +16,7 @@ import au.csiro.pathling.fhir.FhirPathParser.InvocationTermContext;
 import au.csiro.pathling.fhir.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhir.FhirPathParser.ParenthesizedTermContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -51,9 +53,16 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
     checkNotNull(term);
     checkUserInput(term.equals("%resource") || term.equals("%context"),
         "Unsupported environment variable: " + term);
+    check(context.getInputContext() instanceof NonLiteralPath);
 
     // The %resource and %context elements both return the input context.
-    return context.getInputContext();
+    final NonLiteralPath inputContext = (NonLiteralPath) context.getInputContext();
+
+    // In the case of %resource and %context, the new expression will be the input context with the
+    // expression updated to match the external constant term.
+    return inputContext.copy(term, inputContext.getDataset(), inputContext.getIdColumn(),
+        inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
+        inputContext.getThisColumn());
   }
 
   @Override

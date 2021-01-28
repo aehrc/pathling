@@ -12,7 +12,6 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -23,6 +22,7 @@ import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.json.JSONException;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
@@ -81,12 +81,13 @@ public abstract class Assertions {
     }
   }
 
-  public static void assertDatasetAgainstCsv(@Nonnull final String expectedCsvPath,
-      @Nonnull final Dataset<Row> actualDataset) {
+  public static void assertDatasetAgainstCsv(@Nonnull final SparkSession spark,
+      @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset) {
     final URL url = TestHelpers.getResourceAsUrl(expectedCsvPath);
-    final Dataset<Row> expectedDataset = SparkHelpers.getSparkSession().read()
+    final Dataset<Row> expectedDataset = spark.read()
         .schema(actualDataset.schema())
         .csv(url.toString());
     assertEquals(expectedDataset.collectAsList(), actualDataset.collectAsList());
   }
+
 }

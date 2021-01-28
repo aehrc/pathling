@@ -38,12 +38,14 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptMapEntry;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
+import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
@@ -52,16 +54,15 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author Piotr Szul
  */
+@SpringBootTest
 @Tag("UnitTest")
 public class SubsumesFunctionTest {
-
-  private TerminologyClient terminologyClient;
-  private TerminologyClientFactory terminologyClientFactory;
 
   private static final String TEST_SYSTEM = "uuid:1";
 
@@ -88,6 +89,18 @@ public class SubsumesFunctionTest {
   private static final List<String> ALL_RES_IDS =
       Arrays.asList(RES_ID1, RES_ID2, RES_ID3, RES_ID4, RES_ID5);
 
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
+
+  @Autowired
+  private TerminologyClient terminologyClient;
+
+  @Autowired
+  private TerminologyClientFactory terminologyClientFactory;
+
   private static Row codeableConceptRowFromCoding(final Coding coding) {
     return codeableConceptRowFromCoding(coding, CODING_OTHER4);
   }
@@ -98,17 +111,11 @@ public class SubsumesFunctionTest {
 
   @BeforeEach
   public void setUp() {
-    // NOTE: We need to make TerminologyClient mock serializable so that the TerminologyClientFactory
-    // mock is serializable too.
-    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    terminologyClientFactory = mock(TerminologyClientFactory.class,
-        Mockito.withSettings().serializable());
-    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
     when(terminologyClient.closure(any(), any())).thenReturn(MAP_LARGE_MEDIUM_SMALL);
   }
 
-  private static CodingPath createCodingInput() {
-    final Dataset<Row> dataset = new DatasetBuilder()
+  private CodingPath createCodingInput() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
@@ -122,7 +129,7 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID3, makeEid(0), rowFromCoding(CODING_OTHER2))
         .withRow(RES_ID4, makeEid(0), rowFromCoding(CODING_OTHER2))
         .buildWithStructValue();
-    final ElementPath inputExpression = new ElementPathBuilder()
+    final ElementPath inputExpression = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndEidAndValueColumns()
@@ -132,8 +139,8 @@ public class SubsumesFunctionTest {
     return (CodingPath) inputExpression;
   }
 
-  private static CodingPath createSingularCodingInput() {
-    final Dataset<Row> dataset = new DatasetBuilder()
+  private CodingPath createSingularCodingInput() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
         .withRow(RES_ID1, rowFromCoding(CODING_SMALL))
@@ -142,7 +149,7 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
         .withRow(RES_ID5, null /* NULL coding value */)
         .buildWithStructValue();
-    final ElementPath inputExpression = new ElementPathBuilder()
+    final ElementPath inputExpression = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndValueColumns()
@@ -153,8 +160,8 @@ public class SubsumesFunctionTest {
   }
 
 
-  private static ElementPath createCodeableConceptInput() {
-    final Dataset<Row> dataset = new DatasetBuilder()
+  private ElementPath createCodeableConceptInput() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(codeableConceptStructType())
@@ -169,7 +176,7 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID4, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
         .buildWithStructValue();
 
-    return new ElementPathBuilder()
+    return new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
         .idAndEidAndValueColumns()
@@ -177,13 +184,13 @@ public class SubsumesFunctionTest {
         .build();
   }
 
-  private static CodingLiteralPath createLiteralArgOrInput() {
-    final Dataset<Row> literalContextDataset = new DatasetBuilder()
+  private CodingLiteralPath createLiteralArgOrInput() {
+    final Dataset<Row> literalContextDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false, ALL_RES_IDS)
         .build();
-    final ElementPath literalContext = new ElementPathBuilder()
+    final ElementPath literalContext = new ElementPathBuilder(spark)
         .dataset(literalContextDataset)
         .idAndValueColumns()
         .build();
@@ -192,14 +199,14 @@ public class SubsumesFunctionTest {
         literalContext);
   }
 
-  private static CodingPath createCodingArg() {
-    final Dataset<Row> dataset = new DatasetBuilder()
+  private CodingPath createCodingArg() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
         .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_MEDIUM))
         .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_OTHER3))
         .buildWithStructValue();
-    final ElementPath argument = new ElementPathBuilder()
+    final ElementPath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndValueColumns()
@@ -208,8 +215,8 @@ public class SubsumesFunctionTest {
     return (CodingPath) argument;
   }
 
-  private static ElementPath createCodeableConceptArg() {
-    final Dataset<Row> dataset = new DatasetBuilder()
+  private ElementPath createCodeableConceptArg() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codeableConceptStructType())
         .withIdValueRows(ALL_RES_IDS,
@@ -218,21 +225,21 @@ public class SubsumesFunctionTest {
             id -> codeableConceptRowFromCoding(CODING_OTHER3, CODING_OTHER5))
         .buildWithStructValue();
 
-    return new ElementPathBuilder()
+    return new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
         .idAndValueColumns()
         .build();
   }
 
-  private static CodingPath createNullCodingArg() {
-    final Dataset<Row> dataset = new DatasetBuilder()
+  private CodingPath createNullCodingArg() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
         .withIdValueRows(ALL_RES_IDS, id -> null)
         .buildWithStructValue();
 
-    final ElementPath argument = new ElementPathBuilder()
+    final ElementPath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndValueColumns()
@@ -241,8 +248,8 @@ public class SubsumesFunctionTest {
     return (CodingPath) argument;
   }
 
-  private static DatasetBuilder expectedSubsumes() {
-    return new DatasetBuilder()
+  private DatasetBuilder expectedSubsumes() {
+    return new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
@@ -257,8 +264,8 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID5, null, null);
   }
 
-  private static DatasetBuilder expectedSubsumedBy() {
-    return new DatasetBuilder()
+  private DatasetBuilder expectedSubsumedBy() {
+    return new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
@@ -274,8 +281,8 @@ public class SubsumesFunctionTest {
   }
 
   @Nonnull
-  private static DatasetBuilder expectedAllNonNull(final boolean result) {
-    return new DatasetBuilder()
+  private DatasetBuilder expectedAllNonNull(final boolean result) {
+    return new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
@@ -292,7 +299,7 @@ public class SubsumesFunctionTest {
 
   private FhirPathAssertion assertCallSuccess(final NamedFunction function,
       final NonLiteralPath inputExpression, final FhirPath argumentExpression) {
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(terminologyClient)
         .terminologyClientFactory(terminologyClientFactory)
         .build();
@@ -387,7 +394,7 @@ public class SubsumesFunctionTest {
   @Test
   public void testAllNonNullTrueWhenSubsumesItself() {
 
-    final DatasetBuilder expectedResult = new DatasetBuilder()
+    final DatasetBuilder expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
@@ -414,16 +421,16 @@ public class SubsumesFunctionTest {
 
   @Test
   public void throwsErrorIfInputTypeIsUnsupported() {
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(mock(TerminologyClient.class))
         .terminologyClientFactory(mock(TerminologyClientFactory.class))
         .build();
 
-    final ElementPath argument = new ElementPathBuilder()
+    final ElementPath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
 
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .build();
 
@@ -440,12 +447,12 @@ public class SubsumesFunctionTest {
 
   @Test
   public void throwsErrorIfArgumentTypeIsUnsupported() {
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(mock(TerminologyClient.class))
         .terminologyClientFactory(mock(TerminologyClientFactory.class))
         .build();
 
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
     final StringLiteralPath argument = StringLiteralPath
@@ -465,12 +472,12 @@ public class SubsumesFunctionTest {
   @Test
   public void throwsErrorIfMoreThanOneArgument() {
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(mock(TerminologyClient.class))
         .terminologyClientFactory(mock(TerminologyClientFactory.class))
         .build();
 
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
 
@@ -494,7 +501,7 @@ public class SubsumesFunctionTest {
 
   @Test
   public void throwsErrorIfTerminologyServiceNotConfigured() {
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
 
@@ -502,8 +509,7 @@ public class SubsumesFunctionTest {
         .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
             input);
 
-    final ParserContext context = new ParserContextBuilder()
-        .build();
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext).build();
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(context, input,
         Collections.singletonList(argument));

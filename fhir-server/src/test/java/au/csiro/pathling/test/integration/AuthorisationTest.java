@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling;
+package au.csiro.pathling.test.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -13,13 +13,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.List;
 import lombok.Getter;
-import org.apache.catalina.webresources.TomcatURLStreamHandlerFactory;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.test.context.TestPropertySource;
@@ -27,22 +22,14 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * @author John Grimes
  */
-@Tag("IntegrationTest")
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-@TestPropertySource(locations = {"classpath:/configuration/authorisation-enabled.properties"})
-class AuthorisationTest {
+@TestPropertySource(locations = {"classpath:/configuration/authorisation.properties"})
+class AuthorisationTest extends IntegrationTest {
 
   @LocalServerPort
   private int port;
 
   @Autowired
   private TestRestTemplate restTemplate;
-
-  @BeforeAll
-  static void beforeAll() {
-    // See: https://github.com/spring-projects/spring-boot/issues/21535#issuecomment-634088332
-    TomcatURLStreamHandlerFactory.disable();
-  }
 
   @Test
   void smartConfiguration() {
