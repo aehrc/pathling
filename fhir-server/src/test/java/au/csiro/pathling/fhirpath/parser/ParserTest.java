@@ -89,7 +89,7 @@ public class ParserTest {
         ResourceType.DIAGNOSTICREPORT);
 
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "%resource", true);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyClientFactory)
@@ -397,6 +397,12 @@ public class ParserTest {
         "name.family.where($this = %resource.name.family.first())")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+  }
+
+  @Test
+  public void testResourceConstantHasCorrectExpression() {
+    assertThatResultOf("%resource")
+        .hasExpression("%resource");
   }
 
   @Test
