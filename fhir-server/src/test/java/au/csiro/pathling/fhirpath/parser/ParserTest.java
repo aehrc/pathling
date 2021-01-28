@@ -89,7 +89,7 @@ public class ParserTest {
         ResourceType.DIAGNOSTICREPORT);
 
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "%resource", true);
+        .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyClientFactory)
@@ -389,6 +389,33 @@ public class ParserTest {
   public void testBooleanOperatorWithTwoLiterals() {
     assertThatResultOf("true and false")
         .selectOrderedResult();
+  }
+
+  @Test
+  public void testQueryWithExternalConstantInWhere() {
+    assertThatResultOf(
+        "name.family.where($this = %resource.name.family.first())")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+
+    assertThatResultOf(
+        "name.family.where($this = %context.name.family.first())")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+
+    assertThatResultOf(
+        "name.family.where(%resource.name.family.first() = $this)")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+  }
+
+  @Test
+  public void testExternalConstantHasCorrectExpression() {
+    assertThatResultOf("%resource")
+        .hasExpression("%resource");
+
+    assertThatResultOf("%context")
+        .hasExpression("%context");
   }
 
   @Test
