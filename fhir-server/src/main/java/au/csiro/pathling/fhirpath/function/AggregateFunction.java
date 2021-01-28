@@ -117,14 +117,12 @@ public abstract class AggregateFunction {
     final List<Column> groupByList = parserContext.getGroupingColumns()
         .orElse(Collections.singletonList(idColumn));
 
-    final Set<String> existingColumns = Stream.of(dataset.columns()).collect(Collectors.toSet());
-
     // Drop the requested grouping columns that are not present in the provided dataset.
     // This handles the situation where `%resource` is used in `where()`.
-    // The columns requested for aggregation may include $this element id, which is not
-    // present in datasets originating from `%resource` and thus
-    // should not be actually used for evaluation of the aggregation.
-
+    // The columns requested for aggregation may include $this element ID, which is not present in
+    // datasets originating from `%resource` and thus should not be actually used for evaluation of
+    // the aggregation.
+    final Set<String> existingColumns = Stream.of(dataset.columns()).collect(Collectors.toSet());
     final Column[] groupBy = groupByList.stream()
         .filter(c -> existingColumns.contains(c.toString()))
         .toArray(Column[]::new);

@@ -114,19 +114,17 @@ public abstract class QueryHelpers {
     return new DatasetWithColumnMap(result, columnMap);
   }
 
-
   /**
-   * Checks if a column is present in a dataset
+   * Checks if a column is present in a dataset.
    *
    * @param dataset a dataset to test
    * @param column a column to test
-   * @return true if the column is present in the dataset.
+   * @return true if the column is present in the dataset
    */
   public static boolean hasColumn(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column column) {
-    return Stream.of(dataset.columns()).anyMatch(column.toString()::equals);
+    return Arrays.asList(dataset.columns()).contains(column.toString());
   }
-
 
   private static Dataset<Row> join(@Nonnull final Dataset<Row> left,
       @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
@@ -269,8 +267,8 @@ public abstract class QueryHelpers {
       final NonLiteralPath nonLiteralThis = (NonLiteralPath) parserContext.getThisContext().get();
       if (nonLiteralThis.getEidColumn().isPresent()) {
         final Column thisEidColumn = nonLiteralThis.getEidColumn().get();
-        // Only use eid for join if both datasets have this column,
-        // which means that they both originate from $this
+        // Only use the element ID for the join if both datasets have a $this column, which means
+        // that they both originate from $this.
         if (hasColumn(left.getDataset(), thisEidColumn) &&
             hasColumn(right.getDataset(), thisEidColumn)) {
           leftColumns.add(thisEidColumn);

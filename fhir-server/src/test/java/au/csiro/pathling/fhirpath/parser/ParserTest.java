@@ -393,13 +393,12 @@ public class ParserTest {
 
   @Test
   public void testQueryWithExternalConstantInWhere() {
-
     assertThatResultOf(
         "name.family.where($this = %resource.name.family.first())")
         .selectOrderedResult()
-        .hasRows("responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
   }
-  
+
   @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
