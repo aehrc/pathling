@@ -381,26 +381,11 @@ public class ParserTest {
   public void testQueryWithExternalConstantInWhere() {
 
     assertThatResultOf(
-        "name.family").selectOrderedResult()
-        .debugAllRows();
-
-    assertThatResultOf(
-        "name.family.where($this = 'Gleichner915')").selectOrderedResult()
-        .debugAllRows();
-
-    assertThatResultOf(
-        "name.family.where($this = %resource.name.family.first())").selectOrderedResult()
-        .debugAllRows();
+        "name.family.where($this = %resource.name.family.first())")
+        .selectOrderedResult()
+        .hasRows("responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
   }
-
-
-  @Test
-  public void testComplexQueryWithExternalConstantInWhere() {
-    parser.parse(
-        "reverseResolve(Condition.subject).where($this.onsetDateTime > %resource.reverseResolve(MedicationRequest.subject).first().authoredOn).code");
-  }
-
-
+  
   @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,

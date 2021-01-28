@@ -119,13 +119,12 @@ public abstract class AggregateFunction {
 
     final Set<String> existingColumns = Stream.of(dataset.columns()).collect(Collectors.toSet());
 
-    // Drop the requested grouping columns which are not present in the provided dataset.
-    // This will handle the situation where %resource is using in where() and argument datasets
-    // might need to use eid for aggregation if they originate form $this.
-    // In argument originating from %resource the $this.eid column does not exits.
-    // This may however lead to undetected issues when the requested grouping column
-    // should be present in the argument dataset (and is not), which will be
-    // silently ignored
+    // Drop the requested grouping columns that are not present in the provided dataset.
+    // This handles the situation where `%resource` is used in `where()`.
+    // The columns requested for aggregation may include $this element id, which is not
+    // present in datasets originating from `%resource` and thus
+    // should not be actually used for evaluation of the aggregation.
+
     final Column[] groupBy = groupByList.stream()
         .filter(c -> existingColumns.contains(c.toString()))
         .toArray(Column[]::new);
