@@ -98,7 +98,9 @@ public class DockerImageTest {
         .build();
     httpClient = HttpClients.createDefault();
     jsonParser = FhirContext.forR4().newJsonParser();
-    log.info("Created DockerImageTest: version={}, terminologyServiceUrl={}, dockerRepository={}",
+    log.info("Created DockerImageTest: pathling.systemTest.version={}, "
+            + "pathling.systemTest.terminology.serverUrl={}, "
+            + "pathling.systemTest.dockerRepository={}",
         VERSION, TERMINOLOGY_SERVICE_URL, DOCKER_REPOSITORY);
   }
 
