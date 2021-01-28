@@ -43,6 +43,7 @@ class SentryTest extends WireMockTest {
 
   @BeforeEach
   void setUp() {
+    super.setUp();
     stubFor(post(urlPathEqualTo("/api/5513555/envelope/"))
         .willReturn(aResponse().withStatus(200)));
     when(aggregateExecutor.execute(any())).thenThrow(new RuntimeException("bar"));
