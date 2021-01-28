@@ -397,12 +397,25 @@ public class ParserTest {
         "name.family.where($this = %resource.name.family.first())")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+
+    assertThatResultOf(
+        "name.family.where($this = %context.name.family.first())")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+
+    assertThatResultOf(
+        "name.family.where(%resource.name.family.first() = $this)")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
   }
 
   @Test
-  public void testResourceConstantHasCorrectExpression() {
+  public void testExternalConstantHasCorrectExpression() {
     assertThatResultOf("%resource")
         .hasExpression("%resource");
+
+    assertThatResultOf("%context")
+        .hasExpression("%context");
   }
 
   @Test
