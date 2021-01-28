@@ -15,7 +15,6 @@ spark:
     bindAddress: localhost
     host: localhost
   sql:
-  version: 0.0.0-test
     shuffle:
       partitions: 1
       autoBroadcastJoinThreshold: -1
