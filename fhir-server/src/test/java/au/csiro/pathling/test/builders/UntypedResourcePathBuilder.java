@@ -17,17 +17,13 @@ import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * @author John Grimes
  */
-@SuppressWarnings("unused")
 public class UntypedResourcePathBuilder {
 
   @Nonnull
@@ -56,10 +52,10 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   private Set<ResourceType> possibleTypes;
 
-  public UntypedResourcePathBuilder() {
+  public UntypedResourcePathBuilder(@Nonnull final SparkSession spark) {
     expression = "";
     eidColumn = Optional.empty();
-    dataset = new DatasetBuilder()
+    dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withColumn(DataTypes.StringType)
@@ -97,12 +93,6 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   public UntypedResourcePathBuilder dataset(@Nonnull final Dataset<Row> dataset) {
     this.dataset = dataset;
-    return this;
-  }
-
-  @Nonnull
-  public UntypedResourcePathBuilder idColumn(@Nonnull final Column idColumn) {
-    this.idColumn = idColumn;
     return this;
   }
 

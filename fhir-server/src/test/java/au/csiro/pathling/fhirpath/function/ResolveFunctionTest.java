@@ -30,24 +30,35 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
+import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
 @Tag("UnitTest")
 class ResolveFunctionTest {
+
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
 
   private ResourceReader mockReader;
 
@@ -59,11 +70,11 @@ class ResolveFunctionTest {
   @Test
   public void simpleResolve() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource("Encounter", "episodeOfCare");
+        .getChildOfResource(fhirContext, "Encounter", "episodeOfCare");
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
 
-    final Dataset<Row> referenceDataset = new DatasetBuilder()
+    final Dataset<Row> referenceDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(referenceStructType())
@@ -76,7 +87,7 @@ class ResolveFunctionTest {
         .withRow("encounter-4", makeEid(0),
             RowFactory.create(null, "EpisodeOfCare/episodeofcare-2", null))
         .buildWithStructValue();
-    final ElementPath referencePath = new ElementPathBuilder()
+    final ElementPath referencePath = new ElementPathBuilder(spark)
         .expression("Encounter.episodeOfCare")
         .dataset(referenceDataset)
         .idAndEidAndValueColumns()
@@ -84,7 +95,7 @@ class ResolveFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final Dataset<Row> episodeOfCareDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> episodeOfCareDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("episodeofcare-1", "planned")
@@ -102,7 +113,7 @@ class ResolveFunctionTest {
         .isNotSingular()
         .hasResourceType(ResourceType.EPISODEOFCARE);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("encounter-1", "episodeofcare-1")
@@ -118,11 +129,11 @@ class ResolveFunctionTest {
   @Test
   public void polymorphicResolve() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource("Encounter", "subject");
+        .getChildOfResource(fhirContext, "Encounter", "subject");
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
 
-    final Dataset<Row> referenceDataset = new DatasetBuilder()
+    final Dataset<Row> referenceDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(referenceStructType())
         .withRow("encounter-1", RowFactory.create(null, "Patient/patient-1", null))
@@ -131,7 +142,7 @@ class ResolveFunctionTest {
         .withRow("encounter-4", RowFactory.create(null, "Patient/patient-2", null))
         .withRow("encounter-5", RowFactory.create(null, "Group/group-1", null))
         .buildWithStructValue();
-    final ElementPath referencePath = new ElementPathBuilder()
+    final ElementPath referencePath = new ElementPathBuilder(spark)
         .expression("Encounter.subject")
         .dataset(referenceDataset)
         .idAndValueColumns()
@@ -139,7 +150,7 @@ class ResolveFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final Dataset<Row> patientDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withColumn(DataTypes.BooleanType)
@@ -150,7 +161,7 @@ class ResolveFunctionTest {
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
 
-    final Dataset<Row> groupDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> groupDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withColumn(DataTypes.BooleanType)
@@ -170,7 +181,7 @@ class ResolveFunctionTest {
         .isSingular()
         .hasPossibleTypes(ResourceType.PATIENT, ResourceType.GROUP);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
@@ -188,12 +199,12 @@ class ResolveFunctionTest {
   @Test
   public void polymorphicResolveAnyType() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource("Condition", "evidence")
+        .getChildOfResource(fhirContext, "Condition", "evidence")
         .flatMap(child -> child.getChildElement("detail"));
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
 
-    final Dataset<Row> referenceDataset = new DatasetBuilder()
+    final Dataset<Row> referenceDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(referenceStructType())
@@ -202,7 +213,7 @@ class ResolveFunctionTest {
         .withRow("condition-2", makeEid(0),
             RowFactory.create(null, "ClinicalImpression/clinicalimpression-1", null))
         .buildWithStructValue();
-    final ElementPath referencePath = new ElementPathBuilder()
+    final ElementPath referencePath = new ElementPathBuilder(spark)
         .expression("Condition.evidence.detail")
         .dataset(referenceDataset)
         .idAndEidAndValueColumns()
@@ -210,7 +221,7 @@ class ResolveFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final Dataset<Row> observationDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> observationDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("observation-1", "registered")
@@ -218,7 +229,7 @@ class ResolveFunctionTest {
     when(mockReader.read(ResourceType.OBSERVATION))
         .thenReturn(observationDataset);
 
-    final Dataset<Row> clinicalImpressionDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> clinicalImpressionDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("clinicalimpression-1", "in-progress")
@@ -238,7 +249,7 @@ class ResolveFunctionTest {
         .isNotSingular()
         .hasPossibleTypes(ResourceType.OBSERVATION, ResourceType.CLINICALIMPRESSION);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
@@ -255,11 +266,11 @@ class ResolveFunctionTest {
 
   @Test
   public void throwExceptionWhenInputNotReference() {
-    final Dataset<Row> patientDataset = new DatasetBuilder()
+    final Dataset<Row> patientDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .build();
-    final ElementPath genderPath = new ElementPathBuilder()
+    final ElementPath genderPath = new ElementPathBuilder(spark)
         .expression("Patient.gender")
         .dataset(patientDataset)
         .idAndValueColumns()
@@ -275,11 +286,11 @@ class ResolveFunctionTest {
 
   @Test
   public void throwExceptionWhenArgumentSupplied() {
-    final ElementPath referencePath = new ElementPathBuilder()
+    final ElementPath referencePath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .build();
     final StringLiteralPath stringLiteralPath = StringLiteralPath
         .fromString("'foo'", parserContext.getInputContext());
@@ -292,7 +303,7 @@ class ResolveFunctionTest {
 
   @Nonnull
   private NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
         .resourceReader(mockReader)
         .build();

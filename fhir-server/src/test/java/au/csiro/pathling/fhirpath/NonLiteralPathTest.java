@@ -14,33 +14,36 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import java.util.Arrays;
 import java.util.Collections;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * Tests some basic NonLiteralPath behaviour.
  *
  * @author Piotr Szul
  */
+@SpringBootTest
 @Tag("UnitTest")
 public class NonLiteralPathTest {
+
+  @Autowired
+  private SparkSession spark;
 
   @Test
   public void testSingularNonLiteralEidExpansion() {
     // Check the result.
-    final Dataset<Row> inputDataset = new DatasetBuilder()
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "Jude")   // when: "two values"  expect: "Jude"
         .build();
 
-    final ElementPath testPath = new ElementPathBuilder()
+    final ElementPath testPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
         .idAndValueColumns()
@@ -61,7 +64,7 @@ public class NonLiteralPathTest {
   @Test
   public void testNonSingularNonLiteralEidExpansion() {
     // Check the result.
-    final Dataset<Row> inputDataset = new DatasetBuilder()
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
@@ -70,7 +73,7 @@ public class NonLiteralPathTest {
         .withRow("patient-2", null, null)
         .build();
 
-    final ElementPath testPath = new ElementPathBuilder()
+    final ElementPath testPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()

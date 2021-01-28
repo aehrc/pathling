@@ -10,25 +10,20 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import au.csiro.pathling.spark.udf.CodingsEqual;
-import au.csiro.pathling.sql.PathlingStrategy;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
-import scala.Option;
 import scala.collection.JavaConverters;
 import scala.collection.mutable.Buffer;
 
@@ -37,30 +32,6 @@ import scala.collection.mutable.Buffer;
  */
 @SuppressWarnings("WeakerAccess")
 public abstract class SparkHelpers {
-
-  @Nonnull
-  public static SparkSession getSparkSession() {
-    @Nullable final Option<SparkSession> activeSession = SparkSession.getActiveSession();
-    checkNotNull(activeSession);
-
-    if (activeSession.isEmpty()) {
-      final SparkSession spark = SparkSession.builder()
-          .appName("pathling-test")
-          // use one thread only to make it consistent between environments with
-          // varying number of CPU cores. This also sets the value
-          // of `spark.default.parallelism` to one, which results in one partition
-          // in datsets created from lists of rows.
-          .config("spark.master", "local[1]")
-          .config("spark.driver.bindAddress", "localhost")
-          .config("spark.sql.shuffle.partitions", "1")
-          .config("spark.sql.autoBroadcastJoinThreshold", "-1")
-          .getOrCreate();
-      spark.udf().register("codings_equal", new CodingsEqual(), DataTypes.BooleanType);
-      PathlingStrategy.setup(spark);
-      return spark;
-    }
-    return activeSession.get();
-  }
 
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset) {
@@ -72,11 +43,11 @@ public abstract class SparkHelpers {
       final boolean hasEid) {
     int colIndex = 0;
     final Column idColumn = col(dataset.columns()[colIndex++]);
-    final Optional<Column> eidColum = hasEid
-                                      ? Optional.of(col(dataset.columns()[colIndex++]))
-                                      : Optional.empty();
+    final Optional<Column> eidColumn = hasEid
+                                       ? Optional.of(col(dataset.columns()[colIndex++]))
+                                       : Optional.empty();
     final Column valueColumn = col(dataset.columns()[colIndex]);
-    return new IdAndValueColumns(idColumn, eidColum, Collections.singletonList(valueColumn));
+    return new IdAndValueColumns(idColumn, eidColumn, Collections.singletonList(valueColumn));
   }
 
   @Nonnull

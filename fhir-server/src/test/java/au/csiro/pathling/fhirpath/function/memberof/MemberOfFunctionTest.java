@@ -39,24 +39,35 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.FhirHelpers.MemberOfTxAnswerer;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
 @Tag("UnitTest")
 class MemberOfFunctionTest {
+
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
 
   private static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";
   private static final String TERMINOLOGY_SERVICE_URL = "https://r4.ontoserver.csiro.au/fhir";
@@ -70,11 +81,11 @@ class MemberOfFunctionTest {
     final Coding coding5 = new Coding(MY_VALUE_SET_URL, "ACUTE", "inpatient acute");
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource("Encounter", "class");
+        .getChildOfResource(fhirContext, "Encounter", "class");
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
 
-    final Dataset<Row> inputDataset = new DatasetBuilder()
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
@@ -87,7 +98,7 @@ class MemberOfFunctionTest {
         .withRow("encounter-6", null, null)
         .buildWithStructValue();
 
-    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder()
+    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
         .expression("Encounter.class")
@@ -115,7 +126,7 @@ class MemberOfFunctionTest {
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     // Prepare the inputs to the function.
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputExpression.getIdColumn())
         .terminologyClient(terminologyClient)
         .terminologyClientFactory(terminologyClientFactory)
@@ -128,7 +139,7 @@ class MemberOfFunctionTest {
     final FhirPath result = new MemberOfFunction().invoke(memberOfInput);
 
     // The outcome is somehow random with regard to the sequence passed to MemberOfMapperAnswerer.
-    final Dataset<Row> expectedResult = new DatasetBuilder()
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
@@ -172,11 +183,11 @@ class MemberOfFunctionTest {
     final CodeableConcept codeableConcept6 = new CodeableConcept(coding1);
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource("DiagnosticReport", "code");
+        .getChildOfResource(fhirContext, "DiagnosticReport", "code");
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
 
-    final Dataset<Row> inputDataset = new DatasetBuilder()
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codeableConceptStructType())
         .withRow("diagnosticreport-1", rowFromCodeableConcept(codeableConcept1))
@@ -188,7 +199,7 @@ class MemberOfFunctionTest {
         .withRow("diagnosticreport-7", null)
         .buildWithStructValue();
 
-    final ElementPath inputExpression = new ElementPathBuilder()
+    final ElementPath inputExpression = new ElementPathBuilder(spark)
         .dataset(inputDataset)
         .idAndValueColumns()
         .expression("DiagnosticReport.code")
@@ -217,7 +228,7 @@ class MemberOfFunctionTest {
     when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
 
     // Prepare the inputs to the function.
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(terminologyClient)
         .terminologyClientFactory(terminologyClientFactory)
         .build();
@@ -228,7 +239,7 @@ class MemberOfFunctionTest {
     // Invoke the function.
     final FhirPath result = new MemberOfFunction().invoke(memberOfInput);
 
-    final Dataset<Row> expectedResult = new DatasetBuilder()
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("diagnosticreport-1", true)
@@ -253,14 +264,14 @@ class MemberOfFunctionTest {
 
   @Test
   public void throwsErrorIfInputTypeIsUnsupported() {
-    final FhirPath mockContext = new ElementPathBuilder().build();
-    final ElementPath input = new ElementPathBuilder()
+    final FhirPath mockContext = new ElementPathBuilder(spark).build();
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .expression("name.given")
         .build();
     final FhirPath argument = StringLiteralPath.fromString(MY_VALUE_SET_URL, mockContext);
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(mock(TerminologyClient.class))
         .terminologyClientFactory(mock(TerminologyClientFactory.class))
         .build();
@@ -276,12 +287,12 @@ class MemberOfFunctionTest {
 
   @Test
   public void throwsErrorIfArgumentIsNotString() {
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
     final IntegerLiteralPath argument = IntegerLiteralPath.fromString("4", input);
 
-    final ParserContext context = new ParserContextBuilder()
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(mock(TerminologyClient.class))
         .terminologyClientFactory(mock(TerminologyClientFactory.class))
         .build();
@@ -297,13 +308,13 @@ class MemberOfFunctionTest {
 
   @Test
   public void throwsErrorIfMoreThanOneArgument() {
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
     final StringLiteralPath argument1 = StringLiteralPath.fromString("'foo'", input),
         argument2 = StringLiteralPath.fromString("'bar'", input);
 
-    final ParserContext context = new ParserContextBuilder()
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(mock(TerminologyClient.class))
         .terminologyClientFactory(mock(TerminologyClientFactory.class))
         .build();
@@ -319,12 +330,12 @@ class MemberOfFunctionTest {
 
   @Test
   public void throwsErrorIfTerminologyServiceNotConfigured() {
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
     final FhirPath argument = StringLiteralPath.fromString("some string", input);
 
-    final ParserContext context = new ParserContextBuilder()
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .build();
 
     final NamedFunctionInput memberOfInput = new NamedFunctionInput(context, input,

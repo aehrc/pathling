@@ -12,12 +12,14 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Terminology;
 import au.csiro.pathling.encoders.FhirEncoders;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
+@Profile({"core", "fhir"})
 @Slf4j
 public class Dependencies {
 
@@ -34,6 +37,13 @@ public class Dependencies {
   static FhirContext fhirContext() {
     log.info("Creating R4 FHIR context");
     return FhirContext.forR4();
+  }
+  
+  @Bean
+  @Autowired
+  @Nonnull
+  static IParser jsonParser(@Nonnull final FhirContext fhirContext) {
+    return fhirContext.newJsonParser();
   }
 
   @Bean

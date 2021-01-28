@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -57,9 +58,9 @@ public class ElementPathBuilder {
   @Nonnull
   private ElementDefinition definition;
 
-  public ElementPathBuilder() {
+  public ElementPathBuilder(@Nonnull final SparkSession spark) {
     expression = "";
-    dataset = new DatasetBuilder()
+    dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .build();

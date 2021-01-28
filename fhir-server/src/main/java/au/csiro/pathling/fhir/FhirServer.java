@@ -10,6 +10,8 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Authorisation;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateProvider;
+import au.csiro.pathling.aggregate.CachingAggregateExecutor;
+import au.csiro.pathling.aggregate.FreshAggregateExecutor;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.CachingSearchProvider;
@@ -41,6 +43,7 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ResourceType;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.cors.CorsConfiguration;
 
 /**
@@ -49,6 +52,7 @@ import org.springframework.web.cors.CorsConfiguration;
  * @author John Grimes
  */
 @WebServlet(urlPatterns = "/fhir/*")
+@Profile("server")
 @Slf4j
 @SuppressWarnings({"NonSerializableFieldInSerializableClass", "serial"})
 public class FhirServer extends RestfulServer {
@@ -97,17 +101,19 @@ public class FhirServer extends RestfulServer {
   private final SearchExecutorCache searchExecutorCache;
 
   /**
-   * @param fhirContext A {@link FhirContext} for use in executing FHIR operations
-   * @param configuration A {@link Configuration} instance which controls the behaviour of the
+   * @param fhirContext a {@link FhirContext} for use in executing FHIR operations
+   * @param configuration a {@link Configuration} instance which controls the behaviour of the
    * server
-   * @param sparkSession A {@link SparkSession} for use in querying FHIR data using Spark
-   * @param fhirEncoders A {@link FhirEncoders} for use in serializing and deserializing FHIR data
-   * @param resourceReader A {@link ResourceReader} for retrieving FHIR data from storage
-   * @param terminologyClient A {@link TerminologyClient} for resolving FHIR terminology queries
-   * @param terminologyClientFactory A {@link TerminologyClientFactory} for resolving FHIR
+   * @param sparkSession a {@link SparkSession} for use in querying FHIR data using Spark
+   * @param fhirEncoders a {@link FhirEncoders} for use in serializing and deserializing FHIR data
+   * @param resourceReader a {@link ResourceReader} for retrieving FHIR data from storage
+   * @param terminologyClient a {@link TerminologyClient} for resolving FHIR terminology queries
+   * @param terminologyClientFactory a {@link TerminologyClientFactory} for resolving FHIR
    * terminology queries during parallel processing
-   * @param aggregateExecutor A {@link AggregateExecutor} for processing requests to the aggregate
-   * operation
+   * @param cachingAggregateExecutor a {@link CachingAggregateExecutor} for processing requests to
+   * aggregate operation, when caching is enabled
+   * @param freshAggregateExecutor a {@link FreshAggregateExecutor} for processing requests to the
+   * aggregate operation, when caching is not enabled
    * @param importProvider A {@link ImportProvider} for receiving requests to the import operation
    * @param operationDefinitionProvider A {@link OperationDefinitionProvider} for receiving requests
    * for OperationDefinitions
@@ -118,6 +124,7 @@ public class FhirServer extends RestfulServer {
    * CapabilityStatement
    * @param searchExecutorCache A {@link SearchExecutorCache} for caching search requests
    */
+  @SuppressWarnings("TypeMayBeWeakened")
   public FhirServer(@Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration,
       @Nonnull final SparkSession sparkSession,
@@ -125,7 +132,8 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyClient> terminologyClient,
       @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
-      @Nonnull final AggregateExecutor aggregateExecutor,
+      @Nonnull final CachingAggregateExecutor cachingAggregateExecutor,
+      @Nonnull final FreshAggregateExecutor freshAggregateExecutor,
       @Nonnull final ImportProvider importProvider,
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
@@ -139,7 +147,9 @@ public class FhirServer extends RestfulServer {
     this.resourceReader = resourceReader;
     this.terminologyClient = terminologyClient;
     this.terminologyClientFactory = terminologyClientFactory;
-    this.aggregateExecutor = aggregateExecutor;
+    this.aggregateExecutor = configuration.getCaching().isEnabled()
+                             ? cachingAggregateExecutor
+                             : freshAggregateExecutor;
     this.importProvider = importProvider;
     this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;

@@ -13,7 +13,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>2.4.1</version>
+    <version>2.4.2</version>
     <relativePath/>
   </parent>
 
@@ -70,7 +70,7 @@
     <project.majorVersion>3</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.hapiFhirVersion>5.2.0</pathling.hapiFhirVersion>
+    <pathling.hapiFhirVersion>5.2.1</pathling.hapiFhirVersion>
     <pathling.sparkVersion>3.0.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.dockerJavaVersion>3.2.7</pathling.dockerJavaVersion>
@@ -175,7 +175,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
-        <version>2.12.0</version>
+        <version>2.12.1</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.janino</groupId>
@@ -185,7 +185,7 @@
       <dependency>
         <groupId>org.codehaus.janino</groupId>
         <artifactId>commons-compiler</artifactId>
-        <version>3.0.9</version>
+        <version>3.1.3</version>
       </dependency>
 
       <!-- Encoders -->
@@ -199,7 +199,7 @@
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>3.2.0</version>
+        <version>3.2.1</version>
       </dependency>
 
       <!-- Testing -->
@@ -239,8 +239,8 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
+        <groupId>pl.project13.maven</groupId>
+        <artifactId>git-commit-id-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -367,7 +367,9 @@
             <detectLinks/>
             <doctitle>Pathling ${project.version} API</doctitle>
             <windowtitle>Pathling ${project.version} API</windowtitle>
-            <bottom><![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]></bottom>
+            <bottom>
+              <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
+            </bottom>
             <additionalJOptions>
               <option>--no-module-directories</option>
               <option>-Xdoclint:none</option>

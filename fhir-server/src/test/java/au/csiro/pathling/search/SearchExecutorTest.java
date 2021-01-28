@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.search;
 
-import static au.csiro.pathling.test.helpers.FhirHelpers.getJsonParser;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockResourceReader;
@@ -43,31 +42,28 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
 @SpringBootTest
-@Tag("IntegrationTest")
-@ActiveProfiles("test")
-@TestPropertySource(locations = {"classpath:/configuration/integration-test.properties"})
+@Tag("UnitTest")
 class SearchExecutorTest {
 
-  private final Configuration configuration;
-  private final FhirContext fhirContext;
-  private final SparkSession sparkSession;
-  private final FhirEncoders fhirEncoders;
+  @Autowired
+  private Configuration configuration;
 
   @Autowired
-  public SearchExecutorTest(final Configuration configuration, final FhirContext fhirContext,
-      final SparkSession sparkSession, final FhirEncoders fhirEncoders) {
-    this.configuration = configuration;
-    this.fhirContext = fhirContext;
-    this.sparkSession = sparkSession;
-    this.fhirEncoders = fhirEncoders;
-  }
+  private FhirContext fhirContext;
+
+  @Autowired
+  private IParser jsonParser;
+
+  @Autowired
+  private SparkSession sparkSession;
+
+  @Autowired
+  private FhirEncoders fhirEncoders;
 
   @Test
   void simpleSearchWithMemberOf() {
@@ -79,7 +75,7 @@ class SearchExecutorTest {
         .withFilters(params);
     mockResourceReader(builder.getResourceReader(), sparkSession, ResourceType.CONDITION);
 
-    final ValueSet valueSet = (ValueSet) getJsonParser().parseResource(getResourceAsStream(
+    final ValueSet valueSet = (ValueSet) jsonParser.parseResource(getResourceAsStream(
         "txResponses/SearchExecutorTest/simpleSearchWithMemberOf.ValueSet.json"));
     when(builder.getTerminologyClient().expand(any(), any())).thenReturn(valueSet);
     when(builder.getTerminologyClient().searchCodeSystems(any(), any()))
@@ -124,7 +120,6 @@ class SearchExecutorTest {
   @SuppressWarnings("SameParameterValue")
   private void assertResponse(@Nonnull final String expectedPath,
       @Nonnull final IBundleProvider executor) {
-    final IParser jsonParser = getJsonParser();
 
     final String expectedJson = getResourceAsString("responses/" + expectedPath);
     final Bundle expectedBundle = (Bundle) jsonParser.parseResource(expectedJson);
