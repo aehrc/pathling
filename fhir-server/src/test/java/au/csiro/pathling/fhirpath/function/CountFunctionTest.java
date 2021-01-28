@@ -20,37 +20,43 @@ import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.*;
-import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
 @Tag("UnitTest")
 class CountFunctionTest {
 
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
   private FhirContext fhirContext;
   private ResourceReader mockReader;
 
   @BeforeEach
   void setUp() {
-    fhirContext = FhirHelpers.getFhirContext();
     mockReader = mock(ResourceReader.class);
   }
 
   @Test
   public void countsByResourceIdentity() {
-    final Dataset<Row> patientDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
@@ -63,7 +69,7 @@ class CountFunctionTest {
     final ResourcePath inputPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
         .inputExpression("Patient")
         .build();
@@ -72,7 +78,7 @@ class CountFunctionTest {
     final NamedFunction count = NamedFunction.getInstance("count");
     final FhirPath result = count.invoke(countInput);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.LongType)
         .withRow("patient-1", 1L)
@@ -91,7 +97,7 @@ class CountFunctionTest {
 
   @Test
   public void countsByGrouping() {
-    final Dataset<Row> inputDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> inputDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
@@ -100,14 +106,14 @@ class CountFunctionTest {
         .withRow("patient-2", "male", true)
         .build();
     when(mockReader.read(ResourceType.PATIENT)).thenReturn(inputDataset);
-    final ResourcePath inputPath = new ResourcePathBuilder()
+    final ResourcePath inputPath = new ResourcePathBuilder(spark)
         .resourceReader(mockReader)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();
     final Column groupingColumn = inputPath.getElementColumn("gender");
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(groupingColumn))
         .inputExpression("Patient")
         .build();
@@ -116,7 +122,7 @@ class CountFunctionTest {
     final NamedFunction count = NamedFunction.getInstance("count");
     final FhirPath result = count.invoke(countInput);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withColumn(DataTypes.StringType)
         .withColumn(DataTypes.LongType)
         .withRow("female", 2L)
@@ -135,9 +141,9 @@ class CountFunctionTest {
 
   @Test
   public void inputMustNotContainArguments() {
-    final ElementPath inputPath = new ElementPathBuilder().build();
-    final ElementPath argumentPath = new ElementPathBuilder().build();
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ElementPath inputPath = new ElementPathBuilder(spark).build();
+    final ElementPath argumentPath = new ElementPathBuilder(spark).build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
 
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));

@@ -10,6 +10,8 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -59,8 +61,9 @@ public class PatientResourceRowFixture {
     return spark.createDataFrame(NO_ROWS, SCHEMA);
   }
 
-  public static DatasetBuilder allPatientsWithValue(final Object value) {
-    return new DatasetBuilder().withColumn(DataTypes.StringType)
+  public static DatasetBuilder allPatientsWithValue(@Nonnull final SparkSession spark,
+      @Nullable final Object value) {
+    return new DatasetBuilder(spark).withColumn(DataTypes.StringType)
         .withColumn(DataTypes.BooleanType).withIdsAndValue(value, PATIENT_ALL_IDS);
   }
 }

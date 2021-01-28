@@ -18,6 +18,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.*;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
+@Profile({"core", "spark"})
 @Slf4j
 public class Spark {
 
@@ -36,7 +38,7 @@ public class Spark {
    * @param environment Spring {@link Environment} from which to harvest Spark configuration
    * @return A shiny new {@link SparkSession}
    */
-  @Bean
+  @Bean(destroyMethod = "stop")
   @Autowired
   @Nonnull
   public static SparkSession build(@Nonnull final Configuration configuration,

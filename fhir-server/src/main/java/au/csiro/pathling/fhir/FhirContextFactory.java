@@ -11,6 +11,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
+@Profile("core")
 public class FhirContextFactory implements Serializable {
 
   private static final long serialVersionUID = 3704272891614244206L;
@@ -26,10 +28,16 @@ public class FhirContextFactory implements Serializable {
   @Nonnull
   private final FhirVersionEnum fhirVersion;
 
+  /**
+   * @param fhirContext the {@link FhirContext} that this factory should be based upon
+   */
   public FhirContextFactory(@Nonnull final FhirContext fhirContext) {
     this.fhirVersion = fhirContext.getVersion().getVersion();
   }
 
+  /**
+   * @return a new {@link FhirContext} instance
+   */
   @Nonnull
   public FhirContext build() {
     return FhirEncoders.contextFor(fhirVersion);

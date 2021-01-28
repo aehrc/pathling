@@ -27,7 +27,6 @@ public class IntegrationTestDependencies {
     final WireMockServer wireMockServer = new WireMockServer(
         new WireMockConfiguration().port(WIREMOCK_PORT)
             .usingFilesUnderDirectory("src/test/resources/wiremock"));
-    wireMockServer.start();
     WireMock.configureFor("localhost", WIREMOCK_PORT);
     return wireMockServer;
   }

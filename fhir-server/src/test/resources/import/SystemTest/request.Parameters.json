@@ -10,7 +10,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/AllergyIntolerance.ndjson"
+          "valueUrl": "file:///usr/share/staging/AllergyIntolerance.ndjson"
         }
       ]
     },
@@ -23,7 +23,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/CarePlan.ndjson"
+          "valueUrl": "file:///usr/share/staging/CarePlan.ndjson"
         }
       ]
     },
@@ -36,7 +36,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Claim.ndjson"
+          "valueUrl": "file:///usr/share/staging/Claim.ndjson"
         }
       ]
     },
@@ -49,7 +49,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Condition.ndjson"
+          "valueUrl": "file:///usr/share/staging/Condition.ndjson"
         }
       ]
     },
@@ -62,7 +62,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/DiagnosticReport.ndjson"
+          "valueUrl": "file:///usr/share/staging/DiagnosticReport.ndjson"
         }
       ]
     },
@@ -75,7 +75,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Encounter.ndjson"
+          "valueUrl": "file:///usr/share/staging/Encounter.ndjson"
         }
       ]
     },
@@ -88,7 +88,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/ExplanationOfBenefit.ndjson"
+          "valueUrl": "file:///usr/share/staging/ExplanationOfBenefit.ndjson"
         }
       ]
     },
@@ -101,7 +101,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Goal.ndjson"
+          "valueUrl": "file:///usr/share/staging/Goal.ndjson"
         }
       ]
     },
@@ -114,7 +114,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/ImagingStudy.ndjson"
+          "valueUrl": "file:///usr/share/staging/ImagingStudy.ndjson"
         }
       ]
     },
@@ -127,7 +127,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Immunization.ndjson"
+          "valueUrl": "file:///usr/share/staging/Immunization.ndjson"
         }
       ]
     },
@@ -140,7 +140,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/MedicationRequest.ndjson"
+          "valueUrl": "file:///usr/share/staging/MedicationRequest.ndjson"
         }
       ]
     },
@@ -153,7 +153,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Observation.ndjson"
+          "valueUrl": "file:///usr/share/staging/Observation.ndjson"
         }
       ]
     },
@@ -166,7 +166,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Organization.ndjson"
+          "valueUrl": "file:///usr/share/staging/Organization.ndjson"
         }
       ]
     },
@@ -179,7 +179,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Patient.ndjson"
+          "valueUrl": "file:///usr/share/staging/Patient.ndjson"
         }
       ]
     },
@@ -192,7 +192,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Practitioner.ndjson"
+          "valueUrl": "file:///usr/share/staging/Practitioner.ndjson"
         }
       ]
     },
@@ -205,7 +205,7 @@
         },
         {
           "name": "url",
-          "valueUrl": "file:///usr/share/staging/test/Procedure.ndjson"
+          "valueUrl": "file:///usr/share/staging/Procedure.ndjson"
         }
       ]
     }

@@ -14,32 +14,43 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
+import ca.uhn.fhir.context.FhirContext;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
 @Tag("UnitTest")
 public class BooleanOperatorValidationTest {
+
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
 
   private ParserContext parserContext;
 
   @BeforeEach
   void setUp() {
-    parserContext = new ParserContextBuilder().build();
+    parserContext = new ParserContextBuilder(spark, fhirContext).build();
   }
 
   @Test
   public void operandIsNotSingular() {
-    final ElementPath left = new ElementPathBuilder()
+    final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(false)
         .expression("estimatedAge")
         .build();
-    final ElementPath right = new ElementPathBuilder()
+    final ElementPath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(true)
         .expression("deceasedBoolean")
@@ -67,12 +78,12 @@ public class BooleanOperatorValidationTest {
 
   @Test
   public void operandIsNotBoolean() {
-    final ElementPath left = new ElementPathBuilder()
+    final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .singular(true)
         .expression("estimatedAge")
         .build();
-    final ElementPath right = new ElementPathBuilder()
+    final ElementPath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(true)
         .expression("deceasedBoolean")

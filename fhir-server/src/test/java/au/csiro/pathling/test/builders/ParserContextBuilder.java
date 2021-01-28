@@ -16,8 +16,6 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DefaultAnswer;
-import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
 import java.util.Optional;
@@ -36,10 +34,10 @@ public class ParserContextBuilder {
   private FhirPath inputContext;
 
   @Nonnull
-  private FhirContext fhirContext;
+  private final FhirContext fhirContext;
 
   @Nonnull
-  private SparkSession sparkSession;
+  private final SparkSession spark;
 
   @Nonnull
   private ResourceReader resourceReader;
@@ -53,12 +51,13 @@ public class ParserContextBuilder {
   @Nonnull
   private Optional<List<Column>> groupingColumns;
 
-  public ParserContextBuilder() {
+  public ParserContextBuilder(@Nonnull final SparkSession spark,
+      @Nonnull final FhirContext fhirContext) {
+    this.fhirContext = fhirContext;
+    this.spark = spark;
     inputContext = mock(FhirPath.class);
     when(inputContext.getIdColumn()).thenReturn(lit(null));
-    when(inputContext.getDataset()).thenReturn(SparkHelpers.getSparkSession().emptyDataFrame());
-    fhirContext = FhirHelpers.getFhirContext();
-    sparkSession = SparkHelpers.getSparkSession();
+    when(inputContext.getDataset()).thenReturn(spark.emptyDataFrame());
     resourceReader = Mockito.mock(ResourceReader.class, new DefaultAnswer());
     groupingColumns = Optional.empty();
   }
@@ -78,18 +77,6 @@ public class ParserContextBuilder {
   @Nonnull
   public ParserContextBuilder idColumn(@Nonnull final Column idColumn) {
     when(inputContext.getIdColumn()).thenReturn(idColumn);
-    return this;
-  }
-
-  @Nonnull
-  public ParserContextBuilder fhirContext(@Nonnull final FhirContext fhirContext) {
-    this.fhirContext = fhirContext;
-    return this;
-  }
-
-  @Nonnull
-  public ParserContextBuilder sparkSession(@Nonnull final SparkSession sparkSession) {
-    this.sparkSession = sparkSession;
     return this;
   }
 
@@ -121,7 +108,7 @@ public class ParserContextBuilder {
 
   @Nonnull
   public ParserContext build() {
-    return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
+    return new ParserContext(inputContext, fhirContext, spark, resourceReader,
         Optional.ofNullable(terminologyClient), Optional.ofNullable(terminologyClientFactory),
         groupingColumns);
   }

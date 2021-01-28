@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.helpers.SparkHelpers.getSparkSession;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -23,6 +22,7 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.CodingRowFixture;
 import au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture;
+import ca.uhn.fhir.context.FhirContext;
 import java.util.stream.Stream;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
@@ -31,23 +31,27 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author Piotr Szul
  */
+@SpringBootTest
 @Tag("UnitTest")
 public class MembershipOperatorTest {
 
-  private final SparkSession spark;
-  private ParserContext parserContext;
+  @Autowired
+  private SparkSession spark;
 
-  public MembershipOperatorTest() {
-    spark = getSparkSession();
-  }
+  @Autowired
+  private FhirContext fhirContext;
+
+  private ParserContext parserContext;
 
   @BeforeEach
   void setUp() {
-    parserContext = new ParserContextBuilder().build();
+    parserContext = new ParserContextBuilder(spark, fhirContext).build();
   }
 
   public static Stream<String> parameters() {
@@ -75,13 +79,13 @@ public class MembershipOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void returnsCorrectResultWhenElementIsLiteral(final String operator) {
-    final ElementPath collection = new ElementPathBuilder()
+    final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(StringPrimitiveRowFixture.createCompleteDataset(spark))
         .idAndValueColumns()
         .build();
     final StringLiteralPath element = StringLiteralPath.fromString("'Samuel'", collection);
-    parserContext = new ParserContextBuilder()
+    parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputContext(collection)
         .build();
 
@@ -99,24 +103,24 @@ public class MembershipOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void returnsCorrectResultWhenElementIsExpression(final String operator) {
-    final ElementPath collection = new ElementPathBuilder()
+    final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(StringPrimitiveRowFixture.createCompleteDataset(spark))
         .idAndValueColumns()
         .build();
-    final ElementPath element = new ElementPathBuilder()
+    final ElementPath element = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
-        .dataset(StringPrimitiveRowFixture.createDataset(spark,
-            RowFactory.create(StringPrimitiveRowFixture.ROW_ID_1, "Eva"),
-            StringPrimitiveRowFixture.STRING_2_SAMUEL,
-            StringPrimitiveRowFixture.STRING_3_NULL,
-            StringPrimitiveRowFixture.STRING_4_ADAM,
-            StringPrimitiveRowFixture.STRING_5_NULL))
+        .dataset(StringPrimitiveRowFixture
+            .createDataset(spark, RowFactory.create(StringPrimitiveRowFixture.ROW_ID_1, "Eva"),
+                StringPrimitiveRowFixture.STRING_2_SAMUEL,
+                StringPrimitiveRowFixture.STRING_3_NULL,
+                StringPrimitiveRowFixture.STRING_4_ADAM,
+                StringPrimitiveRowFixture.STRING_5_NULL))
         .idAndValueColumns()
         .singular(true)
         .expression("name.family.first()")
         .build();
-    parserContext = new ParserContextBuilder()
+    parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputContext(collection)
         .build();
 
@@ -134,13 +138,13 @@ public class MembershipOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void resultIsFalseWhenCollectionIsEmpty(final String operator) {
-    final ElementPath collection = new ElementPathBuilder()
+    final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(StringPrimitiveRowFixture.createNullRowsDataset(spark))
         .idAndValueColumns()
         .build();
     final StringLiteralPath element = StringLiteralPath.fromString("'Samuel'", collection);
-    parserContext = new ParserContextBuilder()
+    parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputContext(collection)
         .build();
 
@@ -155,19 +159,19 @@ public class MembershipOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void returnsEmptyWhenElementIsEmpty(final String operator) {
-    final ElementPath collection = new ElementPathBuilder()
+    final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(StringPrimitiveRowFixture.createCompleteDataset(spark))
         .idAndValueColumns()
         .build();
-    final ElementPath element = new ElementPathBuilder()
+    final ElementPath element = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(StringPrimitiveRowFixture.createAllRowsNullDataset(spark))
         .idAndValueColumns()
         .singular(true)
         .expression("name.family.first()")
         .build();
-    parserContext = new ParserContextBuilder()
+    parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputContext(collection)
         .build();
 
@@ -185,7 +189,7 @@ public class MembershipOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void worksForUnversionedCodingLiterals(final String operator) {
-    final ElementPath collection = new ElementPathBuilder()
+    final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(CodingRowFixture.createCompleteDataset(spark))
         .idAndValueColumns()
@@ -193,7 +197,7 @@ public class MembershipOperatorTest {
         .build();
     final CodingLiteralPath element = CodingLiteralPath
         .fromString(CodingRowFixture.SYSTEM_1 + "|" + CodingRowFixture.CODE_1, collection);
-    parserContext = new ParserContextBuilder()
+    parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputContext(collection)
         .build();
 
@@ -210,7 +214,7 @@ public class MembershipOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void worksForVersionedCodingLiterals(final String operator) {
-    final ElementPath collection = new ElementPathBuilder()
+    final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(CodingRowFixture.createCompleteDataset(spark))
         .idAndValueColumns()
@@ -218,7 +222,7 @@ public class MembershipOperatorTest {
     final CodingLiteralPath element = CodingLiteralPath
         .fromString(CodingRowFixture.SYSTEM_2 + "|" + CodingRowFixture.VERSION_2 + "|"
             + CodingRowFixture.CODE_2, collection);
-    parserContext = new ParserContextBuilder()
+    parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputContext(collection)
         .build();
 
@@ -235,10 +239,10 @@ public class MembershipOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void throwExceptionWhenElementIsNotSingular(final String operator) {
-    final ElementPath collection = new ElementPathBuilder()
+    final ElementPath collection = new ElementPathBuilder(spark)
         .singular(false)
         .build();
-    final ElementPath element = new ElementPathBuilder()
+    final ElementPath element = new ElementPathBuilder(spark)
         .singular(false)
         .expression("name.given")
         .build();
@@ -254,7 +258,7 @@ public class MembershipOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void throwExceptionWhenIncompatibleTypes(final String operator) {
-    final ElementPath collection = new ElementPathBuilder()
+    final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .expression("foo")
         .build();

@@ -8,11 +8,12 @@ package au.csiro.pathling.test;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.FhirContextFactory;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.Objects;
+import javax.annotation.Nonnull;
 import jodd.io.filter.WildcardFileFilter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
@@ -21,6 +22,12 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Profile;
 
 /**
  * Converts the test fhir data in `src/test/resources/test-data/fhir` to their parquet version in
@@ -28,21 +35,31 @@ import org.hl7.fhir.r4.model.Enumerations;
  *
  * @author Piotr Szul
  */
-public class TestDataImporter {
+@SpringBootApplication
+@ComponentScan(basePackages = "au.csiro.pathling")
+@Profile("cli")
+@Slf4j
+public class TestDataImporter implements CommandLineRunner {
 
-  protected SparkSession spark;
-  private final FhirEncoders fhirEncoders = FhirEncoders.forR4().getOrCreate();
+  @Nonnull
+  protected final SparkSession spark;
+
+  @Nonnull
+  private final FhirEncoders fhirEncoders;
+
+  @Autowired
+  public TestDataImporter(@Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders) {
+    this.spark = spark;
+    this.fhirEncoders = fhirEncoders;
+  }
 
   public static void main(final String[] args) {
-    new TestDataImporter().run(args);
+    SpringApplication.run(TestDataImporter.class, args);
   }
 
-  public void setUp() {
-    spark = SparkHelpers.getSparkSession();
-  }
-
-  private void run(final String[] args) {
-    setUp();
+  @Override
+  public void run(final String... args) {
     final String sourcePath = args[0];
     final String targetPath = args[1];
 
@@ -51,6 +68,7 @@ public class TestDataImporter {
     final File[] srcNdJsonFiles = srcNdJsonDir.listFiles(fileFilter);
 
     for (final File srcFile : Objects.requireNonNull(srcNdJsonFiles)) {
+      log.info("Loading source NDJSON file: " + srcFile);
       final String resourceName = FilenameUtils.getBaseName(srcFile.getName());
       final Enumerations.ResourceType subjectResource = Enumerations.ResourceType
           .valueOf(resourceName.toUpperCase());
@@ -64,14 +82,10 @@ public class TestDataImporter {
               .build().newJsonParser().parseResource(json), fhirEncoder);
       final String outputParquet =
           targetPath + "/" + subjectResource.toCode() + ".parquet";
+
+      log.info("Writing: " + outputParquet);
       resourcesDataset.write().mode(SaveMode.Overwrite).parquet(outputParquet);
     }
-
-    tearDown();
-  }
-
-  private void tearDown() {
-    spark.stop();
   }
 
 }

@@ -23,7 +23,6 @@ import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.*;
-import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,30 +30,38 @@ import java.util.HashSet;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
 @Tag("UnitTest")
 class OfTypeFunctionTest {
 
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
   private FhirContext fhirContext;
+
   private ResourceReader mockReader;
 
   @BeforeEach
   void setUp() {
-    fhirContext = FhirHelpers.getFhirContext();
     mockReader = mock(ResourceReader.class);
   }
 
   @Test
   void resolvesPolymorphicReference() {
-    final Dataset<Row> inputDataset = new DatasetBuilder()
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withTypeColumn()
@@ -75,7 +82,7 @@ class OfTypeFunctionTest {
             RowFactory.create(null, "Group/group-1", null))
         .withRow("encounter-6", null, null, null)
         .buildWithStructValue();
-    final UntypedResourcePath inputPath = new UntypedResourcePathBuilder()
+    final UntypedResourcePath inputPath = new UntypedResourcePathBuilder(spark)
         .expression("subject.resolve()")
         .dataset(inputDataset)
         .idEidTypeAndValueColumns()
@@ -83,7 +90,7 @@ class OfTypeFunctionTest {
         .possibleTypes(new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)))
         .build();
 
-    final Dataset<Row> argumentDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> argumentDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .withColumn(DataTypes.BooleanType)
@@ -93,13 +100,13 @@ class OfTypeFunctionTest {
         .build();
     when(mockReader.read(ResourceType.PATIENT))
         .thenReturn(argumentDataset);
-    final ResourcePath argumentPath = new ResourcePathBuilder()
+    final ResourcePath argumentPath = new ResourcePathBuilder(spark)
         .resourceReader(mockReader)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
         .build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, inputPath,
@@ -113,7 +120,7 @@ class OfTypeFunctionTest {
         .isNotSingular()
         .hasResourceType(ResourceType.PATIENT);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withIdColumn() // this represents value for a resource
@@ -133,12 +140,12 @@ class OfTypeFunctionTest {
 
   @Test
   public void throwsErrorIfInputNotPolymorphic() {
-    final ResourcePath input = new ResourcePathBuilder()
+    final ResourcePath input = new ResourcePathBuilder(spark)
         .expression("Patient")
         .build();
-    final ResourcePath argument = new ResourcePathBuilder().build();
+    final ResourcePath argument = new ResourcePathBuilder(spark).build();
 
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
 
@@ -153,17 +160,17 @@ class OfTypeFunctionTest {
 
   @Test
   public void throwsErrorIfMoreThanOneArgument() {
-    final UntypedResourcePath input = new UntypedResourcePathBuilder()
+    final UntypedResourcePath input = new UntypedResourcePathBuilder(spark)
         .expression("subject")
         .build();
-    final ResourcePath argument1 = new ResourcePathBuilder()
+    final ResourcePath argument1 = new ResourcePathBuilder(spark)
         .expression("Patient")
         .build();
-    final ResourcePath argument2 = new ResourcePathBuilder()
+    final ResourcePath argument2 = new ResourcePathBuilder(spark)
         .expression("Condition")
         .build();
 
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, input,
         Arrays.asList(argument1, argument2));
 
@@ -178,13 +185,13 @@ class OfTypeFunctionTest {
 
   @Test
   public void throwsErrorIfArgumentNotResource() {
-    final UntypedResourcePath input = new UntypedResourcePathBuilder()
+    final UntypedResourcePath input = new UntypedResourcePathBuilder(spark)
         .expression("subject")
         .build();
     final StringLiteralPath argument = StringLiteralPath
         .fromString("'some string'", input);
 
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
 

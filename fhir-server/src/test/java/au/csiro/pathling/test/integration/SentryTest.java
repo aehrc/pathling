@@ -12,15 +12,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.aggregate.CachingAggregateExecutor;
-import com.github.tomakehurst.wiremock.WireMockServer;
 import java.net.URI;
 import java.net.URISyntaxException;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.webresources.TomcatURLStreamHandlerFactory;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
@@ -33,11 +29,8 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * @author John Grimes
  */
-@Tag("IntegrationTest")
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @TestPropertySource(locations = {"classpath:/configuration/sentry.properties"})
-@Slf4j
-class SentryTest {
+class SentryTest extends WireMockTest {
 
   @LocalServerPort
   private int port;
@@ -45,17 +38,8 @@ class SentryTest {
   @Autowired
   private TestRestTemplate restTemplate;
 
-  @Autowired
-  private WireMockServer wireMockServer;
-
   @MockBean
   private CachingAggregateExecutor aggregateExecutor;
-
-  @BeforeAll
-  static void beforeAll() {
-    // See: https://github.com/spring-projects/spring-boot/issues/21535#issuecomment-634088332
-    TomcatURLStreamHandlerFactory.disable();
-  }
 
   @BeforeEach
   void setUp() {
@@ -76,13 +60,8 @@ class SentryTest {
 
     // Give the asynchronous request sender within Sentry time to actually send the error report.
     Thread.sleep(1000);
-    
-    verify(1, postRequestedFor(urlPathEqualTo("/api/5513555/envelope/")));
-  }
 
-  @AfterEach
-  void tearDown() {
-    wireMockServer.resetAll();
+    verify(1, postRequestedFor(urlPathEqualTo("/api/5513555/envelope/")));
   }
 
 }

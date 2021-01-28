@@ -22,21 +22,32 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
+import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
 @Tag("UnitTest")
 public class EmptyFunctionTest {
+
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
 
   @Test
   public void returnsCorrectResults() {
@@ -45,8 +56,8 @@ public class EmptyFunctionTest {
     final Coding coding2 = new Coding(TestHelpers.SNOMED_URL, "248427009", "Fever symptoms");
     final CodeableConcept concept2 = new CodeableConcept(coding2);
 
-    final ParserContext parserContext = new ParserContextBuilder().build();
-    final Dataset<Row> dataset = new DatasetBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(codeableConceptStructType())
         .withRow("observation-1", null)
@@ -58,7 +69,7 @@ public class EmptyFunctionTest {
         .withRow("observation-5", rowFromCodeableConcept(concept1))
         .withRow("observation-5", rowFromCodeableConcept(concept2))
         .build();
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
         .idAndValueColumns()
@@ -74,7 +85,7 @@ public class EmptyFunctionTest {
     final FhirPath result = emptyFunction.invoke(emptyInput);
 
     // Check the result.
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("observation-1", true)
@@ -93,11 +104,11 @@ public class EmptyFunctionTest {
 
   @Test
   public void inputMustNotContainArguments() {
-    final ElementPath input = new ElementPathBuilder().build();
+    final ElementPath input = new ElementPathBuilder(spark).build();
     final StringLiteralPath argument = StringLiteralPath
         .fromString("'some argument'", input);
 
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput emptyInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
 
