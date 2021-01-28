@@ -114,6 +114,20 @@ public abstract class QueryHelpers {
     return new DatasetWithColumnMap(result, columnMap);
   }
 
+
+  /**
+   * Checks if a column is present in a dataset
+   *
+   * @param dataset a dataset to test
+   * @param column a column to test
+   * @return true if the column is present in the dataset.
+   */
+  public static boolean hasColumn(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column column) {
+    return Stream.of(dataset.columns()).anyMatch(column.toString()::equals);
+  }
+
+
   private static Dataset<Row> join(@Nonnull final Dataset<Row> left,
       @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
       @Nonnull final List<Column> rightColumns, @Nonnull final Optional<Column> additionalCondition,
@@ -254,14 +268,16 @@ public abstract class QueryHelpers {
         && right instanceof NonLiteralPath) {
       final NonLiteralPath nonLiteralThis = (NonLiteralPath) parserContext.getThisContext().get();
       if (nonLiteralThis.getEidColumn().isPresent()) {
-        leftColumns.add(nonLiteralThis.getEidColumn().get());
-        rightColumns.add(nonLiteralThis.getEidColumn().get());
-      } else {
-        leftColumns.add(parserContext.getThisContext().get().getValueColumn());
-        rightColumns.add(parserContext.getThisContext().get().getValueColumn());
+        final Column thisEidColumn = nonLiteralThis.getEidColumn().get();
+        // Only use eid for join if both datasets have this column,
+        // which means that they both originate from $this
+        if (hasColumn(left.getDataset(), thisEidColumn) &&
+            hasColumn(right.getDataset(), thisEidColumn)) {
+          leftColumns.add(thisEidColumn);
+          rightColumns.add(thisEidColumn);
+        }
       }
     }
-
     return join(left.getDataset(), leftColumns, right.getDataset(), rightColumns, joinType);
   }
 

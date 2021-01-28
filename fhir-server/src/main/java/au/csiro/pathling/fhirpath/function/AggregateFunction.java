@@ -15,10 +15,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -119,7 +116,18 @@ public abstract class AggregateFunction {
     // individual resource.
     final List<Column> groupByList = parserContext.getGroupingColumns()
         .orElse(Collections.singletonList(idColumn));
-    final Column[] groupBy = groupByList
+
+    final Set<String> existingColumns = Stream.of(dataset.columns()).collect(Collectors.toSet());
+
+    // Drop the requested grouping columns which are not present in the provided dataset.
+    // This will handle the situation where %resource is using in where() and argument datasets
+    // might need to use eid for aggregation if they originate form $this.
+    // In argument originating from %resource the $this.eid column does not exits.
+    // This may however lead to undetected issues when the requested grouping column
+    // should be present in the argument dataset (and is not), which will be
+    // silently ignored
+    final Column[] groupBy = groupByList.stream()
+        .filter(c -> existingColumns.contains(c.toString()))
         .toArray(Column[]::new);
 
     // The selection will be either:
