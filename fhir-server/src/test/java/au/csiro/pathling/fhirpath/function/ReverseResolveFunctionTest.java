@@ -8,7 +8,6 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.helpers.FhirHelpers.getFhirContext;
 import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,35 +32,39 @@ import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
+@SpringBootTest
 @Tag("UnitTest")
 class ReverseResolveFunctionTest {
 
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
   private FhirContext fhirContext;
+
   private ResourceReader mockReader;
 
   @BeforeEach
   void setUp() {
-    fhirContext = FhirHelpers.getFhirContext();
     mockReader = mock(ResourceReader.class);
   }
 
   @Test
   public void reverseResolve() {
-    final Dataset<Row> patientDataset = new ResourceDatasetBuilder()
+    final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
@@ -75,7 +78,7 @@ class ReverseResolveFunctionTest {
     final ResourcePath inputPath = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", true);
 
-    final DatasetBuilder encounterDatasetBuilder = new ResourceDatasetBuilder()
+    final DatasetBuilder encounterDatasetBuilder = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("status", DataTypes.StringType)
         .withRow("encounter-1", "planned")
@@ -89,11 +92,11 @@ class ReverseResolveFunctionTest {
         .build(fhirContext, mockReader, ResourceType.ENCOUNTER, "Encounter", false);
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource("Encounter", "subject");
+        .getChildOfResource(fhirContext, "Encounter", "subject");
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
 
-    final Dataset<Row> argumentDatasetPreJoin = new DatasetBuilder()
+    final Dataset<Row> argumentDatasetPreJoin = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(referenceStructType())
         .withRow("encounter-1", RowFactory.create(null, "Patient/patient-1", null))
@@ -108,7 +111,7 @@ class ReverseResolveFunctionTest {
 
     final Dataset<Row> argumentDataset = join(originPath.getDataset(),
         originPath.getIdColumn(), argumentDatasetPreJoin, idColumn, JoinType.LEFT_OUTER);
-    final FhirPath argumentPath = new ElementPathBuilder()
+    final FhirPath argumentPath = new ElementPathBuilder(spark)
         .dataset(argumentDataset)
         .idColumn(originPath.getIdColumn())
         .valueColumn(valueColumn)
@@ -118,7 +121,7 @@ class ReverseResolveFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
         .resourceReader(mockReader)
         .inputExpression("Patient")
@@ -134,7 +137,7 @@ class ReverseResolveFunctionTest {
         .isNotSingular()
         .hasResourceType(ResourceType.ENCOUNTER);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder()
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withIdColumn()
         .withRow("patient-1", "encounter-1")
@@ -150,15 +153,15 @@ class ReverseResolveFunctionTest {
 
   @Test
   public void throwsErrorIfInputNotResource() {
-    final ElementPath input = new ElementPathBuilder()
+    final ElementPath input = new ElementPathBuilder(spark)
         .expression("gender")
         .fhirType(FHIRDefinedType.CODE)
         .build();
-    final ElementPath argument = new ElementPathBuilder()
+    final ElementPath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
 
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
 
@@ -173,13 +176,13 @@ class ReverseResolveFunctionTest {
 
   @Test
   public void throwsErrorIfArgumentIsNotReference() {
-    final ResourcePath input = new ResourcePathBuilder().build();
-    final ElementPath argument = new ElementPathBuilder()
+    final ResourcePath input = new ResourcePathBuilder(spark).build();
+    final ElementPath argument = new ElementPathBuilder(spark)
         .expression("gender")
         .fhirType(FHIRDefinedType.CODE)
         .build();
 
-    final ParserContext parserContext = new ParserContextBuilder().build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
 
@@ -194,19 +197,19 @@ class ReverseResolveFunctionTest {
 
   @Test
   public void throwsErrorIfMoreThanOneArgument() {
-    final ResourcePath input = new ResourcePathBuilder()
+    final ResourcePath input = new ResourcePathBuilder(spark)
         .expression("Patient")
         .build();
-    final ElementPath argument1 = new ElementPathBuilder()
+    final ElementPath argument1 = new ElementPathBuilder(spark)
         .expression("Encounter.subject")
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
-    final ElementPath argument2 = new ElementPathBuilder()
+    final ElementPath argument2 = new ElementPathBuilder(spark)
         .expression("Encounter.participant.individual")
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputExpression("Patient")
         .build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, input,
@@ -223,21 +226,21 @@ class ReverseResolveFunctionTest {
 
   @Test
   public void throwsErrorIfArgumentTypeDoesNotMatchInput() {
-    final ResourcePath input = new ResourcePathBuilder()
+    final ResourcePath input = new ResourcePathBuilder(spark)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();
-    final BaseRuntimeChildDefinition childDefinition = getFhirContext()
+    final BaseRuntimeChildDefinition childDefinition = fhirContext
         .getResourceDefinition("Encounter").getChildByName("episodeOfCare");
     final ElementDefinition definition = ElementDefinition
         .build(childDefinition, "episodeOfCare");
-    final ElementPath argument = new ElementPathBuilder()
+    final ElementPath argument = new ElementPathBuilder(spark)
         .expression("Encounter.episodeOfCare")
         .fhirType(FHIRDefinedType.REFERENCE)
         .definition(definition)
         .buildDefined();
 
-    final ParserContext parserContext = new ParserContextBuilder()
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputExpression("Patient")
         .build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, input,

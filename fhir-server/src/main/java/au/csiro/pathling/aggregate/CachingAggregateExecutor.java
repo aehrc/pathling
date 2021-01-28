@@ -19,8 +19,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -29,8 +28,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Primary
-@ConditionalOnProperty(prefix = "pathling", value = "caching.enabled", havingValue = "true")
+@Profile("core")
 @Slf4j
 public class CachingAggregateExecutor implements AggregateExecutor, Cacheable {
 

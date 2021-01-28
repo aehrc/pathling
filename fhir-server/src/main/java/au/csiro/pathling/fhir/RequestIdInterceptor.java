@@ -14,6 +14,7 @@ import io.sentry.Sentry;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
+@Profile("server")
 @Interceptor
 @Slf4j
 public class RequestIdInterceptor {
@@ -37,7 +39,7 @@ public class RequestIdInterceptor {
     if (requestDetails != null) {
       final String requestId = requestDetails.getRequestId();
       MDC.put("requestId", requestId);
-      Sentry.setExtra("requestId", requestId);
+      Sentry.configureScope(scope -> scope.setExtra("requestId", requestId));
     } else {
       log.warn("Request ID interceptor invoked with missing request details");
     }

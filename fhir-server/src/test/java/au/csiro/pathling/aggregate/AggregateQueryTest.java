@@ -12,18 +12,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.TimingExtension;
-import au.csiro.pathling.test.helpers.FhirHelpers;
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -31,7 +26,6 @@ import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author John Grimes
@@ -40,10 +34,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @ExtendWith(TimingExtension.class)
 class AggregateQueryTest extends AggregateExecutorTest {
 
-  @Autowired
-  public AggregateQueryTest(final Configuration configuration, final FhirContext fhirContext,
-      final SparkSession spark, final FhirEncoders fhirEncoders) {
-    super(configuration, fhirContext, spark, fhirEncoders);
+  public AggregateQueryTest() {
+    super();
   }
 
   @Test
@@ -251,12 +243,12 @@ class AggregateQueryTest extends AggregateExecutorTest {
   void queryWithMemberOf() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
-    final Bundle mockSearch = (Bundle) FhirHelpers.getJsonParser().parseResource(
+    final Bundle mockSearch = (Bundle) jsonParser.parseResource(
         getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.Bundle.json"));
     final List<CodeSystem> codeSystems = mockSearch.getEntry().stream()
         .map(entry -> (CodeSystem) entry.getResource())
         .collect(Collectors.toList());
-    final ValueSet mockExpansion = (ValueSet) FhirHelpers.getJsonParser().parseResource(
+    final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
         getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
 
     //noinspection unchecked

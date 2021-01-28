@@ -8,13 +8,11 @@ package au.csiro.pathling;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import io.sentry.Sentry;
 import java.io.PrintStream;
 import javax.annotation.Nullable;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.ServletComponentScan;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 
@@ -26,25 +24,13 @@ import org.springframework.core.env.Environment;
 @SpringBootApplication
 @Import(Configuration.class)
 @ServletComponentScan
-public class Pathling {
+public class PathlingServer {
 
   /**
    * @param args Arguments that will be passed to the main application.
    */
   public static void main(final String[] args) {
-
-    // Get the Configuration bean so that we can initialise Sentry early.
-    final AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-    context.register(Configuration.class);
-    context.refresh();
-    final Configuration configuration = context.getBean(Configuration.class);
-
-    // If the Sentry DSN is configured, initialise it.
-    configuration.getSentryDsn().ifPresent(sentryDsn -> Sentry.init(options -> {
-      options.setDsn(sentryDsn);
-    }));
-
-    new SpringApplicationBuilder(Pathling.class)
+    new SpringApplicationBuilder(PathlingServer.class)
         .banner(new Banner())
         .run(args);
   }

@@ -1,0 +1,15 @@
+spring:
+  main:
+    banner-mode: off
+
+spark:
+  master: local[1]
+  driver:
+    bindAddress: localhost
+    host: localhost
+  sql:
+    shuffle:
+      partitions: 1
+      autoBroadcastJoinThreshold: -1
+  ui:
+    enabled: false

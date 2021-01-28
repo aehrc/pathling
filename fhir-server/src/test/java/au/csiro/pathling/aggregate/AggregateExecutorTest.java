@@ -7,11 +7,8 @@
 package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertJson;
-import static au.csiro.pathling.test.helpers.FhirHelpers.getJsonParser;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
@@ -22,6 +19,7 @@ import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.StringParam;
@@ -33,47 +31,49 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
-import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
 @SpringBootTest
-@Tag("IntegrationTest")
-@TestPropertySource(locations = {"classpath:/configuration/integration-test.properties"})
-@ActiveProfiles("test")
+@Tag("UnitTest")
 public abstract class AggregateExecutorTest {
 
-  protected final AggregateExecutor executor;
-  private final SparkSession spark;
-  private final ResourceReader resourceReader;
-  protected final TerminologyClient terminologyClient;
-  private final TerminologyClientFactory terminologyClientFactory;
-  private final Configuration configuration;
-  private final FhirContext fhirContext;
-  private final FhirEncoders fhirEncoders;
-  protected AggregateResponse response = null;
+  @Autowired
+  protected SparkSession spark;
+
+  @Autowired
+  protected TerminologyClient terminologyClient;
+
+  @Autowired
+  protected TerminologyClientFactory terminologyClientFactory;
+
+  @Autowired
+  protected Configuration configuration;
+
+  @Autowired
+  protected FhirContext fhirContext;
+
+  @Autowired
+  protected IParser jsonParser;
+
+  @Autowired
+  protected FhirEncoders fhirEncoders;
+
+  protected AggregateExecutor executor;
   protected ResourceType subjectResource;
+  protected ResourceReader resourceReader;
+  protected AggregateResponse response = null;
 
-  public AggregateExecutorTest(final Configuration configuration, final FhirContext fhirContext,
-      final SparkSession spark, final FhirEncoders fhirEncoders) {
-    this.configuration = configuration;
-    this.fhirContext = fhirContext;
-    this.spark = spark;
-    this.fhirEncoders = fhirEncoders;
+  @BeforeEach
+  void setUp() {
     resourceReader = mock(ResourceReader.class);
-    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-
-    terminologyClientFactory =
-        mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
-    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
-
-    executor = new FreshAggregateExecutor(configuration, fhirContext, spark,
-        resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory));
+    executor = new FreshAggregateExecutor(configuration, fhirContext, spark, resourceReader,
+        Optional.of(terminologyClient), Optional.of(terminologyClientFactory));
   }
 
   /**
@@ -103,10 +103,10 @@ public abstract class AggregateExecutorTest {
     }
   }
 
-  protected static void assertResponse(@Nonnull final String expectedPath,
+  protected void assertResponse(@Nonnull final String expectedPath,
       @Nonnull final AggregateResponse response) {
     final Parameters parameters = response.toParameters();
-    final String actualJson = getJsonParser().encodeResourceToString(parameters);
+    final String actualJson = jsonParser.encodeResourceToString(parameters);
     assertJson("responses/" + expectedPath, actualJson);
   }
 

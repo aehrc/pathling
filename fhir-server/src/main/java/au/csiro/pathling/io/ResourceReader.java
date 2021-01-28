@@ -13,7 +13,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.errors.ResourceNotFoundError;
-import au.csiro.pathling.errors.UnexpectedServerError;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -35,6 +34,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -44,6 +44,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
+@Profile("core")
 @Slf4j
 public class ResourceReader implements Cacheable {
 
@@ -103,23 +104,19 @@ public class ResourceReader implements Cacheable {
     try {
       warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
     } catch (final IOException e) {
-      throw new UnexpectedServerError("Problem accessing warehouse location: " + warehouseUrl, e);
+      throw new RuntimeException("Problem accessing warehouse location: " + warehouseUrl, e);
     } catch (final URISyntaxException e) {
-      throw new UnexpectedServerError("Problem parsing warehouse URL: " + warehouseUrl, e);
+      throw new RuntimeException("Problem parsing warehouse URL: " + warehouseUrl, e);
     }
     checkNotNull(warehouse);
 
     // Check that the database path exists.
-    boolean exists;
     final String databasePath = warehouseUrl + "/" + databaseName;
     try {
-      exists = warehouse.exists(new Path(databasePath));
+      warehouse.exists(new Path(databasePath));
     } catch (final IOException e) {
-      exists = false;
-    }
-    if (!exists) {
-      availableResourceTypes = EnumSet.noneOf(ResourceType.class);
-      return;
+      throw new RuntimeException(
+          "Problem accessing database path within warehouse location: " + databaseName, e);
     }
 
     // Find all the Parquet files within the warehouse and use them to create a set of resource
@@ -129,7 +126,7 @@ public class ResourceReader implements Cacheable {
       fileStatuses = warehouse
           .listStatus(new Path(databasePath));
     } catch (final IOException e) {
-      throw new UnexpectedServerError(
+      throw new RuntimeException(
           "Problem listing file status at database path: " + databasePath, e);
     }
     checkNotNull(fileStatuses);

@@ -155,8 +155,9 @@ that are controlled by this configuration.
 ### Monitoring
 
 - `pathling.sentryDsn` - If this variable is set, all errors will be reported to a
-  [Sentry](https://sentry.io) service, e.g.
-  `https://abc123@sentry.io/123456?servername=pathling.csiro.au`.
+  [Sentry](https://sentry.io) service, e.g. `https://abc123@sentry.io/123456`.
+- `pathling.sentryEnvironment` - If this variable is set, this will be sent as
+  the environment when reporting errors to Sentry.
 
 ## Server base
 
