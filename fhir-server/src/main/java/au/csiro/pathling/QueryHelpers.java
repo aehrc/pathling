@@ -121,14 +121,22 @@ public abstract class QueryHelpers {
     checkArgument(leftColumns.size() == rightColumns.size(),
         "Left columns should be same size as right columns");
 
+    final Set<String> leftPresentColumns = Stream.of(left.columns()).collect(Collectors.toSet());
+    final Set<String> rightPresentColumns = Stream.of(right.columns()).collect(Collectors.toSet());
+
     Dataset<Row> aliasedLeft = left;
     final Collection<Column> joinConditions = new ArrayList<>();
     for (int i = 0; i < leftColumns.size(); i++) {
       // We alias the join columns on the left hand side to disambiguate them from columns named the
       // same on the right hand side.
-      final DatasetWithColumn leftWithColumn = createColumn(aliasedLeft, leftColumns.get(i));
-      aliasedLeft = leftWithColumn.getDataset();
-      joinConditions.add(leftWithColumn.getColumn().equalTo(rightColumns.get(i)));
+      final Column cl = leftColumns.get(i);
+      final Column rc = rightColumns.get(i);
+      if (leftPresentColumns.contains(cl.toString()) && rightPresentColumns
+          .contains(rc.toString())) {
+        final DatasetWithColumn leftWithColumn = createColumn(aliasedLeft, cl);
+        aliasedLeft = leftWithColumn.getDataset();
+        joinConditions.add(leftWithColumn.getColumn().equalTo(rc));
+      }
     }
     additionalCondition.ifPresent(joinConditions::add);
     final Column joinCondition = joinConditions.stream()
@@ -138,6 +146,7 @@ public abstract class QueryHelpers {
     final List<String> leftColumnNames = Arrays.asList(aliasedLeft.columns());
     final List<String> rightColumnNames = rightColumns.stream()
         .map(Column::toString)
+        .filter(rightPresentColumns::contains)
         .collect(Collectors.toList());
 
     // Exclude the columns in the right dataset from the trimmed left dataset.

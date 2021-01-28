@@ -30,6 +30,18 @@ public class DatasetAssert {
     this.dataset = dataset;
   }
 
+
+  @Nonnull
+  public Dataset<Row> getDataset() {
+    return dataset;
+  }
+
+  @Nonnull
+  public DatasetAssert explain() {
+    dataset.explain();
+    return this;
+  }
+
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final List<Row> expected) {
     final List<Row> actualRows = dataset.collectAsList();

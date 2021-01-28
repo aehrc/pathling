@@ -15,6 +15,7 @@ import au.csiro.pathling.fhir.FhirPathParser.InvocationTermContext;
 import au.csiro.pathling.fhir.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhir.FhirPathParser.ParenthesizedTermContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -23,7 +24,7 @@ import javax.annotation.Nullable;
  *
  * @author John Grimes
  */
-class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
+class TermVisitor extends FhirPathBaseVisitor<ParserResult> {
 
   @Nonnull
   private final ParserContext context;
@@ -34,31 +35,47 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitInvocationTerm(@Nonnull final InvocationTermContext ctx) {
+  public ParserResult visitInvocationTerm(@Nonnull final InvocationTermContext ctx) {
     return new InvocationVisitor(context).visit(ctx.invocation());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitLiteralTerm(@Nonnull final LiteralTermContext ctx) {
+  public ParserResult visitLiteralTerm(@Nonnull final LiteralTermContext ctx) {
     return new LiteralTermVisitor(context).visit(ctx.literal());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitExternalConstantTerm(@Nonnull final ExternalConstantTermContext ctx) {
+  public ParserResult visitExternalConstantTerm(@Nonnull final ExternalConstantTermContext ctx) {
     @Nullable final String term = ctx.getText();
     checkNotNull(term);
     checkUserInput(term.equals("%resource") || term.equals("%context"),
         "Unsupported environment variable: " + term);
 
     // The %resource and %context elements both return the input context.
-    return context.getInputContext();
+    // TODO: Find the actual root parser context
+
+
+    final ParserContext evaluationContext;
+    if (context.getThisContext().isPresent()) {
+      System.out.println("Switchig evaluation context to root: %resource");
+      evaluationContext = new ParserContext(context.getInputContext(),
+          context.getFhirContext(), context.getSparkSession(),
+          context.getResourceReader(), context.getTerminologyClient(),
+          context.getTerminologyClientFactory(),
+          // TODO: This possibly should not be empty but rather the original grupping
+          // columns
+          Optional.empty());
+    } else {
+     evaluationContext = context;
+    }
+    return evaluationContext.resultFor(context.getInputContext());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitParenthesizedTerm(@Nonnull final ParenthesizedTermContext ctx) {
+  public ParserResult visitParenthesizedTerm(@Nonnull final ParenthesizedTermContext ctx) {
     // Parentheses are ignored in the standalone term case.
     return new Visitor(context).visit(ctx.expression());
   }

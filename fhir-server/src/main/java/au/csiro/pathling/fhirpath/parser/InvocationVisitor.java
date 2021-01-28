@@ -38,7 +38,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
+class InvocationVisitor extends FhirPathBaseVisitor<ParserResult> {
 
   @Nonnull
   private final ParserContext context;
@@ -79,7 +79,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitMemberInvocation(@Nonnull final MemberInvocationContext ctx) {
+  public ParserResult visitMemberInvocation(@Nonnull final MemberInvocationContext ctx) {
     @Nullable final String fhirPath = ctx.getText();
     checkNotNull(fhirPath);
 
@@ -87,7 +87,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // If there is an invoker, we treat this as a path traversal from the invoker.
       final PathTraversalInput pathTraversalInput = new PathTraversalInput(context, invoker,
           fhirPath);
-      return new PathTraversalOperator().invoke(pathTraversalInput);
+      return context.resultFor(new PathTraversalOperator().invoke(pathTraversalInput));
 
     } else {
       // If there is no invoker, we need to interpret what the expression means, based on its
@@ -102,14 +102,14 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         // subject resource.
         // See https://hl7.org/fhirpath/2018Sep/index.html#path-selection.
         if (fhirPath.equals(context.getInputContext().getExpression())) {
-          return context.getInputContext();
+          return context.resultFor(context.getInputContext());
 
         } else {
           // If the expression is not a reference to the subject resource, treat it as a path
           // traversal from the input context.
           final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
               context.getInputContext(), fhirPath);
-          return new PathTraversalOperator().invoke(pathTraversalInput);
+          return context.resultFor(new PathTraversalOperator().invoke(pathTraversalInput));
         }
       } else {
         // If we're in the context of a function's arguments, there are two valid things this
@@ -126,7 +126,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
           // input context.
           final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
               context.getThisContext().get(), fhirPath);
-          return new PathTraversalOperator().invoke(pathTraversalInput);
+          return context.resultFor(new PathTraversalOperator().invoke(pathTraversalInput));
         }
 
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
@@ -139,8 +139,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         // back to it for things like reverse reference resolution.
         path.setForeignResource(path);
 
-        return path;
-
+        return context.resultFor(path);
       }
     }
   }
@@ -154,7 +153,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitFunctionInvocation(@Nonnull final FunctionInvocationContext ctx) {
+  public ParserResult visitFunctionInvocation(@Nonnull final FunctionInvocationContext ctx) {
     @Nullable final String functionIdentifier = ctx.functn().identifier().getText();
     checkNotNull(functionIdentifier);
     final NamedFunction function = NamedFunction.getInstance(functionIdentifier);
@@ -207,21 +206,21 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // Parse each of the expressions passed as arguments to the function.
       arguments.addAll(
           paramList.expression().stream()
-              .map(expression -> new Visitor(argumentContext).visit(expression))
+              .map(expression -> new Visitor(argumentContext).visit(expression).getFhirPath())
               .collect(Collectors.toList())
       );
     }
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(context, nonLiteral, arguments);
-    return function.invoke(functionInput);
+    return context.resultFor(function.invoke(functionInput));
   }
 
   @Override
   @Nonnull
-  public FhirPath visitThisInvocation(@Nonnull final ThisInvocationContext ctx) {
+  public ParserResult visitThisInvocation(@Nonnull final ThisInvocationContext ctx) {
     checkUserInput(context.getThisContext().isPresent(),
         "$this can only be used within the context of arguments to a function");
-    return context.getThisContext().get();
+    return context.resultFor(context.getThisContext().get());
   }
 
 }

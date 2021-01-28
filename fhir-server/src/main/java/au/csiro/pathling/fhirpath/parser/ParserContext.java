@@ -117,4 +117,8 @@ public class ParserContext {
     this.thisContext = Optional.of(thisContext);
   }
 
+  @Nonnull
+  public ParserResult resultFor(@Nonnull final FhirPath path) {
+    return new ParserResult(path, this);
+  }
 }

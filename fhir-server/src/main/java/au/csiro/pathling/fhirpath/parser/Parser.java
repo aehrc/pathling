@@ -50,7 +50,7 @@ public class Parser {
     parser.addErrorListener(new ParserErrorListener());
 
     final Visitor visitor = new Visitor(context);
-    return visitor.visit(parser.expression());
+    return visitor.visit(parser.expression()).getFhirPath();
   }
 
 }

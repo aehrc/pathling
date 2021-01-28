@@ -384,4 +384,30 @@ public class ParserTest {
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
     assertEquals("Error parsing FHIRPath expression: missing ')' at '<EOF>'", error.getMessage());
   }
+
+
+  @Test
+  public void testComplexQuery() {
+//    parser.parse(
+//        "reverseResolve(Condition.subject).where($this.onsetDateTime > %resource.reverseResolve(MedicationRequest.subject).first().authoredOn).code");
+    parser.parse(
+        "name.family.where($this = %resource.name.family.first())");
+  }
+
+  @Test
+  public void testComplexQueryInv() {
+    //    parser.parse(
+    //        "reverseResolve(Condition.subject).where($this.onsetDateTime > %resource.reverseResolve(MedicationRequest.subject).first().authoredOn).code");
+    parser.parse(
+        "name.family.where(%resource.name.family.first() = $this)");
+  }
+
+  @Test
+  public void testComplexQuery1() {
+    parser.parse(
+            "reverseResolve(Condition.subject).where($this.onsetDateTime > %resource.reverseResolve(MedicationRequest.subject).first().authoredOn).code");
+    //parser.parse(
+    //    "name.family.where($this = %resource.name.family.first())");
+  }
+
 }
