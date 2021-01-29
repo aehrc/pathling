@@ -419,6 +419,14 @@ public class ParserTest {
   }
 
   @Test
+  public void testNotFunction() {
+    assertThatResultOf(
+        "(name.given contains 'Su690').not()")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testNotFunction.csv");
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(

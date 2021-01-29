@@ -20,7 +20,6 @@ import ca.uhn.fhir.parser.IParser;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
@@ -47,7 +46,6 @@ public class UnitTestDependencies {
   }
 
   @Bean
-  @Autowired
   @Nonnull
   public static IParser jsonParser(@Nonnull final FhirContext fhirContext) {
     return fhirContext.newJsonParser();

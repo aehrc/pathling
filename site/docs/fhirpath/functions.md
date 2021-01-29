@@ -16,6 +16,7 @@ The following functions are currently supported:
 - [count](#count)
 - [first](#first)
 - [empty](#empty)
+- [not](#not)
 - [where](#where)
 - [memberOf](#memberof)
 - [subsumes](#subsumes)
@@ -82,6 +83,23 @@ Patient.reverseResolve(Condition.subject).empty()
 ```
 
 See also: [empty](https://hl7.org/fhirpath/#empty-boolean)
+
+## not
+
+```
+Boolean -> not() : Boolean
+```
+
+Returns `true` if the input collection evaluates to `false`, and `false` if it 
+evaluates to `true`. Otherwise, the result is empty (`{ }`).
+
+Example:
+
+```
+(Patient.name.given contains 'Frank').not()
+```
+
+See also: [not](http://hl7.org/fhirpath/#not-boolean)
 
 ## where
 
