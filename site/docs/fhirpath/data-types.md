@@ -150,6 +150,9 @@ Not all code systems require the use of a version to unambiguously specify a
 code - see
 [Versioning Code Systems](https://hl7.org/fhir/R4/codesystem.html#versioning).
 
+You can also optionally single-quote each of the components within the Coding 
+literal, in cases where certain characters might otherwise confuse the parser.
+
 <div class="callout warning">The <code>Coding</code> literal is not within the FHIRPath specification, and is currently unique to the Pathling implementation.</div>
 
 Next: [Operators](./operators.html)
