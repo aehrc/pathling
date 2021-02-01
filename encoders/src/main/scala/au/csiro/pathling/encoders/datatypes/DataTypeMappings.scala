@@ -17,7 +17,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.apache.spark.unsafe.types.UTF8String
-import org.hl7.fhir.instance.model.api.{IBaseBundle, IBaseDatatype, IBaseResource, IPrimitiveType}
+import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
 
 /**
  * Interface for mapping FHIR datatypes to Spark datatypes.
@@ -38,16 +38,6 @@ trait DataTypeMappings {
    * @return the base class for FHIR types in the version used
    */
   def baseType(): Class[_ <: IBaseDatatype]
-
-  /**
-   * Helper method to extract resources from a bundle. The FHIR bundle API isn't used
-   * directly here since this supports code where the FHIR type is not known at compile time.
-   *
-   * @param bundle       a FHIR bundle
-   * @param resourceName the resoure to extract
-   * @return a list of resources extracted from the bundle
-   */
-  def extractEntryFromBundle(bundle: IBaseBundle, resourceName: String): java.util.List[IBaseResource]
 
   /**
    * Returns a Spark expression that translate a string-based FHIR type to a Spark UTF8 string.
@@ -104,6 +94,7 @@ trait DataTypeMappings {
 
   /**
    * Returns a specialized custom coder for this child definition.
+   *
    * @param childDefinition
    * @return a specialized custom coder
    */
