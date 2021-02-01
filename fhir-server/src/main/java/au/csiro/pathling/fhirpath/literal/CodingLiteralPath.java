@@ -51,6 +51,7 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
    * @return A new instance of {@link LiteralPath}
    * @throws IllegalArgumentException if the literal is malformed
    */
+  @Nonnull
   public static CodingLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
     final LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(fhirPath.split("\\|")));

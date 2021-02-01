@@ -9,11 +9,9 @@ package au.csiro.pathling.fhirpath.parser;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.FhirPathBaseVisitor;
-import au.csiro.pathling.fhir.FhirPathParser.FunctionInvocationContext;
-import au.csiro.pathling.fhir.FhirPathParser.MemberInvocationContext;
-import au.csiro.pathling.fhir.FhirPathParser.ParamListContext;
-import au.csiro.pathling.fhir.FhirPathParser.ThisInvocationContext;
+import au.csiro.pathling.fhir.FhirPathParser.*;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -155,7 +153,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitFunctionInvocation(@Nonnull final FunctionInvocationContext ctx) {
-    @Nullable final String functionIdentifier = ctx.functn().identifier().getText();
+    @Nullable final String functionIdentifier = ctx.function().identifier().getText();
     checkNotNull(functionIdentifier);
     final NamedFunction function = NamedFunction.getInstance(functionIdentifier);
 
@@ -171,7 +169,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
             .getExpression());
     final NonLiteralPath nonLiteral = (NonLiteralPath) input;
 
-    @Nullable final ParamListContext paramList = ctx.functn().paramList();
+    @Nullable final ParamListContext paramList = ctx.function().paramList();
 
     final List<FhirPath> arguments = new ArrayList<>();
     if (paramList != null) {
@@ -222,6 +220,18 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
     checkUserInput(context.getThisContext().isPresent(),
         "$this can only be used within the context of arguments to a function");
     return context.getThisContext().get();
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath visitIndexInvocation(@Nonnull final IndexInvocationContext ctx) {
+    throw new InvalidUserInputError("$index is not supported");
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath visitTotalInvocation(@Nonnull final TotalInvocationContext ctx) {
+    throw new InvalidUserInputError("$total is not supported");
   }
 
 }
