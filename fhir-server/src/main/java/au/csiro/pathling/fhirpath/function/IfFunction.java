@@ -12,6 +12,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -52,16 +53,10 @@ public class IfFunction implements NamedFunction {
             + conditionBoolean.getExpression());
     final FhirPath ifTrue = input.getArguments().get(1);
     final FhirPath otherwise = input.getArguments().get(2);
-
-    // The current constrained implementation of this function requires the second and third
-    // arguments to be literal, and of the same type.
-    checkUserInput(ifTrue instanceof LiteralPath,
-        "ifTrue argument to iif must be literal: " + ifTrue.getExpression());
-    checkUserInput(ifTrue instanceof LiteralPath,
-        "otherwise argument to iif must be literal" + otherwise.getExpression());
-    checkUserInput(ifTrue.getClass().equals(otherwise.getClass()),
-        "ifTrue and otherwise argument to iif must be of same type");
-    final String expression = expressionFromInput(input, NAME);
+    final FHIRDefinedType ifTrueType = getFhirTypeForArgument(ifTrue);
+    final FHIRDefinedType otherwiseType = getFhirTypeForArgument(otherwise);
+    checkUserInput(ifTrueType == otherwiseType,
+        "ifTrue and otherwise argument to iif must be of the same type");
 
     // Join the three datasets together and create a value column.
     final Dataset<Row> dataset = join(input.getContext(),
@@ -72,12 +67,24 @@ public class IfFunction implements NamedFunction {
 
     // Build a new ElementPath based on the type of the literal `ifTrue` and `otherwise` arguments,
     // and populate it with the dataset and calculated value column.
-    final FHIRDefinedType fhirType = LiteralPath
-        .fhirPathToFhirType(((LiteralPath) ifTrue).getClass());
+    final String expression = expressionFromInput(input, NAME);
     return ElementPath
         .build(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(), valueColumn,
             inputPath.isSingular(), inputPath.getForeignResource(), inputPath.getThisColumn(),
-            fhirType);
+            ifTrueType);
+  }
+
+  private FHIRDefinedType getFhirTypeForArgument(final FhirPath argument) {
+    final FHIRDefinedType fhirType;
+    if (argument instanceof ElementPath) {
+      fhirType = ((ElementPath) argument).getFhirType();
+    } else if (argument instanceof LiteralPath) {
+      fhirType = LiteralPath.fhirPathToFhirType(((LiteralPath) argument).getClass());
+    } else {
+      throw new InvalidUserInputError(
+          "Argument not supported within iif function: " + argument.getExpression());
+    }
+    return fhirType;
   }
 
 }

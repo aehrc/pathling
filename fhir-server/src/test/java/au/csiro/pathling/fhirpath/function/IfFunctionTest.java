@@ -18,6 +18,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
@@ -190,7 +191,8 @@ class IfFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
-        .withColumn(DataTypes.StringType)
+        .withEidColumn()
+        .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 11)
         .withRow("observation-1", makeEid(0), 16)
         .withRow("observation-2", makeEid(0), 2)
@@ -203,7 +205,7 @@ class IfFunctionTest {
     assertThat(result)
         .hasExpression("valueBoolean.iif($this, someInteger, anotherInteger)")
         .isNotSingular()
-        .isElementPath(StringPath.class)
+        .isElementPath(IntegerPath.class)
         .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
@@ -272,7 +274,8 @@ class IfFunctionTest {
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
-        .withColumn(DataTypes.StringType)
+        .withEidColumn()
+        .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 99)
         .withRow("observation-2", makeEid(0), 2)
         .withRow("observation-3", makeEid(0), 99)
@@ -284,7 +287,7 @@ class IfFunctionTest {
     assertThat(result)
         .hasExpression("valueBoolean.iif($this, someInteger, 99)")
         .isNotSingular()
-        .isElementPath(StringPath.class)
+        .isElementPath(IntegerPath.class)
         .selectOrderedResultWithEid()
         .hasRows(expectedDataset);
   }
@@ -357,11 +360,12 @@ class IfFunctionTest {
 
   @Test
   void throwsErrorIfResultArgumentsDifferentTypes() {
-    final ElementPath condition = new ElementPathBuilder(spark)
+    final NonLiteralPath condition = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .expression("valueBoolean")
         .singular(true)
-        .build();
+        .build()
+        .toThisPath();
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", condition);
     final IntegerLiteralPath otherwise = IntegerLiteralPath.fromString("99", condition);
 
