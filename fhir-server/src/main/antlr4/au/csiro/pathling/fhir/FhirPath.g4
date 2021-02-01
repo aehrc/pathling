@@ -116,12 +116,24 @@ CODING
         : CODING_WITHOUT_VERSION | CODING_WITH_VERSION
         ;
 
-CODING_WITHOUT_VERSION
-        : ~[ |\r\n\t()]+ '|' ~[ |\r\n\t()]+
+fragment CODING_WITHOUT_VERSION
+        : CODING_COMPONENT '|' CODING_COMPONENT
         ;
 
-CODING_WITH_VERSION
-        : ~[ |\r\n\t()]+ '|' ~[ |\r\n\t()]+ '|' ~[ |\r\n\t()]+
+fragment CODING_WITH_VERSION
+        : CODING_WITHOUT_VERSION '|' CODING_COMPONENT
+        ;
+
+fragment CODING_COMPONENT
+        : RAW_CODING_COMPONENT | QUOTED_CODING_COMPONENT
+        ;
+
+fragment RAW_CODING_COMPONENT
+        : ~[ |\r\n\t(),]+
+        ;
+
+fragment QUOTED_CODING_COMPONENT
+        : STRING
         ;
 
 DATETIME

@@ -419,11 +419,19 @@ public class ParserTest {
   }
 
   @Test
+  void testIfFunction() {
+    assertThatResultOf(
+        "maritalStatus.coding.iif($this = 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus'|M, 'Married', 'Not married')")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testIfFunction.csv");
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
     assertEquals("Error parsing FHIRPath expression: missing ')' at '<EOF>'", error.getMessage());
   }
- 
+
 }

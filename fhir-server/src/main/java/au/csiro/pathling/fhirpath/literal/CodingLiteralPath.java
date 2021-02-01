@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
@@ -55,10 +56,12 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
     final LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(fhirPath.split("\\|")));
     final Coding coding;
     if (codingTokens.size() == 2) {
-      coding = new Coding(codingTokens.get(0), codingTokens.get(1), null);
+      coding = new Coding(decodeComponent(codingTokens.get(0)),
+          decodeComponent(codingTokens.get(1)), null);
     } else if (codingTokens.size() == 3) {
-      coding = new Coding(codingTokens.get(0), codingTokens.get(2), null);
-      coding.setVersion(codingTokens.get(1));
+      coding = new Coding(decodeComponent(codingTokens.get(0)),
+          decodeComponent(codingTokens.get(2)), null);
+      coding.setVersion(decodeComponent(codingTokens.get(1)));
     } else {
       throw new IllegalArgumentException(
           "Coding literal must be of form [system]|[code] or [system]|[version]|[code]");
@@ -67,12 +70,34 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   }
 
   @Nonnull
+  private static String decodeComponent(@Nonnull final String component) {
+    if (component.matches("^'(.*)'$")) {
+      final String result = unSingleQuote(component);
+      return StringLiteralPath.unescapeFhirPathString(result);
+    } else {
+      return component;
+    }
+  }
+
+  @Nonnull
+  private static String encodeComponent(@Nonnull final String component) {
+    if (component.matches("[',]")) {
+      final String result = StringLiteralPath.escapeFhirPathString(component);
+      return "'" + result + "'";
+    } else {
+      return component;
+    }
+  }
+
+  @Nonnull
   @Override
   public String getExpression() {
-    return getLiteralValue().getVersion() == null
-           ? getLiteralValue().getSystem() + "|" + getLiteralValue().getCode()
-           : getLiteralValue().getSystem() + "|" + getLiteralValue().getVersion() + "|"
-               + getLiteralValue().getCode();
+    final String system = getLiteralValue().getSystem();
+    final String version = getLiteralValue().getVersion();
+    final String code = getLiteralValue().getCode();
+    return version == null
+           ? encodeComponent(system) + "|" + encodeComponent(code)
+           : encodeComponent(system) + "|" + encodeComponent(version) + "|" + encodeComponent(code);
   }
 
   @Override

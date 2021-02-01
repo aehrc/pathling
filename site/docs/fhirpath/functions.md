@@ -119,6 +119,8 @@ Takes three arguments, the first of which is a Boolean expression. Returns the
 second argument if the first argument evaluates to `true`, or the third argument 
 otherwise.
 
+The `ifTrue` and `otherwise` arguments must be of the same type.
+
 Example:
 
 ```
