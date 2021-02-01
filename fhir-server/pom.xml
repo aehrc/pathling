@@ -256,7 +256,7 @@
             <configuration>
               <excludes>
                 <exclude>au/csiro/pathling/fhirpath/parser/generated/*</exclude>
-                <exclude>au/csiro/pathling/Configuration.class</exclude>
+                <exclude>au/csiro/pathling/Configuration*</exclude>
               </excludes>
             </configuration>
           </execution>
