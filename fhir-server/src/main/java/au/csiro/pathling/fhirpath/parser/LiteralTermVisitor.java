@@ -9,10 +9,10 @@ package au.csiro.pathling.fhirpath.parser;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.FhirPathBaseVisitor;
-import au.csiro.pathling.fhir.FhirPathParser.*;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.*;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
 import java.text.ParseException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

@@ -10,8 +10,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.FhirPathBaseVisitor;
-import au.csiro.pathling.fhir.FhirPathParser.*;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -19,6 +17,8 @@ import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
