@@ -13,11 +13,11 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import java.util.Arrays;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -38,11 +38,14 @@ public class IfFunction implements NamedFunction {
   @Nonnull
   @Override
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+    final NonLiteralPath inputPath = input.getInput();
     checkUserInput(input.getArguments().size() == 3,
         "3 arguments must be supplied to iif function");
     final FhirPath condition = input.getArguments().get(0);
     checkUserInput(condition instanceof BooleanPath,
         "Condition argument to iif must be Boolean: " + condition.getExpression());
+    checkUserInput(condition.isSingular(),
+        "Condition argument to iif must be singular: " + condition.getExpression());
     final BooleanPath conditionBoolean = (BooleanPath) condition;
     checkUserInput(conditionBoolean.getThisColumn().isPresent(),
         "Condition argument to iif function must be navigable from collection item (use $this): "
@@ -62,8 +65,7 @@ public class IfFunction implements NamedFunction {
 
     // Join the three datasets together and create a value column.
     final Dataset<Row> dataset = join(input.getContext(),
-        Arrays.asList(conditionBoolean, ifTrue, otherwise),
-        JoinType.LEFT_OUTER);
+        Arrays.asList(conditionBoolean, ifTrue, otherwise), JoinType.LEFT_OUTER);
     final Column valueColumn =
         when(conditionBoolean.getValueColumn().equalTo(true), ifTrue.getValueColumn())
             .otherwise(otherwise.getValueColumn());
@@ -73,8 +75,9 @@ public class IfFunction implements NamedFunction {
     final FHIRDefinedType fhirType = LiteralPath
         .fhirPathToFhirType(((LiteralPath) ifTrue).getClass());
     return ElementPath
-        .build(expression, dataset, ifTrue.getIdColumn(), Optional.empty(), valueColumn,
-            conditionBoolean.isSingular(), Optional.empty(), Optional.empty(), fhirType);
+        .build(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(), valueColumn,
+            inputPath.isSingular(), inputPath.getForeignResource(), inputPath.getThisColumn(),
+            fhirType);
   }
 
 }

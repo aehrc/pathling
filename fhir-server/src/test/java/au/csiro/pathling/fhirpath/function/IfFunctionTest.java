@@ -10,7 +10,8 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -18,8 +19,10 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
+import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.*;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
@@ -29,6 +32,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,9 +51,17 @@ class IfFunctionTest {
   @Autowired
   private FhirContext fhirContext;
 
+  private ParserContext parserContext;
+  private ResourceReader resourceReader;
+
+  @BeforeEach
+  void setUp() {
+    parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    resourceReader = mock(ResourceReader.class);
+  }
+
   @Test
   void returnsCorrectResultsForTwoLiterals() {
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final Dataset<Row> inputContextDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withRow("observation-1")
@@ -58,14 +70,14 @@ class IfFunctionTest {
         .withRow("observation-4")
         .withRow("observation-5")
         .build();
+    when(resourceReader.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
     final ResourcePath inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
-        .dataset(inputContextDataset)
+        .resourceReader(resourceReader)
         .singular(true)
         .build();
-    final NonLiteralPath thisPath = inputContext.toThisPath();
-    final Dataset<Row> conditionDataset = new DatasetBuilder(spark)
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
@@ -77,42 +89,204 @@ class IfFunctionTest {
         .withRow("observation-5", makeEid(0), null)
         .withRow("observation-5", makeEid(1), null)
         .build();
-    assertTrue(thisPath.getThisColumn().isPresent());
-    final Dataset<Row> conditionDatasetWithThis = conditionDataset.join(thisPath.getDataset(),
-        thisPath.getIdColumn().equalTo(conditionDataset.col(conditionDataset.columns()[0])),
-        "left_outer");
-    final ElementPath condition = new ElementPathBuilder(spark)
+    final ElementPath inputPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
-        .dataset(conditionDatasetWithThis)
+        .dataset(inputDataset)
         .idAndEidAndValueColumns()
         .expression("valueBoolean")
         .singular(false)
-        .thisColumn(thisPath.getThisColumn().get())
         .build();
+    final NonLiteralPath condition = inputPath.toThisPath();
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", inputContext);
     final StringLiteralPath otherwise = StringLiteralPath.fromString("bar", inputContext);
 
-    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, inputContext,
+    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, inputPath,
+        Arrays.asList(condition, ifTrue, otherwise));
+    final FhirPath result = NamedFunction.getInstance("iif").invoke(ifInput);
+
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("observation-1", makeEid(0), "foo")
+        .withRow("observation-2", makeEid(0), "bar")
+        .withRow("observation-3", makeEid(0), "bar")
+        .withRow("observation-4", makeEid(0), "foo")
+        .withRow("observation-4", makeEid(1), "bar")
+        .withRow("observation-5", makeEid(0), "bar")
+        .withRow("observation-5", makeEid(1), "bar")
+        .build();
+    assertThat(result)
+        .hasExpression("valueBoolean.iif($this, 'foo', 'bar')")
+        .isNotSingular()
+        .isElementPath(StringPath.class)
+        .selectOrderedResultWithEid()
+        .hasRowsUnordered(expectedDataset);
+  }
+
+  @Test
+  void returnsCorrectResultsForTwoNonLiterals() {
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.BooleanType)
+        .withRow("observation-1", makeEid(0), false)
+        .withRow("observation-2", makeEid(0), true)
+        .withRow("observation-3", makeEid(0), null)
+        .withRow("observation-4", makeEid(0), true)
+        .withRow("observation-4", makeEid(1), false)
+        .withRow("observation-5", makeEid(0), null)
+        .withRow("observation-5", makeEid(1), null)
+        .build();
+    final ElementPath inputPath = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .dataset(inputDataset)
+        .idAndEidAndValueColumns()
+        .expression("valueBoolean")
+        .singular(false)
+        .build();
+    final NonLiteralPath condition = inputPath.toThisPath();
+
+    final Dataset<Row> ifTrueDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.IntegerType)
+        .withRow("observation-1", makeEid(0), 1)
+        .withRow("observation-2", makeEid(0), 2)
+        .withRow("observation-3", makeEid(0), 3)
+        .withRow("observation-4", makeEid(0), 4)
+        .withRow("observation-5", makeEid(0), 5)
+        .build();
+    final ElementPath ifTrue = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.INTEGER)
+        .dataset(ifTrueDataset)
+        .idAndEidAndValueColumns()
+        .expression("someInteger")
+        .singular(true)
+        .build();
+
+    final Dataset<Row> otherwiseDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.IntegerType)
+        .withRow("observation-1", makeEid(0), 11)
+        .withRow("observation-1", makeEid(0), 16)
+        .withRow("observation-2", makeEid(0), 12)
+        .withRow("observation-3", makeEid(0), 13)
+        .withRow("observation-4", makeEid(0), 14)
+        .withRow("observation-5", makeEid(0), 15)
+        .build();
+    final ElementPath otherwise = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.INTEGER)
+        .dataset(otherwiseDataset)
+        .idAndEidAndValueColumns()
+        .expression("anotherInteger")
+        .singular(true)
+        .build();
+
+    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, inputPath,
         Arrays.asList(condition, ifTrue, otherwise));
     final FhirPath result = NamedFunction.getInstance("iif").invoke(ifInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("observation-1", "foo")
-        .withRow("observation-2", "bar")
-        .withRow("observation-3", "bar")
-        .withRow("observation-4", "foo")
-        .withRow("observation-4", "bar")
-        .withRow("observation-5", "bar")
-        .withRow("observation-5", "bar")
+        .withRow("observation-1", makeEid(0), 11)
+        .withRow("observation-1", makeEid(0), 16)
+        .withRow("observation-2", makeEid(0), 2)
+        .withRow("observation-3", makeEid(0), 13)
+        .withRow("observation-4", makeEid(0), 4)
+        .withRow("observation-4", makeEid(1), 14)
+        .withRow("observation-5", makeEid(0), 15)
+        .withRow("observation-5", makeEid(1), 15)
         .build();
     assertThat(result)
-        .hasExpression("Observation.iif(valueBoolean, 'foo', 'bar')")
+        .hasExpression("valueBoolean.iif($this, someInteger, anotherInteger)")
         .isNotSingular()
         .isElementPath(StringPath.class)
-        .selectResult()
-        .hasRowsUnordered(expectedDataset);
+        .selectOrderedResultWithEid()
+        .hasRows(expectedDataset);
+  }
+
+  @Test
+  void returnsCorrectResultsForLiteralAndNonLiteral() {
+    final Dataset<Row> inputContextDataset = new ResourceDatasetBuilder(spark)
+        .withIdColumn()
+        .withRow("observation-1")
+        .withRow("observation-2")
+        .withRow("observation-3")
+        .withRow("observation-4")
+        .withRow("observation-5")
+        .build();
+    when(resourceReader.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
+    final ResourcePath inputContext = new ResourcePathBuilder(spark)
+        .expression("Observation")
+        .resourceType(ResourceType.OBSERVATION)
+        .resourceReader(resourceReader)
+        .singular(true)
+        .build();
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.BooleanType)
+        .withRow("observation-1", makeEid(0), false)
+        .withRow("observation-2", makeEid(0), true)
+        .withRow("observation-3", makeEid(0), null)
+        .withRow("observation-4", makeEid(0), true)
+        .withRow("observation-4", makeEid(1), false)
+        .withRow("observation-5", makeEid(0), null)
+        .withRow("observation-5", makeEid(1), null)
+        .build();
+    final ElementPath inputPath = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .dataset(inputDataset)
+        .idAndEidAndValueColumns()
+        .expression("valueBoolean")
+        .singular(false)
+        .build();
+    final NonLiteralPath condition = inputPath.toThisPath();
+
+    final Dataset<Row> ifTrueDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.IntegerType)
+        .withRow("observation-1", makeEid(0), 1)
+        .withRow("observation-2", makeEid(0), 2)
+        .withRow("observation-3", makeEid(0), 3)
+        .withRow("observation-4", makeEid(0), 4)
+        .withRow("observation-5", makeEid(0), 5)
+        .build();
+    final ElementPath ifTrue = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.INTEGER)
+        .dataset(ifTrueDataset)
+        .idAndEidAndValueColumns()
+        .expression("someInteger")
+        .singular(true)
+        .build();
+
+    final IntegerLiteralPath otherwise = IntegerLiteralPath.fromString("99", inputContext);
+
+    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, inputPath,
+        Arrays.asList(condition, ifTrue, otherwise));
+    final FhirPath result = NamedFunction.getInstance("iif").invoke(ifInput);
+
+    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("observation-1", makeEid(0), 99)
+        .withRow("observation-2", makeEid(0), 2)
+        .withRow("observation-3", makeEid(0), 99)
+        .withRow("observation-4", makeEid(0), 4)
+        .withRow("observation-4", makeEid(1), 99)
+        .withRow("observation-5", makeEid(0), 99)
+        .withRow("observation-5", makeEid(1), 99)
+        .build();
+    assertThat(result)
+        .hasExpression("valueBoolean.iif($this, someInteger, 99)")
+        .isNotSingular()
+        .isElementPath(StringPath.class)
+        .selectOrderedResultWithEid()
+        .hasRows(expectedDataset);
   }
 
   @Test
@@ -120,11 +294,11 @@ class IfFunctionTest {
     final ElementPath condition = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .expression("valueInteger")
+        .singular(true)
         .build();
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", condition);
     final StringLiteralPath otherwise = StringLiteralPath.fromString("bar", condition);
 
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
         Arrays.asList(condition, ifTrue, otherwise));
 
@@ -138,15 +312,37 @@ class IfFunctionTest {
   }
 
   @Test
-  void throwsErrorIfNoThisInCondition() {
+  void throwsErrorIfConditionNotSingular() {
     final ElementPath condition = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .expression("valueBoolean")
+        .singular(false)
         .build();
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", condition);
     final StringLiteralPath otherwise = StringLiteralPath.fromString("bar", condition);
 
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
+        Arrays.asList(condition, ifTrue, otherwise));
+
+    final NamedFunction notFunction = NamedFunction.getInstance("iif");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> notFunction.invoke(ifInput));
+    assertEquals(
+        "Condition argument to iif must be singular: valueBoolean",
+        error.getMessage());
+  }
+
+  @Test
+  void throwsErrorIfNoThisInCondition() {
+    final ElementPath condition = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .expression("valueBoolean")
+        .singular(true)
+        .build();
+    final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", condition);
+    final StringLiteralPath otherwise = StringLiteralPath.fromString("bar", condition);
+
     final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
         Arrays.asList(condition, ifTrue, otherwise));
 
@@ -158,5 +354,27 @@ class IfFunctionTest {
         "Condition argument to iif function must be navigable from collection item (use $this): valueBoolean",
         error.getMessage());
   }
- 
+
+  @Test
+  void throwsErrorIfResultArgumentsDifferentTypes() {
+    final ElementPath condition = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .expression("valueBoolean")
+        .singular(true)
+        .build();
+    final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", condition);
+    final IntegerLiteralPath otherwise = IntegerLiteralPath.fromString("99", condition);
+
+    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
+        Arrays.asList(condition, ifTrue, otherwise));
+
+    final NamedFunction notFunction = NamedFunction.getInstance("iif");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> notFunction.invoke(ifInput));
+    assertEquals(
+        "ifTrue and otherwise argument to iif must be of the same type",
+        error.getMessage());
+  }
+
 }
