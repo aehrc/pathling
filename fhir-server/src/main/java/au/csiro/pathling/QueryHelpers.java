@@ -121,7 +121,7 @@ public abstract class QueryHelpers {
    * @param column a column to test
    * @return true if the column is present in the dataset
    */
-  public static boolean hasColumn(@Nonnull final Dataset<Row> dataset,
+  private static boolean hasColumn(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column column) {
     return Arrays.asList(dataset.columns()).contains(column.toString());
   }
@@ -251,32 +251,56 @@ public abstract class QueryHelpers {
   public static Dataset<Row> join(@Nonnull final ParserContext parserContext,
       @Nonnull final FhirPath left, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
-    final List<Column> leftColumns = new ArrayList<>();
-    final List<Column> rightColumns = new ArrayList<>();
-    leftColumns.add(left.getIdColumn());
-    rightColumns.add(right.getIdColumn());
+    return join(parserContext, Arrays.asList(left, right), joinType);
+  }
 
-    // If a $this context is present (i.e. the join is being performed within function arguments,
-    // with an item from the input collection as context), then we need to add the identity of the
-    // input element to the join. This is to prevent too many rows being generated when there are
-    // more rows than resources on either side of the join.
-    if (parserContext.getThisContext().isPresent()
-        && parserContext.getThisContext().get() instanceof NonLiteralPath
-        && left instanceof NonLiteralPath
-        && right instanceof NonLiteralPath) {
-      final NonLiteralPath nonLiteralThis = (NonLiteralPath) parserContext.getThisContext().get();
-      if (nonLiteralThis.getEidColumn().isPresent()) {
-        final Column thisEidColumn = nonLiteralThis.getEidColumn().get();
-        // Only use the element ID for the join if both datasets have a $this column, which means
-        // that they both originate from $this.
-        if (hasColumn(left.getDataset(), thisEidColumn) &&
-            hasColumn(right.getDataset(), thisEidColumn)) {
-          leftColumns.add(thisEidColumn);
-          rightColumns.add(thisEidColumn);
+  /**
+   * Joins any number of {@link FhirPath} expressions, using equality between their respective
+   * resource ID columns.
+   *
+   * @param parserContext the current {@link ParserContext}
+   * @param fhirPaths a list of {@link FhirPath} expressions
+   * @param joinType a {@link JoinType}
+   * @return a new {@link Dataset}
+   */
+  @Nonnull
+  public static Dataset<Row> join(@Nonnull final ParserContext parserContext,
+      @Nonnull final List<FhirPath> fhirPaths, @Nonnull final JoinType joinType) {
+    checkArgument(fhirPaths.size() > 1, "fhirPaths must contain more than one FhirPath");
+
+    final FhirPath left = fhirPaths.get(0);
+    Dataset<Row> dataset = left.getDataset();
+    final List<FhirPath> joinTargets = fhirPaths.subList(1, fhirPaths.size());
+
+    for (final FhirPath right : joinTargets) {
+      final List<Column> leftColumns = new ArrayList<>();
+      final List<Column> rightColumns = new ArrayList<>();
+      leftColumns.add(left.getIdColumn());
+      rightColumns.add(right.getIdColumn());
+      // If a $this context is present (i.e. the join is being performed within function arguments,
+      // with an item from the input collection as context), then we need to add the identity of the
+      // input element to the join. This is to prevent too many rows being generated when there are
+      // more rows than resources on either side of the join.
+      if (parserContext.getThisContext().isPresent()
+          && parserContext.getThisContext().get() instanceof NonLiteralPath
+          && left instanceof NonLiteralPath
+          && right instanceof NonLiteralPath) {
+        final NonLiteralPath nonLiteralThis = (NonLiteralPath) parserContext.getThisContext().get();
+        if (nonLiteralThis.getEidColumn().isPresent()) {
+          final Column thisEidColumn = nonLiteralThis.getEidColumn().get();
+          // Only use the element ID for the join if both datasets have a $this column, which means
+          // that they both originate from $this.
+          if (hasColumn(left.getDataset(), thisEidColumn)
+              && hasColumn(right.getDataset(), thisEidColumn)) {
+            leftColumns.add(thisEidColumn);
+            rightColumns.add(thisEidColumn);
+          }
         }
       }
+      dataset = join(dataset, leftColumns, right.getDataset(), rightColumns, joinType);
     }
-    return join(left.getDataset(), leftColumns, right.getDataset(), rightColumns, joinType);
+
+    return dataset;
   }
 
   /**

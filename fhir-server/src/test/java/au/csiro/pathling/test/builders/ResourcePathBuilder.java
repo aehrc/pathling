@@ -146,6 +146,7 @@ public class ResourcePathBuilder {
 
   @Nonnull
   public ResourcePath build() {
+    when(resourceReader.read(any(ResourceType.class))).thenReturn(dataset);
     return ResourcePath.build(fhirContext, resourceReader, resourceType, expression, singular);
   }
 

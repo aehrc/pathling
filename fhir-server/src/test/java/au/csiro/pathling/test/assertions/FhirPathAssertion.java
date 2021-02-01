@@ -35,6 +35,12 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
   }
 
   @Nonnull
+  public DatasetAssert selectResult() {
+    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
+    return new DatasetAssert(fhirPath.getDataset().select(selection));
+  }
+
+  @Nonnull
   public DatasetAssert selectOrderedResult() {
     final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
     final Column[] ordering = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn()};

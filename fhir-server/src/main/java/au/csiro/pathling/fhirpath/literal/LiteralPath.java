@@ -55,6 +55,19 @@ public abstract class LiteralPath implements FhirPath {
           .put(FHIRDefinedType.QUANTITY, QuantityLiteralPath.class)
           .build();
 
+  private static final Map<Class<? extends LiteralPath>, FHIRDefinedType> FHIRPATH_TYPE_TO_FHIR_TYPE =
+      new ImmutableMap.Builder<Class<? extends LiteralPath>, FHIRDefinedType>()
+          .put(BooleanLiteralPath.class, FHIRDefinedType.BOOLEAN)
+          .put(StringLiteralPath.class, FHIRDefinedType.STRING)
+          .put(IntegerLiteralPath.class, FHIRDefinedType.INTEGER)
+          .put(DecimalLiteralPath.class, FHIRDefinedType.DECIMAL)
+          .put(DateLiteralPath.class, FHIRDefinedType.DATE)
+          .put(DateTimeLiteralPath.class, FHIRDefinedType.DATETIME)
+          .put(TimeLiteralPath.class, FHIRDefinedType.TIME)
+          .put(CodingLiteralPath.class, FHIRDefinedType.CODING)
+          .put(QuantityLiteralPath.class, FHIRDefinedType.QUANTITY)
+          .build();
+
   @Getter
   @Nonnull
   protected Dataset<Row> dataset;
@@ -146,6 +159,16 @@ public abstract class LiteralPath implements FhirPath {
   @Nonnull
   public Column buildValueColumn() {
     return lit(getJavaValue());
+  }
+
+  /**
+   * @param fhirPathClass a subclass of LiteralPath
+   * @return a {@link FHIRDefinedType}
+   */
+  @Nonnull
+  public static FHIRDefinedType fhirPathToFhirType(
+      @Nonnull final Class<? extends LiteralPath> fhirPathClass) {
+    return FHIRPATH_TYPE_TO_FHIR_TYPE.get(fhirPathClass);
   }
 
 }

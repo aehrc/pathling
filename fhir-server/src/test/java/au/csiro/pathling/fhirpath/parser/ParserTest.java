@@ -425,4 +425,5 @@ public class ParserTest {
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
     assertEquals("Error parsing FHIRPath expression: missing ')' at '<EOF>'", error.getMessage());
   }
+ 
 }
