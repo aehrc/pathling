@@ -427,6 +427,32 @@ public class ParserTest {
   }
 
   @Test
+  void testIfFunctionWithComplexTypeResult() {
+    assertThatResultOf(
+        "iif(gender = 'male', contact.name, name).given")
+        .selectOrderedResult()
+        .debugAllRows();
+  }
+
+  @Test
+  void testIfFunctionWithUntypedResourceResult() {
+    assertThatResultOf(
+        "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
+            + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender")
+        .selectOrderedResult()
+        .debugAllRows();
+  }
+
+  @Test
+  void testIfFunctionWithResourceResult() {
+    assertThatResultOf(
+        "iif(gender = 'male', contact.where(gender = 'male').organization.resolve(), "
+            + "contact.where(gender = 'female').organization.resolve()).name")
+        .selectOrderedResult()
+        .debugAllRows();
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
