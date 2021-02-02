@@ -377,7 +377,7 @@ class IfFunctionTest {
         InvalidUserInputError.class,
         () -> notFunction.invoke(ifInput));
     assertEquals(
-        "ifTrue and otherwise argument to iif must be of the same type",
+        "Paths cannot be merged into a collection together: 'foo', 99",
         error.getMessage());
   }
 
@@ -405,7 +405,7 @@ class IfFunctionTest {
         InvalidUserInputError.class,
         () -> notFunction.invoke(ifInput));
     assertEquals(
-        "BackboneElement not allowed in ifTrue and otherwise arguments to iif: someBackboneElement",
+        "Path of type BackboneElement cannot be merged into a collection",
         error.getMessage());
   }
 

@@ -11,6 +11,7 @@ import static au.csiro.pathling.QueryHelpers.createColumns;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
@@ -163,6 +164,24 @@ public class ResourcePath extends NonLiteralPath {
         eidColumn.map(datasetWithColumns::getColumn),
         datasetWithColumns.getColumn(valueColumn), singular, thisColumn, definition,
         elementsToColumns);
+  }
+
+  @Override
+  @Nonnull
+  public NonLiteralPath mergeWith(@Nonnull final FhirPath target,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
+    if (target instanceof ResourcePath && definition
+        .equals(((ResourcePath) target).getDefinition())) {
+      // Two ResourcePaths can be merged together if they have the same definition.
+      return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
+    }
+    // Anything else is invalid.
+    throw new InvalidUserInputError(
+        "Paths cannot be merged into a collection together: " + getExpression() + ", " + target
+            .getExpression());
   }
 
 }

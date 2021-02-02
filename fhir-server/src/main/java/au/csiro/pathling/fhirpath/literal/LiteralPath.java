@@ -10,11 +10,15 @@ import static au.csiro.pathling.QueryHelpers.createColumn;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.element.ElementPath;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -169,6 +173,31 @@ public abstract class LiteralPath implements FhirPath {
   public static FHIRDefinedType fhirPathToFhirType(
       @Nonnull final Class<? extends LiteralPath> fhirPathClass) {
     return FHIRPATH_TYPE_TO_FHIR_TYPE.get(fhirPathClass);
+  }
+
+  @Override
+  @Nonnull
+  public NonLiteralPath mergeWith(@Nonnull final FhirPath target,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
+    if (target instanceof LiteralPath && getClass().equals(target.getClass())) {
+      // If the target is another LiteralPath, we can merge it if they have the same FHIR type, as
+      // decided by our mapping of literal FHIRPath types to FHIR types.
+      final FHIRDefinedType fhirType = fhirPathToFhirType(getClass());
+      return ElementPath
+          .build(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
+              thisColumn, fhirType);
+    } else if (target instanceof ElementPath) {
+      // If the target is an ElementPath, we delegate off to the ElementPath to do the merging.
+      return target.mergeWith(this, dataset, expression, idColumn, eidColumn, valueColumn, singular,
+          thisColumn);
+    }
+    // Anything else is invalid.
+    throw new InvalidUserInputError(
+        "Paths cannot be merged into a collection together: " + getExpression() + ", " + target
+            .getExpression());
   }
 
 }

@@ -86,7 +86,7 @@ public class ParserTest {
     mockReader = mock(ResourceReader.class);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
         ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
-        ResourceType.DIAGNOSTICREPORT);
+        ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION);
 
     final ResourcePath subjectResource = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
@@ -431,7 +431,7 @@ public class ParserTest {
     assertThatResultOf(
         "iif(gender = 'male', contact.name, name).given")
         .selectOrderedResult()
-        .debugAllRows();
+        .hasRows(spark, "responses/ParserTest/testIfFunctionWithComplexTypeResult.csv");
   }
 
   @Test
@@ -440,7 +440,7 @@ public class ParserTest {
         "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
             + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender")
         .selectOrderedResult()
-        .debugAllRows();
+        .hasRows(allPatientsWithValue(spark, (String) null));
   }
 
   @Test
@@ -449,7 +449,7 @@ public class ParserTest {
         "iif(gender = 'male', contact.where(gender = 'male').organization.resolve(), "
             + "contact.where(gender = 'female').organization.resolve()).name")
         .selectOrderedResult()
-        .debugAllRows();
+        .hasRows(allPatientsWithValue(spark, (String) null));
   }
 
   @Test
