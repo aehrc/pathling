@@ -19,6 +19,8 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
@@ -34,6 +36,9 @@ import org.hl7.fhir.r4.model.Type;
  */
 @Getter
 public class CodingLiteralPath extends LiteralPath implements Materializable<Coding>, Comparable {
+
+  private static final Pattern NEEDS_QUOTING = Pattern.compile("[',]");
+  private static final Pattern NEEDS_UNQUOTING = Pattern.compile("^'(.*)'$");
 
   @SuppressWarnings("WeakerAccess")
   protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
@@ -72,7 +77,8 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
 
   @Nonnull
   private static String decodeComponent(@Nonnull final String component) {
-    if (component.matches("^'(.*)'$")) {
+    final Matcher matcher = NEEDS_UNQUOTING.matcher(component);
+    if (matcher.matches()) {
       final String result = unSingleQuote(component);
       return StringLiteralPath.unescapeFhirPathString(result);
     } else {
@@ -82,7 +88,8 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
 
   @Nonnull
   private static String encodeComponent(@Nonnull final String component) {
-    if (component.matches("[',]")) {
+    final Matcher matcher = NEEDS_QUOTING.matcher(component);
+    if (matcher.matches()) {
       final String result = StringLiteralPath.escapeFhirPathString(component);
       return "'" + result + "'";
     } else {
