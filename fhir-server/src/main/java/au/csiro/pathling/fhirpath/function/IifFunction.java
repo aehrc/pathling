@@ -28,7 +28,7 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#iif">iif</a>
  */
-public class IfFunction implements NamedFunction {
+public class IifFunction implements NamedFunction {
 
   private static final String NAME = "iif";
 

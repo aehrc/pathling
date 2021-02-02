@@ -17,6 +17,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
@@ -26,6 +27,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.*;
 import ca.uhn.fhir.context.FhirContext;
+import com.google.common.collect.ImmutableSet.Builder;
 import java.util.Arrays;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -44,7 +46,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-class IfFunctionTest {
+class IifFunctionTest {
 
   @Autowired
   private SparkSession spark;
@@ -101,9 +103,9 @@ class IfFunctionTest {
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", inputContext);
     final StringLiteralPath otherwise = StringLiteralPath.fromString("bar", inputContext);
 
-    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, inputPath,
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, inputPath,
         Arrays.asList(condition, ifTrue, otherwise));
-    final FhirPath result = NamedFunction.getInstance("iif").invoke(ifInput);
+    final FhirPath result = NamedFunction.getInstance("iif").invoke(iifInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -185,9 +187,9 @@ class IfFunctionTest {
         .singular(true)
         .build();
 
-    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, inputPath,
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, inputPath,
         Arrays.asList(condition, ifTrue, otherwise));
-    final FhirPath result = NamedFunction.getInstance("iif").invoke(ifInput);
+    final FhirPath result = NamedFunction.getInstance("iif").invoke(iifInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -268,11 +270,11 @@ class IfFunctionTest {
 
     final IntegerLiteralPath otherwise = IntegerLiteralPath.fromString("99", inputContext);
 
-    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, inputPath,
+    final NamedFunctionInput iifInput1 = new NamedFunctionInput(parserContext, inputPath,
         Arrays.asList(condition, ifTrue, otherwise));
-    final FhirPath result = NamedFunction.getInstance("iif").invoke(ifInput);
+    final FhirPath result1 = NamedFunction.getInstance("iif").invoke(iifInput1);
 
-    final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
+    final Dataset<Row> expectedDataset1 = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
@@ -284,12 +286,35 @@ class IfFunctionTest {
         .withRow("observation-5", makeEid(0), 99)
         .withRow("observation-5", makeEid(1), 99)
         .build();
-    assertThat(result)
+    assertThat(result1)
         .hasExpression("valueBoolean.iif($this, someInteger, 99)")
         .isNotSingular()
         .isElementPath(IntegerPath.class)
         .selectOrderedResultWithEid()
-        .hasRows(expectedDataset);
+        .hasRows(expectedDataset1);
+
+    final NamedFunctionInput iifInput2 = new NamedFunctionInput(parserContext, inputPath,
+        Arrays.asList(condition, otherwise, ifTrue));
+    final FhirPath result2 = NamedFunction.getInstance("iif").invoke(iifInput2);
+
+    final Dataset<Row> expectedDataset2 = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.IntegerType)
+        .withRow("observation-1", makeEid(0), 1)
+        .withRow("observation-2", makeEid(0), 99)
+        .withRow("observation-3", makeEid(0), 3)
+        .withRow("observation-4", makeEid(0), 99)
+        .withRow("observation-4", makeEid(1), 4)
+        .withRow("observation-5", makeEid(0), 5)
+        .withRow("observation-5", makeEid(1), 5)
+        .build();
+    assertThat(result2)
+        .hasExpression("valueBoolean.iif($this, 99, someInteger)")
+        .isNotSingular()
+        .isElementPath(IntegerPath.class)
+        .selectOrderedResultWithEid()
+        .hasRows(expectedDataset2);
   }
 
   @Test
@@ -302,13 +327,13 @@ class IfFunctionTest {
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", condition);
     final StringLiteralPath otherwise = StringLiteralPath.fromString("bar", condition);
 
-    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
         Arrays.asList(condition, ifTrue, otherwise));
 
     final NamedFunction notFunction = NamedFunction.getInstance("iif");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
-        () -> notFunction.invoke(ifInput));
+        () -> notFunction.invoke(iifInput));
     assertEquals(
         "Condition argument to iif must be Boolean: valueInteger",
         error.getMessage());
@@ -324,13 +349,13 @@ class IfFunctionTest {
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", condition);
     final StringLiteralPath otherwise = StringLiteralPath.fromString("bar", condition);
 
-    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
         Arrays.asList(condition, ifTrue, otherwise));
 
     final NamedFunction notFunction = NamedFunction.getInstance("iif");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
-        () -> notFunction.invoke(ifInput));
+        () -> notFunction.invoke(iifInput));
     assertEquals(
         "Condition argument to iif must be singular: valueBoolean",
         error.getMessage());
@@ -346,13 +371,13 @@ class IfFunctionTest {
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", condition);
     final StringLiteralPath otherwise = StringLiteralPath.fromString("bar", condition);
 
-    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
         Arrays.asList(condition, ifTrue, otherwise));
 
     final NamedFunction notFunction = NamedFunction.getInstance("iif");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
-        () -> notFunction.invoke(ifInput));
+        () -> notFunction.invoke(iifInput));
     assertEquals(
         "Condition argument to iif function must be navigable from collection item (use $this): valueBoolean",
         error.getMessage());
@@ -369,13 +394,13 @@ class IfFunctionTest {
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", condition);
     final IntegerLiteralPath otherwise = IntegerLiteralPath.fromString("99", condition);
 
-    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
         Arrays.asList(condition, ifTrue, otherwise));
 
     final NamedFunction notFunction = NamedFunction.getInstance("iif");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
-        () -> notFunction.invoke(ifInput));
+        () -> notFunction.invoke(iifInput));
     assertEquals(
         "Paths cannot be merged into a collection together: 'foo', 99",
         error.getMessage());
@@ -397,15 +422,156 @@ class IfFunctionTest {
         .fhirType(FHIRDefinedType.BACKBONEELEMENT)
         .build();
 
-    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
         Arrays.asList(condition, ifTrue, otherwise));
 
     final NamedFunction notFunction = NamedFunction.getInstance("iif");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
-        () -> notFunction.invoke(ifInput));
+        () -> notFunction.invoke(iifInput));
     assertEquals(
         "Path of type BackboneElement cannot be merged into a collection",
+        error.getMessage());
+  }
+
+  @Test
+  void throwsErrorWithIncompatibleResourceResults() {
+    final NonLiteralPath condition = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .expression("valueBoolean")
+        .singular(true)
+        .build()
+        .toThisPath();
+    final ResourcePath ifTrue = new ResourcePathBuilder(spark)
+        .expression("someResource")
+        .resourceType(ResourceType.PATIENT)
+        .build();
+    final ResourcePath otherwise = new ResourcePathBuilder(spark)
+        .expression("anotherResource")
+        .resourceType(ResourceType.CONDITION)
+        .build();
+
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
+        Arrays.asList(condition, ifTrue, otherwise));
+
+    final NamedFunction notFunction = NamedFunction.getInstance("iif");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> notFunction.invoke(iifInput));
+    assertEquals(
+        "Paths cannot be merged into a collection together: someResource, anotherResource",
+        error.getMessage());
+  }
+
+  @Test
+  void throwsErrorWithResourceAndLiteralResults() {
+    final NonLiteralPath condition = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .expression("valueBoolean")
+        .singular(true)
+        .build()
+        .toThisPath();
+    final ResourcePath ifTrue = new ResourcePathBuilder(spark)
+        .expression("someResource")
+        .resourceType(ResourceType.PATIENT)
+        .build();
+    final StringLiteralPath otherwise = StringLiteralPath.fromString("foo", condition);
+
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
+        Arrays.asList(condition, ifTrue, otherwise));
+
+    final NamedFunction notFunction = NamedFunction.getInstance("iif");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> notFunction.invoke(iifInput));
+    assertEquals(
+        "Paths cannot be merged into a collection together: someResource, 'foo'",
+        error.getMessage());
+  }
+
+  @Test
+  void throwsErrorWithUntypedResourceAndLiteralResults() {
+    final NonLiteralPath condition = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .expression("valueBoolean")
+        .singular(true)
+        .build()
+        .toThisPath();
+    final UntypedResourcePath ifTrue = new UntypedResourcePathBuilder(spark)
+        .expression("someUntypedResource")
+        .build();
+    final StringLiteralPath otherwise = StringLiteralPath.fromString("foo", condition);
+
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
+        Arrays.asList(condition, ifTrue, otherwise));
+
+    final NamedFunction notFunction = NamedFunction.getInstance("iif");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> notFunction.invoke(iifInput));
+    assertEquals(
+        "Paths cannot be merged into a collection together: someUntypedResource, 'foo'",
+        error.getMessage());
+  }
+
+  @Test
+  void throwsErrorWithElementAndResourceResults() {
+    final NonLiteralPath condition = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .expression("valueBoolean")
+        .singular(true)
+        .build()
+        .toThisPath();
+    final ElementPath ifTrue = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.STRING)
+        .expression("someString")
+        .build();
+    final ResourcePath otherwise = new ResourcePathBuilder(spark)
+        .expression("someResource")
+        .resourceType(ResourceType.CONDITION)
+        .build();
+
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
+        Arrays.asList(condition, ifTrue, otherwise));
+
+    final NamedFunction notFunction = NamedFunction.getInstance("iif");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> notFunction.invoke(iifInput));
+    assertEquals(
+        "Paths cannot be merged into a collection together: someString, someResource",
+        error.getMessage());
+  }
+
+  @Test
+  void throwsErrorWithIncompatibleUntypedResourceResults() {
+    final NonLiteralPath condition = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .expression("valueBoolean")
+        .singular(true)
+        .build()
+        .toThisPath();
+    final UntypedResourcePath ifTrue = new UntypedResourcePathBuilder(spark)
+        .expression("someUntypedResource")
+        .possibleTypes(new Builder<ResourceType>().add(
+            ResourceType.PATIENT,
+            ResourceType.CONDITION).build())
+        .build();
+    final UntypedResourcePath otherwise = new UntypedResourcePathBuilder(spark)
+        .expression("anotherUntypedResource")
+        .possibleTypes(new Builder<ResourceType>().add(
+            ResourceType.PATIENT).build())
+        .build();
+
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
+        Arrays.asList(condition, ifTrue, otherwise));
+
+    final NamedFunction notFunction = NamedFunction.getInstance("iif");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> notFunction.invoke(iifInput));
+    assertEquals(
+        "Paths cannot be merged into a collection together: someUntypedResource, anotherUntypedResource",
         error.getMessage());
   }
 

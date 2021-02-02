@@ -75,6 +75,8 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
     return new CodingLiteralPath(context.getDataset(), context.getIdColumn(), coding);
   }
 
+  // TODO: Test encoding and decoding of Coding literals with unit tests.
+
   @Nonnull
   private static String decodeComponent(@Nonnull final String component) {
     final Matcher matcher = NEEDS_UNQUOTING.matcher(component);
