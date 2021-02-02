@@ -57,6 +57,11 @@ public class IfFunction implements NamedFunction {
     final FHIRDefinedType otherwiseType = getFhirTypeForArgument(otherwise);
     checkUserInput(ifTrueType == otherwiseType,
         "ifTrue and otherwise argument to iif must be of the same type");
+    // We can't allow BackboneElements in the result arguments, as their type is not really the same
+    // in the sense that the result can be treated the same within FHIRPath expression evaluation.
+    checkUserInput(ifTrueType != FHIRDefinedType.BACKBONEELEMENT,
+        "BackboneElement not allowed in ifTrue and otherwise arguments to iif: " + ifTrue
+            .getExpression());
 
     // Join the three datasets together and create a value column.
     final Dataset<Row> dataset = join(input.getContext(),

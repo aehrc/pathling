@@ -381,4 +381,32 @@ class IfFunctionTest {
         error.getMessage());
   }
 
+  @Test
+  void throwsErrorIfResultArgumentsAreBackboneElements() {
+    final NonLiteralPath condition = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .expression("valueBoolean")
+        .singular(true)
+        .build()
+        .toThisPath();
+    final ElementPath ifTrue = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BACKBONEELEMENT)
+        .expression("someBackboneElement")
+        .build();
+    final ElementPath otherwise = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BACKBONEELEMENT)
+        .build();
+
+    final NamedFunctionInput ifInput = new NamedFunctionInput(parserContext, condition,
+        Arrays.asList(condition, ifTrue, otherwise));
+
+    final NamedFunction notFunction = NamedFunction.getInstance("iif");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> notFunction.invoke(ifInput));
+    assertEquals(
+        "BackboneElement not allowed in ifTrue and otherwise arguments to iif: someBackboneElement",
+        error.getMessage());
+  }
+
 }
