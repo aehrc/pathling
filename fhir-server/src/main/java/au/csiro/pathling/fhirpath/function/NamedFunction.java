@@ -38,6 +38,7 @@ public interface NamedFunction {
       .put("empty", new EmptyFunction())
       .put("first", new FirstFunction())
       .put("not", new NotFunction())
+      .put("iif", new IifFunction())
       .build();
 
   /**

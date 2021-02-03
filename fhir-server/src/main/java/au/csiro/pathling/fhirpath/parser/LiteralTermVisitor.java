@@ -9,10 +9,10 @@ package au.csiro.pathling.fhirpath.parser;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.FhirPathBaseVisitor;
-import au.csiro.pathling.fhir.FhirPathParser.*;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.*;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
 import java.text.ParseException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -52,20 +52,25 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
+  public FhirPath visitDateLiteral(@Nonnull final DateLiteralContext ctx) {
+    @Nullable final String fhirPath = ctx.getText();
+    checkNotNull(fhirPath);
+    try {
+      return DateLiteralPath.fromString(fhirPath, context.getInputContext());
+    } catch (final ParseException ex) {
+      throw new InvalidUserInputError("Unable to parse date format: " + fhirPath);
+    }
+  }
+
+  @Override
   @Nonnull
   public FhirPath visitDateTimeLiteral(@Nonnull final DateTimeLiteralContext ctx) {
     @Nullable final String fhirPath = ctx.getText();
     checkNotNull(fhirPath);
-    // The FHIRPath grammar lumps these two types together, so we tease them apart by trying to 
-    // parse them. A better way of doing this would be to modify the grammar.
     try {
       return DateTimeLiteralPath.fromString(fhirPath, context.getInputContext());
-    } catch (final ParseException e) {
-      try {
-        return DateLiteralPath.fromString(fhirPath, context.getInputContext());
-      } catch (final ParseException ex) {
-        throw new InvalidUserInputError("Invalid date format: " + fhirPath);
-      }
+    } catch (final ParseException ex) {
+      throw new InvalidUserInputError("Unable to parse date/time format: " + fhirPath);
     }
   }
 

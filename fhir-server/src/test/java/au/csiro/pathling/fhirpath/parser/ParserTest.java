@@ -86,7 +86,7 @@ public class ParserTest {
     mockReader = mock(ResourceReader.class);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
         ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
-        ResourceType.DIAGNOSTICREPORT);
+        ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION);
 
     final ResourcePath subjectResource = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
@@ -427,10 +427,45 @@ public class ParserTest {
   }
 
   @Test
+  void testIfFunction() {
+    assertThatResultOf(
+        "maritalStatus.coding.iif($this = 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus'|M, 'Married', 'Not married')")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testIfFunction.csv");
+  }
+
+  @Test
+  void testIfFunctionWithComplexTypeResult() {
+    assertThatResultOf(
+        "iif(gender = 'male', contact.name, name).given")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testIfFunctionWithComplexTypeResult.csv");
+  }
+
+  @Test
+  void testIfFunctionWithUntypedResourceResult() {
+    assertThatResultOf(
+        "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
+            + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender")
+        .selectOrderedResult()
+        .hasRows(allPatientsWithValue(spark, (String) null));
+  }
+
+  @Test
+  void testIfFunctionWithResourceResult() {
+    assertThatResultOf(
+        "iif(gender = 'male', contact.where(gender = 'male').organization.resolve(), "
+            + "contact.where(gender = 'female').organization.resolve()).name")
+        .selectOrderedResult()
+        .hasRows(allPatientsWithValue(spark, (String) null));
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
     assertEquals("Error parsing FHIRPath expression: missing ')' at '<EOF>'", error.getMessage());
   }
+
 }

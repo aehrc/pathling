@@ -43,6 +43,9 @@ public abstract class NonLiteralPath implements FhirPath {
   @Nonnull
   protected final Column idColumn;
 
+  /**
+   * A {@link Column} that represents the unique ID for an element within a collection.
+   */
   @Nonnull
   protected final Optional<Column> eidColumn;
 

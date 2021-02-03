@@ -12,6 +12,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Arrays;
@@ -121,6 +122,25 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
     return new UntypedResourcePath(expression, datasetWithColumns.getDataset(), idColumn,
         eidColumn.map(datasetWithColumns::getColumn),
         datasetWithColumns.getColumn(valueColumn), singular, thisColumn, typeColumn, possibleTypes);
+  }
+
+  @Override
+  @Nonnull
+  public NonLiteralPath mergeWith(@Nonnull final FhirPath target,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
+    if (target instanceof UntypedResourcePath && possibleTypes
+        .equals(((UntypedResourcePath) target).possibleTypes)) {
+      // Two UntypedResourcePaths can be merged together if they have the same set of possible
+      // types.
+      return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
+    }
+    // Anything else is invalid.
+    throw new InvalidUserInputError(
+        "Paths cannot be merged into a collection together: " + getExpression() + ", " + target
+            .getExpression());
   }
 
 }

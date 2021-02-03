@@ -8,9 +8,11 @@ package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstCsv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
@@ -58,6 +60,20 @@ public class DatasetAssert {
       @Nonnull final String expectedCsvPath) {
     assertDatasetAgainstCsv(spark, expectedCsvPath, dataset);
     return this;
+  }
+
+  @Nonnull
+  private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
+    final List<Row> actualRows = dataset.collectAsList();
+    assertTrue(actualRows.containsAll(expected));
+    assertTrue(expected.containsAll(actualRows));
+    assertEquals(expected.size(), actualRows.size());
+    return this;
+  }
+
+  @Nonnull
+  public DatasetAssert hasRowsUnordered(@Nonnull final Dataset<Row> expected) {
+    return hasRowsUnordered(expected.collectAsList());
   }
 
   @Nonnull

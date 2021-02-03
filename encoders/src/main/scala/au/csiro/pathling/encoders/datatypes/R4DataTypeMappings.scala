@@ -22,10 +22,8 @@ import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, In
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.apache.spark.unsafe.types.UTF8String
-import org.hl7.fhir.instance.model.api.{IBaseBundle, IBaseDatatype, IBaseResource, IPrimitiveType}
+import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model._
-
-import scala.collection.JavaConversions._
 
 /**
  * Data type mappings for FHIR STU3.
@@ -65,23 +63,6 @@ class R4DataTypeMappings extends DataTypeMappings {
   }
 
   override def baseType(): Class[_ <: IBaseDatatype] = classOf[org.hl7.fhir.r4.model.Type]
-
-  override def extractEntryFromBundle(bundle: IBaseBundle, resourceName: String): java.util.List[IBaseResource] = {
-
-    val stu3Bundle: Bundle = bundle.asInstanceOf[Bundle]
-
-    val items = new java.util.ArrayList[IBaseResource]
-
-    for (component <- stu3Bundle.getEntry()) {
-
-      val resource = component.getResource()
-
-      if (resource != null && resourceName == resource.getResourceType().name())
-        items.add(resource)
-    }
-
-    items
-  }
 
   override def overrideCompositeExpression(inputObject: Expression,
                                            definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[Expression]] = {

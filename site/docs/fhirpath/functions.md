@@ -18,6 +18,7 @@ The following functions are currently supported:
 - [empty](#empty)
 - [not](#not)
 - [where](#where)
+- [iif](#iif)
 - [memberOf](#memberof)
 - [subsumes](#subsumes)
 - [subsumedBy](#subsumedby)
@@ -104,7 +105,7 @@ See also: [not](http://hl7.org/fhirpath/#not-boolean)
 ## where
 
 ```
-collection -> where(criteria: expression) : collection
+collection -> where(criteria: [any]) : collection
 ```
 
 Returns a collection containing only those elements in the input collection for
@@ -126,6 +127,27 @@ Patient.reverseResolve(Condition.subject).where(recordedDate > @1960).severity
 See also:
 [where](https://hl7.org/fhirpath/#wherecriteria-expression-collection)
 
+## iif
+
+```
+[any] -> iif(condition: Boolean, ifTrue: [any], otherwise: [any]) : [any]
+```
+
+Takes three arguments, the first of which is a Boolean expression. Returns the 
+second argument if the first argument evaluates to `true`, or the third argument 
+otherwise.
+
+The `ifTrue` and `otherwise` arguments must be of the same type.
+
+Example:
+
+```
+Patient.name.family.iif(empty(), 'Doe', $this)
+```
+
+See also:
+[iif](http://hl7.org/fhirpath/#iifcriterion-expression-true-result-collection-otherwise-result-collection-collection)
+
 ## memberOf
 
 ```
@@ -143,7 +165,7 @@ based on whether each concept is a member of the
 <div class="callout info">
     The <code>memberOf</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../configuration.html#terminology-service">Configuration and deployment</a> for details.
+    <a href="../configuration.html#terminology-service">Configuration</a> for details.
 </div>
 
 See also:
@@ -171,7 +193,7 @@ Patient.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|7
 <div class="callout info">
     The <code>subsumes</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../configuration.html#terminology-service">Configuration and deployment</a> for details.
+    <a href="../configuration.html#terminology-service">Configuration</a> for details.
 </div>
 
 See also:
@@ -196,7 +218,7 @@ Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct
 <div class="callout info">
     The <code>subsumedBy</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../configuration.html#terminology-service">Configuration and deployment</a> for details.
+    <a href="../configuration.html#terminology-service">Configuration</a> for details.
 </div>
 
 See also:

@@ -10,13 +10,13 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.fhir.FhirPathBaseVisitor;
-import au.csiro.pathling.fhir.FhirPathParser.ExternalConstantTermContext;
-import au.csiro.pathling.fhir.FhirPathParser.InvocationTermContext;
-import au.csiro.pathling.fhir.FhirPathParser.LiteralTermContext;
-import au.csiro.pathling.fhir.FhirPathParser.ParenthesizedTermContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantTermContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 

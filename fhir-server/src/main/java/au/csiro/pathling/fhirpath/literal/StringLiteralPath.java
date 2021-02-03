@@ -60,9 +60,14 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
         new StringType(value));
   }
 
-  // On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
+  /**
+   * On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
+   *
+   * @param value the value to apply escaping to
+   * @return the escaped result
+   */
   @Nonnull
-  private static String escapeFhirPathString(@Nonnull final String value) {
+  public static String escapeFhirPathString(@Nonnull final String value) {
     return value.replace("'", "\\'");
   }
 
@@ -78,11 +83,15 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
     return (PrimitiveType) literalValue;
   }
 
-  // This method implements the rules for dealing with strings in the FHIRPath specification.
-  // 
-  // See https://hl7.org/fhirpath/2018Sep/index.html#string.
+  /**
+   * This method implements the rules for dealing with strings in the FHIRPath specification.
+   *
+   * @param value the string to be unescaped
+   * @return the unescaped result
+   * @see <a href="https://hl7.org/fhirpath/index.html#string">String</a>
+   */
   @Nonnull
-  private static String unescapeFhirPathString(@Nonnull String value) {
+  public static String unescapeFhirPathString(@Nonnull String value) {
     value = value.replaceAll("\\\\/", "/");
     value = value.replaceAll("\\f", "\u000C");
     value = value.replaceAll("\\n", "\n");

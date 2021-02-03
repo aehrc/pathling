@@ -253,6 +253,12 @@
             <goals>
               <goal>report</goal>
             </goals>
+            <configuration>
+              <excludes>
+                <exclude>au/csiro/pathling/fhirpath/parser/generated/*</exclude>
+                <exclude>au/csiro/pathling/Configuration*</exclude>
+              </excludes>
+            </configuration>
           </execution>
         </executions>
       </plugin>

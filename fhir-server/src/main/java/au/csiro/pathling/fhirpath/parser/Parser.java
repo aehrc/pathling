@@ -6,9 +6,9 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhir.FhirPathLexer;
-import au.csiro.pathling.fhir.FhirPathParser;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
 import javax.annotation.Nonnull;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
