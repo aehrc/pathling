@@ -15,12 +15,13 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.element.CodingPath;
-import java.util.Arrays;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
@@ -37,7 +38,9 @@ import org.hl7.fhir.r4.model.Type;
 @Getter
 public class CodingLiteralPath extends LiteralPath implements Materializable<Coding>, Comparable {
 
-  private static final Pattern NEEDS_QUOTING = Pattern.compile("[',]");
+  private static final Pattern CODING_PATTERN = Pattern
+      .compile("('.*'|[^ '|\\r\\n\\t(),]+)(\\|('.*'|[^ '|\\r\\n\\t(),]+)){0,2}?");
+  private static final Pattern NEEDS_QUOTING = Pattern.compile("[ '|\\r\\n\\t(),]");
   private static final Pattern NEEDS_UNQUOTING = Pattern.compile("^'(.*)'$");
 
   @SuppressWarnings("WeakerAccess")
@@ -57,9 +60,12 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
    * @throws IllegalArgumentException if the literal is malformed
    */
   @Nonnull
-  public static CodingLiteralPath fromString(@Nonnull final String fhirPath,
+  public static CodingLiteralPath fromString(@Nonnull final CharSequence fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
-    final LinkedList<String> codingTokens = new LinkedList<>(Arrays.asList(fhirPath.split("\\|")));
+    final Matcher matcher = CODING_PATTERN.matcher(fhirPath);
+    final List<String> codingTokens = matcher.results()
+        .map(MatchResult::group)
+        .collect(Collectors.toList());
     final Coding coding;
     if (codingTokens.size() == 2) {
       coding = new Coding(decodeComponent(codingTokens.get(0)),
@@ -75,8 +81,6 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
     return new CodingLiteralPath(context.getDataset(), context.getIdColumn(), coding);
   }
 
-  // TODO: Test encoding and decoding of Coding literals with unit tests.
-
   @Nonnull
   private static String decodeComponent(@Nonnull final String component) {
     final Matcher matcher = NEEDS_UNQUOTING.matcher(component);
@@ -91,7 +95,7 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   @Nonnull
   private static String encodeComponent(@Nonnull final String component) {
     final Matcher matcher = NEEDS_QUOTING.matcher(component);
-    if (matcher.matches()) {
+    if (matcher.find()) {
       final String result = StringLiteralPath.escapeFhirPathString(component);
       return "'" + result + "'";
     } else {

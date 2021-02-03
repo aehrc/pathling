@@ -37,8 +37,7 @@ term
         ;
 
 literal
-        : CODING                                                #codingLiteral
-        | '{' '}'                                               #nullLiteral
+        : '{' '}'                                               #nullLiteral
         | ('true' | 'false')                                    #booleanLiteral
         | STRING                                                #stringLiteral
         | NUMBER                                                #numberLiteral
@@ -46,6 +45,7 @@ literal
         | DATETIME                                              #dateTimeLiteral
         | TIME                                                  #timeLiteral
         | quantity                                              #quantityLiteral
+        | CODING                                                #codingLiteral
         ;
 
 externalConstant
@@ -108,30 +108,6 @@ identifier
     Lexical rules
 *****************************************************************/
 
-CODING
-        : CODING_WITHOUT_VERSION | CODING_WITH_VERSION
-        ;
-
-fragment CODING_WITHOUT_VERSION
-        : CODING_COMPONENT '|' CODING_COMPONENT
-        ;
-
-fragment CODING_WITH_VERSION
-        : CODING_WITHOUT_VERSION '|' CODING_COMPONENT
-        ;
-
-fragment CODING_COMPONENT
-        : RAW_CODING_COMPONENT | QUOTED_CODING_COMPONENT
-        ;
-
-fragment RAW_CODING_COMPONENT
-        : ~[ |\r\n\t(),]+
-        ;
-
-fragment QUOTED_CODING_COMPONENT
-        : STRING
-        ;
-
 DATE
         : '@' DATEFORMAT
         ;
@@ -166,6 +142,32 @@ DELIMITEDIDENTIFIER
 
 STRING
         : '\'' (ESC | .)*? '\''
+        ;
+
+CODING
+        : CODING_WITHOUT_VERSION
+        | CODING_WITH_VERSION
+        ;
+
+fragment CODING_WITH_VERSION
+        : CODING_WITHOUT_VERSION '|' CODING_COMPONENT
+        ;
+
+fragment CODING_WITHOUT_VERSION
+        : CODING_COMPONENT '|' CODING_COMPONENT
+        ;
+
+fragment CODING_COMPONENT
+        : RAW_CODING_COMPONENT
+        | QUOTED_CODING_COMPONENT
+        ;
+
+fragment RAW_CODING_COMPONENT
+        : ~[ '|\r\n\t(),]+
+        ;
+
+fragment QUOTED_CODING_COMPONENT
+        : STRING
         ;
 
 // Also allows leading zeroes now (just like CQL and XSD)
