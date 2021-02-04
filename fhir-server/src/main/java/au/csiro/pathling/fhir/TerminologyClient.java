@@ -59,11 +59,13 @@ public interface TerminologyClient extends IRestfulClient {
    *
    * @param name The name that defines the particular context for the subsumption based closure
    * table
+   * @return an empty {@link ConceptMap}
    * @see <a href="https://www.hl7.org/fhir/R4/conceptmap-operation-closure.html">Operation $closure
    * on ConceptMap</a>
    */
   @Operation(name = "$closure")
-  void initialiseClosure(@Nonnull @OperationParam(name = "name") StringType name);
+  @SuppressWarnings("UnusedReturnValue")
+  ConceptMap initialiseClosure(@Nonnull @OperationParam(name = "name") StringType name);
 
   /**
    * Invokes the "closure" operation against the ConceptMap resource.
