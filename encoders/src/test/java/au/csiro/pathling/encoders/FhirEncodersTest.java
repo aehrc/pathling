@@ -116,15 +116,15 @@ public class FhirEncodersTest {
 
   @Test
   public void testResourceWithVersionId() {
+    conditionsWithVersionDataset.show();
+
     Assert.assertEquals("with-version",
         conditionsWithVersionDataset.select("id").head().get(0));
 
-    // A current limitation of the implementation is that technical version information is not
-    // preserved on the way out.
-    //
-    // TODO: Work out a way to preserve the technical version information when serializing the data
-    //  back out.
-    Assert.assertEquals("with-version",
+    Assert.assertEquals(conditionWithVersion.getId(),
+        conditionsWithVersionDataset.select("id_versioned").head().get(0));
+
+    Assert.assertEquals(conditionWithVersion.getId(),
         decodedConditionWithVersion.getId());
   }
 
@@ -375,7 +375,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testEncoderCached() throws IOException {
+  public void testEncoderCached() {
 
     Assert.assertSame(encoders.of(Condition.class),
         encoders.of(Condition.class));
