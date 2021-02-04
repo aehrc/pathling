@@ -16,6 +16,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -68,7 +69,7 @@ public class FhirHelpers {
 
     @Override
     @Nonnull
-    public ValueSet answer(@Nonnull final InvocationOnMock invocation) {
+    public ValueSet answer(@Nullable final InvocationOnMock invocation) {
       final ValueSet answer = new ValueSet();
       final ValueSetExpansionComponent expansion = new ValueSetExpansionComponent();
       final List<ValueSetExpansionContainsComponent> contains = validMembers.stream()

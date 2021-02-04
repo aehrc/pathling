@@ -8,7 +8,6 @@ package au.csiro.pathling.fhirpath.function.subsumes;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -81,7 +80,7 @@ public class SubsumptionMapperWithPreviewTest {
     // verify behaviour
     verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM1)), any());
     verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM2)), any());
-    verify(terminologyClient).closure(any(), isNull());
+    verify(terminologyClient).initialiseClosure(any());
     verify(terminologyClient)
         .closure(any(),
             argThat(new CodingSetMatcher(Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED))));
@@ -104,7 +103,7 @@ public class SubsumptionMapperWithPreviewTest {
     mapper.preview(inputPairs.iterator());
 
     // verify behaviour
-    verify(terminologyClient).closure(any(), isNull());
+    verify(terminologyClient).initialiseClosure(any());
     verify(terminologyClient)
         .closure(any(),
             argThat(new CodingSetMatcher(Collections.emptySet())));
@@ -127,7 +126,7 @@ public class SubsumptionMapperWithPreviewTest {
     mapper.preview(inputPairs.iterator());
 
     // verify behaviour
-    verify(terminologyClient).closure(any(), isNull());
+    verify(terminologyClient).initialiseClosure(any());
     verify(terminologyClient)
         .closure(any(),
             argThat(new CodingSetMatcher(Collections.emptySet())));

@@ -27,13 +27,15 @@ public interface Comparable {
    * @return A {@link Function} that takes a Comparable as its parameter, and returns a {@link
    * Column}
    */
-  Function<Comparable, Column> getComparison(ComparisonOperation operation);
+  @Nonnull
+  Function<Comparable, Column> getComparison(@Nonnull ComparisonOperation operation);
 
   /**
    * Returns a {@link Column} within the dataset containing the values of the nodes.
    *
    * @return A {@link Column}
    */
+  @Nonnull
   Column getValueColumn();
 
   /**
@@ -51,7 +53,7 @@ public interface Comparable {
    */
   @Nonnull
   static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      final BiFunction<Column, Column, Column> sparkFunction) {
+      @Nonnull final BiFunction<Column, Column, Column> sparkFunction) {
     return target -> sparkFunction.apply(source.getValueColumn(), target.getValueColumn());
   }
 
@@ -111,6 +113,7 @@ public interface Comparable {
     }
 
     @Override
+    @Nonnull
     public String toString() {
       return fhirPath;
     }

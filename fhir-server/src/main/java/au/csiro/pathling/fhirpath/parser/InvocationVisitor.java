@@ -77,8 +77,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitMemberInvocation(@Nonnull final MemberInvocationContext ctx) {
-    @Nullable final String fhirPath = ctx.getText();
+  public FhirPath visitMemberInvocation(@Nullable final MemberInvocationContext ctx) {
+    @Nullable final String fhirPath = checkNotNull(ctx).getText();
     checkNotNull(fhirPath);
 
     if (invoker != null) {
@@ -152,8 +152,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitFunctionInvocation(@Nonnull final FunctionInvocationContext ctx) {
-    @Nullable final String functionIdentifier = ctx.function().identifier().getText();
+  public FhirPath visitFunctionInvocation(@Nullable final FunctionInvocationContext ctx) {
+    @Nullable final String functionIdentifier = checkNotNull(ctx).function().identifier().getText();
     checkNotNull(functionIdentifier);
     final NamedFunction function = NamedFunction.getInstance(functionIdentifier);
 
@@ -216,7 +216,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitThisInvocation(@Nonnull final ThisInvocationContext ctx) {
+  public FhirPath visitThisInvocation(@Nullable final ThisInvocationContext ctx) {
     checkUserInput(context.getThisContext().isPresent(),
         "$this can only be used within the context of arguments to a function");
     return context.getThisContext().get();
@@ -224,13 +224,13 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitIndexInvocation(@Nonnull final IndexInvocationContext ctx) {
+  public FhirPath visitIndexInvocation(@Nullable final IndexInvocationContext ctx) {
     throw new InvalidUserInputError("$index is not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPath visitTotalInvocation(@Nonnull final TotalInvocationContext ctx) {
+  public FhirPath visitTotalInvocation(@Nullable final TotalInvocationContext ctx) {
     throw new InvalidUserInputError("$total is not supported");
   }
 

@@ -36,20 +36,20 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitInvocationTerm(@Nonnull final InvocationTermContext ctx) {
-    return new InvocationVisitor(context).visit(ctx.invocation());
+  public FhirPath visitInvocationTerm(@Nullable final InvocationTermContext ctx) {
+    return new InvocationVisitor(context).visit(checkNotNull(ctx).invocation());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitLiteralTerm(@Nonnull final LiteralTermContext ctx) {
-    return new LiteralTermVisitor(context).visit(ctx.literal());
+  public FhirPath visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
+    return new LiteralTermVisitor(context).visit(checkNotNull(ctx).literal());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitExternalConstantTerm(@Nonnull final ExternalConstantTermContext ctx) {
-    @Nullable final String term = ctx.getText();
+  public FhirPath visitExternalConstantTerm(@Nullable final ExternalConstantTermContext ctx) {
+    @Nullable final String term = checkNotNull(ctx).getText();
     checkNotNull(term);
     checkUserInput(term.equals("%resource") || term.equals("%context"),
         "Unsupported environment variable: " + term);
@@ -67,9 +67,9 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitParenthesizedTerm(@Nonnull final ParenthesizedTermContext ctx) {
+  public FhirPath visitParenthesizedTerm(@Nullable final ParenthesizedTermContext ctx) {
     // Parentheses are ignored in the standalone term case.
-    return new Visitor(context).visit(ctx.expression());
+    return new Visitor(context).visit(checkNotNull(ctx).expression());
   }
 
 }
