@@ -26,7 +26,6 @@ import au.csiro.pathling.test.builders.*;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -87,7 +86,6 @@ class OfTypeFunctionTest {
         .dataset(inputDataset)
         .idEidTypeAndValueColumns()
         .singular(false)
-        .possibleTypes(new HashSet<>(Arrays.asList(ResourceType.PATIENT, ResourceType.GROUP)))
         .build();
 
     final Dataset<Row> argumentDataset = new ResourceDatasetBuilder(spark)
