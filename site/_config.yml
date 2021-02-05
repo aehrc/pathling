@@ -10,4 +10,7 @@ exclude:
   - Gemfile.lock
   - Dockerfile
   - pom.xml
+  - src
   - target
+plugins:
+  - jekyll-sitemap

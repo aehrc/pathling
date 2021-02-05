@@ -37,6 +37,8 @@ public interface NamedFunction {
       .put("subsumedBy", new SubsumesFunction(true))
       .put("empty", new EmptyFunction())
       .put("first", new FirstFunction())
+      .put("not", new NotFunction())
+      .put("iif", new IifFunction())
       .build();
 
   /**

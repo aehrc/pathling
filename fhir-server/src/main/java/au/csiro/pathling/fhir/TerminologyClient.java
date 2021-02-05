@@ -36,37 +36,53 @@ public interface TerminologyClient extends IRestfulClient {
    * @return a list of {@link CodeSystem} objects
    */
   @Search
-  List<CodeSystem> searchCodeSystems(@RequiredParam(name = CodeSystem.SP_URL) UriParam uri,
-      @Elements Set<String> elements);
+  @Nullable
+  List<CodeSystem> searchCodeSystems(@Nonnull @RequiredParam(name = CodeSystem.SP_URL) UriParam uri,
+      @Nonnull @Elements Set<String> elements);
 
   /**
    * Invokes an "expand" request against the terminology server, using an inline ValueSet resource
    *
    * @param valueSet a {@link ValueSet} resource to be expanded by the terminology server
-   * @param count The number of results to return
+   * @param count the number of results to return
    * @return a ValueSet containing the expansion result
    * @see <a href="https://www.hl7.org/fhir/R4/valueset-operation-expand.html">Operation $expand on
    * ValueSet</a>
    */
   @Operation(name = "$expand", type = ValueSet.class)
-  ValueSet expand(@OperationParam(name = "valueSet") ValueSet valueSet,
-      @OperationParam(name = "count") IntegerType count);
+  @Nullable
+  ValueSet expand(@Nonnull @OperationParam(name = "valueSet") ValueSet valueSet,
+      @Nonnull @OperationParam(name = "count") IntegerType count);
 
   /**
    * Invokes the "closure" operation against the ConceptMap resource.
    *
    * @param name The name that defines the particular context for the subsumption based closure
    * table
-   * @param concept Concepts to add to the closure table
-   * @return A list of new entries ({@code code / system --> code/system}) that the client should
+   * @return an empty {@link ConceptMap}
+   * @see <a href="https://www.hl7.org/fhir/R4/conceptmap-operation-closure.html">Operation $closure
+   * on ConceptMap</a>
+   */
+  @Operation(name = "$closure")
+  @SuppressWarnings("UnusedReturnValue")
+  ConceptMap initialiseClosure(@Nonnull @OperationParam(name = "name") StringType name);
+
+  /**
+   * Invokes the "closure" operation against the ConceptMap resource.
+   *
+   * @param name the name that defines the particular context for the subsumption based closure
+   * table
+   * @param concept concepts to add to the closure table
+   * @return a list of new entries ({@code code / system --> code/system}) that the client should
    * add to its closure table. The only kind of entry mapping equivalences that can be returned are
    * equal, specializes, subsumes and unmatched
    * @see <a href="https://www.hl7.org/fhir/R4/conceptmap-operation-closure.html">Operation $closure
    * on ConceptMap</a>
    */
   @Operation(name = "$closure")
-  ConceptMap closure(@OperationParam(name = "name") StringType name,
-      @Nullable @OperationParam(name = "concept") List<Coding> concept);
+  @Nullable
+  ConceptMap closure(@Nonnull @OperationParam(name = "name") StringType name,
+      @Nonnull @OperationParam(name = "concept") List<Coding> concept);
 
   /**
    * Build a new instance using the supplied {@link FhirContext} and configuration options.

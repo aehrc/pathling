@@ -19,7 +19,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>3.0.1</version>
+  <version>3.1.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -199,7 +199,7 @@
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>3.2.1</version>
+        <version>4.1.0</version>
       </dependency>
 
       <!-- Testing -->
@@ -230,7 +230,7 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.16</version>
+        <version>1.18.18</version>
         <scope>provided</scope>
       </dependency>
     </dependencies>

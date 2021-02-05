@@ -12,14 +12,11 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
-import java.util.Collections;
 import java.util.Optional;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * @author John Grimes
@@ -49,9 +46,6 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   private Column typeColumn;
 
-  @Nonnull
-  private Set<ResourceType> possibleTypes;
-
   public UntypedResourcePathBuilder(@Nonnull final SparkSession spark) {
     expression = "";
     eidColumn = Optional.empty();
@@ -64,7 +58,6 @@ public class UntypedResourcePathBuilder {
     valueColumn = col(dataset.columns()[1]);
     typeColumn = col(dataset.columns()[2]);
     singular = false;
-    possibleTypes = Collections.emptySet();
   }
 
   @Nonnull
@@ -121,12 +114,6 @@ public class UntypedResourcePathBuilder {
   }
 
   @Nonnull
-  public UntypedResourcePathBuilder possibleTypes(@Nonnull final Set<ResourceType> possibleTypes) {
-    this.possibleTypes = possibleTypes;
-    return this;
-  }
-
-  @Nonnull
   public UntypedResourcePath build() {
     final ReferencePath referencePath = mock(ReferencePath.class);
     when(referencePath.getValueColumn()).thenReturn(valueColumn);
@@ -134,7 +121,7 @@ public class UntypedResourcePathBuilder {
     when(referencePath.getThisColumn()).thenReturn(Optional.ofNullable(thisColumn));
     return UntypedResourcePath
         .build(referencePath, expression, dataset, idColumn, eidColumn,
-            typeColumn, possibleTypes);
+            typeColumn);
   }
 
 }

@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.function.subsumes;
 
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.util.ArrayList;
@@ -102,9 +104,10 @@ class ClosureService {
     final String closureName = UUID.randomUUID().toString();
     log.info("Sending $closure request to terminology service with name '{}' and {} codings",
         closureName, codings.size());
-    terminologyClient.closure(new StringType(closureName), null);
+    terminologyClient.initialiseClosure(new StringType(closureName));
     final ConceptMap closureResponse =
         terminologyClient.closure(new StringType(closureName), codings);
+    checkNotNull(closureResponse);
     return conceptMapToClosure(closureResponse);
   }
 

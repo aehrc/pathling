@@ -9,6 +9,7 @@ package au.csiro.pathling.fhirpath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -54,4 +55,21 @@ public class ResourceDefinition {
     return childDefinition.map(definition -> ElementDefinition.build(definition, name));
   }
 
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final ResourceDefinition that = (ResourceDefinition) o;
+    return resourceType == that.resourceType;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(resourceType);
+  }
+  
 }

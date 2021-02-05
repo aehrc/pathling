@@ -1,9 +1,12 @@
-// Copyright © Australian e-Health Research Centre, CSIRO. All rights reserved.
+// Copyright © 2018-2021, Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+// ABN 41 687 119 230. Licensed under the CSIRO Open Source Software Licence Agreement.
+//
 // Based on the FHIRPath grammar file at: http://hl7.org/fhirpath/grammar.html
 
 grammar FhirPath;
 
 // Grammar rules
+// [FHIRPath](http://hl7.org/fhirpath/N1) Normative Release
 
 //prog: line (line)*;
 //line: ID ( '(' expr ')') ':' expr '\r'? '\n';
@@ -15,9 +18,9 @@ expression
         | ('+' | '-') expression                                    #polarityExpression
         | expression ('*' | '/' | 'div' | 'mod') expression         #multiplicativeExpression
         | expression ('+' | '-' | '&') expression                   #additiveExpression
+        | expression ('is' | 'as') typeSpecifier                    #typeExpression
         | expression '|' expression                                 #unionExpression
         | expression ('<=' | '<' | '>' | '>=') expression           #inequalityExpression
-        | expression ('is' | 'as') typeSpecifier                    #typeExpression
         | expression ('=' | '~' | '!=' | '!~') expression           #equalityExpression
         | expression ('in' | 'contains') expression                 #membershipExpression
         | expression 'and' expression                               #andExpression
@@ -34,27 +37,30 @@ term
         ;
 
 literal
-        : CODING                                                #codingLiteral
-        | '{' '}'                                               #nullLiteral
+        : '{' '}'                                               #nullLiteral
         | ('true' | 'false')                                    #booleanLiteral
         | STRING                                                #stringLiteral
         | NUMBER                                                #numberLiteral
+        | DATE                                                  #dateLiteral
         | DATETIME                                              #dateTimeLiteral
         | TIME                                                  #timeLiteral
         | quantity                                              #quantityLiteral
+        | CODING                                                #codingLiteral
         ;
 
 externalConstant
-        : '%' identifier
+        : '%' ( identifier | STRING )
         ;
 
 invocation                          // Terms that can be used after the function/member invocation '.'
         : identifier                                            #memberInvocation
-        | functn                                              #functionInvocation
+        | function                                              #functionInvocation
         | '$this'                                               #thisInvocation
+        | '$index'                                              #indexInvocation
+        | '$total'                                              #totalInvocation
         ;
 
-functn
+function
         : identifier '(' paramList? ')'
         ;
 
@@ -90,10 +96,11 @@ qualifiedIdentifier
 
 identifier
         : IDENTIFIER
-        | QUOTEDIDENTIFIER
+        | DELIMITEDIDENTIFIER
         | 'as'
-        | 'is'
         | 'contains'
+        | 'in'
+        | 'is'
         ;
 
 
@@ -101,64 +108,66 @@ identifier
     Lexical rules
 *****************************************************************/
 
-// Not sure why, but with these as lexical rules, when the grammar is imported into CQL, they are not correctly recognized
-// Moving the same rules into the literal production rule above corrects the issue
-//EMPTY
-//        : '{' '}'
-//        ;                      // To create an empty array (and avoid a NULL literal)
-
-//BOOL
-//        : 'true'
-//        | 'false'
-//        ;
-
-CODING
-        : CODING_WITHOUT_VERSION | CODING_WITH_VERSION
-        ;
-
-CODING_WITHOUT_VERSION
-        : ~[ |\r\n\t()]+ '|' ~[ |\r\n\t()]+
-        ;
-
-CODING_WITH_VERSION
-        : ~[ |\r\n\t()]+ '|' ~[ |\r\n\t()]+ '|' ~[ |\r\n\t()]+
+DATE
+        : '@' DATEFORMAT
         ;
 
 DATETIME
-        : '@'
-            [0-9][0-9][0-9][0-9] // year
-            (
-                '-'[0-9][0-9] // month
-                (
-                    '-'[0-9][0-9] // day
-                    (
-                        'T' TIMEFORMAT
-                    )?
-                 )?
-             )?
-             'Z'? // UTC specifier
+        : '@' DATEFORMAT 'T' (TIMEFORMAT TIMEZONEOFFSETFORMAT?)?
         ;
 
 TIME
         : '@' 'T' TIMEFORMAT
         ;
 
+fragment DATEFORMAT
+        : [0-9][0-9][0-9][0-9] ('-'[0-9][0-9] ('-'[0-9][0-9])?)?
+        ;
+
 fragment TIMEFORMAT
-        :
-            [0-9][0-9] (':'[0-9][0-9] (':'[0-9][0-9] ('.'[0-9]+)?)?)?
-            ('Z' | ('+' | '-') [0-9][0-9]':'[0-9][0-9])? // timezone
+        : [0-9][0-9] (':'[0-9][0-9] (':'[0-9][0-9] ('.'[0-9]+)?)?)?
+        ;
+
+fragment TIMEZONEOFFSETFORMAT
+        : ('Z' | ('+' | '-') [0-9][0-9]':'[0-9][0-9])
         ;
 
 IDENTIFIER
         : ([A-Za-z] | '_')([A-Za-z0-9] | '_')*            // Added _ to support CQL (FHIR could constrain it out)
         ;
 
-QUOTEDIDENTIFIER
-        : '"' (ESC | ~[\\"])* '"'
+DELIMITEDIDENTIFIER
+        : '`' (ESC | .)*? '`'
         ;
 
 STRING
-        : '\'' (ESC | ~['])* '\''
+        : '\'' (ESC | .)*? '\''
+        ;
+
+CODING
+        : CODING_WITHOUT_VERSION
+        | CODING_WITH_VERSION
+        ;
+
+fragment CODING_WITH_VERSION
+        : CODING_WITHOUT_VERSION '|' CODING_COMPONENT
+        ;
+
+fragment CODING_WITHOUT_VERSION
+        : CODING_COMPONENT '|' CODING_COMPONENT
+        ;
+
+fragment CODING_COMPONENT
+        : RAW_CODING_COMPONENT
+        | QUOTED_CODING_COMPONENT
+        ;
+
+fragment RAW_CODING_COMPONENT
+        : ~[ '|\r\n\t(),]+
+        ;
+
+fragment QUOTED_CODING_COMPONENT
+        : STRING
         ;
 
 // Also allows leading zeroes now (just like CQL and XSD)
@@ -180,7 +189,7 @@ LINE_COMMENT
         ;
 
 fragment ESC
-        : '\\' (["'\\/fnrt] | UNICODE)    // allow \", \', \\, \/, \f, etc. and \uXXX
+        : '\\' ([`'\\/fnrt] | UNICODE)    // allow \`, \', \\, \/, \f, etc. and \uXXX
         ;
 
 fragment UNICODE

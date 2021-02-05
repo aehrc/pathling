@@ -12,17 +12,16 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Represents a path that is a collection of resources of more than one type.
@@ -38,26 +37,16 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
   @Getter
   private final Column typeColumn;
 
-  /**
-   * A set of {@link ResourceType} objects that describe the different types that this collection
-   * may contain.
-   */
-  @Nonnull
-  @Getter
-  private final Set<ResourceType> possibleTypes;
-
   private UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn,
-      @Nonnull final Set<ResourceType> possibleTypes) {
+      @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn) {
     super(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
         thisColumn);
 
     checkArgument(Arrays.asList(dataset.columns()).contains(typeColumn.toString()),
         "Type column not present in dataset");
     this.typeColumn = typeColumn;
-    this.possibleTypes = possibleTypes;
   }
 
   /**
@@ -67,14 +56,13 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
    * @param idColumn a column within the dataset containing the identity of the subject resource
    * @param eidColumn a column within the dataset containing the element identities of the nodes
    * @param typeColumn a column within the dataset containing the resource type
-   * @param possibleTypes a set of {@link ResourceType} objects that describe the different types
    * @return a shiny new UntypedResourcePath
    */
   @Nonnull
   public static UntypedResourcePath build(@Nonnull final ReferencePath referencePath,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column typeColumn, @Nonnull final Set<ResourceType> possibleTypes) {
+      @Nonnull final Column typeColumn) {
 
     final Column valueColumn = referencePath.getValueColumn();
     final DatasetWithColumn datasetWithType = createColumn(dataset, typeColumn);
@@ -82,8 +70,8 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
     final Column finalTypeColumn = datasetWithType.getColumn();
 
     return new UntypedResourcePath(expression, finalDataset, idColumn, eidColumn, valueColumn,
-        referencePath.isSingular(), referencePath.getThisColumn(), finalTypeColumn,
-        possibleTypes);
+        referencePath.isSingular(), referencePath.getThisColumn(), finalTypeColumn
+    );
   }
 
   @Nonnull
@@ -120,7 +108,23 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
 
     return new UntypedResourcePath(expression, datasetWithColumns.getDataset(), idColumn,
         eidColumn.map(datasetWithColumns::getColumn),
-        datasetWithColumns.getColumn(valueColumn), singular, thisColumn, typeColumn, possibleTypes);
+        datasetWithColumns.getColumn(valueColumn), singular, thisColumn, typeColumn);
+  }
+
+  @Override
+  @Nonnull
+  public NonLiteralPath mergeWith(@Nonnull final FhirPath target,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
+      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
+      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Optional<Column> thisColumn) {
+    if (target instanceof UntypedResourcePath) {
+      return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
+    }
+    // Anything else is invalid.
+    throw new InvalidUserInputError(
+        "Paths cannot be merged into a collection together: " + getExpression() + ", " + target
+            .getExpression());
   }
 
 }

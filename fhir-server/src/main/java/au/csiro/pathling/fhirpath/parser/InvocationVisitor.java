@@ -9,11 +9,7 @@ package au.csiro.pathling.fhirpath.parser;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.fhir.FhirPathBaseVisitor;
-import au.csiro.pathling.fhir.FhirPathParser.FunctionInvocationContext;
-import au.csiro.pathling.fhir.FhirPathParser.MemberInvocationContext;
-import au.csiro.pathling.fhir.FhirPathParser.ParamListContext;
-import au.csiro.pathling.fhir.FhirPathParser.ThisInvocationContext;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -21,6 +17,8 @@ import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -79,8 +77,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitMemberInvocation(@Nonnull final MemberInvocationContext ctx) {
-    @Nullable final String fhirPath = ctx.getText();
+  public FhirPath visitMemberInvocation(@Nullable final MemberInvocationContext ctx) {
+    @Nullable final String fhirPath = checkNotNull(ctx).getText();
     checkNotNull(fhirPath);
 
     if (invoker != null) {
@@ -154,8 +152,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitFunctionInvocation(@Nonnull final FunctionInvocationContext ctx) {
-    @Nullable final String functionIdentifier = ctx.functn().identifier().getText();
+  public FhirPath visitFunctionInvocation(@Nullable final FunctionInvocationContext ctx) {
+    @Nullable final String functionIdentifier = checkNotNull(ctx).function().identifier().getText();
     checkNotNull(functionIdentifier);
     final NamedFunction function = NamedFunction.getInstance(functionIdentifier);
 
@@ -171,7 +169,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
             .getExpression());
     final NonLiteralPath nonLiteral = (NonLiteralPath) input;
 
-    @Nullable final ParamListContext paramList = ctx.functn().paramList();
+    @Nullable final ParamListContext paramList = ctx.function().paramList();
 
     final List<FhirPath> arguments = new ArrayList<>();
     if (paramList != null) {
@@ -218,10 +216,22 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitThisInvocation(@Nonnull final ThisInvocationContext ctx) {
+  public FhirPath visitThisInvocation(@Nullable final ThisInvocationContext ctx) {
     checkUserInput(context.getThisContext().isPresent(),
         "$this can only be used within the context of arguments to a function");
     return context.getThisContext().get();
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath visitIndexInvocation(@Nullable final IndexInvocationContext ctx) {
+    throw new InvalidUserInputError("$index is not supported");
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath visitTotalInvocation(@Nullable final TotalInvocationContext ctx) {
+    throw new InvalidUserInputError("$total is not supported");
   }
 
 }

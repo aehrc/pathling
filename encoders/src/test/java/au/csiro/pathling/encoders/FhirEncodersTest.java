@@ -103,7 +103,6 @@ public class FhirEncodersTest {
   @AfterClass
   public static void tearDown() {
     spark.stop();
-    spark = null;
   }
 
   @Test
@@ -375,7 +374,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testEncoderCached() throws IOException {
+  public void testEncoderCached() {
 
     Assert.assertSame(encoders.of(Condition.class),
         encoders.of(Condition.class));

@@ -9,11 +9,11 @@ package au.csiro.pathling.fhirpath.parser;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.FhirPathBaseVisitor;
-import au.csiro.pathling.fhir.FhirPathParser.*;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.operator.Operator;
 import au.csiro.pathling.fhirpath.operator.OperatorInput;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -41,8 +41,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitTermExpression(@Nonnull final TermExpressionContext ctx) {
-    return ctx.term().accept(new TermVisitor(context));
+  public FhirPath visitTermExpression(@Nullable final TermExpressionContext ctx) {
+    return checkNotNull(ctx).term().accept(new TermVisitor(context));
   }
 
   /**
@@ -53,8 +53,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitInvocationExpression(@Nonnull final InvocationExpressionContext ctx) {
-    final FhirPath expressionResult = new Visitor(context).visit(ctx.expression());
+  public FhirPath visitInvocationExpression(@Nullable final InvocationExpressionContext ctx) {
+    final FhirPath expressionResult = new Visitor(context).visit(checkNotNull(ctx).expression());
     // The input context is passed through to the invocation visitor as the invoker.
     return ctx.invocation().accept(new InvocationVisitor(context, expressionResult));
   }
@@ -77,57 +77,57 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitEqualityExpression(@Nonnull final EqualityExpressionContext ctx) {
-    return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
+  public FhirPath visitEqualityExpression(@Nullable final EqualityExpressionContext ctx) {
+    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
-  public FhirPath visitInequalityExpression(@Nonnull final InequalityExpressionContext ctx) {
-    return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
-  }
-
-  @Override
-  @Nonnull
-  public FhirPath visitAndExpression(@Nonnull final AndExpressionContext ctx) {
-    return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
+  public FhirPath visitInequalityExpression(@Nullable final InequalityExpressionContext ctx) {
+    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitOrExpression(@Nonnull final OrExpressionContext ctx) {
-    return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
+  public FhirPath visitAndExpression(@Nullable final AndExpressionContext ctx) {
+    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitImpliesExpression(@Nonnull final ImpliesExpressionContext ctx) {
-    return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
+  public FhirPath visitOrExpression(@Nullable final OrExpressionContext ctx) {
+    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitMembershipExpression(@Nonnull final MembershipExpressionContext ctx) {
-    return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
+  public FhirPath visitImpliesExpression(@Nullable final ImpliesExpressionContext ctx) {
+    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+        ctx.children.get(1).toString());
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath visitMembershipExpression(@Nullable final MembershipExpressionContext ctx) {
+    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
   public FhirPath visitMultiplicativeExpression(
-      @Nonnull final MultiplicativeExpressionContext ctx) {
-    return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
+      @Nullable final MultiplicativeExpressionContext ctx) {
+    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitAdditiveExpression(@Nonnull final AdditiveExpressionContext ctx) {
-    return visitBinaryOperator(ctx.expression(0), ctx.expression(1),
+  public FhirPath visitAdditiveExpression(@Nullable final AdditiveExpressionContext ctx) {
+    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 

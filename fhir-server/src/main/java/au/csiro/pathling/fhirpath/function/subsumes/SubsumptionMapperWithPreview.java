@@ -93,7 +93,7 @@ public class SubsumptionMapperWithPreview implements
       final UriParam uri = new UriParam(codeSystem);
       final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
           uri, new HashSet<>(Collections.singletonList("id")));
-      return !knownSystems.isEmpty();
+      return !(knownSystems == null || knownSystems.isEmpty());
     }).collect(Collectors.toSet());
 
     if (!knownCodeSystems.equals(allCodeSystems)) {
