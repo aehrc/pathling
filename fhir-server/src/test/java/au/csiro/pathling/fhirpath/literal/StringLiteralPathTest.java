@@ -8,11 +8,13 @@ package au.csiro.pathling.fhirpath.literal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * @author John Grimes
  */
+@Tag("UnitTest")
 class StringLiteralPathTest {
 
   @Test
