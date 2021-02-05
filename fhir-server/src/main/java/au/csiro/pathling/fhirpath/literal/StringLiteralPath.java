@@ -93,13 +93,13 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
   @Nonnull
   public static String unescapeFhirPathString(@Nonnull String value) {
     value = value.replaceAll("\\\\/", "/");
-    value = value.replaceAll("\\f", "\u000C");
-    value = value.replaceAll("\\n", "\n");
-    value = value.replaceAll("\\r", "\r");
-    value = value.replaceAll("\\t", "\u0009");
+    value = value.replaceAll("\\\\f", "\u000C");
+    value = value.replaceAll("\\\\n", "\n");
+    value = value.replaceAll("\\\\r", "\r");
+    value = value.replaceAll("\\\\t", "\u0009");
     value = value.replaceAll("\\\\`", "`");
     value = value.replaceAll("\\\\'", "'");
-    return value.replaceAll("\\\\", "\\");
+    return value.replaceAll("\\\\\\\\", "\\\\");
   }
 
   @Nonnull
