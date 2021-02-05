@@ -27,7 +27,6 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.builders.*;
 import ca.uhn.fhir.context.FhirContext;
-import com.google.common.collect.ImmutableSet.Builder;
 import java.util.Arrays;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -540,38 +539,6 @@ class IifFunctionTest {
         () -> notFunction.invoke(iifInput));
     assertEquals(
         "Paths cannot be merged into a collection together: someString, someResource",
-        error.getMessage());
-  }
-
-  @Test
-  void throwsErrorWithIncompatibleUntypedResourceResults() {
-    final NonLiteralPath condition = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.BOOLEAN)
-        .expression("valueBoolean")
-        .singular(true)
-        .build()
-        .toThisPath();
-    final UntypedResourcePath ifTrue = new UntypedResourcePathBuilder(spark)
-        .expression("someUntypedResource")
-        .possibleTypes(new Builder<ResourceType>().add(
-            ResourceType.PATIENT,
-            ResourceType.CONDITION).build())
-        .build();
-    final UntypedResourcePath otherwise = new UntypedResourcePathBuilder(spark)
-        .expression("anotherUntypedResource")
-        .possibleTypes(new Builder<ResourceType>().add(
-            ResourceType.PATIENT).build())
-        .build();
-
-    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
-        Arrays.asList(condition, ifTrue, otherwise));
-
-    final NamedFunction notFunction = NamedFunction.getInstance("iif");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> notFunction.invoke(iifInput));
-    assertEquals(
-        "Paths cannot be merged into a collection together: someUntypedResource, anotherUntypedResource",
         error.getMessage());
   }
 

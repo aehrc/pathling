@@ -33,8 +33,8 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitCodingLiteral(@Nonnull final CodingLiteralContext ctx) {
-    @Nullable final String fhirPath = ctx.getText();
+  public FhirPath visitCodingLiteral(@Nullable final CodingLiteralContext ctx) {
+    @Nullable final String fhirPath = checkNotNull(ctx).getText();
     checkNotNull(fhirPath);
     try {
       return CodingLiteralPath.fromString(fhirPath, context.getInputContext());
@@ -45,15 +45,15 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitStringLiteral(@Nonnull final StringLiteralContext ctx) {
-    @Nullable final String fhirPath = ctx.getText();
+  public FhirPath visitStringLiteral(@Nullable final StringLiteralContext ctx) {
+    @Nullable final String fhirPath = checkNotNull(ctx).getText();
     checkNotNull(fhirPath);
     return StringLiteralPath.fromString(fhirPath, context.getInputContext());
   }
 
   @Override
-  public FhirPath visitDateLiteral(@Nonnull final DateLiteralContext ctx) {
-    @Nullable final String fhirPath = ctx.getText();
+  public FhirPath visitDateLiteral(@Nullable final DateLiteralContext ctx) {
+    @Nullable final String fhirPath = checkNotNull(ctx).getText();
     checkNotNull(fhirPath);
     try {
       return DateLiteralPath.fromString(fhirPath, context.getInputContext());
@@ -64,8 +64,8 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitDateTimeLiteral(@Nonnull final DateTimeLiteralContext ctx) {
-    @Nullable final String fhirPath = ctx.getText();
+  public FhirPath visitDateTimeLiteral(@Nullable final DateTimeLiteralContext ctx) {
+    @Nullable final String fhirPath = checkNotNull(ctx).getText();
     checkNotNull(fhirPath);
     try {
       return DateTimeLiteralPath.fromString(fhirPath, context.getInputContext());
@@ -76,16 +76,16 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitTimeLiteral(@Nonnull final TimeLiteralContext ctx) {
-    @Nullable final String fhirPath = ctx.getText();
+  public FhirPath visitTimeLiteral(@Nullable final TimeLiteralContext ctx) {
+    @Nullable final String fhirPath = checkNotNull(ctx).getText();
     checkNotNull(fhirPath);
     return TimeLiteralPath.fromString(fhirPath, context.getInputContext());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitNumberLiteral(@Nonnull final NumberLiteralContext ctx) {
-    @Nullable final String fhirPath = ctx.getText();
+  public FhirPath visitNumberLiteral(@Nullable final NumberLiteralContext ctx) {
+    @Nullable final String fhirPath = checkNotNull(ctx).getText();
     checkNotNull(fhirPath);
     // The FHIRPath grammar lumps these two types together, so we tease them apart by trying to 
     // parse them. A better way of doing this would be to modify the grammar.
@@ -102,7 +102,8 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitBooleanLiteral(@Nonnull final BooleanLiteralContext ctx) {
+  public FhirPath visitBooleanLiteral(@Nullable final BooleanLiteralContext ctx) {
+    checkNotNull(ctx);
     @Nullable final String fhirPath = ctx.getText();
     checkNotNull(fhirPath);
     return BooleanLiteralPath.fromString(fhirPath, context.getInputContext());
@@ -110,13 +111,13 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitNullLiteral(@Nonnull final NullLiteralContext ctx) {
+  public FhirPath visitNullLiteral(@Nullable final NullLiteralContext ctx) {
     return NullLiteralPath.build(context.getInputContext());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitQuantityLiteral(@Nonnull final QuantityLiteralContext ctx) {
+  public FhirPath visitQuantityLiteral(@Nullable final QuantityLiteralContext ctx) {
     throw new InvalidUserInputError("Quantity literals are not supported");
   }
 

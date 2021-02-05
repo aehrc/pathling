@@ -90,7 +90,7 @@ class CodingLiteralPathTest {
   }
 
   @Test
-  void fromStringWithQuotedComponent() {
+  void roundTripWithQuotedComponent() {
     final String expression =
         "http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20201231|"
             + "'397956004 |Prosthetic arthroplasty of the hip|: 363704007 |Procedure site| = "
@@ -111,7 +111,7 @@ class CodingLiteralPathTest {
   }
 
   @Test
-  void fromStringWithQuotedComponentWithComma() {
+  void roundTripWithQuotedComponentWithComma() {
     final String expression =
         "http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20201231|'46,2'";
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath
@@ -121,6 +121,19 @@ class CodingLiteralPathTest {
     assertEquals("http://snomed.info/sct/32506021000036107/version/20201231",
         literalValue.getVersion());
     assertEquals("46,2", literalValue.getCode());
+
+    final String actualExpression = codingLiteralPath.getExpression();
+    assertEquals(expression, actualExpression);
+  }
+
+  @Test
+  void roundTripWithQuotedComponentWithSingleQuote() {
+    final String expression = "'Someone\\'s CodeSystem'|166056000";
+    final CodingLiteralPath codingLiteralPath = CodingLiteralPath
+        .fromString(expression, inputContext);
+    final Coding literalValue = codingLiteralPath.getLiteralValue();
+    assertEquals("Someone's CodeSystem", literalValue.getSystem());
+    assertEquals("166056000", literalValue.getCode());
 
     final String actualExpression = codingLiteralPath.getExpression();
     assertEquals(expression, actualExpression);

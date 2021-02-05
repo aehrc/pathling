@@ -91,7 +91,7 @@ public class MemberOfMapperWithPreview implements
       final UriParam uri = new UriParam(codeSystem.getSystem().get());
       final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
           uri, new HashSet<>(Collections.singletonList("id")));
-      if (knownSystems.size() > 0) {
+      if (knownSystems != null && knownSystems.size() > 0) {
         uniqueKnownUris.add(codeSystem.getSystem().get());
       }
     }
@@ -143,6 +143,9 @@ public class MemberOfMapperWithPreview implements
           valueSetUri);
       final ValueSet expansion = terminologyClient
           .expand(intersection, new IntegerType(codings.size()));
+      if (expansion == null) {
+        return Collections.emptySet();
+      }
 
       // Build a set of SimpleCodings to represent the codings present in the intersection.
       expandedCodings = expansion.getExpansion().getContains().stream()

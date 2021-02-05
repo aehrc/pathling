@@ -192,9 +192,12 @@ public class AuthorisationInterceptor {
 
     @Override
     @Nullable
-    public RSAPublicKey getPublicKeyById(@Nonnull final String keyId) {
+    public RSAPublicKey getPublicKeyById(@Nullable final String keyId) {
       final Jwk jwk;
       final RSAPublicKey publicKey;
+      if (keyId == null) {
+        return null;
+      }
       try {
         jwk = jwkProvider.get(keyId);
         publicKey = (RSAPublicKey) jwk.getPublicKey();
