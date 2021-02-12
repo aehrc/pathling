@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.terminology.TerminologyService;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.Serializable;
@@ -61,5 +62,20 @@ public class TerminologyClientFactory implements Serializable {
         .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
             verboseRequestLogging, logger);
   }
+
+  /**
+   * Builds a new instance.
+   *
+   * @param logger a {@link Logger} to use for logging
+   * @return a shiny new TerminologyClient instance
+   */
+  @Nonnull
+  public TerminologyService buildService(@Nonnull final Logger logger) {
+    return null;
+    // return  TerminologyClient
+    //     .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
+    //         verboseRequestLogging, logger);
+  }
+
 
 }
