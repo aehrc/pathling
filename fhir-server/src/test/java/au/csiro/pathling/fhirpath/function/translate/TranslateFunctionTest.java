@@ -15,9 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
+import static org.mockito.Mockito.*;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -40,15 +38,20 @@ import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.util.*;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -71,19 +74,36 @@ class TranslateFunctionTest {
   private static final String CONCEPT_MAP_URI = "http://snomed.info/sct?fhir_cm=100";
 
 
-  private final TerminologyService terminologyService = mock(TerminologyService.class,
-      withSettings().serializable());
+  // TODO: This need rethinking
+  // The problem is that the mock that are actually used in SparkTasks are ser/de copies
+  // of the original mocks. This works for stubbing but not for verification
+  // as the original mocks are not being called at all.
+  private final static TerminologyService terminologyService = mock(TerminologyService.class);
 
-  private final TerminologyClientFactory terminologyClientFactory = mock(
-      TerminologyClientFactory.class,
-      withSettings().serializable());
+  @Nullable
+  private TerminologyClientFactory terminologyClientFactory;
 
+  static class TestFactory extends TerminologyClientFactory {
 
-  @BeforeEach
-  public void setupUp() {
-    when(terminologyClientFactory.buildService(any())).thenReturn(terminologyService);
+    /**
+     * @param fhirContext the {@link FhirContext} used to build the client
+     */
+    public TestFactory(@Nonnull FhirContext fhirContext, TerminologyService terminologyService) {
+      super(fhirContext, "", 0, false);
+    }
+
+    @Nonnull
+    @Override
+    public TerminologyService buildService(@Nonnull Logger logger) {
+      return TranslateFunctionTest.terminologyService;
+    }
   }
 
+  @BeforeEach
+  public void setUp() {
+    reset(terminologyService);
+    terminologyClientFactory = new TestFactory(fhirContext, terminologyService);
+  }
 
   @Test
   public void translateCoding() {
@@ -187,22 +207,17 @@ class TranslateFunctionTest {
         .debugAllRows()
         .hasRows(expectedResult);
 
-    // TODO: Cannot verify on these mock as the actual instances used
-    // are copies serialized to spark tasks.
-    //
-    // // Verify mocks
-    // final Set<SimpleCoding> expectedSourceCodings = ImmutableSet
-    //     .of(new SimpleCoding(coding1), new SimpleCoding(coding2), new SimpleCoding(coding3));
-    //
-    // final List<ConceptMapEquivalence> expectedEquivalences = Arrays
-    //     .asList(ConceptMapEquivalence.WIDER, ConceptMapEquivalence.EQUAL);
-    //
-    // verify(terminologyService)
-    //     .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP_URI), eq(false),
-    //         eq(expectedEquivalences));
-    // verifyNoMoreInteractions(terminologyClientFactory);
-    // verifyNoMoreInteractions(terminologyService);
+    // Verify mocks
+    final Set<SimpleCoding> expectedSourceCodings = ImmutableSet
+        .of(new SimpleCoding(coding1), new SimpleCoding(coding2), new SimpleCoding(coding3));
 
+    final List<ConceptMapEquivalence> expectedEquivalences = Arrays
+        .asList(ConceptMapEquivalence.WIDER, ConceptMapEquivalence.EQUAL);
+
+    verify(terminologyService)
+        .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP_URI), eq(false),
+            eq(expectedEquivalences));
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
