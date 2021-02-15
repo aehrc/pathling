@@ -8,7 +8,9 @@ package au.csiro.pathling.fhirpath.function.translate;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
+import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
+import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,6 +47,7 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -71,7 +74,19 @@ class TranslateFunctionTest {
   private static final String SOURCE_SYSTEM_URI = "uuid:source";
   private static final String DEST_SYSTEM_URI = "uuid:dest";
 
-  private static final String CONCEPT_MAP_URI = "http://snomed.info/sct?fhir_cm=100";
+  private static final String CONCEPT_MAP1_URI = "http://snomed.info/sct?fhir_cm=100";
+  private static final String CONCEPT_MAP2_URI = "http://snomed.info/sct?fhir_cm=200";
+
+
+  private static final Coding CODING_1 = new Coding(SOURCE_SYSTEM_URI, "AMB", "ambulatory");
+  private static final Coding CODING_2 = new Coding(SOURCE_SYSTEM_URI, "EMER", null);
+  private static final Coding CODING_3 = new Coding(SOURCE_SYSTEM_URI, "IMP",
+      "inpatient encounter");
+  private static final Coding CODING_4 = new Coding(SOURCE_SYSTEM_URI, "OTHER", null);
+  private static final Coding CODING_5 = new Coding(SOURCE_SYSTEM_URI, "ACUTE", "inpatient acute");
+
+  private static final Coding TRANSLATED_1 = new Coding(DEST_SYSTEM_URI, "TEST1", "Test1");
+  private static final Coding TRANSLATED_2 = new Coding(DEST_SYSTEM_URI, "TEST2", "Test2");
 
 
   // TODO: This need rethinking
@@ -107,32 +122,42 @@ class TranslateFunctionTest {
 
   @Test
   public void translateCoding() {
-    final Coding coding1 = new Coding(SOURCE_SYSTEM_URI, "AMB", "ambulatory");
-    final Coding coding2 = new Coding(SOURCE_SYSTEM_URI, "EMER", null);
-    final Coding coding3 = new Coding(SOURCE_SYSTEM_URI, "IMP", "inpatient encounter");
-    final Coding coding4 = new Coding(SOURCE_SYSTEM_URI, "IMP", null);
-    final Coding coding5 = new Coding(SOURCE_SYSTEM_URI, "ACUTE", "inpatient acute");
-
-    final Coding translated1 = new Coding(DEST_SYSTEM_URI, "TEST1", "Test");
-    final Coding translated2 = new Coding(DEST_SYSTEM_URI, "TEST2", "Test");
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "class");
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
 
+    // The translations are
+    // {
+    //    coding1 -> [translated1],
+    //    coding2 -> [translated1, translated2]
+    // }
+
+    // Use cases:
+    // 1. [ C2,C3,C1 ] -> [ T1, T2, T1]
+    // 2. [ C3, C5 ] -> [ ]
+    // 3. [ C2 ] -> [T1, T2]
+    // 4. [] -> []
+    // 5. null -> null
+
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
-        .withRow("encounter-1", makeEid(2), rowFromCoding(coding2))
-        .withRow("encounter-1", makeEid(1), rowFromCoding(coding3))
-        .withRow("encounter-1", makeEid(0), rowFromCoding(coding1))
-        .withRow("encounter-2", makeEid(0), rowFromCoding(coding3))
-        .withRow("encounter-3", makeEid(0), rowFromCoding(coding1))
-        .withRow("encounter-4", makeEid(0), rowFromCoding(coding2))
-        .withRow("encounter-5", makeEid(0), null)
-        .withRow("encounter-6", null, null)
+        // TC-1
+        .withRow("encounter-1", makeEid(0), rowFromCoding(CODING_2))
+        .withRow("encounter-1", makeEid(1), rowFromCoding(CODING_3))
+        .withRow("encounter-1", makeEid(2), rowFromCoding(CODING_1))
+        // TC-2
+        .withRow("encounter-2", makeEid(0), rowFromCoding(CODING_3))
+        .withRow("encounter-2", makeEid(1), rowFromCoding(CODING_5))
+        // TC-3
+        .withRow("encounter-3", makeEid(0), rowFromCoding(CODING_2))
+        // TC-4
+        .withRow("encounter-4", makeEid(0), null)
+        // TC-5
+        .withRow("encounter-5", null, null)
         .buildWithStructValue();
 
     final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
@@ -143,15 +168,9 @@ class TranslateFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    // The translations are
-    // {
-    //    coding1 -> [translated1],
-    //    coding2 -> [translated1, translated2]
-    // }
-
     final Map<SimpleCoding, List<Coding>> translationMap = ImmutableMap.<SimpleCoding, List<Coding>>builder()
-        .put(new SimpleCoding(coding1), Collections.singletonList(translated1))
-        .put(new SimpleCoding(coding2), Arrays.asList(translated1, translated2))
+        .put(new SimpleCoding(CODING_1), Collections.singletonList(TRANSLATED_1))
+        .put(new SimpleCoding(CODING_2), Arrays.asList(TRANSLATED_1, TRANSLATED_2))
         .build();
     final ConceptMapper returnedConceptMapper = new ConceptMapper(translationMap);
 
@@ -166,7 +185,7 @@ class TranslateFunctionTest {
         .build();
 
     final StringLiteralPath conceptMapUrlArgument = StringLiteralPath
-        .fromString("'" + CONCEPT_MAP_URI + "'", inputExpression);
+        .fromString("'" + CONCEPT_MAP1_URI + "'", inputExpression);
 
     final BooleanLiteralPath reverseArgument = BooleanLiteralPath
         .fromString("false", inputExpression);
@@ -179,19 +198,167 @@ class TranslateFunctionTest {
     // Invoke the function.
     final FhirPath result = new TranslateFunction().invoke(translateInput);
 
-    // The outcome is somehow random with regard to the sequence passed to MemberOfMapperAnswerer.
+    // TODO: is it valid to return two rows with the same eid
+    // in principle this is not VALID as (id, eid) should be unique primary key
+    // and as such is being used element identification for $this
+    // so this most likely need ot be fixed to provide another level of
+    // eid just as path traversal (which is another many to many operation)
+    // TODO: write a parser test case that does cartesian product because of this
+
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
-        .withRow("encounter-1", makeEid(0), rowFromCoding(translated1))
+        // TC-1
+        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_2))
         .withRow("encounter-1", makeEid(1), null)
-        .withRow("encounter-1", makeEid(2), rowFromCoding(translated1))
-        .withRow("encounter-1", makeEid(2), rowFromCoding(translated2))
+        .withRow("encounter-1", makeEid(2), rowFromCoding(TRANSLATED_1))
+        // TC-2
         .withRow("encounter-2", makeEid(0), null)
-        .withRow("encounter-3", makeEid(0), rowFromCoding(translated1))
-        .withRow("encounter-4", makeEid(0), rowFromCoding(translated1))
-        .withRow("encounter-4", makeEid(0), rowFromCoding(translated2))
+        .withRow("encounter-2", makeEid(1), null)
+        // TC-3
+        .withRow("encounter-3", makeEid(0), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-3", makeEid(0), rowFromCoding(TRANSLATED_2))
+        // TC-4
+        .withRow("encounter-4", makeEid(0), null)
+        // TC-5
+        .withRow("encounter-5", null, null)
+        .buildWithStructValue();
+
+    // Check the result.
+    assertThat(result)
+        .hasExpression(
+            "Encounter.class.translate('" + CONCEPT_MAP1_URI + "', false, 'wider,equal')")
+        .isElementPath(CodingPath.class)
+        .hasFhirType(FHIRDefinedType.CODING)
+        .isNotSingular()
+        .selectOrderedResultWithEid()
+        .hasRows(expectedResult);
+
+    // Verify mocks
+    final Set<SimpleCoding> expectedSourceCodings = ImmutableSet
+        .of(new SimpleCoding(CODING_1), new SimpleCoding(CODING_2), new SimpleCoding(CODING_3),
+            new SimpleCoding(CODING_5));
+
+    final List<ConceptMapEquivalence> expectedEquivalences = Arrays
+        .asList(ConceptMapEquivalence.WIDER, ConceptMapEquivalence.EQUAL);
+
+    verify(terminologyService)
+        .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP1_URI), eq(false),
+            eq(expectedEquivalences));
+    verifyNoMoreInteractions(terminologyService);
+  }
+
+  @Test
+  public void translateCodeableConcep() {
+
+    final Optional<ElementDefinition> optionalDefinition = FhirHelpers
+        .getChildOfResource(fhirContext, "Encounter", "type");
+    assertTrue(optionalDefinition.isPresent());
+    final ElementDefinition definition = optionalDefinition.get();
+
+    // The translations are
+    // {
+    //    coding1 -> [translated1],
+    //    coding2 -> [translated1, translated2]
+    //    coding4 -> [tranlates2]
+    // }
+
+    // Use cases:
+    // 1. [ {C2,C3,C1}, {C3}, {C4} ] -> [ T1, T2, T1,  T2]
+    // 2. [ {C3, C5}, {C3} ] -> [ ]
+    // 3. [ {C2} ] -> [T1, T2]
+    // 4. [ {C3}] -> []
+    // 5. [ ]-> []
+    // 6. null -> null
+
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructTypeColumns(codeableConceptStructType())
+        // TC-1
+        .withRow("encounter-1", makeEid(0),
+            rowFromCodeableConcept(
+                new CodeableConcept(CODING_2).addCoding(CODING_3).addCoding(CODING_1)))
+        .withRow("encounter-1", makeEid(1),
+            rowFromCodeableConcept(
+                new CodeableConcept(CODING_3).addCoding(CODING_5)))
+        .withRow("encounter-1", makeEid(2),
+            rowFromCodeableConcept(
+                new CodeableConcept(CODING_4)))
+        // TC-2
+        .withRow("encounter-2", makeEid(0),
+            rowFromCodeableConcept(new CodeableConcept(CODING_3).addCoding(CODING_5)))
+        .withRow("encounter-2", makeEid(1),
+            rowFromCodeableConcept(new CodeableConcept(CODING_3)))
+        // TC-3
+        .withRow("encounter-3", makeEid(0), rowFromCodeableConcept(new CodeableConcept(CODING_2)))
+        // TC-4
+        .withRow("encounter-4", makeEid(0), rowFromCodeableConcept(new CodeableConcept(CODING_3)))
+        // TC-5
+        .withRow("encounter-5", makeEid(0), null)
+        .withRow("encounter-6", null, null)
+        .buildWithStructValue();
+
+    final ElementPath inputExpression = new ElementPathBuilder(spark)
+        .dataset(inputDataset)
+        .idAndEidAndValueColumns()
+        .expression("Encounter.type")
+        .singular(false)
+        .definition(definition)
+        .buildDefined();
+
+    final Map<SimpleCoding, List<Coding>> translationMap = ImmutableMap.<SimpleCoding, List<Coding>>builder()
+        .put(new SimpleCoding(CODING_1), Collections.singletonList(TRANSLATED_1))
+        .put(new SimpleCoding(CODING_2), Arrays.asList(TRANSLATED_1, TRANSLATED_2))
+        .put(new SimpleCoding(CODING_4), Collections.singletonList(TRANSLATED_2))
+        .build();
+    final ConceptMapper returnedConceptMapper = new ConceptMapper(translationMap);
+
+    // Create a mock terminology client.
+    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
+        .thenReturn(returnedConceptMapper);
+
+    // Prepare the inputs to the function.
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .idColumn(inputExpression.getIdColumn())
+        .terminologyClientFactory(terminologyClientFactory)
+        .build();
+
+    final StringLiteralPath conceptMapUrlArgument = StringLiteralPath
+        .fromString("'" + CONCEPT_MAP2_URI + "'", inputExpression);
+
+    final BooleanLiteralPath reverseArgument = BooleanLiteralPath
+        .fromString("true", inputExpression);
+
+    final StringLiteralPath equivalenceArgument = StringLiteralPath
+        .fromString("narrower,equivalent", inputExpression);
+
+    final NamedFunctionInput translateInput = new NamedFunctionInput(parserContext, inputExpression,
+        Arrays.asList(conceptMapUrlArgument, reverseArgument, equivalenceArgument));
+    // Invoke the function.
+    final FhirPath result = new TranslateFunction().invoke(translateInput);
+
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructTypeColumns(codingStructType())
+        // TC-1
+        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_2))
+        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-1", makeEid(1), null)
+        .withRow("encounter-1", makeEid(2), rowFromCoding(TRANSLATED_2))
+        // TC-2
+        .withRow("encounter-2", makeEid(0), null)
+        .withRow("encounter-2", makeEid(1), null)
+        // TC-3
+        .withRow("encounter-3", makeEid(0), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-3", makeEid(0), rowFromCoding(TRANSLATED_2))
+        // TC-4
+        .withRow("encounter-4", makeEid(0), null)
+        // TC-5
         .withRow("encounter-5", makeEid(0), null)
         .withRow("encounter-6", null, null)
         .buildWithStructValue();
@@ -199,7 +366,7 @@ class TranslateFunctionTest {
     // Check the result.
     assertThat(result)
         .hasExpression(
-            "Encounter.class.translate('" + CONCEPT_MAP_URI + "', false, 'wider,equal')")
+            "Encounter.type.translate('" + CONCEPT_MAP2_URI + "', true, 'narrower,equivalent')")
         .isElementPath(CodingPath.class)
         .hasFhirType(FHIRDefinedType.CODING)
         .isNotSingular()
@@ -209,16 +376,18 @@ class TranslateFunctionTest {
 
     // Verify mocks
     final Set<SimpleCoding> expectedSourceCodings = ImmutableSet
-        .of(new SimpleCoding(coding1), new SimpleCoding(coding2), new SimpleCoding(coding3));
+        .of(new SimpleCoding(CODING_1), new SimpleCoding(CODING_2), new SimpleCoding(CODING_3),
+            new SimpleCoding(CODING_4), new SimpleCoding(CODING_5));
 
     final List<ConceptMapEquivalence> expectedEquivalences = Arrays
-        .asList(ConceptMapEquivalence.WIDER, ConceptMapEquivalence.EQUAL);
+        .asList(ConceptMapEquivalence.NARROWER, ConceptMapEquivalence.EQUIVALENT);
 
     verify(terminologyService)
-        .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP_URI), eq(false),
+        .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP2_URI), eq(true),
             eq(expectedEquivalences));
     verifyNoMoreInteractions(terminologyService);
   }
+
 
   @Test
   public void throwsErrorIfInputTypeIsUnsupported() {

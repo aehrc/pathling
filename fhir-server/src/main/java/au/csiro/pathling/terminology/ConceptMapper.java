@@ -31,7 +31,7 @@ public class ConceptMapper implements Serializable {
            ? Collections.emptyList()
            : codings.stream()
                .flatMap(c -> codingMapping.getOrDefault(c, Collections.emptyList()).stream())
-               .distinct()
+               //.distinct()
                .collect(
                    Collectors.toList());
   }

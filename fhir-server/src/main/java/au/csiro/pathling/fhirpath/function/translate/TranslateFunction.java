@@ -98,8 +98,6 @@ public class TranslateFunction implements NamedFunction {
             conceptMapUrl, reverse, TerminologyUtils.parseCsvList(equivalence,
             ConceptMapEquivalence::fromCode));
 
-    // This de-duplicates the Codings to be validated, then performs the validation on a
-    // per-partition basis.
     final Dataset<Row> resultDataset = SqlExtensions
         .mapWithPartitionPreview(dataset, codingArrayCol,
             SimpleCodingsDecoders::decodeList,

@@ -78,7 +78,7 @@ public class TranslatefMapperWithPreview implements
         .collect(Collectors.toSet());
     final TerminologyService terminologyService = terminologyClientFactory.buildService(log);
     return terminologyService.translate(uniqueCodings, conceptMapUrl,
-        false, equivalences);
+        reverse, equivalences);
   }
 
   @Override
