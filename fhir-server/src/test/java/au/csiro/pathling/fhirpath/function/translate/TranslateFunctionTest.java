@@ -32,18 +32,16 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.ConceptMapper;
+import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.*;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -54,7 +52,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -89,35 +86,15 @@ class TranslateFunctionTest {
   private static final Coding TRANSLATED_2 = new Coding(DEST_SYSTEM_URI, "TEST2", "Test2");
 
 
-  // TODO: This need rethinking
-  // The problem is that the mock that are actually used in SparkTasks are ser/de copies
-  // of the original mocks. This works for stubbing but not for verification
-  // as the original mocks are not being called at all.
-  private final static TerminologyService terminologyService = mock(TerminologyService.class);
+  @Autowired
+  TerminologyClientFactory terminologyClientFactory;
 
-  @Nullable
-  private TerminologyClientFactory terminologyClientFactory;
-
-  static class TestFactory extends TerminologyClientFactory {
-
-    /**
-     * @param fhirContext the {@link FhirContext} used to build the client
-     */
-    public TestFactory(@Nonnull FhirContext fhirContext, TerminologyService terminologyService) {
-      super(fhirContext, "", 0, false);
-    }
-
-    @Nonnull
-    @Override
-    public TerminologyService buildService(@Nonnull Logger logger) {
-      return TranslateFunctionTest.terminologyService;
-    }
-  }
+  @Autowired
+  TerminologyService terminologyService;
 
   @BeforeEach
   public void setUp() {
     reset(terminologyService);
-    terminologyClientFactory = new TestFactory(fhirContext, terminologyService);
   }
 
   @Test
@@ -168,15 +145,15 @@ class TranslateFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final Map<SimpleCoding, List<Coding>> translationMap = ImmutableMap.<SimpleCoding, List<Coding>>builder()
-        .put(new SimpleCoding(CODING_1), Collections.singletonList(TRANSLATED_1))
-        .put(new SimpleCoding(CODING_2), Arrays.asList(TRANSLATED_1, TRANSLATED_2))
+    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
+        .toSystem(DEST_SYSTEM_URI)
+        .put(new SimpleCoding(CODING_1), TRANSLATED_1)
+        .put(new SimpleCoding(CODING_2), TRANSLATED_1, TRANSLATED_2)
         .build();
-    final ConceptMapper returnedConceptMapper = new ConceptMapper(translationMap);
 
     // Create a mock terminology client.
     when(terminologyService.translate(any(), any(), anyBoolean(), any()))
-        .thenReturn(returnedConceptMapper);
+        .thenReturn(returnedConceptTranslator);
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
@@ -309,16 +286,16 @@ class TranslateFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final Map<SimpleCoding, List<Coding>> translationMap = ImmutableMap.<SimpleCoding, List<Coding>>builder()
-        .put(new SimpleCoding(CODING_1), Collections.singletonList(TRANSLATED_1))
-        .put(new SimpleCoding(CODING_2), Arrays.asList(TRANSLATED_1, TRANSLATED_2))
-        .put(new SimpleCoding(CODING_4), Collections.singletonList(TRANSLATED_2))
+    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
+        .toSystem(DEST_SYSTEM_URI)
+        .put(new SimpleCoding(CODING_1), TRANSLATED_1)
+        .put(new SimpleCoding(CODING_2), TRANSLATED_1, TRANSLATED_2)
+        .put(new SimpleCoding(CODING_4), TRANSLATED_2)
         .build();
-    final ConceptMapper returnedConceptMapper = new ConceptMapper(translationMap);
 
     // Create a mock terminology client.
     when(terminologyService.translate(any(), any(), anyBoolean(), any()))
-        .thenReturn(returnedConceptMapper);
+        .thenReturn(returnedConceptTranslator);
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)

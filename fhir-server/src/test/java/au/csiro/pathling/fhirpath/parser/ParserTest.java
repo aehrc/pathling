@@ -22,16 +22,20 @@ import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.terminology.ConceptTranslator;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
+import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.param.UriParam;
@@ -42,6 +46,7 @@ import java.net.URL;
 import java.sql.Date;
 import java.util.*;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -52,6 +57,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -71,6 +77,9 @@ public class ParserTest {
 
   @Autowired
   private TerminologyClient terminologyClient;
+
+  @Autowired
+  private TerminologyService terminologyService;
 
   @Autowired
   private TerminologyClientFactory terminologyClientFactory;
@@ -118,6 +127,23 @@ public class ParserTest {
   @SuppressWarnings("rawtypes")
   private FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
+  }
+
+  @SuppressWarnings("rawtypes")
+  @Nonnull
+  private FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
+      @Nonnull final String expression) {
+    final ResourcePath subjectResource = ResourcePath
+        .build(fhirContext, mockReader, resourceType, resourceType.toCode(), true);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .terminologyClientFactory(terminologyClientFactory)
+        .terminologyClient(terminologyClient)
+        .resourceReader(mockReader)
+        .inputContext(subjectResource)
+        .build();
+    final Parser resourceParser = new Parser(parserContext);
+    return assertThat(resourceParser.parse(expression));
   }
 
   @Test
@@ -458,6 +484,28 @@ public class ParserTest {
             + "contact.where(gender = 'female').organization.resolve()).name")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, (String) null));
+  }
+
+
+  @Test
+  void testTranslateFunction() {
+
+    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
+        .toSystem("uuid:test-system")
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
+        .build();
+
+    // Create a mock terminology client.
+    when(terminologyService.translate(any(), any(), ArgumentMatchers.anyBoolean(), any()))
+        .thenReturn(returnedConceptTranslator);
+
+    // TODO: add actual assertions
+    assertThatResultOf(ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent')")
+        //"code.coding', false, 'equivalent')")
+        .selectOrderedResultWithEid()
+        .debugAllRows();
   }
 
   @Test

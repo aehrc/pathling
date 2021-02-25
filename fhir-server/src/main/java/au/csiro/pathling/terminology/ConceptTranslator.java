@@ -1,5 +1,6 @@
 package au.csiro.pathling.terminology;
 
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.io.Serializable;
 import java.util.Collection;
@@ -9,18 +10,21 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import org.hl7.fhir.r4.model.Coding;
 
-public class ConceptMapper implements Serializable {
+@ToString
+@EqualsAndHashCode
+public class ConceptTranslator implements Serializable {
 
-  private final Map<SimpleCoding, List<Coding>> codingMapping;
+  private final Map<SimpleCoding, List<ImmutableCoding>> codingMapping;
 
-
-  public ConceptMapper() {
-    codingMapping = Collections.emptyMap();
+  public ConceptTranslator() {
+    this(Collections.emptyMap());
   }
 
-  public ConceptMapper(Map<SimpleCoding, List<Coding>> codingMapping) {
+  public ConceptTranslator(Map<SimpleCoding, List<ImmutableCoding>> codingMapping) {
     this.codingMapping = codingMapping;
   }
 
@@ -31,7 +35,7 @@ public class ConceptMapper implements Serializable {
            ? Collections.emptyList()
            : codings.stream()
                .flatMap(c -> codingMapping.getOrDefault(c, Collections.emptyList()).stream())
-               //.distinct()
+               .map(ImmutableCoding::toCoding)
                .collect(
                    Collectors.toList());
   }

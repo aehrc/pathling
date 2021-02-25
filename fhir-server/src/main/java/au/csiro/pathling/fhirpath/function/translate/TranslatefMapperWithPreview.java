@@ -12,7 +12,7 @@ import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
-import au.csiro.pathling.terminology.ConceptMapper;
+import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.TerminologyService;
 import java.util.Iterator;
 import java.util.List;
@@ -32,7 +32,7 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
  */
 @Slf4j
 public class TranslatefMapperWithPreview implements
-    MapperWithPreview<List<SimpleCoding>, Row[], ConceptMapper> {
+    MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> {
 
   private static final long serialVersionUID = 2879761794073649202L;
 
@@ -68,9 +68,9 @@ public class TranslatefMapperWithPreview implements
 
   @Override
   @Nonnull
-  public ConceptMapper preview(@Nonnull final Iterator<List<SimpleCoding>> input) {
+  public ConceptTranslator preview(@Nonnull final Iterator<List<SimpleCoding>> input) {
     if (!input.hasNext() || equivalences.isEmpty()) {
-      return new ConceptMapper();
+      return new ConceptTranslator();
     }
     final Set<SimpleCoding> uniqueCodings = streamOf(input)
         .filter(Objects::nonNull)
@@ -84,7 +84,7 @@ public class TranslatefMapperWithPreview implements
   @Override
   @Nullable
   public Row[] call(@Nullable final List<SimpleCoding> input,
-      @Nonnull final ConceptMapper state) {
+      @Nonnull final ConceptTranslator state) {
 
     final List<Coding> outputCodings = state.translate(input);
     return outputCodings.isEmpty()

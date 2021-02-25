@@ -1,0 +1,218 @@
+package au.csiro.pathling.terminology;
+
+
+import static au.csiro.pathling.test.assertions.Assertions.assertJson;
+import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import au.csiro.pathling.errors.MalformedResponseException;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
+import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
+import ca.uhn.fhir.parser.IParser;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Bundle.BundleType;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+@Tag("UnitTest")
+public class TranslateMappingTest {
+
+  @Autowired
+  protected IParser jsonParser;
+
+
+  private static final String CONCEPT_MAP_URL_1 = "http://snomed.info/sct?fhir_cm=1";
+  private static final String CONCEPT_MAP_URL_2 = "http://snomed.info/sct?fhir_cm=2";
+
+  private static final SimpleCoding SIMPLE_CODING_1 = new SimpleCoding("uuid:system1", "code1");
+  private static final SimpleCoding SIMPLE_CODING_2 = new SimpleCoding("uuid:system2", "code2",
+      "12");
+  private static final SimpleCoding SIMPLE_CODING_3 = new SimpleCoding("uuid:system3", "code3");
+
+
+  private static final Coding CODING_1_WIDER = new Coding("http://snomed.info/sct",
+      "wider-1",
+      "Wider 1");
+
+  private static final Coding CODING_1_EQUIVALENT = new Coding("http://snomed.info/sct",
+      "equivalent-1",
+      "Equivalent 1");
+
+  private static final Coding CODING_2_EQUIVALENT = new Coding("http://snomed.info/sct",
+      "equivalent-2",
+      "Equivalent 2");
+
+  @Nullable
+  private TestInfo testInfo;
+
+  @BeforeEach
+  public void setUp(@Nonnull TestInfo testInfo) {
+    this.testInfo = testInfo;
+  }
+
+  protected void assertRequest(
+      @Nonnull final IBaseResource resource) {
+    final String actualJson = jsonParser.encodeResourceToString(resource);
+
+    //noinspection ConstantConditions,OptionalGetWithoutIsPresent
+    final Path expectedPath = Paths
+        .get("requests", testInfo.getTestClass().get().getSimpleName(),
+            testInfo.getTestMethod().get().getName() + ".json");
+    assertJson(expectedPath.toString(), actualJson);
+  }
+
+  @Test
+  public void testToBundleEmpty() {
+    final Bundle requestBundle = TranslateMapping
+        .toRequestBundle(Collections.emptyList(), CONCEPT_MAP_URL_1,
+            false);
+    assertRequest(requestBundle);
+  }
+
+  @Test
+  public void testToBundleForward() {
+    final Bundle requestBundle = TranslateMapping
+        .toRequestBundle(Arrays.asList(SIMPLE_CODING_1, SIMPLE_CODING_2), CONCEPT_MAP_URL_1,
+            false);
+    assertRequest(requestBundle);
+  }
+
+  @Test
+  public void testToBundleReverse() {
+    final Bundle requestBundle = TranslateMapping
+        .toRequestBundle(
+            Arrays.asList(SIMPLE_CODING_2, SIMPLE_CODING_1), CONCEPT_MAP_URL_2,
+            true);
+    assertRequest(requestBundle);
+  }
+
+
+  @Test
+  public void testFromBundleWhenResponseHasMappings() {
+    final Bundle responseBundle = (Bundle) jsonParser.parseResource(
+        getResourceAsStream("txResponses/TranslateMappingTest/responseWithMappings3.Bundle.json"));
+
+    final List<SimpleCoding> inputCodings = Arrays
+        .asList(SIMPLE_CODING_1, SIMPLE_CODING_2, SIMPLE_CODING_3);
+
+    // TC-1 Not matching equivalences
+    final ConceptTranslator conceptTranslatorEmpty = TranslateMapping
+        .fromResponseBundle(responseBundle, inputCodings,
+            Collections.singletonList(ConceptMapEquivalence.INEXACT));
+    assertEquals(new ConceptTranslator(), conceptTranslatorEmpty,
+        "TC-1: Not matching equivalences");
+
+    // TC-2 All equivalences match
+
+    final ConceptTranslator conceptTranslatorAll = TranslateMapping
+        .fromResponseBundle(responseBundle, inputCodings,
+            Arrays.asList(ConceptMapEquivalence.values()));
+
+    final ConceptTranslator expectedConcepMapperAll = ConceptTranslatorBuilder.empty()
+        .put(SIMPLE_CODING_1, CODING_1_EQUIVALENT, CODING_1_WIDER)
+        .put(SIMPLE_CODING_2, CODING_2_EQUIVALENT)
+        .build();
+    assertEquals(expectedConcepMapperAll, conceptTranslatorAll, "TC-2: All equivalences match");
+
+    // TC-3 Selected equivalences match
+
+    final ConceptTranslator conceptTranslatorSelect = TranslateMapping
+        .fromResponseBundle(responseBundle, inputCodings,
+            Collections.singletonList(ConceptMapEquivalence.WIDER));
+
+    final ConceptTranslator expectedConcepMapperSelect = ConceptTranslatorBuilder.empty()
+        .put(SIMPLE_CODING_1, CODING_1_WIDER)
+        .build();
+    assertEquals(expectedConcepMapperSelect, conceptTranslatorSelect,
+        "TC-3: Selected equivalences match");
+  }
+
+  @Test
+  public void testFromBundleWhenResponseWithNoMappings() {
+    final Bundle responseBundle = (Bundle) jsonParser.parseResource(
+        getResourceAsStream("txResponses/TranslateMappingTest/noMappingsResponse2.Bundle.json"));
+
+    final List<SimpleCoding> inputCodings = Arrays
+        .asList(SIMPLE_CODING_1, SIMPLE_CODING_2);
+
+    // TC-4 Not mappins in response
+    final ConceptTranslator conceptTranslatorEmpty = TranslateMapping
+        .fromResponseBundle(responseBundle, inputCodings,
+            Collections.singletonList(ConceptMapEquivalence.INEXACT));
+    assertEquals(new ConceptTranslator(), conceptTranslatorEmpty, "TC-4: No mappings in response");
+  }
+
+  @Test
+  public void throwsErrorIfResponsBundleSizeWrong() {
+
+    final Bundle responseBundle = (Bundle) jsonParser.parseResource(
+        getResourceAsStream("txResponses/TranslateMappingTest/responseWithMappings3.Bundle.json"));
+
+    // Response bundle has three entries
+    final MalformedResponseException error = assertThrows(MalformedResponseException.class,
+        () -> TranslateMapping
+            .fromResponseBundle(responseBundle, Arrays
+                    .asList(SIMPLE_CODING_1, SIMPLE_CODING_2),
+                Collections.emptyList()));
+    assertEquals(
+        "The size of the response bundle: 2 does not match the size of the request bundle: 3",
+        error.getMessage());
+  }
+
+  @Test
+  public void throwsErrorIfAnyEntryHasError() {
+
+    final Bundle responseBundle = (Bundle) jsonParser.parseResource(
+        getResourceAsStream("txResponses/TranslateMappingTest/responseWithMappings3.Bundle.json"));
+
+    // set one entry status to error
+    responseBundle.getEntry().get(1).getResponse().setStatus("404");
+
+    // Response bundle has three entries
+    final MalformedResponseException error = assertThrows(MalformedResponseException.class,
+        () -> TranslateMapping
+            .fromResponseBundle(responseBundle, Arrays
+                    .asList(SIMPLE_CODING_1, SIMPLE_CODING_2, SIMPLE_CODING_3),
+                Collections.emptyList()));
+    assertEquals(
+        "Failed entry in response bundle with status: 404",
+        error.getMessage());
+  }
+
+
+  @Test
+  public void throwsErrorIfWrongBundleType() {
+
+    final Bundle responseBundle = (Bundle) jsonParser.parseResource(
+        getResourceAsStream("txResponses/TranslateMappingTest/noMappingsResponse2.Bundle.json"));
+
+    // set one entry status to error
+    responseBundle.setType(BundleType.BATCH);
+
+    // Response bundle has three entries
+    final MalformedResponseException error = assertThrows(MalformedResponseException.class,
+        () -> TranslateMapping
+            .fromResponseBundle(responseBundle, Arrays
+                    .asList(SIMPLE_CODING_1, SIMPLE_CODING_2),
+                Collections.emptyList()));
+    assertEquals(
+        "Expected bundle type 'batch-reponse' but got: 'batch'",
+        error.getMessage());
+  }
+}

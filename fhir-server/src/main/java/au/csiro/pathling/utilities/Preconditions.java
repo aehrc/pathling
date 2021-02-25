@@ -7,6 +7,7 @@
 package au.csiro.pathling.utilities;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.errors.MalformedResponseException;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,6 +30,21 @@ public class Preconditions {
   public static void check(final boolean expression) {
     if (!expression) {
       throw new AssertionError();
+    }
+  }
+
+  /**
+   * Ensures the truth of an expression, throwing an {@link AssertionError} with the supplied
+   * message if it does not evaluate as true.
+   *
+   * @param expression The expression that should be true
+   * @param messageTemplate The message template in the {@link String#format } format
+   * @param params The parameters to the message template
+   */
+  public static void check(final boolean expression, final @Nonnull String messageTemplate,
+      @Nonnull Object... params) {
+    if (!expression) {
+      throw new AssertionError(String.format(messageTemplate, params));
     }
   }
 
@@ -97,6 +113,21 @@ public class Preconditions {
   public static void checkState(final boolean expression, @Nonnull final String errorMessage) {
     if (!expression) {
       throw new IllegalStateException(errorMessage);
+    }
+  }
+
+  /**
+   * Ensures the truth of an expression, throwing an {@link MalformedResponseException} with the
+   * supplied formatted message if it does not evaluate as true.
+   *
+   * @param expression The expression that should be true
+   * @param messageTemplate The message template in the {@link String#format} format
+   * @param params The parameters to the message template
+   */
+  public static void checkResponse(boolean expression, @Nonnull final String messageTemplate,
+      final @Nonnull Object... params) {
+    if (!expression) {
+      throw new MalformedResponseException(String.format(messageTemplate, params));
     }
   }
 
