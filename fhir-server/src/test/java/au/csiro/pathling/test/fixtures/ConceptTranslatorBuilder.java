@@ -46,6 +46,14 @@ public class ConceptTranslatorBuilder {
     return this;
   }
 
+
+  @Nonnull
+  public ConceptTranslatorBuilder put(@Nonnull final Coding coding,
+      @Nonnull final Coding... translatedCodings) {
+    return put(new SimpleCoding(coding), translatedCodings);
+  }
+
+
   @Nonnull
   public ConceptTranslator build() {
     return new ConceptTranslator(mappings);

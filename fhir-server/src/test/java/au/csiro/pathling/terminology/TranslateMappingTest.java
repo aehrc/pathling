@@ -36,7 +36,6 @@ public class TranslateMappingTest {
   @Autowired
   protected IParser jsonParser;
 
-
   private static final String CONCEPT_MAP_URL_1 = "http://snomed.info/sct?fhir_cm=1";
   private static final String CONCEPT_MAP_URL_2 = "http://snomed.info/sct?fhir_cm=2";
 

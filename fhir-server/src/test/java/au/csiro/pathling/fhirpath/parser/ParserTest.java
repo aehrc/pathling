@@ -54,6 +54,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -487,6 +488,8 @@ public class ParserTest {
   }
 
 
+  // TODO: Enable when eid translate issue is fixed.
+  @Disabled
   @Test
   void testTranslateFunction() {
 
@@ -501,9 +504,9 @@ public class ParserTest {
         .thenReturn(returnedConceptTranslator);
 
     // TODO: add actual assertions
-    assertThatResultOf(ResourceType.PATIENT,
-        "reverseResolve(Condition.subject).code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent')")
-        //"code.coding', false, 'equivalent')")
+    // This should be empty as $this is singular
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').where($this.count() > 1)")
         .selectOrderedResultWithEid()
         .debugAllRows();
   }
