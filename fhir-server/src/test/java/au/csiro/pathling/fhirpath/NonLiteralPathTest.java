@@ -98,8 +98,9 @@ public class NonLiteralPathTest {
     final Column newNullEid = testPath
         .expandEid(functions.lit(null));
 
-    assertNull(pathDataset.where(idCol.equalTo("patient-1")).select(newNullEid).first()
-        .getList(0));
+    assertEquals(Arrays.asList(1, 3, 0),
+        pathDataset.where(idCol.equalTo("patient-1")).select(newNullEid).first()
+            .getList(0));
     assertNull(pathDataset.where(idCol.equalTo("patient-2")).select(newNullEid).first()
         .getList(0));
   }

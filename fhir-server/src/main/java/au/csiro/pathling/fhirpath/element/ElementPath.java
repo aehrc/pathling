@@ -44,7 +44,7 @@ public class ElementPath extends NonLiteralPath {
   @Nonnull
   private final FHIRDefinedType fhirType;
 
-  @Getter(AccessLevel.PROTECTED)
+  @Getter(AccessLevel.PUBLIC)
   @Nonnull
   private Optional<ElementDefinition> definition = Optional.empty();
 

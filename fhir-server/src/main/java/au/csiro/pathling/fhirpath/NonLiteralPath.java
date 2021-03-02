@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+import static org.apache.spark.sql.functions.*;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -21,7 +22,6 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 
 /**
  * Represents any FHIRPath expression which is not a literal.
@@ -208,7 +208,7 @@ public abstract class NonLiteralPath implements FhirPath {
    */
   @Nonnull
   private Column makeThisColumn() {
-    return functions.struct(
+    return struct(
         getOrderingColumn().alias(THIS_ORDERING_COLUMN_NAME),
         getValueColumn().alias(THIS_VALUE_COLUMN_NAME));
   }
@@ -216,19 +216,37 @@ public abstract class NonLiteralPath implements FhirPath {
   /**
    * Construct the new value of the element ID column, based on its current value in the parent path
    * and the index of an element in the child path.
+   * <p>
+   * If the parent's eid is None it indicates that the parent is singular and a new eid needs to be
+   * created based on the value of the indexColumn:
+   * <ul>
+   * <li>if the indexColumns is null then the eid can be set to null.</li>
+   * <li>otherwise it should be a one element array with the indexColumn value.</li>
+   * </ul>
+   * <p>
+   * If the
+   * parent eid exits that the value of the index column needs to be appended to the the existing
+   * id.
+   * <ul>
+   * <li>f the existing is null then then the index must be null as well and the new id should be
+   * null.</li>
+   * <li>otherwise the exising id needs to be extended if the value of indexColumn or 0 if index
+   * column is null.</li>
+   * </ul>
    *
    * @param indexColumn the {@link Column} with the child path element index
    * @return an element ID Column for the child path
    */
   @Nonnull
   public Column expandEid(@Nonnull final Column indexColumn) {
-    final Column indexAsArray = functions.array(indexColumn);
-    final Column compositeEid = getEidColumn()
-        .map(eid -> functions.when(eid.isNull(), ORDERING_NULL_VALUE).otherwise(
-            functions.concat(eid, indexAsArray))).orElse(indexAsArray);
-
-    return functions.when(indexColumn.isNull(), ORDERING_NULL_VALUE)
-        .otherwise(compositeEid);
+    final Column indexOrZero =
+        when(indexColumn.isNotNull(), array(indexColumn))
+            .otherwise(array(lit(0)));
+    final Column indexOrNull =
+        when(indexColumn.isNotNull(), array(indexColumn))
+            .otherwise(ORDERING_NULL_VALUE);
+    return getEidColumn()
+        .map(eid -> when(eid.isNull(), ORDERING_NULL_VALUE).otherwise(
+            concat(eid, indexOrZero))).orElse(indexOrNull);
   }
-
 }

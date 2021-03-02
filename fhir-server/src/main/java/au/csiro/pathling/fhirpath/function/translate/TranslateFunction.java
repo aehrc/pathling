@@ -9,11 +9,15 @@ package au.csiro.pathling.fhirpath.function.translate;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.posexplode_outer;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
+import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
@@ -23,7 +27,10 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.SqlExtensions;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -33,7 +40,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.slf4j.MDC;
 
 /**
@@ -70,11 +76,19 @@ public class TranslateFunction implements NamedFunction {
     final Column idColumn = inputPath.getIdColumn();
     final Column conceptColumn = inputPath.getValueColumn();
 
+    final boolean isCodeableConcept = isCodeableConcept(inputPath);
+
     CheckReturnValue functions;
-    final Column codingArrayCol = (isCodeableConcept(inputPath))
+    final Column codingArrayCol = isCodeableConcept
                                   ? conceptColumn.getField("coding")
                                   : when(conceptColumn.isNotNull(), array(conceptColumn))
                                       .otherwise(lit(null));
+
+    // the the definition of the result is always the Coding element.
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    final ElementDefinition resultDefinition = isCodeableConcept
+                                               ? inputPath.getChildElement("coding").get()
+                                               : inputPath.getDefinition().get();
 
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
@@ -84,35 +98,40 @@ public class TranslateFunction implements NamedFunction {
     final String conceptMapUrl = conceptMapUrlArg.getJavaValue();
     final boolean reverse = reverseArg.getJavaValue();
     final String equivalence = equivalenceArg.getJavaValue();
-
     final Dataset<Row> dataset = inputPath.getDataset();
 
-    //
-    // Hapi bunlde example: https://hapifhir.io/hapi-fhir/docs/client/examples.html
-    //
-
-    // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
-    // then create a new dataset with the boolean results.
     final TranslatefMapperWithPreview mapper =
         new TranslatefMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
             conceptMapUrl, reverse, TerminologyUtils.parseCsvList(equivalence,
             ConceptMapEquivalence::fromCode));
 
-    final Dataset<Row> resultDataset = SqlExtensions
+    final Dataset<Row> translatedDataset = SqlExtensions
         .mapWithPartitionPreview(dataset, codingArrayCol,
             SimpleCodingsDecoders::decodeList,
             mapper,
             StructField.apply("result", DataTypes.createArrayType(CodingEncoding.DATA_TYPE), true,
                 Metadata.empty()));
-    final Column resultColumn = explode_outer(col("result"));
+
+    // the result is an array of translations per each input element, which we now
+    // need to explode in the same way as for path traversal, creating unique element ids.
+
+    final Column[] allColumns = Stream.concat(Arrays.stream(dataset.columns())
+        .map(dataset::col), Stream
+        .of(posexplode_outer(translatedDataset.col("result"))
+            .as(new String[]{"index", "value"})))
+        .toArray(Column[]::new);
+    final Dataset<Row> resultDataset = translatedDataset.select(allColumns);
+    final Column resultColumn = resultDataset.col("value");
+    Optional<Column> eidColumnCandidate = Optional
+        .of(inputPath.expandEid(resultDataset.col("index")));
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
 
     return ElementPath
-        .build(expression, resultDataset, idColumn, inputPath.getEidColumn(), resultColumn,
+        .build(expression, resultDataset, idColumn, eidColumnCandidate, resultColumn,
             false, inputPath.getForeignResource(), inputPath.getThisColumn(),
-            FHIRDefinedType.CODING);
+            resultDefinition);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

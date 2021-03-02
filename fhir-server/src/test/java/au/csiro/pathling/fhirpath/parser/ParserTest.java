@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -54,11 +56,9 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -488,11 +488,8 @@ public class ParserTest {
   }
 
 
-  // TODO: Enable when eid translate issue is fixed.
-  @Disabled
   @Test
   void testTranslateFunction() {
-
     final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
         .toSystem("uuid:test-system")
         .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
@@ -500,15 +497,42 @@ public class ParserTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), ArgumentMatchers.anyBoolean(), any()))
+    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
         .thenReturn(returnedConceptTranslator);
 
     // TODO: add actual assertions
     // This should be empty as $this is singular
     assertThatResultOf(ResourceType.CONDITION,
-        "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').where($this.count() > 1)")
-        .selectOrderedResultWithEid()
-        .debugAllRows();
+        "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').code")
+        .selectOrderedResultWithEid();
+  }
+
+
+  @Test
+  void testTranslateWithWhereAndTranslate() {
+
+    final ConceptTranslator conceptTranslator1 = ConceptTranslatorBuilder
+        .toSystem("uuid:test-system")
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
+        .build();
+
+    final ConceptTranslator conceptTranslator2 = ConceptTranslatorBuilder
+        .toSystem("uuid:other-system")
+        .putTimes(new SimpleCoding("uuid:test-system", "444814009-0"), 1)
+        .putTimes(new SimpleCoding("uuid:test-system", "444814009-1"), 2)
+        .build();
+
+    // Create a mock terminology client.
+    when(terminologyService.translate(any(), eq("uuid:cm=1"), anyBoolean(), any()))
+        .thenReturn(conceptTranslator1);
+    when(terminologyService.translate(any(), eq("uuid:cm=2"), anyBoolean(), any()))
+        .thenReturn(conceptTranslator2);
+
+    // TODO: add actual assertions
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code contains '444814009-1-0').code")
+        .selectOrderedResultWithEid();
   }
 
   @Test

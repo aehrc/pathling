@@ -24,6 +24,8 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
 /**
  * Input/Ouput mapping for translate operation.
+ * <p>
+ * Hapi bunlde example: https://hapifhir.io/hapi-fhir/docs/client/examples.html
  */
 public final class TranslateMapping extends BaseMapping {
 

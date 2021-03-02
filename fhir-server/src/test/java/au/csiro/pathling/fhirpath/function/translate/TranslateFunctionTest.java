@@ -187,18 +187,18 @@ class TranslateFunctionTest {
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
         // TC-1
-        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_1))
-        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_2))
-        .withRow("encounter-1", makeEid(1), null)
-        .withRow("encounter-1", makeEid(2), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-1", makeEid(0, 0), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-1", makeEid(0, 1), rowFromCoding(TRANSLATED_2))
+        .withRow("encounter-1", makeEid(1, 0), null)
+        .withRow("encounter-1", makeEid(2, 0), rowFromCoding(TRANSLATED_1))
         // TC-2
-        .withRow("encounter-2", makeEid(0), null)
-        .withRow("encounter-2", makeEid(1), null)
+        .withRow("encounter-2", makeEid(0, 0), null)
+        .withRow("encounter-2", makeEid(1, 0), null)
         // TC-3
-        .withRow("encounter-3", makeEid(0), rowFromCoding(TRANSLATED_1))
-        .withRow("encounter-3", makeEid(0), rowFromCoding(TRANSLATED_2))
+        .withRow("encounter-3", makeEid(0, 0), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-3", makeEid(0, 1), rowFromCoding(TRANSLATED_2))
         // TC-4
-        .withRow("encounter-4", makeEid(0), null)
+        .withRow("encounter-4", makeEid(0, 0), null)
         // TC-5
         .withRow("encounter-5", null, null)
         .buildWithStructValue();
@@ -228,7 +228,7 @@ class TranslateFunctionTest {
   }
 
   @Test
-  public void translateCodeableConcep() {
+  public void translateCodeableConcept() {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "type");
@@ -322,21 +322,21 @@ class TranslateFunctionTest {
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
         // TC-1
-        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_1))
-        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_2))
-        .withRow("encounter-1", makeEid(0), rowFromCoding(TRANSLATED_1))
-        .withRow("encounter-1", makeEid(1), null)
-        .withRow("encounter-1", makeEid(2), rowFromCoding(TRANSLATED_2))
+        .withRow("encounter-1", makeEid(0, 0), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-1", makeEid(0, 1), rowFromCoding(TRANSLATED_2))
+        .withRow("encounter-1", makeEid(0, 2), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-1", makeEid(1, 0), null)
+        .withRow("encounter-1", makeEid(2, 0), rowFromCoding(TRANSLATED_2))
         // TC-2
-        .withRow("encounter-2", makeEid(0), null)
-        .withRow("encounter-2", makeEid(1), null)
+        .withRow("encounter-2", makeEid(0, 0), null)
+        .withRow("encounter-2", makeEid(1, 0), null)
         // TC-3
-        .withRow("encounter-3", makeEid(0), rowFromCoding(TRANSLATED_1))
-        .withRow("encounter-3", makeEid(0), rowFromCoding(TRANSLATED_2))
+        .withRow("encounter-3", makeEid(0, 0), rowFromCoding(TRANSLATED_1))
+        .withRow("encounter-3", makeEid(0, 1), rowFromCoding(TRANSLATED_2))
         // TC-4
-        .withRow("encounter-4", makeEid(0), null)
+        .withRow("encounter-4", makeEid(0, 0), null)
         // TC-5
-        .withRow("encounter-5", makeEid(0), null)
+        .withRow("encounter-5", makeEid(0, 0), null)
         .withRow("encounter-6", null, null)
         .buildWithStructValue();
 
@@ -348,7 +348,6 @@ class TranslateFunctionTest {
         .hasFhirType(FHIRDefinedType.CODING)
         .isNotSingular()
         .selectOrderedResultWithEid()
-        .debugAllRows()
         .hasRows(expectedResult);
 
     // Verify mocks
