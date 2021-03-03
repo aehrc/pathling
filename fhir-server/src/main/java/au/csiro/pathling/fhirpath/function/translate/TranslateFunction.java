@@ -50,8 +50,8 @@ import org.slf4j.MDC;
  * equivalence = 'equivalent') : collection<Coding>
  * </pre>
  * <p>
- * <p>
- * Uses: https://www.hl7.org/fhir/operation-conceptmap-translate.html
+ * Uses: <a href="https://www.hl7.org/fhir/operation-conceptmap-translate.html">Translate
+ * Operation</a>
  *
  * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#translate">translate</a>

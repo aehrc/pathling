@@ -7,7 +7,7 @@
 package au.csiro.pathling.utilities;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.errors.MalformedResponseException;
+import au.csiro.pathling.errors.UnexpectedResponseException;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
@@ -117,7 +117,7 @@ public class Preconditions {
   }
 
   /**
-   * Ensures the truth of an expression, throwing an {@link MalformedResponseException} with the
+   * Ensures the truth of an expression, throwing an {@link UnexpectedResponseException} with the
    * supplied formatted message if it does not evaluate as true.
    *
    * @param expression The expression that should be true
@@ -127,7 +127,7 @@ public class Preconditions {
   public static void checkResponse(boolean expression, @Nonnull final String messageTemplate,
       final @Nonnull Object... params) {
     if (!expression) {
-      throw new MalformedResponseException(String.format(messageTemplate, params));
+      throw new UnexpectedResponseException(String.format(messageTemplate, params));
     }
   }
 

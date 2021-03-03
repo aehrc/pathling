@@ -7,21 +7,23 @@
 package au.csiro.pathling.errors;
 
 /**
+ * Thrown when a response from the upstream server does not match expectations.
+ *
  * @author Piotr Szul
  */
-public class MalformedResponseException extends RuntimeException {
+public class UnexpectedResponseException extends RuntimeException {
 
   private static final long serialVersionUID = 5953491164133388069L;
 
-  public MalformedResponseException(final String message, final Throwable cause) {
+  public UnexpectedResponseException(final String message, final Throwable cause) {
     super(message, cause);
   }
 
-  public MalformedResponseException(final String message) {
+  public UnexpectedResponseException(final String message) {
     super(message);
   }
 
-  public MalformedResponseException(final Throwable cause) {
+  public UnexpectedResponseException(final Throwable cause) {
     super(cause);
   }
 

@@ -14,7 +14,7 @@ import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
- * Terminology helper funtions
+ * Terminology helper functions
  */
 public interface TerminologyUtils {
 
@@ -36,7 +36,7 @@ public interface TerminologyUtils {
 
 
   /**
-   * Creates a stream from an interator.
+   * Creates a stream from the iterator.
    *
    * @param iterator an iterator
    * @param <T> the type (of elements)

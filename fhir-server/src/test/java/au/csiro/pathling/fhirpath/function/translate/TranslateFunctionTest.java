@@ -112,9 +112,9 @@ class TranslateFunctionTest {
     // }
 
     // Use cases:
-    // 1. [ C2,C3,C1 ] -> [ T1, T2, T1]
-    // 2. [ C3, C5 ] -> [ ]
-    // 3. [ C2 ] -> [T1, T2]
+    // 1. [ C2,C3,C1 ] -> [ [T1, T2],[], [T1]]
+    // 2. [ C3, C5 ] -> [[],[]]
+    // 3. [ C2 ] -> [ [T1, T2] ]
     // 4. [] -> []
     // 5. null -> null
 
@@ -174,14 +174,6 @@ class TranslateFunctionTest {
         Arrays.asList(conceptMapUrlArgument, reverseArgument, equivalenceArgument));
     // Invoke the function.
     final FhirPath result = new TranslateFunction().invoke(translateInput);
-
-    // TODO: is it valid to return two rows with the same eid
-    // in principle this is not VALID as (id, eid) should be unique primary key
-    // and as such is being used element identification for $this
-    // so this most likely need ot be fixed to provide another level of
-    // eid just as path traversal (which is another many to many operation)
-    // TODO: write a parser test case that does cartesian product because of this
-
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -243,10 +235,10 @@ class TranslateFunctionTest {
     // }
 
     // Use cases:
-    // 1. [ {C2,C3,C1}, {C3}, {C4} ] -> [ T1, T2, T1,  T2]
-    // 2. [ {C3, C5}, {C3} ] -> [ ]
-    // 3. [ {C2} ] -> [T1, T2]
-    // 4. [ {C3}] -> []
+    // 1. [ {C2,C3,C1}, {C3}, {C4} ] -> [ [T1, T2],[], [T2]]
+    // 2. [ {C3, C5}, {C3} ] -> [ [], [] ]
+    // 3. [ {C2} ] -> [[T1, T2]]
+    // 4. [ {C3}] -> [[]]
     // 5. [ ]-> []
     // 6. null -> null
 
@@ -324,7 +316,6 @@ class TranslateFunctionTest {
         // TC-1
         .withRow("encounter-1", makeEid(0, 0), rowFromCoding(TRANSLATED_1))
         .withRow("encounter-1", makeEid(0, 1), rowFromCoding(TRANSLATED_2))
-        .withRow("encounter-1", makeEid(0, 2), rowFromCoding(TRANSLATED_1))
         .withRow("encounter-1", makeEid(1, 0), null)
         .withRow("encounter-1", makeEid(2, 0), rowFromCoding(TRANSLATED_2))
         // TC-2
@@ -348,6 +339,7 @@ class TranslateFunctionTest {
         .hasFhirType(FHIRDefinedType.CODING)
         .isNotSingular()
         .selectOrderedResultWithEid()
+        .debugAllRows()
         .hasRows(expectedResult);
 
     // Verify mocks

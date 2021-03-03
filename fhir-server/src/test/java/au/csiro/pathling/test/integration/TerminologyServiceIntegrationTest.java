@@ -12,7 +12,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.errors.MalformedResponseException;
+import au.csiro.pathling.errors.UnexpectedResponseException;
 import au.csiro.pathling.fhir.DefaultTerminologyClientFactory;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.terminology.ConceptTranslator;
@@ -129,7 +129,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   @Test
   public void testFailsForUnknowConteptMap() {
 
-    final MalformedResponseException error = assertThrows(MalformedResponseException.class,
+    final UnexpectedResponseException error = assertThrows(UnexpectedResponseException.class,
         () -> terminologyService.translate(
             Arrays.asList(simpleOf(CD_SNOMED_72940011000036107), snomedSimple("444814009")),
             "http://snomed.info/sct?fhir_cm=xxxx", false,

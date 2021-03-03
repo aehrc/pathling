@@ -11,6 +11,9 @@ import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
+/**
+ * Default implementation of TerminologyService using a backed terminology server.
+ */
 public class DefaultTerminologyService implements TerminologyService {
 
 

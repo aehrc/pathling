@@ -6,7 +6,7 @@ import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.errors.MalformedResponseException;
+import au.csiro.pathling.errors.UnexpectedResponseException;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import ca.uhn.fhir.parser.IParser;
@@ -164,7 +164,7 @@ public class TranslateMappingTest {
         getResourceAsStream("txResponses/TranslateMappingTest/responseWithMappings3.Bundle.json"));
 
     // Response bundle has three entries
-    final MalformedResponseException error = assertThrows(MalformedResponseException.class,
+    final UnexpectedResponseException error = assertThrows(UnexpectedResponseException.class,
         () -> TranslateMapping
             .fromResponseBundle(responseBundle, Arrays
                     .asList(SIMPLE_CODING_1, SIMPLE_CODING_2),
@@ -184,7 +184,7 @@ public class TranslateMappingTest {
     responseBundle.getEntry().get(1).getResponse().setStatus("404");
 
     // Response bundle has three entries
-    final MalformedResponseException error = assertThrows(MalformedResponseException.class,
+    final UnexpectedResponseException error = assertThrows(UnexpectedResponseException.class,
         () -> TranslateMapping
             .fromResponseBundle(responseBundle, Arrays
                     .asList(SIMPLE_CODING_1, SIMPLE_CODING_2, SIMPLE_CODING_3),
@@ -205,7 +205,7 @@ public class TranslateMappingTest {
     responseBundle.setType(BundleType.BATCH);
 
     // Response bundle has three entries
-    final MalformedResponseException error = assertThrows(MalformedResponseException.class,
+    final UnexpectedResponseException error = assertThrows(UnexpectedResponseException.class,
         () -> TranslateMapping
             .fromResponseBundle(responseBundle, Arrays
                     .asList(SIMPLE_CODING_1, SIMPLE_CODING_2),

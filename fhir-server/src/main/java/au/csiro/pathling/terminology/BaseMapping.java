@@ -11,6 +11,11 @@ import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 
+/**
+ * Helper function for request/response mappings.
+ *
+ * @author Piotr Szul
+ */
 public class BaseMapping {
 
   protected BaseMapping() {
@@ -25,6 +30,15 @@ public class BaseMapping {
     }
   }
 
+  /**
+   * Converts ParametersParameterComponent object to a java bean class initializing it's properties
+   * from the part properties.
+   *
+   * @param component the ParametersParameterComponent element.
+   * @param supplier the supplier for the bean class.
+   * @param <T> the type of the bean.
+   * @return the new java bean of type T initialize from the arametersParameterComponent element.
+   */
   @Nonnull
   public static <T> T partToBean(ParametersParameterComponent component, Supplier<T> supplier) {
     final T result = supplier.get();
@@ -33,6 +47,14 @@ public class BaseMapping {
   }
 
 
+  /**
+   * Retrieves parameters from successful bundle entry element.
+   *
+   * @param entry the bundle entry.
+   * @return the parameters from the entry.
+   * @throws au.csiro.pathling.errors.UnexpectedResponseException when the entry response code is
+   * not 200.
+   */
   @Nonnull
   public static Parameters parametersFromEntry(@Nonnull final BundleEntryComponent entry) {
     checkResponse("200".equals(entry.getResponse().getStatus()),

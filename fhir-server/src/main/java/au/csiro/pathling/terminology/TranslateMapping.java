@@ -32,7 +32,6 @@ public final class TranslateMapping extends BaseMapping {
   private TranslateMapping() {
   }
 
-
   @Data
   @NoArgsConstructor
   public static class TranslationEntry {
@@ -44,6 +43,14 @@ public final class TranslateMapping extends BaseMapping {
     private CodeType equivalence;
   }
 
+  /**
+   * Converts {@link TerminologyService#translate} parameters to a batch request Bundle.
+   *
+   * @param codings the list of codings to be translated.
+   * @param conceptMapUrl the concept map url.
+   * @param reverse if reverse translation is required.
+   * @return the barch bundle for the requested parameters.
+   */
   @Nonnull
   public static Bundle toRequestBundle(@Nonnull final List<SimpleCoding> codings,
       @Nonnull final String conceptMapUrl,
@@ -64,6 +71,15 @@ public final class TranslateMapping extends BaseMapping {
     return translateBatch;
   }
 
+  /**
+   * Builds ConceptTranslator from the batch response bundle for {@link
+   * TerminologyService#translate}
+   *
+   * @param responseBundle the response from the terminology server.
+   * @param inputCodes the list of coding requested for translation.
+   * @param equivalences the list of equivalences to be included the translator.
+   * @return the the ConceptTranslator.
+   */
   @Nonnull
   public static ConceptTranslator fromResponseBundle(@Nonnull final Bundle responseBundle,
       @Nonnull final List<SimpleCoding> inputCodes,
