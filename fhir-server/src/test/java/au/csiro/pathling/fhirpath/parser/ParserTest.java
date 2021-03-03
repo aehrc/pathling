@@ -500,11 +500,10 @@ public class ParserTest {
     when(terminologyService.translate(any(), any(), anyBoolean(), any()))
         .thenReturn(returnedConceptTranslator);
 
-    // TODO: add actual assertions
-    // This should be empty as $this is singular
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').code")
-        .selectOrderedResultWithEid();
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testTranslateFunction.csv");
   }
 
 
@@ -529,10 +528,10 @@ public class ParserTest {
     when(terminologyService.translate(any(), eq("uuid:cm=2"), anyBoolean(), any()))
         .thenReturn(conceptTranslator2);
 
-    // TODO: add actual assertions
     assertThatResultOf(ResourceType.CONDITION,
-        "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code contains '444814009-1-0').code")
-        .selectOrderedResultWithEid();
+        "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=2).code")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.csv");
   }
 
   @Test
