@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Getter;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -249,4 +250,32 @@ public abstract class NonLiteralPath implements FhirPath {
         .map(eid -> when(eid.isNull(), ORDERING_NULL_VALUE).otherwise(
             concat(eid, indexOrZero))).orElse(indexOrNull);
   }
+
+  /**
+   * Explodes an array column from a provided dataset preserving all the columns from this one and
+   * producing updated element ids.
+   *
+   * @param arrayDataset the dataset containing the array column. It should also contain all columns
+   * from this dataset.
+   * @param arrayCol the array column to explode.
+   * @param outValueAndEidCols the output pair of columns: `left` is set to the new value column and
+   * `right` to the new eid column.
+   * @return the dataset with the exploded array.
+   */
+  @Nonnull
+  public Dataset<Row> explodeArray(@Nonnull final Dataset<Row> arrayDataset,
+      @Nonnull final Column arrayCol,
+      @Nonnull final MutablePair<Column, Column> outValueAndEidCols) {
+    final Column[] allColumns = Stream.concat(Arrays.stream(dataset.columns())
+        .map(dataset::col), Stream
+        .of(posexplode_outer(arrayCol)
+            .as(new String[]{"index", "value"})))
+        .toArray(Column[]::new);
+    final Dataset<Row> resultDataset = arrayDataset.select(allColumns);
+    outValueAndEidCols.setLeft(resultDataset.col("value"));
+    outValueAndEidCols.setRight(expandEid(resultDataset.col("index")));
+    return resultDataset;
+  }
+
+
 }

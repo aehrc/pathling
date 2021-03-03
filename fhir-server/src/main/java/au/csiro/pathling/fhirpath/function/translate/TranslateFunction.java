@@ -11,7 +11,6 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.posexplode_outer;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhir.TerminologyClientFactory;
@@ -27,12 +26,11 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.SqlExtensions;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -114,22 +112,15 @@ public class TranslateFunction implements NamedFunction {
 
     // the result is an array of translations per each input element, which we now
     // need to explode in the same way as for path traversal, creating unique element ids.
-
-    final Column[] allColumns = Stream.concat(Arrays.stream(dataset.columns())
-        .map(dataset::col), Stream
-        .of(posexplode_outer(translatedDataset.col("result"))
-            .as(new String[]{"index", "value"})))
-        .toArray(Column[]::new);
-    final Dataset<Row> resultDataset = translatedDataset.select(allColumns);
-    final Column resultColumn = resultDataset.col("value");
-    Optional<Column> eidColumnCandidate = Optional
-        .of(inputPath.expandEid(resultDataset.col("index")));
-
+    final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
+    final Dataset<Row> resultDataset = inputPath
+        .explodeArray(translatedDataset, translatedDataset.col("result"), valueAndEidColumns);
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
 
     return ElementPath
-        .build(expression, resultDataset, idColumn, eidColumnCandidate, resultColumn,
+        .build(expression, resultDataset, idColumn, Optional.of(valueAndEidColumns.getRight()),
+            valueAndEidColumns.getLeft(),
             false, inputPath.getForeignResource(), inputPath.getThisColumn(),
             resultDefinition);
   }
