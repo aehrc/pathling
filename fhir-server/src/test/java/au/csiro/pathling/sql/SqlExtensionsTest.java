@@ -9,11 +9,11 @@ package au.csiro.pathling.sql;
 
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.utilities.Streams;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
@@ -55,9 +55,7 @@ public class SqlExtensionsTest {
     @Override
     @Nonnull
     public List<String> preview(@Nonnull final Iterator<String> input) {
-      final Iterable<String> iterable = () -> input;
-      return StreamSupport
-          .stream(iterable.spliterator(), false)
+      return Streams.streamOf(input)
           .filter(Objects::nonNull)
           .collect(Collectors.toList());
     }

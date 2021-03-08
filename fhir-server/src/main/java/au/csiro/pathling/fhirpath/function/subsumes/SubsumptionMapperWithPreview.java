@@ -6,16 +6,16 @@
 
 package au.csiro.pathling.fhirpath.function.subsumes;
 
+import static java.util.stream.Stream.concat;
+
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
+import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.rest.param.UriParam;
-import com.google.common.collect.Streams;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -65,19 +65,15 @@ public class SubsumptionMapperWithPreview implements
     // request across all workers.
     MDC.put("requestId", requestId);
 
-    final Iterable<ImmutablePair<List<SimpleCoding>, List<SimpleCoding>>> inputRowsIterable = () -> input;
-    final Stream<ImmutablePair<List<SimpleCoding>, List<SimpleCoding>>> inputStream = StreamSupport
-        .stream(inputRowsIterable.spliterator(), false);
-
     // Collect all distinct tokens used on both in inputs and arguments in this partition
     // Rows in which either input or argument are NULL are excluded as they do not need
     // to be included in closure request.
     // Also we only include codings with both system and code defined as only they can
     // be expected to be meaningfully represented to the terminology server
 
-    final Set<SimpleCoding> allCodings = inputStream
+    final Set<SimpleCoding> allCodings = Streams.streamOf(input)
         .filter(r -> r.getLeft() != null && r.getRight() != null)
-        .flatMap(r -> Streams.concat(r.getLeft().stream(), r.getRight().stream()))
+        .flatMap(r -> concat(r.getLeft().stream(), r.getRight().stream()))
         .filter(Objects::nonNull)
         .filter(SimpleCoding::isDefined)
         .collect(Collectors.toSet());

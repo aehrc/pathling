@@ -6,14 +6,13 @@
 
 package au.csiro.pathling.fhirpath.function.translate;
 
-import static au.csiro.pathling.fhirpath.TerminologyUtils.streamOf;
-
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.utilities.Streams;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -72,7 +71,7 @@ public class TranslatefMapperWithPreview implements
     if (!input.hasNext() || equivalences.isEmpty()) {
       return new ConceptTranslator();
     }
-    final Set<SimpleCoding> uniqueCodings = streamOf(input)
+    final Set<SimpleCoding> uniqueCodings = Streams.streamOf(input)
         .filter(Objects::nonNull)
         .flatMap(List::stream)
         .collect(Collectors.toSet());

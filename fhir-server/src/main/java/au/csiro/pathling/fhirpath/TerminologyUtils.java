@@ -4,12 +4,10 @@ import static java.util.function.Predicate.not;
 
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -33,20 +31,6 @@ public interface TerminologyUtils {
     return Stream.of(csvList.split(",")).map(String::trim).filter(not(String::isEmpty))
         .map(converter).collect(
             Collectors.toList());
-  }
-
-  /**
-   * Creates a stream from the iterator.
-   *
-   * @param iterator an iterator
-   * @param <T> the type (of elements)
-   * @return the stream for given iterator
-   */
-  @Nonnull
-  static <T> Stream<T> streamOf(@Nonnull Iterator<T> iterator) {
-    final Iterable<T> iterable = () -> iterator;
-    return StreamSupport
-        .stream(iterable.spliterator(), false);
   }
 
   /**

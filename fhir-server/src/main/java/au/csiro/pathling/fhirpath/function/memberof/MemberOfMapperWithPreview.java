@@ -10,10 +10,10 @@ import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
+import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.rest.param.UriParam;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
@@ -67,9 +67,7 @@ public class MemberOfMapperWithPreview implements
     }
     MDC.put("requestId", requestId);
 
-    final Iterable<List<SimpleCoding>> inputRowsIterable = () -> input;
-    final Set<SimpleCoding> codings = StreamSupport
-        .stream(inputRowsIterable.spliterator(), false)
+    final Set<SimpleCoding> codings = Streams.streamOf(input)
         .filter(Objects::nonNull)
         .flatMap(List::stream)
         .filter(Objects::nonNull)
