@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.SqlExtensions;
+import au.csiro.pathling.utilities.Strings;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.CheckReturnValue;
@@ -100,7 +101,7 @@ public class TranslateFunction implements NamedFunction {
 
     final TranslatefMapperWithPreview mapper =
         new TranslatefMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
-            conceptMapUrl, reverse, TerminologyUtils.parseCsvList(equivalence,
+            conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
             ConceptMapEquivalence::fromCode));
 
     final Dataset<Row> translatedDataset = SqlExtensions
