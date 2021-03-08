@@ -42,6 +42,8 @@ import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.ImmutableSet;
 import java.util.*;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -98,7 +100,7 @@ class TranslateFunctionTest {
   }
 
   @Test
-  public void translateCoding() {
+  public void translateCodingWithDefaultArguments() {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "class");
@@ -164,14 +166,8 @@ class TranslateFunctionTest {
     final StringLiteralPath conceptMapUrlArgument = StringLiteralPath
         .fromString("'" + CONCEPT_MAP1_URI + "'", inputExpression);
 
-    final BooleanLiteralPath reverseArgument = BooleanLiteralPath
-        .fromString("false", inputExpression);
-
-    final StringLiteralPath equivalenceArgument = StringLiteralPath
-        .fromString("wider,equal", inputExpression);
-
     final NamedFunctionInput translateInput = new NamedFunctionInput(parserContext, inputExpression,
-        Arrays.asList(conceptMapUrlArgument, reverseArgument, equivalenceArgument));
+        Collections.singletonList(conceptMapUrlArgument));
     // Invoke the function.
     final FhirPath result = new TranslateFunction().invoke(translateInput);
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
@@ -198,7 +194,7 @@ class TranslateFunctionTest {
     // Check the result.
     assertThat(result)
         .hasExpression(
-            "Encounter.class.translate('" + CONCEPT_MAP1_URI + "', false, 'wider,equal')")
+            "Encounter.class.translate('" + CONCEPT_MAP1_URI + "')")
         .isElementPath(CodingPath.class)
         .hasFhirType(FHIRDefinedType.CODING)
         .isNotSingular()
@@ -210,8 +206,8 @@ class TranslateFunctionTest {
         .of(new SimpleCoding(CODING_1), new SimpleCoding(CODING_2), new SimpleCoding(CODING_3),
             new SimpleCoding(CODING_5));
 
-    final List<ConceptMapEquivalence> expectedEquivalences = Arrays
-        .asList(ConceptMapEquivalence.WIDER, ConceptMapEquivalence.EQUAL);
+    final List<ConceptMapEquivalence> expectedEquivalences = Collections
+        .singletonList(ConceptMapEquivalence.EQUIVALENT);
 
     verify(terminologyService)
         .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP1_URI), eq(false),
@@ -220,7 +216,7 @@ class TranslateFunctionTest {
   }
 
   @Test
-  public void translateCodeableConcept() {
+  public void translateCodeableConceptWithNonDefaultArguments() {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "type");
@@ -380,12 +376,12 @@ class TranslateFunctionTest {
         error.getMessage());
   }
 
-  @Test
-  public void throwsErrorIfArgumentIsNotString() {
+
+  private void assertThrowsErrorForArguments(@Nonnull final String expectedErrror,
+      @Nonnull final Function<ElementPath, List<FhirPath>> argsFactory) {
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
-    final IntegerLiteralPath argument = IntegerLiteralPath.fromString("4", input);
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(mock(TerminologyClient.class))
@@ -393,34 +389,58 @@ class TranslateFunctionTest {
         .build();
 
     final NamedFunctionInput translateInput = new NamedFunctionInput(context, input,
-        Arrays.asList(argument, argument, argument));
+        argsFactory.apply(input));
 
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new TranslateFunction().invoke(translateInput));
-    assertEquals("Function `translate` expects `String literal` as argument 1",
+    assertEquals(expectedErrror,
         error.getMessage());
+
   }
 
   @Test
-  public void throwsErrorIfLessThanThreeArguments() {
-    final ElementPath input = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .build();
-    final StringLiteralPath argument1 = StringLiteralPath.fromString("'foo'", input),
-        argument2 = StringLiteralPath.fromString("'bar'", input);
+  public void throwsErrorIfNoArguments() {
+    assertThrowsErrorForArguments(
+        "translate function accepts one required and two optional arguments",
+        input -> Collections.emptyList());
+  }
 
-    final ParserContext context = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClient(mock(TerminologyClient.class))
-        .terminologyClientFactory(mock(TerminologyClientFactory.class))
-        .build();
+  @Test
+  public void throwsErrorIfFirstArgumentIsNotString() {
+    assertThrowsErrorForArguments("Function `translate` expects `String literal` as argument 1",
+        input -> Collections.singletonList(
+            IntegerLiteralPath.fromString("4", input)));
+  }
 
-    final NamedFunctionInput translateInput = new NamedFunctionInput(context, input,
-        Arrays.asList(argument1, argument2));
+  @Test
+  public void throwsErrorIfSecondArgumentIsNotBoolean() {
+    assertThrowsErrorForArguments("Function `translate` expects `Boolean literal` as argument 2",
+        input -> Arrays.asList(
+            StringLiteralPath.fromString("'foo'", input),
+            StringLiteralPath.fromString("'bar'", input)));
+  }
 
-    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-        () -> new TranslateFunction().invoke(translateInput));
-    assertEquals("translate function accepts 3 arguments",
-        error.getMessage());
+
+  @Test
+  public void throwsErrorIfThirdArgumentIsNotString() {
+    assertThrowsErrorForArguments("Function `translate` expects `String literal` as argument 3",
+        input -> Arrays.asList(
+            StringLiteralPath.fromString("'foo'", input),
+            BooleanLiteralPath.fromString("true", input),
+            BooleanLiteralPath.fromString("false", input)));
+  }
+
+
+  @Test
+  public void throwsErrorIfTooManyArguments() {
+    assertThrowsErrorForArguments(
+        "translate function accepts one required and two optional arguments",
+        input -> Arrays.asList(
+            StringLiteralPath.fromString("'foo'", input),
+            BooleanLiteralPath.fromString("true", input),
+            StringLiteralPath.fromString("'false'", input),
+            StringLiteralPath.fromString("'false'", input)
+        ));
   }
 
   @Test

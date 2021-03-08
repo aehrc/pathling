@@ -23,11 +23,13 @@ import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
+import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.SqlExtensions;
 import au.csiro.pathling.utilities.Strings;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -61,15 +63,72 @@ public class TranslateFunction implements NamedFunction {
 
   private static final String NAME = "translate";
 
+  private static final Boolean DEFAULT_REVERSE = false;
+
+  private static final String DEFAULT_EQUIVALENCE = "equivalent";
+
+
+  /**
+   * Helper class for dealing with optional arguments.
+   */
+  private static class Arguments {
+
+    @Nonnull
+    private final List<FhirPath> arguments;
+
+    private Arguments(@Nonnull List<FhirPath> arguments) {
+      this.arguments = arguments;
+    }
+
+    /**
+     * Gets the value of an optional literal argument or the default value it the argument is
+     * missing.
+     *
+     * @param index the 0-based index of the argument.
+     * @param defaultValue the default value.
+     * @param <T> the Java type of the argument value.
+     * @return the java value of the requested argument.
+     */
+    @SuppressWarnings("unchecked")
+    @Nonnull
+    public <T> T getValueOr(int index, @Nonnull final T defaultValue) {
+      return (index < arguments.size())
+             ? getValue(index, (Class<T>) defaultValue.getClass())
+             : defaultValue;
+    }
+
+    /**
+     * Gets the value of the required literal argument.
+     *
+     * @param index the 0-based index of the argument.
+     * @param valueClass the expected Java  class of the argument value.
+     * @param <T> the Java type of the argument value.
+     * @return the java value of the requested argument.
+     */
+    @Nonnull
+    public <T> T getValue(int index, @Nonnull final Class<T> valueClass) {
+      return Objects
+          .requireNonNull(valueClass.cast(((LiteralPath) arguments.get(index)).getJavaValue()));
+    }
+
+    /**
+     * Construct {@link Arguments} for given {@link NamedFunctionInput}
+     *
+     * @param input the function input.
+     * @return the {@link Arguments} for the input.
+     */
+    @Nonnull
+    public static Arguments of(@Nonnull final NamedFunctionInput input) {
+      return new Arguments(input.getArguments());
+    }
+  }
+
   @Nonnull
   @Override
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     validateInput(input);
 
     final ElementPath inputPath = (ElementPath) input.getInput();
-    final StringLiteralPath conceptMapUrlArg = (StringLiteralPath) input.getArguments().get(0);
-    final BooleanLiteralPath reverseArg = (BooleanLiteralPath) input.getArguments().get(1);
-    final StringLiteralPath equivalenceArg = (StringLiteralPath) input.getArguments().get(2);
 
     final ParserContext inputContext = input.getContext();
     final Column idColumn = inputPath.getIdColumn();
@@ -94,9 +153,12 @@ public class TranslateFunction implements NamedFunction {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final TerminologyClientFactory terminologyClientFactory = inputContext
         .getTerminologyClientFactory().get();
-    final String conceptMapUrl = conceptMapUrlArg.getJavaValue();
-    final boolean reverse = reverseArg.getJavaValue();
-    final String equivalence = equivalenceArg.getJavaValue();
+
+    final Arguments arguments = Arguments.of(input);
+
+    final String conceptMapUrl = arguments.getValue(0, String.class);
+    final boolean reverse = arguments.getValueOr(1, DEFAULT_REVERSE);
+    final String equivalence = arguments.getValueOr(2, DEFAULT_EQUIVALENCE);
     final Dataset<Row> dataset = inputPath.getDataset();
 
     final TranslatefMapperWithPreview mapper =
@@ -138,13 +200,13 @@ public class TranslateFunction implements NamedFunction {
         String.format("Input to %s function is of unsupported type: %s", NAME,
             inputPath.getExpression()));
     final List<FhirPath> arguments = input.getArguments();
-    checkUserInput(arguments.size() == 3,
-        NAME + " function accepts 3 arguments");
+    checkUserInput(arguments.size() >= 1 && arguments.size() <= 3,
+        NAME + " function accepts one required and two optional arguments");
     checkUserInput(arguments.get(0) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 1));
-    checkUserInput(arguments.get(1) instanceof BooleanLiteralPath,
-        String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 2));
-    checkUserInput(arguments.get(2) instanceof StringLiteralPath,
+    checkUserInput(arguments.size() <= 1 || arguments.get(1) instanceof BooleanLiteralPath,
+        String.format("Function `%s` expects `%s` as argument %s", NAME, "Boolean literal", 2));
+    checkUserInput(arguments.size() <= 2 || arguments.get(2) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 3));
   }
 }
