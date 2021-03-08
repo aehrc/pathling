@@ -19,7 +19,6 @@ import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -46,9 +45,6 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
   @Autowired
   private FhirContext fhirContext;
-
-  @Autowired
-  private IParser jsonParser;
 
   @Value("${live.terminology.serveBaseUrl}")
   private String liveTerminologServerBaseUrl;
@@ -127,7 +123,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   }
 
   @Test
-  public void testFailsForUnknowConteptMap() {
+  public void testFailsForUnknownConceptMap() {
 
     final UnexpectedResponseException error = assertThrows(UnexpectedResponseException.class,
         () -> terminologyService.translate(

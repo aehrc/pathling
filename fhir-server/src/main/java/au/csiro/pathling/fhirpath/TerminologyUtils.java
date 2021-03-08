@@ -23,8 +23,9 @@ public interface TerminologyUtils {
    * values.
    *
    * @param csvList a coma separated list of equivalence codes
-   * @param converter a function that convers single value string to the desired type
-   * @return the list of converted values
+   * @param converter a function that converts single value string to the desired type T
+   * @param <T> the type of elements to produce.
+   * @return the list of converted values of type T.
    */
   @Nonnull
   static <T> List<T> parseCsvList(@Nonnull final String csvList, final @Nonnull
@@ -33,7 +34,6 @@ public interface TerminologyUtils {
         .map(converter).collect(
             Collectors.toList());
   }
-
 
   /**
    * Creates a stream from the iterator.

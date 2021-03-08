@@ -31,7 +31,7 @@ public class BaseMapping {
   }
 
   /**
-   * Converts ParametersParameterComponent object to a java bean class initializing it's properties
+   * Converts ParametersParameterComponent object to a java bean class initializing its properties
    * from the part properties.
    *
    * @param component the ParametersParameterComponent element.
@@ -40,7 +40,8 @@ public class BaseMapping {
    * @return the new java bean of type T initialize from the arametersParameterComponent element.
    */
   @Nonnull
-  public static <T> T partToBean(ParametersParameterComponent component, Supplier<T> supplier) {
+  public static <T> T partToBean(@Nonnull final ParametersParameterComponent component,
+      @Nonnull final Supplier<T> supplier) {
     final T result = supplier.get();
     component.getPart().forEach(p -> setProperty(result, p.getName(), p.getValue()));
     return result;

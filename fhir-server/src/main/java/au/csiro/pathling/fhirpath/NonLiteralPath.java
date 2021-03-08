@@ -215,28 +215,28 @@ public abstract class NonLiteralPath implements FhirPath {
   }
 
   /**
-   * Construct the new value of the element ID column, based on its current value in the parent path
-   * and the index of an element in the child path.
+   * Constructs the new value of the element ID column, based on its current value in the parent
+   * path and the index of the element in the child path.
    * <p>
-   * If the parent's eid is None it indicates that the parent is singular and a new eid needs to be
-   * created based on the value of the indexColumn:
+   * If the parent's eid is None it indicates that the parent is singular and the new eid needs to
+   * be created based on the value of the indexColumn:
    * <ul>
    * <li>if the indexColumns is null then the eid can be set to null.</li>
    * <li>otherwise it should be a one element array with the indexColumn value.</li>
    * </ul>
    * <p>
    * If the
-   * parent eid exits that the value of the index column needs to be appended to the the existing
+   * parent eid exists then the value of the index column needs to be appended to the the existing
    * id.
    * <ul>
-   * <li>f the existing is null then then the index must be null as well and the new id should be
+   * <li>if the existing eid is null then the index must be null as well and the new id should be
    * null.</li>
-   * <li>otherwise the exising id needs to be extended if the value of indexColumn or 0 if index
+   * <li>otherwise the existing eid needs to be extended with the value of indexColumn or 0 if index
    * column is null.</li>
    * </ul>
    *
    * @param indexColumn the {@link Column} with the child path element index
-   * @return an element ID Column for the child path
+   * @return the element ID {@link Column} for the child path.
    */
   @Nonnull
   public Column expandEid(@Nonnull final Column indexColumn) {
@@ -260,7 +260,7 @@ public abstract class NonLiteralPath implements FhirPath {
    * @param arrayCol the array column to explode.
    * @param outValueAndEidCols the output pair of columns: `left` is set to the new value column and
    * `right` to the new eid column.
-   * @return the dataset with the exploded array.
+   * @return the {@link Dataset} with the exploded array.
    */
   @Nonnull
   public Dataset<Row> explodeArray(@Nonnull final Dataset<Row> arrayDataset,
@@ -276,6 +276,5 @@ public abstract class NonLiteralPath implements FhirPath {
     outValueAndEidCols.setRight(expandEid(resultDataset.col("index")));
     return resultDataset;
   }
-
 
 }

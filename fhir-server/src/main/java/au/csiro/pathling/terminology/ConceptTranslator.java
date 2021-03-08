@@ -21,6 +21,8 @@ import org.hl7.fhir.r4.model.Coding;
 @EqualsAndHashCode
 public class ConceptTranslator implements Serializable {
 
+  private static final long serialVersionUID = -8246857034657784595L;
+
   @Nonnull
   private final Map<SimpleCoding, List<ImmutableCoding>> codingMapping;
 
@@ -40,7 +42,7 @@ public class ConceptTranslator implements Serializable {
    * @return the list of distinct coding translations.
    */
   @Nonnull
-  public List<Coding> translate(@Nullable Collection<SimpleCoding> codings) {
+  public List<Coding> translate(@Nullable final Collection<SimpleCoding> codings) {
 
     return codings == null
            ? Collections.emptyList()
