@@ -68,8 +68,7 @@ public class UnitTestDependencies {
 
   @Bean
   @Nonnull
-  public static TerminologyClientFactory terminologyClientFactory(
-      @Nonnull final TerminologyClient terminologyClient) {
+  public static TerminologyClientFactory terminologyClientFactory() {
     return new TestTerminologyClientFactory();
   }
 

@@ -335,7 +335,6 @@ class TranslateFunctionTest {
         .hasFhirType(FHIRDefinedType.CODING)
         .isNotSingular()
         .selectOrderedResultWithEid()
-        .debugAllRows()
         .hasRows(expectedResult);
 
     // Verify mocks
