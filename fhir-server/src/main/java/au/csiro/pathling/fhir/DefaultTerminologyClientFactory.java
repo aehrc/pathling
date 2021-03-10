@@ -74,7 +74,7 @@ public class DefaultTerminologyClientFactory implements TerminologyClientFactory
   @Nonnull
   @Override
   public TerminologyService buildService(@Nonnull final Logger logger) {
-    return new DefaultTerminologyService(build(logger));
+    return new DefaultTerminologyService(FhirEncoders.contextFor(fhirVersion), build(logger));
   }
 
 

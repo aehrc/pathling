@@ -12,13 +12,13 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.errors.UnexpectedResponseException;
 import au.csiro.pathling.fhir.DefaultTerminologyClientFactory;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -125,14 +125,16 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   @Test
   public void testFailsForUnknownConceptMap() {
 
-    final UnexpectedResponseException error = assertThrows(UnexpectedResponseException.class,
+    final ResourceNotFoundException error = assertThrows(ResourceNotFoundException.class,
         () -> terminologyService.translate(
             Arrays.asList(simpleOf(CD_SNOMED_72940011000036107), snomedSimple("444814009")),
             "http://snomed.info/sct?fhir_cm=xxxx", false,
             ALL_EQUIVALENCES));
 
     assertEquals(
-        "Failed entry in response bundle with status: 404",
+        "Error in response entry : HTTP 404 : "
+            + "[ed835929-8734-4a4a-b4ed-8614f2d46321]: "
+            + "Unable to find ConceptMap with URI http://snomed.info/sct?fhir_cm=xxxx",
         error.getMessage());
   }
 }

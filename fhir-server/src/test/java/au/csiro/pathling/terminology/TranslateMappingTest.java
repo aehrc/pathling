@@ -9,7 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import au.csiro.pathling.errors.UnexpectedResponseException;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -35,6 +37,9 @@ public class TranslateMappingTest {
 
   @Autowired
   protected IParser jsonParser;
+
+  @Autowired
+  protected FhirContext fhirContext;
 
   private static final String CONCEPT_MAP_URL_1 = "http://snomed.info/sct?fhir_cm=1";
   private static final String CONCEPT_MAP_URL_2 = "http://snomed.info/sct?fhir_cm=2";
@@ -113,7 +118,7 @@ public class TranslateMappingTest {
     // TC-1 Not matching equivalences
     final ConceptTranslator conceptTranslatorEmpty = TranslateMapping
         .fromResponseBundle(responseBundle, inputCodings,
-            Collections.singletonList(ConceptMapEquivalence.INEXACT));
+            Collections.singletonList(ConceptMapEquivalence.INEXACT), fhirContext);
     assertEquals(new ConceptTranslator(), conceptTranslatorEmpty,
         "TC-1: Not matching equivalences");
 
@@ -121,7 +126,7 @@ public class TranslateMappingTest {
 
     final ConceptTranslator conceptTranslatorAll = TranslateMapping
         .fromResponseBundle(responseBundle, inputCodings,
-            Arrays.asList(ConceptMapEquivalence.values()));
+            Arrays.asList(ConceptMapEquivalence.values()), fhirContext);
 
     final ConceptTranslator expectedConcepMapperAll = ConceptTranslatorBuilder.empty()
         .put(SIMPLE_CODING_1, CODING_1_EQUIVALENT, CODING_1_WIDER)
@@ -133,7 +138,7 @@ public class TranslateMappingTest {
 
     final ConceptTranslator conceptTranslatorSelect = TranslateMapping
         .fromResponseBundle(responseBundle, inputCodings,
-            Collections.singletonList(ConceptMapEquivalence.WIDER));
+            Collections.singletonList(ConceptMapEquivalence.WIDER), fhirContext);
 
     final ConceptTranslator expectedConcepMapperSelect = ConceptTranslatorBuilder.empty()
         .put(SIMPLE_CODING_1, CODING_1_WIDER)
@@ -153,7 +158,7 @@ public class TranslateMappingTest {
     // TC-4 Not mappins in response
     final ConceptTranslator conceptTranslatorEmpty = TranslateMapping
         .fromResponseBundle(responseBundle, inputCodings,
-            Collections.singletonList(ConceptMapEquivalence.INEXACT));
+            Collections.singletonList(ConceptMapEquivalence.INEXACT), fhirContext);
     assertEquals(new ConceptTranslator(), conceptTranslatorEmpty, "TC-4: No mappings in response");
   }
 
@@ -168,7 +173,7 @@ public class TranslateMappingTest {
         () -> TranslateMapping
             .fromResponseBundle(responseBundle, Arrays
                     .asList(SIMPLE_CODING_1, SIMPLE_CODING_2),
-                Collections.emptyList()));
+                Collections.emptyList(), fhirContext));
     assertEquals(
         "The size of the response bundle: 2 does not match the size of the request bundle: 3",
         error.getMessage());
@@ -178,19 +183,16 @@ public class TranslateMappingTest {
   public void throwsErrorIfAnyEntryHasError() {
 
     final Bundle responseBundle = (Bundle) jsonParser.parseResource(
-        getResourceAsStream("txResponses/TranslateMappingTest/responseWithMappings3.Bundle.json"));
+        getResourceAsStream("txResponses/TranslateMappingTest/responseWith404.Bundle.json"));
 
-    // set one entry status to error
-    responseBundle.getEntry().get(1).getResponse().setStatus("404");
-
-    // Response bundle has three entries
-    final UnexpectedResponseException error = assertThrows(UnexpectedResponseException.class,
+    // Response bundle has 2 entries
+    final ResourceNotFoundException error = assertThrows(ResourceNotFoundException.class,
         () -> TranslateMapping
             .fromResponseBundle(responseBundle, Arrays
-                    .asList(SIMPLE_CODING_1, SIMPLE_CODING_2, SIMPLE_CODING_3),
-                Collections.emptyList()));
+                    .asList(SIMPLE_CODING_1, SIMPLE_CODING_2),
+                Collections.emptyList(), fhirContext));
     assertEquals(
-        "Failed entry in response bundle with status: 404",
+        "Error in response entry : HTTP 404 : [ed835929-8734-4a4a-b4ed-8614f2d46321]: Unable to find ConceptMap with URI http://snomed.info/sct?fhir_cm=xxxx",
         error.getMessage());
   }
 
@@ -209,7 +211,7 @@ public class TranslateMappingTest {
         () -> TranslateMapping
             .fromResponseBundle(responseBundle, Arrays
                     .asList(SIMPLE_CODING_1, SIMPLE_CODING_2),
-                Collections.emptyList()));
+                Collections.emptyList(), fhirContext));
     assertEquals(
         "Expected bundle type 'batch-reponse' but got: 'batch'",
         error.getMessage());

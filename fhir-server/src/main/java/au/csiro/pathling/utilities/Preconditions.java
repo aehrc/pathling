@@ -11,8 +11,10 @@ import au.csiro.pathling.errors.UnexpectedResponseException;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.hl7.fhir.exceptions.FHIRException;
 
 /**
  * Static convenience methods for checking the validity of inputs.
@@ -130,5 +132,28 @@ public class Preconditions {
       throw new UnexpectedResponseException(String.format(messageTemplate, params));
     }
   }
+
+
+  /**
+   * Converts a function which throws a {@link FHIRException} to a function that throws an {@link
+   * InvalidUserInputError} in the same situation.
+   *
+   * @param func the function throwing {@link FHIRException}
+   * @param <T> the type of the function argument.
+   * @param <R> the type of the function result.
+   * @return the wrapped function.
+   */
+  public static <T, R> Function<T, R> wrapInUserInputError(
+      @Nonnull final Function<T, R> func) {
+
+    return s -> {
+      try {
+        return func.apply(s);
+      } catch (FHIRException ex) {
+        throw new InvalidUserInputError(ex.getMessage(), ex);
+      }
+    };
+  }
+
 
 }

@@ -4,6 +4,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
+import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,9 +19,14 @@ public class DefaultTerminologyService implements TerminologyService {
 
 
   @Nonnull
+  private final FhirContext fhirContext;
+
+  @Nonnull
   private final TerminologyClient terminologyClient;
 
-  public DefaultTerminologyService(@Nonnull TerminologyClient terminologyClient) {
+  public DefaultTerminologyService(@Nonnull final FhirContext fhirContext,
+      @Nonnull final TerminologyClient terminologyClient) {
+    this.fhirContext = fhirContext;
     this.terminologyClient = terminologyClient;
   }
 
@@ -36,6 +42,7 @@ public class DefaultTerminologyService implements TerminologyService {
     final Bundle translateBatch = TranslateMapping
         .toRequestBundle(uniqueCodings, conceptMapUrl, reverse);
     final Bundle result = terminologyClient.batch(translateBatch);
-    return TranslateMapping.fromResponseBundle(checkNotNull(result), uniqueCodings, equivalences);
+    return TranslateMapping
+        .fromResponseBundle(checkNotNull(result), uniqueCodings, equivalences, fhirContext);
   }
 }

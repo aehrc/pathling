@@ -9,6 +9,7 @@ package au.csiro.pathling.fhirpath.function.translate;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
@@ -164,7 +165,7 @@ public class TranslateFunction implements NamedFunction {
     final TranslatefMapperWithPreview mapper =
         new TranslatefMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
             conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
-            ConceptMapEquivalence::fromCode));
+            wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 
     final Dataset<Row> translatedDataset = SqlExtensions
         .mapWithPartitionPreview(dataset, codingArrayCol,

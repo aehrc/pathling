@@ -376,11 +376,18 @@ class TranslateFunctionTest {
   }
 
 
-  private void assertThrowsErrorForArguments(@Nonnull final String expectedErrror,
+  private void assertThrowsErrorForArguments(@Nonnull final String expectedError,
       @Nonnull final Function<ElementPath, List<FhirPath>> argsFactory) {
+
+    final Optional<ElementDefinition> optionalDefinition = FhirHelpers
+        .getChildOfResource(fhirContext, "Encounter", "class");
+    assertTrue(optionalDefinition.isPresent());
+    final ElementDefinition definition = optionalDefinition.get();
+
     final ElementPath input = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .build();
+        .fhirType(FHIRDefinedType.CODING)
+        .definition(definition)
+        .buildDefined();
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .terminologyClient(mock(TerminologyClient.class))
@@ -392,7 +399,7 @@ class TranslateFunctionTest {
 
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new TranslateFunction().invoke(translateInput));
-    assertEquals(expectedErrror,
+    assertEquals(expectedError,
         error.getMessage());
 
   }
@@ -439,6 +446,17 @@ class TranslateFunctionTest {
             BooleanLiteralPath.fromString("true", input),
             StringLiteralPath.fromString("'false'", input),
             StringLiteralPath.fromString("'false'", input)
+        ));
+  }
+
+  @Test
+  public void throwsErrorIfCannotParseEquivalences() {
+    assertThrowsErrorForArguments(
+        "Unknown ConceptMapEquivalence code 'not-an-equivalence'",
+        input -> Arrays.asList(
+            StringLiteralPath.fromString("'foo'", input),
+            BooleanLiteralPath.fromString("true", input),
+            StringLiteralPath.fromString("'not-an-equivalence'", input)
         ));
   }
 

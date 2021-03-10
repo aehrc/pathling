@@ -1,13 +1,19 @@
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.utilities.Preconditions.checkResponse;
-
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.client.impl.BaseHttpClientInvocation;
+import ca.uhn.fhir.rest.client.method.IClientResponseHandler;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import ca.uhn.fhir.util.OperationOutcomeUtil;
 import java.lang.reflect.InvocationTargetException;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryResponseComponent;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 
@@ -52,16 +58,52 @@ public class BaseMapping {
    * Retrieves parameters from successful bundle entry element.
    *
    * @param entry the bundle entry.
+   * @param fhirContext the Fhir context to use.
    * @return the parameters from the entry.
    * @throws au.csiro.pathling.errors.UnexpectedResponseException when the entry response code is
    * not 200.
    */
   @Nonnull
-  public static Parameters parametersFromEntry(@Nonnull final BundleEntryComponent entry) {
-    checkResponse("200".equals(entry.getResponse().getStatus()),
-        "Failed entry in response bundle with status: %s",
-        entry.getResponse().getStatus()
-    );
+  public static Parameters parametersFromEntry(@Nonnull final BundleEntryComponent entry,
+      @Nonnull final FhirContext fhirContext) {
+    checkResponseEntry(entry, fhirContext);
     return (Parameters) entry.getResource();
   }
+
+  /**
+   * Ensures that the bundle-response entry contains a successful response or otherwise throws the
+   * appropriate subclass of {@link BaseServerResponseException}  capturing the error information
+   * returned from the terminology server.
+   *
+   * <p>
+   * This is adapted from HAPI: `ca.uhn.fhir.rest.client.impl.BaseClient#invokeClient(...)`.
+   *
+   * @param entry the bundle entry.
+   * @param fhirContext the Fhir context to use.
+   * @throws BaseServerResponseException then the entry status code is not 2xx.
+   */
+  public static void checkResponseEntry(@Nonnull final BundleEntryComponent entry, @Nonnull final
+  FhirContext fhirContext) {
+
+    final BundleEntryResponseComponent response = entry.getResponse();
+    final int statusCode = Integer.parseInt(response.getStatus());
+
+    if (statusCode < 200 || statusCode > 299) {
+
+      String message = "Error in response entry : HTTP " + response.getStatus();
+      IBaseOperationOutcome oo = (IBaseOperationOutcome) entry.getResource();
+
+      String details = OperationOutcomeUtil.getFirstIssueDetails(fhirContext, oo);
+      if (StringUtils.isNotBlank(details)) {
+        message = message + " : " + details;
+      }
+      BaseServerResponseException exception = BaseServerResponseException
+          .newInstance(statusCode, message);
+      exception.setOperationOutcome(oo);
+      throw exception;
+    }
+
+  }
+
+
 }

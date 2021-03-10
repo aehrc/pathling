@@ -5,6 +5,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkResponse;
 
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
+import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.Streams;
 import java.util.Collection;
 import java.util.List;
@@ -83,7 +84,8 @@ public final class TranslateMapping extends BaseMapping {
   @Nonnull
   public static ConceptTranslator fromResponseBundle(@Nonnull final Bundle responseBundle,
       @Nonnull final List<SimpleCoding> inputCodes,
-      @Nonnull final Collection<ConceptMapEquivalence> equivalences) {
+      @Nonnull final Collection<ConceptMapEquivalence> equivalences,
+      @Nonnull final FhirContext fhirContext) {
 
     checkResponse("batch-response".equals(responseBundle.getType().toCode()),
         "Expected bundle type 'batch-reponse' but got: '%s'",
@@ -96,7 +98,7 @@ public final class TranslateMapping extends BaseMapping {
         .map(ConceptMapEquivalence::toCode).collect(Collectors.toSet());
 
     final Stream<List<ImmutableCoding>> outputEntries = responseBundle.getEntry().stream()
-        .map(TranslateMapping::parametersFromEntry)
+        .map(e -> TranslateMapping.parametersFromEntry(e, fhirContext))
         .map(TranslateMapping::entriesFromParameters)
         .map(s -> s.filter(e -> equivalenceCodes.contains(e.getEquivalence().getCode()))
             .map(TranslationEntry::getConcept)
