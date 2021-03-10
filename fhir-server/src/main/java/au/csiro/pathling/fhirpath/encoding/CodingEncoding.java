@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.fhirpath.encoding;
 
 import java.util.List;
@@ -14,6 +20,9 @@ import org.hl7.fhir.r4.model.Coding;
  */
 public interface CodingEncoding {
 
+  /**
+   * @return a {@link StructType} that can house a Coding
+   */
   @Nonnull
   static StructType codingStructType() {
     final Metadata metadata = new MetadataBuilder().build();
@@ -27,6 +36,9 @@ public interface CodingEncoding {
     return new StructType(new StructField[]{id, system, version, code, display, userSelected});
   }
 
+  /**
+   * A {@link StructType} for a Coding.
+   */
   StructType DATA_TYPE = codingStructType();
 
   /**

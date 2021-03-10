@@ -15,16 +15,11 @@ public class UnexpectedResponseException extends RuntimeException {
 
   private static final long serialVersionUID = 5953491164133388069L;
 
-  public UnexpectedResponseException(final String message, final Throwable cause) {
-    super(message, cause);
-  }
-
+  /**
+   * @param message The detailed message for the exception
+   */
   public UnexpectedResponseException(final String message) {
     super(message);
-  }
-
-  public UnexpectedResponseException(final Throwable cause) {
-    super(cause);
   }
 
 }

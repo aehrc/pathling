@@ -130,7 +130,7 @@ public class ParserTest {
     return assertThat(parser.parse(expression));
   }
 
-  @SuppressWarnings("rawtypes")
+  @SuppressWarnings({"rawtypes", "SameParameterValue"})
   @Nonnull
   private FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {

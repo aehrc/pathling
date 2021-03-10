@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.test.helpers;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
@@ -12,9 +18,7 @@ public final class TerminologyHelpers {
   private TerminologyHelpers() {
   }
 
-
-  public static final String SNOMED_URI = "http://snomed.info/sct";
-  public static final String TEST_URI = "uuid:test-system";
+  private static final String SNOMED_URI = "http://snomed.info/sct";
 
   public static final String CM_HIST_ASSOCIATIONS = "http://snomed.info/sct?fhir_cm=900000000000526001";
 
@@ -43,7 +47,7 @@ public final class TerminologyHelpers {
   }
 
   @Nonnull
-  public static Coding snomedCoding(@Nonnull final String code, @Nonnull final String dislayName) {
+  private static Coding snomedCoding(@Nonnull final String code, @Nonnull final String dislayName) {
     return new Coding(SNOMED_URI, code, dislayName);
   }
 

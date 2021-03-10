@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.terminology;
 
 
@@ -66,11 +72,11 @@ public class TranslateMappingTest {
   private TestInfo testInfo;
 
   @BeforeEach
-  public void setUp(@Nonnull TestInfo testInfo) {
+  public void setUp(@Nonnull final TestInfo testInfo) {
     this.testInfo = testInfo;
   }
 
-  protected void assertRequest(
+  private void assertRequest(
       @Nonnull final IBaseResource resource) {
     final String actualJson = jsonParser.encodeResourceToString(resource);
 
@@ -213,7 +219,7 @@ public class TranslateMappingTest {
                     .asList(SIMPLE_CODING_1, SIMPLE_CODING_2),
                 Collections.emptyList(), fhirContext));
     assertEquals(
-        "Expected bundle type 'batch-reponse' but got: 'batch'",
+        "Expected bundle type 'batch-response' but got: 'batch'",
         error.getMessage());
   }
 }

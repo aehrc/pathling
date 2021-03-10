@@ -20,6 +20,7 @@ import au.csiro.pathling.fhirpath.TerminologyUtils;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
@@ -27,7 +28,9 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.SqlExtensions;
+import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.utilities.Strings;
 import java.util.List;
 import java.util.Objects;
@@ -48,7 +51,7 @@ import org.slf4j.MDC;
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set Codings
  * translated using provided concept map URL.
  * <p>
- * Sinature:
+ * Signature:
  * <pre>
  * collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse = false,
  * equivalence = 'equivalent') : collection<Coding>
@@ -77,7 +80,7 @@ public class TranslateFunction implements NamedFunction {
     @Nonnull
     private final List<FhirPath> arguments;
 
-    private Arguments(@Nonnull List<FhirPath> arguments) {
+    private Arguments(@Nonnull final List<FhirPath> arguments) {
       this.arguments = arguments;
     }
 
@@ -92,7 +95,7 @@ public class TranslateFunction implements NamedFunction {
      */
     @SuppressWarnings("unchecked")
     @Nonnull
-    public <T> T getValueOr(int index, @Nonnull final T defaultValue) {
+    private <T> T getValueOr(final int index, @Nonnull final T defaultValue) {
       return (index < arguments.size())
              ? getValue(index, (Class<T>) defaultValue.getClass())
              : defaultValue;
@@ -107,16 +110,16 @@ public class TranslateFunction implements NamedFunction {
      * @return the java value of the requested argument.
      */
     @Nonnull
-    public <T> T getValue(int index, @Nonnull final Class<T> valueClass) {
+    public <T> T getValue(final int index, @Nonnull final Class<T> valueClass) {
       return Objects
           .requireNonNull(valueClass.cast(((LiteralPath) arguments.get(index)).getJavaValue()));
     }
 
     /**
-     * Construct {@link Arguments} for given {@link NamedFunctionInput}
+     * Construct Arguments for given {@link NamedFunctionInput}
      *
      * @param input the function input.
-     * @return the {@link Arguments} for the input.
+     * @return the Arguments for the input.
      */
     @Nonnull
     public static Arguments of(@Nonnull final NamedFunctionInput input) {
@@ -162,8 +165,8 @@ public class TranslateFunction implements NamedFunction {
     final String equivalence = arguments.getValueOr(2, DEFAULT_EQUIVALENCE);
     final Dataset<Row> dataset = inputPath.getDataset();
 
-    final TranslatefMapperWithPreview mapper =
-        new TranslatefMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
+    final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
+        new TranslateMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
             conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
             wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 

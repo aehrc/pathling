@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.terminology;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
@@ -13,7 +19,7 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
 /**
- * Default implementation of TerminologyService using a backed terminology server.
+ * Default implementation of TerminologyService using a backend terminology server.
  */
 public class DefaultTerminologyService implements TerminologyService {
 
@@ -24,6 +30,10 @@ public class DefaultTerminologyService implements TerminologyService {
   @Nonnull
   private final TerminologyClient terminologyClient;
 
+  /**
+   * @param fhirContext The {@link FhirContext} used to interpret responses
+   * @param terminologyClient The {@link TerminologyClient} used to issue requests
+   */
   public DefaultTerminologyService(@Nonnull final FhirContext fhirContext,
       @Nonnull final TerminologyClient terminologyClient) {
     this.fhirContext = fhirContext;

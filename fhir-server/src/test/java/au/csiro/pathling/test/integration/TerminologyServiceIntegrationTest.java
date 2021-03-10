@@ -33,24 +33,24 @@ import org.springframework.test.context.TestPropertySource;
  * @author Piotr Szul
  */
 @TestPropertySource(properties = {
-    "live.terminology.serveBaseUrl=https://r4.ontoserver.csiro.au/",
+    "live.terminology.serverBaseUrl=https://r4.ontoserver.csiro.au/",
     "pathling.terminology.serverUrl=http://localhost:" + 4072 + "/fhir"
 })
 @Slf4j
 class TerminologyServiceIntegrationTest extends WireMockTest {
 
-  public static boolean isRecordMode() {
+  private static boolean isRecordMode() {
     return Boolean.parseBoolean(System.getProperty("WireMockTest.recordMappings", "false"));
   }
 
   @Autowired
   private FhirContext fhirContext;
 
-  @Value("${live.terminology.serveBaseUrl}")
-  private String liveTerminologServerBaseUrl;
+  @Value("${live.terminology.serverBaseUrl}")
+  private String liveTerminologyServerBaseUrl;
 
   @Value("${pathling.terminology.serverUrl}")
-  private String terminologServerUrl;
+  private String terminologyServerUrl;
 
   private TerminologyService terminologyService;
 
@@ -60,13 +60,13 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     super.setUp();
     if (isRecordMode()) {
       wireMockServer.resetAll();
-      log.warn("Proxying all request to: {}", liveTerminologServerBaseUrl);
-      stubFor(proxyAllTo(liveTerminologServerBaseUrl));
+      log.warn("Proxying all request to: {}", liveTerminologyServerBaseUrl);
+      stubFor(proxyAllTo(liveTerminologyServerBaseUrl));
     }
 
     // TODO: refactor to use actual dependency injection
     final TerminologyClientFactory tcf = new DefaultTerminologyClientFactory(fhirContext,
-        terminologServerUrl, 0, false);
+        terminologyServerUrl, 0, false);
     terminologyService = tcf.buildService(log);
   }
 

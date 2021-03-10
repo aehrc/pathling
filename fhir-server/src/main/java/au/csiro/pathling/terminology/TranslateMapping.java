@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.terminology;
 
 
@@ -24,15 +30,19 @@ import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
 /**
- * Input/Ouput mapping for translate operation.
+ * Input/Output mapping for translate operation.
  * <p>
- * Hapi bunlde example: https://hapifhir.io/hapi-fhir/docs/client/examples.html
+ * HAPI Bundle example: https://hapifhir.io/hapi-fhir/docs/client/examples.html
  */
 public final class TranslateMapping extends BaseMapping {
 
   private TranslateMapping() {
   }
 
+  /**
+   * Represents a concept translation, along with an equivalence.
+   */
+  @SuppressWarnings("WeakerAccess")
   @Data
   @NoArgsConstructor
   public static class TranslationEntry {
@@ -47,15 +57,15 @@ public final class TranslateMapping extends BaseMapping {
   /**
    * Converts {@link TerminologyService#translate} parameters to a batch request Bundle.
    *
-   * @param codings the list of codings to be translated.
-   * @param conceptMapUrl the concept map url.
-   * @param reverse if reverse translation is required.
-   * @return the barch bundle for the requested parameters.
+   * @param codings The list of codings to be translated
+   * @param conceptMapUrl The concept map url
+   * @param reverse If reverse translation is required
+   * @return The batch Bundle for the requested parameters
    */
   @Nonnull
-  public static Bundle toRequestBundle(@Nonnull final List<SimpleCoding> codings,
+  public static Bundle toRequestBundle(@Nonnull final Iterable<SimpleCoding> codings,
       @Nonnull final String conceptMapUrl,
-      boolean reverse) {
+      final boolean reverse) {
     final Bundle translateBatch = new Bundle();
     translateBatch.setType(BundleType.BATCH);
     codings.forEach(coding -> {
@@ -74,12 +84,13 @@ public final class TranslateMapping extends BaseMapping {
 
   /**
    * Builds ConceptTranslator from the batch response bundle for {@link
-   * TerminologyService#translate}
+   * TerminologyService#translate}.
    *
-   * @param responseBundle the response from the terminology server.
-   * @param inputCodes the list of coding requested for translation.
-   * @param equivalences the list of equivalences to be included the translator.
-   * @return the the ConceptTranslator.
+   * @param responseBundle The response from the terminology server
+   * @param inputCodes The list of coding requested for translation
+   * @param equivalences The list of equivalences to be included the translator
+   * @param fhirContext A {@link FhirContext} for interpreting the response
+   * @return The ConceptTranslator
    */
   @Nonnull
   public static ConceptTranslator fromResponseBundle(@Nonnull final Bundle responseBundle,
@@ -88,7 +99,7 @@ public final class TranslateMapping extends BaseMapping {
       @Nonnull final FhirContext fhirContext) {
 
     checkResponse("batch-response".equals(responseBundle.getType().toCode()),
-        "Expected bundle type 'batch-reponse' but got: '%s'",
+        "Expected bundle type 'batch-response' but got: '%s'",
         responseBundle.getType().toCode());
     checkResponse(inputCodes.size() == responseBundle.getEntry().size(),
         "The size of the response bundle: %s does not match the size of the request bundle: %s",
@@ -105,6 +116,7 @@ public final class TranslateMapping extends BaseMapping {
             .map(ImmutableCoding::of)
             .collect(Collectors.toUnmodifiableList()));
 
+    @SuppressWarnings("UnstableApiUsage")
     final Stream<Pair<SimpleCoding, List<ImmutableCoding>>> pairs = Streams
         .zip(inputCodes.stream(), outputEntries, Pair::of);
 

@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.fhirpath.encoding;
 
 import java.io.Serializable;
@@ -19,6 +25,8 @@ import org.hl7.fhir.r4.model.Coding;
 @Getter
 @EqualsAndHashCode
 public class ImmutableCoding implements Serializable {
+
+  private static final long serialVersionUID = -2461921559175440312L;
 
   @Nullable
   private final String system;

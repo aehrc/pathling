@@ -61,11 +61,6 @@ public class SubsumesFunction implements NamedFunction {
    */
   private static final String COL_ARG_CODINGS = "argCodings";
 
-  /**
-   * The column name that this function uses to represent the result value.
-   */
-  public static final String COL_VALUE = "value";
-
   private static final String COL_ARG_ID = "argId";
   private static final String COL_CODING = "coding";
   private static final String FIELD_CODING = "coding";

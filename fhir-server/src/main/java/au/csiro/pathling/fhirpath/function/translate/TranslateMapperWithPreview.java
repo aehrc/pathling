@@ -24,13 +24,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.slf4j.MDC;
 
 /**
  * Takes a list of {@link SimpleCoding} and returns a Boolean result indicating if any of the
  * codings belongs to the specified ValueSet.
  */
 @Slf4j
-public class TranslatefMapperWithPreview implements
+public class TranslateMapperWithPreview implements
     MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> {
 
   private static final long serialVersionUID = 2879761794073649202L;
@@ -53,8 +54,11 @@ public class TranslatefMapperWithPreview implements
   /**
    * @param requestId An identifier used alongside any logging that the mapper outputs
    * @param terminologyClientFactory Used to create instances of the terminology client on workers
+   * @param conceptMapUrl The URI of the ConceptMap to use for translations
+   * @param reverse If set, reverse source and target within the map
+   * @param equivalences The list of equivalence values that will be matched
    */
-  public TranslatefMapperWithPreview(@Nonnull final String requestId,
+  public TranslateMapperWithPreview(@Nonnull final String requestId,
       @Nonnull final TerminologyClientFactory terminologyClientFactory,
       @Nonnull final String conceptMapUrl, final boolean reverse,
       @Nonnull final List<ConceptMapEquivalence> equivalences) {
@@ -71,6 +75,11 @@ public class TranslatefMapperWithPreview implements
     if (!input.hasNext() || equivalences.isEmpty()) {
       return new ConceptTranslator();
     }
+
+    // Add the request ID to the logging context, so that we can track the logging for this
+    // request across all workers.
+    MDC.put("requestId", requestId);
+
     final Set<SimpleCoding> uniqueCodings = Streams.streamOf(input)
         .filter(Objects::nonNull)
         .flatMap(List::stream)

@@ -44,7 +44,7 @@ public class Preconditions {
    * @param params The parameters to the message template
    */
   public static void check(final boolean expression, final @Nonnull String messageTemplate,
-      @Nonnull Object... params) {
+      @Nonnull final Object... params) {
     if (!expression) {
       throw new AssertionError(String.format(messageTemplate, params));
     }
@@ -126,7 +126,7 @@ public class Preconditions {
    * @param messageTemplate The message template in the {@link String#format} format
    * @param params The parameters to the message template
    */
-  public static void checkResponse(boolean expression, @Nonnull final String messageTemplate,
+  public static void checkResponse(final boolean expression, @Nonnull final String messageTemplate,
       final @Nonnull Object... params) {
     if (!expression) {
       throw new UnexpectedResponseException(String.format(messageTemplate, params));
@@ -149,7 +149,7 @@ public class Preconditions {
     return s -> {
       try {
         return func.apply(s);
-      } catch (FHIRException ex) {
+      } catch (final FHIRException ex) {
         throw new InvalidUserInputError(ex.getMessage(), ex);
       }
     };

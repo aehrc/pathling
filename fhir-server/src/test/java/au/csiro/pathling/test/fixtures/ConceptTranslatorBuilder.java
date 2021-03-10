@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.test.fixtures;
 
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
@@ -26,7 +32,8 @@ public class ConceptTranslatorBuilder {
   }
 
   @Nonnull
-  public ConceptTranslatorBuilder putTimes(@Nonnull final SimpleCoding coding, int noOfMappings) {
+  public ConceptTranslatorBuilder putTimes(@Nonnull final SimpleCoding coding,
+      final int noOfMappings) {
     if (toSystem == null) {
       throw new IllegalStateException("toSystem is undefined");
     }

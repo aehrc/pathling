@@ -227,7 +227,7 @@ class TranslateFunctionTest {
     // {
     //    coding1 -> [translated1],
     //    coding2 -> [translated1, translated2]
-    //    coding4 -> [tranlates2]
+    //    coding4 -> [translated2]
     // }
 
     // Use cases:
