@@ -1,0 +1,34 @@
+{
+  "id" : "4d2b4aa6-300c-4b6c-8b7a-0c715d0973a5",
+  "name" : "fhir",
+  "request" : {
+    "url" : "/fhir",
+    "method" : "POST",
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"resourceType\":\"Bundle\",\"type\":\"batch\",\"entry\":[{\"resource\":{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"url\",\"valueUri\":\"http://snomed.info/sct?fhir_cm=xxxx\"},{\"name\":\"reverse\",\"valueBoolean\":false},{\"name\":\"coding\",\"valueCoding\":{\"system\":\"http://snomed.info/sct\",\"code\":\"72940011000036107\"}}]},\"request\":{\"method\":\"POST\",\"url\":\"ConceptMap/$translate\"}},{\"resource\":{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"url\",\"valueUri\":\"http://snomed.info/sct?fhir_cm=xxxx\"},{\"name\":\"reverse\",\"valueBoolean\":false},{\"name\":\"coding\",\"valueCoding\":{\"system\":\"http://snomed.info/sct\",\"code\":\"444814009\"}}]},\"request\":{\"method\":\"POST\",\"url\":\"ConceptMap/$translate\"}}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : true
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "body" : "{\"resourceType\":\"Bundle\",\"id\":\"9bebc1a1-4ba8-4475-9714-9a34b4d34551\",\"type\":\"batch-response\",\"link\":[{\"relation\":\"self\",\"url\":\"https://r4.ontoserver.csiro.au/fhir\"}],\"entry\":[{\"resource\":{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"severity\":\"error\",\"code\":\"not-found\",\"diagnostics\":\"[ed835929-8734-4a4a-b4ed-8614f2d46321]: Unable to find ConceptMap with URI http://snomed.info/sct?fhir_cm=xxxx\"}]},\"response\":{\"status\":\"404\"}},{\"resource\":{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"severity\":\"error\",\"code\":\"not-found\",\"diagnostics\":\"[6ae629b6-7152-4179-8f87-8f37cc249884]: Unable to find ConceptMap with URI http://snomed.info/sct?fhir_cm=xxxx\"}]},\"response\":{\"status\":\"404\"}}]}",
+    "headers" : {
+      "Server" : "nginx/1.15.9",
+      "Date" : "Mon, 01 Mar 2021 03:34:27 GMT",
+      "Content-Type" : "application/fhir+json;charset=UTF-8",
+      "X-Request-Id" : "L1N159lblq4scvN3",
+      "Cache-Control" : "must-revalidate, max-age=1",
+      "Vary" : "Accept,Origin,Accept-Encoding,Accept-Language,Authorization",
+      "X-Powered-By" : "HAPI FHIR 5.2.0 REST Server (FHIR Server; FHIR 4.0.1/R4)",
+      "Content-Location" : "https://r4.ontoserver.csiro.au/fhir/Bundle/9bebc1a1-4ba8-4475-9714-9a34b4d34551",
+      "Location" : "https://r4.ontoserver.csiro.au/fhir/Bundle/9bebc1a1-4ba8-4475-9714-9a34b4d34551",
+      "X-Content-Type-Options" : "nosniff",
+      "X-XSS-Protection" : "1; mode=block",
+      "X-Frame-Options" : "DENY"
+    }
+  },
+  "uuid" : "4d2b4aa6-300c-4b6c-8b7a-0c715d0973a5",
+  "persistent" : true,
+  "insertionIndex" : 1
+}
