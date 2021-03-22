@@ -31,13 +31,15 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.terminology.Relation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.fixtures.ConceptMapEntry;
-import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
+import au.csiro.pathling.test.fixtures.ClosureBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,8 +51,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -82,9 +84,11 @@ public class SubsumesFunctionTest {
   private static final String RES_ID5 = "condition-xyz5";
 
   // coding_large -- subsumes --> coding_medium --> subsumes --> coding_small
-  private static final ConceptMap MAP_LARGE_MEDIUM_SMALL =
-      ConceptMapFixtures.createConceptMap(ConceptMapEntry.subsumesOf(CODING_MEDIUM, CODING_LARGE),
-          ConceptMapEntry.specializesOf(CODING_MEDIUM, CODING_SMALL));
+  private static final Relation RELATION_LARGE_MEDIUM_SMALL = ClosureBuilder.empty()
+      .add(CODING_LARGE, CODING_MEDIUM)
+      .add(CODING_MEDIUM, CODING_SMALL)
+      .add(CODING_LARGE, CODING_SMALL)
+      .build();
 
   private static final List<String> ALL_RES_IDS =
       Arrays.asList(RES_ID1, RES_ID2, RES_ID3, RES_ID4, RES_ID5);
@@ -99,6 +103,9 @@ public class SubsumesFunctionTest {
   private TerminologyClient terminologyClient;
 
   @Autowired
+  private TerminologyService terminologyService;
+
+  @Autowired
   private TerminologyClientFactory terminologyClientFactory;
 
   private static Row codeableConceptRowFromCoding(final Coding coding) {
@@ -111,7 +118,12 @@ public class SubsumesFunctionTest {
 
   @BeforeEach
   public void setUp() {
-    when(terminologyClient.closure(any(), any())).thenReturn(MAP_LARGE_MEDIUM_SMALL);
+    when(terminologyService.getSubsumesRelation(any())).thenReturn(RELATION_LARGE_MEDIUM_SMALL);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    SharedMocks.resetAll();
   }
 
   private CodingPath createCodingInput() {
@@ -297,6 +309,7 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID5, null, null);
   }
 
+  @SuppressWarnings("rawtypes")
   private FhirPathAssertion assertCallSuccess(final NamedFunction function,
       final NonLiteralPath inputExpression, final FhirPath argumentExpression) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)

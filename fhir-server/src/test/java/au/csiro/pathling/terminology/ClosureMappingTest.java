@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.fhirpath.function.subsumes;
+package au.csiro.pathling.terminology;
 
 import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.CM_EMPTY;
 import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.createConceptMap;
@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag("UnitTest")
-public class ClosureServiceTest {
+public class ClosureMappingTest {
 
   private static final Coding CODING_1_1_1 = newVersionedCoding("system1", "code1", "version1",
       null);
@@ -39,8 +39,8 @@ public class ClosureServiceTest {
 
   @Test
   public void testMapsEmptyConceptMapCorrectly() {
-    final Closure closure = ClosureService.conceptMapToClosure(CM_EMPTY);
-    assertTrue(closure.getMappings().isEmpty());
+    final Relation relation = ClosureMapping.closureFromConceptMap(CM_EMPTY);
+    assertTrue(relation.getMappings().isEmpty());
   }
 
   @Test
@@ -53,7 +53,7 @@ public class ClosureServiceTest {
         .forEach(e -> {
           final ConceptMap invalidMap = createConceptMap(
               ConceptMapEntry.of(CODING_1_1_1, CODING_1_1_1, e));
-          assertTrue(ClosureService.conceptMapToClosure(invalidMap).getMappings().isEmpty());
+          assertTrue(ClosureMapping.closureFromConceptMap(invalidMap).getMappings().isEmpty());
         });
   }
 
@@ -80,6 +80,6 @@ public class ClosureServiceTest {
         Arrays.asList(new SimpleCoding(CODING_1_1_1), new SimpleCoding(CODING_1_3_1)));
     expectedMappings.put(new SimpleCoding(CODING_2_1_1),
         Collections.singletonList(new SimpleCoding(CODING_1_3_1)));
-    assertEquals(expectedMappings, ClosureService.conceptMapToClosure(complexMap).getMappings());
+    assertEquals(expectedMappings, ClosureMapping.closureFromConceptMap(complexMap).getMappings());
   }
 }

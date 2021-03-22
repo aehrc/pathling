@@ -12,6 +12,8 @@ import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
 /**
+ * @author Piotr Szul
+ * <p>
  * Abstraction layer for the terminology related operations.
  */
 public interface TerminologyService {
@@ -30,4 +32,18 @@ public interface TerminologyService {
   ConceptTranslator translate(@Nonnull Collection<SimpleCoding> codings,
       @Nonnull String conceptMapUrl,
       boolean reverse, @Nonnull Collection<ConceptMapEquivalence> equivalences);
+
+  /**
+   * Creates a transitive closure representation of subsumes relation for the given set of codings.
+   * <p>
+   * Additional resources on closure table maintenance:
+   * <a href="https://www.hl7.org/fhir/terminology-service.html#closure">Maintaining
+   * a Closure Table</a>
+   *
+   * @param systemAndCodes the codings to construct the closure for.
+   * @return the closure representation.
+   */
+  @Nonnull
+  Relation getSubsumesRelation(@Nonnull final Collection<SimpleCoding> systemAndCodes);
+
 }

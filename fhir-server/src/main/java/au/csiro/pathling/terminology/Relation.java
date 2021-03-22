@@ -4,31 +4,30 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.fhirpath.function.subsumes;
+package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import com.google.common.collect.Streams;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.ToString;
 
 /**
- * Represents a relation defined by a transitive closure table.
+ * Represents a relation between codings. It my be a transitive or non-transitive relation depending
+ * on the construction, i.e: the creator is responsible for explicitly defining all related pair for
+ * transitive closure.
  *
  * @author Piotr Szul
  */
 @ToString
-class Closure {
+public class Relation {
 
   @Nonnull
   private final Map<SimpleCoding, List<SimpleCoding>> mappings;
 
-  private Closure(@Nonnull final Map<SimpleCoding, List<SimpleCoding>> mappings) {
+  private Relation(@Nonnull final Map<SimpleCoding, List<SimpleCoding>> mappings) {
     this.mappings = mappings;
   }
 
@@ -70,7 +69,7 @@ class Closure {
   }
 
   @Nonnull
-  public static Closure fromMappings(@Nonnull final Collection<Mapping> mappings) {
+  public static Relation fromMappings(@Nonnull final Collection<Mapping> mappings) {
     final Map<SimpleCoding, List<Mapping>> groupedMappings =
         mappings.stream().collect(Collectors.groupingBy(Mapping::getFrom));
     final Map<SimpleCoding, List<SimpleCoding>> groupedCodings =
@@ -78,7 +77,12 @@ class Closure {
             .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().stream()
                 .map(Mapping::getTo)
                 .collect(Collectors.toList())));
-    return new Closure(groupedCodings);
+    return new Relation(groupedCodings);
+  }
+
+  @Nonnull
+  public static Relation empty() {
+    return new Relation(Collections.emptyMap());
   }
 
   /**
@@ -90,7 +94,7 @@ class Closure {
     // filter out null SystemAndCodes
     final Set<SimpleCoding> leftSet =
         left.stream().filter(SimpleCoding::isDefined).collect(Collectors.toSet());
-    final Closure.CodingSet expansion = new Closure.CodingSet(expand(leftSet));
+    final Relation.CodingSet expansion = new Relation.CodingSet(expand(leftSet));
     return right.stream().anyMatch(expansion::contains);
   }
 
@@ -100,7 +104,7 @@ class Closure {
    */
   @Nonnull
   private Set<SimpleCoding> expand(@Nonnull final Set<SimpleCoding> codings) {
-    final Closure.CodingSet baseSet = new Closure.CodingSet(codings);
+    final Relation.CodingSet baseSet = new Relation.CodingSet(codings);
     return Streams
         .concat(codings.stream(), mappings.entrySet().stream()
             .filter(kv -> baseSet.contains(kv.getKey())).flatMap(kv -> kv.getValue().stream()))

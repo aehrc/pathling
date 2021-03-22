@@ -4,31 +4,22 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.fhirpath.function.subsumes;
+package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-
-import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.r4.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.hl7.fhir.r4.model.StringType;
 
 /**
- * Helper class to encapsulate the creation of a subsumes relation for a set of Codings.
- * <p>
- * Additional resources on closure table maintenance:
+ * Input/output mappings for $closure operation.
  *
  * @author Piotr Szul
  * @see <a href="https://www.hl7.org/fhir/terminology-service.html#closure">Maintaining a Closure
@@ -37,13 +28,9 @@ import org.hl7.fhir.r4.model.StringType;
  * ConceptMap</a>
  */
 @Slf4j
-class ClosureService {
+public final class ClosureMapping extends BaseMapping {
 
-  @Nonnull
-  private final TerminologyClient terminologyClient;
-
-  public ClosureService(@Nonnull final TerminologyClient terminologyClient) {
-    this.terminologyClient = terminologyClient;
+  private ClosureMapping() {
   }
 
   /**
@@ -94,25 +81,7 @@ class ClosureService {
   }
 
   @Nonnull
-  public Closure getSubsumesRelation(
-      @Nonnull final Collection<SimpleCoding> systemAndCodes) {
-    final List<Coding> codings =
-        systemAndCodes.stream().map(SimpleCoding::toCoding).collect(Collectors.toList());
-    // recreate the systemAndCodes dataset from the list not to execute the query again.
-    // Create a unique name for the closure table for this code system, based upon the
-    // expressions of the input, argument and the CodeSystem URI.
-    final String closureName = UUID.randomUUID().toString();
-    log.info("Sending $closure request to terminology service with name '{}' and {} codings",
-        closureName, codings.size());
-    terminologyClient.initialiseClosure(new StringType(closureName));
-    final ConceptMap closureResponse =
-        terminologyClient.closure(new StringType(closureName), codings);
-    checkNotNull(closureResponse);
-    return conceptMapToClosure(closureResponse);
-  }
-
-  @Nonnull
-  static Closure conceptMapToClosure(@Nonnull final ConceptMap conceptMap) {
-    return Closure.fromMappings(conceptMapToMappings(conceptMap));
+  public static Relation closureFromConceptMap(@Nonnull final ConceptMap conceptMap) {
+    return Relation.fromMappings(conceptMapToMappings(conceptMap));
   }
 }

@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.fhirpath.function.subsumes;
+package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.io.Serializable;

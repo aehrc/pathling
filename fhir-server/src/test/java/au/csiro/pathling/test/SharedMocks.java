@@ -22,4 +22,11 @@ public class SharedMocks {
       return (T) MOCKS.computeIfAbsent(clazz, Mockito::mock);
     }
   }
+
+  public static void resetAll() {
+    synchronized (MOCKS) {
+      MOCKS.values().forEach(Mockito::reset);
+    }
+
+  }
 }
