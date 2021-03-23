@@ -12,15 +12,18 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructT
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -34,13 +37,13 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.FhirHelpers.MemberOfTxAnswerer;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.rest.param.UriParam;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
@@ -48,11 +51,12 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -68,6 +72,20 @@ class MemberOfFunctionTest {
 
   @Autowired
   private FhirContext fhirContext;
+
+  @Autowired
+  TerminologyClientFactory terminologyClientFactory;
+
+  @Autowired
+  TerminologyService terminologyService;
+
+  @Autowired
+  TerminologyClient terminologyClient;
+
+  @BeforeEach
+  public void setUp() {
+    SharedMocks.resetAll();
+  }
 
   private static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";
   private static final String TERMINOLOGY_SERVICE_URL = "https://r4.ontoserver.csiro.au/fhir";
@@ -109,21 +127,9 @@ class MemberOfFunctionTest {
     final StringLiteralPath argumentExpression = StringLiteralPath
         .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
 
-    // Create a mock terminology client.
-    final TerminologyClient terminologyClient = mock(TerminologyClient.class,
-        withSettings().serializable());
-    final Answer<ValueSet> memberOfTxAnswerer = new MemberOfTxAnswerer(coding2, coding5);
-    when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
-    when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
-        .thenAnswer(memberOfTxAnswerer);
-    // setup all systems as known
-    when(terminologyClient.searchCodeSystems(any(UriParam.class), any()))
-        .thenReturn(Collections.singletonList(new CodeSystem()));
-    // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
-
-    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
-        withSettings().serializable());
-    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
+    // Setup mocks
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(coding2, coding5));
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
@@ -160,6 +166,11 @@ class MemberOfFunctionTest {
         .isNotSingular()
         .selectOrderedResultWithEid()
         .hasRows(expectedResult);
+
+    verify(terminologyService)
+        .intersect(eq(MY_VALUE_SET_URL),
+            eq(setOfSimpleFrom(coding1, coding2, coding3, coding4, coding5)));
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
@@ -210,22 +221,9 @@ class MemberOfFunctionTest {
     final StringLiteralPath argumentExpression = StringLiteralPath
         .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
 
-    // Create a mock terminology client.
-    final TerminologyClient terminologyClient = mock(TerminologyClient.class,
-        withSettings().serializable());
-    final Answer<ValueSet> memberOfTxAnswerer = new MemberOfTxAnswerer(codeableConcept1,
-        codeableConcept3, codeableConcept4);
-    when(terminologyClient.getServerBase()).thenReturn(TERMINOLOGY_SERVICE_URL);
-    when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
-        .thenAnswer(memberOfTxAnswerer);
-    // setup all systems as known
-    when(terminologyClient.searchCodeSystems(any(UriParam.class), any()))
-        .thenReturn(Collections.singletonList(new CodeSystem()));
-
-    // Create a mock TerminologyClientFactory, and make it return the mock terminology client.
-    final TerminologyClientFactory terminologyClientFactory = mock(TerminologyClientFactory.class,
-        withSettings().serializable());
-    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
+    // Setup mocks
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(codeableConcept1, codeableConcept3, codeableConcept4));
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
@@ -260,6 +258,11 @@ class MemberOfFunctionTest {
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
         .hasRows(expectedResult);
+
+    verify(terminologyService)
+        .intersect(eq(MY_VALUE_SET_URL),
+            eq(setOfSimpleFrom(coding1, coding2, coding3, coding4, coding5)));
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test

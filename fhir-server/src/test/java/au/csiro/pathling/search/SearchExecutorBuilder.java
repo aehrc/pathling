@@ -7,9 +7,7 @@
 package au.csiro.pathling.search;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -62,17 +60,15 @@ public class SearchExecutorBuilder {
 
   public SearchExecutorBuilder(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final FhirEncoders fhirEncoders) {
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final TerminologyClientFactory terminologyClientFactory) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.fhirEncoders = fhirEncoders;
     resourceReader = mock(ResourceReader.class);
     terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-
-    terminologyClientFactory =
-        mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
-    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
+    this.terminologyClientFactory = terminologyClientFactory;
   }
 
   public SearchExecutorBuilder withSubjectResource(@Nonnull final ResourceType resourceType) {

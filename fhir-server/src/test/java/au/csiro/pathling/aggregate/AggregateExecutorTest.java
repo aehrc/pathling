@@ -17,6 +17,8 @@ import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClientFactory;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.SearchExecutor;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -50,6 +52,9 @@ public abstract class AggregateExecutorTest {
   protected TerminologyClient terminologyClient;
 
   @Autowired
+  protected TerminologyService terminologyService;
+
+  @Autowired
   protected TerminologyClientFactory terminologyClientFactory;
 
   @Autowired
@@ -71,6 +76,7 @@ public abstract class AggregateExecutorTest {
 
   @BeforeEach
   void setUp() {
+    SharedMocks.resetAll();
     resourceReader = mock(ResourceReader.class);
     executor = new FreshAggregateExecutor(configuration, fhirContext, spark, resourceReader,
         Optional.of(terminologyClient), Optional.of(terminologyClientFactory));

@@ -8,6 +8,7 @@ package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.util.Collection;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
@@ -48,5 +49,21 @@ public interface TerminologyService {
    */
   @Nonnull
   Relation getSubsumesRelation(@Nonnull final Collection<SimpleCoding> systemAndCodes);
+
+
+  /**
+   * Intersects the given set of codings with the <code>ValueSet</code> defined by provided uri.
+   * <p>
+   * Should be able to ignore codings including are undefined (i.e. the system or code is null) or
+   * where the system is unknown to the underlying terminology service.
+   * <p>
+   *
+   * @param valueSetUri the URI of the <code>ValueSet</code>.
+   * @param systemAndCodes the collections of codings to intersect.
+   * @return the set of input codings the belong to the <code>ValueSet</code>.
+   */
+  @Nonnull
+  Set<SimpleCoding> intersect(@Nonnull final String valueSetUri,
+      @Nonnull final Collection<SimpleCoding> systemAndCodes);
 
 }

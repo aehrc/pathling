@@ -8,7 +8,9 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
-import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -30,9 +32,9 @@ import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.ClosureMapping;
 import au.csiro.pathling.terminology.ConceptTranslator;
+import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.TimingExtension;
@@ -50,15 +52,18 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Date;
 import java.util.*;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.CodeSystem;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -94,6 +99,7 @@ public class ParserTest {
 
   @BeforeEach
   public void setUp() throws IOException {
+    SharedMocks.resetAll();
     mockReader = mock(ResourceReader.class);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
         ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
@@ -109,12 +115,6 @@ public class ParserTest {
         .inputContext(subjectResource)
         .build();
     parser = new Parser(parserContext);
-  }
-
-  @AfterEach
-  public void tearDown() {
-    // TODO: Move to a shared base class for tests
-    SharedMocks.resetAll();
   }
 
   private void mockResourceReader(final ResourceType... resourceTypes)
@@ -378,19 +378,8 @@ public class ParserTest {
 
   @Test
   public void testWhereWithMemberOf() {
-    final Bundle mockSearch = (Bundle) jsonParser.parseResource(
-        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.Bundle.json"));
-    final List<CodeSystem> codeSystems = mockSearch.getEntry().stream()
-        .map(entry -> (CodeSystem) entry.getResource())
-        .collect(Collectors.toList());
-    final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
-        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
-
-    //noinspection unchecked
-    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
-        .thenReturn(codeSystems);
-    when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
-        .thenReturn(mockExpansion);
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(CD_SNOMED_403190006, CD_SNOMED_284551006));
 
     assertThatResultOf(
         "reverseResolve(Condition.subject).where("

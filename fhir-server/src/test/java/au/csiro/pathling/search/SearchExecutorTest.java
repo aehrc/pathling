@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.search;
 
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockResourceReader;
@@ -17,12 +18,14 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.test.SharedMocks;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.StringParam;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -32,10 +35,10 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleType;
-import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -65,6 +68,18 @@ class SearchExecutorTest {
   @Autowired
   private FhirEncoders fhirEncoders;
 
+
+  @Autowired
+  private TerminologyClientFactory terminologyClientFactory;
+
+  @Autowired
+  private TerminologyService terminologyService;
+
+  @BeforeEach
+  void setUp() {
+    SharedMocks.resetAll();
+  }
+
   @Test
   void simpleSearchWithMemberOf() {
     final StringAndListParam params = new StringAndListParam();
@@ -77,9 +92,8 @@ class SearchExecutorTest {
 
     final ValueSet valueSet = (ValueSet) jsonParser.parseResource(getResourceAsStream(
         "txResponses/SearchExecutorTest/simpleSearchWithMemberOf.ValueSet.json"));
-    when(builder.getTerminologyClient().expand(any(), any())).thenReturn(valueSet);
-    when(builder.getTerminologyClient().searchCodeSystems(any(), any()))
-        .thenReturn(Collections.singletonList(new CodeSystem()));
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(valueSet));
 
     final SearchExecutor executor = builder.build();
     assertResponse("SearchExecutorTest/simpleSearchWithMemberOf.Bundle.json", executor);
@@ -114,7 +128,7 @@ class SearchExecutorTest {
   @Nonnull
   private SearchExecutorBuilder searchBuilder() {
     return new SearchExecutorBuilder(configuration, fhirContext, sparkSession,
-        fhirEncoders);
+        fhirEncoders, terminologyClientFactory);
   }
 
   @SuppressWarnings("SameParameterValue")

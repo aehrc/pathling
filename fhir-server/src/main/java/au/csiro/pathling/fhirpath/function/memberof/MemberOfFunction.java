@@ -22,7 +22,6 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.SqlExtensions;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -45,14 +44,10 @@ public class MemberOfFunction implements NamedFunction {
 
   private static final String NAME = "memberOf";
 
-  @Nonnull
-  private final Optional<MemberOfMapperWithPreview> configuredMapper;
-
   /**
    * Returns a new instance of this function.
    */
   public MemberOfFunction() {
-    configuredMapper = Optional.empty();
   }
 
   private boolean isCodeableConcept(@Nonnull final FhirPath fhirPath) {
@@ -86,9 +81,9 @@ public class MemberOfFunction implements NamedFunction {
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
     // then create a new dataset with the boolean results.
-    final MemberOfMapperWithPreview mapper = configuredMapper.orElseGet(() ->
+    final MemberOfMapperWithPreview mapper =
         new MemberOfMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
-            valueSetUri));
+            valueSetUri);
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.
