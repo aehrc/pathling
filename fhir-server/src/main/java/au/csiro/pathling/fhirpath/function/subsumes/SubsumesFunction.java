@@ -103,7 +103,7 @@ public class SubsumesFunction implements NamedFunction {
     @SuppressWarnings({"OptionalGetWithoutIsPresent", "TypeMayBeWeakened"})
     final SubsumptionMapperWithPreview mapper =
         new SubsumptionMapperWithPreview(MDC.get("requestId"),
-            input.getContext().getTerminologyClientFactory().get(),
+            input.getContext().getTerminologyServiceFactory().get(),
             inverted);
 
     final Dataset<Row> resultDataset = SqlExtensions
@@ -199,10 +199,9 @@ public class SubsumesFunction implements NamedFunction {
   private void validateInput(@Nonnull final NamedFunctionInput input) {
 
     final ParserContext context = input.getContext();
-    checkUserInput(
-        context.getTerminologyClient().isPresent() && context.getTerminologyClientFactory()
-            .isPresent(), "Attempt to call terminology function " + functionName
-            + " when terminology service has not been configured");
+    checkUserInput(context.getTerminologyServiceFactory()
+        .isPresent(), "Attempt to call terminology function " + functionName
+        + " when terminology service has not been configured");
 
     checkUserInput(
         input.getArguments().size() == 1,

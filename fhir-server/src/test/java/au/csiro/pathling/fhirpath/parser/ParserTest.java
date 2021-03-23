@@ -21,8 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
@@ -45,19 +44,18 @@ import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import ca.uhn.fhir.rest.param.UriParam;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Date;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,13 +81,10 @@ public class ParserTest {
   private FhirContext fhirContext;
 
   @Autowired
-  private TerminologyClient terminologyClient;
-
-  @Autowired
   private TerminologyService terminologyService;
 
   @Autowired
-  private TerminologyClientFactory terminologyClientFactory;
+  private TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
   private IParser jsonParser;
@@ -109,8 +104,7 @@ public class ParserTest {
         .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyClientFactory)
-        .terminologyClient(terminologyClient)
+        .terminologyClientFactory(terminologyServiceFactory)
         .resourceReader(mockReader)
         .inputContext(subjectResource)
         .build();
@@ -144,8 +138,7 @@ public class ParserTest {
         .build(fhirContext, mockReader, resourceType, resourceType.toCode(), true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyClientFactory)
-        .terminologyClient(terminologyClient)
+        .terminologyClientFactory(terminologyServiceFactory)
         .resourceReader(mockReader)
         .inputContext(subjectResource)
         .build();
@@ -292,10 +285,6 @@ public class ParserTest {
 
   @Test
   public void testSubsumesAndSubsumedBy() {
-    final List<CodeSystem> codeSystems = Collections.singletonList(new CodeSystem());
-    //noinspection unchecked
-    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
-        .thenReturn(codeSystems);  // Setup mock terminology client
     when(terminologyService.getSubsumesRelation(any())).thenReturn(Relation.equality());
 
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
@@ -359,10 +348,6 @@ public class ParserTest {
   @Disabled
   @Test
   public void testWhereWithSubsumes() {
-    final List<CodeSystem> codeSystems = Collections.singletonList(new CodeSystem());
-    //noinspection unchecked
-    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
-        .thenReturn(codeSystems);
 
     // TODO: This should not work for empty closure
     when(terminologyService.getSubsumesRelation(any()))

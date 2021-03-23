@@ -12,18 +12,11 @@ import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
 /**
- * Represents something that creates a TerminologyClient. Used for code that runs on Spark workers.
+ * Represents something that creates a {@link TerminologyService}.
+ * <p>
+ * Used for code that runs on Spark workers.
  */
-public interface TerminologyClientFactory extends Serializable {
-
-  /**
-   * Builds a new instance.
-   *
-   * @param logger a {@link Logger} to use for logging
-   * @return a shiny new TerminologyClient instance
-   */
-  @Nonnull
-  TerminologyClient build(@Nonnull final Logger logger);
+public interface TerminologyServiceFactory extends Serializable {
 
   /**
    * Builds a new instance.

@@ -13,7 +13,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
@@ -74,15 +74,15 @@ public class MemberOfFunction implements NamedFunction {
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    final TerminologyClientFactory terminologyClientFactory = inputContext
-        .getTerminologyClientFactory().get();
+    final TerminologyServiceFactory terminologyServiceFactory = inputContext
+        .getTerminologyServiceFactory().get();
     final String valueSetUri = argument.getJavaValue();
     final Dataset<Row> dataset = inputPath.getDataset();
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
     // then create a new dataset with the boolean results.
     final MemberOfMapperWithPreview mapper =
-        new MemberOfMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
+        new MemberOfMapperWithPreview(MDC.get("requestId"), terminologyServiceFactory,
             valueSetUri);
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
@@ -105,10 +105,9 @@ public class MemberOfFunction implements NamedFunction {
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {
     final ParserContext context = input.getContext();
-    checkUserInput(
-        context.getTerminologyClient().isPresent() && context.getTerminologyClientFactory()
-            .isPresent(), "Attempt to call terminology function " + NAME
-            + " when terminology service has not been configured");
+    checkUserInput(context.getTerminologyServiceFactory()
+        .isPresent(), "Attempt to call terminology function " + NAME
+        + " when terminology service has not been configured");
 
     final FhirPath inputPath = input.getInput();
     checkUserInput(inputPath instanceof ElementPath

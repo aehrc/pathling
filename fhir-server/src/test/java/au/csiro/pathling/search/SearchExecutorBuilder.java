@@ -11,8 +11,7 @@ import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
@@ -23,7 +22,6 @@ import javax.annotation.Nullable;
 import lombok.Getter;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.mockito.Mockito;
 
 /**
  * @author John Grimes
@@ -47,10 +45,7 @@ public class SearchExecutorBuilder {
   private final ResourceReader resourceReader;
 
   @Nonnull
-  private final TerminologyClient terminologyClient;
-
-  @Nonnull
-  private final TerminologyClientFactory terminologyClientFactory;
+  private final TerminologyServiceFactory terminologyServiceFactory;
 
   @Nullable
   private ResourceType subjectResource;
@@ -61,14 +56,13 @@ public class SearchExecutorBuilder {
   public SearchExecutorBuilder(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final FhirEncoders fhirEncoders,
-      @Nonnull final TerminologyClientFactory terminologyClientFactory) {
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.fhirEncoders = fhirEncoders;
     resourceReader = mock(ResourceReader.class);
-    terminologyClient = mock(TerminologyClient.class, Mockito.withSettings().serializable());
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
   public SearchExecutorBuilder withSubjectResource(@Nonnull final ResourceType resourceType) {
@@ -85,8 +79,7 @@ public class SearchExecutorBuilder {
   public SearchExecutor build() {
     checkNotNull(subjectResource);
     return new SearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
-        Optional.of(terminologyClient), Optional.of(terminologyClientFactory), fhirEncoders,
-        subjectResource, filters);
+        Optional.of(terminologyServiceFactory), fhirEncoders, subjectResource, filters);
   }
 
 }

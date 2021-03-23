@@ -9,10 +9,10 @@ package au.csiro.pathling.test;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
 import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.test.stubs.TestTerminologyClientFactory;
+import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import javax.annotation.Nonnull;
@@ -68,8 +68,8 @@ public class UnitTestDependencies {
 
   @Bean
   @Nonnull
-  public static TerminologyClientFactory terminologyClientFactory() {
-    return new TestTerminologyClientFactory();
+  public static TerminologyServiceFactory terminologyClientFactory() {
+    return new TestTerminologyServiceFactory();
   }
 
 }

@@ -16,7 +16,7 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -74,8 +74,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
    * @param resourceReader A {@link ResourceReader} for retrieving resources
-   * @param terminologyClient A {@link TerminologyClient} for resolving terminology queries
-   * @param terminologyClientFactory A {@link TerminologyClientFactory} for resolving terminology
+   * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
    * queries within parallel processing
    * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
    * objects
@@ -85,12 +84,10 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   public SearchExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyClient> terminologyClient,
-      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<StringAndListParam> filters) {
-    super(configuration, fhirContext, sparkSession, resourceReader, terminologyClient,
-        terminologyClientFactory);
+    super(configuration, fhirContext, sparkSession, resourceReader, terminologyServiceFactory);
     this.fhirEncoders = fhirEncoders;
     this.subjectResource = subjectResource;
     this.filters = filters;

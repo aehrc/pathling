@@ -44,7 +44,7 @@ public class FhirHelpers {
         ResourceType.fromCode(resourceCode), hapiDefinition);
     return definition.getChildElement(elementName);
   }
-
+  // TODO: Maybe remove
   /**
    * Custom Mockito answerer for returning a mock response from the terminology server in response
    * to calculating a ValueSet intersection using {@code $expand}.

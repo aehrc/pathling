@@ -6,24 +6,17 @@
 
 package au.csiro.pathling.test.stubs;
 
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
-public class TestTerminologyClientFactory implements TerminologyClientFactory {
+public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
 
   private static final long serialVersionUID = -8229464411116137820L;
 
-  public TestTerminologyClientFactory() {
-  }
-
-  @Nonnull
-  @Override
-  public TerminologyClient build(@Nonnull final Logger logger) {
-    return SharedMocks.getOrCreate(TerminologyClient.class);
+  public TestTerminologyServiceFactory() {
   }
 
   @Nonnull

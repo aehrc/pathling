@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import ca.uhn.fhir.context.FhirContext;
@@ -70,7 +70,7 @@ class SearchExecutorTest {
 
 
   @Autowired
-  private TerminologyClientFactory terminologyClientFactory;
+  private TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
   private TerminologyService terminologyService;
@@ -128,7 +128,7 @@ class SearchExecutorTest {
   @Nonnull
   private SearchExecutorBuilder searchBuilder() {
     return new SearchExecutorBuilder(configuration, fhirContext, sparkSession,
-        fhirEncoders, terminologyClientFactory);
+        fhirEncoders, terminologyServiceFactory);
   }
 
   @SuppressWarnings("SameParameterValue")

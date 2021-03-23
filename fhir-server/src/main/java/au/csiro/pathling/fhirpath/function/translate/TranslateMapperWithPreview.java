@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.function.translate;
 
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
@@ -40,7 +40,7 @@ public class TranslateMapperWithPreview implements
   private final String requestId;
 
   @Nonnull
-  private final TerminologyClientFactory terminologyClientFactory;
+  private final TerminologyServiceFactory terminologyServiceFactory;
 
   @Nonnull
   private final String conceptMapUrl;
@@ -53,17 +53,17 @@ public class TranslateMapperWithPreview implements
 
   /**
    * @param requestId An identifier used alongside any logging that the mapper outputs
-   * @param terminologyClientFactory Used to create instances of the terminology client on workers
+   * @param terminologyServiceFactory Used to create instances of the terminology client on workers
    * @param conceptMapUrl The URI of the ConceptMap to use for translations
    * @param reverse If set, reverse source and target within the map
    * @param equivalences The list of equivalence values that will be matched
    */
   public TranslateMapperWithPreview(@Nonnull final String requestId,
-      @Nonnull final TerminologyClientFactory terminologyClientFactory,
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final String conceptMapUrl, final boolean reverse,
       @Nonnull final List<ConceptMapEquivalence> equivalences) {
     this.requestId = requestId;
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
     this.conceptMapUrl = conceptMapUrl;
     this.reverse = reverse;
     this.equivalences = equivalences;
@@ -84,7 +84,7 @@ public class TranslateMapperWithPreview implements
         .filter(Objects::nonNull)
         .flatMap(List::stream)
         .collect(Collectors.toSet());
-    final TerminologyService terminologyService = terminologyClientFactory.buildService(log);
+    final TerminologyService terminologyService = terminologyServiceFactory.buildService(log);
     return terminologyService.translate(uniqueCodings, conceptMapUrl,
         reverse, equivalences);
   }

@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -52,7 +52,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -100,13 +99,10 @@ public class SubsumesFunctionTest {
   private FhirContext fhirContext;
 
   @Autowired
-  private TerminologyClient terminologyClient;
-
-  @Autowired
   private TerminologyService terminologyService;
 
   @Autowired
-  private TerminologyClientFactory terminologyClientFactory;
+  private TerminologyServiceFactory terminologyServiceFactory;
 
   private static Row codeableConceptRowFromCoding(final Coding coding) {
     return codeableConceptRowFromCoding(coding, CODING_OTHER4);
@@ -118,12 +114,8 @@ public class SubsumesFunctionTest {
 
   @BeforeEach
   public void setUp() {
-    when(terminologyService.getSubsumesRelation(any())).thenReturn(RELATION_LARGE_MEDIUM_SMALL);
-  }
-
-  @AfterEach
-  public void tearDown() {
     SharedMocks.resetAll();
+    when(terminologyService.getSubsumesRelation(any())).thenReturn(RELATION_LARGE_MEDIUM_SMALL);
   }
 
   private CodingPath createCodingInput() {
@@ -313,8 +305,7 @@ public class SubsumesFunctionTest {
   private FhirPathAssertion assertCallSuccess(final NamedFunction function,
       final NonLiteralPath inputExpression, final FhirPath argumentExpression) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClient(terminologyClient)
-        .terminologyClientFactory(terminologyClientFactory)
+        .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, inputExpression,
@@ -435,8 +426,7 @@ public class SubsumesFunctionTest {
   @Test
   public void throwsErrorIfInputTypeIsUnsupported() {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClient(mock(TerminologyClient.class))
-        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
 
     final ElementPath argument = new ElementPathBuilder(spark)
@@ -461,8 +451,7 @@ public class SubsumesFunctionTest {
   @Test
   public void throwsErrorIfArgumentTypeIsUnsupported() {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClient(mock(TerminologyClient.class))
-        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
 
     final ElementPath input = new ElementPathBuilder(spark)
@@ -486,8 +475,7 @@ public class SubsumesFunctionTest {
   public void throwsErrorIfMoreThanOneArgument() {
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClient(mock(TerminologyClient.class))
-        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
 
     final ElementPath input = new ElementPathBuilder(spark)

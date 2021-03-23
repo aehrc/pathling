@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.function.memberof;
 
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -33,21 +33,21 @@ public class MemberOfMapperWithPreview implements
   private final String requestId;
 
   @Nonnull
-  private final TerminologyClientFactory terminologyClientFactory;
+  private final TerminologyServiceFactory terminologyServiceFactory;
 
   @Nonnull
   private final String valueSetUri;
 
   /**
    * @param requestId An identifier used alongside any logging that the mapper outputs
-   * @param terminologyClientFactory Used to create instances of the terminology client on workers
+   * @param terminologyServiceFactory Used to create instances of the terminology client on workers
    * @param valueSetUri The identifier of the ValueSet that codes will be validated against
    */
   public MemberOfMapperWithPreview(@Nonnull final String requestId,
-      @Nonnull final TerminologyClientFactory terminologyClientFactory,
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final String valueSetUri) {
     this.requestId = requestId;
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
     this.valueSetUri = valueSetUri;
   }
 
@@ -64,7 +64,7 @@ public class MemberOfMapperWithPreview implements
         .flatMap(List::stream)
         .collect(Collectors.toSet());
 
-    final TerminologyService terminologyService = terminologyClientFactory.buildService(log);
+    final TerminologyService terminologyService = terminologyServiceFactory.buildService(log);
     return terminologyService.intersect(valueSetUri, codings);
   }
 

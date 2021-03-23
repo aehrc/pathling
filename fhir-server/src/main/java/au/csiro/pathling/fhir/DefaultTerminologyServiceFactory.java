@@ -15,12 +15,13 @@ import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
 /**
- * Uses the FhirEncoders class to create a FhirContext, then creates a TerminologyClient with some
- * configuration. Used for code that runs on Spark workers.
+ * Default implementation of {@link TerminologyServiceFactory} providing {@link TerminologyService}
+ * implemented using {@link TerminologyClient} with with given configuration.
  *
  * @author John Grimes
+ * @author Piotr Szul
  */
-public class DefaultTerminologyClientFactory implements TerminologyClientFactory {
+public class DefaultTerminologyServiceFactory implements TerminologyServiceFactory {
 
   private static final long serialVersionUID = 8862251697418622614L;
 
@@ -41,7 +42,7 @@ public class DefaultTerminologyClientFactory implements TerminologyClientFactory
    * @param socketTimeout the number of milliseconds to wait for response data
    * @param verboseRequestLogging whether to log out verbose details of each request
    */
-  public DefaultTerminologyClientFactory(@Nonnull final FhirContext fhirContext,
+  public DefaultTerminologyServiceFactory(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl, final int socketTimeout,
       final boolean verboseRequestLogging) {
     this.fhirVersion = fhirContext.getVersion().getVersion();
@@ -54,27 +55,15 @@ public class DefaultTerminologyClientFactory implements TerminologyClientFactory
    * Builds a new instance.
    *
    * @param logger a {@link Logger} to use for logging
-   * @return a shiny new TerminologyClient instance
-   */
-  @Nonnull
-  @Override
-  @Deprecated
-  public TerminologyClient build(@Nonnull final Logger logger) {
-    return TerminologyClient
-        .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
-            verboseRequestLogging, logger);
-  }
-
-  /**
-   * Builds a new instance.
-   *
-   * @param logger a {@link Logger} to use for logging
    * @return a shiny new TerminologyService instance
    */
   @Nonnull
   @Override
   public TerminologyService buildService(@Nonnull final Logger logger) {
-    return new DefaultTerminologyService(FhirEncoders.contextFor(fhirVersion), build(logger));
+    final TerminologyClient terminologyClient = TerminologyClient
+        .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
+            verboseRequestLogging, logger);
+    return new DefaultTerminologyService(FhirEncoders.contextFor(fhirVersion), terminologyClient);
   }
 
 

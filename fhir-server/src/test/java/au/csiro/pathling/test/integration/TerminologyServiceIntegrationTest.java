@@ -12,8 +12,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.fhir.DefaultTerminologyClientFactory;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
@@ -65,7 +65,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     }
 
     // TODO: refactor to use actual dependency injection
-    final TerminologyClientFactory tcf = new DefaultTerminologyClientFactory(fhirContext,
+    final TerminologyServiceFactory tcf = new DefaultTerminologyServiceFactory(fhirContext,
         terminologyServerUrl, 0, false);
     terminologyService = tcf.buildService(log);
   }

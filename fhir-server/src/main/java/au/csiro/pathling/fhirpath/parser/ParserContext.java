@@ -6,10 +6,10 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.terminology.TerminologyService;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
 import java.util.Optional;
@@ -60,18 +60,12 @@ public class ParserContext {
   private final ResourceReader resourceReader;
 
   /**
-   * The terminology client that should be used to resolve terminology queries within this
-   * expression. Will only be present if a terminology service has been configured.
+   * A factory for creating new {@link TerminologyService} objects, which is needed within blocks of
+   * code that are run in parallel. Will only be present if a terminology service has been
+   * configured.
    */
   @Nonnull
-  private final Optional<TerminologyClient> terminologyClient;
-
-  /**
-   * A factory for creating new TerminologyClient objects, which is needed within blocks of code
-   * that are run in parallel. Will only be present if a terminology service has been configured.
-   */
-  @Nonnull
-  private final Optional<TerminologyClientFactory> terminologyClientFactory;
+  private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   /**
    * The context may contain zero or more grouping columns. If there are columns in this list, the
@@ -93,23 +87,19 @@ public class ParserContext {
    * @param sparkSession A {@link SparkSession} that can be used to resolve Spark queries required
    * for this expression
    * @param resourceReader For retrieving data relating to resource references
-   * @param terminologyClient The {@link TerminologyClient} that should be used to resolve
-   * terminology queries
-   * @param terminologyClientFactory A factory for {@link TerminologyClient} objects, used for
+   * @param terminologyServiceFactory A factory for {@link TerminologyService} objects, used for
    * parallel processing
    * @param groupingColumns the list of columns to group on when aggregating
    */
   public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyClient> terminologyClient,
-      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final Optional<List<Column>> groupingColumns) {
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.resourceReader = resourceReader;
-    this.terminologyClient = terminologyClient;
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
     this.groupingColumns = groupingColumns;
   }
 

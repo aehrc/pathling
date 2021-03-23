@@ -14,7 +14,7 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -155,8 +155,8 @@ public class TranslateFunction implements NamedFunction {
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    final TerminologyClientFactory terminologyClientFactory = inputContext
-        .getTerminologyClientFactory().get();
+    final TerminologyServiceFactory terminologyServiceFactory = inputContext
+        .getTerminologyServiceFactory().get();
 
     final Arguments arguments = Arguments.of(input);
 
@@ -166,7 +166,7 @@ public class TranslateFunction implements NamedFunction {
     final Dataset<Row> dataset = inputPath.getDataset();
 
     final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
+        new TranslateMapperWithPreview(MDC.get("requestId"), terminologyServiceFactory,
             conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
             wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 
@@ -195,7 +195,7 @@ public class TranslateFunction implements NamedFunction {
   private void validateInput(@Nonnull final NamedFunctionInput input) {
     final ParserContext context = input.getContext();
     checkUserInput(
-        context.getTerminologyClientFactory()
+        context.getTerminologyServiceFactory()
             .isPresent(), "Attempt to call terminology function " + NAME
             + " when terminology service has not been configured");
 

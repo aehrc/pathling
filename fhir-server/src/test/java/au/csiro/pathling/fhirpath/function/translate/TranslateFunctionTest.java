@@ -21,7 +21,7 @@ import static org.mockito.Mockito.*;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -89,7 +89,7 @@ class TranslateFunctionTest {
 
 
   @Autowired
-  TerminologyClientFactory terminologyClientFactory;
+  TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
   TerminologyService terminologyService;
@@ -160,7 +160,7 @@ class TranslateFunctionTest {
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputExpression.getIdColumn())
-        .terminologyClientFactory(terminologyClientFactory)
+        .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
     final StringLiteralPath conceptMapUrlArgument = StringLiteralPath
@@ -288,7 +288,7 @@ class TranslateFunctionTest {
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputExpression.getIdColumn())
-        .terminologyClientFactory(terminologyClientFactory)
+        .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
     final StringLiteralPath conceptMapUrlArgument = StringLiteralPath
@@ -362,8 +362,7 @@ class TranslateFunctionTest {
     final FhirPath argument = StringLiteralPath.fromString(SOURCE_SYSTEM_URI, mockContext);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClient(mock(TerminologyClient.class))
-        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
 
     final NamedFunctionInput translateInput = new NamedFunctionInput(parserContext, input,
@@ -390,8 +389,7 @@ class TranslateFunctionTest {
         .buildDefined();
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClient(mock(TerminologyClient.class))
-        .terminologyClientFactory(mock(TerminologyClientFactory.class))
+        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
 
     final NamedFunctionInput translateInput = new NamedFunctionInput(context, input,

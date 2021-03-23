@@ -8,7 +8,7 @@ package au.csiro.pathling.fhirpath.function.subsumes;
 
 import static java.util.stream.Stream.concat;
 
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.terminology.Relation;
@@ -37,21 +37,21 @@ public class SubsumptionMapperWithPreview implements
   private final String requestId;
 
   @Nonnull
-  private final TerminologyClientFactory terminologyClientFactory;
+  private final TerminologyServiceFactory terminologyServiceFactory;
   private final boolean inverted;
 
 
   /**
    * @param requestId an identifier used alongside any logging that the mapper outputs
-   * @param terminologyClientFactory the factory to use to create the {@link
+   * @param terminologyServiceFactory the factory to use to create the {@link
    * au.csiro.pathling.fhir.TerminologyClient}
    * @param inverted if true checks for `subsumedBy` relation, otherwise for `subsumes`
    */
   public SubsumptionMapperWithPreview(@Nonnull final String requestId,
-      @Nonnull final TerminologyClientFactory terminologyClientFactory,
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       final boolean inverted) {
     this.requestId = requestId;
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
     this.inverted = inverted;
   }
 
@@ -76,7 +76,7 @@ public class SubsumptionMapperWithPreview implements
         .filter(Objects::nonNull)
         .collect(Collectors.toSet());
 
-    final TerminologyService terminologyService = terminologyClientFactory.buildService(log);
+    final TerminologyService terminologyService = terminologyServiceFactory.buildService(log);
     return terminologyService.getSubsumesRelation(codings);
   }
 

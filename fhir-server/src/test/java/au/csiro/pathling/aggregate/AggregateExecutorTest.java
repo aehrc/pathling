@@ -13,8 +13,7 @@ import static org.mockito.Mockito.mock;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -49,13 +48,10 @@ public abstract class AggregateExecutorTest {
   protected SparkSession spark;
 
   @Autowired
-  protected TerminologyClient terminologyClient;
-
-  @Autowired
   protected TerminologyService terminologyService;
 
   @Autowired
-  protected TerminologyClientFactory terminologyClientFactory;
+  protected TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
   protected Configuration configuration;
@@ -79,7 +75,7 @@ public abstract class AggregateExecutorTest {
     SharedMocks.resetAll();
     resourceReader = mock(ResourceReader.class);
     executor = new FreshAggregateExecutor(configuration, fhirContext, spark, resourceReader,
-        Optional.of(terminologyClient), Optional.of(terminologyClientFactory));
+        Optional.of(terminologyServiceFactory));
   }
 
   /**
@@ -101,7 +97,7 @@ public abstract class AggregateExecutorTest {
         final StringAndListParam filters = new StringAndListParam();
         filters.addAnd(new StringParam(drillDown));
         final IBundleProvider searchExecutor = new SearchExecutor(configuration, fhirContext, spark,
-            resourceReader, Optional.of(terminologyClient), Optional.of(terminologyClientFactory),
+            resourceReader, Optional.of(terminologyServiceFactory),
             fhirEncoders, subjectResource, Optional.of(filters));
         final List<IBaseResource> resources = searchExecutor.getResources(0, 100);
         assertTrue(resources.size() > 0);

@@ -73,11 +73,11 @@ public class Dependencies {
   @Autowired
   @ConditionalOnBean(TerminologyClient.class)
   @Nonnull
-  static TerminologyClientFactory terminologyClientFactory(
+  static TerminologyServiceFactory terminologyClientFactory(
       @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
     final Terminology terminology = configuration.getTerminology();
     checkNotNull(terminology);
-    return new DefaultTerminologyClientFactory(fhirContext,
+    return new DefaultTerminologyServiceFactory(fhirContext,
         terminology.getServerUrl(),
         terminology.getSocketTimeout(),
         configuration.getVerboseRequestLogging());

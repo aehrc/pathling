@@ -198,8 +198,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // expression.
       final ParserContext argumentContext = new ParserContext(context.getInputContext(),
           context.getFhirContext(), context.getSparkSession(),
-          context.getResourceReader(), context.getTerminologyClient(),
-          context.getTerminologyClientFactory(), argumentGroupings);
+          context.getResourceReader(), context.getTerminologyServiceFactory(), argumentGroupings);
       argumentContext.setThisContext(thisPath);
 
       // Parse each of the expressions passed as arguments to the function.

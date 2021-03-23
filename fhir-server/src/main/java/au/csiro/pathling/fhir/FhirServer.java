@@ -74,10 +74,7 @@ public class FhirServer extends RestfulServer {
   private final ResourceReader resourceReader;
 
   @Nonnull
-  private final Optional<TerminologyClient> terminologyClient;
-
-  @Nonnull
-  private final Optional<TerminologyClientFactory> terminologyClientFactory;
+  private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   @Nonnull
   private final AggregateExecutor aggregateExecutor;
@@ -107,8 +104,7 @@ public class FhirServer extends RestfulServer {
    * @param sparkSession a {@link SparkSession} for use in querying FHIR data using Spark
    * @param fhirEncoders a {@link FhirEncoders} for use in serializing and deserializing FHIR data
    * @param resourceReader a {@link ResourceReader} for retrieving FHIR data from storage
-   * @param terminologyClient a {@link TerminologyClient} for resolving FHIR terminology queries
-   * @param terminologyClientFactory a {@link TerminologyClientFactory} for resolving FHIR
+   * @param terminologyServiceFactory a {@link TerminologyServiceFactory} for resolving FHIR
    * terminology queries during parallel processing
    * @param cachingAggregateExecutor a {@link CachingAggregateExecutor} for processing requests to
    * aggregate operation, when caching is enabled
@@ -130,8 +126,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final SparkSession sparkSession,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyClient> terminologyClient,
-      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final CachingAggregateExecutor cachingAggregateExecutor,
       @Nonnull final FreshAggregateExecutor freshAggregateExecutor,
       @Nonnull final ImportProvider importProvider,
@@ -145,8 +140,7 @@ public class FhirServer extends RestfulServer {
     this.sparkSession = sparkSession;
     this.fhirEncoders = fhirEncoders;
     this.resourceReader = resourceReader;
-    this.terminologyClient = terminologyClient;
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
     this.aggregateExecutor = configuration.getCaching().isEnabled()
                              ? cachingAggregateExecutor
                              : freshAggregateExecutor;
@@ -239,10 +233,9 @@ public class FhirServer extends RestfulServer {
       final IResourceProvider searchProvider =
           configuration.getCaching().isEnabled()
           ? new CachingSearchProvider(configuration, getFhirContext(), sparkSession, resourceReader,
-              terminologyClient, terminologyClientFactory, fhirEncoders, resourceTypeClass,
-              searchExecutorCache)
+              terminologyServiceFactory, fhirEncoders, resourceTypeClass, searchExecutorCache)
           : new SearchProvider(configuration, getFhirContext(), sparkSession, resourceReader,
-              terminologyClient, terminologyClientFactory, fhirEncoders, resourceTypeClass);
+              terminologyServiceFactory, fhirEncoders, resourceTypeClass);
 
       providers.add(searchProvider);
     }
