@@ -8,32 +8,41 @@ package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import com.google.common.collect.Streams;
+import java.io.Serializable;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NonNull;
 import lombok.ToString;
 
 /**
- * Represents a relation between codings. It my be a transitive or non-transitive relation depending
- * on the construction, i.e: the creator is responsible for explicitly defining all related pair for
- * transitive closure.
+ * Represents relation between codings with implicit coding equality.
+ * <p>
+ * Implicitly two codings that are equal are related. It may be a transitive or non-transitive
+ * relation depending on the construction, i.e: the creator is responsible for explicitly defining
+ * all related pairs for transitive closure (except of the equality).
  *
  * @author Piotr Szul
  */
 @ToString
 public class Relation {
 
-  @Nonnull
-  private final Map<SimpleCoding, List<SimpleCoding>> mappings;
+  /**
+   * An entry representing the existence of relation between <code>form</code> and <code>to</code>.
+   */
+  @Data
+  @AllArgsConstructor(staticName = "of")
+  public static class Entry implements Serializable {
 
-  private Relation(@Nonnull final Map<SimpleCoding, List<SimpleCoding>> mappings) {
-    this.mappings = mappings;
-  }
+    private static final long serialVersionUID = 1L;
 
-  @Nonnull
-  Map<SimpleCoding, List<SimpleCoding>> getMappings() {
-    return mappings;
+    @NonNull
+    private final SimpleCoding from;
+
+    @NonNull
+    private final SimpleCoding to;
   }
 
   /**
@@ -69,33 +78,18 @@ public class Relation {
   }
 
   @Nonnull
-  public static Relation fromMappings(@Nonnull final Collection<Mapping> mappings) {
-    final Map<SimpleCoding, List<Mapping>> groupedMappings =
-        mappings.stream().collect(Collectors.groupingBy(Mapping::getFrom));
-    final Map<SimpleCoding, List<SimpleCoding>> groupedCodings =
-        groupedMappings.entrySet().stream()
-            .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().stream()
-                .map(Mapping::getTo)
-                .collect(Collectors.toList())));
-    return new Relation(groupedCodings);
+  private final Map<SimpleCoding, List<SimpleCoding>> mappings;
+
+  /**
+   * Private constructor. Use {@link #equality()} or {@link #fromMappings} to create instances.
+   */
+  private Relation(@Nonnull final Map<SimpleCoding, List<SimpleCoding>> mappings) {
+    this.mappings = mappings;
   }
 
   @Nonnull
-  public static Relation empty() {
-    return new Relation(Collections.emptyMap());
-  }
-
-  /**
-   * Checks if any of the Codings in the right set is in the relation with any of the Codings in the
-   * left set.
-   */
-  public boolean anyRelates(@Nonnull final Collection<SimpleCoding> left,
-      @Nonnull final Collection<SimpleCoding> right) {
-    // filter out null SystemAndCodes
-    final Set<SimpleCoding> leftSet =
-        left.stream().filter(SimpleCoding::isDefined).collect(Collectors.toSet());
-    final Relation.CodingSet expansion = new Relation.CodingSet(expand(leftSet));
-    return right.stream().anyMatch(expansion::contains);
+  Map<SimpleCoding, List<SimpleCoding>> getMappings() {
+    return mappings;
   }
 
   /**
@@ -109,5 +103,57 @@ public class Relation {
         .concat(codings.stream(), mappings.entrySet().stream()
             .filter(kv -> baseSet.contains(kv.getKey())).flatMap(kv -> kv.getValue().stream()))
         .collect(Collectors.toSet());
+  }
+
+
+  /**
+   * Checks if any of the Codings in the right set is in the relation with any of the Codings in the
+   * left set.
+   *
+   * @param left a collections of codings.
+   * @param right a collection of codings.
+   * @return true if any left coding is related to any right coding.
+   */
+  public boolean anyRelates(@Nonnull final Collection<SimpleCoding> left,
+      @Nonnull final Collection<SimpleCoding> right) {
+    // filter out null SystemAndCodes
+    final Set<SimpleCoding> leftSet =
+        left.stream().filter(SimpleCoding::isDefined).collect(Collectors.toSet());
+    final Relation.CodingSet expansion = new Relation.CodingSet(expand(leftSet));
+    return right.stream().anyMatch(expansion::contains);
+  }
+
+  /**
+   * Constructs relation from given list of related pairs of codings.
+   * <p>
+   * The relation is assumed to include coding equality so <code>(A,A)</code> is assumed. All other
+   * the related pairs need to be explicitly listed. If the relation is meant to represent a
+   * transitive closure with implicit equality such that:
+   * <code> A -> B -> C </code> than the entry list must to include the all pairs of:
+   * <code>[(A,B) , (B,C), (A, C)]</code>.
+   *
+   * @param entries the list of pair of codings that are related.
+   * @return the relation instance.
+   */
+  @Nonnull
+  public static Relation fromMappings(@Nonnull final Collection<Entry> entries) {
+    final Map<SimpleCoding, List<Entry>> groupedMappings =
+        entries.stream().collect(Collectors.groupingBy(Entry::getFrom));
+    final Map<SimpleCoding, List<SimpleCoding>> groupedCodings =
+        groupedMappings.entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream()
+                .map(Entry::getTo)
+                .collect(Collectors.toList())));
+    return new Relation(groupedCodings);
+  }
+
+  /**
+   * Constructs a relation that only includes coding equality.
+   *
+   * @return the equality relation instance.
+   */
+  @Nonnull
+  public static Relation equality() {
+    return new Relation(Collections.emptyMap());
   }
 }

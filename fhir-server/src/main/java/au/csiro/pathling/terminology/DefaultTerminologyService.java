@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.terminology.ClosureMapping.closureFromConceptMap;
+import static au.csiro.pathling.terminology.ClosureMapping.relationFromConceptMap;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -105,6 +105,6 @@ public class DefaultTerminologyService implements TerminologyService {
     final ConceptMap closureResponse =
         terminologyClient.closure(new StringType(closureName), codings);
     checkNotNull(closureResponse);
-    return closureFromConceptMap(closureResponse);
+    return relationFromConceptMap(closureResponse);
   }
 }

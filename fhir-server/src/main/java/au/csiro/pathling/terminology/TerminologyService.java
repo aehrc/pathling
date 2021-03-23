@@ -36,6 +36,9 @@ public interface TerminologyService {
   /**
    * Creates a transitive closure representation of subsumes relation for the given set of codings.
    * <p>
+   * Should be able to ignore codings including are undefined (i.e. the system or code is null) or
+   * where the system is unknown to the underlying terminology service.
+   * <p>
    * Additional resources on closure table maintenance:
    * <a href="https://www.hl7.org/fhir/terminology-service.html#closure">Maintaining
    * a Closure Table</a>

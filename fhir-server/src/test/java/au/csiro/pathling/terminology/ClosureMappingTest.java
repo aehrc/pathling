@@ -39,7 +39,7 @@ public class ClosureMappingTest {
 
   @Test
   public void testMapsEmptyConceptMapCorrectly() {
-    final Relation relation = ClosureMapping.closureFromConceptMap(CM_EMPTY);
+    final Relation relation = ClosureMapping.relationFromConceptMap(CM_EMPTY);
     assertTrue(relation.getMappings().isEmpty());
   }
 
@@ -53,7 +53,7 @@ public class ClosureMappingTest {
         .forEach(e -> {
           final ConceptMap invalidMap = createConceptMap(
               ConceptMapEntry.of(CODING_1_1_1, CODING_1_1_1, e));
-          assertTrue(ClosureMapping.closureFromConceptMap(invalidMap).getMappings().isEmpty());
+          assertTrue(ClosureMapping.relationFromConceptMap(invalidMap).getMappings().isEmpty());
         });
   }
 
@@ -80,6 +80,6 @@ public class ClosureMappingTest {
         Arrays.asList(new SimpleCoding(CODING_1_1_1), new SimpleCoding(CODING_1_3_1)));
     expectedMappings.put(new SimpleCoding(CODING_2_1_1),
         Collections.singletonList(new SimpleCoding(CODING_1_3_1)));
-    assertEquals(expectedMappings, ClosureMapping.closureFromConceptMap(complexMap).getMappings());
+    assertEquals(expectedMappings, ClosureMapping.relationFromConceptMap(complexMap).getMappings());
   }
 }

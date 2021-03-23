@@ -296,7 +296,7 @@ public class ParserTest {
     //noinspection unchecked
     when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
         .thenReturn(codeSystems);  // Setup mock terminology client
-    when(terminologyService.getSubsumesRelation(any())).thenReturn(Relation.empty());
+    when(terminologyService.getSubsumesRelation(any())).thenReturn(Relation.equality());
 
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
@@ -323,7 +323,7 @@ public class ParserTest {
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
     when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(ClosureMapping.closureFromConceptMap(
+        .thenReturn(ClosureMapping.relationFromConceptMap(
             ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED));
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
@@ -366,7 +366,7 @@ public class ParserTest {
 
     // TODO: This should not work for empty closure
     when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(Relation.empty());
+        .thenReturn(Relation.equality());
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"

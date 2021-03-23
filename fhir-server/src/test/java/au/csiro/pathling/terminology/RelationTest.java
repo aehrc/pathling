@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.terminology.Relation.CodingSet;
+import au.csiro.pathling.terminology.Relation.Entry;
 import java.util.*;
 import javax.annotation.Nonnull;
 import org.junit.jupiter.api.Tag;
@@ -106,7 +107,7 @@ public class RelationTest {
   public void testUnversionedClosure() {
     final Relation versionedRelation =
         Relation.fromMappings(
-            Collections.singletonList(Mapping.of(CODING1_UNVERSIONED, CODING2_UNVERSIONED)));
+            Collections.singletonList(Entry.of(CODING1_UNVERSIONED, CODING2_UNVERSIONED)));
     // in addition to all equalities
 
     checkBasicEqualities(versionedRelation);
@@ -131,9 +132,9 @@ public class RelationTest {
   @Test
   public void testVersionedClosure() {
 
-    final List<Mapping> mappings = Collections
-        .singletonList(Mapping.of(CODING1_VERSION1, CODING2_VERSION1));
-    final Relation versionedRelation = Relation.fromMappings(mappings);
+    final List<Entry> entries = Collections
+        .singletonList(Entry.of(CODING1_VERSION1, CODING2_VERSION1));
+    final Relation versionedRelation = Relation.fromMappings(entries);
     // in addition to all equalities
     checkBasicEqualities(versionedRelation);
 
