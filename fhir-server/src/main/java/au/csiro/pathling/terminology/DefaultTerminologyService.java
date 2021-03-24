@@ -17,45 +17,16 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import lombok.Value;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
-import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
-import org.hl7.fhir.r4.model.ValueSet.ValueSetComposeComponent;
 
 /**
  * Default implementation of TerminologyService using a backend terminology server.
  */
 @Slf4j
 public class DefaultTerminologyService implements TerminologyService {
-
-
-  @Value
-  private static class CodeSystemReference {
-
-    @Nonnull
-    Optional<String> system;
-
-    @Nonnull
-    Optional<String> version;
-
-    private boolean matchesCoding(@Nonnull final SimpleCoding coding) {
-      if (system.isEmpty() || coding.getSystem() == null) {
-        return false;
-      }
-      final boolean eitherSideIsMissingVersion =
-          version.isEmpty() || coding.getVersion() == null;
-      final boolean versionAgnosticTest = system.get().equals(coding.getSystem());
-      if (eitherSideIsMissingVersion) {
-        return versionAgnosticTest;
-      } else {
-        return versionAgnosticTest && version.get().equals(coding.getVersion());
-      }
-    }
-  }
-
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -73,22 +44,37 @@ public class DefaultTerminologyService implements TerminologyService {
     this.terminologyClient = terminologyClient;
   }
 
+
+  boolean isValidCoding(@Nullable final SimpleCoding coding) {
+    return Objects.nonNull(coding) && coding.isDefined();
+  }
+
+  boolean isKnownSystem(@Nonnull final String codeSystem) {
+    final UriParam uri = new UriParam(codeSystem);
+    final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
+        uri, new HashSet<>(Collections.singletonList("id")));
+    return !(knownSystems == null || knownSystems.isEmpty());
+  }
+
   @Nonnull
-  private Stream<SimpleCoding> filterByKnownSystems(
+  Stream<SimpleCoding> validCodings(
+      @Nonnull final Collection<SimpleCoding> codings) {
+    return codings.stream()
+        .filter(this::isValidCoding);
+  }
+
+  @Nonnull
+  Stream<SimpleCoding> validAndKnownCodings(
       @Nonnull final Collection<SimpleCoding> codings) {
 
     // filter out codings with code systems unknown to the terminology server
-    final Set<String> allCodeSystems = codings.stream()
-        .filter(SimpleCoding::isDefined)
+    final Set<String> allCodeSystems = validCodings(codings)
         .map(SimpleCoding::getSystem)
         .collect(Collectors.toSet());
 
-    final Set<String> knownCodeSystems = allCodeSystems.stream().filter(codeSystem -> {
-      final UriParam uri = new UriParam(codeSystem);
-      final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
-          uri, new HashSet<>(Collections.singletonList("id")));
-      return !(knownSystems == null || knownSystems.isEmpty());
-    }).collect(Collectors.toSet());
+    final Set<String> knownCodeSystems = allCodeSystems.stream()
+        .filter(this::isKnownSystem)
+        .collect(Collectors.toSet());
 
     if (!knownCodeSystems.equals(allCodeSystems)) {
       final Collection<String> unrecognizedCodeSystems = new HashSet<>(allCodeSystems);
@@ -96,7 +82,6 @@ public class DefaultTerminologyService implements TerminologyService {
       log.warn("Terminology server does not recognize these coding systems: {}",
           unrecognizedCodeSystems);
     }
-
     return codings.stream()
         .filter(coding -> knownCodeSystems.contains(coding.getSystem()));
   }
@@ -107,7 +92,8 @@ public class DefaultTerminologyService implements TerminologyService {
       @Nonnull final String conceptMapUrl, final boolean reverse,
       @Nonnull final Collection<ConceptMapEquivalence> equivalences) {
 
-    final List<SimpleCoding> uniqueCodings = codings.stream().distinct()
+    final List<SimpleCoding> uniqueCodings = validCodings(codings)
+        .distinct()
         .collect(Collectors.toUnmodifiableList());
     // create bundle
     final Bundle translateBatch = TranslateMapping
@@ -120,7 +106,7 @@ public class DefaultTerminologyService implements TerminologyService {
   @Nonnull
   @Override
   public Relation getSubsumesRelation(@Nonnull Collection<SimpleCoding> systemAndCodes) {
-    final List<Coding> codings = filterByKnownSystems(systemAndCodes)
+    final List<Coding> codings = validAndKnownCodings(systemAndCodes)
         .distinct()
         .map(SimpleCoding::toCoding)
         .collect(Collectors.toUnmodifiableList());
@@ -139,70 +125,17 @@ public class DefaultTerminologyService implements TerminologyService {
 
   @Nonnull
   @Override
-  public Set<SimpleCoding> intersect(@Nonnull String valueSetUri,
-      @Nonnull Collection<SimpleCoding> systemAndCodes) {
-    final Set<SimpleCoding> codings = systemAndCodes.stream()
-        .filter(Objects::nonNull)
-        .filter(SimpleCoding::isDefined)
-        .collect(Collectors.toSet());
-
-    final Set<CodeSystemReference> codeSystems = codings.stream()
-        .map(coding -> new CodeSystemReference(Optional.ofNullable(coding.getSystem()),
-            Optional.ofNullable(coding.getVersion())))
-        .filter(codeSystem -> codeSystem.getSystem().isPresent())
-        .collect(Collectors.toSet());
-
-    // Filter the set of code systems to only those known by the terminology server. We determine
-    // this by performing a CodeSystem search operation.
-    final Collection<String> uniqueKnownUris = new HashSet<>();
-    for (final CodeSystemReference codeSystem : codeSystems) {
-      //noinspection OptionalGetWithoutIsPresent
-      final UriParam uri = new UriParam(codeSystem.getSystem().get());
-      final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
-          uri, new HashSet<>(Collections.singletonList("id")));
-      if (knownSystems != null && knownSystems.size() > 0) {
-        uniqueKnownUris.add(codeSystem.getSystem().get());
-      }
-    }
-    //noinspection OptionalGetWithoutIsPresent
-    final Set<CodeSystemReference> filteredCodeSystems = codeSystems.stream()
-        .filter(codeSystem -> uniqueKnownUris.contains(codeSystem.getSystem().get()))
-        .collect(Collectors.toSet());
+  public Set<SimpleCoding> intersect(@Nonnull final String valueSetUri,
+      @Nonnull final Collection<SimpleCoding> systemAndCodes) {
+    final Set<SimpleCoding> codings = validAndKnownCodings(systemAndCodes)
+        .collect(Collectors.toUnmodifiableSet());
 
     // Create a ValueSet to represent the intersection of the input codings and the ValueSet
     // described by the URI in the argument.
-    final ValueSet intersection = new ValueSet();
-    final ValueSetComposeComponent compose = new ValueSetComposeComponent();
-    final List<ConceptSetComponent> includes = new ArrayList<>();
-
-    // Create an include section for each unique code system present within the input codings.
-    for (final CodeSystemReference codeSystem : filteredCodeSystems) {
-      final ConceptSetComponent include = new ConceptSetComponent();
-      include.setValueSet(Collections.singletonList(new CanonicalType(valueSetUri)));
-      //noinspection OptionalGetWithoutIsPresent
-      include.setSystem(codeSystem.getSystem().get());
-      codeSystem.getVersion().ifPresent(include::setVersion);
-
-      // Add the codings that match the current code system.
-      final List<ConceptReferenceComponent> concepts = codings.stream()
-          .filter(codeSystem::matchesCoding)
-          .map(coding -> {
-            final ConceptReferenceComponent concept = new ConceptReferenceComponent();
-            concept.setCode(coding.getCode());
-            return concept;
-          })
-          .collect(Collectors.toList());
-
-      if (!concepts.isEmpty()) {
-        include.setConcept(concepts);
-        includes.add(include);
-      }
-    }
-    compose.setInclude(includes);
-    intersection.setCompose(compose);
+    final ValueSet intersection = ValueSetMapping.toIntersectionValueSet(valueSetUri, codings);
 
     final Set<SimpleCoding> expandedCodings;
-    if (includes.isEmpty()) {
+    if (intersection.getCompose().getInclude().isEmpty()) {
       // If there is nothing to expand, don't bother calling the terminology server.
       expandedCodings = Collections.emptySet();
     } else {
@@ -212,15 +145,7 @@ public class DefaultTerminologyService implements TerminologyService {
           valueSetUri);
       final ValueSet expansion = terminologyClient
           .expand(intersection, new IntegerType(codings.size()));
-      if (expansion == null) {
-        return Collections.emptySet();
-      }
-
-      // Build a set of SimpleCodings to represent the codings present in the intersection.
-      expandedCodings = expansion.getExpansion().getContains().stream()
-          .map(contains -> new SimpleCoding(contains.getSystem(), contains.getCode(),
-              contains.getVersion()))
-          .collect(Collectors.toSet());
+      expandedCodings = ValueSetMapping.codingSetFromExpansion(expansion);
     }
     return expandedCodings;
   }
