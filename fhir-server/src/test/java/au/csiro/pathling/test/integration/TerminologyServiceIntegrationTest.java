@@ -41,7 +41,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.terminology.serverUrl=http://localhost:" + 4072 + "/fhir"
 })
 @Slf4j
-@ActiveProfiles({"unit-test", "integration-test"})
+//@ActiveProfiles({"unit-test", "integration-test"})
 class TerminologyServiceIntegrationTest extends WireMockTest {
 
   private static boolean isRecordMode() {
