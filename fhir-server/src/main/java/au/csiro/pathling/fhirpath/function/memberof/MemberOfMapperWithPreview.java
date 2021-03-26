@@ -15,7 +15,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 
@@ -54,9 +53,6 @@ public class MemberOfMapperWithPreview implements
   @Override
   @Nonnull
   public Set<SimpleCoding> preview(@Nonnull final Iterator<List<SimpleCoding>> input) {
-    if (!input.hasNext()) {
-      return Collections.emptySet();
-    }
     MDC.put("requestId", requestId);
 
     final Set<SimpleCoding> codings = Streams.streamOf(input)
@@ -76,29 +72,4 @@ public class MemberOfMapperWithPreview implements
            ? !Collections.disjoint(state, input)
            : null;
   }
-
-  @Value
-  private static class CodeSystemReference {
-
-    @Nonnull
-    Optional<String> system;
-
-    @Nonnull
-    Optional<String> version;
-
-    private boolean matchesCoding(@Nonnull final SimpleCoding coding) {
-      if (system.isEmpty() || coding.getSystem() == null) {
-        return false;
-      }
-      final boolean eitherSideIsMissingVersion =
-          version.isEmpty() || coding.getVersion() == null;
-      final boolean versionAgnosticTest = system.get().equals(coding.getSystem());
-      if (eitherSideIsMissingVersion) {
-        return versionAgnosticTest;
-      } else {
-        return versionAgnosticTest && version.get().equals(coding.getVersion());
-      }
-    }
-  }
-
 }

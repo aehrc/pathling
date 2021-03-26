@@ -84,7 +84,6 @@ class MemberOfFunctionTest {
   }
 
   private static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";
-  private static final String TERMINOLOGY_SERVICE_URL = "https://r4.ontoserver.csiro.au/fhir";
 
   @Test
   public void memberOfCoding() {
@@ -165,6 +164,63 @@ class MemberOfFunctionTest {
     verify(terminologyService)
         .intersect(eq(MY_VALUE_SET_URL),
             eq(setOfSimpleFrom(coding1, coding2, coding3, coding4, coding5)));
+    verifyNoMoreInteractions(terminologyService);
+  }
+
+
+  @Test
+  public void memberOfEmptyCodingDatasetDoesNotCallTerminology() {
+
+    final Optional<ElementDefinition> optionalDefinition = FhirHelpers
+        .getChildOfResource(fhirContext, "Encounter", "class");
+    assertTrue(optionalDefinition.isPresent());
+    final ElementDefinition definition = optionalDefinition.get();
+
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructTypeColumns(codingStructType())
+        .buildWithStructValue();
+
+    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
+        .dataset(inputDataset)
+        .idAndEidAndValueColumns()
+        .expression("Encounter.class")
+        .singular(false)
+        .definition(definition)
+        .buildDefined();
+
+    final StringLiteralPath argumentExpression = StringLiteralPath
+        .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
+
+    // Prepare the inputs to the function.
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .idColumn(inputExpression.getIdColumn())
+        .terminologyClientFactory(terminologyServiceFactory)
+        .build();
+
+    final NamedFunctionInput memberOfInput = new NamedFunctionInput(parserContext, inputExpression,
+        Collections.singletonList(argumentExpression));
+
+    // Invoke the function.
+    final FhirPath result = new MemberOfFunction().invoke(memberOfInput);
+
+    // The outcome is somehow random with regard to the sequence passed to MemberOfMapperAnswerer.
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.BooleanType)
+        .build();
+
+    // Check the result.
+    assertThat(result)
+        .hasExpression("Encounter.class.memberOf('" + MY_VALUE_SET_URL + "')")
+        .isElementPath(BooleanPath.class)
+        .hasFhirType(FHIRDefinedType.BOOLEAN)
+        .isNotSingular()
+        .selectOrderedResultWithEid()
+        .hasRows(expectedResult);
+
     verifyNoMoreInteractions(terminologyService);
   }
 

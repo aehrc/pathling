@@ -31,7 +31,7 @@ public final class ValueSetMapping extends BaseMapping {
   }
 
   @Value
-  private static class CodeSystemReference {
+  static class CodeSystemReference {
 
     @Nonnull
     Optional<String> system;
@@ -62,12 +62,11 @@ public final class ValueSetMapping extends BaseMapping {
    * @return the intersection value set.
    */
   @Nonnull
-  public static ValueSet toIntersectionValueSet(@Nonnull final String valueSetUri,
+  public static ValueSet toIntersection(@Nonnull final String valueSetUri,
       @Nonnull final Set<SimpleCoding> codings) {
 
-    // The codings here are validate for both having the system defined
-    // as well as the system being known to the terminology service
     final Set<CodeSystemReference> validCodeSystems = codings.stream()
+        .filter(SimpleCoding::isDefined)
         .map(coding -> new CodeSystemReference(Optional.ofNullable(coding.getSystem()),
             Optional.ofNullable(coding.getVersion())))
         .collect(Collectors.toUnmodifiableSet());
@@ -89,9 +88,12 @@ public final class ValueSetMapping extends BaseMapping {
       // Add the codings that match the current code system.
       final List<ConceptReferenceComponent> concepts = codings.stream()
           .filter(codeSystem::matchesCoding)
-          .map(coding -> {
+          .map(SimpleCoding::getCode)
+          .filter(Objects::nonNull)
+          .distinct()
+          .map(code -> {
             final ConceptReferenceComponent concept = new ConceptReferenceComponent();
-            concept.setCode(coding.getCode());
+            concept.setCode(code);
             return concept;
           })
           .collect(Collectors.toList());

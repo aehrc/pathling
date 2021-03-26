@@ -132,7 +132,7 @@ public class DefaultTerminologyService implements TerminologyService {
 
     // Create a ValueSet to represent the intersection of the input codings and the ValueSet
     // described by the URI in the argument.
-    final ValueSet intersection = ValueSetMapping.toIntersectionValueSet(valueSetUri, codings);
+    final ValueSet intersection = ValueSetMapping.toIntersection(valueSetUri, codings);
 
     final Set<SimpleCoding> expandedCodings;
     if (intersection.getCompose().getInclude().isEmpty()) {
