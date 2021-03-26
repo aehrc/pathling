@@ -14,19 +14,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.util.Arrays;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 /**
@@ -37,6 +41,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.terminology.serverUrl=http://localhost:" + 4072 + "/fhir"
 })
 @Slf4j
+@ActiveProfiles({"unit-test", "integration-test"})
 class TerminologyServiceIntegrationTest extends WireMockTest {
 
   private static boolean isRecordMode() {
@@ -136,5 +141,21 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
             + "[ed835929-8734-4a4a-b4ed-8614f2d46321]: "
             + "Unable to find ConceptMap with URI http://snomed.info/sct?fhir_cm=xxxx",
         error.getMessage());
+  }
+
+  @Test
+  public void testCorrectlyIntersectKnownAndUnknowSystems() {
+    final Set<SimpleCoding> expansion = terminologyService
+        .intersect("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+            setOfSimpleFrom(CD_SNOMED_284551006, CD_SNOMED_VER_403190006,
+                CD_SNOMED_72940011000036107,
+                CD_AST_VIC,
+                new Coding("uuid:unknown", "unknown", "Unknown")
+            ));
+
+    // TODO: Ask John - why the expansion is versioned if we include the CD_AST_VIC, but
+    // unversioned othrwise? As this will affect the functionig of memberOf (since it uses
+    // SimpleCoding equality.
+    assertEquals(setOfSimpleFrom(CD_SNOMED_VER_284551006, CD_SNOMED_VER_403190006), expansion);
   }
 }

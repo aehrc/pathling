@@ -23,6 +23,9 @@ public final class TerminologyHelpers {
   }
 
   private static final String SNOMED_URI = "http://snomed.info/sct";
+  private static final String SNOMED_VERSION = "http://snomed.info/sct/32506021000036107/version/20210228";
+
+  private static final String AST_URI = "http://csiro.au/fhir/au-states-territories";
 
   public static final String CM_HIST_ASSOCIATIONS = "http://snomed.info/sct?fhir_cm=900000000000526001";
 
@@ -37,9 +40,18 @@ public final class TerminologyHelpers {
 
   public static Coding CD_SNOMED_403190006 = snomedCoding("403190006",
       "Epidermal burn of skin");
+
   public static Coding CD_SNOMED_284551006 = snomedCoding("284551006",
       "Laceration of foot");
 
+  public static Coding CD_SNOMED_VER_403190006 = snomedVersionedCoding("403190006",
+      "Epidermal burn of skin");
+
+  public static Coding CD_SNOMED_VER_284551006 = snomedVersionedCoding("284551006",
+      "Laceration of foot");
+
+
+  public static Coding CD_AST_VIC = new Coding(AST_URI, "VIC", "Victoria");
 
   @Nonnull
   public static SimpleCoding snomedSimple(@Nonnull final String code) {
@@ -83,5 +95,13 @@ public final class TerminologyHelpers {
   private static Coding snomedCoding(@Nonnull final String code, @Nonnull final String dislayName) {
     return new Coding(SNOMED_URI, code, dislayName);
   }
+
+
+  @Nonnull
+  private static Coding snomedVersionedCoding(@Nonnull final String code,
+      @Nonnull final String dislayName) {
+    return new Coding(SNOMED_URI, code, dislayName).setVersion(SNOMED_VERSION);
+  }
+
 
 }
