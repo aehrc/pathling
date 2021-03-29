@@ -6,12 +6,10 @@
 
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.CM_EMPTY;
-import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.createConceptMap;
-import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.newVersionedCoding;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.newVersionedCoding;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import au.csiro.pathling.test.fixtures.ConceptMapEntry;
+import au.csiro.pathling.test.fixtures.ConceptMapBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,23 +25,24 @@ import org.junit.jupiter.api.Test;
 public class ClosureMappingTest {
 
   private static final Coding CODING_1_1_1 = newVersionedCoding("system1", "code1", "version1",
-      null);
+      "");
   private static final Coding CODING_1_2_1 = newVersionedCoding("system1", "code2", "version1",
-      null);
+      "");
   private static final Coding CODING_1_3_1 = newVersionedCoding("system1", "code3", "version1",
-      null);
+      "");
 
   private static final Coding CODING_2_1_1 = newVersionedCoding("system2", "code2", "version1",
-      null);
+      "");
   private static final Coding CODING_3_1_1 = newVersionedCoding("system3", "code2", "version1",
-      null);
+      "");
 
 
   private final static Relation EMPTY_RELATION = RelationBuilder.empty().build();
 
   @Test
   public void toRelationFromEmptyMap() {
-    final Relation emptyRelation = ClosureMapping.relationFromConceptMap(CM_EMPTY);
+    final Relation emptyRelation = ClosureMapping
+        .relationFromConceptMap(ConceptMapBuilder.empty().build());
     assertEquals(EMPTY_RELATION, emptyRelation);
   }
 
@@ -55,13 +54,13 @@ public class ClosureMappingTest {
     // system1|code3 -- equal --> system2|code1 (equiv: system1|code3 -- subsumes --> system2|code1 and 
     //                                                     system2|code1 -- subsumes --> system1|code3)
     // system1|code1 -- unmatched --> system3|code1 (equiv: NONE)
-    final ConceptMap complexMap = createConceptMap(
-        ConceptMapEntry.subsumesOf(CODING_1_1_1, CODING_1_2_1),
-        ConceptMapEntry.subsumesOf(CODING_1_1_1, CODING_1_3_1),
-        ConceptMapEntry.specializesOf(CODING_1_2_1, CODING_1_3_1),
-        ConceptMapEntry.of(CODING_2_1_1, CODING_1_3_1, ConceptMapEquivalence.EQUAL),
-        ConceptMapEntry.of(CODING_3_1_1, CODING_1_1_1, ConceptMapEquivalence.UNMATCHED)
-    );
+    final ConceptMap complexMap = ConceptMapBuilder.empty()
+        .withSubsumes(CODING_1_1_1, CODING_1_2_1)
+        .withSubsumes(CODING_1_1_1, CODING_1_3_1)
+        .withSpecializes(CODING_1_2_1, CODING_1_3_1)
+        .with(CODING_2_1_1, CODING_1_3_1, ConceptMapEquivalence.EQUAL)
+        .with(CODING_3_1_1, CODING_1_1_1, ConceptMapEquivalence.UNMATCHED)
+        .build();
 
     final Relation expectedRelation = RelationBuilder.empty()
         .add(CODING_1_3_1, CODING_1_1_1, CODING_2_1_1)
@@ -79,8 +78,8 @@ public class ClosureMappingTest {
 
     Stream.of(ConceptMapEquivalence.values()).filter(e -> !validRelations.contains(e))
         .forEach(e -> {
-          final ConceptMap invalidMap = createConceptMap(
-              ConceptMapEntry.of(CODING_1_1_1, CODING_1_1_1, e));
+          final ConceptMap invalidMap = ConceptMapBuilder.empty()
+              .with(CODING_1_1_1, CODING_1_1_1, e).build();
           assertEquals(EMPTY_RELATION, ClosureMapping.relationFromConceptMap(invalidMap));
         });
   }

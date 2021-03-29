@@ -52,11 +52,11 @@ public class DefaultTerminologyService implements TerminologyService {
   }
 
 
-  boolean isValidCoding(@Nullable final SimpleCoding coding) {
+  private boolean isValidCoding(@Nullable final SimpleCoding coding) {
     return Objects.nonNull(coding) && coding.isDefined();
   }
 
-  boolean isKnownSystem(@Nonnull final String codeSystem) {
+  private boolean isKnownSystem(@Nonnull final String codeSystem) {
     final UriParam uri = new UriParam(codeSystem);
     final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
         uri, new HashSet<>(Collections.singletonList("id")));
@@ -64,14 +64,14 @@ public class DefaultTerminologyService implements TerminologyService {
   }
 
   @Nonnull
-  Stream<SimpleCoding> validCodings(
+  private Stream<SimpleCoding> validCodings(
       @Nonnull final Collection<SimpleCoding> codings) {
     return codings.stream()
         .filter(this::isValidCoding);
   }
 
   @Nonnull
-  Stream<SimpleCoding> validAndKnownCodings(
+  private Stream<SimpleCoding> validAndKnownCodings(
       @Nonnull final Collection<SimpleCoding> codings) {
 
     // filter out codings with code systems unknown to the terminology server
@@ -89,7 +89,7 @@ public class DefaultTerminologyService implements TerminologyService {
       log.warn("Terminology server does not recognize these coding systems: {}",
           unrecognizedCodeSystems);
     }
-    return codings.stream()
+    return validCodings(codings)
         .filter(coding -> knownCodeSystems.contains(coding.getSystem()));
   }
 
@@ -117,17 +117,21 @@ public class DefaultTerminologyService implements TerminologyService {
         .distinct()
         .map(SimpleCoding::toCoding)
         .collect(Collectors.toUnmodifiableList());
-    // recreate the systemAndCodes dataset from the list not to execute the query again.
-    // Create a unique name for the closure table for this code system, based upon the
-    // expressions of the input, argument and the CodeSystem URI.
-    final String closureName = uuidFactory.nextUUID().toString();
-    log.info("Sending $closure request to terminology service with name '{}' and {} codings",
-        closureName, codings.size());
-    terminologyClient.initialiseClosure(new StringType(closureName));
-    final ConceptMap closureResponse =
-        terminologyClient.closure(new StringType(closureName), codings);
-    checkNotNull(closureResponse);
-    return relationFromConceptMap(closureResponse);
+    if (!codings.isEmpty()) {
+      // recreate the systemAndCodes dataset from the list not to execute the query again.
+      // Create a unique name for the closure table for this code system, based upon the
+      // expressions of the input, argument and the CodeSystem URI.
+      final String closureName = uuidFactory.nextUUID().toString();
+      log.info("Sending $closure request to terminology service with name '{}' and {} codings",
+          closureName, codings.size());
+      terminologyClient.initialiseClosure(new StringType(closureName));
+      final ConceptMap closureResponse =
+          terminologyClient.closure(new StringType(closureName), codings);
+      checkNotNull(closureResponse);
+      return relationFromConceptMap(closureResponse);
+    } else {
+      return Relation.equality();
+    }
   }
 
   @Nonnull

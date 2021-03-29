@@ -31,7 +31,6 @@ import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.terminology.ClosureMapping;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -40,8 +39,8 @@ import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
+import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.io.File;
@@ -312,8 +311,7 @@ public class ParserTest {
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
     when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(ClosureMapping.relationFromConceptMap(
-            ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED));
+        .thenReturn(TerminologyHelpers.REL_SNOMED_444814009_SUBSUMES_40055000);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .selectOrderedResult()
