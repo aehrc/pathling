@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.terminology;
 
+import static au.csiro.pathling.test.helpers.FhirHelpers.deepEq;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -21,14 +22,13 @@ import au.csiro.pathling.test.fixtures.ConceptMapBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.UriParam;
+import com.google.common.collect.ImmutableSet;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.hl7.fhir.r4.model.CodeSystem;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.ConceptMap;
-import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -52,6 +52,16 @@ public class DefaultTerminologyServiceTest {
 
   private static final String TEST_UUID_AS_STRING = "5d1b976d-c50c-445a-8030-64074b83f355";
   private static final UUID TEST_UUID = UUID.fromString(TEST_UUID_AS_STRING);
+
+
+  private ValueSetExpansionContainsComponent fromSimpleCoding(
+      @Nonnull final SimpleCoding simpleCoding) {
+    final ValueSetExpansionContainsComponent result = new ValueSetExpansionContainsComponent();
+    result.setSystem(simpleCoding.getSystem());
+    result.setCode(simpleCoding.getCode());
+    result.setVersion(simpleCoding.getVersion());
+    return result;
+  }
 
   @Autowired
   private FhirContext fhirContext;
@@ -99,9 +109,9 @@ public class DefaultTerminologyServiceTest {
     verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM1)), any());
     verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM2)), any());
     verify(terminologyClient)
-        .initialiseClosure(argThat(new StringTypeMatcher(TEST_UUID_AS_STRING)));
+        .initialiseClosure(deepEq(new StringType(TEST_UUID_AS_STRING)));
     verify(terminologyClient)
-        .closure(argThat(new StringTypeMatcher(TEST_UUID_AS_STRING)),
+        .closure(deepEq(new StringType(TEST_UUID_AS_STRING)),
             argThat(new CodingSetMatcher(
                 Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1))));
     verifyNoMoreInteractions(terminologyClient);
@@ -114,6 +124,50 @@ public class DefaultTerminologyServiceTest {
     assertEquals(Relation.equality(), actualRelation);
     verifyNoMoreInteractions(terminologyClient);
   }
+
+
+  @SuppressWarnings("ConstantConditions")
+  @Test
+  public void testIntersectFiltersIllegalAndUnknownCodings() {
+
+    final ValueSet responseExpansion = new ValueSet();
+    responseExpansion.getExpansion().getContains().addAll(Arrays.asList(
+        fromSimpleCoding(CODING1_VERSION1),
+        fromSimpleCoding(CODING2_VERSION1)
+    ));
+
+    when(terminologyClient.expand(any(), any()))
+        .thenReturn(responseExpansion);
+
+    // setup SYSTEM1 as known system
+    when(terminologyClient.searchCodeSystems(refEq(new UriParam(SYSTEM1)), any()))
+        .thenReturn(Collections.singletonList(new CodeSystem()));
+
+    final Set<SimpleCoding> actualExpansion = terminologyService.intersect("uuid:value-set",
+        ImmutableSet.of(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1, CODING3_VERSION1,
+            new SimpleCoding(SYSTEM1, null), new SimpleCoding(null, "code1"),
+            new SimpleCoding(null, null)));
+
+    final Set<SimpleCoding> expectedExpansion = ImmutableSet.of(CODING1_VERSION1, CODING2_VERSION1);
+    assertEquals(expectedExpansion, actualExpansion);
+
+    // verify behaviour
+    verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM1)), any());
+    verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM2)), any());
+    // TODO: Test the actual value of requested ValueSet
+    verify(terminologyClient).expand(any(), deepEq(new IntegerType(3)));
+    verifyNoMoreInteractions(terminologyClient);
+  }
+
+  @Test
+  public void testIntersectForEmptySet() {
+    // Does NOT call the terminologyClient and returns equality relation
+    final Set<SimpleCoding> actualExpansion = terminologyService
+        .intersect("uuid:test", Collections.emptySet());
+    assertEquals(Collections.emptySet(), actualExpansion);
+    verifyNoMoreInteractions(terminologyClient);
+  }
+
 
   private static class CodingSetMatcher implements ArgumentMatcher<List<Coding>> {
 
@@ -136,24 +190,6 @@ public class DefaultTerminologyServiceTest {
           leftSet.equals(right.stream().map(SimpleCoding::new).collect(Collectors.toSet()));
     }
   }
-
-
-  private static class StringTypeMatcher implements ArgumentMatcher<StringType> {
-
-    @Nonnull
-    private final String expected;
-
-    public StringTypeMatcher(@Nonnull String expected) {
-      this.expected = expected;
-    }
-
-    @Override
-    public boolean matches(@Nullable final StringType actual) {
-      return actual != null && expected.equals(actual.getValue());
-    }
-  }
-
-
 }
 
 
