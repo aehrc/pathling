@@ -9,8 +9,10 @@ package au.csiro.pathling.fhir;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.terminology.DefaultTerminologyService;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.UUIDFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import java.util.UUID;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
@@ -60,10 +62,25 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   @Nonnull
   @Override
   public TerminologyService buildService(@Nonnull final Logger logger) {
+    return buildService(logger, UUID::randomUUID);
+  }
+
+
+  /**
+   * Builds a new instance.
+   *
+   * @param logger a {@link Logger} to use for logging
+   * @param uuidFactory the {@link UUIDFactory to use for UUID generation}
+   * @return a shiny new TerminologyService instance =
+   */
+  @Nonnull
+  public TerminologyService buildService(@Nonnull final Logger logger,
+      @Nonnull final UUIDFactory uuidFactory) {
     final TerminologyClient terminologyClient = TerminologyClient
         .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
             verboseRequestLogging, logger);
-    return new DefaultTerminologyService(FhirEncoders.contextFor(fhirVersion), terminologyClient);
+    return new DefaultTerminologyService(FhirEncoders.contextFor(fhirVersion), terminologyClient,
+        uuidFactory);
   }
 
 

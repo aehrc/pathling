@@ -34,14 +34,21 @@ public class DefaultTerminologyService implements TerminologyService {
   @Nonnull
   private final TerminologyClient terminologyClient;
 
+
+  @Nonnull
+  private final UUIDFactory uuidFactory;
+
   /**
-   * @param fhirContext The {@link FhirContext} used to interpret responses
-   * @param terminologyClient The {@link TerminologyClient} used to issue requests
+   * @param fhirContext The {@link FhirContext} used to interpret responses.
+   * @param terminologyClient The {@link TerminologyClient} used to issue requests.
+   * @param uuidFactory The {@link UUIDFactory} used to create UUIDs.
    */
   public DefaultTerminologyService(@Nonnull final FhirContext fhirContext,
-      @Nonnull final TerminologyClient terminologyClient) {
+      @Nonnull final TerminologyClient terminologyClient,
+      @Nonnull final UUIDFactory uuidFactory) {
     this.fhirContext = fhirContext;
     this.terminologyClient = terminologyClient;
+    this.uuidFactory = uuidFactory;
   }
 
 
@@ -113,7 +120,7 @@ public class DefaultTerminologyService implements TerminologyService {
     // recreate the systemAndCodes dataset from the list not to execute the query again.
     // Create a unique name for the closure table for this code system, based upon the
     // expressions of the input, argument and the CodeSystem URI.
-    final String closureName = UUID.randomUUID().toString();
+    final String closureName = uuidFactory.nextUUID().toString();
     log.info("Sending $closure request to terminology service with name '{}' and {} codings",
         closureName, codings.size());
     terminologyClient.initialiseClosure(new StringType(closureName));

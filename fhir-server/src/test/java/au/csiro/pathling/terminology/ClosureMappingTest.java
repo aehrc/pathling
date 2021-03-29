@@ -10,11 +10,12 @@ import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.CM_EMPTY;
 import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.createConceptMap;
 import static au.csiro.pathling.test.fixtures.ConceptMapFixtures.newVersionedCoding;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.test.fixtures.ConceptMapEntry;
-import java.util.*;
+import au.csiro.pathling.test.fixtures.RelationBuilder;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
@@ -37,28 +38,17 @@ public class ClosureMappingTest {
   private static final Coding CODING_3_1_1 = newVersionedCoding("system3", "code2", "version1",
       null);
 
+
+  private final static Relation EMPTY_RELATION = RelationBuilder.empty().build();
+
   @Test
-  public void testMapsEmptyConceptMapCorrectly() {
-    final Relation relation = ClosureMapping.relationFromConceptMap(CM_EMPTY);
-    assertTrue(relation.getMappings().isEmpty());
+  public void toRelationFromEmptyMap() {
+    final Relation emptyRelation = ClosureMapping.relationFromConceptMap(CM_EMPTY);
+    assertEquals(EMPTY_RELATION, emptyRelation);
   }
 
   @Test
-  public void testIgnoresUnknownEquivalenceTypes() {
-    final Collection<ConceptMapEquivalence> validRelations = new HashSet<>(Arrays.asList(
-        ConceptMapEquivalence.SPECIALIZES, ConceptMapEquivalence.SUBSUMES,
-        ConceptMapEquivalence.EQUAL, ConceptMapEquivalence.UNMATCHED));
-
-    Stream.of(ConceptMapEquivalence.values()).filter(e -> !validRelations.contains(e))
-        .forEach(e -> {
-          final ConceptMap invalidMap = createConceptMap(
-              ConceptMapEntry.of(CODING_1_1_1, CODING_1_1_1, e));
-          assertTrue(ClosureMapping.relationFromConceptMap(invalidMap).getMappings().isEmpty());
-        });
-  }
-
-  @Test
-  public void testComplexResponse() {
+  public void toRelationFromComplexMap() {
     // system1|code2 -- subsumes --> system1|code1
     // system1|code3 -- subsumes --> system1|code1
     // system1|code3 -- isSubsumedBy --> system1|code2 (equiv: system1|code2 -- subsumes --> system1|code3)
@@ -73,13 +63,25 @@ public class ClosureMappingTest {
         ConceptMapEntry.of(CODING_3_1_1, CODING_1_1_1, ConceptMapEquivalence.UNMATCHED)
     );
 
-    final Map<SimpleCoding, List<SimpleCoding>> expectedMappings = new HashMap<>();
-    expectedMappings.put(new SimpleCoding(CODING_1_3_1),
-        Arrays.asList(new SimpleCoding(CODING_1_1_1), new SimpleCoding(CODING_2_1_1)));
-    expectedMappings.put(new SimpleCoding(CODING_1_2_1),
-        Arrays.asList(new SimpleCoding(CODING_1_1_1), new SimpleCoding(CODING_1_3_1)));
-    expectedMappings.put(new SimpleCoding(CODING_2_1_1),
-        Collections.singletonList(new SimpleCoding(CODING_1_3_1)));
-    assertEquals(expectedMappings, ClosureMapping.relationFromConceptMap(complexMap).getMappings());
+    final Relation expectedRelation = RelationBuilder.empty()
+        .add(CODING_1_3_1, CODING_1_1_1, CODING_2_1_1)
+        .add(CODING_1_2_1, CODING_1_1_1, CODING_1_3_1)
+        .add(CODING_2_1_1, CODING_1_3_1)
+        .build();
+    assertEquals(expectedRelation, ClosureMapping.relationFromConceptMap(complexMap));
+  }
+
+  @Test
+  public void toRelationIgnoresUnknownEquivalenceTypes() {
+    final Collection<ConceptMapEquivalence> validRelations = new HashSet<>(Arrays.asList(
+        ConceptMapEquivalence.SPECIALIZES, ConceptMapEquivalence.SUBSUMES,
+        ConceptMapEquivalence.EQUAL, ConceptMapEquivalence.UNMATCHED));
+
+    Stream.of(ConceptMapEquivalence.values()).filter(e -> !validRelations.contains(e))
+        .forEach(e -> {
+          final ConceptMap invalidMap = createConceptMap(
+              ConceptMapEntry.of(CODING_1_1_1, CODING_1_1_1, e));
+          assertEquals(EMPTY_RELATION, ClosureMapping.relationFromConceptMap(invalidMap));
+        });
   }
 }

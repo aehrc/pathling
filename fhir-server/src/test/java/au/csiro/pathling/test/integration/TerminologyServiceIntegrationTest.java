@@ -11,26 +11,30 @@ import static com.github.tomakehurst.wiremock.client.WireMock.proxyAllTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.terminology.ConceptTranslator;
+import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.UUIDFactory;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
+import au.csiro.pathling.test.fixtures.RelationBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 /**
@@ -41,7 +45,6 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.terminology.serverUrl=http://localhost:" + 4072 + "/fhir"
 })
 @Slf4j
-//@ActiveProfiles({"unit-test", "integration-test"})
 class TerminologyServiceIntegrationTest extends WireMockTest {
 
   private static boolean isRecordMode() {
@@ -59,6 +62,8 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
   private TerminologyService terminologyService;
 
+  private UUIDFactory mockUUIDFactory;
+
   @BeforeEach
   @Override
   public void setUp() {
@@ -69,10 +74,11 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
       stubFor(proxyAllTo(liveTerminologyServerBaseUrl));
     }
 
+    mockUUIDFactory = Mockito.mock(UUIDFactory.class);
     // TODO: refactor to use actual dependency injection
-    final TerminologyServiceFactory tcf = new DefaultTerminologyServiceFactory(fhirContext,
+    final DefaultTerminologyServiceFactory tcf = new DefaultTerminologyServiceFactory(fhirContext,
         terminologyServerUrl, 0, false);
-    terminologyService = tcf.buildService(log);
+    terminologyService = tcf.buildService(log, mockUUIDFactory);
   }
 
   @AfterEach
@@ -154,8 +160,28 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
             ));
 
     // TODO: Ask John - why the expansion is versioned if we include the CD_AST_VIC, but
-    // unversioned othrwise? As this will affect the functionig of memberOf (since it uses
+    // unversioned othrwise? As this will affect the functioning of memberOf (since it uses
     // SimpleCoding equality.
     assertEquals(setOfSimpleFrom(CD_SNOMED_VER_284551006, CD_SNOMED_VER_403190006), expansion);
+  }
+
+
+  @Test
+  public void testCorrectlyBuildsClosureKnownAndUnknowSystems() {
+
+    when(mockUUIDFactory.nextUUID())
+        .thenReturn(UUID.fromString("5d1b976d-c50c-445a-8030-64074b83f355"));
+    final Relation actualRelation = terminologyService
+        .getSubsumesRelation(
+            setOfSimpleFrom(CD_SNOMED_107963000, CD_SNOMED_VER_63816008,
+                CD_SNOMED_72940011000036107,
+                CD_AST_VIC,
+                new Coding("uuid:unknown", "unknown", "Unknown")
+            ));
+    // It appears that in the response all codings are versioned regardless
+    // of whether the version was present in the request
+    final Relation expectedRelation = RelationBuilder.empty()
+        .add(CD_SNOMED_VER_107963000, CD_SNOMED_VER_63816008).build();
+    assertEquals(expectedRelation, actualRelation);
   }
 }

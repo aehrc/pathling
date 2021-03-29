@@ -44,6 +44,20 @@ public final class TerminologyHelpers {
   public static Coding CD_SNOMED_284551006 = snomedCoding("284551006",
       "Laceration of foot");
 
+  public static Coding CD_SNOMED_63816008 = snomedCoding("63816008",
+      "Left hepatectomy");
+
+  // Subsumes CD_SNOMED_63816008
+  public static Coding CD_SNOMED_107963000 = snomedCoding("107963000",
+      "Liver resection");
+
+  public static Coding CD_SNOMED_VER_63816008 = snomedVersionedCoding("63816008",
+      "Left hepatectomy");
+
+  // Subsumes CD_SNOMED_63816008
+  public static Coding CD_SNOMED_VER_107963000 = snomedVersionedCoding("107963000",
+      "Liver resection");
+
   public static Coding CD_SNOMED_VER_403190006 = snomedVersionedCoding("403190006",
       "Epidermal burn of skin");
 

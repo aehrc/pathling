@@ -49,14 +49,17 @@ public class DefaultTerminologyServiceTest {
   private FhirContext fhirContext;
 
   private TerminologyClient terminologyClient;
+  private UUIDFactory uuidFactory;
+
   private DefaultTerminologyService terminologyService;
 
   @BeforeEach
   public void setUp() {
     terminologyClient = mock(TerminologyClient.class);
+    uuidFactory = mock(UUIDFactory.class);
     when(terminologyClient.closure(any(), any()))
         .thenReturn(ConceptMapFixtures.creatEmptyConceptMap());
-    terminologyService = new DefaultTerminologyService(fhirContext, terminologyClient);
+    terminologyService = new DefaultTerminologyService(fhirContext, terminologyClient, uuidFactory);
   }
 
   @Test

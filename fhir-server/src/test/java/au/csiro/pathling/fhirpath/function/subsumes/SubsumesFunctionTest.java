@@ -19,7 +19,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -39,7 +38,7 @@ import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.fixtures.ClosureBuilder;
+import au.csiro.pathling.test.fixtures.RelationBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
@@ -83,7 +82,7 @@ public class SubsumesFunctionTest {
   private static final String RES_ID5 = "condition-xyz5";
 
   // coding_large -- subsumes --> coding_medium --> subsumes --> coding_small
-  private static final Relation RELATION_LARGE_MEDIUM_SMALL = ClosureBuilder.empty()
+  private static final Relation RELATION_LARGE_MEDIUM_SMALL = RelationBuilder.empty()
       .add(CODING_LARGE, CODING_MEDIUM)
       .add(CODING_MEDIUM, CODING_SMALL)
       .add(CODING_LARGE, CODING_SMALL)

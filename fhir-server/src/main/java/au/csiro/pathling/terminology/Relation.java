@@ -12,10 +12,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NonNull;
-import lombok.ToString;
+import lombok.*;
 
 /**
  * Represents relation between codings with implicit coding equality.
@@ -27,6 +24,7 @@ import lombok.ToString;
  * @author Piotr Szul
  */
 @ToString
+@EqualsAndHashCode
 public class Relation {
 
   /**
@@ -85,11 +83,6 @@ public class Relation {
    */
   private Relation(@Nonnull final Map<SimpleCoding, List<SimpleCoding>> mappings) {
     this.mappings = mappings;
-  }
-
-  @Nonnull
-  Map<SimpleCoding, List<SimpleCoding>> getMappings() {
-    return mappings;
   }
 
   /**

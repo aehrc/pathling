@@ -5,10 +5,11 @@ import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.Relation.Entry;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Coding;
 
-public class ClosureBuilder {
+public class RelationBuilder {
 
   private final List<Entry> entries = new ArrayList<>();
 
@@ -20,12 +21,13 @@ public class ClosureBuilder {
            : Relation.fromMappings(entries);
   }
 
-  public ClosureBuilder add(@Nonnull final Coding from, @Nonnull Coding to) {
-    entries.add(Entry.of(new SimpleCoding(from), new SimpleCoding(to)));
+  public RelationBuilder add(@Nonnull final Coding src, @Nonnull Coding... targets) {
+    Stream.of(targets).forEach(to ->
+        entries.add(Entry.of(new SimpleCoding(src), new SimpleCoding(to))));
     return this;
   }
 
-  public static ClosureBuilder empty() {
-    return new ClosureBuilder();
+  public static RelationBuilder empty() {
+    return new RelationBuilder();
   }
 }
