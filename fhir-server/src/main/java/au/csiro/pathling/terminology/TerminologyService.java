@@ -32,9 +32,9 @@ public interface TerminologyService {
    * @return the translator instance with requested translation.
    */
   @Nonnull
-  ConceptTranslator translate(@Nonnull Collection<SimpleCoding> codings,
-      @Nonnull String conceptMapUrl,
-      boolean reverse, @Nonnull Collection<ConceptMapEquivalence> equivalences);
+  ConceptTranslator translate(@Nonnull final Collection<SimpleCoding> codings,
+      @Nonnull final String conceptMapUrl,
+      boolean reverse, @Nonnull final Collection<ConceptMapEquivalence> equivalences);
 
   /**
    * Creates a transitive closure representation of subsumes relation for the given set of codings.

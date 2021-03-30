@@ -21,12 +21,14 @@ public class RelationBuilder {
            : Relation.fromMappings(entries);
   }
 
+  @Nonnull
   public RelationBuilder add(@Nonnull final Coding src, @Nonnull Coding... targets) {
     Stream.of(targets).forEach(to ->
         entries.add(Entry.of(new SimpleCoding(src), new SimpleCoding(to))));
     return this;
   }
 
+  @Nonnull
   public static RelationBuilder empty() {
     return new RelationBuilder();
   }
