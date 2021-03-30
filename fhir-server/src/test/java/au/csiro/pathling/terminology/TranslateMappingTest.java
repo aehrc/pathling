@@ -7,7 +7,6 @@
 package au.csiro.pathling.terminology;
 
 
-import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -16,33 +15,20 @@ import au.csiro.pathling.errors.UnexpectedResponseException;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
 @Tag("UnitTest")
-public class TranslateMappingTest {
-
-  @Autowired
-  protected IParser jsonParser;
+public class TranslateMappingTest extends MappingTest {
 
   @Autowired
   protected FhirContext fhirContext;
@@ -68,25 +54,6 @@ public class TranslateMappingTest {
       "equivalent-2",
       "Equivalent 2");
 
-  @Nullable
-  private TestInfo testInfo;
-
-  @BeforeEach
-  public void setUp(@Nonnull final TestInfo testInfo) {
-    this.testInfo = testInfo;
-  }
-
-  private void assertRequest(
-      @Nonnull final IBaseResource resource) {
-    final String actualJson = jsonParser.encodeResourceToString(resource);
-
-    //noinspection ConstantConditions,OptionalGetWithoutIsPresent
-    final Path expectedPath = Paths
-        .get("requests", testInfo.getTestClass().get().getSimpleName(),
-            testInfo.getTestMethod().get().getName() + ".json");
-    assertJson(expectedPath.toString(), actualJson);
-  }
-
   @Test
   public void testToBundleEmpty() {
     final Bundle requestBundle = TranslateMapping
@@ -111,7 +78,6 @@ public class TranslateMappingTest {
             true);
     assertRequest(requestBundle);
   }
-
 
   @Test
   public void testFromBundleWhenResponseHasMappings() {

@@ -7,35 +7,21 @@
 package au.csiro.pathling.terminology;
 
 
-import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import com.google.common.collect.ImmutableSet;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Set;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.ValueSet;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
 @Tag("UnitTest")
-public class ValueSetMappingTest {
-
-  @Autowired
-  protected IParser jsonParser;
+public class ValueSetMappingTest extends MappingTest {
 
   @Autowired
   protected FhirContext fhirContext;
@@ -44,37 +30,6 @@ public class ValueSetMappingTest {
 
   private static final String SYSTEM_1 = "uuid:system1";
   private static final String SYSTEM_2 = "uuid:system2";
-
-  @Nullable
-  private TestInfo testInfo;
-
-  @BeforeEach
-  public void setUp(@Nonnull final TestInfo testInfo) {
-    this.testInfo = testInfo;
-  }
-
-  private void assertRequest(
-      @Nonnull final IBaseResource resource) {
-    final String actualJson = jsonParser.encodeResourceToString(resource);
-
-    //noinspection ConstantConditions,OptionalGetWithoutIsPresent
-    final Path expectedPath = Paths
-        .get("requests", testInfo.getTestClass().get().getSimpleName(),
-            testInfo.getTestMethod().get().getName() + ".json");
-    assertJson(expectedPath.toString(), actualJson);
-  }
-
-  // TODO: refactor out to a common test class
-  private void assertRequest(
-      @Nonnull final IBaseResource resource, @Nonnull final String name) {
-    final String actualJson = jsonParser.encodeResourceToString(resource);
-
-    //noinspection ConstantConditions,OptionalGetWithoutIsPresent
-    final Path expectedPath = Paths
-        .get("requests", testInfo.getTestClass().get().getSimpleName(),
-            name + ".json");
-    assertJson(expectedPath.toString(), actualJson);
-  }
 
   @Test
   public void toIntersectionEmpty() {

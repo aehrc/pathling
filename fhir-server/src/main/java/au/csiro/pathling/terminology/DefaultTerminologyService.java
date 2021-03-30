@@ -147,7 +147,7 @@ public class DefaultTerminologyService implements TerminologyService {
   public Set<SimpleCoding> intersect(@Nonnull final String valueSetUri,
       @Nonnull final Collection<SimpleCoding> systemAndCodes) {
     final Set<SimpleCoding> codings = validAndKnownCodings(systemAndCodes)
-        .collect(Collectors.toUnmodifiableSet());
+        .collect(Collectors.toSet());
 
     // Create a ValueSet to represent the intersection of the input codings and the ValueSet
     // described by the URI in the argument.

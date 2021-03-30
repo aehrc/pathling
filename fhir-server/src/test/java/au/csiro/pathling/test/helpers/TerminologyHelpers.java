@@ -111,7 +111,6 @@ public final class TerminologyHelpers {
 
   @Nonnull
   public static Set<SimpleCoding> setOfSimpleFrom(@Nonnull final ValueSet valueSet) {
-    // TODO: move to MemeberOfMapping
     return valueSet.getExpansion().getContains().stream()
         .map(contains -> new SimpleCoding(contains.getSystem(), contains.getCode(),
             contains.getVersion()))

@@ -29,8 +29,12 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Bundle.BundleType;
+import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
+import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -147,7 +151,7 @@ public class DefaultTerminologyServiceTest {
         .thenReturn(Collections.singletonList(new CodeSystem()));
 
     final Set<SimpleCoding> actualExpansion = terminologyService.intersect("uuid:value-set",
-        Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1, CODING3_VERSION1,
+        Arrays.asList(CODING1_VERSION1, CODING2_VERSION1, CODING3_VERSION1,
             new SimpleCoding(SYSTEM1, null), new SimpleCoding(null, "code1"),
             new SimpleCoding(null, null), null));
 
@@ -157,8 +161,14 @@ public class DefaultTerminologyServiceTest {
     // verify behaviour
     verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM1)), any());
     verify(terminologyClient).searchCodeSystems(refEq(new UriParam(SYSTEM2)), any());
-    // TODO: Test the actual value of requested ValueSet
-    verify(terminologyClient).expand(any(), deepEq(new IntegerType(3)));
+
+    final ValueSet requestValueSet = new ValueSet();
+    final List<ConceptSetComponent> includes = requestValueSet.getCompose().getInclude();
+    includes.add(new ConceptSetComponent().addValueSet("uuid:value-set").setSystem(SYSTEM1)
+        .setVersion("version1").addConcept(new ConceptReferenceComponent().setCode("code1"))
+        .addConcept(new ConceptReferenceComponent().setCode("code2")));
+
+    verify(terminologyClient).expand(deepEq(requestValueSet), deepEq(new IntegerType(2)));
     verifyNoMoreInteractions(terminologyClient);
   }
 
@@ -197,7 +207,7 @@ public class DefaultTerminologyServiceTest {
     // Response bundle:
     // [1]  CODING1_VERSION1 -> None
     // [2]  CODING2_VERSION1 -> { equivalent: CODING3_VERSION1, wider: CODING1_VERSION1}
-    final Bundle reponseBundle = new Bundle().setType(Bundle.BundleType.fromCode("batch-response"));
+    final Bundle reponseBundle = new Bundle().setType(BundleType.BATCHRESPONSE);
     // entry with no mapping
     final Parameters noTranslation = new Parameters().addParameter("result", false);
     reponseBundle.addEntry().setResource(noTranslation).getResponse().setStatus("200");
@@ -222,14 +232,36 @@ public class DefaultTerminologyServiceTest {
 
     when(terminologyClient.batch(any())).thenReturn(reponseBundle);
     final ConceptTranslator actualTranslator = terminologyService
-        .translate(Arrays.asList(CODING1_VERSION1, CODING2_VERSION1),
+        .translate(Arrays
+                .asList(CODING1_VERSION1, CODING2_VERSION1, new SimpleCoding(SYSTEM1, null),
+                    new SimpleCoding(null, "code1"),
+                    new SimpleCoding(null, null), null),
             "uuid:concept-map", false,
             Collections.singletonList(ConceptMapEquivalence.EQUIVALENT));
     assertEquals(
         ConceptTranslatorBuilder.empty().put(CODING2_VERSION1, CODING3_VERSION1.toCoding()).build(),
         actualTranslator);
-    // TODO: Test the actual request bundle
-    verify(terminologyClient).batch(any());
+
+    // expected request bundle
+    final Bundle requestBundle = new Bundle().setType(BundleType.BATCH);
+
+    requestBundle.addEntry().setResource(
+        new Parameters()
+            .addParameter("url", new UriType("uuid:concept-map"))
+            .addParameter("reverse", false)
+            .addParameter("coding", CODING1_VERSION1.toCoding())
+    ).getRequest().setMethod(HTTPVerb.POST)
+        .setUrl("ConceptMap/$translate");
+
+    requestBundle.addEntry().setResource(
+        new Parameters()
+            .addParameter("url", new UriType("uuid:concept-map"))
+            .addParameter("reverse", false)
+            .addParameter("coding", CODING2_VERSION1.toCoding())
+    ).getRequest().setMethod(HTTPVerb.POST)
+        .setUrl("ConceptMap/$translate");
+
+    verify(terminologyClient).batch(deepEq(requestBundle));
     verifyNoMoreInteractions(terminologyClient);
   }
 

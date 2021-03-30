@@ -40,6 +40,7 @@ import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
+import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -58,7 +59,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -343,20 +343,22 @@ public class ParserTest {
             .changeValue(PATIENT_ID_9360820c, "female"));
   }
 
-  @Disabled
   @Test
   public void testWhereWithSubsumes() {
-
-    // TODO: This should not work for empty closure
+    // Not a real subsumption - just works for this use case.
+    // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
     when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(Relation.equality());
+        .thenReturn(RelationBuilder.empty().add(TerminologyHelpers.CD_SNOMED_VER_284551006,
+            TerminologyHelpers.CD_SNOMED_VER_40055000).build());
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
-            + ".subsumedBy(http://snomed.info/sct|40055000) contains true).gender")
+            + ".subsumedBy(http://snomed.info/sct|284551006) contains true).gender")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, (String) null)
-            .changeValue(PATIENT_ID_7001ad9c, "female"));
+            .changeValue(PATIENT_ID_7001ad9c, "female") // has code 40055000
+            .changeValue(PATIENT_ID_bbd33563, "male")  // has code 284551006
+        );
   }
 
   @Test

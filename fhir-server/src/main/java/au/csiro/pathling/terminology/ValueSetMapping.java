@@ -64,7 +64,6 @@ public final class ValueSetMapping extends BaseMapping {
   @Nonnull
   public static ValueSet toIntersection(@Nonnull final String valueSetUri,
       @Nonnull final Set<SimpleCoding> codings) {
-
     final Set<CodeSystemReference> validCodeSystems = codings.stream()
         .filter(SimpleCoding::isDefined)
         .map(coding -> new CodeSystemReference(Optional.ofNullable(coding.getSystem()),

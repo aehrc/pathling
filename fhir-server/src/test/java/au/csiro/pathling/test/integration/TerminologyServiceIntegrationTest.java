@@ -76,6 +76,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
     mockUUIDFactory = Mockito.mock(UUIDFactory.class);
     // TODO: refactor to use actual dependency injection
+    // requires possible refactoring of test contexts.
     final DefaultTerminologyServiceFactory tcf = new DefaultTerminologyServiceFactory(fhirContext,
         terminologyServerUrl, 0, false);
     terminologyService = tcf.buildService(log, mockUUIDFactory);
@@ -161,7 +162,9 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
     // TODO: Ask John - why the expansion is versioned if we include the CD_AST_VIC, but
     // unversioned othrwise? As this will affect the functioning of memberOf (since it uses
-    // SimpleCoding equality.
+    // SimpleCoding equality).
+    // Also if two versioned SNOMED codings are requested the response contains
+    // their unversioned versions.
     assertEquals(setOfSimpleFrom(CD_SNOMED_VER_284551006, CD_SNOMED_VER_403190006), expansion);
   }
 
