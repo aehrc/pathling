@@ -102,12 +102,20 @@ public class DefaultTerminologyService implements TerminologyService {
     final List<SimpleCoding> uniqueCodings = validCodings(codings)
         .distinct()
         .collect(Collectors.toUnmodifiableList());
+
+    final Set<ConceptMapEquivalence> uniqueEquivalences = equivalences.stream()
+        .collect(Collectors.toUnmodifiableSet());
+
     // create bundle
-    final Bundle translateBatch = TranslateMapping
-        .toRequestBundle(uniqueCodings, conceptMapUrl, reverse);
-    final Bundle result = terminologyClient.batch(translateBatch);
-    return TranslateMapping
-        .fromResponseBundle(checkNotNull(result), uniqueCodings, equivalences, fhirContext);
+    if (!uniqueCodings.isEmpty() && !uniqueEquivalences.isEmpty()) {
+      final Bundle translateBatch = TranslateMapping
+          .toRequestBundle(uniqueCodings, conceptMapUrl, reverse);
+      final Bundle result = terminologyClient.batch(translateBatch);
+      return TranslateMapping
+          .fromResponseBundle(checkNotNull(result), uniqueCodings, uniqueEquivalences, fhirContext);
+    } else {
+      return ConceptTranslator.empty();
+    }
   }
 
   @Nonnull

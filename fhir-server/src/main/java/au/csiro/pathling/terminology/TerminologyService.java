@@ -22,6 +22,8 @@ public interface TerminologyService {
   /**
    * Creates a translator for given set of codings according to the specified concept map. See also:
    * https://www.hl7.org/fhir/operation-conceptmap-translate.html.
+   * <p>
+   * Should be able to ignore codings including are undefined (i.e. the system or code is null).
    *
    * @param codings the collections of codings to find translations for.
    * @param conceptMapUrl the url of the concept map to use for translation.
@@ -56,7 +58,6 @@ public interface TerminologyService {
    * <p>
    * Should be able to ignore codings including are undefined (i.e. the system or code is null) or
    * where the system is unknown to the underlying terminology service.
-   * <p>
    *
    * @param valueSetUri the URI of the <code>ValueSet</code>.
    * @param systemAndCodes the collections of codings to intersect.

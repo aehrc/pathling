@@ -47,6 +47,15 @@ public class ConceptTranslator implements Serializable {
   }
 
   /**
+   * Returns an empty concept translator;
+   *
+   * @return an empty tranlator.
+   */
+  public static ConceptTranslator empty() {
+    return new ConceptTranslator();
+  }
+
+  /**
    * Translates a collection of coding according to this map to the distinct list of translated
    * codings.
    *

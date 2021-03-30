@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.test.fixtures.ConceptMapBuilder;
+import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.UriParam;
@@ -28,6 +29,8 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -69,7 +72,7 @@ public class DefaultTerminologyServiceTest {
   private TerminologyClient terminologyClient;
   private UUIDFactory uuidFactory;
 
-  private DefaultTerminologyService terminologyService;
+  private TerminologyService terminologyService;
 
   @BeforeEach
   public void setUp() {
@@ -144,9 +147,9 @@ public class DefaultTerminologyServiceTest {
         .thenReturn(Collections.singletonList(new CodeSystem()));
 
     final Set<SimpleCoding> actualExpansion = terminologyService.intersect("uuid:value-set",
-        ImmutableSet.of(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1, CODING3_VERSION1,
+        Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1, CODING3_VERSION1,
             new SimpleCoding(SYSTEM1, null), new SimpleCoding(null, "code1"),
-            new SimpleCoding(null, null)));
+            new SimpleCoding(null, null), null));
 
     final Set<SimpleCoding> expectedExpansion = ImmutableSet.of(CODING1_VERSION1, CODING2_VERSION1);
     assertEquals(expectedExpansion, actualExpansion);
@@ -168,6 +171,67 @@ public class DefaultTerminologyServiceTest {
     verifyNoMoreInteractions(terminologyClient);
   }
 
+  @Test
+  public void testTranslateForEmptyCodingSet() {
+    // Does NOT call the terminologyClient and returns equality relation
+    final ConceptTranslator actualTranslator = terminologyService
+        .translate(Collections.emptySet(), "uuid:concept-map", false, Arrays
+            .asList(ConceptMapEquivalence.values()));
+    assertEquals(ConceptTranslatorBuilder.empty().build(), actualTranslator);
+    verifyNoMoreInteractions(terminologyClient);
+  }
+
+  @Test
+  public void testTranslateForEmptyEquivalences() {
+    // Does NOT call the terminologyClient and returns equality relation
+    final ConceptTranslator actualTranslator = terminologyService
+        .translate(Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1),
+            "uuid:concept-map", false, Collections.emptyList());
+    assertEquals(ConceptTranslatorBuilder.empty().build(), actualTranslator);
+    verifyNoMoreInteractions(terminologyClient);
+  }
+
+  @Test
+  public void testTranslateForValidAndInvalidCodings() {
+
+    // Response bundle:
+    // [1]  CODING1_VERSION1 -> None
+    // [2]  CODING2_VERSION1 -> { equivalent: CODING3_VERSION1, wider: CODING1_VERSION1}
+    final Bundle reponseBundle = new Bundle().setType(Bundle.BundleType.fromCode("batch-response"));
+    // entry with no mapping
+    final Parameters noTranslation = new Parameters().addParameter("result", false);
+    reponseBundle.addEntry().setResource(noTranslation).getResponse().setStatus("200");
+
+    // entry with two mappings
+    final Parameters withTranslation = new Parameters().addParameter("result", true);
+    ParametersParameterComponent equivalentMatch = withTranslation.addParameter()
+        .setName("match");
+    equivalentMatch.addPart().setName("equivalence")
+        .setValue(new CodeType("equivalent"));
+    equivalentMatch.addPart().setName("concept")
+        .setValue(CODING3_VERSION1.toCoding());
+
+    ParametersParameterComponent widerMatch = withTranslation.addParameter()
+        .setName("match");
+    widerMatch.addPart().setName("equivalence")
+        .setValue(new CodeType("wider"));
+    widerMatch.addPart().setName("concept")
+        .setValue(CODING1_VERSION1.toCoding());
+
+    reponseBundle.addEntry().setResource(withTranslation).getResponse().setStatus("200");
+
+    when(terminologyClient.batch(any())).thenReturn(reponseBundle);
+    final ConceptTranslator actualTranslator = terminologyService
+        .translate(Arrays.asList(CODING1_VERSION1, CODING2_VERSION1),
+            "uuid:concept-map", false,
+            Collections.singletonList(ConceptMapEquivalence.EQUIVALENT));
+    assertEquals(
+        ConceptTranslatorBuilder.empty().put(CODING2_VERSION1, CODING3_VERSION1.toCoding()).build(),
+        actualTranslator);
+    // TODO: Test the actual request bundle
+    verify(terminologyClient).batch(any());
+    verifyNoMoreInteractions(terminologyClient);
+  }
 
   private static class CodingSetMatcher implements ArgumentMatcher<List<Coding>> {
 
