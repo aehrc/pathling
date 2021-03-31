@@ -12,5 +12,7 @@ exclude:
   - pom.xml
   - src
   - target
+  - scripts
+destination: ./target/site
 plugins:
   - jekyll-sitemap
