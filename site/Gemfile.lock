@@ -65,7 +65,7 @@ PLATFORMS
 
 DEPENDENCIES
   jekyll (~> 3.8.5)
-  jekyll-sitemap
+  jekyll-sitemap (~> 1.4.0)
   just-the-docs (= 0.2.7)
 
 BUNDLED WITH
