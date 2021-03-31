@@ -465,7 +465,7 @@ public class ParserTest {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
-    assertEquals("Error parsing FHIRPath expression: missing ')' at '<EOF>'", error.getMessage());
+    assertEquals("<Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'>", error.getMessage());
   }
 
 }
