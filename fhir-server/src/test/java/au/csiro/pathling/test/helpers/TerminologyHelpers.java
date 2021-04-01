@@ -46,6 +46,7 @@ public final class TerminologyHelpers {
   public static Coding CD_SNOMED_284551006 = snomedCoding("284551006",
       "Laceration of foot");
 
+  @SuppressWarnings("unused")
   public static Coding CD_SNOMED_63816008 = snomedCoding("63816008",
       "Left hepatectomy");
 
@@ -74,7 +75,7 @@ public final class TerminologyHelpers {
 
   public static Coding CD_SNOMED_VER_40055000 = snomedVersionedCoding("40055000",
       "Chronic sinusitis (disorder)");
-  public static Coding CD_SNOMED_VER_444814009 = snomedVersionedCoding("444814009",
+  private static final Coding CD_SNOMED_VER_444814009 = snomedVersionedCoding("444814009",
       "Viral sinusitis (disorder)");
 
   public static final Relation REL_SNOMED_444814009_SUBSUMES_40055000 = RelationBuilder.empty()
@@ -119,18 +120,18 @@ public final class TerminologyHelpers {
 
   @Nonnull
   public static Coding newVersionedCoding(@Nonnull final String system, @Nonnull final String code,
-      @Nonnull final String version,
-      @Nonnull final String dislayName) {
-    return new Coding(system, code, dislayName).setVersion(version);
+      @Nonnull final String version, @Nonnull final String displayName) {
+    return new Coding(system, code, displayName).setVersion(version);
   }
 
   @Nonnull
-  public static Coding snomedCoding(@Nonnull final String code, @Nonnull final String displayName) {
+  private static Coding snomedCoding(@Nonnull final String code,
+      @Nonnull final String displayName) {
     return new Coding(SNOMED_URI, code, displayName);
   }
 
   @Nonnull
-  public static Coding snomedVersionedCoding(@Nonnull final String code,
+  private static Coding snomedVersionedCoding(@Nonnull final String code,
       @Nonnull final String displayName) {
     return newVersionedCoding(SNOMED_URI, code, SNOMED_VERSION, displayName);
   }

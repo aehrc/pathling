@@ -151,7 +151,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   }
 
   @Test
-  public void testCorrectlyIntersectKnownAndUnknowSystems() {
+  public void testCorrectlyIntersectKnownAndUnknownSystems() {
     final Set<SimpleCoding> expansion = terminologyService
         .intersect("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             setOfSimpleFrom(CD_SNOMED_284551006, CD_SNOMED_VER_403190006,

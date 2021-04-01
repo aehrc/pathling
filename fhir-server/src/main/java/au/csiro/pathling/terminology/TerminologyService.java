@@ -13,9 +13,9 @@ import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
 /**
- * @author Piotr Szul
- * <p>
  * Abstraction layer for the terminology related operations.
+ *
+ * @author Piotr Szul
  */
 public interface TerminologyService {
 
@@ -54,14 +54,14 @@ public interface TerminologyService {
 
 
   /**
-   * Intersects the given set of codings with the <code>ValueSet</code> defined by provided uri.
+   * Intersects the given set of codings with the {@code ValueSet} defined by provided uri.
    * <p>
    * Should be able to ignore codings including are undefined (i.e. the system or code is null) or
    * where the system is unknown to the underlying terminology service.
    *
-   * @param valueSetUri the URI of the <code>ValueSet</code>.
+   * @param valueSetUri the URI of the {@code ValueSet}.
    * @param systemAndCodes the collections of codings to intersect.
-   * @return the set of input codings the belong to the <code>ValueSet</code>.
+   * @return the set of input codings the belong to the {@code ValueSet}.
    */
   @Nonnull
   Set<SimpleCoding> intersect(@Nonnull final String valueSetUri,

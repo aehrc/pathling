@@ -20,7 +20,7 @@ import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetComposeComponent;
 
 /**
- * Input/output mappings for {@link ValueSet} related operations, such as <code>expand</code>.
+ * Input/output mappings for {@link ValueSet} related operations, such as {@code expand}.
  *
  * @author Piotr Szul
  */
@@ -31,7 +31,7 @@ public final class ValueSetMapping extends BaseMapping {
   }
 
   @Value
-  static class CodeSystemReference {
+  private static class CodeSystemReference {
 
     @Nonnull
     Optional<String> system;
@@ -63,7 +63,7 @@ public final class ValueSetMapping extends BaseMapping {
    */
   @Nonnull
   public static ValueSet toIntersection(@Nonnull final String valueSetUri,
-      @Nonnull final Set<SimpleCoding> codings) {
+      @Nonnull final Collection<SimpleCoding> codings) {
     final Set<CodeSystemReference> validCodeSystems = codings.stream()
         .filter(SimpleCoding::isDefined)
         .map(coding -> new CodeSystemReference(Optional.ofNullable(coding.getSystem()),

@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.test.fixtures;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
@@ -22,7 +28,7 @@ public class RelationBuilder {
   }
 
   @Nonnull
-  public RelationBuilder add(@Nonnull final Coding src, @Nonnull Coding... targets) {
+  public RelationBuilder add(@Nonnull final Coding src, @Nonnull final Coding... targets) {
     Stream.of(targets).forEach(to ->
         entries.add(Entry.of(new SimpleCoding(src), new SimpleCoding(to))));
     return this;

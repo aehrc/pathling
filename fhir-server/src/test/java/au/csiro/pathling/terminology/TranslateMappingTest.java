@@ -100,11 +100,11 @@ public class TranslateMappingTest extends MappingTest {
         .fromResponseBundle(responseBundle, inputCodings,
             Arrays.asList(ConceptMapEquivalence.values()), fhirContext);
 
-    final ConceptTranslator expectedConcepMapperAll = ConceptTranslatorBuilder.empty()
+    final ConceptTranslator expectedConceptMapperAll = ConceptTranslatorBuilder.empty()
         .put(SIMPLE_CODING_1, CODING_1_EQUIVALENT, CODING_1_WIDER)
         .put(SIMPLE_CODING_2, CODING_2_EQUIVALENT)
         .build();
-    assertEquals(expectedConcepMapperAll, conceptTranslatorAll, "TC-2: All equivalences match");
+    assertEquals(expectedConceptMapperAll, conceptTranslatorAll, "TC-2: All equivalences match");
 
     // TC-3 Selected equivalences match
 
@@ -112,10 +112,10 @@ public class TranslateMappingTest extends MappingTest {
         .fromResponseBundle(responseBundle, inputCodings,
             Collections.singletonList(ConceptMapEquivalence.WIDER), fhirContext);
 
-    final ConceptTranslator expectedConcepMapperSelect = ConceptTranslatorBuilder.empty()
+    final ConceptTranslator expectedConceptMapperSelect = ConceptTranslatorBuilder.empty()
         .put(SIMPLE_CODING_1, CODING_1_WIDER)
         .build();
-    assertEquals(expectedConcepMapperSelect, conceptTranslatorSelect,
+    assertEquals(expectedConceptMapperSelect, conceptTranslatorSelect,
         "TC-3: Selected equivalences match");
   }
 
@@ -127,7 +127,7 @@ public class TranslateMappingTest extends MappingTest {
     final List<SimpleCoding> inputCodings = Arrays
         .asList(SIMPLE_CODING_1, SIMPLE_CODING_2);
 
-    // TC-4 Not mappins in response
+    // TC-4 No mappings in response
     final ConceptTranslator conceptTranslatorEmpty = TranslateMapping
         .fromResponseBundle(responseBundle, inputCodings,
             Collections.singletonList(ConceptMapEquivalence.INEXACT), fhirContext);
@@ -135,7 +135,7 @@ public class TranslateMappingTest extends MappingTest {
   }
 
   @Test
-  public void throwsErrorIfResponsBundleSizeWrong() {
+  public void throwsErrorIfResponseBundleSizeWrong() {
 
     final Bundle responseBundle = (Bundle) jsonParser.parseResource(
         getResourceAsStream("txResponses/TranslateMappingTest/responseWithMappings3.Bundle.json"));

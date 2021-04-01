@@ -28,7 +28,7 @@ import lombok.*;
 public class Relation {
 
   /**
-   * An entry representing the existence of relation between <code>form</code> and <code>to</code>.
+   * An entry representing the existence of relation between {@code form} and {@code to}.
    */
   @Data
   @AllArgsConstructor(staticName = "of")
@@ -119,11 +119,10 @@ public class Relation {
   /**
    * Constructs relation from given list of related pairs of codings.
    * <p>
-   * The relation is assumed to include coding equality so <code>(A,A)</code> is assumed. All other
-   * the related pairs need to be explicitly listed. If the relation is meant to represent a
-   * transitive closure with implicit equality such that:
-   * <code> A -> B -> C </code> than the entry list must to include the all pairs of:
-   * <code>[(A,B) , (B,C), (A, C)]</code>.
+   * The relation is assumed to include coding equality so {@code (A,A)} is assumed. All other the
+   * related pairs need to be explicitly listed. If the relation is meant to represent a transitive
+   * closure with implicit equality such that: {@code A -> B -> C} than the entry list must to
+   * include the all pairs of: {@code [(A,B), (B,C), (A, C)]}.
    *
    * @param entries the list of pair of codings that are related.
    * @return the relation instance.

@@ -35,7 +35,6 @@ import au.csiro.pathling.utilities.Strings;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
@@ -140,13 +139,12 @@ public class TranslateFunction implements NamedFunction {
 
     final boolean isCodeableConcept = isCodeableConcept(inputPath);
 
-    CheckReturnValue functions;
     final Column codingArrayCol = isCodeableConcept
                                   ? conceptColumn.getField("coding")
                                   : when(conceptColumn.isNotNull(), array(conceptColumn))
                                       .otherwise(lit(null));
 
-    // the the definition of the result is always the Coding element.
+    // The definition of the result is always the Coding element.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final ElementDefinition resultDefinition = isCodeableConcept
                                                ? inputPath.getChildElement("coding").get()
@@ -177,7 +175,7 @@ public class TranslateFunction implements NamedFunction {
             StructField.apply("result", DataTypes.createArrayType(CodingEncoding.DATA_TYPE), true,
                 Metadata.empty()));
 
-    // the result is an array of translations per each input element, which we now
+    // The result is an array of translations per each input element, which we now
     // need to explode in the same way as for path traversal, creating unique element ids.
     final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
     final Dataset<Row> resultDataset = inputPath

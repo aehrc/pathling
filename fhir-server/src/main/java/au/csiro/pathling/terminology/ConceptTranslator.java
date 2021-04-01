@@ -21,7 +21,7 @@ import lombok.ToString;
 import org.hl7.fhir.r4.model.Coding;
 
 /**
- * Local representation of the concept map flattened with respect to  equivalence types.
+ * Local representation of the concept map flattened with respect to equivalence types.
  */
 @ToString
 @EqualsAndHashCode
@@ -47,10 +47,11 @@ public class ConceptTranslator implements Serializable {
   }
 
   /**
-   * Returns an empty concept translator;
+   * Returns an empty concept translator.
    *
-   * @return an empty tranlator.
+   * @return an empty translator.
    */
+  @Nonnull
   public static ConceptTranslator empty() {
     return new ConceptTranslator();
   }
@@ -59,8 +60,8 @@ public class ConceptTranslator implements Serializable {
    * Translates a collection of coding according to this map to the distinct list of translated
    * codings.
    *
-   * @param codings the codings to be translated.
-   * @return the list of distinct coding translations.
+   * @param codings the codings to be translated
+   * @return the list of distinct coding translations
    */
   @Nonnull
   public List<Coding> translate(@Nullable final Collection<SimpleCoding> codings) {

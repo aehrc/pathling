@@ -74,14 +74,13 @@ public class DefaultTerminologyServiceTest {
   private FhirContext fhirContext;
 
   private TerminologyClient terminologyClient;
-  private UUIDFactory uuidFactory;
 
   private TerminologyService terminologyService;
 
   @BeforeEach
   public void setUp() {
     terminologyClient = mock(TerminologyClient.class);
-    uuidFactory = mock(UUIDFactory.class);
+    final UUIDFactory uuidFactory = mock(UUIDFactory.class);
     when(uuidFactory.nextUUID()).thenReturn(TEST_UUID);
     terminologyService = new DefaultTerminologyService(fhirContext, terminologyClient, uuidFactory);
   }
@@ -207,30 +206,30 @@ public class DefaultTerminologyServiceTest {
     // Response bundle:
     // [1]  CODING1_VERSION1 -> None
     // [2]  CODING2_VERSION1 -> { equivalent: CODING3_VERSION1, wider: CODING1_VERSION1}
-    final Bundle reponseBundle = new Bundle().setType(BundleType.BATCHRESPONSE);
+    final Bundle responseBundle = new Bundle().setType(BundleType.BATCHRESPONSE);
     // entry with no mapping
     final Parameters noTranslation = new Parameters().addParameter("result", false);
-    reponseBundle.addEntry().setResource(noTranslation).getResponse().setStatus("200");
+    responseBundle.addEntry().setResource(noTranslation).getResponse().setStatus("200");
 
     // entry with two mappings
     final Parameters withTranslation = new Parameters().addParameter("result", true);
-    ParametersParameterComponent equivalentMatch = withTranslation.addParameter()
+    final ParametersParameterComponent equivalentMatch = withTranslation.addParameter()
         .setName("match");
     equivalentMatch.addPart().setName("equivalence")
         .setValue(new CodeType("equivalent"));
     equivalentMatch.addPart().setName("concept")
         .setValue(CODING3_VERSION1.toCoding());
 
-    ParametersParameterComponent widerMatch = withTranslation.addParameter()
+    final ParametersParameterComponent widerMatch = withTranslation.addParameter()
         .setName("match");
     widerMatch.addPart().setName("equivalence")
         .setValue(new CodeType("wider"));
     widerMatch.addPart().setName("concept")
         .setValue(CODING1_VERSION1.toCoding());
 
-    reponseBundle.addEntry().setResource(withTranslation).getResponse().setStatus("200");
+    responseBundle.addEntry().setResource(withTranslation).getResponse().setStatus("200");
 
-    when(terminologyClient.batch(any())).thenReturn(reponseBundle);
+    when(terminologyClient.batch(any())).thenReturn(responseBundle);
     final ConceptTranslator actualTranslator = terminologyService
         .translate(Arrays
                 .asList(CODING1_VERSION1, CODING2_VERSION1, new SimpleCoding(SYSTEM1, null),

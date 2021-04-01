@@ -120,7 +120,7 @@ public class DefaultTerminologyService implements TerminologyService {
 
   @Nonnull
   @Override
-  public Relation getSubsumesRelation(@Nonnull Collection<SimpleCoding> systemAndCodes) {
+  public Relation getSubsumesRelation(@Nonnull final Collection<SimpleCoding> systemAndCodes) {
     final List<Coding> codings = validAndKnownCodings(systemAndCodes)
         .distinct()
         .map(SimpleCoding::toCoding)

@@ -16,12 +16,16 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.SqlExtensions;
+import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -81,7 +85,7 @@ public class MemberOfFunction implements NamedFunction {
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
     // then create a new dataset with the boolean results.
-    final MemberOfMapperWithPreview mapper =
+    final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
         new MemberOfMapperWithPreview(MDC.get("requestId"), terminologyServiceFactory,
             valueSetUri);
 

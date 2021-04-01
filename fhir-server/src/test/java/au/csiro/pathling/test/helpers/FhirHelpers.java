@@ -49,7 +49,7 @@ public class FhirHelpers {
     @Nonnull
     private final T expected;
 
-    public FhirDeepMatcher(@Nonnull T expected) {
+    private FhirDeepMatcher(@Nonnull final T expected) {
       this.expected = expected;
     }
 

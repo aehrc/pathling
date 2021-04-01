@@ -20,13 +20,13 @@ import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
 /**
- * Input/output mappings for <code>$closure</code> operation.
- * <p>
- * See also:  <a href="https://www.hl7.org/fhir/terminology-service.html#closure">Maintaining a
- * Closure Table</a> and <a href="https://www.hl7.org/fhir/conceptmap-operation-closure.html">Operation
- * $closure on ConceptMap</a>
+ * Input/output mappings for {@code $closure} operation.
  *
  * @author Piotr Szul
+ * @see <a href="https://www.hl7.org/fhir/terminology-service.html#closure">Maintaining a Closure
+ * Table</a>
+ * @see <a href="https://www.hl7.org/fhir/conceptmap-operation-closure.html">Operation $closure on
+ * ConceptMap</a>
  */
 @Slf4j
 public final class ClosureMapping extends BaseMapping {
@@ -82,8 +82,8 @@ public final class ClosureMapping extends BaseMapping {
   }
 
   /**
-   * Construct the relation from a concept map using th <code>SUBSUMES</code>,
-   * <code>SPECIALIZES</code> and <code>EQUAL</code> equivalences.
+   * Construct the relation from a concept map using th {@code SUBSUMES}, {@code SPECIALIZES} and
+   * {@code EQUAL} equivalences.
    *
    * @param conceptMap the concept map to convert to a relation.
    * @return the relation instance.
