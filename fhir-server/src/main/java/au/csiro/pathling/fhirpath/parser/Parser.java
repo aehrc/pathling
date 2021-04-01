@@ -10,8 +10,8 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
 import javax.annotation.Nonnull;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
+
+import org.antlr.v4.runtime.*;
 
 /**
  * This is an ANTLR-based parser for processing a FHIRPath expression, and aggregating the results
@@ -43,6 +43,9 @@ public class Parser {
     final FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
     final CommonTokenStream tokens = new CommonTokenStream(lexer);
     final FhirPathParser parser = new FhirPathParser(tokens);
+
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(new ParserErrorListener());
 
     // Remove the default console error reporter, and add a listener that wraps each parse error in
     // an invalid request exception.
