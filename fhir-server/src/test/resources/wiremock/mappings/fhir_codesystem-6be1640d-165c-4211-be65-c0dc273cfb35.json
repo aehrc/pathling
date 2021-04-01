@@ -1,0 +1,29 @@
+{
+  "id" : "6be1640d-165c-4211-be65-c0dc273cfb35",
+  "name" : "fhir_codesystem",
+  "request" : {
+    "url" : "/fhir/CodeSystem?url=uuid%3Aunknown&_elements=id",
+    "method" : "GET"
+  },
+  "response" : {
+    "status" : 200,
+    "body" : "{\"resourceType\":\"Bundle\",\"id\":\"cb7e69ad-2c7b-4d89-a58c-0b453beb0893\",\"meta\":{\"lastUpdated\":\"2021-03-26T14:19:47.003+10:00\"},\"type\":\"searchset\",\"total\":0,\"link\":[{\"relation\":\"self\",\"url\":\"https://r4.ontoserver.csiro.au/fhir/CodeSystem?_elements=id&url=uuid%3Aunknown\"}]}",
+    "headers" : {
+      "Server" : "nginx/1.15.9",
+      "Date" : "Fri, 26 Mar 2021 04:50:10 GMT",
+      "Content-Type" : "application/fhir+json;charset=UTF-8",
+      "X-Request-Id" : "6AUyOqGn6eZaQpUW",
+      "ETag" : "W/\"1616122521383\"",
+      "Cache-Control" : "must-revalidate, max-age=1",
+      "Vary" : "Accept,Origin,Accept-Encoding,Accept-Language,Authorization",
+      "X-Powered-By" : "HAPI FHIR 5.3.0 REST Server (FHIR Server; FHIR 4.0.1/R4)",
+      "Last-Modified" : "Fri, 26 Mar 2021 04:19:47 GMT",
+      "X-Content-Type-Options" : "nosniff",
+      "X-XSS-Protection" : "1; mode=block",
+      "X-Frame-Options" : "DENY"
+    }
+  },
+  "uuid" : "6be1640d-165c-4211-be65-c0dc273cfb35",
+  "persistent" : true,
+  "insertionIndex" : 7
+}

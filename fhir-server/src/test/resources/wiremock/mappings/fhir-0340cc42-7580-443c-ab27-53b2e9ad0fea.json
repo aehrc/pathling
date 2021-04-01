@@ -1,0 +1,34 @@
+{
+  "id" : "0340cc42-7580-443c-ab27-53b2e9ad0fea",
+  "name" : "fhir",
+  "request" : {
+    "url" : "/fhir",
+    "method" : "POST",
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"resourceType\":\"Bundle\",\"type\":\"batch\",\"entry\":[{\"resource\":{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"url\",\"valueUri\":\"http://snomed.info/sct?fhir_cm=900000000000526001\"},{\"name\":\"reverse\",\"valueBoolean\":false},{\"name\":\"coding\",\"valueCoding\":{\"system\":\"http://snomed.info/sct\",\"code\":\"72940011000036107\"}}]},\"request\":{\"method\":\"POST\",\"url\":\"ConceptMap/$translate\"}},{\"resource\":{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"url\",\"valueUri\":\"http://snomed.info/sct?fhir_cm=900000000000526001\"},{\"name\":\"reverse\",\"valueBoolean\":false},{\"name\":\"coding\",\"valueCoding\":{\"system\":\"http://snomed.info/sct\",\"code\":\"444814009\"}}]},\"request\":{\"method\":\"POST\",\"url\":\"ConceptMap/$translate\"}}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : true
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "body" : "{\"resourceType\":\"Bundle\",\"id\":\"54d95332-054d-4ead-b5c7-2a4eed7b24a1\",\"type\":\"batch-response\",\"link\":[{\"relation\":\"self\",\"url\":\"https://r4.ontoserver.csiro.au/fhir\"}],\"entry\":[{\"resource\":{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"result\",\"valueBoolean\":true},{\"name\":\"match\",\"part\":[{\"name\":\"equivalence\",\"valueCode\":\"equivalent\"},{\"name\":\"concept\",\"valueCoding\":{\"system\":\"http://snomed.info/sct\",\"code\":\"720471000168102\",\"display\":\"Duodopa intestinal gel\"}},{\"name\":\"source\",\"valueString\":\"http://snomed.info/sct/32506021000036107/version/20210228?fhir_cm=900000000000526001\"}]}]},\"response\":{\"status\":\"200\"}},{\"resource\":{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"result\",\"valueBoolean\":false},{\"name\":\"message\",\"valueString\":\"No mappings could be found for 444814009 (http://snomed.info/sct)\"}]},\"response\":{\"status\":\"200\"}}]}",
+    "headers" : {
+      "Server" : "nginx/1.15.9",
+      "Date" : "Mon, 01 Mar 2021 03:34:27 GMT",
+      "Content-Type" : "application/fhir+json;charset=UTF-8",
+      "X-Request-Id" : "Gp4DjnrF6RB5YE1s",
+      "Cache-Control" : "must-revalidate, max-age=1",
+      "Vary" : "Accept,Origin,Accept-Encoding,Accept-Language,Authorization",
+      "X-Powered-By" : "HAPI FHIR 5.2.0 REST Server (FHIR Server; FHIR 4.0.1/R4)",
+      "Content-Location" : "https://r4.ontoserver.csiro.au/fhir/Bundle/54d95332-054d-4ead-b5c7-2a4eed7b24a1",
+      "Location" : "https://r4.ontoserver.csiro.au/fhir/Bundle/54d95332-054d-4ead-b5c7-2a4eed7b24a1",
+      "X-Content-Type-Options" : "nosniff",
+      "X-XSS-Protection" : "1; mode=block",
+      "X-Frame-Options" : "DENY"
+    }
+  },
+  "uuid" : "0340cc42-7580-443c-ab27-53b2e9ad0fea",
+  "persistent" : true,
+  "insertionIndex" : 4
+}

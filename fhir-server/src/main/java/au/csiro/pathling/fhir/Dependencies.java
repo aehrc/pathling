@@ -38,7 +38,7 @@ public class Dependencies {
     log.info("Creating R4 FHIR context");
     return FhirContext.forR4();
   }
-  
+
   @Bean
   @Autowired
   @Nonnull
@@ -73,11 +73,11 @@ public class Dependencies {
   @Autowired
   @ConditionalOnBean(TerminologyClient.class)
   @Nonnull
-  static TerminologyClientFactory terminologyClientFactory(
+  static TerminologyServiceFactory terminologyClientFactory(
       @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
     final Terminology terminology = configuration.getTerminology();
     checkNotNull(terminology);
-    return new TerminologyClientFactory(fhirContext,
+    return new DefaultTerminologyServiceFactory(fhirContext,
         terminology.getServerUrl(),
         terminology.getSocketTimeout(),
         configuration.getVerboseRequestLogging());

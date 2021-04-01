@@ -19,7 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class WireMockTest extends IntegrationTest {
 
   @Autowired
-  private WireMockServer wireMockServer;
+  protected WireMockServer wireMockServer;
 
   @BeforeEach
   void setUp() {

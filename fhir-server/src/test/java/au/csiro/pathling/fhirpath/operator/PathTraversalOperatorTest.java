@@ -8,9 +8,9 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -146,8 +146,9 @@ public class PathTraversalOperatorTest {
         // patient with two names
         .withRow("patient-1", makeEid(1), RowFactory.create(Arrays.asList("Jude", "Adam")))
         .withRow("patient-1", makeEid(0), RowFactory.create(Arrays.asList("Mark", "Alen", null)))
-        // patient with empty list of given names
-        .withRow("patient-2", makeEid(0), RowFactory.create(Collections.emptyList()))
+        // patient with empty list of given names and null list
+        .withRow("patient-2", makeEid(1), RowFactory.create(Collections.emptyList()))
+        .withRow("patient-2", makeEid(0), null)
         // no name in the first place
         .withRow("patient-5", null, null)
         .buildWithStructValue();
@@ -176,7 +177,8 @@ public class PathTraversalOperatorTest {
         .withRow("patient-1", makeEid(0, 2), null)
         .withRow("patient-1", makeEid(1, 0), "Jude")
         .withRow("patient-1", makeEid(1, 1), "Adam")
-        .withRow("patient-2", null, null)
+        .withRow("patient-2", makeEid(0, 0), null)
+        .withRow("patient-2", makeEid(1, 0), null)
         .withRow("patient-5", null, null)
         .build();
 

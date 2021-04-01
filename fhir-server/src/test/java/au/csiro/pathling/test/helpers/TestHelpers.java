@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.test.helpers;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -20,6 +21,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -52,7 +54,9 @@ public abstract class TestHelpers {
   @Nonnull
   public static InputStream getResourceAsStream(@Nonnull final String name) {
     final ClassLoader loader = getClassLoader();
-    return checkNotNull(loader.getResourceAsStream(name));
+    final InputStream inputStream = loader.getResourceAsStream(name);
+    check(Objects.nonNull(inputStream), "Failed to load resource from : '%s'", name);
+    return checkNotNull(inputStream);
   }
 
   @Nonnull

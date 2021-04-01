@@ -10,8 +10,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
@@ -43,10 +42,7 @@ public class ParserContextBuilder {
   private ResourceReader resourceReader;
 
   @Nullable
-  private TerminologyClient terminologyClient;
-
-  @Nullable
-  private TerminologyClientFactory terminologyClientFactory;
+  private TerminologyServiceFactory terminologyServiceFactory;
 
   @Nonnull
   private Optional<List<Column>> groupingColumns;
@@ -87,16 +83,9 @@ public class ParserContextBuilder {
   }
 
   @Nonnull
-  public ParserContextBuilder terminologyClient(
-      @Nonnull final TerminologyClient terminologyClient) {
-    this.terminologyClient = terminologyClient;
-    return this;
-  }
-
-  @Nonnull
   public ParserContextBuilder terminologyClientFactory(
-      @Nonnull final TerminologyClientFactory terminologyClientFactory) {
-    this.terminologyClientFactory = terminologyClientFactory;
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+    this.terminologyServiceFactory = terminologyServiceFactory;
     return this;
   }
 
@@ -109,8 +98,7 @@ public class ParserContextBuilder {
   @Nonnull
   public ParserContext build() {
     return new ParserContext(inputContext, fhirContext, spark, resourceReader,
-        Optional.ofNullable(terminologyClient), Optional.ofNullable(terminologyClientFactory),
-        groupingColumns);
+        Optional.ofNullable(terminologyServiceFactory), groupingColumns);
   }
 
 }

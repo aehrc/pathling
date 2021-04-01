@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.aggregate;
 
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,15 +15,8 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.TimingExtension;
-import ca.uhn.fhir.rest.param.UriParam;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -243,19 +237,11 @@ class AggregateQueryTest extends AggregateExecutorTest {
   void queryWithMemberOf() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.CONDITION, subjectResource);
-    final Bundle mockSearch = (Bundle) jsonParser.parseResource(
-        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.Bundle.json"));
-    final List<CodeSystem> codeSystems = mockSearch.getEntry().stream()
-        .map(entry -> (CodeSystem) entry.getResource())
-        .collect(Collectors.toList());
+
     final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
         getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
-
-    //noinspection unchecked
-    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
-        .thenReturn(codeSystems);
-    when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
-        .thenReturn(mockExpansion);
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(mockExpansion));
 
     final String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)

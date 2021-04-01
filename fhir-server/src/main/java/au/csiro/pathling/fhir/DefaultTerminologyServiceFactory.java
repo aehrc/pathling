@@ -7,19 +7,23 @@
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.terminology.DefaultTerminologyService;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.UUIDFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
-import java.io.Serializable;
+import java.util.UUID;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
 /**
- * Uses the FhirEncoders class to create a FhirContext, then creates a TerminologyClient with some
- * configuration. Used for code that runs on Spark workers.
+ * Default implementation of {@link TerminologyServiceFactory} providing {@link TerminologyService}
+ * implemented using {@link TerminologyClient} with with given configuration.
  *
  * @author John Grimes
+ * @author Piotr Szul
  */
-public class TerminologyClientFactory implements Serializable {
+public class DefaultTerminologyServiceFactory implements TerminologyServiceFactory {
 
   private static final long serialVersionUID = 8862251697418622614L;
 
@@ -40,7 +44,7 @@ public class TerminologyClientFactory implements Serializable {
    * @param socketTimeout the number of milliseconds to wait for response data
    * @param verboseRequestLogging whether to log out verbose details of each request
    */
-  public TerminologyClientFactory(@Nonnull final FhirContext fhirContext,
+  public DefaultTerminologyServiceFactory(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl, final int socketTimeout,
       final boolean verboseRequestLogging) {
     this.fhirVersion = fhirContext.getVersion().getVersion();
@@ -53,13 +57,31 @@ public class TerminologyClientFactory implements Serializable {
    * Builds a new instance.
    *
    * @param logger a {@link Logger} to use for logging
-   * @return a shiny new TerminologyClient instance
+   * @return a shiny new TerminologyService instance
    */
   @Nonnull
-  public TerminologyClient build(@Nonnull final Logger logger) {
-    return TerminologyClient
+  @Override
+  public TerminologyService buildService(@Nonnull final Logger logger) {
+    return buildService(logger, UUID::randomUUID);
+  }
+
+
+  /**
+   * Builds a new instance.
+   *
+   * @param logger a {@link Logger} to use for logging
+   * @param uuidFactory the {@link UUIDFactory to use for UUID generation}
+   * @return a shiny new TerminologyService instance =
+   */
+  @Nonnull
+  public TerminologyService buildService(@Nonnull final Logger logger,
+      @Nonnull final UUIDFactory uuidFactory) {
+    final TerminologyClient terminologyClient = TerminologyClient
         .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
             verboseRequestLogging, logger);
+    return new DefaultTerminologyService(FhirEncoders.contextFor(fhirVersion), terminologyClient,
+        uuidFactory);
   }
+
 
 }

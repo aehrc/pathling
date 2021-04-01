@@ -6,21 +6,20 @@
 
 package au.csiro.pathling.fhirpath.function.subsumes;
 
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import static java.util.stream.Stream.concat;
+
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
-import ca.uhn.fhir.rest.param.UriParam;
-import com.google.common.collect.Streams;
+import au.csiro.pathling.terminology.Relation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.utilities.Streams;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.hl7.fhir.r4.model.CodeSystem;
 import org.slf4j.MDC;
 
 /**
@@ -30,7 +29,7 @@ import org.slf4j.MDC;
 @Slf4j
 public class SubsumptionMapperWithPreview implements
     MapperWithPreview<ImmutablePair<
-        List<SimpleCoding>, List<SimpleCoding>>, Boolean, Closure> {
+        List<SimpleCoding>, List<SimpleCoding>>, Boolean, Relation> {
 
   private static final long serialVersionUID = 2879761794073649202L;
 
@@ -38,36 +37,32 @@ public class SubsumptionMapperWithPreview implements
   private final String requestId;
 
   @Nonnull
-  private final TerminologyClientFactory terminologyClientFactory;
+  private final TerminologyServiceFactory terminologyServiceFactory;
   private final boolean inverted;
 
 
   /**
    * @param requestId an identifier used alongside any logging that the mapper outputs
-   * @param terminologyClientFactory the factory to use to create the {@link
+   * @param terminologyServiceFactory the factory to use to create the {@link
    * au.csiro.pathling.fhir.TerminologyClient}
    * @param inverted if true checks for `subsumedBy` relation, otherwise for `subsumes`
    */
   public SubsumptionMapperWithPreview(@Nonnull final String requestId,
-      @Nonnull final TerminologyClientFactory terminologyClientFactory,
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       final boolean inverted) {
     this.requestId = requestId;
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
     this.inverted = inverted;
   }
 
   @Override
   @Nonnull
-  public Closure preview(
+  public Relation preview(
       @Nonnull final Iterator<ImmutablePair<List<SimpleCoding>, List<SimpleCoding>>> input) {
 
     // Add the request ID to the logging context, so that we can track the logging for this
     // request across all workers.
     MDC.put("requestId", requestId);
-
-    final Iterable<ImmutablePair<List<SimpleCoding>, List<SimpleCoding>>> inputRowsIterable = () -> input;
-    final Stream<ImmutablePair<List<SimpleCoding>, List<SimpleCoding>>> inputStream = StreamSupport
-        .stream(inputRowsIterable.spliterator(), false);
 
     // Collect all distinct tokens used on both in inputs and arguments in this partition
     // Rows in which either input or argument are NULL are excluded as they do not need
@@ -75,40 +70,14 @@ public class SubsumptionMapperWithPreview implements
     // Also we only include codings with both system and code defined as only they can
     // be expected to be meaningfully represented to the terminology server
 
-    final Set<SimpleCoding> allCodings = inputStream
+    final Set<SimpleCoding> codings = Streams.streamOf(input)
         .filter(r -> r.getLeft() != null && r.getRight() != null)
-        .flatMap(r -> Streams.concat(r.getLeft().stream(), r.getRight().stream()))
+        .flatMap(r -> concat(r.getLeft().stream(), r.getRight().stream()))
         .filter(Objects::nonNull)
-        .filter(SimpleCoding::isDefined)
         .collect(Collectors.toSet());
 
-    final TerminologyClient terminologyClient = terminologyClientFactory.build(log);
-
-    // filter out codings with code systems unknown to the terminology server
-    final Set<String> allCodeSystems = allCodings.stream()
-        .map(SimpleCoding::getSystem)
-        .collect(Collectors.toSet());
-
-    final Set<String> knownCodeSystems = allCodeSystems.stream().filter(codeSystem -> {
-      final UriParam uri = new UriParam(codeSystem);
-      final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
-          uri, new HashSet<>(Collections.singletonList("id")));
-      return !(knownSystems == null || knownSystems.isEmpty());
-    }).collect(Collectors.toSet());
-
-    if (!knownCodeSystems.equals(allCodeSystems)) {
-      final Collection<String> unrecognizedCodeSystems = new HashSet<>(allCodeSystems);
-      unrecognizedCodeSystems.removeAll(knownCodeSystems);
-      log.warn("Terminology server does not recognize these coding systems: {}",
-          unrecognizedCodeSystems);
-    }
-
-    final Set<SimpleCoding> knownCodings = allCodings.stream()
-        .filter(coding -> knownCodeSystems.contains(coding.getSystem()))
-        .collect(Collectors.toSet());
-
-    final ClosureService closureService = new ClosureService(terminologyClient);
-    return closureService.getSubsumesRelation(knownCodings);
+    final TerminologyService terminologyService = terminologyServiceFactory.buildService(log);
+    return terminologyService.getSubsumesRelation(codings);
   }
 
   @Nonnull
@@ -121,7 +90,7 @@ public class SubsumptionMapperWithPreview implements
   @Override
   @Nullable
   public Boolean call(@Nullable final ImmutablePair<List<SimpleCoding>, List<SimpleCoding>> input,
-      @Nonnull final Closure subsumeClosure) {
+      @Nonnull final Relation subsumeRelation) {
 
     if (Objects.isNull(input) || Objects.isNull(input.getLeft())) {
       return null;
@@ -131,10 +100,10 @@ public class SubsumptionMapperWithPreview implements
     @Nonnull final List<SimpleCoding> argCodings = safeGetList(input.getRight());
 
     return (!inverted
-            ? subsumeClosure
+            ? subsumeRelation
                 .anyRelates(inputCodings, argCodings)
             :
-            subsumeClosure
+            subsumeRelation
                 .anyRelates(argCodings,
                     inputCodings));
 
