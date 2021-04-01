@@ -9,6 +9,7 @@ package au.csiro.pathling.fhirpath;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -60,7 +61,7 @@ public class NonLiteralPathTest {
 
     final Column newNullEid = testPath
         .expandEid(functions.lit(null));
-    assertNull(inputDataset.select(newNullEid).first().getList(0));
+    assertTrue(inputDataset.select(newNullEid).first().isNullAt(0));
   }
 
   @Test
@@ -92,9 +93,9 @@ public class NonLiteralPathTest {
     assertEquals(Arrays.asList(1, 3, 2),
         pathDataset.where(idCol.equalTo("patient-1")).select(newNonNullEid).first()
             .getList(0));
-    assertNull(
+    assertTrue(
         pathDataset.where(idCol.equalTo("patient-2")).select(newNonNullEid).first()
-            .getList(0));
+            .isNullAt(0));
 
     // Test null element ID.
     final Column newNullEid = testPath
@@ -103,8 +104,8 @@ public class NonLiteralPathTest {
     assertEquals(Arrays.asList(1, 3, 0),
         pathDataset.where(idCol.equalTo("patient-1")).select(newNullEid).first()
             .getList(0));
-    assertNull(pathDataset.where(idCol.equalTo("patient-2")).select(newNullEid).first()
-        .getList(0));
+    assertTrue(pathDataset.where(idCol.equalTo("patient-2")).select(newNullEid).first()
+        .isNullAt(0));
   }
 
 
