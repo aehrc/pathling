@@ -259,20 +259,7 @@
           "profile": "http://hl7.org/fhir/StructureDefinition/OperationDefinition",
           "interaction": [
             {
-              "code": "search-type"
-            },
-            {
               "code": "read"
-            }
-          ],
-          "operation": [
-            {
-              "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
-            },
-            {
-              "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
             }
           ]
         },

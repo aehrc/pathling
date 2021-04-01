@@ -156,14 +156,12 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Nonnull
   private List<CapabilityStatementRestResourceComponent> buildResources() {
     final List<CapabilityStatementRestResourceComponent> resources = new ArrayList<>();
-    @Nullable CapabilityStatementRestResourceComponent opDefResource = null;
     final Set<Enumerations.ResourceType> availableToRead = resourceReader
         .getAvailableResourceTypes();
     final Set<Enumerations.ResourceType> availableResourceTypes =
         availableToRead.isEmpty()
         ? EnumSet.noneOf(Enumerations.ResourceType.class)
         : EnumSet.copyOf(availableToRead);
-    availableResourceTypes.add(Enumerations.ResourceType.OPERATIONDEFINITION);
 
     for (final Enumerations.ResourceType resourceType : availableResourceTypes) {
       final CapabilityStatementRestResourceComponent resource =
@@ -187,20 +185,17 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       resource.addOperation(searchOperation);
 
       resources.add(resource);
-
-      // Save away the OperationDefinition resource, so that we can later add the read operation to
-      // it.
-      if (resourceType.toCode().equals("OperationDefinition")) {
-        opDefResource = resource;
-      }
     }
 
-    if (opDefResource != null) {
-      // Add the read operation to the StructureDefinition and OperationDefinition resources.
-      final ResourceInteractionComponent readInteraction = new ResourceInteractionComponent();
-      readInteraction.setCode(TypeRestfulInteraction.READ);
-      opDefResource.addInteraction(readInteraction);
-    }
+    // Add the read operation to the OperationDefinition resource.
+    final String opDefCode = Enumerations.ResourceType.OPERATIONDEFINITION.toCode();
+    final CapabilityStatementRestResourceComponent opDefResource =
+        new CapabilityStatementRestResourceComponent(new CodeType(opDefCode));
+    opDefResource.setProfile(FHIR_RESOURCE_BASE + opDefCode);
+    final ResourceInteractionComponent readInteraction = new ResourceInteractionComponent();
+    readInteraction.setCode(TypeRestfulInteraction.READ);
+    opDefResource.addInteraction(readInteraction);
+    resources.add(opDefResource);
 
     return resources;
   }
