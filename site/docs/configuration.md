@@ -209,7 +209,7 @@ vs individual record data, and more.
 Pathling can also be run directly within an Apache Spark cluster as a persistent
 application.
 
-For compatibility, Pathling runs Spark 3.0.1 (Scala 2.12), with Hadoop version
+For compatibility, Pathling runs Spark 3.1.1 (Scala 2.12), with Hadoop version
 2.10.1.
 
 Next: [Roadmap](./roadmap.html)
