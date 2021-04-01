@@ -174,6 +174,8 @@ Focus will be placed on the following areas:
 - How the presence of an associated
   [Consent](https://hl7.org/fhir/R4/consent.html) resource might influence how
   access to data is authorised
+  
+See [(#282) Add operation and resource level authorisation](https://github.com/aehrc/pathling/issues/282).
 
 ## Cell suppression
 
