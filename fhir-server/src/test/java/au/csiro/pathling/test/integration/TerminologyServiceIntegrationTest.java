@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.test.integration;
 
+import static au.csiro.pathling.test.assertions.Assertions.assertMatches;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.proxyAllTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
@@ -23,6 +24,7 @@ import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
@@ -87,7 +89,8 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   public void tearDown() {
     if (isRecordMode()) {
       log.warn("Recording snapshots to: {}", wireMockServer.getOptions().filesRoot());
-      wireMockServer.snapshotRecord();
+      wireMockServer
+          .snapshotRecord(new RecordSpecBuilder().matchRequestBodyWithEqualToJson(true, false));
     }
     super.tearDown();
   }
@@ -143,10 +146,10 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
             "http://snomed.info/sct?fhir_cm=xxxx", false,
             ALL_EQUIVALENCES));
 
-    assertEquals(
+    assertMatches(
         "Error in response entry : HTTP 404 : "
-            + "[ed835929-8734-4a4a-b4ed-8614f2d46321]: "
-            + "Unable to find ConceptMap with URI http://snomed.info/sct?fhir_cm=xxxx",
+            + "\\[.+\\]: "
+            + "Unable to find ConceptMap with URI http://snomed\\.info/sct\\?fhir_cm=xxxx",
         error.getMessage());
   }
 

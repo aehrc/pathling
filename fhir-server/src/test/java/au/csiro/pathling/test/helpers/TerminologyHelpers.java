@@ -25,7 +25,7 @@ public final class TerminologyHelpers {
   }
 
   private static final String SNOMED_URI = "http://snomed.info/sct";
-  private static final String SNOMED_VERSION = "http://snomed.info/sct/32506021000036107/version/20210228";
+  private static final String SNOMED_VERSION = "http://snomed.info/sct/32506021000036107/version/20210331";
 
   private static final String AST_URI = "http://csiro.au/fhir/au-states-territories";
 
