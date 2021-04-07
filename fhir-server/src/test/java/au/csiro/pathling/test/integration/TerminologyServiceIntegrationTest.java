@@ -130,8 +130,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
     final ConceptTranslator actualTranslation = terminologyService.translate(
         Arrays.asList(testSimple("72940011000036107"), testSimple("444814009")),
-        CM_HIST_ASSOCIATIONS, false,
-        ALL_EQUIVALENCES);
+        CM_HIST_ASSOCIATIONS, false, ALL_EQUIVALENCES);
 
     final ConceptTranslator expectedTranslation = ConceptTranslatorBuilder.empty().build();
     assertEquals(expectedTranslation, actualTranslation);
@@ -158,13 +157,12 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     final Set<SimpleCoding> expansion = terminologyService
         .intersect("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             setOfSimpleFrom(CD_SNOMED_284551006, CD_SNOMED_VER_403190006,
-                CD_SNOMED_72940011000036107,
-                CD_AST_VIC,
+                CD_SNOMED_72940011000036107, CD_AST_VIC,
                 new Coding("uuid:unknown", "unknown", "Unknown")
             ));
 
     // TODO: Ask John - why the expansion is versioned if we include the CD_AST_VIC, but
-    // unversioned othrwise? As this will affect the functioning of memberOf (since it uses
+    // unversioned otherwise? As this will affect the functioning of memberOf (since it uses
     // SimpleCoding equality).
     // Also if two versioned SNOMED codings are requested the response contains
     // their unversioned versions.
@@ -173,15 +171,14 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
 
   @Test
-  public void testCorrectlyBuildsClosureKnownAndUnknowSystems() {
+  public void testCorrectlyBuildsClosureKnownAndUnknownSystems() {
 
     when(mockUUIDFactory.nextUUID())
         .thenReturn(UUID.fromString("5d1b976d-c50c-445a-8030-64074b83f355"));
     final Relation actualRelation = terminologyService
         .getSubsumesRelation(
             setOfSimpleFrom(CD_SNOMED_107963000, CD_SNOMED_VER_63816008,
-                CD_SNOMED_72940011000036107,
-                CD_AST_VIC,
+                CD_SNOMED_72940011000036107, CD_AST_VIC,
                 new Coding("uuid:unknown", "unknown", "Unknown")
             ));
     // It appears that in the response all codings are versioned regardless
