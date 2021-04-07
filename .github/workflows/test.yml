@@ -118,5 +118,6 @@ jobs:
       - name: Run the verify goal with Maven
         run: |
           mvn --batch-mode verify \
-          -pl site -am
+          -pl site -am \
+          -DskipTests
         timeout-minutes: 30
