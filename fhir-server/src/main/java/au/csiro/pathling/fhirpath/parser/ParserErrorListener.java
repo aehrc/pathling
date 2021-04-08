@@ -24,10 +24,17 @@ public class ParserErrorListener extends BaseErrorListener {
   public void syntaxError(@Nullable final Recognizer<?, ?> recognizer,
       @Nullable final Object offendingSymbol, final int line, final int charPositionInLine,
       @Nullable final String msg, @Nullable final RecognitionException e) {
-    final String errorMessage = msg == null
-                                ? "Error parsing FHIRPath expression"
-                                : "Error parsing FHIRPath expression: " + msg;
-    throw new InvalidUserInputError(errorMessage);
+    final StringBuilder sb = new StringBuilder();
+    sb.append("Error parsing FHIRPath expression (line: ");
+    sb.append(line);
+    sb.append(", position: ");
+    sb.append(charPositionInLine);
+    sb.append(")");
+    if (msg != null) {
+      sb.append(": ");
+      sb.append(msg);
+    }
+    throw new InvalidUserInputError(sb.toString());
   }
 
 }

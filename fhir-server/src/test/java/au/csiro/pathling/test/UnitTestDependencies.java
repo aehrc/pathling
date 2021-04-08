@@ -6,20 +6,17 @@
 
 package au.csiro.pathling.test;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
-import org.mockito.Mockito;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
@@ -60,17 +57,19 @@ public class UnitTestDependencies {
   @Bean
   @Nonnull
   public static TerminologyClient terminologyClient() {
-    return mock(TerminologyClient.class, Mockito.withSettings().serializable());
+    return SharedMocks.getOrCreate(TerminologyClient.class);
   }
 
   @Bean
   @Nonnull
-  public static TerminologyClientFactory terminologyClientFactory(
-      @Nonnull final TerminologyClient terminologyClient) {
-    final TerminologyClientFactory terminologyClientFactory =
-        mock(TerminologyClientFactory.class, Mockito.withSettings().serializable());
-    when(terminologyClientFactory.build(any())).thenReturn(terminologyClient);
-    return terminologyClientFactory;
+  public static TerminologyService terminologyService() {
+    return SharedMocks.getOrCreate(TerminologyService.class);
+  }
+
+  @Bean
+  @Nonnull
+  public static TerminologyServiceFactory terminologyClientFactory() {
+    return new TestTerminologyServiceFactory();
   }
 
 }

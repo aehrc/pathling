@@ -22,6 +22,7 @@ The following functions are currently supported:
 - [memberOf](#memberof)
 - [subsumes](#subsumes)
 - [subsumedBy](#subsumedby)
+- [translate](#translate)
 - [resolve](#resolve)
 - [reverseResolve](#reverseresolve)
 - [ofType](#oftype)
@@ -223,6 +224,29 @@ Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
+
+## translate
+
+```
+collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse = false, equivalence = 'equivalent') : collection<Coding>
+```
+
+When invoked on a [Coding](https://pathling.csiro.au/docs/fhirpath/data-types.html#coding)-valued element, returns any matching concepts using the ConceptMap specified using `conceptMapUrl`.
+
+The `reverse` parameter controls the direction to traverse the map - `true` results in "source to target" mappings while `false` results in "target to source".
+
+The `equivalence` parameter is a comma-delimited set of values from the [ConceptMapEquivalence](https://www.hl7.org/fhir/R4/valueset-concept-map-equivalence.html) ValueSet, and is used to filter the mappings returned to only those that have an equivalence value in this list.
+
+Example:
+
+```
+Condition.code.coding.translate('https://csiro.au/fhir/ConceptMap/some-map', true, 'equivalent,wider').display
+```
+
+<div class="callout warning">
+    The <code>reverseResolve</code> function is not within the FHIRPath 
+    specification, and is currently unique to the Pathling implementation.
+</div>
 
 ## resolve
 

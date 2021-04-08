@@ -8,45 +8,55 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
-import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.terminology.ConceptTranslator;
+import au.csiro.pathling.terminology.Relation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.fixtures.ConceptMapFixtures;
+import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
+import au.csiro.pathling.test.fixtures.RelationBuilder;
+import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import ca.uhn.fhir.rest.param.UriParam;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Date;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.HashSet;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -70,10 +80,10 @@ public class ParserTest {
   private FhirContext fhirContext;
 
   @Autowired
-  private TerminologyClient terminologyClient;
+  private TerminologyService terminologyService;
 
   @Autowired
-  private TerminologyClientFactory terminologyClientFactory;
+  private TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
   private IParser jsonParser;
@@ -83,6 +93,7 @@ public class ParserTest {
 
   @BeforeEach
   public void setUp() throws IOException {
+    SharedMocks.resetAll();
     mockReader = mock(ResourceReader.class);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
         ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
@@ -92,14 +103,12 @@ public class ParserTest {
         .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyClientFactory)
-        .terminologyClient(terminologyClient)
+        .terminologyClientFactory(terminologyServiceFactory)
         .resourceReader(mockReader)
         .inputContext(subjectResource)
         .build();
     parser = new Parser(parserContext);
   }
-
 
   private void mockResourceReader(final ResourceType... resourceTypes)
       throws MalformedURLException {
@@ -118,6 +127,22 @@ public class ParserTest {
   @SuppressWarnings("rawtypes")
   private FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
+  }
+
+  @SuppressWarnings({"rawtypes", "SameParameterValue"})
+  @Nonnull
+  private FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
+      @Nonnull final String expression) {
+    final ResourcePath subjectResource = ResourcePath
+        .build(fhirContext, mockReader, resourceType, resourceType.toCode(), true);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .terminologyClientFactory(terminologyServiceFactory)
+        .resourceReader(mockReader)
+        .inputContext(subjectResource)
+        .build();
+    final Parser resourceParser = new Parser(parserContext);
+    return assertThat(resourceParser.parse(expression));
   }
 
   @Test
@@ -259,11 +284,7 @@ public class ParserTest {
 
   @Test
   public void testSubsumesAndSubsumedBy() {
-    final List<CodeSystem> codeSystems = Collections.singletonList(new CodeSystem());
-    //noinspection unchecked
-    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
-        .thenReturn(codeSystems);  // Setup mock terminology client
-    when(terminologyClient.closure(any(), any())).thenReturn(ConceptMapFixtures.CM_EMPTY);
+    when(terminologyService.getSubsumesRelation(any())).thenReturn(Relation.equality());
 
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
@@ -289,8 +310,8 @@ public class ParserTest {
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
 
     // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyClient.closure(any(), any()))
-        .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
+    when(terminologyService.getSubsumesRelation(any()))
+        .thenReturn(TerminologyHelpers.REL_SNOMED_444814009_SUBSUMES_40055000);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .selectOrderedResult()
@@ -324,36 +345,26 @@ public class ParserTest {
 
   @Test
   public void testWhereWithSubsumes() {
-    final List<CodeSystem> codeSystems = Collections.singletonList(new CodeSystem());
-    //noinspection unchecked
-    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
-        .thenReturn(codeSystems);
-    when(terminologyClient.closure(any(), any()))
-        .thenReturn(ConceptMapFixtures.CM_SNOMED_444814009_SUBSUMES_40055000_VERSIONED);
+    // Not a real subsumption - just works for this use case.
+    // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
+    when(terminologyService.getSubsumesRelation(any()))
+        .thenReturn(RelationBuilder.empty().add(TerminologyHelpers.CD_SNOMED_VER_284551006,
+            TerminologyHelpers.CD_SNOMED_VER_40055000).build());
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
-            + ".subsumedBy(http://snomed.info/sct|40055000) contains true).gender")
+            + ".subsumedBy(http://snomed.info/sct|284551006) contains true).gender")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, (String) null)
-            .changeValue(PATIENT_ID_7001ad9c, "female"));
+            .changeValue(PATIENT_ID_7001ad9c, "female") // has code 40055000
+            .changeValue(PATIENT_ID_bbd33563, "male")  // has code 284551006
+        );
   }
 
   @Test
   public void testWhereWithMemberOf() {
-    final Bundle mockSearch = (Bundle) jsonParser.parseResource(
-        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.Bundle.json"));
-    final List<CodeSystem> codeSystems = mockSearch.getEntry().stream()
-        .map(entry -> (CodeSystem) entry.getResource())
-        .collect(Collectors.toList());
-    final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
-        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
-
-    //noinspection unchecked
-    when(terminologyClient.searchCodeSystems(any(UriParam.class), any(Set.class)))
-        .thenReturn(codeSystems);
-    when(terminologyClient.expand(any(ValueSet.class), any(IntegerType.class)))
-        .thenReturn(mockExpansion);
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(CD_SNOMED_403190006, CD_SNOMED_284551006));
 
     assertThatResultOf(
         "reverseResolve(Condition.subject).where("
@@ -460,12 +471,59 @@ public class ParserTest {
         .hasRows(allPatientsWithValue(spark, (String) null));
   }
 
+
+  @Test
+  void testTranslateFunction() {
+    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
+        .toSystem("uuid:test-system")
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
+        .build();
+
+    // Create a mock terminology client.
+    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
+        .thenReturn(returnedConceptTranslator);
+
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').code")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testTranslateFunction.csv");
+  }
+
+
+  @Test
+  void testTranslateWithWhereAndTranslate() {
+
+    final ConceptTranslator conceptTranslator1 = ConceptTranslatorBuilder
+        .toSystem("uuid:test-system")
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
+        .build();
+
+    final ConceptTranslator conceptTranslator2 = ConceptTranslatorBuilder
+        .toSystem("uuid:other-system")
+        .putTimes(new SimpleCoding("uuid:test-system", "444814009-0"), 1)
+        .putTimes(new SimpleCoding("uuid:test-system", "444814009-1"), 2)
+        .build();
+
+    // Create a mock terminology client.
+    when(terminologyService.translate(any(), eq("uuid:cm=1"), anyBoolean(), any()))
+        .thenReturn(conceptTranslator1);
+    when(terminologyService.translate(any(), eq("uuid:cm=2"), anyBoolean(), any()))
+        .thenReturn(conceptTranslator2);
+
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=2).code")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.csv");
+  }
+
   @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
-    assertEquals("Error parsing FHIRPath expression: missing ')' at '<EOF>'", error.getMessage());
+    assertEquals("Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'", error.getMessage());
   }
 
 }

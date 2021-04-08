@@ -85,6 +85,17 @@ public interface TerminologyClient extends IRestfulClient {
       @Nonnull @OperationParam(name = "concept") List<Coding> concept);
 
   /**
+   * Invokes the transaction/batch operation with the provided bundle.
+   *
+   * @param inputBundle a bundle describing the batch/transaction to execute
+   * @return the response bundle
+   * @see <a href="https://www.hl7.org/fhir/http.html#transaction">Batch/Transaction</a>
+   */
+  @Transaction
+  @Nullable
+  Bundle batch(@Nonnull @TransactionParam Bundle inputBundle);
+
+  /**
    * Build a new instance using the supplied {@link FhirContext} and configuration options.
    *
    * @param fhirContext the {@link FhirContext} used to build the client

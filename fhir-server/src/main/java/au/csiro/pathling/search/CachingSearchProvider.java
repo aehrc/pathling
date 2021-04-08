@@ -8,8 +8,7 @@ package au.csiro.pathling.search;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.SearchExecutorCache.SearchExecutorCacheKey;
 import ca.uhn.fhir.context.FhirContext;
@@ -46,10 +45,7 @@ public class CachingSearchProvider implements IResourceProvider {
   private final ResourceReader resourceReader;
 
   @Nonnull
-  private final Optional<TerminologyClient> terminologyClient;
-
-  @Nonnull
-  private final Optional<TerminologyClientFactory> terminologyClientFactory;
+  private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   @Nonnull
   private final FhirEncoders fhirEncoders;
@@ -65,8 +61,7 @@ public class CachingSearchProvider implements IResourceProvider {
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
    * @param resourceReader A {@link ResourceReader} for retrieving resources
-   * @param terminologyClient A {@link TerminologyClient} for resolving terminology queries
-   * @param terminologyClientFactory A {@link TerminologyClientFactory} for resolving terminology
+   * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
    * queries within parallel processing
    * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
    * objects
@@ -77,8 +72,7 @@ public class CachingSearchProvider implements IResourceProvider {
   public CachingSearchProvider(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyClient> terminologyClient,
-      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final Class<? extends IBaseResource> resourceClass,
       @Nonnull final SearchExecutorCache cache) {
@@ -86,8 +80,7 @@ public class CachingSearchProvider implements IResourceProvider {
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.resourceReader = resourceReader;
-    this.terminologyClient = terminologyClient;
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
     this.fhirEncoders = fhirEncoders;
     this.resourceClass = resourceClass;
     this.cache = cache;
@@ -110,7 +103,7 @@ public class CachingSearchProvider implements IResourceProvider {
   public IBundleProvider search() {
     final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
     final SearchExecutorCacheKey cacheKey = new SearchExecutorCacheKey(configuration, fhirContext,
-        sparkSession, resourceReader, terminologyClient, terminologyClientFactory, fhirEncoders,
+        sparkSession, resourceReader, terminologyServiceFactory, fhirEncoders,
         subjectResource, Optional.empty());
     return cache.get(cacheKey);
   }
@@ -128,7 +121,7 @@ public class CachingSearchProvider implements IResourceProvider {
   final StringAndListParam filters) {
     final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
     final SearchExecutorCacheKey cacheKey = new SearchExecutorCacheKey(configuration, fhirContext,
-        sparkSession, resourceReader, terminologyClient, terminologyClientFactory, fhirEncoders,
+        sparkSession, resourceReader, terminologyServiceFactory, fhirEncoders,
         subjectResource, Optional.ofNullable(filters));
     return cache.get(cacheKey);
   }

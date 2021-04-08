@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.function.subsumes;
 
+import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
+import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodingOrCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.*;
@@ -16,7 +18,6 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.SqlExtensions;
 import javax.annotation.Nonnull;
@@ -60,11 +61,6 @@ public class SubsumesFunction implements NamedFunction {
    */
   private static final String COL_ARG_CODINGS = "argCodings";
 
-  /**
-   * The column name that this function uses to represent the result value.
-   */
-  public static final String COL_VALUE = "value";
-
   private static final String COL_ARG_ID = "argId";
   private static final String COL_CODING = "coding";
   private static final String FIELD_CODING = "coding";
@@ -107,7 +103,7 @@ public class SubsumesFunction implements NamedFunction {
     @SuppressWarnings({"OptionalGetWithoutIsPresent", "TypeMayBeWeakened"})
     final SubsumptionMapperWithPreview mapper =
         new SubsumptionMapperWithPreview(MDC.get("requestId"),
-            input.getContext().getTerminologyClientFactory().get(),
+            input.getContext().getTerminologyServiceFactory().get(),
             inverted);
 
     final Dataset<Row> resultDataset = SqlExtensions
@@ -203,10 +199,9 @@ public class SubsumesFunction implements NamedFunction {
   private void validateInput(@Nonnull final NamedFunctionInput input) {
 
     final ParserContext context = input.getContext();
-    checkUserInput(
-        context.getTerminologyClient().isPresent() && context.getTerminologyClientFactory()
-            .isPresent(), "Attempt to call terminology function " + functionName
-            + " when terminology service has not been configured");
+    checkUserInput(context.getTerminologyServiceFactory()
+        .isPresent(), "Attempt to call terminology function " + functionName
+        + " when terminology service has not been configured");
 
     checkUserInput(
         input.getArguments().size() == 1,
@@ -215,23 +210,6 @@ public class SubsumesFunction implements NamedFunction {
 
     validateExpressionType(input.getInput(), "input");
     validateExpressionType(input.getArguments().get(0), "argument");
-  }
-
-  private boolean isCodeableConcept(@Nonnull final FhirPath fhirPath) {
-    return (fhirPath instanceof ElementPath &&
-        FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) fhirPath).getFhirType()));
-  }
-
-  private boolean isCodingOrCodeableConcept(@Nonnull final FhirPath fhirPath) {
-    if (fhirPath instanceof CodingLiteralPath) {
-      return true;
-    } else if (fhirPath instanceof ElementPath) {
-      final FHIRDefinedType elementFhirType = ((ElementPath) fhirPath).getFhirType();
-      return FHIRDefinedType.CODING.equals(elementFhirType)
-          || FHIRDefinedType.CODEABLECONCEPT.equals(elementFhirType);
-    } else {
-      return false;
-    }
   }
 
   private void validateExpressionType(@Nonnull final FhirPath inputPath,

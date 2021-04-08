@@ -1,4 +1,6 @@
-# This workflow will test the server, and build the site to ensure there are no errors.
+# This workflow will build the software and documentation to ensure there are no errors, and also
+# execute the tests.
+#
 # This is run on branches other than master - it does not push or deploy anything.
 
 name: Test
@@ -8,8 +10,92 @@ on:
     branches-ignore: [ master ]
 
 jobs:
-  test:
-    name: Build and test
+  encoders:
+    name: Build and test encoders
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Run the verify goal with Maven
+        run: |
+          mvn --batch-mode verify \
+          -pl encoders -am \
+          -Dmaven.test.failure.ignore=true
+        timeout-minutes: 30
+      - name: Upload encoders test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: encoders-surefire-reports
+          path: encoders/target/surefire-reports
+      - name: Publish test results
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: Encoders test report
+          fail_on_test_failures: true
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
+  fhir-server:
+    name: Build and test FHIR server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Run the verify goal with Maven
+        run: |
+          mvn --batch-mode verify \
+          -pl fhir-server -am \
+          -Pdocker,skip-encoders-tests \
+          -Dmaven.test.failure.ignore=true
+        timeout-minutes: 30
+      - name: Upload fhir-server test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-surefire-reports
+          path: fhir-server/target/surefire-reports
+      - name: Upload timing log
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-timing-log
+          path: fhir-server/target/timing.log
+      - name: Publish test results
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: FHIR server test report
+          fail_on_test_failures: true
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
+  site:
+    name: Build site
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -32,32 +118,6 @@ jobs:
       - name: Run the verify goal with Maven
         run: |
           mvn --batch-mode verify \
-          -Pdocker \
-          -Dmaven.test.failure.ignore=true
+          -pl site -am \
+          -DskipTests
         timeout-minutes: 30
-      - name: Upload encoders test reports
-        uses: actions/upload-artifact@v2
-        with:
-          name: encoders-surefire-reports
-          path: encoders/target/surefire-reports
-      - name: Upload fhir-server test reports
-        uses: actions/upload-artifact@v2
-        with:
-          name: fhir-server-surefire-reports
-          path: fhir-server/target/surefire-reports
-      - name: Upload timing log
-        uses: actions/upload-artifact@v2
-        with:
-          name: fhir-server-timing-log
-          path: fhir-server/target/timing.log
-      - name: Publish test results
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: Test report
-          fail_on_test_failures: true
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml

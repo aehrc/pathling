@@ -10,8 +10,7 @@ import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
@@ -47,21 +46,16 @@ public abstract class QueryExecutor {
   private final ResourceReader resourceReader;
 
   @Nonnull
-  private final Optional<TerminologyClient> terminologyClient;
-
-  @Nonnull
-  private final Optional<TerminologyClientFactory> terminologyClientFactory;
+  private final Optional<TerminologyServiceFactory> terminologyClientFactory;
 
   protected QueryExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyClient> terminologyClient,
-      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory) {
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.resourceReader = resourceReader;
-    this.terminologyClient = terminologyClient;
     this.terminologyClientFactory = terminologyClientFactory;
   }
 
@@ -106,7 +100,7 @@ public abstract class QueryExecutor {
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
       @Nonnull final Optional<List<Column>> groupingColumns) {
     return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
-        terminologyClient, terminologyClientFactory, groupingColumns);
+        terminologyClientFactory, groupingColumns);
   }
 
 }

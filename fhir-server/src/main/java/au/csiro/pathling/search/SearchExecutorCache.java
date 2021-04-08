@@ -9,8 +9,7 @@ package au.csiro.pathling.search;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -70,8 +69,8 @@ public class SearchExecutorCache implements Cacheable {
     @Override
     public IBundleProvider load(@Nonnull final SearchExecutorCacheKey key) {
       return new CachingSearchExecutor(key.getConfiguration(), key.getFhirContext(),
-          key.getSparkSession(), key.getResourceReader(), key.getTerminologyClient(),
-          key.getTerminologyClientFactory(), key.getFhirEncoders(), key.getSubjectResource(),
+          key.getSparkSession(), key.getResourceReader(),
+          key.getTerminologyServiceFactory(), key.getFhirEncoders(), key.getSubjectResource(),
           key.getFilters());
     }
 
@@ -97,10 +96,7 @@ public class SearchExecutorCache implements Cacheable {
     private final ResourceReader resourceReader;
 
     @Nonnull
-    private final Optional<TerminologyClient> terminologyClient;
-
-    @Nonnull
-    private final Optional<TerminologyClientFactory> terminologyClientFactory;
+    private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
     @Nonnull
     private final FhirEncoders fhirEncoders;
@@ -116,8 +112,7 @@ public class SearchExecutorCache implements Cacheable {
      * @param fhirContext A {@link FhirContext} for doing FHIR stuff
      * @param sparkSession A {@link SparkSession} for resolving Spark queries
      * @param resourceReader A {@link ResourceReader} for retrieving resources
-     * @param terminologyClient A {@link TerminologyClient} for resolving terminology queries
-     * @param terminologyClientFactory A {@link TerminologyClientFactory} for resolving terminology
+     * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
      * queries within parallel processing
      * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
      * objects
@@ -127,8 +122,7 @@ public class SearchExecutorCache implements Cacheable {
     public SearchExecutorCacheKey(@Nonnull final Configuration configuration,
         @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
         @Nonnull final ResourceReader resourceReader,
-        @Nonnull final Optional<TerminologyClient> terminologyClient, @Nonnull final
-    Optional<TerminologyClientFactory> terminologyClientFactory,
+        @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
         @Nonnull final FhirEncoders fhirEncoders,
         @Nonnull final ResourceType subjectResource,
         @Nonnull final Optional<StringAndListParam> filters) {
@@ -136,8 +130,7 @@ public class SearchExecutorCache implements Cacheable {
       this.fhirContext = fhirContext;
       this.sparkSession = sparkSession;
       this.resourceReader = resourceReader;
-      this.terminologyClient = terminologyClient;
-      this.terminologyClientFactory = terminologyClientFactory;
+      this.terminologyServiceFactory = terminologyServiceFactory;
       this.fhirEncoders = fhirEncoders;
       this.subjectResource = subjectResource;
       this.filters = filters;

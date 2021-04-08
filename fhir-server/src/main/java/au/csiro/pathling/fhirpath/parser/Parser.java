@@ -44,6 +44,9 @@ public class Parser {
     final CommonTokenStream tokens = new CommonTokenStream(lexer);
     final FhirPathParser parser = new FhirPathParser(tokens);
 
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(new ParserErrorListener());
+
     // Remove the default console error reporter, and add a listener that wraps each parse error in
     // an invalid request exception.
     parser.removeErrorListeners();
