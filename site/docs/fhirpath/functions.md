@@ -244,7 +244,7 @@ Condition.code.coding.translate('https://csiro.au/fhir/ConceptMap/some-map', tru
 ```
 
 <div class="callout warning">
-    The <code>reverseResolve</code> function is not within the FHIRPath 
+    The <code>translate</code> function is not within the FHIRPath 
     specification, and is currently unique to the Pathling implementation.
 </div>
 
