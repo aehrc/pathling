@@ -105,13 +105,22 @@
         </header>
         <div class="content">
           <p>
+            Check out a live demo of a user interface that you can use to make queries.
+          </p>
+          <ul class="actions">
+            <li>
+              <a href="https://go.pathling.app/aggregate?subjectResource=Patient&aggregations%5B0%5D%5Blabel%5D=Number%20of%20patients&aggregations%5B0%5D%5Bexpression%5D=count%28%29&groupings%5B0%5D%5Blabel%5D=Prescribed%20TNF%20inhibitor&groupings%5B0%5D%5Bexpression%5D=reverseResolve%28MedicationRequest.subject%29%0A%20%20.medicationCodeableConcept%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Ftnf-inhibitor%27%29%20%0A%20%20contains%20true&groupings%5B1%5D%5Blabel%5D=Contracted%20lung%20infection&groupings%5B1%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Flung-infection%27%29%20%0A%20%20contains%20true&filters%5B0%5D%5Blabel%5D=Rheumatoid%20arthritis&filters%5B0%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Frheumatoid-arthritis%27%29%20%0A%20%20contains%20true&filters%5B1%5D%5Blabel%5D=Chronic%20lung%20disease&filters%5B1%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Fchronic-lung%27%29%20%0A%20%20contains%20true" class="button primary large"
+              >Live demo</a
+              >
+            </li>
+          </ul>
+          <p>
             Technical overview, API specifications, expression reference and
             guides for getting started.
           </p>
           <ul class="actions">
             <li>
-              <a href="./docs" class="button large primary"
-                >Take me to the docs</a
+              <a href="./docs" class="button large">Take me to the docs</a
               >
             </li>
           </ul>
