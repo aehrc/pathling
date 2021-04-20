@@ -108,7 +108,7 @@
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>jwks-rsa</artifactId>
-      <version>0.17.0</version>
+      <version>0.17.1</version>
     </dependency>
 
     <!-- ANTLR -->
