@@ -10,7 +10,7 @@ parent: Documentation
 The roadmap for future development on Pathling is based upon the following
 themes:
 
-1. [Summarise operation](#summarise-operation)
+1. [Extract operation](#extract-operation)
 2. [Improved FHIRPath support](#improved-fhirpath-support)
 3. [Cell suppression](#cell-suppression)
 4. [Real-time updates](#real-time-updates)
@@ -20,23 +20,23 @@ themes:
 8. [APIs for Python and R](#apis-for-python-and-r)
 9. [Multi-tenancy](#multi-tenancy)
 
-## Summarise operation
+## Extract operation
 
-This change will introduce a new operation called `summarise`. This operation is
-designed for extracting data for use within other tools, such as statistical and
-machine learning models.
+This change will introduce a new operation called `extract`. This operation is
+designed for transforming FHIR data into a flattened form, for use within other 
+tools, such as statistical and machine learning models.
 
 The operation takes a set of expressions that define columns in a tabular view
 of the data. A URL pointing to a delimited text file is returned, which contains
 the result of executing the expressions against each subject resource.
 
-<img src="/images/summarise.png" 
-     srcset="/images/summarise@2x.png 2x, /images/summarise.png 1x"
-     alt="Summarise operation" />
+<img src="/images/extract.png" 
+     srcset="/images/extract@2x.png 2x, /images/extract.png 1x"
+     alt="Extract operation" />
 
 ### Request
 
-The request for the `$summarise` operation is a
+The request for the `$extract` operation is a
 [Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 
@@ -60,7 +60,7 @@ following parameters:
 
 ### Response
 
-The response for the `$summarise` operation is a
+The response for the `$extract` operation is a
 [Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
 following parameters:
 

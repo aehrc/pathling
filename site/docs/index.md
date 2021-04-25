@@ -65,7 +65,7 @@ In summary, the operations available within Pathling are:
 3. [aggregate](./aggregate.html) - A "pivot table as an API", able to take in a
    set of expressions that describe aggregations, groupings and filters and
    return grouped aggregate data.
-4. [summarise](./roadmap.html#summarise-operation) _(currently under
+4. [extract](./roadmap.html#extract-operation) _(currently under
    development)_ - An operation that allows a client to describe a custom
    tabular extract of FHIR data, and retrieve it in bulk.
 
@@ -87,7 +87,8 @@ description of expressions within requests to these operations. FHIRPath is a
 language that is capable of navigating and extracting data from within the graph
 of resources and data types that FHIR uses as its data model. It provides a
 convenient way for us to abstract away the complexity of navigating FHIR data
-structures that we ecounter when using more general query languages such as SQL.
+structures that we encounter when using more general query languages such as 
+SQL.
 
 You can get further information about supported syntax and functions within
 FHIRPath [here](./fhirpath).
