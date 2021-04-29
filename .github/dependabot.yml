@@ -1,0 +1,43 @@
+version: 2
+updates:
+- package-ecosystem: maven
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: ca.uhn.hapi.fhir:hapi-fhir-client
+    versions:
+    - 5.3.2
+  - dependency-name: ca.uhn.hapi.fhir:hapi-fhir-server
+    versions:
+    - 5.3.2
+  - dependency-name: ca.uhn.hapi.fhir:hapi-fhir-validation-resources-r4
+    versions:
+    - 5.3.2
+  - dependency-name: ca.uhn.hapi.fhir:hapi-fhir-structures-r4
+    versions:
+    - 5.3.2
+  - dependency-name: ca.uhn.hapi.fhir:hapi-fhir-base
+    versions:
+    - 5.3.2
+  - dependency-name: com.fasterxml.jackson.core:jackson-core
+    versions:
+    - 2.12.2
+  - dependency-name: com.auth0:java-jwt
+    versions:
+    - 3.13.0
+    - 3.14.0
+  - dependency-name: io.sentry:sentry
+    versions:
+    - 4.0.0
+    - 4.2.0
+  - dependency-name: org.springframework.boot:spring-boot-starter-parent
+    versions:
+    - 2.4.3
+  - dependency-name: org.projectlombok:lombok-maven-plugin
+    versions:
+    - 1.18.18.0
+  - dependency-name: com.fasterxml.woodstox:woodstox-core
+    versions:
+    - 6.2.4
