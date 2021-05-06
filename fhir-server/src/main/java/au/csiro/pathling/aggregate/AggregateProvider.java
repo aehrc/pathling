@@ -11,6 +11,7 @@ import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -18,6 +19,10 @@ import javax.annotation.Nullable;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * HAPI plain provider that provides an entry point for the "aggregate" system-wide operation.
@@ -64,6 +69,19 @@ public class AggregateProvider implements IResourceProvider {
       @Nullable @OperationParam(name = "aggregation") final List<String> aggregation,
       @Nullable @OperationParam(name = "grouping") final List<String> grouping,
       @Nullable @OperationParam(name = "filter") final List<String> filter) {
+
+    // SPIKE: Get access to the current context
+    AbstractAuthenticationToken auth = (AbstractAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
+    System.out.println(auth);
+    System.out.println(auth.getAuthorities());
+
+    // NEEDS operation:aggregate
+
+    boolean isAllowed = auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).anyMatch("operation:aggregate"::equals);
+    if (!isAllowed) {
+      throw BaseServerResponseException.newInstance(403, "Needs `operation:aggregate`");
+    }
+
     final AggregateRequest query = new AggregateRequest(
         resourceType, Optional.ofNullable(aggregation), Optional.ofNullable(grouping),
         Optional.ofNullable(filter));

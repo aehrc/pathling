@@ -182,7 +182,11 @@ public class FhirServer extends RestfulServer {
       // Configure interceptors.
       defineCorsConfiguration();
       configureRequestLogging();
-      configureAuthorisation();
+
+
+      // SPIKE: This will be moved out to spring-security
+      // configureAuthorisation();
+
       registerInterceptor(new ResponseHighlighterInterceptor());
 
       // Configure paging.

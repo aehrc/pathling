@@ -83,6 +83,7 @@ public class OperationDefinitionProvider implements IResourceProvider {
   public OperationDefinition getOperationDefinitionById(@Nullable @IdParam final IIdType id) {
     checkUserInput(id != null, "Missing ID parameter");
 
+
     final String idString = id.getValue();
     final OperationDefinition resource = resources.get(idString);
     if (resource == null) {
