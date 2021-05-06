@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.spark.SparkException;
+import org.springframework.security.access.AccessDeniedException;
 
 /**
  * This class unifies exception handling.
@@ -104,7 +105,8 @@ public class ErrorHandlingInterceptor {
       // Errors relating to invalid user input are passed through using the corresponding HAPI
       // exception.
       return new InvalidRequestException(e);
-
+    } catch (final AccessDeniedException e) {
+      return BaseServerResponseException.newInstance(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
     } catch (final Throwable e) {
       // Anything else is unexpected and triggers a 500.
       return internalServerError(e);

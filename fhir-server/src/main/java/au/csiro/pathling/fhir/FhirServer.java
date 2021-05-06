@@ -9,7 +9,6 @@ package au.csiro.pathling.fhir;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Authorisation;
 import au.csiro.pathling.aggregate.AggregateExecutor;
-import au.csiro.pathling.aggregate.AggregateProvider;
 import au.csiro.pathling.aggregate.CachingAggregateExecutor;
 import au.csiro.pathling.aggregate.FreshAggregateExecutor;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -97,6 +96,9 @@ public class FhirServer extends RestfulServer {
   @Nonnull
   private final SearchExecutorCache searchExecutorCache;
 
+  @Nonnull
+  private final ResourceProviderFactory resourceProviderFactory;
+
   /**
    * @param fhirContext a {@link FhirContext} for use in executing FHIR operations
    * @param configuration a {@link Configuration} instance which controls the behaviour of the
@@ -134,7 +136,8 @@ public class FhirServer extends RestfulServer {
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
-      @Nonnull final SearchExecutorCache searchExecutorCache) {
+      @Nonnull final SearchExecutorCache searchExecutorCache,
+      @Nonnull final ResourceProviderFactory resourceProviderFactory) {
     super(fhirContext);
     this.configuration = configuration;
     this.sparkSession = sparkSession;
@@ -150,6 +153,7 @@ public class FhirServer extends RestfulServer {
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.conformanceProvider = conformanceProvider;
     this.searchExecutorCache = searchExecutorCache;
+    this.resourceProviderFactory = resourceProviderFactory;
     log.info("Starting FHIR server with configuration: {}", configuration);
   }
 
@@ -182,7 +186,6 @@ public class FhirServer extends RestfulServer {
       // Configure interceptors.
       defineCorsConfiguration();
       configureRequestLogging();
-
 
       // SPIKE: This will be moved out to spring-security
       // configureAuthorisation();
@@ -218,8 +221,8 @@ public class FhirServer extends RestfulServer {
     for (final ResourceType resourceType : ResourceType.values()) {
       final Class<? extends IBaseResource> resourceTypeClass = getFhirContext()
           .getResourceDefinition(resourceType.name()).getImplementingClass();
-      final IResourceProvider aggregateProvider = new AggregateProvider(aggregateExecutor,
-          resourceTypeClass);
+      final IResourceProvider aggregateProvider = resourceProviderFactory
+          .createAggregateResourceProvider(resourceTypeClass);
       providers.add(aggregateProvider);
     }
     return providers;

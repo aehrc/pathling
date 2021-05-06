@@ -35,6 +35,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 /**
@@ -46,7 +47,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("core")
 @Slf4j
-public class ResourceReader implements Cacheable {
+public class ResourceReader /*implements Cacheable*/ {
 
   @Nonnull
   private final SparkSession spark;
@@ -193,7 +194,7 @@ public class ResourceReader implements Cacheable {
     return resources;
   }
 
-  @Override
+  //@Override
   public void invalidateCache() {
     if (cache != null) {
       cache.invalidateAll();

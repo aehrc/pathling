@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 /**
@@ -48,6 +49,7 @@ public class ImportProvider {
    * @return A FHIR {@link OperationOutcome} resource describing the result
    */
   @Operation(name = "$import")
+  @PreAuthorize("hasAuthority('operation:import')")
   public OperationOutcome importOperation(@ResourceParam final Parameters parameters) {
     return executor.execute(parameters);
   }

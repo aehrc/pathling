@@ -19,16 +19,23 @@ import javax.annotation.Nullable;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Scope;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 
 /**
  * HAPI plain provider that provides an entry point for the "aggregate" system-wide operation.
  *
  * @author John Grimes
  */
+@Component
+@Scope("prototype")
+@Profile("server")
 public class AggregateProvider implements IResourceProvider {
 
   @Nonnull
@@ -65,23 +72,11 @@ public class AggregateProvider implements IResourceProvider {
    * @return {@link Parameters} object representing the result
    */
   @Operation(name = "$aggregate", idempotent = true)
+  @PreAuthorize("hasAuthority('operation:aggregate')")
   public Parameters aggregate(
       @Nullable @OperationParam(name = "aggregation") final List<String> aggregation,
       @Nullable @OperationParam(name = "grouping") final List<String> grouping,
       @Nullable @OperationParam(name = "filter") final List<String> filter) {
-
-    // SPIKE: Get access to the current context
-    AbstractAuthenticationToken auth = (AbstractAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
-    System.out.println(auth);
-    System.out.println(auth.getAuthorities());
-
-    // NEEDS operation:aggregate
-
-    boolean isAllowed = auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).anyMatch("operation:aggregate"::equals);
-    if (!isAllowed) {
-      throw BaseServerResponseException.newInstance(403, "Needs `operation:aggregate`");
-    }
-
     final AggregateRequest query = new AggregateRequest(
         resourceType, Optional.ofNullable(aggregation), Optional.ofNullable(grouping),
         Optional.ofNullable(filter));
