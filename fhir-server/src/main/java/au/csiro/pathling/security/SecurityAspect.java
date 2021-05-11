@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 public class SecurityAspect {
 
-  @Before("@annotation(resourceRead) && args(resourceType,..)")
+  @Before("@annotation(resourceReadAccess) && args(resourceType,..)")
   public void checkResourceRead(ResourceReadAccess resourceReadAccess, ResourceType resourceType) {
     System.out.println("###### BEFORE read resource" + resourceType);
     SecurityUtils.checkHasAuthority(PathlingAuthority.readResource(resourceType));
