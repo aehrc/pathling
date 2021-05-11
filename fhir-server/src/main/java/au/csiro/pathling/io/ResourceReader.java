@@ -13,6 +13,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.security.ResourceReadAccess;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -35,7 +36,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 /**
@@ -47,7 +47,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("core")
 @Slf4j
-public class ResourceReader /*implements Cacheable*/ {
+public class ResourceReader implements Cacheable {
 
   @Nonnull
   private final SparkSession spark;
@@ -168,6 +168,7 @@ public class ResourceReader /*implements Cacheable*/ {
    * @return A {@link Dataset} containing the raw resource, i.e. NOT wrapped in a value column.
    */
   @Nonnull
+  @ResourceReadAccess
   public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
     if (cache == null) {
       return getDatasetForResourceType(resourceType);

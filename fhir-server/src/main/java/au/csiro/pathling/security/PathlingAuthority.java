@@ -8,7 +8,7 @@ public class PathlingAuthority {
 
   private final String authority;
 
-  public PathlingAuthority(String authority) {
+  private PathlingAuthority(String authority) {
     this.authority = authority;
   }
 
@@ -27,6 +27,10 @@ public class PathlingAuthority {
 
   public static PathlingAuthority writeResource(@Nonnull final ResourceType resourceType) {
     return new PathlingAuthority("user/" + resourceType.toCode().toLowerCase() + ".write");
+  }
+
+  public static PathlingAuthority fromString(@Nonnull final String authority) {
+    return new PathlingAuthority(authority);
   }
 
   private static String globToRegex(@Nonnull final String globExpression) {

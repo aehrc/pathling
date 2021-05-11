@@ -8,10 +8,10 @@ package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
+import au.csiro.pathling.security.RequiresAuthority;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -21,11 +21,6 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -72,7 +67,7 @@ public class AggregateProvider implements IResourceProvider {
    * @return {@link Parameters} object representing the result
    */
   @Operation(name = "$aggregate", idempotent = true)
-  @PreAuthorize("hasAuthority('operation:aggregate')")
+  @RequiresAuthority("operation:aggregate")
   public Parameters aggregate(
       @Nullable @OperationParam(name = "aggregation") final List<String> aggregation,
       @Nullable @OperationParam(name = "grouping") final List<String> grouping,

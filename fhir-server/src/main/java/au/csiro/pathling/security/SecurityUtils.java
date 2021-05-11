@@ -11,7 +11,6 @@ public final class SecurityUtils {
   }
 
   public static void checkHasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
-    System.out.println("###### required authority: " + requiredAuthority);
     AbstractAuthenticationToken auth = (AbstractAuthenticationToken) SecurityContextHolder
         .getContext().getAuthentication();
     if (!auth.getAuthorities().stream().anyMatch(requiredAuthority::matches)) {

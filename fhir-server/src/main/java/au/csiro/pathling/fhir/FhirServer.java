@@ -188,7 +188,7 @@ public class FhirServer extends RestfulServer {
       configureRequestLogging();
 
       // SPIKE: This will be moved out to spring-security
-      // configureAuthorisation();
+      configureAuthorisation();
 
       registerInterceptor(new ResponseHighlighterInterceptor());
 
@@ -284,9 +284,9 @@ public class FhirServer extends RestfulServer {
     if (configuration.getAuth().isEnabled()) {
       final Authorisation authorisationConfig = this.configuration.getAuth();
 
-      final AuthorisationInterceptor authorisationInterceptor =
-          new AuthorisationInterceptor(authorisationConfig);
-      registerInterceptor(authorisationInterceptor);
+      // final AuthorisationInterceptor authorisationInterceptor =
+      //     new AuthorisationInterceptor(authorisationConfig);
+      // registerInterceptor(authorisationInterceptor);
 
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
           new SmartConfigurationInterceptor(authorisationConfig);
