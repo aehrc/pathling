@@ -227,6 +227,12 @@ public class Configuration {
     private boolean enabled;
 
     /**
+     * Enables OCID configuration discovery.
+     */
+    @NotNull
+    private boolean enableOcid;
+
+    /**
      * Provides the URL of a JSON Web Key Set from which the signing key for incoming bearer tokens
      * can be retrieved.
      */

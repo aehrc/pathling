@@ -11,6 +11,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.SearchExecutorCache.SearchExecutorCacheKey;
+import au.csiro.pathling.security.RequiresAuthority;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Search;
@@ -23,6 +24,9 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 /**
  * This class wraps the {@link SearchProvider} class, caching the {@link IBundleProvider} instances
@@ -30,6 +34,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
+@Component
+@Scope("prototype")
+@Profile("server")
 public class CachingSearchProvider implements IResourceProvider {
 
   @Nonnull
@@ -99,6 +106,7 @@ public class CachingSearchProvider implements IResourceProvider {
    * of results
    */
   @Search
+  @RequiresAuthority("operation:search")
   @SuppressWarnings({"UnusedReturnValue", "unused"})
   public IBundleProvider search() {
     final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
@@ -116,6 +124,7 @@ public class CachingSearchProvider implements IResourceProvider {
    * of results
    */
   @Search(queryName = SearchProvider.QUERY_NAME)
+  @RequiresAuthority("operation:search")
   @SuppressWarnings({"UnusedReturnValue", "unused"})
   public IBundleProvider search(@Nullable @OptionalParam(name = SearchProvider.FILTER_PARAM)
   final StringAndListParam filters) {

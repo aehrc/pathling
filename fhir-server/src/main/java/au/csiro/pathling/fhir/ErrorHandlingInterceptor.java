@@ -8,6 +8,7 @@ package au.csiro.pathling.fhir;
 
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import ca.uhn.fhir.interceptor.api.Hook;
@@ -104,7 +105,9 @@ public class ErrorHandlingInterceptor {
       // Errors relating to invalid user input are passed through using the corresponding HAPI
       // exception.
       return new InvalidRequestException(e);
-
+    } catch (final AccessDeniedError e) {
+      return BaseServerResponseException
+          .newInstance(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
     } catch (final Throwable e) {
       // Anything else is unexpected and triggers a 500.
       return internalServerError(e);
