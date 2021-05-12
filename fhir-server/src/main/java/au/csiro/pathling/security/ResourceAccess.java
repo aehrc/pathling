@@ -7,5 +7,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface ResourceReadAccess {
+public @interface ResourceAccess {
+
+  PathlingAuthority.AccessType value();
 }

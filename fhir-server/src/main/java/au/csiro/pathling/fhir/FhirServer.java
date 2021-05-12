@@ -13,9 +13,7 @@ import au.csiro.pathling.aggregate.CachingAggregateExecutor;
 import au.csiro.pathling.aggregate.FreshAggregateExecutor;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.search.CachingSearchProvider;
 import au.csiro.pathling.search.SearchExecutorCache;
-import au.csiro.pathling.search.SearchProvider;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -219,10 +217,8 @@ public class FhirServer extends RestfulServer {
 
     // Instantiate an aggregate provider for every resource type in FHIR.
     for (final ResourceType resourceType : ResourceType.values()) {
-      final Class<? extends IBaseResource> resourceTypeClass = getFhirContext()
-          .getResourceDefinition(resourceType.name()).getImplementingClass();
       final IResourceProvider aggregateProvider = resourceProviderFactory
-          .createAggregateResourceProvider(resourceTypeClass);
+          .createAggregateResourceProvider(resourceType);
       providers.add(aggregateProvider);
     }
     return providers;
@@ -234,16 +230,8 @@ public class FhirServer extends RestfulServer {
 
     // Instantiate a search provider for every resource type in FHIR.
     for (final ResourceType resourceType : ResourceType.values()) {
-      final Class<? extends IBaseResource> resourceTypeClass = getFhirContext()
-          .getResourceDefinition(resourceType.name()).getImplementingClass();
-
-      final IResourceProvider searchProvider =
-          configuration.getCaching().isEnabled()
-          ? new CachingSearchProvider(configuration, getFhirContext(), sparkSession, resourceReader,
-              terminologyServiceFactory, fhirEncoders, resourceTypeClass, searchExecutorCache)
-          : new SearchProvider(configuration, getFhirContext(), sparkSession, resourceReader,
-              terminologyServiceFactory, fhirEncoders, resourceTypeClass);
-
+      final IResourceProvider searchProvider = resourceProviderFactory
+          .createSearchResourceProvider(resourceType);
       providers.add(searchProvider);
     }
     return providers;

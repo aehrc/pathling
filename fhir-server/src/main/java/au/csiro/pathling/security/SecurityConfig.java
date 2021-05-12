@@ -1,6 +1,8 @@
 package au.csiro.pathling.security;
 
 import au.csiro.pathling.Configuration;
+import java.util.function.Supplier;
+import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,8 +18,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
 /**
- * See: https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization
- * See (CSRF) : https://stackoverflow.com/questions/51079564/spring-security-antmatchers-not-being-applied-on-post-requests-and-only-works-wi/51088555
+ * See: https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization See (CSRF)
+ * : https://stackoverflow.com/questions/51079564/spring-security-antmatchers-not-being-applied-on-post-requests-and-only-works-wi/51088555
  */
 @EnableWebSecurity
 @Profile("server")
@@ -34,7 +36,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   protected void configure(HttpSecurity http) throws Exception {
 
     if (authEnabled) {
-      log.info("Request authentication is enabled, with config: {}", configuration.getAuth());
+      final Configuration.Authorisation authConfig = configuration.getAuth();
+      log.info("Request authentication is enabled, with config: {}", authConfig);
       http.authorizeRequests()
           // GET requests that do not require authentication
           .mvcMatchers(HttpMethod.GET,
@@ -48,7 +51,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
           .and()
           .oauth2ResourceServer()
           .jwt()
-          .decoder(jwtDecoder())
+          .decoder(jwtDecoder(authConfig))
           .jwtAuthenticationConverter(jwtAuthenticationConverter());
     } else {
       log.warn("Request authentication is disabled.");
@@ -62,34 +65,35 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
   }
 
-  // CorsConfigurationSource corsConfigurationSource() {
-  //   CorsConfiguration configuration = new CorsConfiguration();
-  //   configuration.setAllowedMethods(Arrays.asList(
-  //       HttpMethod.GET.name(),
-  //       HttpMethod.PUT.name(),
-  //       HttpMethod.POST.name(),
-  //       HttpMethod.DELETE.name()
-  //   ));
-  //
-  //   UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-  //   source.registerCorsConfiguration("/**", configuration.applyPermitDefaultValues());
-  //   return source;
-  // }
+  JwtDecoder jwtDecoder(@Nonnull final Configuration.Authorisation authConfig) {
 
-  JwtDecoder jwtDecoder() {
-    final String issuer = "https://dev-ztwhmd51.au.auth0.com/";
-    //OAuth2TokenValidator<Jwt> withAudience = new AudienceValidator(audience);
+    final Supplier<RuntimeException> authConfigError = () -> new RuntimeException(
+        "Configuration for issuer and audience must be present if authorisation is enabled");
+    final String issuer = authConfig.getIssuer().orElseThrow(authConfigError);
+    final String audience = authConfig.getAudience().orElseThrow(authConfigError);
+
+    OAuth2TokenValidator<Jwt> withAudience = new JwtAudienceValidator(audience);
     OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuer);
-    OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(withIssuer);
+    OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(withIssuer,
+        withAudience);
 
-    NimbusJwtDecoder jwtDecoder = (NimbusJwtDecoder) JwtDecoders.fromOidcIssuerLocation(issuer);
+    // TODO: OIDC info includes all the URLs (revoke, auth, etc)
+    final NimbusJwtDecoder jwtDecoder;
+    if (authConfig.isEnableOcid()) {
+      jwtDecoder = (NimbusJwtDecoder) JwtDecoders.fromOidcIssuerLocation(issuer);
+    } else {
+      // TODO: Fix error message
+      final String jwksUrl = authConfig.getJwksUrl().orElseThrow(authConfigError);
+      // TODO: This needs to be reviewd
+      jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwksUrl).build();
+    }
     jwtDecoder.setJwtValidator(validator);
     return jwtDecoder;
   }
 
   JwtAuthenticationConverter jwtAuthenticationConverter() {
     JwtGrantedAuthoritiesConverter converter = new JwtGrantedAuthoritiesConverter();
-    converter.setAuthoritiesClaimName("permissions");
+    converter.setAuthoritiesClaimName("scope");
     converter.setAuthorityPrefix("");
 
     JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();

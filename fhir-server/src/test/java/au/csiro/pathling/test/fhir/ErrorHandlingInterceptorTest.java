@@ -9,6 +9,7 @@ package au.csiro.pathling.test.fhir;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.fhir.ErrorHandlingInterceptor;
 import ca.uhn.fhir.parser.DataFormatException;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
@@ -120,6 +121,17 @@ public class ErrorHandlingInterceptorTest {
     assertEquals("Unknown problem while parsing FHIR/JSON content: "
             + "Some Error",
         actualException.getMessage());
+  }
+
+
+  @Test
+  public void convertsAccessDeniedError() {
+    final BaseServerResponseException actualException = callInterceptor(
+        new AccessDeniedError("Access denied", "operation:import")
+    );
+    assertTrue(actualException instanceof ForbiddenOperationException);
+    assertEquals(403, actualException.getStatusCode());
+    assertEquals("Access denied", actualException.getMessage());
   }
 
 }
