@@ -17,6 +17,7 @@ import ca.uhn.fhir.rest.server.exceptions.*;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.UndeclaredThrowableException;
 import javax.annotation.Nonnull;
 import org.apache.spark.SparkException;
 import org.junit.jupiter.api.Tag;
@@ -57,8 +58,10 @@ public class ErrorHandlingInterceptorTest {
 
   @Test
   public void recursiveUnwrappingOfException() {
-    final Exception wrappedException = new InternalErrorException(new InvocationTargetException(
-        new SparkException("Spark Error", new UncheckedExecutionException(SERVER_RESPONSE_EX1))));
+    final Exception wrappedException = new UndeclaredThrowableException(
+        new InternalErrorException(new InvocationTargetException(
+            new SparkException("Spark Error",
+                new UncheckedExecutionException(SERVER_RESPONSE_EX1)))));
     assertEquals(SERVER_RESPONSE_EX1, callInterceptor(wrappedException));
   }
 
@@ -122,7 +125,6 @@ public class ErrorHandlingInterceptorTest {
             + "Some Error",
         actualException.getMessage());
   }
-
 
   @Test
   public void convertsAccessDeniedError() {

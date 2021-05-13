@@ -87,12 +87,12 @@ public class ResourceProviderFactory {
   }
 
   @Nonnull
-  public IResourceProvider createSearchResourceProvider(@Nonnull final ResourceType resourceType) {
+  public IResourceProvider createSearchResourceProvider(@Nonnull final ResourceType resourceType, boolean cached) {
     final Class<? extends IBaseResource> resourceTypeClass = fhirContext
         .getResourceDefinition(resourceType.name()).getImplementingClass();
 
     final IResourceProvider searchProvider =
-        configuration.getCaching().isEnabled()
+        cached
         ? applicationContext
             .getBean(CachingSearchProvider.class, configuration, fhirContext, sparkSession,
                 resourceReader,

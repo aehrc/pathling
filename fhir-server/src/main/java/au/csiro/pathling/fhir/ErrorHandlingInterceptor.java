@@ -25,6 +25,7 @@ import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.UndeclaredThrowableException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -64,7 +65,7 @@ public class ErrorHandlingInterceptor {
     try {
       throw error;
 
-    } catch (final SparkException | UncheckedExecutionException | InternalErrorException | InvocationTargetException e) {
+    } catch (final SparkException | UncheckedExecutionException | InternalErrorException | InvocationTargetException | UndeclaredThrowableException e) {
       // A number of exceptions are being used to wrap the actual cause. In this case we unwrap
       // its cause and pass it back to this same method to be re-evaluated.
       //

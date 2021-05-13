@@ -231,7 +231,7 @@ public class FhirServer extends RestfulServer {
     // Instantiate a search provider for every resource type in FHIR.
     for (final ResourceType resourceType : ResourceType.values()) {
       final IResourceProvider searchProvider = resourceProviderFactory
-          .createSearchResourceProvider(resourceType);
+          .createSearchResourceProvider(resourceType, configuration.getCaching().isEnabled());
       providers.add(searchProvider);
     }
     return providers;
