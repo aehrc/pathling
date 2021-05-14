@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @author John Grimes
  */
+// TODO: This could migth be better done as in Spring or servlet.
 @Interceptor
 @Slf4j
 public class SmartConfigurationInterceptor {

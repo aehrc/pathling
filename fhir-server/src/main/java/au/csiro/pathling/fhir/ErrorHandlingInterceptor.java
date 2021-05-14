@@ -31,6 +31,10 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.spark.SparkException;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 
 /**
  * This class unifies exception handling.
@@ -107,14 +111,29 @@ public class ErrorHandlingInterceptor {
       // exception.
       return new InvalidRequestException(e);
     } catch (final AccessDeniedError e) {
-      return BaseServerResponseException
-          .newInstance(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
+      return buildException(HttpServletResponse.SC_FORBIDDEN, e.getMessage(), IssueType.FORBIDDEN);
     } catch (final Throwable e) {
       // Anything else is unexpected and triggers a 500.
       return internalServerError(e);
     }
-
   }
+
+  @Nonnull
+  private BaseServerResponseException buildException(int theStatusCode,
+      @Nonnull final String message,
+      @Nonnull final IssueType issueType) {
+    final OperationOutcome opOutcome = new OperationOutcome();
+    final OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
+    issue.setSeverity(IssueSeverity.ERROR);
+    issue.setDiagnostics(message);
+    issue.setCode(issueType);
+    opOutcome.addIssue(issue);
+    final BaseServerResponseException ex = BaseServerResponseException
+        .newInstance(theStatusCode, message);
+    ex.setOperationOutcome(opOutcome);
+    return ex;
+  }
+
 
   @Nonnull
   BaseServerResponseException convertDataFormatException(@Nonnull final DataFormatException e) {

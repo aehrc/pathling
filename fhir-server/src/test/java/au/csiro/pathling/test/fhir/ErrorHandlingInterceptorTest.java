@@ -20,6 +20,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 import javax.annotation.Nonnull;
 import org.apache.spark.SparkException;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -134,6 +138,15 @@ public class ErrorHandlingInterceptorTest {
     assertTrue(actualException instanceof ForbiddenOperationException);
     assertEquals(403, actualException.getStatusCode());
     assertEquals("Access denied", actualException.getMessage());
+
+    final OperationOutcomeIssueComponent expectedIssue = new OperationOutcomeIssueComponent();
+    expectedIssue.setSeverity(IssueSeverity.ERROR);
+    expectedIssue.setCode(IssueType.FORBIDDEN);
+    expectedIssue.setDiagnostics("Access denied");
+
+    assertTrue(expectedIssue
+        .equalsDeep(((OperationOutcome) actualException.getOperationOutcome()).getIssueFirstRep())
+    );
   }
 
 }
