@@ -18,8 +18,11 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
 /**
- * See: https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization See (CSRF)
- * : https://stackoverflow.com/questions/51079564/spring-security-antmatchers-not-being-applied-on-post-requests-and-only-works-wi/51088555
+ * Web security configuration for Pathling.
+ * <p>
+ * See: https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization
+ * <p>
+ * See (CSRF) : https://stackoverflow.com/questions/51079564/spring-security-antmatchers-not-being-applied-on-post-requests-and-only-works-wi/51088555
  */
 @EnableWebSecurity
 @Profile("server")

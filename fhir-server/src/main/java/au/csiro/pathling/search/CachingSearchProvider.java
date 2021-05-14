@@ -11,7 +11,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.SearchExecutorCache.SearchExecutorCacheKey;
-import au.csiro.pathling.security.RequiresAuthority;
+import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Search;
@@ -106,7 +106,7 @@ public class CachingSearchProvider implements IResourceProvider {
    * of results
    */
   @Search
-  @RequiresAuthority("operation:search")
+  @OperationAccess("search")
   @SuppressWarnings({"UnusedReturnValue", "unused"})
   public IBundleProvider search() {
     final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
@@ -124,7 +124,7 @@ public class CachingSearchProvider implements IResourceProvider {
    * of results
    */
   @Search(queryName = SearchProvider.QUERY_NAME)
-  @RequiresAuthority("operation:search")
+  @OperationAccess("search")
   @SuppressWarnings({"UnusedReturnValue", "unused"})
   public IBundleProvider search(@Nullable @OptionalParam(name = SearchProvider.FILTER_PARAM)
   final StringAndListParam filters) {

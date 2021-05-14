@@ -21,6 +21,11 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/**
+ * A factory that encapsulates creation of resource specific ResourceProviders. It uses
+ * ApplicationContext to create the instances of ResoucrceProviders so that they are spring beans
+ * and as such can be detected by SpringAOP (e.g: for security implementation)
+ */
 @Component
 @Profile("server")
 public class ResourceProviderFactory {
@@ -77,6 +82,12 @@ public class ResourceProviderFactory {
                              : freshAggregateExecutor;
   }
 
+  /**
+   * Creates a {@link AggregateProvider} bean for given resource type.
+   *
+   * @param resourceType the type of resource to create the provider for.
+   * @return {@link AggregateProvider} bean.
+   */
   @Nonnull
   public IResourceProvider createAggregateResourceProvider(
       @Nonnull final ResourceType resourceType) {
@@ -86,21 +97,27 @@ public class ResourceProviderFactory {
         .getBean(AggregateProvider.class, aggregateExecutor, resourceTypeClass);
   }
 
+  /**
+   * Creates a {@link SearchProvider} or {@link CachingSearchProvider} bean for given resource
+   * type.
+   *
+   * @param resourceType the type of resource to create the provider for.
+   * @param cached whether to create the {@link CachingSearchProvider}
+   * @return the SearchProvider bean.
+   */
   @Nonnull
-  public IResourceProvider createSearchResourceProvider(@Nonnull final ResourceType resourceType, boolean cached) {
+  public IResourceProvider createSearchResourceProvider(@Nonnull final ResourceType resourceType,
+      boolean cached) {
     final Class<? extends IBaseResource> resourceTypeClass = fhirContext
         .getResourceDefinition(resourceType.name()).getImplementingClass();
 
-    final IResourceProvider searchProvider =
-        cached
-        ? applicationContext
-            .getBean(CachingSearchProvider.class, configuration, fhirContext, sparkSession,
-                resourceReader,
-                terminologyServiceFactory, fhirEncoders, resourceTypeClass, searchExecutorCache)
-        : applicationContext
-            .getBean(SearchProvider.class, configuration, fhirContext, sparkSession, resourceReader,
-                terminologyServiceFactory, fhirEncoders, resourceTypeClass);
-    return searchProvider;
+    return cached
+    ? applicationContext
+        .getBean(CachingSearchProvider.class, configuration, fhirContext, sparkSession,
+            resourceReader,
+            terminologyServiceFactory, fhirEncoders, resourceTypeClass, searchExecutorCache)
+    : applicationContext
+        .getBean(SearchProvider.class, configuration, fhirContext, sparkSession, resourceReader,
+            terminologyServiceFactory, fhirEncoders, resourceTypeClass);
   }
-
 }

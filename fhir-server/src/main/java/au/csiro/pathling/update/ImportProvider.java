@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.update;
 
-import au.csiro.pathling.security.RequiresAuthority;
+import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import javax.annotation.Nonnull;
@@ -49,7 +49,7 @@ public class ImportProvider {
    * @return A FHIR {@link OperationOutcome} resource describing the result
    */
   @Operation(name = "$import")
-  @RequiresAuthority("operation:import")
+  @OperationAccess("import")
   public OperationOutcome importOperation(@ResourceParam final Parameters parameters) {
     return executor.execute(parameters);
   }

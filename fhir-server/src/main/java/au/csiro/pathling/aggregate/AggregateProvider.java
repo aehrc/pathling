@@ -8,7 +8,7 @@ package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
-import au.csiro.pathling.security.RequiresAuthority;
+import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
@@ -67,7 +67,7 @@ public class AggregateProvider implements IResourceProvider {
    * @return {@link Parameters} object representing the result
    */
   @Operation(name = "$aggregate", idempotent = true)
-  @RequiresAuthority("operation:aggregate")
+  @OperationAccess("aggregate")
   public Parameters aggregate(
       @Nullable @OperationParam(name = "aggregation") final List<String> aggregation,
       @Nullable @OperationParam(name = "grouping") final List<String> grouping,
