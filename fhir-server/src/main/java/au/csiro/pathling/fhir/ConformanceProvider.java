@@ -7,7 +7,7 @@
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorisation;
+import au.csiro.pathling.Configuration.Authorization;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.rest.annotation.Metadata;
@@ -130,22 +130,22 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     final CapabilityStatementRestSecurityComponent security = new CapabilityStatementRestSecurityComponent();
     security.setCors(true);
     if (configuration.getAuth().isEnabled()) {
-      final Authorisation authorisationConfig = configuration.getAuth();
+      final Authorization authorizationConfig = configuration.getAuth();
 
       final CodeableConcept smart = new CodeableConcept(
           new Coding(RESTFUL_SECURITY_URI, RESTFUL_SECURITY_CODE, RESTFUL_SECURITY_CODE));
       smart.setText("OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)");
       security.getService().add(smart);
 
-      if (authorisationConfig.getAuthorizeUrl().isPresent()
-          || authorisationConfig.getTokenUrl().isPresent()
-          || authorisationConfig.getRevokeUrl().isPresent()) {
+      if (authorizationConfig.getAuthorizeUrl().isPresent()
+          || authorizationConfig.getTokenUrl().isPresent()
+          || authorizationConfig.getRevokeUrl().isPresent()) {
         final Extension oauthUris = new Extension(SMART_OAUTH_URI);
-        authorisationConfig.getAuthorizeUrl()
+        authorizationConfig.getAuthorizeUrl()
             .ifPresent(url -> oauthUris.addExtension("authorize", new UriType(url)));
-        authorisationConfig.getTokenUrl()
+        authorizationConfig.getTokenUrl()
             .ifPresent(url -> oauthUris.addExtension("token", new UriType(url)));
-        authorisationConfig.getRevokeUrl()
+        authorizationConfig.getRevokeUrl()
             .ifPresent(url -> oauthUris.addExtension("revoke", new UriType(url)));
         security.addExtension(oauthUris);
       }

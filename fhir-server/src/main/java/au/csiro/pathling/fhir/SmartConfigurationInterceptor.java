@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhir;
 
-import au.csiro.pathling.Configuration.Authorisation;
+import au.csiro.pathling.Configuration.Authorization;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @author John Grimes
  */
-// TODO: This could migth be better done as in Spring or servlet.
+// TODO: This could might be better done as in Spring or servlet.
 @Interceptor
 @Slf4j
 public class SmartConfigurationInterceptor {
@@ -38,13 +38,13 @@ public class SmartConfigurationInterceptor {
   private final String response;
 
   /**
-   * @param configuration The authorisation section of the {@link au.csiro.pathling.Configuration}.
+   * @param configuration the authorization section of the {@link au.csiro.pathling.Configuration}.
    */
-  public SmartConfigurationInterceptor(@Nonnull final Authorisation configuration) {
+  public SmartConfigurationInterceptor(@Nonnull final Authorization configuration) {
     response = buildResponse(configuration);
   }
 
-  private static String buildResponse(@Nonnull final Authorisation configuration) {
+  private static String buildResponse(@Nonnull final Authorization configuration) {
     final SmartConfiguration smartConfiguration = new SmartConfiguration();
     configuration.getAuthorizeUrl().ifPresent(smartConfiguration::setAuthorizationEndpoint);
     configuration.getTokenUrl().ifPresent(smartConfiguration::setTokenEndpoint);
@@ -58,7 +58,7 @@ public class SmartConfigurationInterceptor {
 
   /**
    * HAPI hook to selectively serve the SMART configuration document, when the URL matches and
-   * authorisation is enabled.
+   * authorization is enabled.
    *
    * @param servletRequest the details of the request
    * @param servletResponse the response that will be sent

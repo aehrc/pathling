@@ -57,12 +57,8 @@ pathling:
     socketTimeout: 60000
 
   auth:
-    # Enables SMART authorisation.
+    # Enables authorization.
     enabled: false
-
-    # Provides the URL of a JSON Web Key Set from which the signing key for incoming bearer tokens
-    # can be retrieved.
-    # jwksUrl: [JWKS URL]
 
     # Configures the issuing domain for bearer tokens, which will be checked against the claims
     # within incoming bearer tokens.

@@ -50,6 +50,7 @@ public class ImportProvider {
    */
   @Operation(name = "$import")
   @OperationAccess("import")
+  @SuppressWarnings("UnusedReturnValue")
   public OperationOutcome importOperation(@ResourceParam final Parameters parameters) {
     return executor.execute(parameters);
   }

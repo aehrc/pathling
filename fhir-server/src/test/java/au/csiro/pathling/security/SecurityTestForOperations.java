@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.security;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -7,7 +13,6 @@ import au.csiro.pathling.aggregate.AggregateProvider;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.ResourceProviderFactory;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.io.ResourceWriter;
 import au.csiro.pathling.search.CachingSearchProvider;
 import au.csiro.pathling.search.SearchProvider;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
@@ -19,7 +24,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
-
 
 @ActiveProfiles({"core", "server"})
 public class SecurityTestForOperations extends SecurityTest {
@@ -33,9 +37,6 @@ public class SecurityTestForOperations extends SecurityTest {
   @MockBean
   private ResourceReader resourceReader;
 
-  @MockBean
-  private ResourceWriter resourceWriter;
-
   @Autowired
   private SparkSession sparkSession;
 
@@ -48,7 +49,7 @@ public class SecurityTestForOperations extends SecurityTest {
   public void assertImportSuccess() {
     try {
       importProvider.importOperation(new Parameters());
-    } catch (InvalidUserInputError ex) {
+    } catch (final InvalidUserInputError ex) {
       // pass
     }
   }
@@ -58,7 +59,7 @@ public class SecurityTestForOperations extends SecurityTest {
         .createAggregateResourceProvider(ResourceType.Patient);
     try {
       aggregateProvider.aggregate(null, null, null);
-    } catch (InvalidUserInputError ex) {
+    } catch (final InvalidUserInputError ex) {
       // pass
     }
   }
@@ -87,4 +88,5 @@ public class SecurityTestForOperations extends SecurityTest {
         .createSearchResourceProvider(ResourceType.Patient, true);
     cachingSearchProvider.search(null);
   }
+
 }

@@ -22,8 +22,8 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * @author John Grimes
  */
-@TestPropertySource(locations = {"classpath:/configuration/authorisation.properties"})
-class AuthorisationTest extends IntegrationTest {
+@TestPropertySource(locations = {"classpath:/configuration/authorization.properties"})
+class AuthorizationTest extends IntegrationTest {
 
   @LocalServerPort
   private int port;
@@ -47,7 +47,7 @@ class AuthorisationTest extends IntegrationTest {
     assertEquals("https://sso.acme.com/auth/revoke", smartConfiguration.getRevocationEndpoint());
   }
 
-  // TODO: Add tests for enforcement of authorisation. Use WireMock for mocking out the JWKS fetch.
+  // TODO: Add tests for enforcement of authorization. Use WireMock for mocking out the JWKS fetch.
 
   @Getter
   @SuppressWarnings("unused")

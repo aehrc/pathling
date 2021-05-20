@@ -119,7 +119,8 @@ public class ErrorHandlingInterceptor {
   }
 
   @Nonnull
-  private BaseServerResponseException buildException(int theStatusCode,
+  @SuppressWarnings("SameParameterValue")
+  private BaseServerResponseException buildException(final int theStatusCode,
       @Nonnull final String message,
       @Nonnull final IssueType issueType) {
     final OperationOutcome opOutcome = new OperationOutcome();
@@ -136,17 +137,18 @@ public class ErrorHandlingInterceptor {
 
 
   @Nonnull
-  BaseServerResponseException convertDataFormatException(@Nonnull final DataFormatException e) {
+  private BaseServerResponseException convertDataFormatException(
+      @Nonnull final DataFormatException e) {
     final Throwable cause = e.getCause();
     if (cause == null) {
-      // a problem with constructing FHIR from JSON
+      // A problem with constructing FHIR from JSON.
       return new InvalidRequestException("Invalid FHIR content: " + e.getMessage());
     } else {
       if (cause instanceof JsonParseException) {
-        // a problem with parsing JSON
+        // A problem with parsing JSON.
         return new InvalidRequestException("Invalid JSON content: " + cause.getMessage());
       } else {
-        // an unknown problem with FHIR/JSON content
+        // An unknown problem with FHIR/JSON content.
         return new InvalidRequestException(
             "Unknown problem while parsing FHIR/JSON content: " + cause.getMessage());
       }

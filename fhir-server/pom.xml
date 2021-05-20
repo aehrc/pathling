@@ -126,7 +126,7 @@
       <artifactId>slf4j-api</artifactId>
     </dependency>
 
-    <!-- Authorisation -->
+    <!-- Authorization -->
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>

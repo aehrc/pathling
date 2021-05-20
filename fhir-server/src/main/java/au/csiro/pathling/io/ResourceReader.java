@@ -196,7 +196,7 @@ public class ResourceReader implements Cacheable {
     return resources;
   }
 
-  //@Override
+  @Override
   public void invalidateCache() {
     if (cache != null) {
       cache.invalidateAll();

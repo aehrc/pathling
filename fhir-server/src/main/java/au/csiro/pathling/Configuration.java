@@ -75,7 +75,7 @@ public class Configuration {
   private Terminology terminology;
 
   @NotNull
-  private Authorisation auth;
+  private Configuration.Authorization auth;
 
   @NotNull
   private Caching caching;
@@ -214,23 +214,17 @@ public class Configuration {
   }
 
   /**
-   * Represents configuration specific to SMART authorisation.
+   * Represents configuration specific to authorization.
    */
   @Data
   @ToString(doNotUseGetters = true)
-  public static class Authorisation {
+  public static class Authorization {
 
     /**
-     * Enables SMART authorisation.
+     * Enables authorization.
      */
     @NotNull
     private boolean enabled;
-
-    /**
-     * Enables OCID configuration discovery.
-     */
-    @NotNull
-    private boolean enableOcid;
 
     /**
      * Provides the URL of a JSON Web Key Set from which the signing key for incoming bearer tokens
@@ -249,7 +243,7 @@ public class Configuration {
 
     /**
      * Configures the audience for bearer tokens, which is the FHIR endpoint that tokens are
-     * intended to be authorised for.
+     * intended to be authorized for.
      */
     @Nullable
     private String audience;

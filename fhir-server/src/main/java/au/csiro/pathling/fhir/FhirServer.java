@@ -7,13 +7,7 @@
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorisation;
-import au.csiro.pathling.aggregate.AggregateExecutor;
-import au.csiro.pathling.aggregate.CachingAggregateExecutor;
-import au.csiro.pathling.aggregate.FreshAggregateExecutor;
-import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.search.SearchExecutorCache;
+import au.csiro.pathling.Configuration.Authorization;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -26,17 +20,14 @@ import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ResourceType;
@@ -62,21 +53,6 @@ public class FhirServer extends RestfulServer {
   private final Configuration configuration;
 
   @Nonnull
-  private final SparkSession sparkSession;
-
-  @Nonnull
-  private final FhirEncoders fhirEncoders;
-
-  @Nonnull
-  private final ResourceReader resourceReader;
-
-  @Nonnull
-  private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
-
-  @Nonnull
-  private final AggregateExecutor aggregateExecutor;
-
-  @Nonnull
   private final ImportProvider importProvider;
 
   @Nonnull
@@ -92,24 +68,12 @@ public class FhirServer extends RestfulServer {
   private final ConformanceProvider conformanceProvider;
 
   @Nonnull
-  private final SearchExecutorCache searchExecutorCache;
-
-  @Nonnull
   private final ResourceProviderFactory resourceProviderFactory;
 
   /**
-   * @param fhirContext a {@link FhirContext} for use in executing FHIR operations
-   * @param configuration a {@link Configuration} instance which controls the behaviour of the
+   * @param fhirContext A {@link FhirContext} for use in executing FHIR operations
+   * @param configuration A {@link Configuration} instance which controls the behaviour of the
    * server
-   * @param sparkSession a {@link SparkSession} for use in querying FHIR data using Spark
-   * @param fhirEncoders a {@link FhirEncoders} for use in serializing and deserializing FHIR data
-   * @param resourceReader a {@link ResourceReader} for retrieving FHIR data from storage
-   * @param terminologyServiceFactory a {@link TerminologyServiceFactory} for resolving FHIR
-   * terminology queries during parallel processing
-   * @param cachingAggregateExecutor a {@link CachingAggregateExecutor} for processing requests to
-   * aggregate operation, when caching is enabled
-   * @param freshAggregateExecutor a {@link FreshAggregateExecutor} for processing requests to the
-   * aggregate operation, when caching is not enabled
    * @param importProvider A {@link ImportProvider} for receiving requests to the import operation
    * @param operationDefinitionProvider A {@link OperationDefinitionProvider} for receiving requests
    * for OperationDefinitions
@@ -118,39 +82,25 @@ public class FhirServer extends RestfulServer {
    * Sentry
    * @param conformanceProvider A {@link ConformanceProvider} for receiving requests for the server
    * CapabilityStatement
-   * @param searchExecutorCache A {@link SearchExecutorCache} for caching search requests
+   * @param resourceProviderFactory A {@link ResourceProviderFactory} for providing instances of
+   * resource providers
    */
   @SuppressWarnings("TypeMayBeWeakened")
   public FhirServer(@Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration,
-      @Nonnull final SparkSession sparkSession,
-      @Nonnull final FhirEncoders fhirEncoders,
-      @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
-      @Nonnull final CachingAggregateExecutor cachingAggregateExecutor,
-      @Nonnull final FreshAggregateExecutor freshAggregateExecutor,
       @Nonnull final ImportProvider importProvider,
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
-      @Nonnull final SearchExecutorCache searchExecutorCache,
       @Nonnull final ResourceProviderFactory resourceProviderFactory) {
     super(fhirContext);
     this.configuration = configuration;
-    this.sparkSession = sparkSession;
-    this.fhirEncoders = fhirEncoders;
-    this.resourceReader = resourceReader;
-    this.terminologyServiceFactory = terminologyServiceFactory;
-    this.aggregateExecutor = configuration.getCaching().isEnabled()
-                             ? cachingAggregateExecutor
-                             : freshAggregateExecutor;
     this.importProvider = importProvider;
     this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.conformanceProvider = conformanceProvider;
-    this.searchExecutorCache = searchExecutorCache;
     this.resourceProviderFactory = resourceProviderFactory;
     log.info("Starting FHIR server with configuration: {}", configuration);
   }
@@ -185,8 +135,8 @@ public class FhirServer extends RestfulServer {
       defineCorsConfiguration();
       configureRequestLogging();
 
-      // SPIKE: This will be moved out to spring-security
-      configureAuthorisation();
+      // Authorization-related configuration.
+      configureAuthorization();
 
       registerInterceptor(new ResponseHighlighterInterceptor());
 
@@ -268,16 +218,11 @@ public class FhirServer extends RestfulServer {
     registerInterceptor(loggingInterceptor);
   }
 
-  private void configureAuthorisation() throws MalformedURLException {
+  private void configureAuthorization() {
     if (configuration.getAuth().isEnabled()) {
-      final Authorisation authorisationConfig = this.configuration.getAuth();
-
-      // final AuthorisationInterceptor authorisationInterceptor =
-      //     new AuthorisationInterceptor(authorisationConfig);
-      // registerInterceptor(authorisationInterceptor);
-
+      final Authorization authorizationConfig = this.configuration.getAuth();
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
-          new SmartConfigurationInterceptor(authorisationConfig);
+          new SmartConfigurationInterceptor(authorizationConfig);
       registerInterceptor(smartConfigurationInterceptor);
     }
   }

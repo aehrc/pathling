@@ -1,3 +1,9 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.Configuration;
@@ -23,8 +29,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * A factory that encapsulates creation of resource specific ResourceProviders. It uses
- * ApplicationContext to create the instances of ResoucrceProviders so that they are spring beans
- * and as such can be detected by SpringAOP (e.g: for security implementation)
+ * ApplicationContext to create the instances of ResourceProviders so that they are spring beans and
+ * as such can be detected by SpringAOP (which is required for the security implementation).
  */
 @Component
 @Profile("server")
@@ -57,6 +63,23 @@ public class ResourceProviderFactory {
   @Nonnull
   private final SearchExecutorCache searchExecutorCache;
 
+  /**
+   * @param applicationContext The Spring {@link ApplicationContext}
+   * @param fhirContext A {@link FhirContext} for doing FHIR stuff
+   * @param configuration A {@link Configuration} instance which controls the behaviour of the
+   * server
+   * @param sparkSession A {@link SparkSession} for resolving Spark queries
+   * @param resourceReader A {@link ResourceReader} for retrieving resources
+   * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
+   * queries within parallel processing
+   * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
+   * objects
+   * @param searchExecutorCache A {@link SearchExecutorCache} for caching search requests
+   * @param cachingAggregateExecutor A {@link CachingAggregateExecutor} for processing requests to
+   * aggregate operation, when caching is enabled
+   * @param freshAggregateExecutor A {@link FreshAggregateExecutor} for processing requests to the
+   * aggregate operation, when caching is not enabled
+   */
   public ResourceProviderFactory(
       @Nonnull final ApplicationContext applicationContext,
       @Nonnull final FhirContext fhirContext,
@@ -107,17 +130,18 @@ public class ResourceProviderFactory {
    */
   @Nonnull
   public IResourceProvider createSearchResourceProvider(@Nonnull final ResourceType resourceType,
-      boolean cached) {
+      final boolean cached) {
     final Class<? extends IBaseResource> resourceTypeClass = fhirContext
         .getResourceDefinition(resourceType.name()).getImplementingClass();
 
     return cached
-    ? applicationContext
-        .getBean(CachingSearchProvider.class, configuration, fhirContext, sparkSession,
-            resourceReader,
-            terminologyServiceFactory, fhirEncoders, resourceTypeClass, searchExecutorCache)
-    : applicationContext
-        .getBean(SearchProvider.class, configuration, fhirContext, sparkSession, resourceReader,
-            terminologyServiceFactory, fhirEncoders, resourceTypeClass);
+           ? applicationContext
+               .getBean(CachingSearchProvider.class, configuration, fhirContext, sparkSession,
+                   resourceReader,
+                   terminologyServiceFactory, fhirEncoders, resourceTypeClass, searchExecutorCache)
+           : applicationContext
+               .getBean(SearchProvider.class, configuration, fhirContext, sparkSession,
+                   resourceReader,
+                   terminologyServiceFactory, fhirEncoders, resourceTypeClass);
   }
 }
