@@ -6,8 +6,12 @@
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem.AUTH_URL;
+import static org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem.REVOKE_URL;
+import static org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem.TOKEN_URL;
+
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorization;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.rest.annotation.Metadata;
@@ -25,6 +29,7 @@ import org.hl7.fhir.r4.model.CapabilityStatement.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.oauth2.jwt.OidcConfiguration;
 import org.springframework.stereotype.Component;
 
 /**
@@ -54,21 +59,29 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private final ResourceReader resourceReader;
 
   @Nonnull
+  private final Optional<OidcConfiguration> oidcConfiguration;
+
+  @Nonnull
   private Optional<RestfulServer> restfulServer;
 
   @Nonnull
   private final PathlingVersion version;
 
   /**
-   * @param configuration A {@link Configuration} object controlling the behaviour of the capability
+   * @param configuration a {@link Configuration} object controlling the behaviour of the capability
    * statement
-   * @param resourceReader A {@link ResourceReader} to use in checking which resources are
+   * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
+   * from OIDC discovery
+   * @param resourceReader a {@link ResourceReader} to use in checking which resources are
    * available
-   * @param version A {@link PathlingVersion} object containing version information for the server
+   * @param version a {@link PathlingVersion} object containing version information for the server
    */
   public ConformanceProvider(@Nonnull final Configuration configuration,
-      @Nonnull final ResourceReader resourceReader, @Nonnull final PathlingVersion version) {
+      @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
+      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final PathlingVersion version) {
     this.configuration = configuration;
+    this.oidcConfiguration = oidcConfiguration;
     this.resourceReader = resourceReader;
     this.version = version;
     restfulServer = Optional.empty();
@@ -130,23 +143,21 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     final CapabilityStatementRestSecurityComponent security = new CapabilityStatementRestSecurityComponent();
     security.setCors(true);
     if (configuration.getAuth().isEnabled()) {
-      final Authorization authorizationConfig = configuration.getAuth();
+      final OidcConfiguration checkedConfig = checkPresent(oidcConfiguration);
 
       final CodeableConcept smart = new CodeableConcept(
           new Coding(RESTFUL_SECURITY_URI, RESTFUL_SECURITY_CODE, RESTFUL_SECURITY_CODE));
       smart.setText("OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)");
       security.getService().add(smart);
 
-      if (authorizationConfig.getAuthorizeUrl().isPresent()
-          || authorizationConfig.getTokenUrl().isPresent()
-          || authorizationConfig.getRevokeUrl().isPresent()) {
+      final Optional<String> authUrl = checkedConfig.get(AUTH_URL);
+      final Optional<String> tokenUrl = checkedConfig.get(TOKEN_URL);
+      final Optional<String> revokeUrl = checkedConfig.get(REVOKE_URL);
+      if (authUrl.isPresent() || tokenUrl.isPresent() || revokeUrl.isPresent()) {
         final Extension oauthUris = new Extension(SMART_OAUTH_URI);
-        authorizationConfig.getAuthorizeUrl()
-            .ifPresent(url -> oauthUris.addExtension("authorize", new UriType(url)));
-        authorizationConfig.getTokenUrl()
-            .ifPresent(url -> oauthUris.addExtension("token", new UriType(url)));
-        authorizationConfig.getRevokeUrl()
-            .ifPresent(url -> oauthUris.addExtension("revoke", new UriType(url)));
+        authUrl.ifPresent(url -> oauthUris.addExtension("authorize", new UriType(url)));
+        tokenUrl.ifPresent(url -> oauthUris.addExtension("token", new UriType(url)));
+        revokeUrl.ifPresent(url -> oauthUris.addExtension("revoke", new UriType(url)));
         security.addExtension(oauthUris);
       }
     }

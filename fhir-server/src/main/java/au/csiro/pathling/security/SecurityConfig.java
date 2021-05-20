@@ -6,8 +6,11 @@
 
 package au.csiro.pathling.security;
 
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Authorization;
+import java.util.Optional;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +45,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
   @Autowired
   private Configuration configuration;
+
+  @Autowired
+  private Optional<OidcConfiguration> oidcConfiguration;
 
   @Override
   protected void configure(final HttpSecurity http) throws Exception {
@@ -88,8 +94,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     // Information for decoding, such as the signing key, is auto discovered from the OIDC
     // configuration endpoint. We don't currently support non-OIDC authorization servers.
-    final NimbusJwtDecoder jwtDecoder = (NimbusJwtDecoder) JwtDecoders
-        .fromOidcIssuerLocation(issuer);
+    final NimbusJwtDecoder jwtDecoder = checkPresent(oidcConfiguration).getJwtDecoder();
     jwtDecoder.setJwtValidator(validator);
     return jwtDecoder;
   }

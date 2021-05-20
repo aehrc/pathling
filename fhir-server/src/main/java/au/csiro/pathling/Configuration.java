@@ -227,14 +227,6 @@ public class Configuration {
     private boolean enabled;
 
     /**
-     * Provides the URL of a JSON Web Key Set from which the signing key for incoming bearer tokens
-     * can be retrieved.
-     */
-    @URL
-    @Nullable
-    private String jwksUrl;
-
-    /**
      * Configures the issuing domain for bearer tokens, which will be checked against the claims
      * within incoming bearer tokens.
      */
@@ -248,32 +240,6 @@ public class Configuration {
     @Nullable
     private String audience;
 
-    /**
-     * Provides the URL which will be advertised as the authorization endpoint.
-     */
-    @URL
-    @Nullable
-    private String authorizeUrl;
-
-    /**
-     * Provides the URL which will be advertised as the token endpoint.
-     */
-    @URL
-    @Nullable
-    private String tokenUrl;
-
-    /**
-     * Provides the URL which will be advertised as the token revocation endpoint.
-     */
-    @URL
-    @Nullable
-    private String revokeUrl;
-
-    @Nonnull
-    public Optional<String> getJwksUrl() {
-      return Optional.ofNullable(jwksUrl);
-    }
-
     @Nonnull
     public Optional<String> getIssuer() {
       return Optional.ofNullable(issuer);
@@ -282,21 +248,6 @@ public class Configuration {
     @Nonnull
     public Optional<String> getAudience() {
       return Optional.ofNullable(audience);
-    }
-
-    @Nonnull
-    public Optional<String> getAuthorizeUrl() {
-      return Optional.ofNullable(authorizeUrl);
-    }
-
-    @Nonnull
-    public Optional<String> getTokenUrl() {
-      return Optional.ofNullable(tokenUrl);
-    }
-
-    @Nonnull
-    public Optional<String> getRevokeUrl() {
-      return Optional.ofNullable(revokeUrl);
     }
 
   }

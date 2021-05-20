@@ -6,8 +6,9 @@
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorization;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -23,6 +24,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -32,6 +34,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.oauth2.jwt.OidcConfiguration;
 import org.springframework.web.cors.CorsConfiguration;
 
 /**
@@ -51,6 +54,9 @@ public class FhirServer extends RestfulServer {
 
   @Nonnull
   private final Configuration configuration;
+
+  @Nonnull
+  private final Optional<OidcConfiguration> oidcConfiguration;
 
   @Nonnull
   private final ImportProvider importProvider;
@@ -74,6 +80,8 @@ public class FhirServer extends RestfulServer {
    * @param fhirContext A {@link FhirContext} for use in executing FHIR operations
    * @param configuration A {@link Configuration} instance which controls the behaviour of the
    * server
+   * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
+   * from OIDC discovery
    * @param importProvider A {@link ImportProvider} for receiving requests to the import operation
    * @param operationDefinitionProvider A {@link OperationDefinitionProvider} for receiving requests
    * for OperationDefinitions
@@ -88,6 +96,7 @@ public class FhirServer extends RestfulServer {
   @SuppressWarnings("TypeMayBeWeakened")
   public FhirServer(@Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration,
+      @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final ImportProvider importProvider,
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
@@ -96,6 +105,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ResourceProviderFactory resourceProviderFactory) {
     super(fhirContext);
     this.configuration = configuration;
+    this.oidcConfiguration = oidcConfiguration;
     this.importProvider = importProvider;
     this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;
@@ -220,9 +230,8 @@ public class FhirServer extends RestfulServer {
 
   private void configureAuthorization() {
     if (configuration.getAuth().isEnabled()) {
-      final Authorization authorizationConfig = this.configuration.getAuth();
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
-          new SmartConfigurationInterceptor(authorizationConfig);
+          new SmartConfigurationInterceptor(checkPresent(oidcConfiguration));
       registerInterceptor(smartConfigurationInterceptor);
     }
   }

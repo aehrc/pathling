@@ -7,22 +7,36 @@
 package au.csiro.pathling.test.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.OidcConfiguration;
+import org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem;
 import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
-@TestPropertySource(locations = {"classpath:/configuration/authorization.properties"})
+@TestPropertySource(properties = {
+    "pathling.auth.enabled=true",
+    "pathling.auth.issuer=https://auth.ontoserver.csiro.au/auth/realms/aehrc",
+    "pathling.auth.audience=https://pathling.acme.com/fhir",
+})
+@Slf4j
 class AuthorizationTest extends IntegrationTest {
 
   @LocalServerPort
@@ -30,6 +44,24 @@ class AuthorizationTest extends IntegrationTest {
 
   @Autowired
   private TestRestTemplate restTemplate;
+
+  @MockBean
+  private OidcConfiguration oidcConfiguration;
+
+  @BeforeEach
+  public void setUp() {
+    when(oidcConfiguration.get(ConfigItem.AUTH_URL)).thenReturn(
+        Optional
+            .of("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth"));
+    when(oidcConfiguration.get(ConfigItem.TOKEN_URL)).thenReturn(
+        Optional
+            .of("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token"));
+    when(oidcConfiguration.get(ConfigItem.REVOKE_URL)).thenReturn(
+        Optional
+            .of("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke"));
+    final NimbusJwtDecoder jwtDecoder = mock(NimbusJwtDecoder.class);
+    when(oidcConfiguration.getJwtDecoder()).thenReturn(jwtDecoder);
+  }
 
   @Test
   void smartConfiguration() {
@@ -41,13 +73,16 @@ class AuthorizationTest extends IntegrationTest {
         .create();
     final SmartConfiguration smartConfiguration = gson.fromJson(response, SmartConfiguration.class);
 
-    assertEquals("https://sso.acme.com/auth/authorize",
+    assertEquals("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth",
         smartConfiguration.getAuthorizationEndpoint());
-    assertEquals("https://sso.acme.com/auth/token", smartConfiguration.getTokenEndpoint());
-    assertEquals("https://sso.acme.com/auth/revoke", smartConfiguration.getRevocationEndpoint());
+    assertEquals("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token",
+        smartConfiguration.getTokenEndpoint());
+    assertEquals(
+        "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke",
+        smartConfiguration.getRevocationEndpoint());
   }
 
-  // TODO: Add tests for enforcement of authorization. Use WireMock for mocking out the JWKS fetch.
+  // TODO: Add test for enforcement of authorization.
 
   @Getter
   @SuppressWarnings("unused")

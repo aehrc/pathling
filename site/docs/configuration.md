@@ -100,21 +100,15 @@ Here are a few that you might be particularly interested in:
 - `pathling.auth.enabled` - (default: `false`) Enables authorization. If
   this option is set to `true`, `pathling.auth.issuer` and 
   `pathling.auth.audience` options must also be set.
-- `pathling.auth.issuer` - Configures the issuing domain for bearer tokens,
-  which will be checked against the claims within incoming bearer tokens, e.g.
-  `https://pathling.au.auth0.com/`.
+- `pathling.auth.issuer` - Configures the issuing domain for bearer tokens, e.g.
+  `https://pathling.au.auth0.com/`. Must match the 
+  contents of the [issuer claim](https://tools.ietf.org/html/rfc7519#section-4.1.1) 
+  within bearer tokens.
 - `pathling.auth.audience` - Configures the audience for bearer tokens, which is
   the FHIR endpoint that tokens are intended to be authorised for, e.g.
-  `https://pathling.csiro.au/fhir`.
-- `pathling.auth.authorizeUrl` - Provides the URL which will be advertised as
-  the [authorization endpoint](https://tools.ietf.org/html/rfc6749#section-3.1),
-  e.g. `https://pathling.au.auth0.com/oauth/authorize`.
-- `pathling.auth.tokenUrl` - Provides the URL which will be advertised as the
-  [token endpoint](https://tools.ietf.org/html/rfc6749#section-3.2), e.g.
-  `https://pathling.au.auth0.com/oauth/token`.
-- `pathling.auth.revokeUrl` - Provides the URL which will be advertised as the
-  [token revocation endpoint](https://tools.ietf.org/html/rfc7009), e.g.
-  `https://pathling.au.auth0.com/oauth/revoke`.
+  `https://pathling.csiro.au/fhir`. Must match the contents of the 
+  [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3) 
+  within bearer tokens.
   
 ### Caching
 
