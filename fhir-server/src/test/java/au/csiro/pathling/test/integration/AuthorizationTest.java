@@ -7,9 +7,10 @@
 package au.csiro.pathling.test.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.security.OidcConfiguration;
+import au.csiro.pathling.security.OidcConfiguration.ConfigItem;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -23,9 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.jwt.OidcConfiguration;
-import org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.TestPropertySource;
 
 /**
@@ -48,6 +47,9 @@ class AuthorizationTest extends IntegrationTest {
   @MockBean
   private OidcConfiguration oidcConfiguration;
 
+  @MockBean
+  private JwtDecoder jwtDecoder;
+
   @BeforeEach
   public void setUp() {
     when(oidcConfiguration.get(ConfigItem.AUTH_URL)).thenReturn(
@@ -59,8 +61,6 @@ class AuthorizationTest extends IntegrationTest {
     when(oidcConfiguration.get(ConfigItem.REVOKE_URL)).thenReturn(
         Optional
             .of("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke"));
-    final NimbusJwtDecoder jwtDecoder = mock(NimbusJwtDecoder.class);
-    when(oidcConfiguration.getJwtDecoder()).thenReturn(jwtDecoder);
   }
 
   @Test

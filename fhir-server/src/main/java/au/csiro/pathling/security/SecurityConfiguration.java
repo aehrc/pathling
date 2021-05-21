@@ -11,8 +11,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Authorization;
 import java.util.Optional;
-import java.util.function.Supplier;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,11 +19,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2TokenValidator;
-import org.springframework.security.oauth2.jwt.*;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 
 /**
  * Web security configuration for Pathling.
@@ -38,7 +32,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 @EnableWebSecurity
 @Profile("server")
 @Slf4j
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
   @Value("${pathling.auth.enabled}")
   private boolean authEnabled;
@@ -49,12 +43,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   @Autowired
   private Optional<OidcConfiguration> oidcConfiguration;
 
+  @Autowired
+  private Optional<JwtDecoder> jwtDecoder;
+
   @Override
   protected void configure(final HttpSecurity http) throws Exception {
-
     if (authEnabled) {
       final Authorization authConfig = configuration.getAuth();
+      final OidcConfiguration checkedOidcConfig = checkPresent(oidcConfiguration);
       log.info("Request authentication is enabled, with config: {}", authConfig);
+
       http.authorizeRequests()
           // The following requests do not require authentication.
           .mvcMatchers(HttpMethod.GET,
@@ -68,8 +66,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
           .and()
           .oauth2ResourceServer()
           .jwt()
-          .decoder(jwtDecoder(authConfig))
-          .jwtAuthenticationConverter(jwtAuthenticationConverter());
+          .decoder(checkPresent(jwtDecoder))
+          .jwtAuthenticationConverter(checkedOidcConfig.getJwtAuthenticationConverter());
+
     } else {
       log.info("Request authentication is disabled");
       http
@@ -79,33 +78,4 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
   }
 
-  JwtDecoder jwtDecoder(@Nonnull final Authorization authConfig) {
-    final Supplier<RuntimeException> authConfigError = () -> new RuntimeException(
-        "Configuration for issuer and audience must be present if authorization is enabled");
-    final String issuer = authConfig.getIssuer().orElseThrow(authConfigError);
-    final String audience = authConfig.getAudience().orElseThrow(authConfigError);
-
-    // Audience and issuer within each incoming bearer token are validated against the values
-    // configured into the server.
-    final OAuth2TokenValidator<Jwt> withAudience = new JwtAudienceValidator(audience);
-    final OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuer);
-    final OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(withIssuer,
-        withAudience);
-
-    // Information for decoding, such as the signing key, is auto discovered from the OIDC
-    // configuration endpoint. We don't currently support non-OIDC authorization servers.
-    final NimbusJwtDecoder jwtDecoder = checkPresent(oidcConfiguration).getJwtDecoder();
-    jwtDecoder.setJwtValidator(validator);
-    return jwtDecoder;
-  }
-
-  JwtAuthenticationConverter jwtAuthenticationConverter() {
-    final JwtGrantedAuthoritiesConverter converter = new JwtGrantedAuthoritiesConverter();
-    converter.setAuthoritiesClaimName("authorities");
-    converter.setAuthorityPrefix("");
-
-    final JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
-    jwtConverter.setJwtGrantedAuthoritiesConverter(converter);
-    return jwtConverter;
-  }
 }

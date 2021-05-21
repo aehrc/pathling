@@ -6,10 +6,11 @@
 
 package au.csiro.pathling.fhir;
 
-import static org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem.AUTH_URL;
-import static org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem.REVOKE_URL;
-import static org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem.TOKEN_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.AUTH_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
 
+import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
@@ -26,7 +27,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.oauth2.jwt.OidcConfiguration;
 
 /**
  * This class intercepts requests to `.well-known/smart-configuration` and returns a Well-Known

@@ -9,6 +9,7 @@ package au.csiro.pathling.fhir;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -34,7 +35,6 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.oauth2.jwt.OidcConfiguration;
 import org.springframework.web.cors.CorsConfiguration;
 
 /**

@@ -16,7 +16,6 @@ import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
-import org.springframework.security.oauth2.jwt.OidcConfiguration;
 
 /**
  * Main class that serves as the entry point for running the Pathling server.
@@ -24,7 +23,7 @@ import org.springframework.security.oauth2.jwt.OidcConfiguration;
  * @author John Grimes
  */
 @SpringBootApplication
-@Import({Configuration.class, OidcConfiguration.class})
+@Import(Configuration.class)
 @ServletComponentScan
 @EnableAspectJAutoProxy
 public class PathlingServer {

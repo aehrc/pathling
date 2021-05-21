@@ -17,11 +17,14 @@ import org.springframework.security.oauth2.jwt.Jwt;
  * @see <a href="https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization">Spring
  * Security 5 Java API: Authorization</a>
  */
-class JwtAudienceValidator implements OAuth2TokenValidator<Jwt> {
+public class JwtAudienceValidator implements OAuth2TokenValidator<Jwt> {
 
   private final String audience;
 
-  JwtAudienceValidator(final String audience) {
+  /**
+   * @param audience the required audience value to be presented within tokens
+   */
+  public JwtAudienceValidator(final String audience) {
     this.audience = audience;
   }
 
@@ -35,4 +38,5 @@ class JwtAudienceValidator implements OAuth2TokenValidator<Jwt> {
     }
     return OAuth2TokenValidatorResult.failure(error);
   }
+
 }

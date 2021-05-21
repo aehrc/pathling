@@ -6,14 +6,15 @@
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.AUTH_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-import static org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem.AUTH_URL;
-import static org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem.REVOKE_URL;
-import static org.springframework.security.oauth2.jwt.OidcConfiguration.ConfigItem.TOKEN_URL;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IServerConformanceProvider;
@@ -29,7 +30,6 @@ import org.hl7.fhir.r4.model.CapabilityStatement.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.oauth2.jwt.OidcConfiguration;
 import org.springframework.stereotype.Component;
 
 /**
