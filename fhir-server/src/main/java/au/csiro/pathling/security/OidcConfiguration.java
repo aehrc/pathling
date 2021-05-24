@@ -115,6 +115,18 @@ public class OidcConfiguration {
     return oidcConfiguration.getJwtDecoder();
   }
 
+  /**
+   * @param oidcConfiguration an OidcConfiguration object containing configuration retrieved from
+   * OIDC discovery
+   * @return a {@link JwtAuthenticationConverter}
+   */
+  @Bean
+  @Nonnull
+  public static JwtAuthenticationConverter jwtAuthenticationConverter(
+      @Nonnull final OidcConfiguration oidcConfiguration) {
+    return oidcConfiguration.getJwtAuthenticationConverter();
+  }
+
   @Nonnull
   private static NimbusJwtDecoder withProviderConfiguration(
       @Nonnull final Map<String, Object> configuration, @Nonnull final String issuer) {

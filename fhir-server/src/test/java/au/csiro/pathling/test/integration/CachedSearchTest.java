@@ -27,8 +27,8 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * @author John Grimes
  */
-@TestPropertySource(properties = {"pathling.caching.enabled=false"})
-public class SearchTest extends IntegrationTest {
+@TestPropertySource(properties = {"pathling.caching.enabled=true"})
+public class CachedSearchTest extends IntegrationTest {
 
   @Autowired
   SparkSession spark;

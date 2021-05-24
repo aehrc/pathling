@@ -71,6 +71,7 @@ jobs:
           mvn --batch-mode verify \
           -pl fhir-server -am \
           -Pdocker,skip-encoders-tests \
+          -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }} \
           -Dmaven.test.failure.ignore=true
         timeout-minutes: 30
       - name: Upload fhir-server test reports

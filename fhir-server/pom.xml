@@ -364,6 +364,13 @@
               <groups>SystemTest</groups>
               <systemPropertyVariables>
                 <pathling.systemTest.version>${project.version}</pathling.systemTest.version>
+                <pathling.systemTest.auth.issuer>
+                  https://auth.ontoserver.csiro.au/auth/realms/aehrc
+                </pathling.systemTest.auth.issuer>
+                <pathling.systemTest.auth.clientId>pathling-test</pathling.systemTest.auth.clientId>
+                <pathling.systemTest.auth.requestedScope>
+                  openid user/*.*
+                </pathling.systemTest.auth.requestedScope>
                 <pathling.systemTest.terminology.serverUrl>
                   https://r4.ontoserver.csiro.au/fhir
                 </pathling.systemTest.terminology.serverUrl>

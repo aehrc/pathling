@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.test.integration;
 
+import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
@@ -20,11 +21,13 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.test.context.TestPropertySource;
 
 /**
@@ -36,7 +39,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.auth.audience=https://pathling.acme.com/fhir",
 })
 @Slf4j
-class AuthorizationTest extends IntegrationTest {
+class AuthorizationConfigurationTest extends IntegrationTest {
 
   @LocalServerPort
   private int port;
@@ -48,7 +51,12 @@ class AuthorizationTest extends IntegrationTest {
   private OidcConfiguration oidcConfiguration;
 
   @MockBean
+  @SuppressWarnings("unused")
   private JwtDecoder jwtDecoder;
+
+  @MockBean
+  @SuppressWarnings("unused")
+  private JwtAuthenticationConverter jwtAuthenticationConverter;
 
   @BeforeEach
   public void setUp() {
@@ -61,6 +69,15 @@ class AuthorizationTest extends IntegrationTest {
     when(oidcConfiguration.get(ConfigItem.REVOKE_URL)).thenReturn(
         Optional
             .of("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke"));
+  }
+
+  @Test
+  void capabilityStatement() {
+    final String response = restTemplate
+        .getForObject("http://localhost:" + port + "/fhir/metadata", String.class);
+    assertJson(
+        "responses/AuthorizationConfigurationTest/capabilityStatement.CapabilityStatement.json",
+        response, JSONCompareMode.LENIENT);
   }
 
   @Test
@@ -81,8 +98,6 @@ class AuthorizationTest extends IntegrationTest {
         "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke",
         smartConfiguration.getRevocationEndpoint());
   }
-
-  // TODO: Add test for enforcement of authorization.
 
   @Getter
   @SuppressWarnings("unused")

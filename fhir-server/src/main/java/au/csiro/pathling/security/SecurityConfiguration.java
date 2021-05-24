@@ -9,7 +9,6 @@ package au.csiro.pathling.security;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorization;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +19,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 
 /**
  * Web security configuration for Pathling.
@@ -41,18 +41,14 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
   private Configuration configuration;
 
   @Autowired
-  private Optional<OidcConfiguration> oidcConfiguration;
+  private Optional<JwtDecoder> jwtDecoder;
 
   @Autowired
-  private Optional<JwtDecoder> jwtDecoder;
+  private Optional<JwtAuthenticationConverter> jwtAuthenticationConverter;
 
   @Override
   protected void configure(final HttpSecurity http) throws Exception {
     if (authEnabled) {
-      final Authorization authConfig = configuration.getAuth();
-      final OidcConfiguration checkedOidcConfig = checkPresent(oidcConfiguration);
-      log.info("Request authentication is enabled, with config: {}", authConfig);
-
       http.authorizeRequests()
           // The following requests do not require authentication.
           .mvcMatchers(HttpMethod.GET,
@@ -67,10 +63,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
           .oauth2ResourceServer()
           .jwt()
           .decoder(checkPresent(jwtDecoder))
-          .jwtAuthenticationConverter(checkedOidcConfig.getJwtAuthenticationConverter());
+          .jwtAuthenticationConverter(checkPresent(jwtAuthenticationConverter));
 
     } else {
-      log.info("Request authentication is disabled");
       http
           // Without this POST requests fail with 403 Forbidden.
           .csrf().disable()
