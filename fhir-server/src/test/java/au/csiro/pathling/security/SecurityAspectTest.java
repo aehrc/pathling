@@ -52,7 +52,7 @@ public class SecurityAspectTest extends SecurityTest {
   @WithMockUser(username = "admin")
   public void testOperationAccessDeniedWhenNotAuthorized() {
     assertThrowsAccessDenied(() -> securityAspect.checkRequiredAuthority(operationAccess),
-        "Missing authority: \"pathling:test\"", "pathling:test"
+        "Missing authority: 'pathling:test'", "pathling:test"
     );
 
   }
@@ -78,7 +78,7 @@ public class SecurityAspectTest extends SecurityTest {
   public void testResourceAccessDeniedWhenNotAuthorized() {
     assertThrowsAccessDenied(
         () -> securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT),
-        "Missing authority: \"pathling:read:Patient\"", "pathling:read:Patient"
+        "Missing authority: 'pathling:read:Patient'", "pathling:read:Patient"
     );
   }
 

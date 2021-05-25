@@ -79,7 +79,7 @@ public class SecurityAspect {
     if (authToken == null || authToken.getAuthorities() == null || !requiredAuthority
         .subsumedByAny(authorities)) {
       throw new AccessDeniedError(
-          String.format("Missing authority: \"%s\"", requiredAuthority),
+          String.format("Missing authority: '%s'", requiredAuthority),
           requiredAuthority.getAuthority());
     }
   }
