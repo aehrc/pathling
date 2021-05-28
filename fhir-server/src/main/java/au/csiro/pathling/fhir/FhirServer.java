@@ -17,7 +17,6 @@ import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
 import ca.uhn.fhir.rest.server.FifoMemoryPagingProvider;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
-import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import java.lang.reflect.Constructor;
@@ -35,7 +34,6 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.springframework.context.annotation.Profile;
-import org.springframework.web.cors.CorsConfiguration;
 
 /**
  * A HAPI RestfulServer that provides the FHIR interface to the functionality within Pathling.
@@ -142,7 +140,6 @@ public class FhirServer extends RestfulServer {
       registerProvider(operationDefinitionProvider);
 
       // Configure interceptors.
-      defineCorsConfiguration();
       configureRequestLogging();
 
       // Authorization-related configuration.
@@ -195,25 +192,6 @@ public class FhirServer extends RestfulServer {
       providers.add(searchProvider);
     }
     return providers;
-  }
-
-  /**
-   * Declare a CORS interceptor, using the CorsConfiguration from Spring. This is required to enable
-   * web-based applications hosted on different domains to communicate with this server.
-   */
-  private void defineCorsConfiguration() {
-    final CorsConfiguration corsConfig = new CorsConfiguration();
-
-    corsConfig.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
-    corsConfig.setAllowedMethods(configuration.getCors().getAllowedMethods());
-    corsConfig.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
-    corsConfig.setMaxAge(configuration.getCors().getMaxAge());
-    if (configuration.getCors().getExposeHeaders().isPresent()) {
-      corsConfig.setExposedHeaders(configuration.getCors().getExposeHeaders().get());
-    }
-
-    final CorsInterceptor interceptor = new CorsInterceptor(corsConfig);
-    registerInterceptor(interceptor);
   }
 
   private void configureRequestLogging() {

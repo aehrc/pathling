@@ -8,17 +8,21 @@ package au.csiro.pathling.test.integration;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.Configuration;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.security.OidcConfiguration.ConfigItem;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONCompareMode;
@@ -26,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.http.*;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.test.context.TestPropertySource;
@@ -37,6 +42,10 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.auth.enabled=true",
     "pathling.auth.issuer=https://auth.ontoserver.csiro.au/auth/realms/aehrc",
     "pathling.auth.audience=https://pathling.acme.com/fhir",
+    "pathling.cors.maxAge=800",
+    "pathling.cors.allowedMethods=GET,POST",
+    "pathling.cors.allowedOrigins=http://foo.bar,http://boo.bar",
+    "pathling.cors.allowedHeaders=X-Mine,X-Other"
 })
 @Slf4j
 class AuthorizationConfigurationTest extends IntegrationTest {
@@ -57,6 +66,10 @@ class AuthorizationConfigurationTest extends IntegrationTest {
   @MockBean
   @SuppressWarnings("unused")
   private JwtAuthenticationConverter jwtAuthenticationConverter;
+
+
+  @Autowired
+  private Configuration configuration;
 
   @BeforeEach
   public void setUp() {
@@ -98,6 +111,42 @@ class AuthorizationConfigurationTest extends IntegrationTest {
         "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke",
         smartConfiguration.getRevocationEndpoint());
   }
+
+
+  @Test
+  void corsPreflight() throws JSONException {
+    final HttpHeaders corsHeaders = new HttpHeaders();
+    corsHeaders.setOrigin("http://foo.bar");
+    corsHeaders.setAccessControlRequestMethod(HttpMethod.POST);
+    corsHeaders.setAccessControlRequestHeaders(Arrays.asList("X-Mine", "X-Skip"));
+
+    final ResponseEntity<String> response = restTemplate
+        .exchange("http://localhost:" + port + "/fhir/$aggregate", HttpMethod.OPTIONS,
+            new HttpEntity<String>(corsHeaders),
+            String.class);
+
+    final HttpHeaders responseHeaders = response.getHeaders();
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(Arrays.asList(HttpMethod.GET, HttpMethod.POST),
+        responseHeaders.getAccessControlAllowMethods());
+    assertEquals(800L, responseHeaders.getAccessControlMaxAge());
+    assertEquals(Arrays.asList("X-Mine"), responseHeaders.getAccessControlAllowHeaders());
+    assertTrue(responseHeaders.getAccessControlAllowCredentials());
+  }
+
+  @Test
+  void corsForbiddenForIllegalRealm() throws JSONException {
+    final HttpHeaders corsHeaders = new HttpHeaders();
+    corsHeaders.setOrigin("http://otgher.bar");
+
+    final ResponseEntity<String> response = restTemplate
+        .exchange("http://localhost:" + port + "/fhir/metadata", HttpMethod.GET,
+            new HttpEntity<String>(corsHeaders),
+            String.class);
+
+    assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+  }
+
 
   @Getter
   @SuppressWarnings("unused")

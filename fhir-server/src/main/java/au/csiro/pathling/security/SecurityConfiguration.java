@@ -13,6 +13,7 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -20,6 +21,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * Web security configuration for Pathling.
@@ -48,6 +52,11 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
   @Override
   protected void configure(final HttpSecurity http) throws Exception {
+
+    // Will use the bean of class CorsConfigurationSource
+    // as configuration provider
+    http.cors();
+
     if (authEnabled) {
       http.authorizeRequests()
           // The following requests do not require authentication.
@@ -73,4 +82,26 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     }
   }
 
+
+  /**
+   * Constructs Spring CORS configuration.
+   *
+   * @return CORS configuration source
+   */
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration corsConfiguration = new CorsConfiguration();
+    corsConfiguration.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
+    corsConfiguration.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
+    corsConfiguration.setAllowedMethods(configuration.getCors().getAllowedMethods());
+    corsConfiguration.setMaxAge(configuration.getCors().getMaxAge());
+    if (configuration.getCors().getExposeHeaders().isPresent()) {
+      corsConfiguration.setExposedHeaders(configuration.getCors().getExposeHeaders().get());
+    }
+    corsConfiguration.setAllowCredentials(configuration.getAuth().isEnabled());
+
+    final UrlBasedCorsConfigurationSource corsConfigurationSource = new UrlBasedCorsConfigurationSource();
+    corsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);
+    return corsConfigurationSource;
+  }
 }
