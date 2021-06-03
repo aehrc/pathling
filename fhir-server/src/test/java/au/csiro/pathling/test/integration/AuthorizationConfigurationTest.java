@@ -18,6 +18,7 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
@@ -127,10 +128,12 @@ class AuthorizationConfigurationTest extends IntegrationTest {
 
     final HttpHeaders responseHeaders = response.getHeaders();
     assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals("http://foo.bar", responseHeaders.getAccessControlAllowOrigin());
     assertEquals(Arrays.asList(HttpMethod.GET, HttpMethod.POST),
         responseHeaders.getAccessControlAllowMethods());
     assertEquals(800L, responseHeaders.getAccessControlMaxAge());
-    assertEquals(Arrays.asList("X-Mine"), responseHeaders.getAccessControlAllowHeaders());
+    assertEquals(Collections.singletonList("X-Mine"),
+        responseHeaders.getAccessControlAllowHeaders());
     assertTrue(responseHeaders.getAccessControlAllowCredentials());
   }
 

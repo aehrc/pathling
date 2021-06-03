@@ -286,7 +286,7 @@ public class Configuration {
   }
 
   /**
-   * Configures the Import
+   * Represents configuration relating to Cross-Origin Resource Sharing (CORS).
    */
   @Data
   public static class Cors {
@@ -295,21 +295,17 @@ public class Configuration {
     private List<String> allowedOrigins;
 
     @NotNull
+    private List<String> allowedOriginPatterns;
+
+    @NotNull
     private List<String> allowedMethods;
 
     @NotNull
     private List<String> allowedHeaders;
 
-    @Nullable
-    private List<String> exposeHeaders;
-
     @NotNull
+    @Min(0)
     private Long maxAge;
-
-    @Nonnull
-    public Optional<List<String>> getExposeHeaders() {
-      return Optional.ofNullable(exposeHeaders);
-    }
 
   }
 

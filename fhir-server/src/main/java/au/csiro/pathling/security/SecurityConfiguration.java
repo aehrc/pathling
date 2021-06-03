@@ -90,18 +90,16 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
    */
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration corsConfiguration = new CorsConfiguration();
-    corsConfiguration.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
-    corsConfiguration.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
-    corsConfiguration.setAllowedMethods(configuration.getCors().getAllowedMethods());
-    corsConfiguration.setMaxAge(configuration.getCors().getMaxAge());
-    if (configuration.getCors().getExposeHeaders().isPresent()) {
-      corsConfiguration.setExposedHeaders(configuration.getCors().getExposeHeaders().get());
-    }
-    corsConfiguration.setAllowCredentials(configuration.getAuth().isEnabled());
+    final CorsConfiguration cors = new CorsConfiguration();
+    cors.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
+    cors.setAllowedOriginPatterns(configuration.getCors().getAllowedOriginPatterns());
+    cors.setAllowedMethods(configuration.getCors().getAllowedMethods());
+    cors.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
+    cors.setMaxAge(configuration.getCors().getMaxAge());
+    cors.setAllowCredentials(configuration.getAuth().isEnabled());
 
-    final UrlBasedCorsConfigurationSource corsConfigurationSource = new UrlBasedCorsConfigurationSource();
-    corsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);
-    return corsConfigurationSource;
+    final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", cors);
+    return source;
   }
 }
