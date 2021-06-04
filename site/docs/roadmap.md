@@ -13,7 +13,7 @@ themes:
 1. [Extract operation](#extract-operation)
 2. [Improved FHIRPath support](#improved-fhirpath-support)
 3. [APIs for Python and R](#apis-for-python-and-r)
-4. [Authorisation enhancements](#authorisation-enhancements)
+4. [authorization enhancements](#authorization-enhancements)
 5. [Incremental update](#incremental-update)
 6. [Subscriptions](#subscriptions)
 7. [Extension content](#extension-content)
@@ -118,17 +118,17 @@ and [(#193) R integration](https://github.com/aehrc/pathling/issues/193).
 
 ---
 
-## Authorisation enhancements
+## authorization enhancements
 
 This change will enhance the existing support for
-[SMART](https://hl7.org/fhir/smart-app-launch/index.html) authorisation within
+[SMART](https://hl7.org/fhir/smart-app-launch/index.html) authorization within
 the Pathling server, adding the following capabilities:
 
 - Individual control of read and write operations
 - Access control for individual resource types (e.g. `user/DiagnosticReport.read`)
 - Control of access to types of operations (e.g. `operation:search`)
 
-See [(#282) Add operation and resource level authorisation](https://github.com/aehrc/pathling/issues/282).
+See [(#282) Add operation and resource level authorization](https://github.com/aehrc/pathling/issues/282).
 
 ---
 

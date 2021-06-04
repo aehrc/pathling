@@ -13,6 +13,7 @@ import javax.annotation.Nullable;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.ServletComponentScan;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 
@@ -24,6 +25,7 @@ import org.springframework.core.env.Environment;
 @SpringBootApplication
 @Import(Configuration.class)
 @ServletComponentScan
+@EnableAspectJAutoProxy
 public class PathlingServer {
 
   /**
@@ -48,6 +50,6 @@ public class PathlingServer {
       out.println("/_/    \\__,_/\\__/_/ /_/_/_/_/ /_/\\__, / ");
       out.println("                                /____/");
     }
-
   }
+
 }

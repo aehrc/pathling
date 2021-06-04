@@ -6,7 +6,11 @@
 
 package au.csiro.pathling.fhir;
 
-import au.csiro.pathling.Configuration.Authorisation;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.AUTH_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
+
+import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
@@ -16,6 +20,7 @@ import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -29,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @author John Grimes
  */
+// TODO: This could might be better done as in Spring or servlet.
 @Interceptor
 @Slf4j
 public class SmartConfigurationInterceptor {
@@ -37,17 +43,24 @@ public class SmartConfigurationInterceptor {
   private final String response;
 
   /**
-   * @param configuration The authorisation section of the {@link au.csiro.pathling.Configuration}.
+   * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
+   * from OIDC discovery
    */
-  public SmartConfigurationInterceptor(@Nonnull final Authorisation configuration) {
-    response = buildResponse(configuration);
+  public SmartConfigurationInterceptor(@Nonnull final OidcConfiguration oidcConfiguration) {
+    response = buildResponse(oidcConfiguration);
   }
 
-  private static String buildResponse(@Nonnull final Authorisation configuration) {
+  @Nonnull
+  private static String buildResponse(@Nonnull final OidcConfiguration oidcConfiguration) {
     final SmartConfiguration smartConfiguration = new SmartConfiguration();
-    configuration.getAuthorizeUrl().ifPresent(smartConfiguration::setAuthorizationEndpoint);
-    configuration.getTokenUrl().ifPresent(smartConfiguration::setTokenEndpoint);
-    configuration.getRevokeUrl().ifPresent(smartConfiguration::setRevocationEndpoint);
+
+    final Optional<String> authUrl = oidcConfiguration.get(AUTH_URL);
+    final Optional<String> tokenUrl = oidcConfiguration.get(TOKEN_URL);
+    final Optional<String> revokeUrl = oidcConfiguration.get(REVOKE_URL);
+
+    authUrl.ifPresent(smartConfiguration::setAuthorizationEndpoint);
+    tokenUrl.ifPresent(smartConfiguration::setTokenEndpoint);
+    revokeUrl.ifPresent(smartConfiguration::setRevocationEndpoint);
 
     final Gson gson = new GsonBuilder()
         .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
@@ -57,7 +70,7 @@ public class SmartConfigurationInterceptor {
 
   /**
    * HAPI hook to selectively serve the SMART configuration document, when the URL matches and
-   * authorisation is enabled.
+   * authorization is enabled.
    *
    * @param servletRequest the details of the request
    * @param servletResponse the response that will be sent
