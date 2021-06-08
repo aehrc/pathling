@@ -37,11 +37,11 @@ import org.springframework.util.FileSystemUtils;
  * @author John Grimes
  */
 @SpringBootTest
-@Tag("UnitTest")
-@ActiveProfiles({"core"})
+@Tag("IntegrationTest")
 @TestPropertySource(
     properties = {
-        "pathling.import.allowableSources=file:/"
+        "pathling.import.allowableSources=file:/",
+        "pathling.storage.databaseName=default"
     })
 class ImportExecutorTest {
 
