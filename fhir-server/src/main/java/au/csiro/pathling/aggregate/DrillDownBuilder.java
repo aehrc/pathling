@@ -84,7 +84,7 @@ public class DrillDownBuilder {
                                 : " contains ";
         // We need to add parentheses around the grouping expression, as some expressions will not
         // play well with the equality or membership operator due to precedence.
-        final String expression = literal.equals("true")
+        final String expression = literal.equals("true") && grouping.isSingular()
                                   ? grouping.getExpression()
                                   : parentheses(grouping.getExpression()) + equality + literal;
         fhirPaths.add(expression);
