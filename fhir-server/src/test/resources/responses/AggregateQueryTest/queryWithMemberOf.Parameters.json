@@ -31,7 +31,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')"
+          "valueString": "(reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')) contains true"
         }
       ]
     }
