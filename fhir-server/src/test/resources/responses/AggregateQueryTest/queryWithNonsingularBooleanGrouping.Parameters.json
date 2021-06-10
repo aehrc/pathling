@@ -14,7 +14,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "(reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')) contains false"
+          "valueString": "(reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|284551006)) contains false"
         }
       ]
     },
@@ -31,7 +31,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "(reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')) contains true"
+          "valueString": "(reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|284551006)) contains true"
         }
       ]
     }
