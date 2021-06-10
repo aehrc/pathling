@@ -95,31 +95,20 @@ Here are a few that you might be particularly interested in:
   (in milliseconds) that the server should wait for incoming data from the
   terminology service.
 
-### Authorisation
+### Authorization
 
-- `pathling.auth.enabled` - (default: `false`) Enables
-  [SMART](https://hl7.org/fhir/smart-app-launch/index.html) authorisation. If
-  this option is set to `true`, the `pathling.auth.jwksUrl`,
-  `pathling.auth.issuer` and `pathling.auth.audience` options must also be set.
-- `pathling.auth.jwksUrl` - Provides the URL of a
-  [JSON Web Key Set](https://tools.ietf.org/html/rfc7517) from which the signing
-  key for incoming bearer tokens can be retrieved, e.g.
-  `https://pathling.au.auth0.com/.well-known/jwks.json`.
-- `pathling.auth.issuer` - Configures the issuing domain for bearer tokens,
-  which will be checked against the claims within incoming bearer tokens, e.g.
-  `https://pathling.au.auth0.com/`.
+- `pathling.auth.enabled` - (default: `false`) Enables authorization. If
+  this option is set to `true`, `pathling.auth.issuer` and 
+  `pathling.auth.audience` options must also be set.
+- `pathling.auth.issuer` - Configures the issuing domain for bearer tokens, e.g.
+  `https://pathling.au.auth0.com/`. Must match the 
+  contents of the [issuer claim](https://tools.ietf.org/html/rfc7519#section-4.1.1) 
+  within bearer tokens.
 - `pathling.auth.audience` - Configures the audience for bearer tokens, which is
   the FHIR endpoint that tokens are intended to be authorised for, e.g.
-  `https://pathling.csiro.au/fhir`.
-- `pathling.auth.authorizeUrl` - Provides the URL which will be advertised as
-  the [authorisation endpoint](https://tools.ietf.org/html/rfc6749#section-3.1),
-  e.g. `https://pathling.au.auth0.com/oauth/authorize`.
-- `pathling.auth.tokenUrl` - Provides the URL which will be advertised as the
-  [token endpoint](https://tools.ietf.org/html/rfc6749#section-3.2), e.g.
-  `https://pathling.au.auth0.com/oauth/token`.
-- `pathling.auth.revokeUrl` - Provides the URL which will be advertised as the
-  [token revocation endpoint](https://tools.ietf.org/html/rfc7009), e.g.
-  `https://pathling.au.auth0.com/oauth/revoke`.
+  `https://pathling.csiro.au/fhir`. Must match the contents of the 
+  [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3) 
+  within bearer tokens.
   
 ### Caching
 
@@ -141,14 +130,22 @@ See the
 specification for more information about the meaning of the different headers 
 that are controlled by this configuration.
 
-- `pathling.cors.allowedOrigins` - (default: `*`) This is a comma-delimited
-  list of domain names that controls which domains are permitted to access the
-  server per the `Access-Control-Allow-Origin` header.
-- `pathling.cors.allowedMethods` - (default: `GET,POST`) This is a 
+- `pathling.cors.allowedOrigins` - (default: `[empty]`) This is a 
+  comma-delimited list of domain names that controls which domains are permitted 
+  to access the server per the `Access-Control-Allow-Origin` header. The value 
+  `*` can be used with this parameter, but only when `pathling.auth.enabled` is 
+  set to false. To use wildcards when authorization is enabled, please use 
+  `pathling.cors.allowedOriginPatterns`.
+- `pathling.cors.allowedOriginPatterns` - (default: `[empty]`) This is a 
+  comma-delimited list of domain names that controls which domains are permitted
+  to access the server per the `Access-Control-Allow-Origin` header. It differs 
+  from `pathling.cors.allowedOrigins` in that it supports wildcard patterns, 
+  e.g. `https://*.somedomain.com`.
+- `pathling.cors.allowedMethods` - (default: `OPTIONS,GET,POST`) This is a 
   comma-delimited list of HTTP methods permitted via the 
   `Access-Control-Allow-Methods` header.
-- `pathling.cors.allowedHeaders` - (default: `Content-Type`) This is a 
-  comma-delimited list of HTTP headers permitted via the 
+- `pathling.cors.allowedHeaders` - (default: `Content-Type,Authorization`) This 
+  is a comma-delimited list of HTTP headers permitted via the 
   `Access-Control-Allow-Headers` header.
 - `pathling.cors.maxAge` - (default: `600`) Controls how long the results of a 
   preflight request can be cached via the `Access-Control-Max-Age` header.
@@ -174,35 +171,58 @@ account for this, Pathling also supports the use of the
 and `X-Forwarded-Port` headers to override the protocol, hostname and port 
 within URLs sent back by the API.
 
-## Authorisation
+## Authorization
 
 Pathling can perform the role of a resource server within the
-[OAuth 2.0 framework](https://tools.ietf.org/html/rfc6749). The
-[SMART App Launch Framework](https://hl7.org/fhir/smart-app-launch/index.html)
-is a profile of OAuth 2.0 which is specific to the access of health data.
+[OpenID Connect framework](https://openid.net/connect/).
 
-When authorisation is enabled through configuration, Pathling will refuse any
+When authorization is enabled through configuration, Pathling will refuse any
 requests which are not accompanied by a valid
-[bearer token](https://tools.ietf.org/html/rfc6750). Tokens must meet the
-following requirements:
+[bearer token](https://tools.ietf.org/html/rfc6750). The following requirements
+must be met:
 
-- Conforms to the [JSON Web Token](https://tools.ietf.org/html/rfc7519)
-  specification
-- Signed using the RSA-256 signing algorithm
-- Signed using a public signing key accessible from the configured
-  [JSON Web Key Set](https://tools.ietf.org/html/rfc7517) URL
-- Contains an
+- Token is a [JSON Web Token](https://tools.ietf.org/html/rfc7519)
+- Token contains an
   [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3) that
   matches the configured value
-- Contains an [issuer claim](https://tools.ietf.org/html/rfc7519#section-4.1.1)
+- Token contains an [issuer claim](https://tools.ietf.org/html/rfc7519#section-4.1.1)
   that matches the configured value
-- Contains a value of `user/*.read` within the
-  [scope claim](https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context/index.html)
+- Issuer provides an [OpenID Connect Discovery endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html) that provides information 
+  about how to validate the token, including a link to a 
+  [JSON Web Key Set](https://tools.ietf.org/html/rfc7517) containing the signing 
+  key. This endpoint needs to be accessible to the Pathling server.
+  
+### Authorities
 
-Pathling currently only supports the `user/*.read` scope.
-[Future work is planned](./roadmap.html#authorisation-enhancements) to expand
-this to enable control over the access of individual resource types, aggregate
-vs individual record data, and more.
+Pathling supports a set of authorities that control access to resources and 
+operations. Authorities must be provided within the `authorities` claim within 
+the JWT bearer token provided with each request.
+
+<img src="/images/authorities.png"
+srcset="/images/authorities@2x.png 2x, /images/authorities.png 1x"
+alt="Authorities" />
+
+| Authority                        | Description                                                                        |
+| -------------------------------- | ---------------------------------------------------------------------------------- |
+| `pathling`                       | Provides access to all operations and resources, implies all other authorities.    |
+| `pathling:read`                  | Provides read access to all resource types.                                        |
+| `pathling:read:[resource type]`  | Provides read access to only a specified resource type.                            |
+| `pathling:write`                 | Provides write access to all resource types.                                       |
+| `pathling:write:[resource type]` | Provides write access to only a specified resource type.                           |
+| `pathling:import`                | Provides access to the import operation.                                           |
+| `pathling:aggregate`             | Provides access to the aggregate operation.                                        |
+| `pathling:search`                | Provides access to the search operation.                                           |
+
+In order to enable access to an operation, an operation authority (e.g. 
+`pathling:search`) must be provided along with a `read` or `write` authority 
+(e.g. `pathling:read:Patient`).
+
+Where expressions within a request reference multiple different resource types 
+(e.g. through resource references), authority for read access to all those 
+resources must be present within the token.
+
+The import operation requires `write` authority for all resource types that are 
+referenced within the request.
 
 ## Apache Spark
 
