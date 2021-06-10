@@ -12,8 +12,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -54,15 +53,13 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
    * @param resourceReader A {@link ResourceReader} for retrieving resources
-   * @param terminologyClient A {@link TerminologyClient} for resolving terminology queries
-   * @param terminologyClientFactory A {@link TerminologyClientFactory} for resolving terminology
+   * @param terminologyClientFactory A {@link TerminologyServiceFactory} for resolving terminology
    */
   public FreshAggregateExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyClient> terminologyClient,
-      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory) {
-    super(configuration, fhirContext, sparkSession, resourceReader, terminologyClient,
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory) {
+    super(configuration, fhirContext, sparkSession, resourceReader,
         terminologyClientFactory);
   }
 
@@ -244,6 +241,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
       }
 
       for (int i = 0; i < aggregations.size(); i++) {
+        //noinspection rawtypes
         final Materializable aggregation = (Materializable<Type>) aggregations.get(i);
         // Delegate to the `getValueFromRow` method within each Materializable path class to extract 
         // the Type value from the Row in the appropriate way.

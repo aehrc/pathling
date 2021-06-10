@@ -8,8 +8,7 @@ package au.csiro.pathling.aggregate;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.caching.Cacheable;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.cache.CacheBuilder;
@@ -43,16 +42,14 @@ public class CachingAggregateExecutor implements AggregateExecutor, Cacheable {
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
    * @param resourceReader A {@link ResourceReader} for retrieving resources
-   * @param terminologyClient A {@link TerminologyClient} for resolving terminology queries
-   * @param terminologyClientFactory A {@link TerminologyClientFactory} for resolving terminology
+   * @param terminologyClientFactory A {@link TerminologyServiceFactory} for resolving terminology
    */
   public CachingAggregateExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyClient> terminologyClient,
-      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory) {
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory) {
     delegate = new FreshAggregateExecutor(configuration, fhirContext, sparkSession, resourceReader,
-        terminologyClient, terminologyClientFactory);
+        terminologyClientFactory);
     cache = initializeCache(configuration.getCaching().getAggregateRequestCacheSize());
   }
 

@@ -13,13 +13,13 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>2.4.2</version>
+    <version>2.5.0</version>
     <relativePath/>
   </parent>
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>3.0.1</version>
+  <version>3.2.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -70,10 +70,10 @@
     <project.majorVersion>3</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.hapiFhirVersion>5.2.1</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>3.0.1</pathling.sparkVersion>
+    <pathling.hapiFhirVersion>5.3.3</pathling.hapiFhirVersion>
+    <pathling.sparkVersion>3.1.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
-    <pathling.dockerJavaVersion>3.2.7</pathling.dockerJavaVersion>
+    <pathling.dockerJavaVersion>3.2.8</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>2.10.1</pathling.hadoopVersion>
     <pathling.hadoopMirror>https://downloads.apache.org/hadoop/common</pathling.hadoopMirror>
   </properties>
@@ -122,7 +122,7 @@
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
         <artifactId>woodstox-core</artifactId>
-        <version>6.2.3</version>
+        <version>6.2.6</version>
       </dependency>
 
       <!-- Apache Spark -->
@@ -175,7 +175,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
-        <version>2.12.1</version>
+        <version>2.12.3</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.janino</groupId>
@@ -199,7 +199,7 @@
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>3.2.1</version>
+        <version>4.3.0</version>
       </dependency>
 
       <!-- Testing -->
@@ -230,7 +230,7 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.16</version>
+        <version>1.18.20</version>
         <scope>provided</scope>
       </dependency>
     </dependencies>
@@ -266,7 +266,7 @@
         <plugin>
           <groupId>net.alchim31.maven</groupId>
           <artifactId>scala-maven-plugin</artifactId>
-          <version>4.4.0</version>
+          <version>4.5.2</version>
           <executions>
             <execution>
               <id>scala-compile-first</id>

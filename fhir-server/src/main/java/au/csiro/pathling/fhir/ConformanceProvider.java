@@ -6,10 +6,15 @@
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.AUTH_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorisation;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IServerConformanceProvider;
@@ -54,21 +59,29 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private final ResourceReader resourceReader;
 
   @Nonnull
+  private final Optional<OidcConfiguration> oidcConfiguration;
+
+  @Nonnull
   private Optional<RestfulServer> restfulServer;
 
   @Nonnull
   private final PathlingVersion version;
 
   /**
-   * @param configuration A {@link Configuration} object controlling the behaviour of the capability
+   * @param configuration a {@link Configuration} object controlling the behaviour of the capability
    * statement
-   * @param resourceReader A {@link ResourceReader} to use in checking which resources are
+   * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
+   * from OIDC discovery
+   * @param resourceReader a {@link ResourceReader} to use in checking which resources are
    * available
-   * @param version A {@link PathlingVersion} object containing version information for the server
+   * @param version a {@link PathlingVersion} object containing version information for the server
    */
   public ConformanceProvider(@Nonnull final Configuration configuration,
-      @Nonnull final ResourceReader resourceReader, @Nonnull final PathlingVersion version) {
+      @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
+      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final PathlingVersion version) {
     this.configuration = configuration;
+    this.oidcConfiguration = oidcConfiguration;
     this.resourceReader = resourceReader;
     this.version = version;
     restfulServer = Optional.empty();
@@ -130,23 +143,21 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     final CapabilityStatementRestSecurityComponent security = new CapabilityStatementRestSecurityComponent();
     security.setCors(true);
     if (configuration.getAuth().isEnabled()) {
-      final Authorisation authorisationConfig = configuration.getAuth();
+      final OidcConfiguration checkedConfig = checkPresent(oidcConfiguration);
 
       final CodeableConcept smart = new CodeableConcept(
           new Coding(RESTFUL_SECURITY_URI, RESTFUL_SECURITY_CODE, RESTFUL_SECURITY_CODE));
       smart.setText("OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)");
       security.getService().add(smart);
 
-      if (authorisationConfig.getAuthorizeUrl().isPresent()
-          || authorisationConfig.getTokenUrl().isPresent()
-          || authorisationConfig.getRevokeUrl().isPresent()) {
+      final Optional<String> authUrl = checkedConfig.get(AUTH_URL);
+      final Optional<String> tokenUrl = checkedConfig.get(TOKEN_URL);
+      final Optional<String> revokeUrl = checkedConfig.get(REVOKE_URL);
+      if (authUrl.isPresent() || tokenUrl.isPresent() || revokeUrl.isPresent()) {
         final Extension oauthUris = new Extension(SMART_OAUTH_URI);
-        authorisationConfig.getAuthorizeUrl()
-            .ifPresent(url -> oauthUris.addExtension("authorize", new UriType(url)));
-        authorisationConfig.getTokenUrl()
-            .ifPresent(url -> oauthUris.addExtension("token", new UriType(url)));
-        authorisationConfig.getRevokeUrl()
-            .ifPresent(url -> oauthUris.addExtension("revoke", new UriType(url)));
+        authUrl.ifPresent(url -> oauthUris.addExtension("authorize", new UriType(url)));
+        tokenUrl.ifPresent(url -> oauthUris.addExtension("token", new UriType(url)));
+        revokeUrl.ifPresent(url -> oauthUris.addExtension("revoke", new UriType(url)));
         security.addExtension(oauthUris);
       }
     }
@@ -156,14 +167,12 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Nonnull
   private List<CapabilityStatementRestResourceComponent> buildResources() {
     final List<CapabilityStatementRestResourceComponent> resources = new ArrayList<>();
-    @Nullable CapabilityStatementRestResourceComponent opDefResource = null;
     final Set<Enumerations.ResourceType> availableToRead = resourceReader
         .getAvailableResourceTypes();
     final Set<Enumerations.ResourceType> availableResourceTypes =
         availableToRead.isEmpty()
         ? EnumSet.noneOf(Enumerations.ResourceType.class)
         : EnumSet.copyOf(availableToRead);
-    availableResourceTypes.add(Enumerations.ResourceType.OPERATIONDEFINITION);
 
     for (final Enumerations.ResourceType resourceType : availableResourceTypes) {
       final CapabilityStatementRestResourceComponent resource =
@@ -187,20 +196,17 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       resource.addOperation(searchOperation);
 
       resources.add(resource);
-
-      // Save away the OperationDefinition resource, so that we can later add the read operation to
-      // it.
-      if (resourceType.toCode().equals("OperationDefinition")) {
-        opDefResource = resource;
-      }
     }
 
-    if (opDefResource != null) {
-      // Add the read operation to the StructureDefinition and OperationDefinition resources.
-      final ResourceInteractionComponent readInteraction = new ResourceInteractionComponent();
-      readInteraction.setCode(TypeRestfulInteraction.READ);
-      opDefResource.addInteraction(readInteraction);
-    }
+    // Add the read operation to the OperationDefinition resource.
+    final String opDefCode = Enumerations.ResourceType.OPERATIONDEFINITION.toCode();
+    final CapabilityStatementRestResourceComponent opDefResource =
+        new CapabilityStatementRestResourceComponent(new CodeType(opDefCode));
+    opDefResource.setProfile(FHIR_RESOURCE_BASE + opDefCode);
+    final ResourceInteractionComponent readInteraction = new ResourceInteractionComponent();
+    readInteraction.setCode(TypeRestfulInteraction.READ);
+    opDefResource.addInteraction(readInteraction);
+    resources.add(opDefResource);
 
     return resources;
   }

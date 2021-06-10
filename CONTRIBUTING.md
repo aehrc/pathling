@@ -34,8 +34,7 @@ All components of Pathling are versioned as one, according to
 The "public API" of Pathling is defined as:
 
 1. the FHIR API;
-2. all public Java APIs distributed within the JARs (see 
-   [Javadocs](https://pathling.csiro.au/docs/java)), and;
+2. the Parquet schema, and;
 3. the configuration schema (see 
    [Configuration](https://pathling.csiro.au/docs/configuration.html)).
 

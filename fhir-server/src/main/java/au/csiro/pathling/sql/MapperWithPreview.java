@@ -8,6 +8,8 @@ package au.csiro.pathling.sql;
 
 import java.io.Serializable;
 import java.util.Iterator;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Captures a contract for a mapping operation that is allowed to preview all of its input objects
@@ -29,7 +31,8 @@ public interface MapperWithPreview<I, R, S> extends Serializable {
    * object.
    * @throws Exception when an error occurs during processing
    */
-  S preview(Iterator<I> inputIterator) throws Exception;
+  @Nonnull
+  S preview(@Nonnull Iterator<I> inputIterator) throws Exception;
 
   /**
    * The mapping operations.
@@ -39,6 +42,7 @@ public interface MapperWithPreview<I, R, S> extends Serializable {
    * @return the result of mapping the input with the state
    * @throws Exception when an error occurs during processing
    */
-  R call(I input, S state) throws Exception;
+  @Nullable
+  R call(@Nullable I input, @Nonnull S state) throws Exception;
 }
 

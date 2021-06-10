@@ -19,7 +19,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class WireMockTest extends IntegrationTest {
 
   @Autowired
-  private WireMockServer wireMockServer;
+  protected WireMockServer wireMockServer;
+
+  protected static boolean isRecordMode() {
+    return Boolean.parseBoolean(System.getProperty("pathling.test.recording.enabled", "false"));
+  }
 
   @BeforeEach
   void setUp() {

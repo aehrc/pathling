@@ -12,18 +12,13 @@ import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.io.Serializable;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Optional;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.r4.model.CodeableConcept;
-import org.hl7.fhir.r4.model.Coding;
+import javax.annotation.Nullable;
+import org.hl7.fhir.r4.model.Base;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.ValueSet;
-import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionComponent;
-import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
+import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
 import org.springframework.stereotype.Component;
 
 /**
@@ -44,48 +39,23 @@ public class FhirHelpers {
     return definition.getChildElement(elementName);
   }
 
-  /**
-   * Custom Mockito answerer for returning a mock response from the terminology server in response
-   * to calculating a ValueSet intersection using {@code $expand}.
-   */
-  public static class MemberOfTxAnswerer implements Answer<ValueSet>, Serializable {
 
-    private static final long serialVersionUID = -8343684022079397168L;
-    private final Collection<Coding> validMembers;
+  public static <T extends Base> T deepEq(@Nonnull final T expected) {
+    return Mockito.argThat(new FhirDeepMatcher<>(expected));
+  }
 
-    public MemberOfTxAnswerer(@Nonnull final Coding... validMembers) {
-      this.validMembers = new HashSet<>();
-      this.validMembers.addAll(Arrays.asList(validMembers));
-    }
+  private static class FhirDeepMatcher<T extends Base> implements ArgumentMatcher<T> {
 
-    public MemberOfTxAnswerer(@Nonnull final CodeableConcept... validMembers) {
-      final List<Coding> codings = Arrays.stream(validMembers)
-          .flatMap(codeableConcept -> codeableConcept.getCoding().stream())
-          .collect(Collectors.toList());
-      this.validMembers = new HashSet<>();
-      this.validMembers.addAll(codings);
+    @Nonnull
+    private final T expected;
+
+    private FhirDeepMatcher(@Nonnull final T expected) {
+      this.expected = expected;
     }
 
     @Override
-    @Nonnull
-    public ValueSet answer(@Nonnull final InvocationOnMock invocation) {
-      final ValueSet answer = new ValueSet();
-      final ValueSetExpansionComponent expansion = new ValueSetExpansionComponent();
-      final List<ValueSetExpansionContainsComponent> contains = validMembers.stream()
-          .map(validCoding -> {
-            final ValueSetExpansionContainsComponent code = new ValueSetExpansionContainsComponent();
-            code.setSystem(validCoding.getSystem());
-            code.setCode(validCoding.getCode());
-            code.setVersion(validCoding.getVersion());
-            code.setDisplay(validCoding.getDisplay());
-            return code;
-          })
-          .collect(Collectors.toList());
-      expansion.setContains(contains);
-      answer.setExpansion(expansion);
-      return answer;
+    public boolean matches(@Nullable final T actual) {
+      return expected.equalsDeep(actual);
     }
-
   }
-
 }

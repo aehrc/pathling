@@ -16,10 +16,13 @@ The following functions are currently supported:
 - [count](#count)
 - [first](#first)
 - [empty](#empty)
+- [not](#not)
 - [where](#where)
+- [iif](#iif)
 - [memberOf](#memberof)
 - [subsumes](#subsumes)
 - [subsumedBy](#subsumedby)
+- [translate](#translate)
 - [resolve](#resolve)
 - [reverseResolve](#reverseresolve)
 - [ofType](#oftype)
@@ -83,10 +86,27 @@ Patient.reverseResolve(Condition.subject).empty()
 
 See also: [empty](https://hl7.org/fhirpath/#empty-boolean)
 
+## not
+
+```
+Boolean -> not() : Boolean
+```
+
+Returns `true` if the input collection evaluates to `false`, and `false` if it 
+evaluates to `true`. Otherwise, the result is empty (`{ }`).
+
+Example:
+
+```
+(Patient.name.given contains 'Frank').not()
+```
+
+See also: [not](http://hl7.org/fhirpath/#not-boolean)
+
 ## where
 
 ```
-collection -> where(criteria: expression) : collection
+collection -> where(criteria: [any]) : collection
 ```
 
 Returns a collection containing only those elements in the input collection for
@@ -108,6 +128,27 @@ Patient.reverseResolve(Condition.subject).where(recordedDate > @1960).severity
 See also:
 [where](https://hl7.org/fhirpath/#wherecriteria-expression-collection)
 
+## iif
+
+```
+[any] -> iif(condition: Boolean, ifTrue: [any], otherwise: [any]) : [any]
+```
+
+Takes three arguments, the first of which is a Boolean expression. Returns the 
+second argument if the first argument evaluates to `true`, or the third argument 
+otherwise.
+
+The `ifTrue` and `otherwise` arguments must be of the same type.
+
+Example:
+
+```
+Patient.name.family.iif(empty(), 'Doe', $this)
+```
+
+See also:
+[iif](http://hl7.org/fhirpath/#iifcriterion-expression-true-result-collection-otherwise-result-collection-collection)
+
 ## memberOf
 
 ```
@@ -125,7 +166,7 @@ based on whether each concept is a member of the
 <div class="callout info">
     The <code>memberOf</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../configuration.html#terminology-service">Configuration and deployment</a> for details.
+    <a href="../configuration.html#terminology-service">Configuration</a> for details.
 </div>
 
 See also:
@@ -153,7 +194,7 @@ Patient.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|7
 <div class="callout info">
     The <code>subsumes</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../configuration.html#terminology-service">Configuration and deployment</a> for details.
+    <a href="../configuration.html#terminology-service">Configuration</a> for details.
 </div>
 
 See also:
@@ -178,11 +219,34 @@ Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct
 <div class="callout info">
     The <code>subsumedBy</code> function is a <em>terminology function</em>, which means that it requires a configured
     <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../configuration.html#terminology-service">Configuration and deployment</a> for details.
+    <a href="../configuration.html#terminology-service">Configuration</a> for details.
 </div>
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
+
+## translate
+
+```
+collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse = false, equivalence = 'equivalent') : collection<Coding>
+```
+
+When invoked on a [Coding](https://pathling.csiro.au/docs/fhirpath/data-types.html#coding)-valued element, returns any matching concepts using the ConceptMap specified using `conceptMapUrl`.
+
+The `reverse` parameter controls the direction to traverse the map - `true` results in "source to target" mappings while `false` results in "target to source".
+
+The `equivalence` parameter is a comma-delimited set of values from the [ConceptMapEquivalence](https://www.hl7.org/fhir/R4/valueset-concept-map-equivalence.html) ValueSet, and is used to filter the mappings returned to only those that have an equivalence value in this list.
+
+Example:
+
+```
+Condition.code.coding.translate('https://csiro.au/fhir/ConceptMap/some-map', true, 'equivalent,wider').display
+```
+
+<div class="callout warning">
+    The <code>translate</code> function is not within the FHIRPath 
+    specification, and is currently unique to the Pathling implementation.
+</div>
 
 ## resolve
 

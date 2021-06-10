@@ -8,7 +8,6 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.posexplode_outer;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -16,10 +15,9 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import java.util.Arrays;
 import java.util.Optional;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -87,17 +85,10 @@ public class PathTraversalOperator {
       eidColumnCandidate = left.getEidColumn();
       resultDataset = leftDataset;
     } else {
-      // If the element has a cardinality of more than one, create a dataset with all existing
-      // columns and then explode the array value field into `index` and `value` columns using
-      // `posexplode_outer`.
-      final Column[] allColumns = Stream.concat(Arrays.stream(leftDataset.columns())
-          .map(leftDataset::col), Stream
-          .of(posexplode_outer(field)
-              .as(new String[]{"index", "value"})))
-          .toArray(Column[]::new);
-      resultDataset = leftDataset.select(allColumns);
-      valueColumn = resultDataset.col("value");
-      eidColumnCandidate = Optional.of(left.expandEid(resultDataset.col("index")));
+      final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
+      resultDataset = left.explodeArray(leftDataset, field, valueAndEidColumns);
+      valueColumn = valueAndEidColumns.getLeft();
+      eidColumnCandidate = Optional.of(valueAndEidColumns.getRight());
     }
 
     final Optional<Column> eidColumn = resultSingular

@@ -3,6 +3,7 @@ description: Advanced FHIR&reg; analytics server, capable of performing aggregat
 theme: just-the-docs
 url: https://pathling.csiro.au
 baseurl: /
+lang: en-AU
 sass:
   sass_dir: _sass
 exclude:
@@ -10,4 +11,13 @@ exclude:
   - Gemfile.lock
   - Dockerfile
   - pom.xml
+  - src
   - target
+destination: ./target/site
+plugins:
+  - jekyll-sitemap
+defaults:
+  - scope:
+      path: "docs/java/**/*"
+    values:
+      sitemap: false

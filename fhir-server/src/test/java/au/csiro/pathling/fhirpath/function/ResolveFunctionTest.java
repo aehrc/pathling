@@ -178,8 +178,7 @@ class ResolveFunctionTest {
     assertTrue(result instanceof UntypedResourcePath);
     assertThat((UntypedResourcePath) result)
         .hasExpression("Encounter.subject.resolve()")
-        .isSingular()
-        .hasPossibleTypes(ResourceType.PATIENT, ResourceType.GROUP);
+        .isSingular();
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -246,8 +245,7 @@ class ResolveFunctionTest {
     assertTrue(result instanceof UntypedResourcePath);
     assertThat((UntypedResourcePath) result)
         .hasExpression("Condition.evidence.detail.resolve()")
-        .isNotSingular()
-        .hasPossibleTypes(ResourceType.OBSERVATION, ResourceType.CLINICALIMPRESSION);
+        .isNotSingular();
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()

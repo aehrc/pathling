@@ -10,9 +10,9 @@ import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Search;
@@ -26,6 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 /**
  * HAPI resource provider that can be instantiated using any resource type to add the FHIRPath
@@ -33,6 +36,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
+@Component
+@Scope("prototype")
+@Profile("server")
 @Slf4j
 public class SearchProvider implements IResourceProvider {
 
@@ -59,10 +65,7 @@ public class SearchProvider implements IResourceProvider {
   private final ResourceReader resourceReader;
 
   @Nonnull
-  private final Optional<TerminologyClient> terminologyClient;
-
-  @Nonnull
-  private final Optional<TerminologyClientFactory> terminologyClientFactory;
+  private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   @Nonnull
   private final FhirEncoders fhirEncoders;
@@ -78,8 +81,7 @@ public class SearchProvider implements IResourceProvider {
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
    * @param resourceReader A {@link ResourceReader} for retrieving resources
-   * @param terminologyClient A {@link TerminologyClient} for resolving terminology queries
-   * @param terminologyClientFactory A {@link TerminologyClientFactory} for resolving terminology
+   * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
    * queries within parallel processing
    * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
    * objects
@@ -89,16 +91,14 @@ public class SearchProvider implements IResourceProvider {
   public SearchProvider(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyClient> terminologyClient,
-      @Nonnull final Optional<TerminologyClientFactory> terminologyClientFactory,
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.resourceReader = resourceReader;
-    this.terminologyClient = terminologyClient;
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
     this.fhirEncoders = fhirEncoders;
     this.resourceClass = resourceClass;
     resourceType = resourceTypeFromClass(resourceClass);
@@ -117,11 +117,12 @@ public class SearchProvider implements IResourceProvider {
    * of results
    */
   @Search
+  @OperationAccess("search")
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search() {
     final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
     return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
-        terminologyClient, terminologyClientFactory, fhirEncoders,
+        terminologyServiceFactory, fhirEncoders,
         subjectResource, Optional.empty());
   }
 
@@ -133,11 +134,12 @@ public class SearchProvider implements IResourceProvider {
    * of results
    */
   @Search(queryName = QUERY_NAME)
+  @OperationAccess("search")
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search(
       @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters) {
     return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
-        terminologyClient, terminologyClientFactory, fhirEncoders,
+        terminologyServiceFactory, fhirEncoders,
         resourceType, Optional.ofNullable(filters));
   }
 }

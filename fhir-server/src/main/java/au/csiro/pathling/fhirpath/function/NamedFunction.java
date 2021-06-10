@@ -11,6 +11,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.function.memberof.MemberOfFunction;
 import au.csiro.pathling.fhirpath.function.subsumes.SubsumesFunction;
+import au.csiro.pathling.fhirpath.function.translate.TranslateFunction;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,6 +38,9 @@ public interface NamedFunction {
       .put("subsumedBy", new SubsumesFunction(true))
       .put("empty", new EmptyFunction())
       .put("first", new FirstFunction())
+      .put("not", new NotFunction())
+      .put("iif", new IifFunction())
+      .put("translate", new TranslateFunction())
       .build();
 
   /**

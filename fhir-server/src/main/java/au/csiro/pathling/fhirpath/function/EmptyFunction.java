@@ -34,7 +34,7 @@ public class EmptyFunction implements NamedFunction {
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     checkNoArguments(NAME, input);
     final NonLiteralPath inputPath = input.getInput();
-    final String expression = expressionFromInput(input, "empty");
+    final String expression = expressionFromInput(input, NAME);
 
     // We use the count function to determine whether there are zero items in the input collection.
     final FhirPath countResult = new CountFunction().invoke(input);

@@ -70,6 +70,8 @@ public class FhirEncodersTest {
     spark = SparkSession.builder()
         .master("local[*]")
         .appName("testing")
+        .config("spark.driver.bindAddress", "localhost")
+        .config("spark.driver.host", "localhost")
         .getOrCreate();
 
     patientDataset = spark.createDataset(ImmutableList.of(patient),
@@ -103,7 +105,6 @@ public class FhirEncodersTest {
   @AfterClass
   public static void tearDown() {
     spark.stop();
-    spark = null;
   }
 
   @Test

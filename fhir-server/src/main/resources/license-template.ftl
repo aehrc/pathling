@@ -1,6 +1,6 @@
 ## CSIRO Open Source Software Licence Agreement (variation of the BSD / MIT License)
 
-Copyright (c) 2018-2021, Commonwealth Scientific and Industrial Research
+Copyright (c) 2018-${.now?string('yyyy')}, Commonwealth Scientific and Industrial Research
 Organisation (CSIRO) ABN 41 687 119 230.
 
 All rights reserved. CSIRO is willing to grant you a licence to Pathling on the

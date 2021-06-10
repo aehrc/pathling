@@ -7,6 +7,7 @@
 package au.csiro.pathling.test.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -18,6 +19,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import java.net.URL;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
@@ -60,6 +62,14 @@ public abstract class Assertions {
       @Nonnull final String actualJson) {
     assertJson(expectedPath, actualJson, JSONCompareMode.NON_EXTENSIBLE);
   }
+
+  public static void assertMatches(@Nonnull final String expectedRegex,
+      @Nonnull final String actualString) {
+    if (!Pattern.matches(expectedRegex, actualString)) {
+      fail(String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex));
+    }
+  }
+
 
   public static void assertJson(@Nonnull final String expectedPath,
       @Nonnull final String actualJson, @Nonnull final JSONCompareMode compareMode) {

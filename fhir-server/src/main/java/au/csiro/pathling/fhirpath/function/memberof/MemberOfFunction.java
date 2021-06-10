@@ -13,16 +13,19 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.fhir.TerminologyClientFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.SqlExtensions;
-import java.util.Optional;
+import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -45,14 +48,10 @@ public class MemberOfFunction implements NamedFunction {
 
   private static final String NAME = "memberOf";
 
-  @Nonnull
-  private final Optional<MemberOfMapperWithPreview> configuredMapper;
-
   /**
    * Returns a new instance of this function.
    */
   public MemberOfFunction() {
-    configuredMapper = Optional.empty();
   }
 
   private boolean isCodeableConcept(@Nonnull final FhirPath fhirPath) {
@@ -79,16 +78,16 @@ public class MemberOfFunction implements NamedFunction {
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    final TerminologyClientFactory terminologyClientFactory = inputContext
-        .getTerminologyClientFactory().get();
+    final TerminologyServiceFactory terminologyServiceFactory = inputContext
+        .getTerminologyServiceFactory().get();
     final String valueSetUri = argument.getJavaValue();
     final Dataset<Row> dataset = inputPath.getDataset();
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
     // then create a new dataset with the boolean results.
-    final MemberOfMapperWithPreview mapper = configuredMapper.orElseGet(() ->
-        new MemberOfMapperWithPreview(MDC.get("requestId"), terminologyClientFactory,
-            valueSetUri));
+    final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
+        new MemberOfMapperWithPreview(MDC.get("requestId"), terminologyServiceFactory,
+            valueSetUri);
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.
@@ -110,10 +109,9 @@ public class MemberOfFunction implements NamedFunction {
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {
     final ParserContext context = input.getContext();
-    checkUserInput(
-        context.getTerminologyClient().isPresent() && context.getTerminologyClientFactory()
-            .isPresent(), "Attempt to call terminology function " + NAME
-            + " when terminology service has not been configured");
+    checkUserInput(context.getTerminologyServiceFactory()
+        .isPresent(), "Attempt to call terminology function " + NAME
+        + " when terminology service has not been configured");
 
     final FhirPath inputPath = input.getInput();
     checkUserInput(inputPath instanceof ElementPath

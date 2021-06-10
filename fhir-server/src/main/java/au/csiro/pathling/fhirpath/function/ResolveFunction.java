@@ -80,8 +80,8 @@ public class ResolveFunction implements NamedFunction {
 
   @Nonnull
   private static FhirPath resolvePolymorphicReference(@Nonnull final ReferencePath referencePath,
-      @Nonnull final ResourceReader resourceReader, @Nonnull final Set<ResourceType> referenceTypes,
-      final String expression) {
+      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final Iterable<ResourceType> referenceTypes, final String expression) {
     // If this is a polymorphic reference, create a dataset for each reference type, and union
     // them together to produce the target dataset. The dataset will not contain the resources
     // themselves, only a type and identifier for later resolution.
@@ -122,7 +122,7 @@ public class ResolveFunction implements NamedFunction {
     final Column inputId = referencePath.getIdColumn();
     final Optional<Column> inputEid = referencePath.getEidColumn();
     return UntypedResourcePath
-        .build(referencePath, expression, dataset, inputId, inputEid, targetType, referenceTypes);
+        .build(referencePath, expression, dataset, inputId, inputEid, targetType);
   }
 
   @Nonnull

@@ -65,23 +65,6 @@ class R4DataTypeMappings extends DataTypeMappings {
 
   override def baseType(): Class[_ <: IBaseDatatype] = classOf[org.hl7.fhir.r4.model.Type]
 
-  override def extractEntryFromBundle(bundle: IBaseBundle, resourceName: String): java.util.List[IBaseResource] = {
-
-    val stu3Bundle: Bundle = bundle.asInstanceOf[Bundle]
-
-    val items = new java.util.ArrayList[IBaseResource]
-
-    for (component <- stu3Bundle.getEntry()) {
-
-      val resource = component.getResource()
-
-      if (resource != null && resourceName == resource.getResourceType().name())
-        items.add(resource)
-    }
-
-    items
-  }
-
   override def overrideCompositeExpression(inputObject: Expression,
                                            definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[Expression]] = {
 
@@ -130,10 +113,6 @@ class R4DataTypeMappings extends DataTypeMappings {
                                           primitive: RuntimePrimitiveDatatypeDefinition): Expression = {
 
     primitive.getImplementingClass match {
-
-      //      case idClass if idClass == classOf[org.hl7.fhir.r4.model.IdType] =>
-      //        StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
-      //          List(Invoke(inputObject, "getIdPart", ObjectType(classOf[String]))))
 
       // If the FHIR primitive is serialized as a string, convert it to UTF8.
       case cls if fhirPrimitiveToSparkTypes.get(cls).contains(DataTypes.StringType) =>

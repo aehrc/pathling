@@ -6,14 +6,10 @@
 
 package au.csiro.pathling.test.assertions;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import java.util.Arrays;
-import java.util.HashSet;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * @author John Grimes
@@ -38,11 +34,5 @@ public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResou
         .select(selection)
         .orderBy(selection));
   }
-
-  @Nonnull
-  public UntypedResourcePathAssertion hasPossibleTypes(@Nonnull final ResourceType... types) {
-    final HashSet<Object> typeSet = new HashSet<>(Arrays.asList(types));
-    assertEquals(typeSet, fhirPath.getPossibleTypes());
-    return this;
-  }
+ 
 }

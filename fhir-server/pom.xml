@@ -13,7 +13,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>3.0.1</version>
+    <version>3.2.0</version>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
@@ -22,7 +22,7 @@
   <description>A server that exposes Pathling functionality through a FHIR API.</description>
 
   <properties>
-    <pathling.antlrVersion>4.9.1</pathling.antlrVersion>
+    <pathling.antlrVersion>4.9.2</pathling.antlrVersion>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
   </properties>
 
@@ -37,6 +37,33 @@
       <artifactId>spring-boot-configuration-processor</artifactId>
       <optional>true</optional>
     </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-oauth2-resource-server</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-oauth2-jose</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.hibernate.validator</groupId>
       <artifactId>hibernate-validator</artifactId>
@@ -99,16 +126,16 @@
       <artifactId>slf4j-api</artifactId>
     </dependency>
 
-    <!-- Authorisation -->
+    <!-- Authorization -->
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
-      <version>3.12.1</version>
+      <version>3.15.0</version>
     </dependency>
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>jwks-rsa</artifactId>
-      <version>0.15.0</version>
+      <version>0.18.0</version>
     </dependency>
 
     <!-- ANTLR -->
@@ -218,6 +245,7 @@
             </goals>
             <configuration>
               <groups>IntegrationTest</groups>
+              <forkCount>1</forkCount>
               <systemPropertyVariables>
                 <spring.profiles.active>core,server,integration-test</spring.profiles.active>
                 <pathling.storage.warehouseUrl>
@@ -253,6 +281,12 @@
             <goals>
               <goal>report</goal>
             </goals>
+            <configuration>
+              <excludes>
+                <exclude>au/csiro/pathling/fhirpath/parser/generated/*</exclude>
+                <exclude>au/csiro/pathling/Configuration*</exclude>
+              </excludes>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -330,6 +364,13 @@
               <groups>SystemTest</groups>
               <systemPropertyVariables>
                 <pathling.systemTest.version>${project.version}</pathling.systemTest.version>
+                <pathling.systemTest.auth.issuer>
+                  https://auth.ontoserver.csiro.au/auth/realms/aehrc
+                </pathling.systemTest.auth.issuer>
+                <pathling.systemTest.auth.clientId>pathling-test</pathling.systemTest.auth.clientId>
+                <pathling.systemTest.auth.requestedScope>
+                  openid user/*.*
+                </pathling.systemTest.auth.requestedScope>
                 <pathling.systemTest.terminology.serverUrl>
                   https://r4.ontoserver.csiro.au/fhir
                 </pathling.systemTest.terminology.serverUrl>

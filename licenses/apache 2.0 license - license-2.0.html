@@ -40,6 +40,9 @@
 <body>
   <!-- Navigation -->
   <header>
+	<div id="skiptocontent">
+		<a href="#maincontent">Skip to Main Content</a>
+	</div>
     <nav class="navbar navbar-inverse navbar-fixed-top mainmenu">
       <div class="container">
         <div class="navbar-header">
@@ -73,7 +76,7 @@
             </li>
             <li><a href="/index.html#news">News</a></li>
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">About&nbsp;<span class="caret"></span></a>
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">About&nbsp;<span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
                 <li><a href="/foundation">Overview</a></li>
                 <li><a href="/foundation/how-it-works.html">Process</a></li>
@@ -92,7 +95,7 @@
               </ul>
             </li>
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Make a Donation&nbsp;<span class="caret"></span></a>
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Make a Donation&nbsp;<span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
                 <li><a href="/foundation/contributing.html">Donate Now</a></li>
                 <li><a href="https://donate.apache.org/">&nbsp;&nbsp;Via Credit Card</a></li>
@@ -128,7 +131,7 @@
                 <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
                 <li><a href="https://community.apache.org/contributors/etiquette">Etiquette</a></li>
                 <li class="dropdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Projects&nbsp;<span class="caret"></span></a>
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Projects&nbsp;<span class="caret"></span></a>
                   <ul class="dropdown-menu" role="menu">
                     <li><a href="/index.html#projects-list">Project List</a></li>
                     <li><a href="/foundation/how-it-works.html#management">How they work</a></li>
@@ -144,7 +147,7 @@
                   </ul>
                 </li>
                 <li class="drowpdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown">People&nbsp;<span class="caret"></span></a>
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">People&nbsp;<span class="caret"></span></a>
                   <ul class="dropdown-menu" role="menu">
                     <li><a href="/foundation/how-it-works.html#roles">Roles</a></li>
                     <li><a href="/foundation/members.html">Members</a></li>
@@ -157,7 +160,7 @@
                   </ul>
                 </li>
                 <li class="drowpdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Community&nbsp;<span class="caret"></span></a>
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Community&nbsp;<span class="caret"></span></a>
                   <ul class="dropdown-menu" role="menu">
                     <li><a href="https://community.apache.org/about/">Community Development</a></li>
                     <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
@@ -170,17 +173,18 @@
                   </ul>
                 </li>
                 <li class="drowpdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown">License&nbsp;<span class="caret"></span></a>
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">License&nbsp;<span class="caret"></span></a>
                   <ul class="dropdown-menu" role="menu">
                     <li><a href="/licenses/LICENSE-2.0">Apache License 2.0</a></li>
                     <li><a href="/foundation/license-faq.html">Licensing FAQ</a></li>
                     <li><a href="/licenses/contributor-agreements.html">Contributor License Agreements</a></li>
                     <li><a href="/licenses/contributor-agreements.html#grants">Software Grants</a></li>
                     <li><a href="/foundation/marks/list/">Trademarks</a></li>
+                    <li><a href="/licenses/exports/">Exports</a></li>
                   </ul>
                 </li>
                 <li class="drowpdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Sponsors&nbsp;<span class="caret"></span></a>
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Sponsors&nbsp;<span class="caret"></span></a>
                   <ul class="dropdown-menu" role="menu">
                     <li><a href="/foundation/sponsorship.html">Sponsor the ASF</a></li>
                     <li><a href="/foundation/thanks">Sponsor Thanks</a></li>
@@ -192,7 +196,7 @@
               </ul>
             </li>
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads&nbsp;<span class="caret"></span></a>
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Downloads&nbsp;<span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
                 <li><a href="/dist/">Distribution</a></li>
                 <li><a href="https://projects.apache.org/releases.html">Releases</a></li>
@@ -202,24 +206,13 @@
               </ul>
             </li>
             <li class="dropdown hidden-xs">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-search"
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"><span class="glyphicon glyphicon-search"
                   aria-hidden="true"></span><span class="sr-only">Search</span></a>
               <ul class="dropdown-menu search-form" role="search">
                 <li>
                   <div class="input-group" style="width: 100%; padding: 0 5px;">
-                    <script>
-                      (function() {
-                      var cx = '005703438322411770421:5mgshgrgx2u';
-                      var gcse = document.createElement('script');
-                      gcse.type = 'text/javascript';
-                      gcse.async = true;
-                      gcse.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') +
-                      '//cse.google.com/cse.js?cx=' + cx;
-                      var s = document.getElementsByTagName('script')[0];
-                      s.parentNode.insertBefore(gcse, s);
-                      })();
-                    </script>
-                    <gcse:searchbox-only></gcse:searchbox-only>
+                    <script async src="https://cse.google.com/cse.js?cx=cb41d2753d228d8b7"></script>
+                    <div class="gcse-search"></div>
                   </div>
                 </li>
               </ul>
@@ -233,14 +226,14 @@
   <header id="main-header" class="container">
     <div class="sideImg">
       <a class="visible-home" href="http://apachecon.com/"><img class="img-responsive" src="/img/ApacheCon-PROMO-2019.gif" alt="ApacheCon is Coming 9-12 Sept. 2019 - Las Vegas"></a>
-      <a class="hidden-home" href="/"><img class="img-responsive" src="/img/ASF20thAnniversary.jpg" alt="The Apache Software Foundation"></a>
+      <a class="hidden-home" href="/"><img class="img-responsive" src="/img/asf-estd-1999-logo.jpg" alt="The Apache Software Foundation"></a>
     </div>
     <div class="main">
-      <img class="img-responsive center-block visible-home" src="/img/ASF20thAnniversary.jpg" alt="Apache 20th Anniversary Logo">
+      <img class="img-responsive center-block visible-home" src="/img/asf-estd-1999-logo.jpg" alt="Apache 20th Anniversary Logo">
       <h2 class="text-center">Community-led development "The&nbsp;Apache&nbsp;Way"</h2>
       <ul class="nav navbar-nav navbar-justified">
         <li class="drowpdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Projects&nbsp;<span class="caret hidden-sm"></span></a>
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Projects&nbsp;<span class="caret hidden-sm"></span></a>
           <ul class="dropdown-menu" role="menu">
             <li><a href="/index.html#projects-list">Project List</a></li>
             <li><a href="/foundation/how-it-works.html#management">How they work</a></li>
@@ -257,7 +250,7 @@
           </ul>
         </li>
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown">People&nbsp;<span class="caret hidden-sm"></span></a>
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">People&nbsp;<span class="caret hidden-sm"></span></a>
           <ul class="dropdown-menu" role="menu">
             <li><a href="/foundation/how-it-works.html#roles">Roles</a></li>
             <li><a href="/foundation/members.html">Members</a></li>
@@ -271,7 +264,7 @@
           </ul>
         </li>
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Community&nbsp;<span class="caret hidden-sm"></span></a>
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Community&nbsp;<span class="caret hidden-sm"></span></a>
           <ul class="dropdown-menu" role="menu">
             <li><a href="https://community.apache.org/about/">Community Development</a></li>
             <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
@@ -284,17 +277,18 @@
           </ul>
         </li>
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown">License&nbsp;<span class="caret hidden-sm"></span></a>
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">License&nbsp;<span class="caret hidden-sm"></span></a>
           <ul class="dropdown-menu" role="menu">
             <li><a href="/licenses/LICENSE-2.0">Apache License 2.0</a></li>
             <li><a href="/foundation/license-faq.html">Licensing FAQ</a></li>
             <li><a href="/licenses/contributor-agreements.html">Contributor License Agreements</a></li>
             <li><a href="/licenses/contributor-agreements.html#grants">Software Grants</a></li>
             <li><a href="/foundation/marks/list/">Trademarks</a></li>
+			<li><a href="/licenses/exports/">Exports</a></li>
           </ul>
         </li>
         <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Sponsors&nbsp;<span class="caret hidden-sm"></span></a>
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Sponsors&nbsp;<span class="caret hidden-sm"></span></a>
           <ul class="dropdown-menu" role="menu">
             <li><a href="/foundation/sponsorship.html">Sponsor the ASF</a></li>
             <li><a href="/foundation/thanks">Sponsor Thanks</a></li>
@@ -309,6 +303,7 @@
       <a href="/foundation/contributing.html"><img class="img-responsive" src="/img/support-apache.jpg" alt="Apache Support Logo" /></a>
     </div>
   </header>
+	<main id="maincontent">
   <div class="container"><style type="text/css">
 /* The following code is added by mdx_elementid.py
    It was originally lifted from http://subversion.apache.org/style/site.css */
@@ -540,7 +535,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 </pre></div></div>
-
+  </main>
   <!-- Footer -->
   
   <footer class="bg-primary">

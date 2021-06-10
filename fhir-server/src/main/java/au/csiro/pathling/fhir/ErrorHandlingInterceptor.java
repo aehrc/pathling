@@ -8,6 +8,7 @@ package au.csiro.pathling.fhir;
 
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import ca.uhn.fhir.interceptor.api.Hook;
@@ -24,11 +25,16 @@ import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.UndeclaredThrowableException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.spark.SparkException;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 
 /**
  * This class unifies exception handling.
@@ -63,7 +69,7 @@ public class ErrorHandlingInterceptor {
     try {
       throw error;
 
-    } catch (final SparkException | UncheckedExecutionException | InternalErrorException | InvocationTargetException e) {
+    } catch (final SparkException | UncheckedExecutionException | InternalErrorException | InvocationTargetException | UndeclaredThrowableException e) {
       // A number of exceptions are being used to wrap the actual cause. In this case we unwrap
       // its cause and pass it back to this same method to be re-evaluated.
       //
@@ -104,26 +110,45 @@ public class ErrorHandlingInterceptor {
       // Errors relating to invalid user input are passed through using the corresponding HAPI
       // exception.
       return new InvalidRequestException(e);
-
+    } catch (final AccessDeniedError e) {
+      return buildException(HttpServletResponse.SC_FORBIDDEN, e.getMessage(), IssueType.FORBIDDEN);
     } catch (final Throwable e) {
       // Anything else is unexpected and triggers a 500.
       return internalServerError(e);
     }
-
   }
 
   @Nonnull
-  BaseServerResponseException convertDataFormatException(@Nonnull final DataFormatException e) {
+  @SuppressWarnings("SameParameterValue")
+  private BaseServerResponseException buildException(final int theStatusCode,
+      @Nonnull final String message,
+      @Nonnull final IssueType issueType) {
+    final OperationOutcome opOutcome = new OperationOutcome();
+    final OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
+    issue.setSeverity(IssueSeverity.ERROR);
+    issue.setDiagnostics(message);
+    issue.setCode(issueType);
+    opOutcome.addIssue(issue);
+    final BaseServerResponseException ex = BaseServerResponseException
+        .newInstance(theStatusCode, message);
+    ex.setOperationOutcome(opOutcome);
+    return ex;
+  }
+
+
+  @Nonnull
+  private BaseServerResponseException convertDataFormatException(
+      @Nonnull final DataFormatException e) {
     final Throwable cause = e.getCause();
     if (cause == null) {
-      // a problem with constructing FHIR from JSON
+      // A problem with constructing FHIR from JSON.
       return new InvalidRequestException("Invalid FHIR content: " + e.getMessage());
     } else {
       if (cause instanceof JsonParseException) {
-        // a problem with parsing JSON
+        // A problem with parsing JSON.
         return new InvalidRequestException("Invalid JSON content: " + cause.getMessage());
       } else {
-        // an unknown problem with FHIR/JSON content
+        // An unknown problem with FHIR/JSON content.
         return new InvalidRequestException(
             "Unknown problem while parsing FHIR/JSON content: " + cause.getMessage());
       }

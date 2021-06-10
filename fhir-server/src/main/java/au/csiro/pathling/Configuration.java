@@ -75,7 +75,7 @@ public class Configuration {
   private Terminology terminology;
 
   @NotNull
-  private Authorisation auth;
+  private Configuration.Authorization auth;
 
   @NotNull
   private Caching caching;
@@ -214,25 +214,17 @@ public class Configuration {
   }
 
   /**
-   * Represents configuration specific to SMART authorisation.
+   * Represents configuration specific to authorization.
    */
   @Data
   @ToString(doNotUseGetters = true)
-  public static class Authorisation {
+  public static class Authorization {
 
     /**
-     * Enables SMART authorisation.
+     * Enables authorization.
      */
     @NotNull
     private boolean enabled;
-
-    /**
-     * Provides the URL of a JSON Web Key Set from which the signing key for incoming bearer tokens
-     * can be retrieved.
-     */
-    @URL
-    @Nullable
-    private String jwksUrl;
 
     /**
      * Configures the issuing domain for bearer tokens, which will be checked against the claims
@@ -243,36 +235,10 @@ public class Configuration {
 
     /**
      * Configures the audience for bearer tokens, which is the FHIR endpoint that tokens are
-     * intended to be authorised for.
+     * intended to be authorized for.
      */
     @Nullable
     private String audience;
-
-    /**
-     * Provides the URL which will be advertised as the authorization endpoint.
-     */
-    @URL
-    @Nullable
-    private String authorizeUrl;
-
-    /**
-     * Provides the URL which will be advertised as the token endpoint.
-     */
-    @URL
-    @Nullable
-    private String tokenUrl;
-
-    /**
-     * Provides the URL which will be advertised as the token revocation endpoint.
-     */
-    @URL
-    @Nullable
-    private String revokeUrl;
-
-    @Nonnull
-    public Optional<String> getJwksUrl() {
-      return Optional.ofNullable(jwksUrl);
-    }
 
     @Nonnull
     public Optional<String> getIssuer() {
@@ -282,21 +248,6 @@ public class Configuration {
     @Nonnull
     public Optional<String> getAudience() {
       return Optional.ofNullable(audience);
-    }
-
-    @Nonnull
-    public Optional<String> getAuthorizeUrl() {
-      return Optional.ofNullable(authorizeUrl);
-    }
-
-    @Nonnull
-    public Optional<String> getTokenUrl() {
-      return Optional.ofNullable(tokenUrl);
-    }
-
-    @Nonnull
-    public Optional<String> getRevokeUrl() {
-      return Optional.ofNullable(revokeUrl);
     }
 
   }
@@ -335,7 +286,7 @@ public class Configuration {
   }
 
   /**
-   * Configures the Import
+   * Represents configuration relating to Cross-Origin Resource Sharing (CORS).
    */
   @Data
   public static class Cors {
@@ -344,21 +295,17 @@ public class Configuration {
     private List<String> allowedOrigins;
 
     @NotNull
+    private List<String> allowedOriginPatterns;
+
+    @NotNull
     private List<String> allowedMethods;
 
     @NotNull
     private List<String> allowedHeaders;
 
-    @Nullable
-    private List<String> exposeHeaders;
-
     @NotNull
+    @Min(0)
     private Long maxAge;
-
-    @Nonnull
-    public Optional<List<String>> getExposeHeaders() {
-      return Optional.ofNullable(exposeHeaders);
-    }
 
   }
 

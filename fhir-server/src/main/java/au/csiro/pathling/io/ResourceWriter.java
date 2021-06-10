@@ -11,6 +11,8 @@ import static au.csiro.pathling.io.PersistenceScheme.fileNameForResource;
 import static org.apache.spark.sql.functions.asc;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.security.PathlingAuthority.AccessType;
+import au.csiro.pathling.security.ResourceAccess;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
@@ -48,6 +50,7 @@ public class ResourceWriter {
    * @param resourceType The type of the resource to write.
    * @param resources The {@link Dataset} containing the resource data.
    */
+  @ResourceAccess(AccessType.WRITE)
   public void write(@Nonnull final ResourceType resourceType, @Nonnull final Dataset resources) {
     final String tableUrl =
         warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
