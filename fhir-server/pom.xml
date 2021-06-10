@@ -22,7 +22,7 @@
   <description>A server that exposes Pathling functionality through a FHIR API.</description>
 
   <properties>
-    <pathling.antlrVersion>4.9.1</pathling.antlrVersion>
+    <pathling.antlrVersion>4.9.2</pathling.antlrVersion>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
   </properties>
 
