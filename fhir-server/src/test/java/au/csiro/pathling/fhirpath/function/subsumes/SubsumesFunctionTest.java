@@ -34,7 +34,7 @@ import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
-import au.csiro.pathling.test.assertions.FhirPathAssertion;
+import au.csiro.pathling.test.assertions.ElementPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -300,8 +300,7 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID5, null, null);
   }
 
-  @SuppressWarnings("rawtypes")
-  private FhirPathAssertion assertCallSuccess(final NamedFunction function,
+  private ElementPathAssertion assertCallSuccess(final NamedFunction function,
       final NonLiteralPath inputExpression, final FhirPath argumentExpression) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)

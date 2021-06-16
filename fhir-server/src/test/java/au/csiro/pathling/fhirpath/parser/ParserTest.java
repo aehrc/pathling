@@ -43,7 +43,6 @@ import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -84,9 +83,6 @@ public class ParserTest {
 
   @Autowired
   private TerminologyServiceFactory terminologyServiceFactory;
-
-  @Autowired
-  private IParser jsonParser;
 
   private Parser parser;
   private ResourceReader mockReader;
@@ -523,7 +519,9 @@ public class ParserTest {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
-    assertEquals("Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'", error.getMessage());
+    assertEquals(
+        "Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'",
+        error.getMessage());
   }
 
 }
