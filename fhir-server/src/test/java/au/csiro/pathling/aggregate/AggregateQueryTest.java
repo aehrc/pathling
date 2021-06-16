@@ -276,8 +276,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
         .withGrouping("reverseResolve(MedicationRequest.subject).where("
-            + "$this.medicationCodeableConcept.coding contains "
-            + "http://www.nlm.nih.gov/research/umls/rxnorm|313782 "
+            + "$this.medicationCodeableConcept.coding" + ""
+            + ".where(system = 'http://www.nlm.nih.gov/research/umls/rxnorm').code contains '313782' "
             + "and $this.authoredOn < @2019-06-21).count() > 0")
         .build();
 
@@ -311,7 +311,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
         .withGrouping(
-            "reverseResolve(Observation.subject).where($this.code.coding contains http://loinc.org|8302-2).status")
+            "reverseResolve(Observation.subject).where($this.code.coding.code contains '8302-2').status")
         .build();
 
     response = executor.execute(request);

@@ -177,23 +177,20 @@ public class ParserTest {
 
   @Test
   public void testCodingOperations() {
+    // Check that membership operators for codings use strict equality rather than equivalence.
     // test unversioned
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(spark, true)
-            .changeValue(PATIENT_ID_8ee183e2, false)
-            .changeValue(PATIENT_ID_9360820c, false)
-            .changeValue(PATIENT_ID_beff242e, false));
+        .hasRows(allPatientsWithValue(spark, false));
 
     // test versioned
     assertThatResultOf(
         "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(spark, true)
-            .changeValue(PATIENT_ID_bbd33563, false));
+        .hasRows(allPatientsWithValue(spark, false));
   }
 
   @Test
@@ -236,13 +233,13 @@ public class ParserTest {
         .hasExpression("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
         .hasCodingValue(expectedCoding);
 
-    // Coding literal form [system]|[version]|[code]
+    // Coding literal form [system]|[code]|[version]
     final Coding expectedCodingWithVersion =
         new Coding("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "S", null);
     expectedCodingWithVersion.setVersion("v1");
-    assertThatResultOf("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|v1|S")
+    assertThatResultOf("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S|v1")
         .isLiteralPath(CodingLiteralPath.class)
-        .hasExpression("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|v1|S")
+        .hasExpression("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S|v1")
         .hasCodingValue(expectedCodingWithVersion);
   }
 
@@ -318,7 +315,7 @@ public class ParserTest {
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes.csv");
 
     assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
-        + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
+        + "(http://snomed.info/sct|40055000|http://snomed.info/sct/32506021000036107/version/20200229)")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.csv");
   }
@@ -440,7 +437,7 @@ public class ParserTest {
   @Test
   void testIfFunction() {
     assertThatResultOf(
-        "maritalStatus.coding.iif($this = 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus'|M, 'Married', 'Not married')")
+        "gender.iif($this = 'male', 'Male', 'Not male')")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testIfFunction.csv");
   }
@@ -471,7 +468,6 @@ public class ParserTest {
         .hasRows(allPatientsWithValue(spark, (String) null));
   }
 
-
   @Test
   void testTranslateFunction() {
     final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
@@ -489,7 +485,6 @@ public class ParserTest {
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testTranslateFunction.csv");
   }
-
 
   @Test
   void testTranslateWithWhereAndTranslate() {
@@ -519,11 +514,21 @@ public class ParserTest {
   }
 
   @Test
+  public void testWithCodingLiteral() {
+    assertThatResultOf(
+        "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testWithCodingLiteral.csv");
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
-    assertEquals("Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'", error.getMessage());
+    assertEquals(
+        "Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'",
+        error.getMessage());
   }
 
 }

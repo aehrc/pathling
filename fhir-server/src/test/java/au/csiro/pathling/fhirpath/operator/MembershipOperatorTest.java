@@ -7,6 +7,10 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
+import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
+import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
+import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -18,14 +22,17 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.fixtures.CodingRowFixture;
 import au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.stream.Stream;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -188,15 +195,37 @@ public class MembershipOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void worksForUnversionedCodingLiterals(final String operator) {
+  public void worksForCodingLiterals(final String operator) {
+
+    final Coding snomedCoding = new Coding(SNOMED_URL, "56459004", null);
+    final Coding loincCoding1 = new Coding(LOINC_URL, "56459004", null);
+    loincCoding1.setId("fake-id-1");
+    final Coding loincCoding2 = new Coding(LOINC_URL, "56459004", null);
+    loincCoding2.setId("fake-id-2");
+    final Coding loincCodingWithVersion = new Coding(LOINC_URL, "56459004", null);
+    loincCodingWithVersion.setVersion("version1");
+
+    final Dataset<Row> codingDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withStructTypeColumns(codingStructType())
+        .withRow(StringPrimitiveRowFixture.ROW_ID_1, rowFromCoding(snomedCoding))
+        .withRow(StringPrimitiveRowFixture.ROW_ID_1, rowFromCoding(loincCoding1))
+        .withRow(StringPrimitiveRowFixture.ROW_ID_2, rowFromCoding(snomedCoding))
+        .withRow(StringPrimitiveRowFixture.ROW_ID_2, rowFromCoding(loincCoding2))
+        .withRow(StringPrimitiveRowFixture.ROW_ID_3, rowFromCoding(snomedCoding))
+        .withRow(StringPrimitiveRowFixture.ROW_ID_3, rowFromCoding(loincCodingWithVersion))
+        .withRow(StringPrimitiveRowFixture.ROW_ID_4, null)
+        .withRow(StringPrimitiveRowFixture.ROW_ID_4, null)
+        .buildWithStructValue();
+
     final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
-        .dataset(CodingRowFixture.createCompleteDataset(spark))
+        .dataset(codingDataset)
         .idAndValueColumns()
-        .expression("code")
         .build();
+
     final CodingLiteralPath element = CodingLiteralPath
-        .fromString(CodingRowFixture.SYSTEM_1 + "|" + CodingRowFixture.CODE_1, collection);
+        .fromString("http://loinc.org|56459004", collection);
     parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputContext(collection)
         .build();
@@ -206,33 +235,8 @@ public class MembershipOperatorTest {
         .selectOrderedResult()
         .hasRows(
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_1, true),
-            RowFactory.create(StringPrimitiveRowFixture.ROW_ID_2, false),
-            RowFactory.create(StringPrimitiveRowFixture.ROW_ID_3, true),
-            RowFactory.create(StringPrimitiveRowFixture.ROW_ID_4, false));
-  }
-
-  @ParameterizedTest
-  @MethodSource("parameters")
-  public void worksForVersionedCodingLiterals(final String operator) {
-    final ElementPath collection = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .dataset(CodingRowFixture.createCompleteDataset(spark))
-        .idAndValueColumns()
-        .build();
-    final CodingLiteralPath element = CodingLiteralPath
-        .fromString(CodingRowFixture.SYSTEM_2 + "|" + CodingRowFixture.VERSION_2 + "|"
-            + CodingRowFixture.CODE_2, collection);
-    parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
-        .build();
-
-    final FhirPath result = testOperator(operator, collection, element);
-    assertThat(result)
-        .selectOrderedResult()
-        .hasRows(
-            RowFactory.create(StringPrimitiveRowFixture.ROW_ID_1, false),
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_2, true),
-            RowFactory.create(StringPrimitiveRowFixture.ROW_ID_3, true),
+            RowFactory.create(StringPrimitiveRowFixture.ROW_ID_3, false),
             RowFactory.create(StringPrimitiveRowFixture.ROW_ID_4, false));
   }
 

@@ -53,7 +53,9 @@ public interface CodingEncoding {
            ? null
            : RowFactory
                .create(coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
-                   coding.getDisplay(), coding.getUserSelected());
+                   coding.getDisplay(), coding.hasUserSelected()
+                                        ? coding.getUserSelected()
+                                        : null);
 
   }
 
