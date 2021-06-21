@@ -16,6 +16,7 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -184,4 +185,9 @@ public class ResourcePath extends NonLiteralPath {
             .getExpression());
   }
 
+  @Nonnull
+  @Override
+  public FhirPath simplify(@Nonnull List<Column> alwaysKeep) {
+    return this;
+  }
 }

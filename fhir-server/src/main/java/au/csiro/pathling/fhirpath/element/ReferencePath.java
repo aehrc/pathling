@@ -6,9 +6,11 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Referrer;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -57,6 +59,12 @@ public class ReferencePath extends ElementPath implements Referrer {
   public Column getResourceEquality(@Nonnull final Column targetId,
       @Nonnull final Column targetCode) {
     return Referrer.resourceEqualityFor(this, targetCode, targetId);
+  }
+
+  @Nonnull
+  @Override
+  public FhirPath simplify(@Nonnull List<Column> alwaysKeep) {
+    return this;
   }
 
 }

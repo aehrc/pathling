@@ -15,6 +15,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.ResourceReader;
@@ -22,6 +23,7 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
+import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -34,21 +36,22 @@ import java.util.HashSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
+import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.Timed;
 
 /**
  * @author Piotr Szul
  */
+@Disabled
 @SpringBootTest
 @Tag("UnitTest")
 @ExtendWith(TimingExtension.class)
@@ -126,8 +129,125 @@ public class ProfTest {
     return assertThat(resourceParser.parse(expression));
   }
 
+
+  @Test
+  public void testProjection() {
+
+    DatasetBuilder x = new DatasetBuilder(spark).withIdColumn();
+    IntStream.range(0, 1000).mapToObj(String::valueOf).map(s -> "f_" + s)
+        .forEach(s -> x.withColumn(s, DataTypes.StringType));
+    Dataset d = x.build();
+    //d.printSchema();
+
+    Dataset ad = QueryHelpers.aliasAllColumns(d).getDataset();
+
+    for (int i = 0; i < 100; i++) {
+      //DatasetWithColumnMap result = QueryHelpers.createColumns(ad, functions.lit("xx"), functions.lit("yy"));
+      ad.withColumns(
+          scala.collection.JavaConverters.asScalaBuffer(Arrays.asList("xx", "yy")).toSeq(),
+          scala.collection.JavaConverters
+              .asScalaBuffer(Arrays.asList(functions.lit("xx"), functions.lit("yy"))).toSeq());
+    }
+  }
+
+
+  @Test
+  public void testExplode() {
+
+    DatasetBuilder x = new DatasetBuilder(spark).withIdColumn();
+    x.withIdColumn()
+        .withColumn("test", DataTypes.createArrayType(DataTypes.StringType));
+
+    Dataset d = x.build();
+    d.printSchema();
+
+    Column c = d.col("test");
+    Column pe = functions.posexplode_outer(c);
+    Expression exp = pe.expr();
+
+    System.out.println(exp);
+    System.out.println(exp.dataType());
+    System.out.println(exp.deterministic());
+    System.out.println(exp.resolved());
+
+    d.withColumn("ss", pe);
+  }
+
+
+  @Test
+  public void testLazy() {
+    Dataset<Long> ds = spark.range(100);
+    final Column colId = functions.col("id");
+
+    ds
+        .withColumn("id", functions.col("id").plus("10"))
+        .select(functions.col("id"), colId.plus(functions.lit(1)))
+        .collectAsList().forEach(System.out::println);
+  }
+
+
+  @Test
+  public void testObservations() {
+
+    System.out
+        .println(spark.conf().get(org.apache.spark.sql.internal.SQLConf.CODEGEN_FACTORY_MODE()));
+
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(CD_SNOMED_403190006, CD_SNOMED_284551006));
+
+    final String expression = "reverseResolve(Observation.subject).valueQuantity.value";
+    final long startTime = System.currentTimeMillis();
+    final FhirPathAssertion as = assertThatResultOf(expression);
+    final long parserTime = System.currentTimeMillis();
+
+    as.getFhirPath().getDataset().explain();
+
+    System.out.format("Parsing time: %s\n", parserTime - startTime);
+    as.selectOrderedResult()
+        .debugAllRows();
+    final long exectTime = System.currentTimeMillis();
+    System.out.format("Exec time: %s\n", exectTime - parserTime);
+    //    "iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
+    //        + "+ iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
+
+  }
+
+
+  @Test
+  public void testWhereWithMemberOf1() {
+
+    System.out
+        .println(spark.conf().get(org.apache.spark.sql.internal.SQLConf.CODEGEN_FACTORY_MODE()));
+
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(CD_SNOMED_403190006, CD_SNOMED_284551006));
+
+    final String expression = IntStream.range(0, 1).mapToObj(i -> String.format(
+        "iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/%010d')).empty().not(), 2, 0)",
+        i)).collect(
+        Collectors.joining("\n+"));
+    final long startTime = System.currentTimeMillis();
+    final FhirPathAssertion as = assertThatResultOf(expression);
+    final long parserTime = System.currentTimeMillis();
+
+    as.getFhirPath().getDataset().explain();
+
+    System.out.format("Parsing time: %s\n", parserTime - startTime);
+    as.selectOrderedResult()
+        .debugAllRows();
+    final long exectTime = System.currentTimeMillis();
+    System.out.format("Exec time: %s\n", exectTime - parserTime);
+    //    "iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
+    //        + "+ iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
+
+  }
+
   @Test
   public void testWhereWithMemberOf10() {
+
+    System.out
+        .println(spark.conf().get(org.apache.spark.sql.internal.SQLConf.CODEGEN_FACTORY_MODE()));
+
     when(terminologyService.intersect(any(), any()))
         .thenReturn(setOfSimpleFrom(CD_SNOMED_403190006, CD_SNOMED_284551006));
 
@@ -142,7 +262,7 @@ public class ProfTest {
     as.selectOrderedResult()
         .debugAllRows();
     final long exectTime = System.currentTimeMillis();
-    System.out.format("Exec time: %s\n", exectTime - parserTime );
+    System.out.format("Exec time: %s\n", exectTime - parserTime);
     //    "iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
     //        + "+ iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
 
@@ -164,7 +284,7 @@ public class ProfTest {
     as.selectOrderedResult()
         .debugAllRows();
     final long exectTime = System.currentTimeMillis();
-    System.out.format("Exec time: %s\n", exectTime - parserTime );
+    System.out.format("Exec time: %s\n", exectTime - parserTime);
     //    "iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
     //        + "+ iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
 
@@ -187,7 +307,7 @@ public class ProfTest {
     as.selectOrderedResult()
         .debugAllRows();
     final long exectTime = System.currentTimeMillis();
-    System.out.format("Exec time: %s\n", exectTime - parserTime );
+    System.out.format("Exec time: %s\n", exectTime - parserTime);
     //    "iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
     //        + "+ iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
 
@@ -202,6 +322,7 @@ public class ProfTest {
         "iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/%010d')).empty().not(), 2, 0)",
         i)).collect(
         Collectors.joining("\n+"));
+    System.out.format("Starting parsing\n");
     final long startTime = System.currentTimeMillis();
     final FhirPathAssertion as = assertThatResultOf(expression);
     final long parserTime = System.currentTimeMillis();
@@ -209,7 +330,7 @@ public class ProfTest {
     as.selectOrderedResult()
         .debugAllRows();
     final long exectTime = System.currentTimeMillis();
-    System.out.format("Exec time: %s\n", exectTime - parserTime );
+    System.out.format("Exec time: %s\n", exectTime - parserTime);
     //    "iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
     //        + "+ iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
 
@@ -232,7 +353,7 @@ public class ProfTest {
     as.selectOrderedResult()
         .debugAllRows();
     final long exectTime = System.currentTimeMillis();
-    System.out.format("Exec time: %s\n", exectTime - parserTime );
+    System.out.format("Exec time: %s\n", exectTime - parserTime);
     //    "iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
     //        + "+ iif(reverseResolve(Condition.subject).where($this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')).empty().not(), 2, 0)"
 

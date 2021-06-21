@@ -8,9 +8,13 @@ package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.function.NamedFunction;
+import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.terminology.TerminologyService;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -28,6 +32,7 @@ import org.apache.spark.sql.SparkSession;
  */
 @Getter
 public class ParserContext {
+
 
   /**
    * The input context from which the FHIRPath is to be evaluated, which is then referred to through
@@ -106,5 +111,15 @@ public class ParserContext {
   public void setThisContext(@Nonnull final FhirPath thisContext) {
     this.thisContext = Optional.of(thisContext);
   }
+
+
+  @Nonnull
+  public FhirPath invokeFunction(@Nonnull final NamedFunction function,
+      @Nonnull final NonLiteralPath input, @Nonnull final List<FhirPath> arguments) {
+    final NamedFunctionInput functionInput = new NamedFunctionInput(this, input, arguments);
+    return function.invoke(functionInput).simplify(this.getGroupingColumns().orElse(
+        Collections.emptyList()));
+  }
+
 
 }

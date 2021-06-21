@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Optional;
@@ -135,6 +136,8 @@ public class ElementPath extends NonLiteralPath {
 
     final DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
         eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
+
+    //ParserContext.getCurrent();
 
     try {
       // Call its constructor and return.

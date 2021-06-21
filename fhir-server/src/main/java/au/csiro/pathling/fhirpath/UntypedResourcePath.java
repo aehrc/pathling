@@ -16,6 +16,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -127,4 +128,9 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
             .getExpression());
   }
 
+  @Nonnull
+  @Override
+  public FhirPath simplify(@Nonnull List<Column> alwaysKeep) {
+    return this;
+  }
 }

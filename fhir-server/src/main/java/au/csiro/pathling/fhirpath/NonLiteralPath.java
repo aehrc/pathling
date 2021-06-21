@@ -13,9 +13,8 @@ import static org.apache.spark.sql.functions.*;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -277,4 +276,38 @@ public abstract class NonLiteralPath implements FhirPath {
     return resultDataset;
   }
 
+
+  protected void collectColumns(@Nonnull final List<Column> columns) {
+    columns.add(getIdColumn());
+    getEidColumn().ifPresent(columns::add);
+    columns.add(getValueColumn());
+    getThisColumn().ifPresent(columns::add);
+  }
+
+  @Nonnull
+  @Override
+  public FhirPath simplify(@Nonnull List<Column> alwaysKeep) {
+
+    if (getThisColumn().isPresent()) {
+      return this;
+    }
+
+    final Set<String> existingColumns = Stream.of(getDataset().columns())
+        .collect(Collectors.toUnmodifiableSet());
+
+    final List<Column> retain = new ArrayList<>();
+    collectColumns(retain);
+    alwaysKeep.stream()
+        .filter(c -> existingColumns.contains(c.toString()))
+        .forEach(retain::add);
+
+    return this.copy(
+        this.getExpression(),
+        this.getDataset().select(retain.toArray(Column[]::new)),
+        this.getIdColumn(),
+        this.getEidColumn(),
+        this.getValueColumn(),
+        this.isSingular(),
+        this.getThisColumn());
+  }
 }

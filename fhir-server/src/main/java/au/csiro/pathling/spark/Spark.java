@@ -48,6 +48,7 @@ public class Spark {
 
     final SparkSession spark = SparkSession.builder()
         .appName(configuration.getSpark().getAppName())
+//        .config(org.apache.spark.sql.internal.SQLConf.CODEGEN_FACTORY_MODE().key(),"NO_CODEGEN")
         .getOrCreate();
 
     // Configure user defined functions.

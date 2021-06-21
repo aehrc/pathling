@@ -34,6 +34,11 @@ public class FhirPathAssertion<T extends FhirPathAssertion> {
     this.fhirPath = fhirPath;
   }
 
+
+  public FhirPath getFhirPath() {
+    return fhirPath;
+  }
+
   @Nonnull
   public DatasetAssert selectResult() {
     final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};

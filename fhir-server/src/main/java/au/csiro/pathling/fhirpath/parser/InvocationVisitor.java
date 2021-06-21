@@ -19,10 +19,7 @@ import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -85,7 +82,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // If there is an invoker, we treat this as a path traversal from the invoker.
       final PathTraversalInput pathTraversalInput = new PathTraversalInput(context, invoker,
           fhirPath);
-      return new PathTraversalOperator().invoke(pathTraversalInput);
+      return new PathTraversalOperator().invoke(pathTraversalInput)
+          .simplify(context.getGroupingColumns().orElse(
+              Collections.emptyList()));
 
     } else {
       // If there is no invoker, we need to interpret what the expression means, based on its
@@ -107,7 +106,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
           // traversal from the input context.
           final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
               context.getInputContext(), fhirPath);
-          return new PathTraversalOperator().invoke(pathTraversalInput);
+          return new PathTraversalOperator().invoke(pathTraversalInput)
+              .simplify(context.getGroupingColumns().orElse(
+                  Collections.emptyList()));
         }
       } else {
         // If we're in the context of a function's arguments, there are two valid things this
@@ -124,7 +125,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
           // input context.
           final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
               context.getThisContext().get(), fhirPath);
-          return new PathTraversalOperator().invoke(pathTraversalInput);
+          return new PathTraversalOperator().invoke(pathTraversalInput)
+              .simplify(context.getGroupingColumns().orElse(
+                  Collections.emptyList()));
         }
 
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
@@ -209,8 +212,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       );
     }
 
-    final NamedFunctionInput functionInput = new NamedFunctionInput(context, nonLiteral, arguments);
-    return function.invoke(functionInput);
+    return context.invokeFunction(function, nonLiteral, arguments);
   }
 
   @Override

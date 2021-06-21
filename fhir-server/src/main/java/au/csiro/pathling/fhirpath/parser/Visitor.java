@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.operator.Operator;
 import au.csiro.pathling.fhirpath.operator.OperatorInput;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
+import java.util.Collections;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -72,7 +73,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
     final Operator operator = Operator.getInstance(operatorName);
 
     final OperatorInput operatorInput = new OperatorInput(context, left, right);
-    return operator.invoke(operatorInput);
+    return operator.invoke(operatorInput).simplify(context.getGroupingColumns().orElse(
+        Collections.emptyList()));
   }
 
   @Override

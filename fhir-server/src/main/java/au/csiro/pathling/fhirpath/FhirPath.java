@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -69,5 +70,10 @@ public interface FhirPath extends Orderable {
   NonLiteralPath mergeWith(@Nonnull FhirPath target, @Nonnull Dataset<Row> dataset,
       @Nonnull String expression, @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn,
       @Nonnull Column valueColumn, boolean singular, @Nonnull Optional<Column> thisColumn);
+
+  @Nonnull
+  default FhirPath simplify(@Nonnull final List<Column> alwaysKeep) {
+    return this;
+  }
 
 }
