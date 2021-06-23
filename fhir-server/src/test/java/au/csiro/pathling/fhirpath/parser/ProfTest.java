@@ -37,7 +37,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.*;
+import org.apache.spark.sql.catalyst.expressions.Alias;
 import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.catalyst.expressions.NamedExpression;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
@@ -159,18 +161,25 @@ public class ProfTest {
         .withColumn("test", DataTypes.createArrayType(DataTypes.StringType));
 
     Dataset d = x.build();
+    final Column rid = functions.col(d.columns()[0]);
     d.printSchema();
 
     Column c = d.col("test");
-    Column pe = functions.posexplode_outer(c);
-    Expression exp = pe.expr();
+    Column pe = functions.posexplode_outer(c).as(new String[]{"x1", "x2"});
 
-    System.out.println(exp);
-    System.out.println(exp.dataType());
-    System.out.println(exp.deterministic());
-    System.out.println(exp.resolved());
+    System.out.println(pe.expr());
+    Column id = functions.array(functions.col("x1"), rid).alias("y1");
 
-    d.withColumn("ss", pe);
+    Expression ne = id.expr();
+    System.out.println(ne);
+    System.out.println(ne.children());
+
+    Column val = functions.col("x2").alias("y3");
+
+
+    d.select(rid, pe).select(id, val).printSchema();
+    d.select(rid, pe, id, val).select(id, val).collectAsList();
+
   }
 
 
