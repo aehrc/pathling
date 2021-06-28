@@ -25,6 +25,7 @@ import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
@@ -512,6 +513,14 @@ public class ParserTest {
         "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=2).code")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.csv");
+  }
+
+  @Test
+  public void testCombineOperator() {
+    assertThatResultOf("name.family combine name.given")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperator.csv");
   }
 
   @Test

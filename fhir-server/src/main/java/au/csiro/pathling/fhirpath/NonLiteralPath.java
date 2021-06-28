@@ -277,4 +277,9 @@ public abstract class NonLiteralPath implements FhirPath {
     return resultDataset;
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return getClass().equals(target.getClass());
+  }
+
 }

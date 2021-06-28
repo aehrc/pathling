@@ -49,6 +49,13 @@ public interface FhirPath extends Orderable {
   boolean isSingular();
 
   /**
+   * @param target the path to test
+   * @return an indicator of whether this path's values can be combined into a single collection
+   * with values from the supplied expression type
+   */
+  boolean canBeCombinedWith(@Nonnull FhirPath target);
+
+  /**
    * Creates a path that can be used to represent a collection which includes elements from both a
    * source and a target path.
    *

@@ -200,4 +200,9 @@ public abstract class LiteralPath implements FhirPath {
             .getExpression());
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return getClass().equals(target.getClass());
+  }
+
 }
