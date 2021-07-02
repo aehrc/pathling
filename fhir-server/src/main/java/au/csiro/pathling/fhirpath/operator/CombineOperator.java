@@ -38,19 +38,8 @@ public class CombineOperator implements Operator {
     checkUserInput(left.canBeCombinedWith(right),
         "Input and argument to combine function are not compatible");
 
-    final List<Dataset<Row>> trimmed = new ArrayList<>();
-    for (final FhirPath operand : Arrays.asList(left, right)) {
-      final List<Column> columns = new ArrayList<>(
-          Arrays.asList(operand.getIdColumn(), operand.getValueColumn()));
-      if (operand instanceof NonLiteralPath) {
-        final NonLiteralPath nonLiteralLeft = (NonLiteralPath) operand;
-        nonLiteralLeft.getThisColumn().ifPresent(columns::add);
-      }
-      input.getContext().getGroupingColumns().ifPresent(columns::addAll);
-      trimmed.add(operand.getDataset().select(columns.toArray(new Column[]{})));
-    }
-    final Dataset<Row> leftTrimmed = trimmed.get(0);
-    final Dataset<Row> rightTrimmed = trimmed.get(1);
+    final Dataset<Row> leftTrimmed = trimDataset(input, left);
+    final Dataset<Row> rightTrimmed = trimDataset(input, right);
 
     final Dataset<Row> dataset = leftTrimmed.union(rightTrimmed);
     final Optional<Column> thisColumn = left instanceof NonLiteralPath
@@ -59,6 +48,18 @@ public class CombineOperator implements Operator {
     return left
         .mergeWith(right, dataset, expression, left.getIdColumn(),
             Optional.empty(), left.getValueColumn(), false, thisColumn);
+  }
+
+  @Nonnull
+  private Dataset<Row> trimDataset(@Nonnull final OperatorInput input, final FhirPath operand) {
+    final List<Column> columns = new ArrayList<>(
+        Arrays.asList(operand.getIdColumn(), operand.getValueColumn()));
+    if (operand instanceof NonLiteralPath) {
+      final NonLiteralPath nonLiteralLeft = (NonLiteralPath) operand;
+      nonLiteralLeft.getThisColumn().ifPresent(columns::add);
+    }
+    input.getContext().getGroupingColumns().ifPresent(columns::addAll);
+    return operand.getDataset().select(columns.toArray(new Column[]{}));
   }
 
 }
