@@ -65,6 +65,7 @@ class SumFunctionTest {
         .withRow("observation-1", makeEid(2), 7)
         .withRow("observation-2", null, null)
         .withRow("observation-3", makeEid(0), -1)
+        .withRow("observation-3", makeEid(1), null)
         .build();
     final ElementPath inputPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
