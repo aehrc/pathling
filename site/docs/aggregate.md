@@ -7,7 +7,7 @@ parent: Documentation
 
 # Aggregate
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4)
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and the `$aggregate` operation is an

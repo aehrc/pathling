@@ -83,7 +83,6 @@ public class OperationDefinitionProvider implements IResourceProvider {
   public OperationDefinition getOperationDefinitionById(@Nullable @IdParam final IIdType id) {
     checkUserInput(id != null, "Missing ID parameter");
 
-
     final String idString = id.getValue();
     final OperationDefinition resource = resources.get(idString);
     if (resource == null) {
@@ -100,6 +99,13 @@ public class OperationDefinitionProvider implements IResourceProvider {
 
     final OperationDefinition operationDefinition = (OperationDefinition) jsonParser
         .parseResource(resourceStream);
+    final String id = String
+        .format("%1$s%2$s", operationDefinition.getName(),
+            version.getMajorVersion().map(v -> String.format("-%1$s", v)).orElse(""));
+    operationDefinition.setId(id);
+    final String url = String
+        .format("%1$s/OperationDefinition/%2$s", ConformanceProvider.URI_BASE, id);
+    operationDefinition.setUrl(url);
     operationDefinition.setVersion(version.getBuildVersion().orElse(UNKNOWN_VERSION));
     return operationDefinition;
   }

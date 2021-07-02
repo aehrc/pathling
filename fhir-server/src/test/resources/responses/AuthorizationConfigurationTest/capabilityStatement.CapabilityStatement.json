@@ -1,6 +1,5 @@
 {
   "resourceType": "CapabilityStatement",
-  "url": "https://pathling.csiro.au/fhir/CapabilityStatement/pathling-fhir-api-3",
   "rest": [
     {
       "security": {

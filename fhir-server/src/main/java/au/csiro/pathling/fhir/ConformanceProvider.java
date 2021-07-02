@@ -43,13 +43,15 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ConformanceProvider implements IServerConformanceProvider<CapabilityStatement> {
 
-  private static final String URI_BASE = "https://pathling.csiro.au/fhir";
-  private static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
+  /**
+   * The base URI for canonical URIs.
+   */
+  public static final String URI_BASE = "https://pathling.csiro.au/fhir";
 
+  private static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
   private static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   private static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
   private static final String SMART_OAUTH_URI = "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris";
-
   private static final String UNKNOWN_VERSION = "UNKNOWN";
 
   @Nonnull
