@@ -24,6 +24,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
@@ -521,6 +522,15 @@ public class ParserTest {
         .isElementPath(StringPath.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testCombineOperator.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithWhereFunction() {
+    assertThatResultOf("where((name.family combine name.given) contains 'Gleichner915').birthDate")
+        .isElementPath(DatePath.class)
+        .selectResult()
+        .debugAllRows()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithWhereFunction.csv");
   }
 
   @Test
