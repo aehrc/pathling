@@ -12,6 +12,9 @@
 
 package au.csiro.pathling.encoders;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
@@ -22,24 +25,29 @@ import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
-import org.junit.Assert;
+import org.hl7.fhir.r4.model.Questionnaire;
 import org.junit.Test;
 
 public class SchemaConverterTest {
 
-  static SchemaConverter converter = new SchemaConverter(FhirContext.forR4(),
+  private static final SchemaConverter converter = new SchemaConverter(FhirContext.forR4(),
       new R4DataTypeMappings());
 
-  static StructType conditionSchema = converter.resourceSchema(Condition.class);
+  private static final StructType conditionSchema = converter.resourceSchema(Condition.class);
 
-  static StructType observationSchema = converter.resourceSchema(Observation.class);
+  private static final StructType observationSchema = converter.resourceSchema(Observation.class);
 
-  static StructType medRequestSchema = converter.resourceSchema(MedicationRequest.class);
+  private static final StructType medRequestSchema = converter
+      .resourceSchema(MedicationRequest.class);
+
+  private static final StructType questionnaireSchema = converter
+      .resourceSchema(Questionnaire.class);
 
   /**
    * Returns the type of a nested field.
    */
-  DataType getField(final DataType dataType, final boolean isNullable, final String... names) {
+  private DataType getField(final DataType dataType, final boolean isNullable,
+      final String... names) {
 
     final StructType schema = dataType instanceof ArrayType
                               ? (StructType) ((ArrayType) dataType).elementType()
@@ -48,7 +56,7 @@ public class SchemaConverterTest {
     final StructField field = Arrays.stream(schema.fields())
         .filter(sf -> sf.name().equalsIgnoreCase(names[0]))
         .findFirst()
-        .get();
+        .orElseThrow();
 
     final DataType child = field.dataType();
 
@@ -56,7 +64,7 @@ public class SchemaConverterTest {
     if (names.length == 1) {
 
       // Check the nullability.
-      Assert.assertEquals("Unexpected nullability of field " + field.name(),
+      assertEquals("Unexpected nullability of field " + field.name(),
           isNullable,
           field.nullable());
 
@@ -69,12 +77,12 @@ public class SchemaConverterTest {
   @Test
   public void resourceHasId() {
 
-    Assert.assertTrue(getField(conditionSchema, true, "id") instanceof StringType);
+    assertTrue(getField(conditionSchema, true, "id") instanceof StringType);
   }
 
   @Test
   public void boundCodeToStruct() {
-    Assert.assertTrue(getField(conditionSchema, true, "verificationStatus") instanceof StructType);
+    assertTrue(getField(conditionSchema, true, "verificationStatus") instanceof StructType);
   }
 
   @Test
@@ -82,11 +90,11 @@ public class SchemaConverterTest {
 
     final DataType codingType = getField(conditionSchema, true, "severity", "coding");
 
-    Assert.assertTrue(getField(codingType, true, "system") instanceof StringType);
-    Assert.assertTrue(getField(codingType, true, "version") instanceof StringType);
-    Assert.assertTrue(getField(codingType, true, "code") instanceof StringType);
-    Assert.assertTrue(getField(codingType, true, "display") instanceof StringType);
-    Assert.assertTrue(getField(codingType, true, "userSelected") instanceof BooleanType);
+    assertTrue(getField(codingType, true, "system") instanceof StringType);
+    assertTrue(getField(codingType, true, "version") instanceof StringType);
+    assertTrue(getField(codingType, true, "code") instanceof StringType);
+    assertTrue(getField(codingType, true, "display") instanceof StringType);
+    assertTrue(getField(codingType, true, "userSelected") instanceof BooleanType);
   }
 
   @Test
@@ -94,30 +102,30 @@ public class SchemaConverterTest {
 
     final DataType codeableType = getField(conditionSchema, true, "severity");
 
-    Assert.assertTrue(codeableType instanceof StructType);
-    Assert.assertTrue(getField(codeableType, true, "coding") instanceof ArrayType);
-    Assert.assertTrue(getField(codeableType, true, "text") instanceof StringType);
+    assertTrue(codeableType instanceof StructType);
+    assertTrue(getField(codeableType, true, "coding") instanceof ArrayType);
+    assertTrue(getField(codeableType, true, "text") instanceof StringType);
   }
 
   @Test
   public void idToString() {
-    Assert.assertTrue(getField(conditionSchema, true, "id") instanceof StringType);
+    assertTrue(getField(conditionSchema, true, "id") instanceof StringType);
   }
 
   @Test
   public void narrativeToStruct() {
 
-    Assert.assertTrue(getField(conditionSchema, true, "text", "status") instanceof StringType);
-    Assert.assertTrue(getField(conditionSchema, true, "text", "div") instanceof StringType);
+    assertTrue(getField(conditionSchema, true, "text", "status") instanceof StringType);
+    assertTrue(getField(conditionSchema, true, "text", "div") instanceof StringType);
   }
 
   @Test
   public void expandChoiceFields() {
-    Assert.assertTrue(getField(conditionSchema, true, "onsetPeriod") instanceof StructType);
-    Assert.assertTrue(getField(conditionSchema, true, "onsetRange") instanceof StructType);
-    Assert.assertTrue(getField(conditionSchema, true, "onsetDateTime") instanceof StringType);
-    Assert.assertTrue(getField(conditionSchema, true, "onsetString") instanceof StringType);
-    Assert.assertTrue(getField(conditionSchema, true, "onsetAge") instanceof StructType);
+    assertTrue(getField(conditionSchema, true, "onsetPeriod") instanceof StructType);
+    assertTrue(getField(conditionSchema, true, "onsetRange") instanceof StructType);
+    assertTrue(getField(conditionSchema, true, "onsetDateTime") instanceof StringType);
+    assertTrue(getField(conditionSchema, true, "onsetString") instanceof StringType);
+    assertTrue(getField(conditionSchema, true, "onsetAge") instanceof StructType);
   }
 
   @Test
@@ -131,31 +139,36 @@ public class SchemaConverterTest {
         .filter(fn -> fn.startsWith("value"))
         .collect(Collectors.toList());
 
-    Assert.assertEquals(expectedFields, actualFields);
+    assertEquals(expectedFields, actualFields);
+  }
+
+  @Test
+  public void decimalWithinChoiceField() {
+    final DataType field = getField(questionnaireSchema, true, "item", "answer");
+    assertTrue(field instanceof DecimalType);
   }
 
   @Test
   public void instantToTimestamp() {
-    Assert.assertTrue(getField(observationSchema, true, "issued") instanceof TimestampType);
+    assertTrue(getField(observationSchema, true, "issued") instanceof TimestampType);
   }
 
   @Test
   public void timeToString() {
-    Assert.assertTrue((getField(observationSchema, true, "valueTime") instanceof StringType));
+    assertTrue((getField(observationSchema, true, "valueTime") instanceof StringType));
   }
 
   @Test
   public void bigDecimalToDecimal() {
-    Assert.assertTrue(
+    assertTrue(
         getField(observationSchema, true, "valueQuantity", "value") instanceof DecimalType);
   }
 
   @Test
   public void reference() {
-    Assert.assertTrue(
+    assertTrue(
         getField(observationSchema, true, "subject", "reference") instanceof StringType);
-    Assert
-        .assertTrue(getField(observationSchema, true, "subject", "display") instanceof StringType);
+    assertTrue(getField(observationSchema, true, "subject", "display") instanceof StringType);
   }
 
   @Test
@@ -163,13 +176,13 @@ public class SchemaConverterTest {
 
     // Only the primary name that includes the
     // choice type should be included.
-    Assert.assertTrue(medRequestSchema.getFieldIndex(
+    assertTrue(medRequestSchema.getFieldIndex(
         "medicationReference").nonEmpty());
 
     // Additional names for the field should not be included
-    Assert.assertTrue(medRequestSchema.getFieldIndex(
+    assertTrue(medRequestSchema.getFieldIndex(
         "medicationMedication").isEmpty());
-    Assert.assertTrue(medRequestSchema.getFieldIndex(
+    assertTrue(medRequestSchema.getFieldIndex(
         "medicationResource").isEmpty());
   }
 }
