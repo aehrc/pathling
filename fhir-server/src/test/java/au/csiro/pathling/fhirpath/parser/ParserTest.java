@@ -529,8 +529,16 @@ public class ParserTest {
     assertThatResultOf("where((name.family combine name.given) contains 'Gleichner915').birthDate")
         .isElementPath(DatePath.class)
         .selectResult()
-        .debugAllRows()
         .hasRows(spark, "responses/ParserTest/testCombineOperatorWithWhereFunction.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithResourcePaths() {
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).where(clinicalStatus.coding.code contains 'active') combine reverseResolve(Condition.subject).where(clinicalStatus.coding.code contains 'resolved')")
+        .isResourcePath()
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithResourcePaths.csv");
   }
 
   @Test
