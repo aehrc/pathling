@@ -501,6 +501,19 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
+  @Test
+  void queryWithBracketing() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping("(1 + 3) * 4")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithBracketing.Parameters.json", response);
+  }
 
   @Test
   void throwsInvalidInputOnEmptyAggregation() {

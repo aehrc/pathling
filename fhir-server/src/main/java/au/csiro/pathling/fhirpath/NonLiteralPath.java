@@ -177,6 +177,12 @@ public abstract class NonLiteralPath implements FhirPath {
       @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn, @Nonnull Column valueColumn,
       boolean singular, @Nonnull Optional<Column> thisColumn);
 
+  @Nonnull
+  @Override
+  public FhirPath withExpression(@Nonnull final String expression) {
+    return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
+  }
+
   /**
    * Construct a $this path based upon this path.
    *
