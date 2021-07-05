@@ -7,6 +7,8 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.monotonically_increasing_id;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -42,12 +44,13 @@ public class CombineOperator implements Operator {
     final Dataset<Row> rightTrimmed = trimDataset(input, right);
 
     final Dataset<Row> dataset = leftTrimmed.union(rightTrimmed);
+    final Optional<Column> eidColumn = Optional.of(array(monotonically_increasing_id()));
     final Optional<Column> thisColumn = left instanceof NonLiteralPath
                                         ? ((NonLiteralPath) left).getThisColumn()
                                         : Optional.empty();
     return left
-        .mergeWith(right, dataset, expression, left.getIdColumn(),
-            Optional.empty(), left.getValueColumn(), false, thisColumn);
+        .mergeWith(right, dataset, expression, left.getIdColumn(), eidColumn, left.getValueColumn(),
+            false, thisColumn);
   }
 
   @Nonnull
