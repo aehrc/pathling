@@ -15,6 +15,8 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.TimingExtension;
+import au.csiro.pathling.test.fixtures.RelationBuilder;
+import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -475,6 +477,42 @@ class AggregateQueryTest extends AggregateExecutorTest {
     response = executor.execute(request);
     assertResponse("AggregateQueryTest/queryWithNonSingularWhereFollowedByCount.Parameters.json",
         response);
+  }
+
+
+  @Test
+  void queryWithNonsingularBooleanGrouping() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.CONDITION, subjectResource);
+    // Not a real subsumption - just works for this use case.
+    // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
+    when(terminologyService.getSubsumesRelation(any()))
+        .thenReturn(RelationBuilder.empty().add(TerminologyHelpers.CD_SNOMED_VER_284551006,
+            TerminologyHelpers.CD_SNOMED_VER_40055000).build());
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping(
+            "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|284551006)")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithNonsingularBooleanGrouping.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithBracketing() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping("(1 + 3) * 4")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithBracketing.Parameters.json", response);
   }
 
   @Test

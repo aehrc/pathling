@@ -9,6 +9,7 @@ package au.csiro.pathling.test.fhir;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.fhir.ErrorHandlingInterceptor;
 import ca.uhn.fhir.parser.DataFormatException;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
@@ -16,8 +17,13 @@ import ca.uhn.fhir.rest.server.exceptions.*;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.UndeclaredThrowableException;
 import javax.annotation.Nonnull;
 import org.apache.spark.SparkException;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -56,8 +62,10 @@ public class ErrorHandlingInterceptorTest {
 
   @Test
   public void recursiveUnwrappingOfException() {
-    final Exception wrappedException = new InternalErrorException(new InvocationTargetException(
-        new SparkException("Spark Error", new UncheckedExecutionException(SERVER_RESPONSE_EX1))));
+    final Exception wrappedException = new UndeclaredThrowableException(
+        new InternalErrorException(new InvocationTargetException(
+            new SparkException("Spark Error",
+                new UncheckedExecutionException(SERVER_RESPONSE_EX1)))));
     assertEquals(SERVER_RESPONSE_EX1, callInterceptor(wrappedException));
   }
 
@@ -120,6 +128,25 @@ public class ErrorHandlingInterceptorTest {
     assertEquals("Unknown problem while parsing FHIR/JSON content: "
             + "Some Error",
         actualException.getMessage());
+  }
+
+  @Test
+  public void convertsAccessDeniedError() {
+    final BaseServerResponseException actualException = callInterceptor(
+        new AccessDeniedError("Access denied", "operation:import")
+    );
+    assertTrue(actualException instanceof ForbiddenOperationException);
+    assertEquals(403, actualException.getStatusCode());
+    assertEquals("Access denied", actualException.getMessage());
+
+    final OperationOutcomeIssueComponent expectedIssue = new OperationOutcomeIssueComponent();
+    expectedIssue.setSeverity(IssueSeverity.ERROR);
+    expectedIssue.setCode(IssueType.FORBIDDEN);
+    expectedIssue.setDiagnostics("Access denied");
+
+    assertTrue(expectedIssue
+        .equalsDeep(((OperationOutcome) actualException.getOperationOutcome()).getIssueFirstRep())
+    );
   }
 
 }

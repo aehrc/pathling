@@ -175,6 +175,12 @@ public abstract class LiteralPath implements FhirPath {
     return FHIRPATH_TYPE_TO_FHIR_TYPE.get(fhirPathClass);
   }
 
+  @Nonnull
+  @Override
+  public FhirPath withExpression(@Nonnull final String expression) {
+    return this;
+  }
+
   @Override
   @Nonnull
   public NonLiteralPath mergeWith(@Nonnull final FhirPath target,

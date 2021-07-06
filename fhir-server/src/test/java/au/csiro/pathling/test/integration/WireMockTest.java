@@ -21,6 +21,10 @@ public class WireMockTest extends IntegrationTest {
   @Autowired
   protected WireMockServer wireMockServer;
 
+  protected static boolean isRecordMode() {
+    return Boolean.parseBoolean(System.getProperty("pathling.test.recording.enabled", "false"));
+  }
+
   @BeforeEach
   void setUp() {
     log.info("Starting WireMock server");
