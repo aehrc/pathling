@@ -56,6 +56,15 @@ public interface FhirPath extends Orderable {
   boolean canBeCombinedWith(@Nonnull FhirPath target);
 
   /**
+   * Creates a copy of the path with a different expression.
+   *
+   * @param expression the new expression
+   * @return the new FhirPath
+   */
+  @Nonnull
+  FhirPath withExpression(@Nonnull String expression);
+
+  /**
    * Creates a path that can be used to represent a collection which includes elements from both a
    * source and a target path.
    *
