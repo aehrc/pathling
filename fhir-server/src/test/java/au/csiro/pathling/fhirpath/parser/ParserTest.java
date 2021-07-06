@@ -542,6 +542,26 @@ public class ParserTest {
   }
 
   @Test
+  void testCombineOperatorWithDifferentlyTypedStringPaths() {
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.coding.system combine "
+            + "reverseResolve(Condition.subject).code.coding.code")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark,
+            "responses/ParserTest/testCombineOperatorWithDifferentlyTypedStringPaths.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithComplexTypeAndNull() {
+    assertThatResultOf("(name combine {}).given")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark,
+            "responses/ParserTest/testCombineOperatorWithComplexTypeAndNull.csv");
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(

@@ -223,9 +223,11 @@ class CombineOperatorTest {
   @Test
   void throwsErrorIfInputsAreNotCombinable() {
     final ElementPath left = new ElementPathBuilder(spark)
+        .expression("valueInteger")
         .fhirType(FHIRDefinedType.INTEGER)
         .build();
     final ElementPath right = new ElementPathBuilder(spark)
+        .expression("valueString")
         .fhirType(FHIRDefinedType.STRING)
         .build();
 
@@ -236,7 +238,7 @@ class CombineOperatorTest {
         InvalidUserInputError.class,
         () -> combineOperator.invoke(combineInput));
     assertEquals(
-        "Input and argument to combine function are not compatible",
+        "Paths cannot be merged into a collection together: valueInteger, valueString",
         error.getMessage());
   }
 

@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.monotonically_increasing_id;
 
@@ -37,8 +36,6 @@ public class CombineOperator implements Operator {
     final String expression = Operator.buildExpression(input, NAME);
     final FhirPath left = input.getLeft();
     final FhirPath right = input.getRight();
-    checkUserInput(left.canBeCombinedWith(right),
-        "Input and argument to combine function are not compatible");
 
     final Dataset<Row> leftTrimmed = trimDataset(input, left);
     final Dataset<Row> rightTrimmed = trimDataset(input, right);
@@ -49,7 +46,8 @@ public class CombineOperator implements Operator {
                                         ? ((NonLiteralPath) left).getThisColumn()
                                         : Optional.empty();
     return left
-        .mergeWith(right, dataset, expression, left.getIdColumn(), eidColumn, left.getValueColumn(),
+        .combineWith(right, dataset, expression, left.getIdColumn(), eidColumn,
+            left.getValueColumn(),
             false, thisColumn);
   }
 

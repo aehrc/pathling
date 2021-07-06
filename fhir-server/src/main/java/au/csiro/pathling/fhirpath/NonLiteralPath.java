@@ -13,6 +13,7 @@ import static org.apache.spark.sql.functions.*;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
+import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -279,7 +280,7 @@ public abstract class NonLiteralPath implements FhirPath {
 
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
-    return getClass().equals(target.getClass());
+    return getClass().equals(target.getClass()) || target instanceof NullLiteralPath;
   }
 
 }

@@ -170,14 +170,14 @@ public abstract class LiteralPath implements FhirPath {
    * @return a {@link FHIRDefinedType}
    */
   @Nonnull
-  public static FHIRDefinedType fhirPathToFhirType(
+  private static FHIRDefinedType fhirPathToFhirType(
       @Nonnull final Class<? extends LiteralPath> fhirPathClass) {
     return FHIRPATH_TYPE_TO_FHIR_TYPE.get(fhirPathClass);
   }
 
   @Override
   @Nonnull
-  public NonLiteralPath mergeWith(@Nonnull final FhirPath target,
+  public NonLiteralPath combineWith(@Nonnull final FhirPath target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
@@ -191,8 +191,9 @@ public abstract class LiteralPath implements FhirPath {
               thisColumn, fhirType);
     } else if (target instanceof ElementPath) {
       // If the target is an ElementPath, we delegate off to the ElementPath to do the merging.
-      return target.mergeWith(this, dataset, expression, idColumn, eidColumn, valueColumn, singular,
-          thisColumn);
+      return target
+          .combineWith(this, dataset, expression, idColumn, eidColumn, valueColumn, singular,
+              thisColumn);
     }
     // Anything else is invalid.
     throw new InvalidUserInputError(
@@ -202,7 +203,7 @@ public abstract class LiteralPath implements FhirPath {
 
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
-    return getClass().equals(target.getClass());
+    return getClass().equals(target.getClass()) || target instanceof NullLiteralPath;
   }
 
 }

@@ -73,7 +73,7 @@ public interface FhirPath extends Orderable {
    * @return the resulting new {@link NonLiteralPath}
    */
   @Nonnull
-  NonLiteralPath mergeWith(@Nonnull FhirPath target, @Nonnull Dataset<Row> dataset,
+  NonLiteralPath combineWith(@Nonnull FhirPath target, @Nonnull Dataset<Row> dataset,
       @Nonnull String expression, @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn,
       @Nonnull Column valueColumn, boolean singular, @Nonnull Optional<Column> thisColumn);
 
