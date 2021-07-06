@@ -167,8 +167,16 @@ public class ResourcePath extends NonLiteralPath {
   }
 
   @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    // A ResourcePath can be combined with another ResourcePath of the same type.
+    return super.canBeCombinedWith(target) ||
+        (target instanceof ResourcePath &&
+            ((ResourcePath) target).getResourceType().equals(getResourceType()));
+  }
+
+  @Override
   @Nonnull
-  public NonLiteralPath mergeWith(@Nonnull final FhirPath target,
+  public NonLiteralPath combineWith(@Nonnull final FhirPath target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,

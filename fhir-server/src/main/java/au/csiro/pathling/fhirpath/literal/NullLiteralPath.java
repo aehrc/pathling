@@ -8,6 +8,8 @@ package au.csiro.pathling.fhirpath.literal;
 
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.QueryHelpers;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import java.util.function.Function;
@@ -32,8 +34,10 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
     // We put a dummy String value in here as a placeholder so that we can satisfy the nullability 
     // constraints within LiteralValue. It is never accessed.
     super(dataset, idColumn, new StringType(EXPRESSION));
-    this.dataset = dataset;
     this.idColumn = idColumn;
+    final DatasetWithColumn datasetWithColumn = QueryHelpers.createColumn(dataset, lit(null));
+    this.dataset = datasetWithColumn.getDataset();
+    this.valueColumn = datasetWithColumn.getColumn();
   }
 
   /**
@@ -68,6 +72,12 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
 
   @Override
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
+    return true;
+  }
+
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    // A null literal can be combined with any other path.
     return true;
   }
 

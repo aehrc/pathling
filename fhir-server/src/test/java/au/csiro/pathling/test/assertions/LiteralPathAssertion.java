@@ -19,7 +19,7 @@ import org.hl7.fhir.r4.model.Coding;
  * @author John Grimes
  */
 @SuppressWarnings("UnusedReturnValue")
-public class LiteralPathAssertion extends FhirPathAssertion<LiteralPathAssertion> {
+public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAssertion> {
 
   @Nonnull
   private final LiteralPath fhirPath;

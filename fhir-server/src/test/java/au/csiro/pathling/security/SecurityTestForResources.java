@@ -35,8 +35,8 @@ import org.springframework.test.context.DynamicPropertySource;
 public abstract class SecurityTestForResources extends SecurityTest {
 
   @TempDir
-  @SuppressWarnings("unused")
-  private static File testRootDir;
+  @SuppressWarnings({"unused", "WeakerAccess"})
+  static File testRootDir;
 
   @DynamicPropertySource
   @SuppressWarnings("unused")

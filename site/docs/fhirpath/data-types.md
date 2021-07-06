@@ -130,7 +130,7 @@ is a subset of [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). It uses the
 Example:
 
 ```
-@2014-01-25T14:30:14.559
+@2015-02-08T13:28:17-05:00
 ```
 
 ## Coding

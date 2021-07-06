@@ -49,6 +49,13 @@ public interface FhirPath extends Orderable {
   boolean isSingular();
 
   /**
+   * @param target the path to test
+   * @return an indicator of whether this path's values can be combined into a single collection
+   * with values from the supplied expression type
+   */
+  boolean canBeCombinedWith(@Nonnull FhirPath target);
+
+  /**
    * Creates a copy of the path with a different expression.
    *
    * @param expression the new expression
@@ -75,7 +82,7 @@ public interface FhirPath extends Orderable {
    * @return the resulting new {@link NonLiteralPath}
    */
   @Nonnull
-  NonLiteralPath mergeWith(@Nonnull FhirPath target, @Nonnull Dataset<Row> dataset,
+  NonLiteralPath combineWith(@Nonnull FhirPath target, @Nonnull Dataset<Row> dataset,
       @Nonnull String expression, @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn,
       @Nonnull Column valueColumn, boolean singular, @Nonnull Optional<Column> thisColumn);
 

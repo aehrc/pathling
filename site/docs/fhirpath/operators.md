@@ -19,6 +19,7 @@ Pathling:
 - [Math](#math) (`+`, `-`, `*`, `/` and `mod`)
 - [Boolean logic](#boolean-logic) (`and`, `or`, `xor` and `implies`)
 - [Membership](#membership) (`in` and `contains`)
+- [combine](#combine)
 
 See also: [Operations](https://hl7.org/fhirpath/#operations)
 
@@ -126,5 +127,14 @@ result is `false`. If the element has multiple items, an error is returned.
 
 See also:
 [Collections](https://hl7.org/fhirpath/#collections-2)
+
+## combine
+
+The `combine` operator merges the left and right operands into a single 
+collection, preserving duplicates. The result is not ordered.
+
+This reflects the semantics of the [combine function](https://hl7.org/fhirpath/#combineother-collection-collection) 
+within the FHIRPath specification, but implemented as an operator to allow for 
+easier chaining.
 
 Next: [Functions](./functions.html)
