@@ -14,6 +14,7 @@ as input and produce another collection as output and may take parameters.
 The following functions are currently supported:
 
 - [count](#count)
+- [sum](#sum)
 - [first](#first)
 - [empty](#empty)
 - [not](#not)
@@ -51,6 +52,26 @@ Patient.name.given.count()
 ```
 
 See also: [count](https://hl7.org/fhirpath/#count-integer)
+
+## sum
+
+```
+collection -> sum() : Integer|Decimal
+```
+
+Returns the sum of the numeric values ([Integer](./data-types.html#integer) or 
+[Decimal](./data-types.html#decimal)) in the input collection.
+
+Example:
+
+```
+Observation.valueDecimal.sum()
+```
+
+<div class="callout warning">
+    The <code>sum</code> function is not within the FHIRPath specification, and 
+    is currently unique to the Pathling implementation.
+</div>
 
 ## first
 

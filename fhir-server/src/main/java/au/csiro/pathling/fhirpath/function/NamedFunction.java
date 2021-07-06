@@ -41,6 +41,7 @@ public interface NamedFunction {
       .put("not", new NotFunction())
       .put("iif", new IifFunction())
       .put("translate", new TranslateFunction())
+      .put("sum", new SumFunction())
       .build();
 
   /**

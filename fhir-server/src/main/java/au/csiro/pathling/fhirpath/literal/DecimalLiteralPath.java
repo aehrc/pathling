@@ -110,4 +110,9 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
     return DecimalPath.valueFromRow(row, columnNumber);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof DecimalPath;
+  }
+
 }

@@ -58,5 +58,5 @@ public class ReferencePath extends ElementPath implements Referrer {
       @Nonnull final Column targetCode) {
     return Referrer.resourceEqualityFor(this, targetCode, targetId);
   }
-
+ 
 }

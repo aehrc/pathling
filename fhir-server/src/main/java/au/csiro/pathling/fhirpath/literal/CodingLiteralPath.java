@@ -155,4 +155,9 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
     return CodingPath.valueFromRow(row, columnNumber);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof CodingPath;
+  }
+ 
 }

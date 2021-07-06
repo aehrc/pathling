@@ -24,7 +24,9 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
@@ -43,7 +45,6 @@ import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -84,9 +85,6 @@ public class ParserTest {
 
   @Autowired
   private TerminologyServiceFactory terminologyServiceFactory;
-
-  @Autowired
-  private IParser jsonParser;
 
   private Parser parser;
   private ResourceReader mockReader;
@@ -519,11 +517,58 @@ public class ParserTest {
   }
 
   @Test
+  public void testCombineOperator() {
+    assertThatResultOf("name.family combine name.given")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperator.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithWhereFunction() {
+    assertThatResultOf("where((name.family combine name.given) contains 'Gleichner915').birthDate")
+        .isElementPath(DatePath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithWhereFunction.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithResourcePaths() {
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).where(clinicalStatus.coding.code contains 'active') combine reverseResolve(Condition.subject).where(clinicalStatus.coding.code contains 'resolved')")
+        .isResourcePath()
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithResourcePaths.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithDifferentlyTypedStringPaths() {
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.coding.system combine "
+            + "reverseResolve(Condition.subject).code.coding.code")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark,
+            "responses/ParserTest/testCombineOperatorWithDifferentlyTypedStringPaths.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithComplexTypeAndNull() {
+    assertThatResultOf("(name combine {}).given")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark,
+            "responses/ParserTest/testCombineOperatorWithComplexTypeAndNull.csv");
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
-    assertEquals("Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'", error.getMessage());
+    assertEquals(
+        "Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'",
+        error.getMessage());
   }
 
 }

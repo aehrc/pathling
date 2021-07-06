@@ -60,7 +60,7 @@ public class IifFunction implements NamedFunction {
     // Build a new ElementPath based on the type of the literal `ifTrue` and `otherwise` arguments,
     // and populate it with the dataset and calculated value column.
     final String expression = expressionFromInput(input, NAME);
-    return ifTrue.mergeWith(otherwise, dataset, expression, inputPath.getIdColumn(),
+    return ifTrue.combineWith(otherwise, dataset, expression, inputPath.getIdColumn(),
         inputPath.getEidColumn(), valueColumn, inputPath.isSingular(), inputPath.getThisColumn());
   }
 

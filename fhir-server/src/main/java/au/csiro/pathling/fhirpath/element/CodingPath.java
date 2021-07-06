@@ -11,6 +11,7 @@ import static org.apache.spark.sql.functions.not;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
@@ -121,4 +122,8 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
     return COMPARABLE_TYPES.contains(type);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof CodingLiteralPath;
+  }
 }

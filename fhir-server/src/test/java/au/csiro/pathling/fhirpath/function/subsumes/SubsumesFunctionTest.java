@@ -34,7 +34,7 @@ import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
-import au.csiro.pathling.test.assertions.FhirPathAssertion;
+import au.csiro.pathling.test.assertions.ElementPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -235,6 +235,68 @@ public class SubsumesFunctionTest {
         .build();
   }
 
+  private CodingPath createEmptyCodingInput() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructTypeColumns(codingStructType())
+        .buildWithStructValue();
+
+    final ElementPath argument = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.CODING)
+        .dataset(dataset)
+        .idAndEidAndValueColumns()
+        .build();
+
+    return (CodingPath) argument;
+  }
+
+  private CodingPath createNullCodingInput() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
+        .withStructTypeColumns(codingStructType())
+        .buildWithStructValue();
+
+    final ElementPath argument = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.CODING)
+        .dataset(dataset)
+        .idAndEidAndValueColumns()
+        .build();
+
+    return (CodingPath) argument;
+  }
+
+  private ElementPath createEmptyCodeableConceptInput() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructTypeColumns(codeableConceptStructType())
+        .buildWithStructValue();
+
+    return new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+        .dataset(dataset)
+        .idAndEidAndValueColumns()
+        .build();
+  }
+
+  private ElementPath createNullCodeableConceptInput() {
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
+        .withStructTypeColumns(codeableConceptStructType())
+        .buildWithStructValue();
+
+    return new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+        .dataset(dataset)
+        .idAndEidAndValueColumns()
+        .build();
+  }
+
   private CodingPath createNullCodingArg() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -300,8 +362,24 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID5, null, null);
   }
 
-  @SuppressWarnings("rawtypes")
-  private FhirPathAssertion assertCallSuccess(final NamedFunction function,
+  @Nonnull
+  private DatasetBuilder expectedEmpty() {
+    return new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.BooleanType);
+  }
+
+  @Nonnull
+  private DatasetBuilder expectedNull() {
+    return new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
+        .withColumn(DataTypes.BooleanType);
+  }
+
+  private ElementPathAssertion assertCallSuccess(final NamedFunction function,
       final NonLiteralPath inputExpression, final FhirPath argumentExpression) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
@@ -416,6 +494,30 @@ public class SubsumesFunctionTest {
   public void testAllNonNullTrueSubsumedByItself() {
     assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptInput())
         .hasRows(expectedAllNonNull(true));
+  }
+
+  @Test
+  void testEmptyCodingInput() {
+    assertSubsumedBySuccess(createEmptyCodingInput(), createCodingArg())
+        .hasRows(expectedEmpty());
+  }
+
+  @Test
+  void testNullCodingInput() {
+    assertSubsumedBySuccess(createNullCodingInput(), createCodingArg())
+        .hasRows(expectedNull());
+  }
+
+  @Test
+  void testEmptyCodeableConceptInput() {
+    assertSubsumedBySuccess(createEmptyCodeableConceptInput(), createCodingArg())
+        .hasRows(expectedEmpty());
+  }
+
+  @Test
+  void testNullCodeableConceptInput() {
+    assertSubsumedBySuccess(createNullCodeableConceptInput(), createCodingArg())
+        .hasRows(expectedNull());
   }
 
   //
