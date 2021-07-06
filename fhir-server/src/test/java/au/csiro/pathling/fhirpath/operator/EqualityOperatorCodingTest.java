@@ -46,20 +46,40 @@ public class EqualityOperatorCodingTest {
 
   private FhirPath left;
   private FhirPath right;
-  private FhirPath literal;
+  private FhirPath literalSnomedAll;
+  private FhirPath literalLoinSystemCode;
   private ParserContext parserContext;
 
   @BeforeEach
   public void setUp() {
     parserContext = new ParserContextBuilder(spark, fhirContext).build();
-
+    // all components
     final Coding coding1 = new Coding(SNOMED_URL, "56459004", null);
     coding1.setVersion("http://snomed.info/sct/32506021000036107/version/20191231");
+    coding1.setDisplay("Display name");
+    coding1.setUserSelected(true);
+    coding1.setId("some-fake-id");
+
     final Coding coding2 = new Coding(SNOMED_URL, "56459004", null);
-    final Coding coding3 = new Coding(LOINC_URL, "57711-4", null);
-    coding3.setVersion("2.67");
-    final Coding coding4 = new Coding(LOINC_URL, "57711-4", null);
-    coding4.setVersion("2.29");
+    coding2.setVersion("http://snomed.info/sct/32506021000036107/version/20191231");
+    coding2.setDisplay("Display name");
+
+    final Coding coding3 = new Coding(SNOMED_URL, "56459004", null);
+    coding3.setVersion("http://snomed.info/sct/32506021000036107/version/20191231");
+
+    final Coding coding4 = new Coding(LOINC_URL, "222|33", null);
+    coding4.setId("fake-id-1");
+    final Coding coding5 = new Coding(LOINC_URL, "222|33", null);
+    coding5.setId("fake-id-2");
+
+    final Coding coding6 = new Coding(LOINC_URL, "56459004", null);
+    coding6.setVersion("http://snomed.info/sct/32506021000036107/version/20191231");
+    coding6.setDisplay("Display name");
+    coding6.setUserSelected(true);
+    coding6.setId("some-fake-id");
+
+    final Coding coding1_other = coding1.copy();
+    coding1_other.setId("some-other-fake-id");
 
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -67,9 +87,9 @@ public class EqualityOperatorCodingTest {
         .withRow("patient-1", rowFromCoding(coding1))
         .withRow("patient-2", rowFromCoding(coding2))
         .withRow("patient-3", rowFromCoding(coding3))
-        .withRow("patient-4", rowFromCoding(coding3))
-        .withRow("patient-5", null)
-        .withRow("patient-6", rowFromCoding(coding1))
+        .withRow("patient-4", rowFromCoding(coding4))
+        .withRow("patient-5", rowFromCoding(coding5))
+        .withRow("patient-6", rowFromCoding(coding6))
         .withRow("patient-7", null)
         .buildWithStructValue();
     left = new ElementPathBuilder(spark)
@@ -81,11 +101,11 @@ public class EqualityOperatorCodingTest {
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
-        .withRow("patient-1", rowFromCoding(coding1))
-        .withRow("patient-2", rowFromCoding(coding1))
-        .withRow("patient-3", rowFromCoding(coding4))
-        .withRow("patient-4", rowFromCoding(coding2))
-        .withRow("patient-5", rowFromCoding(coding1))
+        .withRow("patient-1", rowFromCoding(coding1_other))
+        .withRow("patient-2", rowFromCoding(coding3))
+        .withRow("patient-3", rowFromCoding(coding3))
+        .withRow("patient-4", rowFromCoding(coding5))
+        .withRow("patient-5", rowFromCoding(coding6))
         .withRow("patient-6", null)
         .withRow("patient-7", null)
         .buildWithStructValue();
@@ -95,8 +115,12 @@ public class EqualityOperatorCodingTest {
         .dataset(rightDataset)
         .idAndValueColumns()
         .build();
-    literal = CodingLiteralPath.fromString(
-        "http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20191231|56459004",
+    literalSnomedAll = CodingLiteralPath.fromString(
+        "http://snomed.info/sct|56459004|http://snomed.info/sct/32506021000036107/version/20191231|'Display name'|true",
+        left);
+
+    literalLoinSystemCode = CodingLiteralPath.fromString(
+        "http://loinc.org|'222|33'",
         left);
   }
 
@@ -108,10 +132,10 @@ public class EqualityOperatorCodingTest {
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
-        RowFactory.create("patient-2", true),
-        RowFactory.create("patient-3", false),
-        RowFactory.create("patient-4", false),
-        RowFactory.create("patient-5", null),
+        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-3", true),
+        RowFactory.create("patient-4", true),
+        RowFactory.create("patient-5", false),
         RowFactory.create("patient-6", null),
         RowFactory.create("patient-7", null)
     );
@@ -125,26 +149,9 @@ public class EqualityOperatorCodingTest {
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
-        RowFactory.create("patient-2", false),
-        RowFactory.create("patient-3", true),
-        RowFactory.create("patient-4", true),
-        RowFactory.create("patient-5", null),
-        RowFactory.create("patient-6", null),
-        RowFactory.create("patient-7", null)
-    );
-  }
-
-  @Test
-  public void literalEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, literal, right);
-    final Operator equalityOperator = Operator.getInstance("=");
-    final FhirPath result = equalityOperator.invoke(input);
-
-    assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", true),
         RowFactory.create("patient-2", true),
         RowFactory.create("patient-3", false),
-        RowFactory.create("patient-4", true),
+        RowFactory.create("patient-4", false),
         RowFactory.create("patient-5", true),
         RowFactory.create("patient-6", null),
         RowFactory.create("patient-7", null)
@@ -152,52 +159,69 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
+  public void literalEquals() {
+    final OperatorInput input = new OperatorInput(parserContext, literalLoinSystemCode, left);
+    final Operator equalityOperator = Operator.getInstance("=");
+    final FhirPath result = equalityOperator.invoke(input);
+
+    assertThat(result).selectOrderedResult().hasRows(
+        RowFactory.create("patient-1", false),
+        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-3", false),
+        RowFactory.create("patient-4", true),
+        RowFactory.create("patient-5", true),
+        RowFactory.create("patient-6", false),
+        RowFactory.create("patient-7", null)
+    );
+  }
+
+  @Test
   public void equalsLiteral() {
-    final OperatorInput input = new OperatorInput(parserContext, left, literal);
+    final OperatorInput input = new OperatorInput(parserContext, left, literalSnomedAll);
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
-        RowFactory.create("patient-2", true),
+        RowFactory.create("patient-2", false),
         RowFactory.create("patient-3", false),
         RowFactory.create("patient-4", false),
-        RowFactory.create("patient-5", null),
-        RowFactory.create("patient-6", true),
+        RowFactory.create("patient-5", false),
+        RowFactory.create("patient-6", false),
         RowFactory.create("patient-7", null)
     );
   }
 
   @Test
   public void literalNotEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, literal, right);
+    final OperatorInput input = new OperatorInput(parserContext, literalLoinSystemCode, left);
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", false),
-        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-1", true),
+        RowFactory.create("patient-2", true),
         RowFactory.create("patient-3", true),
         RowFactory.create("patient-4", false),
         RowFactory.create("patient-5", false),
-        RowFactory.create("patient-6", null),
+        RowFactory.create("patient-6", true),
         RowFactory.create("patient-7", null)
     );
   }
 
   @Test
   public void notEqualsLiteral() {
-    final OperatorInput input = new OperatorInput(parserContext, left, literal);
+    final OperatorInput input = new OperatorInput(parserContext, left, literalSnomedAll);
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
-        RowFactory.create("patient-2", false),
+        RowFactory.create("patient-2", true),
         RowFactory.create("patient-3", true),
         RowFactory.create("patient-4", true),
-        RowFactory.create("patient-5", null),
-        RowFactory.create("patient-6", false),
+        RowFactory.create("patient-5", true),
+        RowFactory.create("patient-6", true),
         RowFactory.create("patient-7", null)
     );
   }

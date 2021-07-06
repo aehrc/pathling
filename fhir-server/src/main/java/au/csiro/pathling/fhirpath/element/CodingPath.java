@@ -6,9 +6,6 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static org.apache.spark.sql.functions.callUDF;
-import static org.apache.spark.sql.functions.not;
-
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -17,12 +14,16 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import com.google.common.collect.ImmutableSet;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -32,6 +33,10 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class CodingPath extends ElementPath implements Materializable<Coding>, Comparable {
+
+  private static final List<String> EQUALITY_COLUMNS = Arrays
+      .asList("system", "code", "version", "display", "userSelected");
+
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(CodingPath.class, CodingLiteralPath.class, NullLiteralPath.class);
@@ -94,16 +99,32 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   @Nonnull
   public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
       @Nonnull final ComparisonOperation operation) {
-    if (operation.equals(ComparisonOperation.EQUALS)) {
+    if (ComparisonOperation.EQUALS.equals(operation)) {
       return Comparable
-          .buildComparison(source, (left, right) -> callUDF("codings_equal", left, right));
-    } else if (operation.equals(ComparisonOperation.NOT_EQUALS)) {
+          .buildComparison(source, codingEqual());
+    } else if (ComparisonOperation.NOT_EQUALS.equals(operation)) {
       return Comparable
-          .buildComparison(source, (left, right) -> not(callUDF("codings_equal", left, right)));
+          .buildComparison(source, codingNotEqual());
     } else {
       throw new InvalidUserInputError(
           "Coding type does not support comparison operator: " + operation);
     }
+  }
+
+  @Nonnull
+  private static BiFunction<Column, Column, Column> codingEqual() {
+    //noinspection OptionalGetWithoutIsPresent
+    return (l, r) ->
+        functions.when(l.isNull().or(r.isNull()), functions.lit(null))
+            .otherwise(
+                EQUALITY_COLUMNS.stream()
+                    .map(f -> l.getField(f).eqNullSafe(r.getField(f))).reduce(Column::and).get()
+            );
+  }
+
+  @Nonnull
+  private static BiFunction<Column, Column, Column> codingNotEqual() {
+    return codingEqual().andThen(functions::not);
   }
 
   @Nonnull
