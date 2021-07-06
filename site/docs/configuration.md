@@ -45,7 +45,10 @@ Additionally, you can set any variable supported by Spring Boot, see
 ### Import
 
 - `pathling.import.allowableSources` - (default: `file:///usr/share/staging`) A 
-  set of URL prefixes which are allowable for use within the import operation.
+  set of URL prefixes which are allowable for use within the import operation. 
+  **Important note**: a trailing slash should be used in cases where an attacker 
+  could create an alternative URL with the same prefix, e.g. `s3://some-bucket` 
+  would also match `s3://some-bucket-alternative`.
 
 ### Storage
 
