@@ -25,7 +25,8 @@ public class ImportLock {
   private static boolean locked = false;
 
   @Around("execution(* au.csiro.pathling.update.ImportExecutor.execute(..))")
-  private Object enforce(@Nonnull final ProceedingJoinPoint joinPoint) throws Throwable {
+  private synchronized Object enforce(@Nonnull final ProceedingJoinPoint joinPoint)
+      throws Throwable {
     if (locked) {
       throw new UnclassifiedServerFailureException(503,
           "Another import operation is currently in progress");
