@@ -9,9 +9,10 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
-import static org.apache.spark.sql.functions.when;
+import static org.apache.spark.sql.functions.min;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -47,7 +48,7 @@ public class BooleanAnyFunction extends AggregateFunction implements NamedFuncti
     final Column inputColumn = inputPath.getValueColumn();
     final String expression = expressionFromInput(input, type.getFunctionName());
 
-    final Column valueColumn = max(type.getEquality().apply(inputColumn));
+    final Column valueColumn = type.getEquality().apply(inputColumn);
     return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath, valueColumn,
         expression);
   }
@@ -61,13 +62,19 @@ public class BooleanAnyFunction extends AggregateFunction implements NamedFuncti
     /**
      * "Any true" test
      */
-    ANY_TRUE("anyTrue", input -> when(input.equalTo(lit(true)).isNull(), false)
-        .otherwise(input.equalTo(lit(true)))),
+    ANY_TRUE("anyTrue", input -> max(coalesce(input, lit(false))).equalTo(lit(true))),
     /**
      * "Any false" test
      */
-    ANY_FALSE("anyFalse", input -> when(input.equalTo(lit(false)).isNull(), false)
-        .otherwise(input.equalTo(lit(false))));
+    ANY_FALSE("anyFalse", input -> min(coalesce(input, lit(true))).equalTo(lit(false))),
+    /**
+     * "All true" test
+     */
+    ALL_TRUE("allTrue", input -> min(coalesce(input, lit(true))).equalTo(lit(true))),
+    /**
+     * "All false" test
+     */
+    ALL_FALSE("allFalse", input -> max(coalesce(input, lit(false))).equalTo(lit(false)));
 
     @Nonnull
     private final String functionName;

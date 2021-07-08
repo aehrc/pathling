@@ -90,6 +90,28 @@ class BooleanAnyFunctionTest {
             .withRow("observation-5", true)
             .withRow("observation-6", false)
             .withRow("observation-7", false)
+            .build()),
+        new TestParameters("allTrue", new DatasetBuilder(spark)
+            .withIdColumn()
+            .withColumn(DataTypes.BooleanType)
+            .withRow("observation-1", false)
+            .withRow("observation-2", true)
+            .withRow("observation-3", false)
+            .withRow("observation-4", true)
+            .withRow("observation-5", false)
+            .withRow("observation-6", true)
+            .withRow("observation-7", true)
+            .build()),
+        new TestParameters("allFalse", new DatasetBuilder(spark)
+            .withIdColumn()
+            .withColumn(DataTypes.BooleanType)
+            .withRow("observation-1", false)
+            .withRow("observation-2", false)
+            .withRow("observation-3", true)
+            .withRow("observation-4", false)
+            .withRow("observation-5", true)
+            .withRow("observation-6", true)
+            .withRow("observation-7", true)
             .build())
     );
   }
