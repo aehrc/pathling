@@ -15,6 +15,7 @@ package au.csiro.pathling.encoders.datatypes
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.decimalType
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
+import org.apache.spark.sql.types
 import org.apache.spark.sql.types._
 import org.hl7.fhir.r4.model.DecimalType
 
@@ -31,19 +32,18 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
   def primitiveClass: Class[DecimalType] = classOf[DecimalType]
 
-  val scaleFieldName = elementName + "_scale"
+  val scaleFieldName: String = elementName + "_scale"
 
   override val schema: Seq[StructField] = Seq(StructField(elementName, decimalType), StructField(scaleFieldName, IntegerType))
 
-  override def customDeserializer(addToPath: String => Expression): Map[String, Expression] = {
-    val expression = NewInstance(primitiveClass,
+  override def customDecoderExpression(addToPath: String => Expression): Expression = {
+    NewInstance(primitiveClass,
       Invoke(
         Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
         "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(scaleFieldName) :: Nil
       ) :: Nil,
       ObjectType(primitiveClass)
     )
-    Map(elementName -> expression)
   }
 
   override def customSerializer(inputObject: Expression): List[Expression] = {
@@ -87,5 +87,5 @@ object DecimalCustomCoder {
 
   val scale: Int = 6
   val precision: Int = 26
-  val decimalType = DataTypes.createDecimalType(precision, scale)
+  val decimalType: types.DecimalType = DataTypes.createDecimalType(precision, scale)
 }

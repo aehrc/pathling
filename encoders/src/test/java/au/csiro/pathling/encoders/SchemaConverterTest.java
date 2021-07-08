@@ -144,8 +144,10 @@ public class SchemaConverterTest {
 
   @Test
   public void decimalWithinChoiceField() {
-    final DataType field = getField(questionnaireSchema, true, "item", "answer");
-    assertTrue(field instanceof DecimalType);
+    assertTrue(getField(questionnaireSchema, true, "item", "enableWhen",
+        "answerDecimal") instanceof DecimalType);
+    assertTrue(getField(questionnaireSchema, true, "item", "enableWhen",
+        "answerDecimal_scale") instanceof IntegerType);
   }
 
   @Test

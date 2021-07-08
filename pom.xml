@@ -298,7 +298,7 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>@{argLine} -Xmx2g</argLine>
+            <argLine>@{argLine} -Xmx2g -ea</argLine>
             <forkCount>1C</forkCount>
           </configuration>
         </plugin>
