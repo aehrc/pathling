@@ -38,7 +38,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
+ * These functions perform tests across a collection of Boolean input values.
+ *
  * @author John Grimes
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#anytrue">anyTrue</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#anyfalse">anyFalse</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#alltrue">allTrue</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#allfalse">allFalse</a>
  */
 @SpringBootTest
 @TestInstance(Lifecycle.PER_CLASS)
