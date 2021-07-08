@@ -26,15 +26,15 @@ import org.apache.spark.sql.Column;
 /**
  * @author John Grimes
  */
-public class BooleanAnyFunction extends AggregateFunction implements NamedFunction {
+public class BooleansTestFunction extends AggregateFunction implements NamedFunction {
 
   @Nonnull
-  private final BooleanAnyType type;
+  private final BooleansTestType type;
 
   /**
    * @param type The type of Boolean collection test
    */
-  public BooleanAnyFunction(@Nonnull final BooleanAnyType type) {
+  public BooleansTestFunction(@Nonnull final BooleansTestType type) {
     this.type = type;
   }
 
@@ -58,7 +58,7 @@ public class BooleanAnyFunction extends AggregateFunction implements NamedFuncti
    */
   @AllArgsConstructor
   @Getter
-  public enum BooleanAnyType {
+  public enum BooleansTestType {
     /**
      * "Any true" test
      */

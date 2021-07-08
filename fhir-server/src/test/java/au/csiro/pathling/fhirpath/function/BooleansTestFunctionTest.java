@@ -43,7 +43,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 @TestInstance(Lifecycle.PER_CLASS)
 @Tag("UnitTest")
-class BooleanAnyFunctionTest {
+class BooleansTestFunctionTest {
 
   @Autowired
   private SparkSession spark;

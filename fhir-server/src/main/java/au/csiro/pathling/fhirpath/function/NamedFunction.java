@@ -6,10 +6,10 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.fhirpath.function.BooleanAnyFunction.BooleanAnyType.ALL_FALSE;
-import static au.csiro.pathling.fhirpath.function.BooleanAnyFunction.BooleanAnyType.ALL_TRUE;
-import static au.csiro.pathling.fhirpath.function.BooleanAnyFunction.BooleanAnyType.ANY_FALSE;
-import static au.csiro.pathling.fhirpath.function.BooleanAnyFunction.BooleanAnyType.ANY_TRUE;
+import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ALL_FALSE;
+import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ALL_TRUE;
+import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ANY_FALSE;
+import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ANY_TRUE;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -46,10 +46,10 @@ public interface NamedFunction {
       .put("iif", new IifFunction())
       .put("translate", new TranslateFunction())
       .put("sum", new SumFunction())
-      .put("anyTrue", new BooleanAnyFunction(ANY_TRUE))
-      .put("anyFalse", new BooleanAnyFunction(ANY_FALSE))
-      .put("allTrue", new BooleanAnyFunction(ALL_TRUE))
-      .put("allFalse", new BooleanAnyFunction(ALL_FALSE))
+      .put("anyTrue", new BooleansTestFunction(ANY_TRUE))
+      .put("anyFalse", new BooleansTestFunction(ANY_FALSE))
+      .put("allTrue", new BooleansTestFunction(ALL_TRUE))
+      .put("allFalse", new BooleansTestFunction(ALL_FALSE))
       .build();
 
   /**
