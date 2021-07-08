@@ -1,0 +1,177 @@
+/*
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
+package au.csiro.pathling.fhirpath.function;
+
+import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.builders.ElementPathBuilder;
+import au.csiro.pathling.test.builders.ParserContextBuilder;
+import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import lombok.Value;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+/**
+ * @author John Grimes
+ */
+@SpringBootTest
+@TestInstance(Lifecycle.PER_CLASS)
+@Tag("UnitTest")
+class BooleanAnyFunctionTest {
+
+  @Autowired
+  private SparkSession spark;
+
+  @Autowired
+  private FhirContext fhirContext;
+
+  @Value
+  private static class TestParameters {
+
+    @Nonnull
+    String functionName;
+
+    @Nonnull
+    Dataset<Row> expectedResult;
+
+    @Override
+    public String toString() {
+      return functionName;
+    }
+
+  }
+
+  public Stream<TestParameters> parameters() {
+    return Stream.of(
+        new TestParameters("anyTrue", new DatasetBuilder(spark)
+            .withIdColumn()
+            .withColumn(DataTypes.BooleanType)
+            .withRow("observation-1", true)
+            .withRow("observation-2", true)
+            .withRow("observation-3", false)
+            .withRow("observation-4", true)
+            .withRow("observation-5", false)
+            .withRow("observation-6", false)
+            .withRow("observation-7", false)
+            .build()),
+        new TestParameters("anyFalse", new DatasetBuilder(spark)
+            .withIdColumn()
+            .withColumn(DataTypes.BooleanType)
+            .withRow("observation-1", true)
+            .withRow("observation-2", false)
+            .withRow("observation-3", true)
+            .withRow("observation-4", false)
+            .withRow("observation-5", true)
+            .withRow("observation-6", false)
+            .withRow("observation-7", false)
+            .build())
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("parameters")
+  void returnsCorrectResults(@Nonnull final TestParameters parameters) {
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final Dataset<Row> dataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withColumn(DataTypes.BooleanType)
+        .withRow("observation-1", true)
+        .withRow("observation-1", false)
+        .withRow("observation-2", true)
+        .withRow("observation-2", true)
+        .withRow("observation-3", false)
+        .withRow("observation-3", false)
+        .withRow("observation-4", true)
+        .withRow("observation-4", null)
+        .withRow("observation-5", false)
+        .withRow("observation-5", null)
+        .withRow("observation-6", null)
+        .withRow("observation-6", null)
+        .withRow("observation-7", null)
+        .build();
+    final ElementPath input = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.BOOLEAN)
+        .dataset(dataset)
+        .idAndValueColumns()
+        .expression("valueBoolean")
+        .build();
+
+    final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
+        Collections.emptyList());
+    final NamedFunction function = NamedFunction.getInstance(parameters.getFunctionName());
+    final FhirPath result = function.invoke(functionInput);
+
+    assertThat(result)
+        .hasExpression("valueBoolean." + parameters.getFunctionName() + "()")
+        .isSingular()
+        .isElementPath(BooleanPath.class)
+        .selectOrderedResult()
+        .hasRows(parameters.getExpectedResult());
+  }
+
+  @ParameterizedTest
+  @MethodSource("parameters")
+  public void inputMustNotContainArguments(@Nonnull final TestParameters parameters) {
+    final ElementPath input = new ElementPathBuilder(spark).build();
+    final StringLiteralPath argument = StringLiteralPath
+        .fromString("'some argument'", input);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
+        Collections.singletonList(argument));
+    final NamedFunction function = NamedFunction.getInstance(parameters.getFunctionName());
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> function.invoke(functionInput));
+    assertEquals(
+        "Arguments can not be passed to " + parameters.getFunctionName() + " function",
+        error.getMessage());
+  }
+
+  @ParameterizedTest
+  @MethodSource("parameters")
+  public void inputMustBeBoolean(@Nonnull final TestParameters parameters) {
+    final ElementPath input = new ElementPathBuilder(spark)
+        .expression("valueString")
+        .fhirType(FHIRDefinedType.STRING)
+        .build();
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
+        Collections.emptyList());
+    final NamedFunction function = NamedFunction.getInstance(parameters.getFunctionName());
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> function.invoke(functionInput));
+    assertEquals(
+        "Input to " + parameters.getFunctionName() + " function must be Boolean",
+        error.getMessage());
+  }
+
+}

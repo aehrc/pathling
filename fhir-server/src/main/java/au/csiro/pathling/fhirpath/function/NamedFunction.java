@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.fhirpath.function.BooleanAnyFunction.BooleanAnyType.ANY_FALSE;
+import static au.csiro.pathling.fhirpath.function.BooleanAnyFunction.BooleanAnyType.ANY_TRUE;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -42,6 +44,8 @@ public interface NamedFunction {
       .put("iif", new IifFunction())
       .put("translate", new TranslateFunction())
       .put("sum", new SumFunction())
+      .put("anyTrue", new BooleanAnyFunction(ANY_TRUE))
+      .put("anyFalse", new BooleanAnyFunction(ANY_FALSE))
       .build();
 
   /**
