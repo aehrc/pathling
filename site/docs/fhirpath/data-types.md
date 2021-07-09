@@ -82,6 +82,11 @@ Examples:
 -3.333
 ```
 
+<div class="callout info">
+    The implementation of Decimal within Pathling supports a precision of 26 and 
+    a scale of 6.
+</div>
+
 ## Date
 
 The Date type represents date and partial date values, without a time component.
