@@ -15,6 +15,7 @@ package au.csiro.pathling.encoders.datatypes
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.decimalType
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
+import org.apache.spark.sql.types
 import org.apache.spark.sql.types._
 import org.hl7.fhir.r4.model.DecimalType
 
@@ -25,25 +26,24 @@ import org.hl7.fhir.r4.model.DecimalType
  * an additional IntegerType column with `_scale` suffix storing the scale of the
  * original FHIR decimal value.
  *
- * @param elementName
+ * @param elementName the name of the element that this will be used to encode
  */
 case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
   def primitiveClass: Class[DecimalType] = classOf[DecimalType]
 
-  val scaleFieldName = elementName + "_scale"
+  val scaleFieldName: String = elementName + "_scale"
 
   override val schema: Seq[StructField] = Seq(StructField(elementName, decimalType), StructField(scaleFieldName, IntegerType))
 
-  override def customDeserializer(addToPath: String => Expression): Map[String, Expression] = {
-    val expression = NewInstance(primitiveClass,
+  override def customDecoderExpression(addToPath: String => Expression): Expression = {
+    NewInstance(primitiveClass,
       Invoke(
         Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
         "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(scaleFieldName) :: Nil
       ) :: Nil,
       ObjectType(primitiveClass)
     )
-    Map(elementName -> expression)
   }
 
   override def customSerializer(inputObject: Expression): List[Expression] = {
@@ -78,14 +78,14 @@ object DecimalCustomCoder {
    * One element where highly precise decimals may be encountered is the Location coordinates.
    * Irrespective of this, the limits documented in XML Schema apply"
    *
-   * For location coordinates 6 decimal digits allow for location precition od 10cm,
+   * For location coordinates 6 decimal digits allow for location precision of 10cm,
    * so should be sufficient for any medical purpose.
    *
-   * So the final type is DECIMAL(24,6) which allows both for 6 decimal places and
+   * So the final type is DECIMAL(26,6) which allows both for 6 decimal places and
    * at least 18 digits (regardless if there any decimal digits or not)
    */
 
   val scale: Int = 6
   val precision: Int = 26
-  val decimalType = DataTypes.createDecimalType(precision, scale)
+  val decimalType: types.DecimalType = DataTypes.createDecimalType(precision, scale)
 }

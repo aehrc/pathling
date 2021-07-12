@@ -13,10 +13,12 @@
 package au.csiro.pathling.encoders;
 
 import com.google.common.collect.ImmutableList;
+import java.util.Collections;
 import java.util.Date;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Medication.MedicationIngredientComponent;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
+import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
 import org.hl7.fhir.r4.model.codesystems.ConditionVerStatus;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
@@ -231,4 +233,43 @@ public class TestData {
 
     return encounter;
   }
+
+
+  /**
+   * Returns a FHIR Questionnaire resource for testing purposes.
+   */
+  public static Questionnaire newQuestionnaire() {
+    final Questionnaire questionnaire = new Questionnaire();
+    questionnaire.setId("Questionnaire/1");
+    final QuestionnaireItemComponent item = questionnaire.addItem();
+    item.addEnableWhen()
+        .setAnswer(new DecimalType(TEST_VERY_SMALL_DECIMAL_SCALE_6));
+    item.addInitial()
+        .setValue(new DecimalType(TEST_VERY_BIG_DECIMAL));
+    return questionnaire;
+  }
+
+
+  private static QuestionnaireItemComponent newNestedItem(int nestingLevel) {
+    final QuestionnaireItemComponent item = new QuestionnaireItemComponent();
+    item.setLinkId("ItemLevel/" + nestingLevel);
+    if (nestingLevel > 0) {
+      item.setItem(Collections.singletonList(newNestedItem(nestingLevel - 1)));
+    }
+    return item;
+  }
+
+  /**
+   * Returns a FHIR Questionnaire resource with nested Item elements for testing purposes.
+   *
+   * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
+   * present in the Questionnaire but with no nested items.
+   */
+  public static Questionnaire newNestedQuestionnaire(int maxNestingLevel) {
+    final Questionnaire questionnaire = new Questionnaire();
+    questionnaire.setId("Questionnaire/1");
+    questionnaire.setItem(Collections.singletonList(newNestedItem(maxNestingLevel)));
+    return questionnaire;
+  }
+
 }
