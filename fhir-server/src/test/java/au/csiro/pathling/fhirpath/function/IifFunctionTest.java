@@ -419,6 +419,7 @@ class IifFunctionTest {
         .build();
     final ElementPath otherwise = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BACKBONEELEMENT)
+        .expression("anotherBackboneElement")
         .build();
 
     final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
@@ -429,8 +430,8 @@ class IifFunctionTest {
         InvalidUserInputError.class,
         () -> notFunction.invoke(iifInput));
     assertEquals(
-        "Path of type BackboneElement cannot be merged into a collection",
-        error.getMessage());
+        "Paths cannot be merged into a collection together: someBackboneElement, "
+            + "anotherBackboneElement", error.getMessage());
   }
 
   @Test

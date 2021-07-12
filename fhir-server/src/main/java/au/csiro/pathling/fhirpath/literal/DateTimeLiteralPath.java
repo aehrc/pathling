@@ -100,4 +100,9 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
     return DateTimePath.valueFromRow(row, columnNumber, FHIRDefinedType.DATETIME);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof DateTimePath;
+  }
+ 
 }

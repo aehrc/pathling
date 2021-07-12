@@ -19,7 +19,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>3.2.0</version>
+  <version>4.0.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -67,7 +67,7 @@
   </ciManagement>
 
   <properties>
-    <project.majorVersion>3</project.majorVersion>
+    <project.majorVersion>4</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <pathling.hapiFhirVersion>5.3.3</pathling.hapiFhirVersion>
@@ -175,7 +175,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
-        <version>2.12.3</version>
+        <version>2.12.4</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.janino</groupId>

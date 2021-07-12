@@ -15,7 +15,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 /**
  * @author John Grimes
  */
-public class ElementPathAssertion extends FhirPathAssertion<ElementPathAssertion> {
+public class ElementPathAssertion extends BaseFhirPathAssertion<ElementPathAssertion> {
 
   @Nonnull
   private final ElementPath fhirPath;

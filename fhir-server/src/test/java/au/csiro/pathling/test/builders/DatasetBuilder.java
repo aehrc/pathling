@@ -101,6 +101,14 @@ public class DatasetBuilder {
   }
 
   @Nonnull
+  public DatasetBuilder withIdEidValueRows(@Nonnull final Iterable<String> ids,
+      @Nonnull final Function<String, String> eidProducer,
+      @Nonnull final Function<String, Object> valueProducer) {
+    ids.forEach(id -> this.withRow(id, eidProducer.apply(id), valueProducer.apply(id)));
+    return this;
+  }
+
+  @Nonnull
   public DatasetBuilder changeValue(@Nonnull final String id, @Nonnull final Object value) {
     for (int i = 0; i < datasetRows.size(); i++) {
       final Row row = datasetRows.get(i);

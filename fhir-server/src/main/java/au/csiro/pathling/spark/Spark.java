@@ -8,14 +8,12 @@ package au.csiro.pathling.spark;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Storage.Aws;
-import au.csiro.pathling.spark.udf.CodingsEqual;
 import au.csiro.pathling.sql.PathlingStrategy;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
@@ -51,7 +49,6 @@ public class Spark {
         .getOrCreate();
 
     // Configure user defined functions.
-    spark.udf().register("codings_equal", new CodingsEqual(), DataTypes.BooleanType);
     PathlingStrategy.setup(spark);
 
     // Configure AWS driver and credentials.

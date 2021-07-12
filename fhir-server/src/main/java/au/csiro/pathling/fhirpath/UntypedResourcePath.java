@@ -113,7 +113,7 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
 
   @Override
   @Nonnull
-  public NonLiteralPath mergeWith(@Nonnull final FhirPath target,
+  public NonLiteralPath combineWith(@Nonnull final FhirPath target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,

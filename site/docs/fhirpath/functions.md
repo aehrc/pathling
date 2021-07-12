@@ -14,9 +14,14 @@ as input and produce another collection as output and may take parameters.
 The following functions are currently supported:
 
 - [count](#count)
+- [sum](#sum)
 - [first](#first)
 - [empty](#empty)
 - [not](#not)
+- [anyTrue](#anytrue)
+- [anyFalse](#anyfalse)
+- [allTrue](#alltrue)
+- [allFalse](#allfalse)
 - [where](#where)
 - [iif](#iif)
 - [memberOf](#memberof)
@@ -51,6 +56,26 @@ Patient.name.given.count()
 ```
 
 See also: [count](https://hl7.org/fhirpath/#count-integer)
+
+## sum
+
+```
+collection -> sum() : Integer|Decimal
+```
+
+Returns the sum of the numeric values ([Integer](./data-types.html#integer) or 
+[Decimal](./data-types.html#decimal)) in the input collection.
+
+Example:
+
+```
+Observation.valueDecimal.sum()
+```
+
+<div class="callout warning">
+    The <code>sum</code> function is not within the FHIRPath specification, and 
+    is currently unique to the Pathling implementation.
+</div>
 
 ## first
 
@@ -92,7 +117,7 @@ See also: [empty](https://hl7.org/fhirpath/#empty-boolean)
 Boolean -> not() : Boolean
 ```
 
-Returns `true` if the input collection evaluates to `false`, and `false` if it 
+Returns `true` if the input collection evaluates to `false`, and `false` if it
 evaluates to `true`. Otherwise, the result is empty (`{ }`).
 
 Example:
@@ -102,6 +127,70 @@ Example:
 ```
 
 See also: [not](http://hl7.org/fhirpath/#not-boolean)
+
+## anyTrue
+
+```
+collection -> anyTrue() : Boolean
+```
+
+Takes a collection of Boolean values and returns `true` if any of the items are `true`. If all the items are `false`, or if the input is empty (`{ }`), the result is `false`.
+
+Example:
+
+```
+Condition.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570581000036105').anyTrue()
+```
+
+See also: [anyTrue](https://hl7.org/fhirpath/#anytrue-boolean)
+
+## anyFalse
+
+```
+collection -> anyFalse() : Boolean
+```
+
+Takes a collection of Boolean values and returns `true` if any of the items are `false`. If all the items are `true`, or if the input is empty (`{ }`), the result is `false`.
+
+Example:
+
+```
+Condition.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570581000036105').anyFalse()
+```
+
+See also: [anyFalse](https://hl7.org/fhirpath/#anyfalse-boolean)
+
+## allTrue
+
+```
+collection -> allTrue() : Boolean
+```
+
+Takes a collection of Boolean values and returns `true` if all the items are `true`. If any items are `false`, the result is `false`. If the input is empty (`{ }`), the result is `true`.
+
+Example:
+
+```
+Condition.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570581000036105').allTrue()
+```
+
+See also: [allTrue](https://hl7.org/fhirpath/#alltrue-boolean)
+
+## allFalse
+
+```
+collection -> allFalse() : Boolean
+```
+
+Takes a collection of Boolean values and returns `true` if all the items are `false`. If any items are `true`, the result is `false`. If the input is empty (`{ }`), the result is `true`.
+
+Example:
+
+```
+Condition.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570581000036105').allFalse()
+```
+
+See also: [allFalse](https://hl7.org/fhirpath/#allfalse-boolean)
 
 ## where
 

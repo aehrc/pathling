@@ -61,7 +61,7 @@ class CodingLiteralPathTest {
 
   @Test
   void roundTrip() {
-    final String expression = "http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20201231|166056000";
+    final String expression = "http://snomed.info/sct|166056000|http://snomed.info/sct/32506021000036107/version/20201231";
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath.fromString(
         expression,
         inputContext);
@@ -92,9 +92,10 @@ class CodingLiteralPathTest {
   @Test
   void roundTripWithQuotedComponent() {
     final String expression =
-        "http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20201231|"
-            + "'397956004 |Prosthetic arthroplasty of the hip|: 363704007 |Procedure site| = "
-            + "( 24136001 |Hip joint structure|: 272741003 |Laterality| =  7771000 |Left| )'";
+        "http://snomed.info/sct"
+            + "|'397956004 |Prosthetic arthroplasty of the hip|: 363704007 |Procedure site| = "
+            + "( 24136001 |Hip joint structure|: 272741003 |Laterality| =  7771000 |Left| )'"
+            + "|http://snomed.info/sct/32506021000036107/version/20201231";
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath
         .fromString(expression, inputContext);
     final Coding literalValue = codingLiteralPath.getLiteralValue();
@@ -113,7 +114,7 @@ class CodingLiteralPathTest {
   @Test
   void roundTripWithQuotedComponentWithComma() {
     final String expression =
-        "http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20201231|'46,2'";
+        "http://snomed.info/sct|'46,2'|http://snomed.info/sct/32506021000036107/version/20201231";
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath
         .fromString(expression, inputContext);
     final Coding literalValue = codingLiteralPath.getLiteralValue();

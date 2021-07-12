@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
@@ -15,13 +14,8 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.element.CodingPath;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.regex.MatchResult;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
@@ -37,11 +31,6 @@ import org.hl7.fhir.r4.model.Type;
  */
 @Getter
 public class CodingLiteralPath extends LiteralPath implements Materializable<Coding>, Comparable {
-
-  private static final Pattern CODING_PATTERN = Pattern
-      .compile("('.*'|[^ '|\\r\\n\\t(),]+)(\\|('.*'|[^ '|\\r\\n\\t(),]+)){0,2}?");
-  private static final Pattern NEEDS_QUOTING = Pattern.compile("[ '|\\r\\n\\t(),]");
-  private static final Pattern NEEDS_UNQUOTING = Pattern.compile("^'(.*)'$");
 
   @SuppressWarnings("WeakerAccess")
   protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
@@ -62,56 +51,15 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   @Nonnull
   public static CodingLiteralPath fromString(@Nonnull final CharSequence fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
-    final Matcher matcher = CODING_PATTERN.matcher(fhirPath);
-    final List<String> codingTokens = matcher.results()
-        .map(MatchResult::group)
-        .collect(Collectors.toList());
-    final Coding coding;
-    if (codingTokens.size() == 2) {
-      coding = new Coding(decodeComponent(codingTokens.get(0)),
-          decodeComponent(codingTokens.get(1)), null);
-    } else if (codingTokens.size() == 3) {
-      coding = new Coding(decodeComponent(codingTokens.get(0)),
-          decodeComponent(codingTokens.get(2)), null);
-      coding.setVersion(decodeComponent(codingTokens.get(1)));
-    } else {
-      throw new IllegalArgumentException(
-          "Coding literal must be of form [system]|[code] or [system]|[version]|[code]");
-    }
-    return new CodingLiteralPath(context.getDataset(), context.getIdColumn(), coding);
-  }
-
-  @Nonnull
-  private static String decodeComponent(@Nonnull final String component) {
-    final Matcher matcher = NEEDS_UNQUOTING.matcher(component);
-    if (matcher.matches()) {
-      final String result = unSingleQuote(component);
-      return StringLiteralPath.unescapeFhirPathString(result);
-    } else {
-      return component;
-    }
-  }
-
-  @Nonnull
-  private static String encodeComponent(@Nonnull final String component) {
-    final Matcher matcher = NEEDS_QUOTING.matcher(component);
-    if (matcher.find()) {
-      final String result = StringLiteralPath.escapeFhirPathString(component);
-      return "'" + result + "'";
-    } else {
-      return component;
-    }
+    return new CodingLiteralPath(context.getDataset(), context.getIdColumn(),
+        CodingLiteral.fromString(fhirPath));
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    final String system = getLiteralValue().getSystem();
-    final String version = getLiteralValue().getVersion();
-    final String code = getLiteralValue().getCode();
-    return version == null
-           ? encodeComponent(system) + "|" + encodeComponent(code)
-           : encodeComponent(system) + "|" + encodeComponent(version) + "|" + encodeComponent(code);
+    return CodingLiteral.toLiteral(getLiteralValue());
+
   }
 
   @Override
@@ -135,7 +83,7 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
         lit(value.getVersion()).as("version"),
         lit(value.getCode()).as("code"),
         lit(value.getDisplay()).as("display"),
-        lit(value.getUserSelected()).as("userSelected"));
+        lit(value.hasUserSelected()?value.getUserSelected():null).as("userSelected"));
   }
 
   @Override
@@ -155,4 +103,9 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
     return CodingPath.valueFromRow(row, columnNumber);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof CodingPath;
+  }
+ 
 }

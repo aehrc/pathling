@@ -24,7 +24,9 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
@@ -43,7 +45,6 @@ import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -84,9 +85,6 @@ public class ParserTest {
 
   @Autowired
   private TerminologyServiceFactory terminologyServiceFactory;
-
-  @Autowired
-  private IParser jsonParser;
 
   private Parser parser;
   private ResourceReader mockReader;
@@ -177,23 +175,20 @@ public class ParserTest {
 
   @Test
   public void testCodingOperations() {
+    // Check that membership operators for codings use strict equality rather than equivalence.
     // test unversioned
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(spark, true)
-            .changeValue(PATIENT_ID_8ee183e2, false)
-            .changeValue(PATIENT_ID_9360820c, false)
-            .changeValue(PATIENT_ID_beff242e, false));
+        .hasRows(allPatientsWithValue(spark, false));
 
     // test versioned
     assertThatResultOf(
         "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(allPatientsWithValue(spark, true)
-            .changeValue(PATIENT_ID_bbd33563, false));
+        .hasRows(allPatientsWithValue(spark, false));
   }
 
   @Test
@@ -236,13 +231,13 @@ public class ParserTest {
         .hasExpression("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
         .hasCodingValue(expectedCoding);
 
-    // Coding literal form [system]|[version]|[code]
+    // Coding literal form [system]|[code]|[version]
     final Coding expectedCodingWithVersion =
         new Coding("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "S", null);
     expectedCodingWithVersion.setVersion("v1");
-    assertThatResultOf("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|v1|S")
+    assertThatResultOf("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S|v1")
         .isLiteralPath(CodingLiteralPath.class)
-        .hasExpression("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|v1|S")
+        .hasExpression("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S|v1")
         .hasCodingValue(expectedCodingWithVersion);
   }
 
@@ -318,7 +313,7 @@ public class ParserTest {
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes.csv");
 
     assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
-        + "(http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20200229|40055000)")
+        + "(http://snomed.info/sct|40055000|http://snomed.info/sct/32506021000036107/version/20200229)")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.csv");
   }
@@ -440,7 +435,7 @@ public class ParserTest {
   @Test
   void testIfFunction() {
     assertThatResultOf(
-        "maritalStatus.coding.iif($this = 'http://terminology.hl7.org/CodeSystem/v3-MaritalStatus'|M, 'Married', 'Not married')")
+        "gender.iif($this = 'male', 'Male', 'Not male')")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testIfFunction.csv");
   }
@@ -471,7 +466,6 @@ public class ParserTest {
         .hasRows(allPatientsWithValue(spark, (String) null));
   }
 
-
   @Test
   void testTranslateFunction() {
     final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
@@ -489,7 +483,6 @@ public class ParserTest {
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testTranslateFunction.csv");
   }
-
 
   @Test
   void testTranslateWithWhereAndTranslate() {
@@ -519,11 +512,66 @@ public class ParserTest {
   }
 
   @Test
+  public void testWithCodingLiteral() {
+    assertThatResultOf(
+        "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testWithCodingLiteral.csv");
+  }
+
+  @Test
+  public void testCombineOperator() {
+    assertThatResultOf("name.family combine name.given")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperator.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithWhereFunction() {
+    assertThatResultOf("where((name.family combine name.given) contains 'Gleichner915').birthDate")
+        .isElementPath(DatePath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithWhereFunction.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithResourcePaths() {
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).where(clinicalStatus.coding.code contains 'active') combine reverseResolve(Condition.subject).where(clinicalStatus.coding.code contains 'resolved')")
+        .isResourcePath()
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithResourcePaths.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithDifferentlyTypedStringPaths() {
+    assertThatResultOf(
+        "reverseResolve(Condition.subject).code.coding.system combine "
+            + "reverseResolve(Condition.subject).code.coding.code")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark,
+            "responses/ParserTest/testCombineOperatorWithDifferentlyTypedStringPaths.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithComplexTypeAndNull() {
+    assertThatResultOf("(name combine {}).given")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark,
+            "responses/ParserTest/testCombineOperatorWithComplexTypeAndNull.csv");
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
-    assertEquals("Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'", error.getMessage());
+    assertEquals(
+        "Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'",
+        error.getMessage());
   }
 
 }

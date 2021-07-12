@@ -86,4 +86,9 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
     return BooleanPath.valueFromRow(row, columnNumber);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof BooleanPath;
+  }
+
 }

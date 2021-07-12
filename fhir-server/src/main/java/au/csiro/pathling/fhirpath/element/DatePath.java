@@ -9,8 +9,10 @@ package au.csiro.pathling.fhirpath.element;
 import static org.apache.spark.sql.functions.to_timestamp;
 
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -128,4 +130,8 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
     return DateTimePath.getComparableTypes().contains(type);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof DateLiteralPath;
+  }
 }
