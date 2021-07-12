@@ -26,7 +26,7 @@ import org.hl7.fhir.r4.model.DecimalType
  * an additional IntegerType column with `_scale` suffix storing the scale of the
  * original FHIR decimal value.
  *
- * @param elementName
+ * @param elementName the name of the element that this will be used to encode
  */
 case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
@@ -78,10 +78,10 @@ object DecimalCustomCoder {
    * One element where highly precise decimals may be encountered is the Location coordinates.
    * Irrespective of this, the limits documented in XML Schema apply"
    *
-   * For location coordinates 6 decimal digits allow for location precition od 10cm,
+   * For location coordinates 6 decimal digits allow for location precision of 10cm,
    * so should be sufficient for any medical purpose.
    *
-   * So the final type is DECIMAL(24,6) which allows both for 6 decimal places and
+   * So the final type is DECIMAL(26,6) which allows both for 6 decimal places and
    * at least 18 digits (regardless if there any decimal digits or not)
    */
 
