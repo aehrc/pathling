@@ -31,8 +31,7 @@ public class CodingLiteral {
   private static final Pattern CODING_PATTERN = Pattern
       .compile(String
           .format("%s\\|%s(?:\\|%s)?(?:\\|%s)?(?:\\|%s)?", COMPONENT_REGEX, COMPONENT_REGEX,
-              COMPONENT_REGEX,
-              COMPONENT_REGEX, COMPONENT_REGEX));
+              COMPONENT_REGEX, COMPONENT_REGEX, COMPONENT_REGEX));
 
   private static final Pattern NEEDS_QUOTING = Pattern
       .compile(String.format("[%s]", SPECIAL_CHARACTERS));

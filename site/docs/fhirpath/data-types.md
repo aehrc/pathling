@@ -141,10 +141,11 @@ a defined concept using a symbol from a defined
 [Using Codes in resources](https://hl7.org/fhir/R4/terminologies.html) for more
 details.
 
-The Coding literal can take two forms:
+The Coding literal comprises a minimum of `system` and `code`, as well as optional `version`, `display`, `userSelected` components:
 
-- `[system]|[version]|[code]`
-- `[system]|[code]`
+```
+<system>|<code>[|<version>][|<display>[|<userSelected>]]]
+```
 
 Not all code systems require the use of a version to unambiguously specify a
 code - see
@@ -152,6 +153,15 @@ code - see
 
 You can also optionally single-quote each of the components within the Coding 
 literal, in cases where certain characters might otherwise confuse the parser.
+
+Examples:
+
+```
+http://snomed.info/sct|52101004
+http://snomed.info/sct|52101004||Present
+http://terminology.hl7.org/CodeSystem/condition-category|problem-list-item|4.0.1|'Problem List Item'
+http://snomed.info/sct|'397956004 |Prosthetic arthroplasty of the hip|: 363704007 |Procedure site| = ( 24136001 |Hip joint structure|: 272741003 |Laterality| =  7771000 |Left| )'
+```
 
 <div class="callout warning">The <code>Coding</code> literal is not within the FHIRPath specification, and is currently unique to the Pathling implementation.</div>
 
