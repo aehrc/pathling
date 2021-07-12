@@ -52,6 +52,8 @@ public class ComparisonOperatorTest {
 
   private ParserContext parserContext;
 
+  private static final String ID_ALIAS = "_abc123";
+
   @BeforeEach
   void setUp() {
     parserContext = new ParserContextBuilder(spark, fhirContext).build();
@@ -126,7 +128,7 @@ public class ComparisonOperatorTest {
 
   private TestParameters buildStringExpressions(final String name) {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "Evelyn")
         .withRow("patient-2", "Evelyn")
@@ -142,7 +144,7 @@ public class ComparisonOperatorTest {
         .singular(true)
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "Evelyn")
         .withRow("patient-2", "Jude")
@@ -163,7 +165,7 @@ public class ComparisonOperatorTest {
 
   private TestParameters buildIntegerExpressions(final String name) {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.IntegerType)
         .withRow("patient-1", 1)
         .withRow("patient-2", 1)
@@ -179,7 +181,7 @@ public class ComparisonOperatorTest {
         .singular(true)
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.IntegerType)
         .withRow("patient-1", 1)
         .withRow("patient-2", 2)
@@ -200,7 +202,7 @@ public class ComparisonOperatorTest {
 
   private TestParameters buildDecimalExpressions(final String name) {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.createDecimalType())
         .withRow("patient-1", new BigDecimal("1.0"))
         .withRow("patient-2", new BigDecimal("1.0"))
@@ -216,7 +218,7 @@ public class ComparisonOperatorTest {
         .singular(true)
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.createDecimalType())
         .withRow("patient-1", new BigDecimal("1.0"))
         .withRow("patient-2", new BigDecimal("2.0"))
@@ -240,7 +242,7 @@ public class ComparisonOperatorTest {
       final String greaterDate,
       final FHIRDefinedType fhirType) {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", lesserDate)
         .withRow("patient-2", lesserDate)
@@ -256,7 +258,7 @@ public class ComparisonOperatorTest {
         .singular(true)
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", lesserDate)
         .withRow("patient-2", greaterDate)

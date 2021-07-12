@@ -11,6 +11,7 @@ import static org.apache.spark.sql.functions.monotonically_increasing_id;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -47,8 +48,7 @@ public class CombineOperator implements Operator {
                                         : Optional.empty();
     return left
         .combineWith(right, dataset, expression, left.getIdColumn(), eidColumn,
-            left.getValueColumn(),
-            false, thisColumn);
+            left.getValueColumn(), false, thisColumn);
   }
 
   @Nonnull
@@ -57,7 +57,15 @@ public class CombineOperator implements Operator {
         Arrays.asList(operand.getIdColumn(), operand.getValueColumn()));
     if (operand instanceof NonLiteralPath) {
       final NonLiteralPath nonLiteralLeft = (NonLiteralPath) operand;
+      // If there is a this column, we need to preserve it.
       nonLiteralLeft.getThisColumn().ifPresent(columns::add);
+      // If the this context is a resource, we need to preserve all element columns.
+      input.getContext().getThisContext().ifPresent(thisContext -> {
+        if (thisContext instanceof ResourcePath) {
+          final ResourcePath thisResource = (ResourcePath) thisContext;
+          columns.addAll(thisResource.getElementColumns());
+        }
+      });
     }
     input.getContext().getGroupingColumns().ifPresent(columns::addAll);
     return operand.getDataset().select(columns.toArray(new Column[]{}));

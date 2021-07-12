@@ -16,6 +16,7 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -134,6 +135,14 @@ public class ResourcePath extends NonLiteralPath {
   @Nonnull
   public Column getElementColumn(@Nonnull final String elementName) {
     return Objects.requireNonNull(elementsToColumns.get(elementName));
+  }
+
+  /**
+   * @return the {@link Column} objects that represent the elements within this resource
+   */
+  @Nonnull
+  public Collection<Column> getElementColumns() {
+    return Objects.requireNonNull(elementsToColumns.values());
   }
 
   public ResourceType getResourceType() {

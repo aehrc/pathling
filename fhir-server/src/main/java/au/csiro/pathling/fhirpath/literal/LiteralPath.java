@@ -6,10 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -94,9 +92,8 @@ public abstract class LiteralPath implements FhirPath {
       @Nonnull final Type literalValue) {
     this.idColumn = idColumn;
     this.literalValue = literalValue;
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset, buildValueColumn());
-    this.dataset = datasetWithColumn.getDataset();
-    this.valueColumn = datasetWithColumn.getColumn();
+    this.dataset = dataset;
+    this.valueColumn = buildValueColumn();
   }
 
   /**
