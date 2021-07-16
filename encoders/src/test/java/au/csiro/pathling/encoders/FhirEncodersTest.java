@@ -54,7 +54,8 @@ public class FhirEncodersTest {
   private static final MedicationRequest medRequest = TestData.newMedRequest();
   private static final Encounter encounter = TestData.newEncounter();
   private static final Questionnaire questionnaire = TestData.newQuestionnaire();
-
+  private static final QuestionnaireResponse questionnaireResponse = TestData
+      .newQuestionnaireResponse();
 
   private static Dataset<Observation> observationsDataset;
   private static Observation decodedObservation;
@@ -66,6 +67,8 @@ public class FhirEncodersTest {
   private static Encounter decodedEncounter;
   private static Dataset<Questionnaire> questionnaireDataset;
   private static Questionnaire decodedQuestionnaire;
+  private static Dataset<QuestionnaireResponse> questionnaireResponseDataset;
+  private static QuestionnaireResponse decodedQuestionnaireResponse;
 
   /**
    * Set up Spark.
@@ -106,6 +109,11 @@ public class FhirEncodersTest {
     questionnaireDataset = spark
         .createDataset(ImmutableList.of(questionnaire), encoders.of(Questionnaire.class));
     decodedQuestionnaire = questionnaireDataset.head();
+
+    questionnaireResponseDataset = spark
+        .createDataset(ImmutableList.of(questionnaireResponse),
+            encoders.of(QuestionnaireResponse.class));
+    decodedQuestionnaireResponse = questionnaireResponseDataset.head();
 
   }
 
@@ -268,7 +276,7 @@ public class FhirEncodersTest {
 
 
   @Test
-  public void choiceBigDecimal() {
+  public void choiceBigDecimalInQuestionnaire() {
 
     final BigDecimal originalDecimal = questionnaire.getItemFirstRep().getEnableWhenFirstRep()
         .getAnswerDecimalType().getValue();
@@ -297,6 +305,38 @@ public class FhirEncodersTest {
     // Test can represent without loss 18 + 6 decimal places
     Assert.assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
         decodedQuestionnaire.getItemFirstRep().getInitialFirstRep().getValueDecimalType()
+            .getValue());
+  }
+
+  @Test
+  public void choiceBigDecimalInQuestionnaireResponse() {
+    final BigDecimal originalDecimal = questionnaireResponse.getItemFirstRep().getAnswerFirstRep()
+        .getValueDecimalType().getValue();
+
+    final BigDecimal queriedDecimal = (BigDecimal) questionnaireResponseDataset
+        .select(functions.col("item").getItem(0).getField("answer").getItem(0)
+            .getField("valueDecimal"))
+        .head()
+        .get(0);
+
+    final int queriedDecimal_scale = questionnaireResponseDataset
+        .select(functions.col("item").getItem(0).getField("answer").getItem(0)
+            .getField("valueDecimal_scale"))
+        .head()
+        .getInt(0);
+
+    Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
+    Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
+
+    final BigDecimal decodedDecimal = decodedQuestionnaireResponse.getItemFirstRep()
+        .getAnswerFirstRep().getValueDecimalType().getValue();
+    Assert.assertEquals(originalDecimal, decodedDecimal);
+
+    Assert.assertEquals(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
+        decodedQuestionnaireResponse.getItemFirstRep().getAnswerFirstRep().getValueDecimalType()
+            .getValue());
+    Assert.assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
+        decodedQuestionnaireResponse.getItemFirstRep().getAnswer().get(1).getValueDecimalType()
             .getValue());
   }
 

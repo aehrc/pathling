@@ -19,6 +19,8 @@ import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Medication.MedicationIngredientComponent;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
+import org.hl7.fhir.r4.model.QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent;
+import org.hl7.fhir.r4.model.QuestionnaireResponse.QuestionnaireResponseItemComponent;
 import org.hl7.fhir.r4.model.codesystems.ConditionVerStatus;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
@@ -249,8 +251,28 @@ public class TestData {
     return questionnaire;
   }
 
+  /**
+   * Returns a FHIR QuestionnaireResponse resource for testing purposes.
+   */
+  public static QuestionnaireResponse newQuestionnaireResponse() {
+    final QuestionnaireResponse questionnaireResponse = new QuestionnaireResponse();
+    questionnaireResponse.setId("QuestionnaireResponse/1");
+    final QuestionnaireResponseItemComponent item = questionnaireResponse.addItem();
 
-  private static QuestionnaireItemComponent newNestedItem(int nestingLevel) {
+    final QuestionnaireResponseItemAnswerComponent answer1 =
+        new QuestionnaireResponseItemAnswerComponent();
+    answer1.setValue(new DecimalType(TEST_VERY_SMALL_DECIMAL_SCALE_6));
+    final QuestionnaireResponseItemAnswerComponent answer2 =
+        new QuestionnaireResponseItemAnswerComponent();
+    answer2.setValue(new DecimalType(TEST_VERY_BIG_DECIMAL));
+
+    item.addAnswer(answer1);
+    item.addAnswer(answer2);
+    return questionnaireResponse;
+  }
+
+
+  private static QuestionnaireItemComponent newNestedItem(final int nestingLevel) {
     final QuestionnaireItemComponent item = new QuestionnaireItemComponent();
     item.setLinkId("ItemLevel/" + nestingLevel);
     if (nestingLevel > 0) {
@@ -265,7 +287,7 @@ public class TestData {
    * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
    * present in the Questionnaire but with no nested items.
    */
-  public static Questionnaire newNestedQuestionnaire(int maxNestingLevel) {
+  public static Questionnaire newNestedQuestionnaire(final int maxNestingLevel) {
     final Questionnaire questionnaire = new Questionnaire();
     questionnaire.setId("Questionnaire/1");
     questionnaire.setItem(Collections.singletonList(newNestedItem(maxNestingLevel)));

@@ -12,8 +12,6 @@
 
 package au.csiro.pathling.encoders.datatypes
 
-import java.util.TimeZone
-
 import au.csiro.pathling.encoders.StaticField
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
@@ -23,7 +21,10 @@ import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent
+import org.hl7.fhir.r4.model.QuestionnaireResponse.{QuestionnaireResponseItemAnswerComponent, QuestionnaireResponseItemComponent}
 import org.hl7.fhir.r4.model._
+
+import java.util.TimeZone
 
 /**
  * Data type mappings for FHIR STU3.
@@ -97,7 +98,11 @@ class R4DataTypeMappings extends DataTypeMappings {
                          child: BaseRuntimeChildDefinition): Boolean = {
 
     // QuestionnaireItems may recursive, so skip the nested 'item' field
-    val skipRecursiveItem = definition.getImplementingClass == classOf[QuestionnaireItemComponent] && child.getElementName == "item"
+    val skipRecursiveItem = (
+      definition.getImplementingClass == classOf[QuestionnaireItemComponent] ||
+        definition.getImplementingClass == classOf[QuestionnaireResponseItemComponent] ||
+        definition.getImplementingClass == classOf[QuestionnaireResponseItemAnswerComponent]
+      ) && child.getElementName == "item"
 
     // References may be recursive, so include only the reference adn display name.
     val skipRecursiveReference = definition.getImplementingClass == classOf[Reference] &&
