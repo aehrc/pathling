@@ -21,11 +21,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.spark.sql.types.BooleanType;
+import org.apache.spark.sql.types.DecimalType;
+import org.apache.spark.sql.types.IntegerType;
+import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.*;
-import org.hl7.fhir.r4.model.Condition;
-import org.hl7.fhir.r4.model.MedicationRequest;
-import org.hl7.fhir.r4.model.Observation;
-import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.*;
 import org.junit.Test;
 
 public class SchemaConverterTest {
@@ -42,6 +43,9 @@ public class SchemaConverterTest {
 
   private static final StructType questionnaireSchema = converter
       .resourceSchema(Questionnaire.class);
+
+  private static final StructType questionnaireResponseSchema = converter
+      .resourceSchema(QuestionnaireResponse.class);
 
   /**
    * Returns the type of a nested field.
@@ -148,6 +152,10 @@ public class SchemaConverterTest {
         "answerDecimal") instanceof DecimalType);
     assertTrue(getField(questionnaireSchema, true, "item", "enableWhen",
         "answerDecimal_scale") instanceof IntegerType);
+    assertTrue(getField(questionnaireResponseSchema, true, "item", "answer",
+        "valueDecimal") instanceof DecimalType);
+    assertTrue(getField(questionnaireResponseSchema, true, "item", "answer",
+        "valueDecimal_scale") instanceof IntegerType);
   }
 
   @Test
