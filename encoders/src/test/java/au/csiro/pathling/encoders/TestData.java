@@ -248,6 +248,10 @@ public class TestData {
         .setAnswer(new DecimalType(TEST_VERY_SMALL_DECIMAL_SCALE_6));
     item.addInitial()
         .setValue(new DecimalType(TEST_VERY_BIG_DECIMAL));
+    // This nested item will be discarded on import, as we currently skip recursive elements.
+    final QuestionnaireItemComponent nestedItem = item.addItem();
+    nestedItem.addInitial()
+        .setValue(new DecimalType(TEST_SMALL_DECIMAL));
     return questionnaire;
   }
 

@@ -306,6 +306,9 @@ public class FhirEncodersTest {
     Assert.assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
         decodedQuestionnaire.getItemFirstRep().getInitialFirstRep().getValueDecimalType()
             .getValue());
+
+    // Nested item should not be present.
+    Assert.assertTrue(decodedQuestionnaire.getItemFirstRep().getItem().isEmpty());
   }
 
   @Test
