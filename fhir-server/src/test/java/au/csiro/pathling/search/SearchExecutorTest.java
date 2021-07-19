@@ -100,6 +100,16 @@ class SearchExecutorTest {
   }
 
   @Test
+  void searchOfQuestionnaire() {
+    final SearchExecutorBuilder builder = searchBuilder()
+        .withSubjectResource(ResourceType.QUESTIONNAIRE);
+    mockResourceReader(builder.getResourceReader(), sparkSession, ResourceType.QUESTIONNAIRE);
+
+    final SearchExecutor executor = builder.build();
+    assertResponse("SearchExecutorTest/searchOfQuestionnaire.Bundle.json", executor);
+  }
+
+  @Test
   void throwsInvalidInputOnNonBooleanFilter() {
     final StringAndListParam params = new StringAndListParam();
     params.addAnd(new StringParam("category.coding"));

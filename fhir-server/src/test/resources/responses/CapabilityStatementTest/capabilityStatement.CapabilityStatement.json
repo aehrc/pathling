@@ -255,15 +255,6 @@
           ]
         },
         {
-          "type": "OperationDefinition",
-          "profile": "http://hl7.org/fhir/StructureDefinition/OperationDefinition",
-          "interaction": [
-            {
-              "code": "read"
-            }
-          ]
-        },
-        {
           "type": "Organization",
           "profile": "http://hl7.org/fhir/StructureDefinition/Organization",
           "interaction": [
@@ -336,6 +327,53 @@
             {
               "name": "fhirPath",
               "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
+            }
+          ]
+        },
+        {
+          "type": "Questionnaire",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Questionnaire",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
+            }
+          ]
+        },
+        {
+          "type": "QuestionnaireResponse",
+          "profile": "http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
+            }
+          ]
+        },
+        {
+          "type": "OperationDefinition",
+          "profile": "http://hl7.org/fhir/StructureDefinition/OperationDefinition",
+          "interaction": [
+            {
+              "code": "read"
             }
           ]
         }

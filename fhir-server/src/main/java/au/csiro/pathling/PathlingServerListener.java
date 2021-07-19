@@ -42,14 +42,11 @@ public class PathlingServerListener implements ApplicationListener<ApplicationRe
   @EventListener(ApplicationReadyEvent.class)
   public void onApplicationEvent(@Nonnull final ApplicationReadyEvent event) {
     // Configure Sentry.
-    configuration.getSentryDsn().ifPresent(dsn -> {
-      Sentry.init(options -> {
-        options.setDsn(dsn);
-        configuration.getSentryEnvironment().ifPresent(options::setEnvironment);
-      });
-      version.getDescriptiveVersion()
-          .ifPresent(version -> Sentry.setExtra("serverVersion", version));
-    });
+    configuration.getSentryDsn().ifPresent(dsn -> Sentry.init(options -> {
+      options.setDsn(dsn);
+      version.getDescriptiveVersion().ifPresent(options::setRelease);
+      configuration.getSentryEnvironment().ifPresent(options::setEnvironment);
+    }));
   }
 
 }

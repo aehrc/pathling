@@ -12,19 +12,19 @@
 
 package au.csiro.pathling.encoders.datatypes
 
-import java.util.TimeZone
-
 import au.csiro.pathling.encoders.StaticField
-import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementCompositeDefinition, RuntimeChildPrimitiveDatatypeDefinition, RuntimePrimitiveDatatypeDefinition}
+import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
 import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
-import org.hl7.fhir.instance.model.api.{IBaseBundle, IBaseDatatype, IBaseResource, IPrimitiveType}
+import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
+import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent
+import org.hl7.fhir.r4.model.QuestionnaireResponse.{QuestionnaireResponseItemAnswerComponent, QuestionnaireResponseItemComponent}
 import org.hl7.fhir.r4.model._
 
-import scala.collection.JavaConversions._
+import java.util.TimeZone
 
 /**
  * Data type mappings for FHIR STU3.
@@ -97,6 +97,13 @@ class R4DataTypeMappings extends DataTypeMappings {
   override def skipField(definition: BaseRuntimeElementCompositeDefinition[_],
                          child: BaseRuntimeChildDefinition): Boolean = {
 
+    // QuestionnaireItems may recursive, so skip the nested 'item' field
+    val skipRecursiveItem = (
+      definition.getImplementingClass == classOf[QuestionnaireItemComponent] ||
+        definition.getImplementingClass == classOf[QuestionnaireResponseItemComponent] ||
+        definition.getImplementingClass == classOf[QuestionnaireResponseItemAnswerComponent]
+      ) && child.getElementName == "item"
+
     // References may be recursive, so include only the reference adn display name.
     val skipRecursiveReference = definition.getImplementingClass == classOf[Reference] &&
       !(child.getElementName == "reference" ||
@@ -106,7 +113,7 @@ class R4DataTypeMappings extends DataTypeMappings {
     val skipContains = definition.getImplementingClass == classOf[ValueSet.ValueSetExpansionContainsComponent] &&
       child.getElementName == "contains"
 
-    skipRecursiveReference || skipContains
+    skipRecursiveItem || skipRecursiveReference || skipContains
   }
 
   override def primitiveEncoderExpression(inputObject: Expression,
@@ -202,23 +209,17 @@ class R4DataTypeMappings extends DataTypeMappings {
     }
   }
 
-  override def customEncoder(childDefinition: BaseRuntimeChildDefinition): Option[CustomCoder] = {
-    childDefinition match {
-      case primitive: RuntimeChildPrimitiveDatatypeDefinition => {
-        val definition = childDefinition.getChildByName(childDefinition.getElementName)
-        definition match {
-          case primitive: RuntimePrimitiveDatatypeDefinition
-            if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass => {
-            Some(DecimalCustomCoder(childDefinition.getElementName))
-          }
-          case primitive: RuntimePrimitiveDatatypeDefinition
-            if classOf[org.hl7.fhir.r4.model.IdType] == primitive.getImplementingClass => {
-            Some(IdCustomCoder(childDefinition.getElementName))
-          }
-          case _ => super.customEncoder(childDefinition)
-        }
+  override def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Option[CustomCoder] = {
+    elementDefinition match {
+      case primitive: RuntimePrimitiveDatatypeDefinition
+        if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass => {
+        Some(DecimalCustomCoder(elementName))
       }
-      case _ => super.customEncoder(childDefinition)
+      case primitive: RuntimePrimitiveDatatypeDefinition
+        if classOf[org.hl7.fhir.r4.model.IdType] == primitive.getImplementingClass => {
+        Some(IdCustomCoder(elementName))
+      }
+      case _ => super.customEncoder(elementDefinition, elementName)
     }
   }
 }

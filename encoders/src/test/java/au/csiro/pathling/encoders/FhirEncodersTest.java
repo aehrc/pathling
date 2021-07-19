@@ -53,6 +53,10 @@ public class FhirEncodersTest {
   private static final Observation observation = TestData.newObservation();
   private static final MedicationRequest medRequest = TestData.newMedRequest();
   private static final Encounter encounter = TestData.newEncounter();
+  private static final Questionnaire questionnaire = TestData.newQuestionnaire();
+  private static final QuestionnaireResponse questionnaireResponse = TestData
+      .newQuestionnaireResponse();
+
   private static Dataset<Observation> observationsDataset;
   private static Observation decodedObservation;
   private static Dataset<Condition> conditionsWithVersionDataset;
@@ -61,6 +65,10 @@ public class FhirEncodersTest {
   private static Condition decodedConditionWithVersion;
   private static Dataset<Encounter> encounterDataset;
   private static Encounter decodedEncounter;
+  private static Dataset<Questionnaire> questionnaireDataset;
+  private static Questionnaire decodedQuestionnaire;
+  private static Dataset<QuestionnaireResponse> questionnaireResponseDataset;
+  private static QuestionnaireResponse decodedQuestionnaireResponse;
 
   /**
    * Set up Spark.
@@ -97,6 +105,16 @@ public class FhirEncodersTest {
     encounterDataset = spark
         .createDataset(ImmutableList.of(encounter), encoders.of(Encounter.class));
     decodedEncounter = encounterDataset.head();
+
+    questionnaireDataset = spark
+        .createDataset(ImmutableList.of(questionnaire), encoders.of(Questionnaire.class));
+    decodedQuestionnaire = questionnaireDataset.head();
+
+    questionnaireResponseDataset = spark
+        .createDataset(ImmutableList.of(questionnaireResponse),
+            encoders.of(QuestionnaireResponse.class));
+    decodedQuestionnaireResponse = questionnaireResponseDataset.head();
+
   }
 
   /**
@@ -117,8 +135,6 @@ public class FhirEncodersTest {
 
   @Test
   public void testResourceWithVersionId() {
-    conditionsWithVersionDataset.show();
-
     Assert.assertEquals("with-version",
         conditionsWithVersionDataset.select("id").head().get(0));
 
@@ -256,6 +272,75 @@ public class FhirEncodersTest {
     // Test rounding of decimals with scale larger than 6
     Assert.assertEquals(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
         decodedObservation.getReferenceRange().get(0).getLow().getValue());
+  }
+
+
+  @Test
+  public void choiceBigDecimalInQuestionnaire() {
+
+    final BigDecimal originalDecimal = questionnaire.getItemFirstRep().getEnableWhenFirstRep()
+        .getAnswerDecimalType().getValue();
+
+    final BigDecimal queriedDecimal = (BigDecimal) questionnaireDataset
+        .select(functions.col("item").getItem(0).getField("enableWhen").getItem(0)
+            .getField("answerDecimal"))
+        .head()
+        .get(0);
+
+    final int queriedDecimal_scale = questionnaireDataset
+        .select(functions.col("item").getItem(0).getField("enableWhen").getItem(0)
+            .getField("answerDecimal_scale"))
+        .head()
+        .getInt(0);
+
+    // we expect the values to be the same but they may differ in scale
+    Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
+    Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
+
+    final BigDecimal decodedDecimal = decodedQuestionnaire.getItemFirstRep().getEnableWhenFirstRep()
+        .getAnswerDecimalType().getValue();
+    // here we expect same value,  scale and precision
+    Assert.assertEquals(originalDecimal, decodedDecimal);
+
+    // Test can represent without loss 18 + 6 decimal places
+    Assert.assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
+        decodedQuestionnaire.getItemFirstRep().getInitialFirstRep().getValueDecimalType()
+            .getValue());
+
+    // Nested item should not be present.
+    Assert.assertTrue(decodedQuestionnaire.getItemFirstRep().getItem().isEmpty());
+  }
+
+  @Test
+  public void choiceBigDecimalInQuestionnaireResponse() {
+    final BigDecimal originalDecimal = questionnaireResponse.getItemFirstRep().getAnswerFirstRep()
+        .getValueDecimalType().getValue();
+
+    final BigDecimal queriedDecimal = (BigDecimal) questionnaireResponseDataset
+        .select(functions.col("item").getItem(0).getField("answer").getItem(0)
+            .getField("valueDecimal"))
+        .head()
+        .get(0);
+
+    final int queriedDecimal_scale = questionnaireResponseDataset
+        .select(functions.col("item").getItem(0).getField("answer").getItem(0)
+            .getField("valueDecimal_scale"))
+        .head()
+        .getInt(0);
+
+    Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
+    Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
+
+    final BigDecimal decodedDecimal = decodedQuestionnaireResponse.getItemFirstRep()
+        .getAnswerFirstRep().getValueDecimalType().getValue();
+    Assert.assertEquals(originalDecimal, decodedDecimal);
+
+    Assert.assertEquals(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
+        decodedQuestionnaireResponse.getItemFirstRep().getAnswerFirstRep().getValueDecimalType()
+            .getValue());
+    Assert.assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
+        decodedQuestionnaireResponse.getItemFirstRep().getAnswer().get(1).getValueDecimalType()
+            .getValue());
   }
 
   @Test
