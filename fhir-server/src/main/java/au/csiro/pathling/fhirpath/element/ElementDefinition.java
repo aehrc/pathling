@@ -37,6 +37,8 @@ public class ElementDefinition {
           .put(FHIRDefinedType.BOOLEAN, BooleanPath.class)
           .put(FHIRDefinedType.STRING, StringPath.class)
           .put(FHIRDefinedType.URI, StringPath.class)
+          .put(FHIRDefinedType.URL, StringPath.class)
+          .put(FHIRDefinedType.CANONICAL, StringPath.class)
           .put(FHIRDefinedType.CODE, StringPath.class)
           .put(FHIRDefinedType.OID, StringPath.class)
           .put(FHIRDefinedType.ID, StringPath.class)
