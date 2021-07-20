@@ -270,43 +270,42 @@ public abstract class QueryHelpers {
 
     final FhirPath left = fhirPaths.get(0);
     Dataset<Row> dataset = left.getDataset();
+    final Column joinId = left.getIdColumn();
     final List<FhirPath> joinTargets = fhirPaths.subList(1, fhirPaths.size());
 
-    boolean nonLiteralEncountered = left instanceof NonLiteralPath;
-    for (final FhirPath right : joinTargets) {
-      if (right instanceof NonLiteralPath) {
-        if (nonLiteralEncountered) {
-          final List<Column> leftColumns = new ArrayList<>();
-          final List<Column> rightColumns = new ArrayList<>();
-          leftColumns.add(left.getIdColumn());
-          rightColumns.add(right.getIdColumn());
-          // If a $this context is present (i.e. the join is being performed within function arguments,
-          // with an item from the input collection as context), then we need to add the identity of the
-          // input element to the join. This is to prevent too many rows being generated when there are
-          // more rows than resources on either side of the join.
-          if (parserContext.getThisContext().isPresent()
-              && parserContext.getThisContext().get() instanceof NonLiteralPath) {
-            final NonLiteralPath nonLiteralThis = (NonLiteralPath) parserContext.getThisContext()
-                .get();
-            if (nonLiteralThis.getEidColumn().isPresent()) {
-              final Column thisEidColumn = nonLiteralThis.getEidColumn().get();
-              // Only use the element ID for the join if both datasets have a $this column, which means
-              // that they both originate from $this.
-              if (hasColumn(left.getDataset(), thisEidColumn)
-                  && hasColumn(right.getDataset(), thisEidColumn)) {
-                leftColumns.add(thisEidColumn);
-                rightColumns.add(thisEidColumn);
-              }
-            }
-          }
-          dataset = join(dataset, leftColumns, right.getDataset(), rightColumns, joinType);
-        } else {
-          dataset = right.getDataset();
-        }
-        nonLiteralEncountered = true;
-      }
+    // Only non-literal paths will trigger a join.
+    final List<FhirPath> nonLiteralTargets = joinTargets.stream()
+        .filter(t -> t instanceof NonLiteralPath)
+        .collect(Collectors.toList());
+    if (nonLiteralTargets.isEmpty()) {
+      return left.getDataset();
     }
 
+    for (final FhirPath right : nonLiteralTargets) {
+      final List<Column> leftColumns = new ArrayList<>();
+      final List<Column> rightColumns = new ArrayList<>();
+      leftColumns.add(joinId);
+      rightColumns.add(right.getIdColumn());
+      // If a $this context is present (i.e. the join is being performed within function arguments,
+      // with an item from the input collection as context), then we need to add the identity of the
+      // input element to the join. This is to prevent too many rows being generated when there are
+      // more rows than resources on either side of the join.
+      if (parserContext.getThisContext().isPresent()
+          && parserContext.getThisContext().get() instanceof NonLiteralPath) {
+        final NonLiteralPath nonLiteralThis = (NonLiteralPath) parserContext.getThisContext()
+            .get();
+        if (nonLiteralThis.getEidColumn().isPresent()) {
+          final Column thisEidColumn = nonLiteralThis.getEidColumn().get();
+          // If both datasets have an element ID column, we add it to the join condition.
+          if (hasColumn(dataset, thisEidColumn)
+              && hasColumn(right.getDataset(), thisEidColumn)) {
+            leftColumns.add(thisEidColumn);
+            rightColumns.add(thisEidColumn);
+          }
+        }
+      }
+      dataset = join(dataset, leftColumns, right.getDataset(), rightColumns, joinType);
+    }
     return dataset;
   }
 
