@@ -6,9 +6,11 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.monotonically_increasing_id;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -40,15 +42,19 @@ public class CombineOperator implements Operator {
 
     final Dataset<Row> leftTrimmed = trimDataset(input, left);
     final Dataset<Row> rightTrimmed = trimDataset(input, right);
+    final int valueColumnIndex = Arrays.asList(leftTrimmed.columns())
+        .indexOf(left.getValueColumn().toString());
 
     final Dataset<Row> dataset = leftTrimmed.union(rightTrimmed);
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset,
+        dataset.col(dataset.columns()[valueColumnIndex]));
     final Optional<Column> eidColumn = Optional.of(array(monotonically_increasing_id()));
     final Optional<Column> thisColumn = left instanceof NonLiteralPath
                                         ? ((NonLiteralPath) left).getThisColumn()
                                         : Optional.empty();
     return left
-        .combineWith(right, dataset, expression, left.getIdColumn(), eidColumn,
-            left.getValueColumn(), false, thisColumn);
+        .combineWith(right, datasetWithColumn.getDataset(), expression, left.getIdColumn(),
+            eidColumn, datasetWithColumn.getColumn(), false, thisColumn);
   }
 
   @Nonnull

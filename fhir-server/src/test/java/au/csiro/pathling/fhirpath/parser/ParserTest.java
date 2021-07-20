@@ -565,6 +565,14 @@ public class ParserTest {
   }
 
   @Test
+  void testCombineOperatorWithTwoLiterals() {
+    assertThatResultOf("1 combine 2")
+        .isElementPath(IntegerPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithTwoLiterals.csv");
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
