@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -63,6 +64,16 @@ public interface FhirPath extends Orderable {
    */
   @Nonnull
   FhirPath withExpression(@Nonnull String expression);
+
+  /**
+   * Trims the path's dataset down to only essential rows, ready for a union operation.
+   *
+   * @param context the current {@link ParserContext}, used for detecting things like $this and
+   * grouping context
+   * @return a new {@link Dataset} with a subset of columns
+   */
+  @Nonnull
+  Dataset<Row> trimDataset(@Nonnull final ParserContext context);
 
   /**
    * Creates a path that can be used to represent a collection which includes elements from both a

@@ -76,6 +76,11 @@ public class DatasetBuilder {
   }
 
   @Nonnull
+  public DatasetBuilder withIdColumn(@Nonnull final String alias) {
+    return withColumn(alias, DataTypes.StringType);
+  }
+
+  @Nonnull
   public DatasetBuilder withTypeColumn() {
     return withColumn(DataTypes.StringType);
   }

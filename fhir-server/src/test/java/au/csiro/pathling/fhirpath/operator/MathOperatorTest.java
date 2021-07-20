@@ -56,6 +56,7 @@ public class MathOperatorTest {
 
   private static final List<String> EXPRESSION_TYPES = Arrays
       .asList("Integer", "Decimal", "Integer (literal)", "Decimal (literal)");
+  private static final String ID_ALIAS = "_abc123";
   private ParserContext parserContext;
 
   @BeforeEach
@@ -111,7 +112,7 @@ public class MathOperatorTest {
   private FhirPath getExpressionForType(final String expressionType,
       final boolean leftOperand) {
     final Dataset<Row> literalContextDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false, Arrays
             .asList("patient-1", "patient-2", "patient-3", "patient-4"))
@@ -140,7 +141,7 @@ public class MathOperatorTest {
 
   private FhirPath buildIntegerExpression(final boolean leftOperand) {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.IntegerType)
         .withRow("patient-1", leftOperand
                               ? 1
@@ -163,7 +164,7 @@ public class MathOperatorTest {
 
   private FhirPath buildDecimalExpression(final boolean leftOperand) {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.createDecimalType())
         .withRow("patient-1", new BigDecimal(leftOperand
                                              ? "1.0"

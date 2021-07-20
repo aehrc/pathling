@@ -14,6 +14,8 @@ import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -287,6 +289,29 @@ public abstract class NonLiteralPath implements FhirPath {
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return getClass().equals(target.getClass()) || target instanceof NullLiteralPath;
+  }
+
+  @Nonnull
+  protected List<Column> getTrimmedColumns(@Nonnull final ParserContext context) {
+    final List<Column> columns = new ArrayList<>(
+        Arrays.asList(getIdColumn(), getValueColumn()));
+    // If there is a this column, we need to preserve it.
+    getThisColumn().ifPresent(columns::add);
+    // If the this context is a resource, we need to preserve all element columns.
+    context.getThisContext().ifPresent(thisContext -> {
+      if (thisContext instanceof ResourcePath) {
+        final ResourcePath thisResource = (ResourcePath) thisContext;
+        columns.addAll(thisResource.getElementColumns());
+      }
+    });
+    context.getGroupingColumns().ifPresent(columns::addAll);
+    return columns;
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> trimDataset(@Nonnull final ParserContext context) {
+    return getDataset().select(getTrimmedColumns(context).toArray(new Column[]{}));
   }
 
 }
