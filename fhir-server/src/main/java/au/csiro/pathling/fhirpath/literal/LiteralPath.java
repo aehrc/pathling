@@ -12,11 +12,11 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -207,6 +207,15 @@ public abstract class LiteralPath implements FhirPath {
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return getClass().equals(target.getClass()) || target instanceof NullLiteralPath;
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> trimDataset(@Nonnull final ParserContext context) {
+    final List<Column> columns = new ArrayList<>(
+        Arrays.asList(getIdColumn(), getValueColumn()));
+    context.getGroupingColumns().ifPresent(columns::addAll);
+    return getDataset().select(columns.toArray(new Column[]{}));
   }
 
 }

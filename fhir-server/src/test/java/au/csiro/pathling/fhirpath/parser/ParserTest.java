@@ -573,6 +573,17 @@ public class ParserTest {
   }
 
   @Test
+  void testCombineOperatorWithTwoUntypedResourcePaths() {
+    assertThatResultOf(
+        "(reverseResolve(Condition.subject).subject.resolve() combine "
+            + "reverseResolve(DiagnosticReport.subject).subject.resolve()).ofType(Patient)")
+        .isResourcePath()
+        .hasResourceType(ResourceType.PATIENT)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithTwoUntypedResourcePaths.csv");
+  }
+
+  @Test
   public void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(

@@ -13,10 +13,8 @@ import static org.apache.spark.sql.functions.monotonically_increasing_id;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import java.util.ArrayList;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -39,9 +37,10 @@ public class CombineOperator implements Operator {
     final String expression = Operator.buildExpression(input, NAME);
     final FhirPath left = input.getLeft();
     final FhirPath right = input.getRight();
+    final ParserContext context = input.getContext();
 
-    final Dataset<Row> leftTrimmed = trimDataset(input, left);
-    final Dataset<Row> rightTrimmed = trimDataset(input, right);
+    final Dataset<Row> leftTrimmed = left.trimDataset(context);
+    final Dataset<Row> rightTrimmed = right.trimDataset(context);
     final int valueColumnIndex = Arrays.asList(leftTrimmed.columns())
         .indexOf(left.getValueColumn().toString());
 
@@ -55,26 +54,6 @@ public class CombineOperator implements Operator {
     return left
         .combineWith(right, datasetWithColumn.getDataset(), expression, left.getIdColumn(),
             eidColumn, datasetWithColumn.getColumn(), false, thisColumn);
-  }
-
-  @Nonnull
-  private Dataset<Row> trimDataset(@Nonnull final OperatorInput input, final FhirPath operand) {
-    final List<Column> columns = new ArrayList<>(
-        Arrays.asList(operand.getIdColumn(), operand.getValueColumn()));
-    if (operand instanceof NonLiteralPath) {
-      final NonLiteralPath nonLiteralLeft = (NonLiteralPath) operand;
-      // If there is a this column, we need to preserve it.
-      nonLiteralLeft.getThisColumn().ifPresent(columns::add);
-      // If the this context is a resource, we need to preserve all element columns.
-      input.getContext().getThisContext().ifPresent(thisContext -> {
-        if (thisContext instanceof ResourcePath) {
-          final ResourcePath thisResource = (ResourcePath) thisContext;
-          columns.addAll(thisResource.getElementColumns());
-        }
-      });
-    }
-    input.getContext().getGroupingColumns().ifPresent(columns::addAll);
-    return operand.getDataset().select(columns.toArray(new Column[]{}));
   }
 
 }
