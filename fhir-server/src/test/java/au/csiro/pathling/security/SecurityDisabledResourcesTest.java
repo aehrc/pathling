@@ -14,7 +14,7 @@ import org.springframework.test.context.TestPropertySource;
         "pathling.auth.enabled=false",
         "pathling.caching.enabled=false"
     })
-public class SecurityDisabledTestForResources extends SecurityTestForResources {
+public class SecurityDisabledResourcesTest extends SecurityTestForResources {
 
   @Test
   public void testPassIfResourceWriteWithNoAuth() {

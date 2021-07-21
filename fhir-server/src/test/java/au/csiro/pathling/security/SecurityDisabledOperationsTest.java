@@ -20,7 +20,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.auth.enabled=false",
     "pathling.caching.enabled=false"
 })
-public class SecurityDisabledTestForOperations extends SecurityTestForOperations {
+public class SecurityDisabledOperationsTest extends SecurityTestForOperations {
 
   @Test
   public void testPassIfImportWithNoAuth() {

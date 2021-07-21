@@ -14,10 +14,8 @@ import au.csiro.pathling.io.ResourceWriter;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import java.io.File;
 import org.apache.spark.sql.SparkSession;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -29,8 +27,6 @@ import org.springframework.test.context.DynamicPropertySource;
  * @see <a href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
-@SpringBootTest
-@Tag("UnitTest")
 @ActiveProfiles({"core"})
 public abstract class SecurityTestForResources extends SecurityTest {
 

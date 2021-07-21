@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
@@ -19,6 +20,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 /**
  * @author John Grimes
  */
+@Tag("UnitTest")
 class JwtAudienceValidatorTest {
 
   @Test

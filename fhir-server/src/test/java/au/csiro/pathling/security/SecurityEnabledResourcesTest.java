@@ -15,7 +15,7 @@ import org.springframework.test.context.TestPropertySource;
         "pathling.auth.enabled=true",
         "pathling.caching.enabled=false"
     })
-public class SecurityEnabledTestForResources extends SecurityTestForResources {
+public class SecurityEnabledResourcesTest extends SecurityTestForResources {
 
   @Test
   @WithMockUser(username = "admin")

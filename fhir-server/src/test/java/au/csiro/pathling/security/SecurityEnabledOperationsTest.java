@@ -7,6 +7,9 @@
 package au.csiro.pathling.security;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 
@@ -16,11 +19,15 @@ import org.springframework.test.context.TestPropertySource;
  * @see <a href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
-@TestPropertySource(locations = {"classpath:/configuration/authorization.properties"},
+@TestPropertySource(
     properties = {
+        "pathling.auth.enabled=true",
         "pathling.caching.enabled=false"
     })
-public class SecurityEnabledTestForOperations extends SecurityTestForOperations {
+@MockBean(OidcConfiguration.class)
+@MockBean(JwtDecoder.class)
+@MockBean(JwtAuthenticationConverter.class)
+public class SecurityEnabledOperationsTest extends SecurityTestForOperations {
 
   @Test
   @WithMockUser(username = "admin")

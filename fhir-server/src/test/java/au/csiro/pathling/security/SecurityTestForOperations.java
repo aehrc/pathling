@@ -26,7 +26,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles({"core", "server"})
-public class SecurityTestForOperations extends SecurityTest {
+public abstract class SecurityTestForOperations extends SecurityTest {
 
   @Autowired
   private ImportProvider importProvider;
