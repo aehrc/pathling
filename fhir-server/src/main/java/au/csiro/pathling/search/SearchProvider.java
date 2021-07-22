@@ -11,6 +11,7 @@ import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.context.FhirContext;
@@ -120,7 +121,7 @@ public class SearchProvider implements IResourceProvider {
   @OperationAccess("search")
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search() {
-    final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
+    final ResourceType subjectResource = ResourceDefinition.getResourceTypeFromClass(resourceClass);
     return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
         terminologyServiceFactory, fhirEncoders,
         subjectResource, Optional.empty());
