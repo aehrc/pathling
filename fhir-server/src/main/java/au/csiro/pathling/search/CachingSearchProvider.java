@@ -9,6 +9,7 @@ package au.csiro.pathling.search;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.SearchExecutorCache.SearchExecutorCacheKey;
 import au.csiro.pathling.security.OperationAccess;
@@ -109,7 +110,7 @@ public class CachingSearchProvider implements IResourceProvider {
   @OperationAccess("search")
   @SuppressWarnings({"UnusedReturnValue", "unused"})
   public IBundleProvider search() {
-    final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
+    final ResourceType subjectResource = ResourceDefinition.getResourceTypeFromClass(resourceClass);
     final SearchExecutorCacheKey cacheKey = new SearchExecutorCacheKey(configuration, fhirContext,
         sparkSession, resourceReader, terminologyServiceFactory, fhirEncoders,
         subjectResource, Optional.empty());
@@ -128,7 +129,7 @@ public class CachingSearchProvider implements IResourceProvider {
   @SuppressWarnings({"UnusedReturnValue", "unused"})
   public IBundleProvider search(@Nullable @OptionalParam(name = SearchProvider.FILTER_PARAM)
   final StringAndListParam filters) {
-    final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
+    final ResourceType subjectResource = ResourceDefinition.getResourceTypeFromClass(resourceClass);
     final SearchExecutorCacheKey cacheKey = new SearchExecutorCacheKey(configuration, fhirContext,
         sparkSession, resourceReader, terminologyServiceFactory, fhirEncoders,
         subjectResource, Optional.ofNullable(filters));
