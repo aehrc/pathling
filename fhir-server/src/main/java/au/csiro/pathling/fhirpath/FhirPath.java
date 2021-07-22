@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -49,6 +50,32 @@ public interface FhirPath extends Orderable {
   boolean isSingular();
 
   /**
+   * @param target the path to test
+   * @return an indicator of whether this path's values can be combined into a single collection
+   * with values from the supplied expression type
+   */
+  boolean canBeCombinedWith(@Nonnull FhirPath target);
+
+  /**
+   * Creates a copy of the path with a different expression.
+   *
+   * @param expression the new expression
+   * @return the new FhirPath
+   */
+  @Nonnull
+  FhirPath withExpression(@Nonnull String expression);
+
+  /**
+   * Trims the path's dataset down to only essential rows, ready for a union operation.
+   *
+   * @param context the current {@link ParserContext}, used for detecting things like $this and
+   * grouping context
+   * @return a new {@link Dataset} with a subset of columns
+   */
+  @Nonnull
+  Dataset<Row> trimDataset(@Nonnull final ParserContext context);
+
+  /**
    * Creates a path that can be used to represent a collection which includes elements from both a
    * source and a target path.
    *
@@ -66,7 +93,7 @@ public interface FhirPath extends Orderable {
    * @return the resulting new {@link NonLiteralPath}
    */
   @Nonnull
-  NonLiteralPath mergeWith(@Nonnull FhirPath target, @Nonnull Dataset<Row> dataset,
+  NonLiteralPath combineWith(@Nonnull FhirPath target, @Nonnull Dataset<Row> dataset,
       @Nonnull String expression, @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn,
       @Nonnull Column valueColumn, boolean singular, @Nonnull Optional<Column> thisColumn);
 

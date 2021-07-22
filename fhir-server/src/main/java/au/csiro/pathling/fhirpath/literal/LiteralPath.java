@@ -6,19 +6,17 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -94,9 +92,8 @@ public abstract class LiteralPath implements FhirPath {
       @Nonnull final Type literalValue) {
     this.idColumn = idColumn;
     this.literalValue = literalValue;
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset, buildValueColumn());
-    this.dataset = datasetWithColumn.getDataset();
-    this.valueColumn = datasetWithColumn.getColumn();
+    this.dataset = dataset;
+    this.valueColumn = buildValueColumn();
   }
 
   /**
@@ -170,14 +167,20 @@ public abstract class LiteralPath implements FhirPath {
    * @return a {@link FHIRDefinedType}
    */
   @Nonnull
-  public static FHIRDefinedType fhirPathToFhirType(
+  private static FHIRDefinedType fhirPathToFhirType(
       @Nonnull final Class<? extends LiteralPath> fhirPathClass) {
     return FHIRPATH_TYPE_TO_FHIR_TYPE.get(fhirPathClass);
   }
 
+  @Nonnull
+  @Override
+  public FhirPath withExpression(@Nonnull final String expression) {
+    return this;
+  }
+
   @Override
   @Nonnull
-  public NonLiteralPath mergeWith(@Nonnull final FhirPath target,
+  public NonLiteralPath combineWith(@Nonnull final FhirPath target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
@@ -191,13 +194,28 @@ public abstract class LiteralPath implements FhirPath {
               thisColumn, fhirType);
     } else if (target instanceof ElementPath) {
       // If the target is an ElementPath, we delegate off to the ElementPath to do the merging.
-      return target.mergeWith(this, dataset, expression, idColumn, eidColumn, valueColumn, singular,
-          thisColumn);
+      return target
+          .combineWith(this, dataset, expression, idColumn, eidColumn, valueColumn, singular,
+              thisColumn);
     }
     // Anything else is invalid.
     throw new InvalidUserInputError(
         "Paths cannot be merged into a collection together: " + getExpression() + ", " + target
             .getExpression());
+  }
+
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return getClass().equals(target.getClass()) || target instanceof NullLiteralPath;
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> trimDataset(@Nonnull final ParserContext context) {
+    final List<Column> columns = new ArrayList<>(
+        Arrays.asList(getIdColumn(), getValueColumn()));
+    context.getGroupingColumns().ifPresent(columns::addAll);
+    return getDataset().select(columns.toArray(new Column[]{}));
   }
 
 }

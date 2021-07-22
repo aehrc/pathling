@@ -7,7 +7,7 @@ parent: Documentation
 
 # Import
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-3)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-4)
 
 Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
 interface, and the `$import` operation is an
@@ -26,6 +26,14 @@ Currently Pathling supports retrieval of NDJSON files from
 [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`) and
 filesystem (`file://`) URLs. Authentication is supported for S3, see
 [Configuration](./configuration.html) for details.
+
+<div class="callout warning">
+    The <code>import</code> operation overwrites all existing data, on a per-resource basis. For example, an import operation that includes the <code>Patient</code> resource will delete all existing <code>Patient</code> resources within the Pathling server, replacing them with the contents of the referenced NDJSON file.
+</div>
+
+<div class="callout warning">
+    Pathling does not currently support the import of recursive element data, such as <code>Questionnaire.item.item</code>. See <a href="https://github.com/aehrc/pathling/issues/322">#322</a> to follow our progress on this.
+</div>
 
 ```
 POST [FHIR endpoint]/$import

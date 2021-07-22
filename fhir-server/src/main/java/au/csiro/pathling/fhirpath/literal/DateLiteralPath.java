@@ -125,6 +125,11 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
     return DatePath.valueFromRow(row, columnNumber);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof DatePath;
+  }
+
   private enum DateLiteralFormat {
     FULL, YEAR_MONTH_DATE, YEAR_ONLY
   }

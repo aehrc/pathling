@@ -125,4 +125,9 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
     return StringPath.valueFromRow(row, columnNumber, FHIRDefinedType.STRING);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof StringPath;
+  }
+
 }

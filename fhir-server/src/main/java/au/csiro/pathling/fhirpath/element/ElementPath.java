@@ -13,7 +13,6 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Optional;
@@ -175,29 +174,27 @@ public class ElementPath extends NonLiteralPath {
   }
 
   @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    // If either of the paths are an unclassified ElementPath (not a subclass), we need to check
+    // their FHIRDefinedType to make sure that their values can co-exist in the same column.
+    if (getClass().equals(ElementPath.class) && target.getClass().equals(ElementPath.class)) {
+      return super.canBeCombinedWith(target) &&
+          getFhirType().equals(((ElementPath) target).getFhirType()) &&
+          !getFhirType().equals(FHIRDefinedType.BACKBONEELEMENT);
+    } else {
+      return super.canBeCombinedWith(target);
+    }
+  }
+
+  @Override
   @Nonnull
-  public NonLiteralPath mergeWith(@Nonnull final FhirPath target,
+  public NonLiteralPath combineWith(@Nonnull final FhirPath target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
-    // We can't allow BackboneElements in the result arguments, as their type is not really the same
-    // in the sense that the result can be treated the same within FHIRPath expression evaluation.
-    if (fhirType == FHIRDefinedType.BACKBONEELEMENT) {
-      throw new InvalidUserInputError(
-          "Path of type BackboneElement cannot be merged into a collection");
-    }
-    if (target instanceof ElementPath && fhirType == ((ElementPath) target).getFhirType()) {
-      // If the target is another ElementPath, we can merge it if they have the same FHIR type.
+    if (canBeCombinedWith(target)) {
       return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
-    } else if (target instanceof LiteralPath) {
-      // If the target is a LiteralPath, we can also merge it as long as they have the same FHIR
-      // type.
-      final FHIRDefinedType literalType = LiteralPath
-          .fhirPathToFhirType(((LiteralPath) target).getClass());
-      if (fhirType == literalType) {
-        return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
-      }
     }
     // Anything else is invalid.
     throw new InvalidUserInputError(

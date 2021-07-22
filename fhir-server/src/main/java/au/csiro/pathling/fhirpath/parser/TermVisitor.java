@@ -69,7 +69,8 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitParenthesizedTerm(@Nullable final ParenthesizedTermContext ctx) {
     // Parentheses are ignored in the standalone term case.
-    return new Visitor(context).visit(checkNotNull(ctx).expression());
+    final FhirPath result = new Visitor(context).visit(checkNotNull(ctx).expression());
+    return result.withExpression("(" + result.getExpression() + ")");
   }
 
 }

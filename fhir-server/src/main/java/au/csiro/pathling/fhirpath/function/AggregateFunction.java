@@ -50,8 +50,7 @@ public abstract class AggregateFunction {
       @Nonnull final Column valueColumn, @Nonnull final String expression) {
 
     return buildAggregateResult(dataset, parserContext, Collections.singletonList(input),
-        valueColumn,
-        expression, input::copy);
+        valueColumn, expression, input::copy);
   }
 
   /**
@@ -73,8 +72,7 @@ public abstract class AggregateFunction {
       @Nonnull final FHIRDefinedType fhirType) {
 
     return buildAggregateResult(dataset, parserContext, Collections.singletonList(input),
-        valueColumn,
-        expression, fhirType);
+        valueColumn, expression, fhirType);
   }
 
   /**

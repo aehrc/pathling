@@ -12,7 +12,7 @@
 
 package au.csiro.pathling.encoders.datatypes
 
-import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementCompositeDefinition, RuntimePrimitiveDatatypeDefinition}
+import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementCompositeDefinition, BaseRuntimeElementDefinition, RuntimePrimitiveDatatypeDefinition}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
@@ -95,9 +95,10 @@ trait DataTypeMappings {
   /**
    * Returns a specialized custom coder for this child definition.
    *
-   * @param childDefinition
+   * @param elementDefinition
+   * @param elementName
    * @return a specialized custom coder
    */
 
-  def customEncoder(childDefinition: BaseRuntimeChildDefinition): Option[CustomCoder] = None
+  def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Option[CustomCoder] = None
 }

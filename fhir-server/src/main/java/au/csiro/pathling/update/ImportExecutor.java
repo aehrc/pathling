@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
@@ -134,7 +135,8 @@ public class ImportExecutor {
       final Dataset<String> jsonStrings;
       try {
         accessRules.checkCanImportFrom(url);
-        jsonStrings = spark.read().textFile(url);
+        final FilterFunction<String> nonBlanks = s -> !s.isBlank();
+        jsonStrings = spark.read().textFile(url).filter(nonBlanks);
       } catch (final SecurityError e) {
         throw new InvalidUserInputError("Not allowed to import from URL: " + url, e);
       } catch (final Exception e) {

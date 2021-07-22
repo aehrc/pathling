@@ -43,21 +43,17 @@ import org.springframework.test.context.TestPropertySource;
  * @author Piotr Szul
  */
 @TestPropertySource(properties = {
-    "live.terminology.serverBaseUrl=https://r4.ontoserver.csiro.au/",
+    "pathling.test.recording.terminologyServerUrl=https://r4.ontoserver.csiro.au/",
     "pathling.terminology.serverUrl=http://localhost:" + 4072 + "/fhir"
 })
 @Slf4j
 class TerminologyServiceIntegrationTest extends WireMockTest {
 
-  private static boolean isRecordMode() {
-    return Boolean.parseBoolean(System.getProperty("WireMockTest.recordMappings", "false"));
-  }
-
   @Autowired
   private FhirContext fhirContext;
 
-  @Value("${live.terminology.serverBaseUrl}")
-  private String liveTerminologyServerBaseUrl;
+  @Value("${pathling.test.recording.terminologyServerUrl}")
+  private String recordingTxServerUrl;
 
   @Value("${pathling.terminology.serverUrl}")
   private String terminologyServerUrl;
@@ -72,13 +68,13 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     super.setUp();
     if (isRecordMode()) {
       wireMockServer.resetAll();
-      log.warn("Proxying all request to: {}", liveTerminologyServerBaseUrl);
-      stubFor(proxyAllTo(liveTerminologyServerBaseUrl));
+      log.warn("Proxying all request to: {}", recordingTxServerUrl);
+      stubFor(proxyAllTo(recordingTxServerUrl));
     }
 
     mockUUIDFactory = Mockito.mock(UUIDFactory.class);
-    // TODO: refactor to use actual dependency injection
-    // requires possible refactoring of test contexts.
+    // TODO: Refactor to use actual dependency injection, requires possible refactoring of test
+    //  contexts.
     final DefaultTerminologyServiceFactory tcf = new DefaultTerminologyServiceFactory(fhirContext,
         terminologyServerUrl, 0, false);
     terminologyService = tcf.buildService(log, mockUUIDFactory);
@@ -122,8 +118,8 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   }
 
 
-  // TODO: enable when fixed in terminology server,
-  // that is it does not accept ignore systems in codings.
+  // TODO: Enable when fixed in terminology server, that is it does not accept ignore systems in
+  //  codings.
   @Test
   @Disabled
   public void testIgnoresUnknownSystems() {
@@ -161,11 +157,10 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
                 new Coding("uuid:unknown", "unknown", "Unknown")
             ));
 
-    // TODO: Ask John - why the expansion is versioned if we include the CD_AST_VIC, but
-    // unversioned otherwise? As this will affect the functioning of memberOf (since it uses
-    // SimpleCoding equality).
-    // Also if two versioned SNOMED codings are requested the response contains
-    // their unversioned versions.
+    // TODO: Ask John - why the expansion is versioned if we include the CD_AST_VIC, but unversioned
+    //  otherwise? As this will affect the functioning of memberOf (since it uses SimpleCoding
+    //  equality). Also if two versioned SNOMED codings are requested the response contains their
+    //  unversioned versions.
     assertEquals(setOfSimpleFrom(CD_SNOMED_VER_284551006, CD_SNOMED_VER_403190006), expansion);
   }
 

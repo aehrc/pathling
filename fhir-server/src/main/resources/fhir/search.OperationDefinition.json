@@ -1,7 +1,5 @@
 {
   "resourceType": "OperationDefinition",
-  "id": "search-3",
-  "url": "https://pathling.csiro.au/fhir/OperationDefinition/search-3",
   "name": "search",
   "title": "Pathling FHIRPath Search Parameter",
   "status": "active",

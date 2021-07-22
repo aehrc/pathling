@@ -19,7 +19,7 @@ trait CustomCoder {
 
   def schema: Seq[StructField]
 
-  def customDeserializer(addToPath: String => Expression): Map[String, Expression]
+  def customDecoderExpression(addToPath: String => Expression): Expression
 
   def customSerializer(inputObject: Expression): List[Expression]
 

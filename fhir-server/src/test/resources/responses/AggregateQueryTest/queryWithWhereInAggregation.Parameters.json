@@ -22,7 +22,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((gender) = 'female') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S)"
+          "valueString": "((gender) = 'female') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S)"
         }
       ]
     },
@@ -47,7 +47,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((gender) = 'male') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S)"
+          "valueString": "((gender) = 'male') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||'Never Married')"
         }
       ]
     },
@@ -72,7 +72,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((gender) = 'male') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|M)"
+          "valueString": "((gender) = 'male') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|M||M)"
         }
       ]
     },
@@ -97,7 +97,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((gender) = 'female') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|M)"
+          "valueString": "((gender) = 'female') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|M||M)"
         }
       ]
     },
@@ -122,7 +122,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((gender) = 'male') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S)"
+          "valueString": "((gender) = 'male') and ((maritalStatus.coding) contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S)"
         }
       ]
     }

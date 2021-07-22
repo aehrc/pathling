@@ -1,7 +1,5 @@
 {
   "resourceType": "OperationDefinition",
-  "id": "aggregate-3",
-  "url": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3",
   "name": "aggregate",
   "title": "Pathling Aggregate Operation",
   "status": "active",

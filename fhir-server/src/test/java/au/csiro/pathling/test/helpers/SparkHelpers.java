@@ -96,7 +96,9 @@ public abstract class SparkHelpers {
   public static Row rowFromCoding(@Nonnull final Coding coding) {
     return new GenericRowWithSchema(
         new Object[]{coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
-            coding.getDisplay(), coding.getUserSelected()}, codingStructType());
+            coding.getDisplay(), coding.hasUserSelected()
+                                 ? coding.getUserSelected()
+                                 : null}, codingStructType());
   }
 
   @Nonnull

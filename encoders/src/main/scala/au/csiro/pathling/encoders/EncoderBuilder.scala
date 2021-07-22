@@ -17,7 +17,7 @@ import java.util
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
-import ca.uhn.fhir.context._
+import ca.uhn.fhir.context.{RuntimeChildPrimitiveDatatypeDefinition, _}
 import ca.uhn.fhir.model.api.IValueSetEnumBinder
 import org.apache.spark.sql.catalyst.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
@@ -199,8 +199,8 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
   /**
    * Returns a sequence of name, value expressions
    */
-  private def childToExpr(parentObject: Expression,
-                          childDefinition: BaseRuntimeChildDefinition): Seq[Expression] = {
+  private def childToSerializer(parentObject: Expression,
+                                childDefinition: BaseRuntimeChildDefinition): Seq[Expression] = {
 
     // Contained resources and extensions not yet supported.
     if (childDefinition.isInstanceOf[RuntimeChildContainedResources] ||
@@ -236,13 +236,12 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
           ObjectCast(choiceObject, ObjectType(choiceChildDefinition.getImplementingClass)),
           Literal.create(null, ObjectType(choiceChildDefinition.getImplementingClass)))
 
-        val childExpr = choiceChildDefinition match {
+        def toChildSerializer = toNamedSerializer(childName)(_)
 
-          case composite: BaseRuntimeElementCompositeDefinition[_] => compositeToExpr(childObject, composite)
-          case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings.primitiveEncoderExpression(childObject, primitive);
+        choiceChildDefinition match {
+          case composite: BaseRuntimeElementCompositeDefinition[_] => toChildSerializer(compositeToExpr(childObject, composite))
+          case primitive: RuntimePrimitiveDatatypeDefinition => primitiveToSerializer(childObject, primitive, childName); ;
         }
-
-        List(Literal(childName), childExpr)
       })
 
       namedExpressions
@@ -275,18 +274,37 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
           accessorFor(childDefinition),
           objectTypeFor(childDefinition))
 
-        dataTypeMappings.customEncoder(childDefinition)
-          .flatMap(cs => Some(cs.customSerializer(childObject)))
-          .getOrElse {
-            val childExpr = definition match {
-              case composite: BaseRuntimeElementCompositeDefinition[_] => compositeToExpr(childObject, composite)
-              case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings.primitiveEncoderExpression(childObject, primitive);
-              case narrative: RuntimePrimitiveDatatypeNarrativeDefinition => dataTypeToUtf8Expr(childObject);
-              case htmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => dataTypeToUtf8Expr(childObject)
-            }
-            List(Literal(childDefinition.getElementName), childExpr)
-          }
+        def toChildSerializer = toNamedSerializer(childDefinition.getElementName)(_)
+
+        definition match {
+          case composite: BaseRuntimeElementCompositeDefinition[_] => toChildSerializer(compositeToExpr(childObject, composite))
+          case primitive: RuntimePrimitiveDatatypeDefinition => primitiveToSerializer(childObject, primitive, childDefinition.getElementName);
+          case narrative: RuntimePrimitiveDatatypeNarrativeDefinition => toChildSerializer(dataTypeToUtf8Expr(childObject))
+          case htmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => toChildSerializer(dataTypeToUtf8Expr(childObject))
+        }
       }
+    }
+  }
+
+  /**
+   * Converts the serializing expression for a given field to the serializer
+   *
+   * @param name                  the name of of the field
+   * @param serializingExpression the serializing expression
+   * @return the serializer
+   */
+  private def toNamedSerializer(name: String)(serializingExpression: Expression): Seq[Expression] = {
+    Seq(Literal(name), serializingExpression)
+  }
+
+  /**
+   * Returns a serializer for the primitive type. It will use custom encoder if defined for the type.
+   */
+  private def primitiveToSerializer(inputObject: Expression,
+                                    definition: RuntimePrimitiveDatatypeDefinition, name: String): Seq[Expression] = {
+
+    dataTypeMappings.customEncoder(definition, name).map(_.customSerializer(inputObject)).getOrElse {
+      toNamedSerializer(name)(dataTypeMappings.primitiveEncoderExpression(inputObject, definition))
     }
   }
 
@@ -305,7 +323,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
 
         children
           .filter(child => !dataTypeMappings.skipField(definition, child))
-          .flatMap(child => childToExpr(inputObject, child))
+          .flatMap(child => childToSerializer(inputObject, child))
       }
     }
 
@@ -324,7 +342,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
     // Map to (name, value, name, value) expressions for child elements.
     val childFields: Seq[Expression] =
       definition.getChildren
-        .flatMap(child => childToExpr(inputObject, child))
+        .flatMap(child => childToSerializer(inputObject, child))
 
     // Map to (name, value, name, value) expressions for all contained resources.
     val containedChildFields = contained.flatMap { containedDefinition =>
@@ -334,7 +352,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
 
       Literal(containedDefinition.getName) ::
         CreateNamedStruct(containedDefinition.getChildren
-          .flatMap(child => childToExpr(containedChild, child))) ::
+          .flatMap(child => childToSerializer(containedChild, child))) ::
         Nil
     }
 
@@ -387,6 +405,22 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       array :: Nil)
   }
 
+
+  /**
+   * Returns a deserializer for the primitive type. It will use custom encoder if defined for the type.
+   *
+   * @param primitiveDefinition the primitive type to deserialize
+   * @param name                the name of the element to deserialize
+   * @param addToPath           the function to contruct the path to the field
+   * @return a deserializer expression.
+   */
+  private def primitiveToDeserializer(primitiveDefinition: RuntimePrimitiveDatatypeDefinition, name: String, addToPath: String => Expression): Expression = {
+    dataTypeMappings.customEncoder(primitiveDefinition, name).map(_.customDecoderExpression(addToPath)).getOrElse {
+      val childPath = Some(addToPath(name))
+      dataTypeMappings.primitiveDecoderExpression(primitiveDefinition.getImplementingClass, childPath)
+    }
+  }
+
   /**
    * Returns a deserializer for the choice, which will return the first
    * non-null field included in the choice definition. Note this method
@@ -424,7 +458,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       val deserializer = choiceField match {
 
         case composite: BaseRuntimeElementCompositeDefinition[_] => compositeToDeserializer(composite, Some(childPath))
-        case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings.primitiveDecoderExpression(primitive.getImplementingClass, Some(childPath))
+        case primitive: RuntimePrimitiveDatatypeDefinition => primitiveToDeserializer(primitive, childName, addToPath)
       }
 
       val child = ObjectCast(deserializer, ObjectType(dataTypeMappings.baseType()))
@@ -445,10 +479,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       .map(p => UnresolvedExtractValue(p, expressions.Literal(part)))
       .getOrElse(UnresolvedAttribute(part))
 
-    val customDeserializer = dataTypeMappings.customEncoder(childDefinition)
-    if (!customDeserializer.isEmpty) {
-      customDeserializer.get.customDeserializer(addToPath)
-    } else if (childDefinition.isInstanceOf[RuntimeChildContainedResources] ||
+    if (childDefinition.isInstanceOf[RuntimeChildContainedResources] ||
       childDefinition.isInstanceOf[RuntimeChildExtension]) {
       // Contained resources and extensions not yet supported.
       Map()
@@ -501,17 +532,15 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
         case composite: RuntimeChildCompositeDatatypeDefinition =>
           compositeToDeserializer(getSingleChild(composite).asInstanceOf[BaseRuntimeElementCompositeDefinition[_]], childPath)
 
-        case primitive: RuntimeChildPrimitiveDatatypeDefinition => {
+        case _: RuntimeChildPrimitiveDatatypeDefinition => {
 
           val definition = childDefinition.getChildByName(childDefinition.getElementName)
-
           definition match {
-            case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings.primitiveDecoderExpression(primitive.getImplementingClass, childPath)
+            case primitive: RuntimePrimitiveDatatypeDefinition => primitiveToDeserializer(primitive, childDefinition.getElementName, addToPath)
             case htmlHl7: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => xhtmlHl7ToDeserializer(htmlHl7, childPath)
           }
         }
       }
-
       // Item is not a list,
       // nonListChildToDeserializer(childDefinition, path)
 

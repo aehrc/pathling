@@ -15,7 +15,8 @@ import org.apache.spark.sql.Column;
  * @author John Grimes
  */
 @SuppressWarnings("UnusedReturnValue")
-public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResourcePathAssertion> {
+public class UntypedResourcePathAssertion extends
+    BaseFhirPathAssertion<UntypedResourcePathAssertion> {
 
   @Nonnull
   private final UntypedResourcePath fhirPath;
@@ -34,5 +35,5 @@ public class UntypedResourcePathAssertion extends FhirPathAssertion<UntypedResou
         .select(selection)
         .orderBy(selection));
   }
- 
+
 }

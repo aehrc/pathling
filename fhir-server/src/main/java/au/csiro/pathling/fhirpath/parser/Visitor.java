@@ -131,6 +131,12 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
         ctx.children.get(1).toString());
   }
 
+  @Override
+  public FhirPath visitCombineExpression(@Nullable final CombineExpressionContext ctx) {
+    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+        ctx.children.get(1).toString());
+  }
+
   // All other FHIRPath constructs are currently unsupported.
 
   @Override

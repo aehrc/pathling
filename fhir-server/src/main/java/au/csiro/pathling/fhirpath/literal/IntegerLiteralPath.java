@@ -96,4 +96,9 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
     return IntegerPath.valueFromRow(row, columnNumber, FHIRDefinedType.INTEGER);
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof IntegerPath;
+  }
+ 
 }

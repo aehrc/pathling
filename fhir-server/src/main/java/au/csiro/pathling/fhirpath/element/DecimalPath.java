@@ -10,6 +10,7 @@ import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.*;
+import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -151,4 +152,9 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
     };
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof DecimalLiteralPath;
+  }
+ 
 }

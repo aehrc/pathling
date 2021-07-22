@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -95,6 +96,11 @@ public class StringPath extends ElementPath implements Materializable<PrimitiveT
   @Override
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return COMPARABLE_TYPES.contains(type);
+  }
+
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof StringLiteralPath;
   }
 
 }

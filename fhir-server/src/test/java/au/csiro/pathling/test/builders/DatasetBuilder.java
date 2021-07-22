@@ -76,6 +76,11 @@ public class DatasetBuilder {
   }
 
   @Nonnull
+  public DatasetBuilder withIdColumn(@Nonnull final String alias) {
+    return withColumn(alias, DataTypes.StringType);
+  }
+
+  @Nonnull
   public DatasetBuilder withTypeColumn() {
     return withColumn(DataTypes.StringType);
   }
@@ -97,6 +102,14 @@ public class DatasetBuilder {
   public DatasetBuilder withIdValueRows(@Nonnull final Iterable<String> ids,
       @Nonnull final Function<String, Object> valueProducer) {
     ids.forEach(id -> this.withRow(id, valueProducer.apply(id)));
+    return this;
+  }
+
+  @Nonnull
+  public DatasetBuilder withIdEidValueRows(@Nonnull final Iterable<String> ids,
+      @Nonnull final Function<String, String> eidProducer,
+      @Nonnull final Function<String, Object> valueProducer) {
+    ids.forEach(id -> this.withRow(id, eidProducer.apply(id), valueProducer.apply(id)));
     return this;
   }
 

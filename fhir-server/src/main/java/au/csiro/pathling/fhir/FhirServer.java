@@ -6,17 +6,10 @@
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorisation;
-import au.csiro.pathling.aggregate.AggregateExecutor;
-import au.csiro.pathling.aggregate.AggregateProvider;
-import au.csiro.pathling.aggregate.CachingAggregateExecutor;
-import au.csiro.pathling.aggregate.FreshAggregateExecutor;
-import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.search.CachingSearchProvider;
-import au.csiro.pathling.search.SearchExecutorCache;
-import au.csiro.pathling.search.SearchProvider;
+import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -24,12 +17,10 @@ import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
 import ca.uhn.fhir.rest.server.FifoMemoryPagingProvider;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
-import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -39,12 +30,10 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.springframework.context.annotation.Profile;
-import org.springframework.web.cors.CorsConfiguration;
 
 /**
  * A HAPI RestfulServer that provides the FHIR interface to the functionality within Pathling.
@@ -65,19 +54,7 @@ public class FhirServer extends RestfulServer {
   private final Configuration configuration;
 
   @Nonnull
-  private final SparkSession sparkSession;
-
-  @Nonnull
-  private final FhirEncoders fhirEncoders;
-
-  @Nonnull
-  private final ResourceReader resourceReader;
-
-  @Nonnull
-  private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
-
-  @Nonnull
-  private final AggregateExecutor aggregateExecutor;
+  private final Optional<OidcConfiguration> oidcConfiguration;
 
   @Nonnull
   private final ImportProvider importProvider;
@@ -95,21 +72,14 @@ public class FhirServer extends RestfulServer {
   private final ConformanceProvider conformanceProvider;
 
   @Nonnull
-  private final SearchExecutorCache searchExecutorCache;
+  private final ResourceProviderFactory resourceProviderFactory;
 
   /**
-   * @param fhirContext a {@link FhirContext} for use in executing FHIR operations
-   * @param configuration a {@link Configuration} instance which controls the behaviour of the
+   * @param fhirContext A {@link FhirContext} for use in executing FHIR operations
+   * @param configuration A {@link Configuration} instance which controls the behaviour of the
    * server
-   * @param sparkSession a {@link SparkSession} for use in querying FHIR data using Spark
-   * @param fhirEncoders a {@link FhirEncoders} for use in serializing and deserializing FHIR data
-   * @param resourceReader a {@link ResourceReader} for retrieving FHIR data from storage
-   * @param terminologyServiceFactory a {@link TerminologyServiceFactory} for resolving FHIR
-   * terminology queries during parallel processing
-   * @param cachingAggregateExecutor a {@link CachingAggregateExecutor} for processing requests to
-   * aggregate operation, when caching is enabled
-   * @param freshAggregateExecutor a {@link FreshAggregateExecutor} for processing requests to the
-   * aggregate operation, when caching is not enabled
+   * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
+   * from OIDC discovery
    * @param importProvider A {@link ImportProvider} for receiving requests to the import operation
    * @param operationDefinitionProvider A {@link OperationDefinitionProvider} for receiving requests
    * for OperationDefinitions
@@ -118,38 +88,28 @@ public class FhirServer extends RestfulServer {
    * Sentry
    * @param conformanceProvider A {@link ConformanceProvider} for receiving requests for the server
    * CapabilityStatement
-   * @param searchExecutorCache A {@link SearchExecutorCache} for caching search requests
+   * @param resourceProviderFactory A {@link ResourceProviderFactory} for providing instances of
+   * resource providers
    */
   @SuppressWarnings("TypeMayBeWeakened")
   public FhirServer(@Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration,
-      @Nonnull final SparkSession sparkSession,
-      @Nonnull final FhirEncoders fhirEncoders,
-      @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
-      @Nonnull final CachingAggregateExecutor cachingAggregateExecutor,
-      @Nonnull final FreshAggregateExecutor freshAggregateExecutor,
+      @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final ImportProvider importProvider,
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
-      @Nonnull final SearchExecutorCache searchExecutorCache) {
+      @Nonnull final ResourceProviderFactory resourceProviderFactory) {
     super(fhirContext);
     this.configuration = configuration;
-    this.sparkSession = sparkSession;
-    this.fhirEncoders = fhirEncoders;
-    this.resourceReader = resourceReader;
-    this.terminologyServiceFactory = terminologyServiceFactory;
-    this.aggregateExecutor = configuration.getCaching().isEnabled()
-                             ? cachingAggregateExecutor
-                             : freshAggregateExecutor;
+    this.oidcConfiguration = oidcConfiguration;
     this.importProvider = importProvider;
     this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.conformanceProvider = conformanceProvider;
-    this.searchExecutorCache = searchExecutorCache;
+    this.resourceProviderFactory = resourceProviderFactory;
     log.info("Starting FHIR server with configuration: {}", configuration);
   }
 
@@ -180,9 +140,11 @@ public class FhirServer extends RestfulServer {
       registerProvider(operationDefinitionProvider);
 
       // Configure interceptors.
-      defineCorsConfiguration();
       configureRequestLogging();
-      configureAuthorisation();
+
+      // Authorization-related configuration.
+      configureAuthorization();
+
       registerInterceptor(new ResponseHighlighterInterceptor());
 
       // Configure paging.
@@ -212,10 +174,8 @@ public class FhirServer extends RestfulServer {
 
     // Instantiate an aggregate provider for every resource type in FHIR.
     for (final ResourceType resourceType : ResourceType.values()) {
-      final Class<? extends IBaseResource> resourceTypeClass = getFhirContext()
-          .getResourceDefinition(resourceType.name()).getImplementingClass();
-      final IResourceProvider aggregateProvider = new AggregateProvider(aggregateExecutor,
-          resourceTypeClass);
+      final IResourceProvider aggregateProvider = resourceProviderFactory
+          .createAggregateResourceProvider(resourceType);
       providers.add(aggregateProvider);
     }
     return providers;
@@ -227,38 +187,11 @@ public class FhirServer extends RestfulServer {
 
     // Instantiate a search provider for every resource type in FHIR.
     for (final ResourceType resourceType : ResourceType.values()) {
-      final Class<? extends IBaseResource> resourceTypeClass = getFhirContext()
-          .getResourceDefinition(resourceType.name()).getImplementingClass();
-
-      final IResourceProvider searchProvider =
-          configuration.getCaching().isEnabled()
-          ? new CachingSearchProvider(configuration, getFhirContext(), sparkSession, resourceReader,
-              terminologyServiceFactory, fhirEncoders, resourceTypeClass, searchExecutorCache)
-          : new SearchProvider(configuration, getFhirContext(), sparkSession, resourceReader,
-              terminologyServiceFactory, fhirEncoders, resourceTypeClass);
-
+      final IResourceProvider searchProvider = resourceProviderFactory
+          .createSearchResourceProvider(resourceType, configuration.getCaching().isEnabled());
       providers.add(searchProvider);
     }
     return providers;
-  }
-
-  /**
-   * Declare a CORS interceptor, using the CorsConfiguration from Spring. This is required to enable
-   * web-based applications hosted on different domains to communicate with this server.
-   */
-  private void defineCorsConfiguration() {
-    final CorsConfiguration corsConfig = new CorsConfiguration();
-
-    corsConfig.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
-    corsConfig.setAllowedMethods(configuration.getCors().getAllowedMethods());
-    corsConfig.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
-    corsConfig.setMaxAge(configuration.getCors().getMaxAge());
-    if (configuration.getCors().getExposeHeaders().isPresent()) {
-      corsConfig.setExposedHeaders(configuration.getCors().getExposeHeaders().get());
-    }
-
-    final CorsInterceptor interceptor = new CorsInterceptor(corsConfig);
-    registerInterceptor(interceptor);
   }
 
   private void configureRequestLogging() {
@@ -273,16 +206,10 @@ public class FhirServer extends RestfulServer {
     registerInterceptor(loggingInterceptor);
   }
 
-  private void configureAuthorisation() throws MalformedURLException {
+  private void configureAuthorization() {
     if (configuration.getAuth().isEnabled()) {
-      final Authorisation authorisationConfig = this.configuration.getAuth();
-
-      final AuthorisationInterceptor authorisationInterceptor =
-          new AuthorisationInterceptor(authorisationConfig);
-      registerInterceptor(authorisationInterceptor);
-
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
-          new SmartConfigurationInterceptor(authorisationConfig);
+          new SmartConfigurationInterceptor(checkPresent(oidcConfiguration));
       registerInterceptor(smartConfigurationInterceptor);
     }
   }

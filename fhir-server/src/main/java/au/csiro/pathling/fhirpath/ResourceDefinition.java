@@ -13,7 +13,9 @@ import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.ListResource;
 
 /**
  * Encapsulates the FHIR definitions for a resource.
@@ -55,6 +57,24 @@ public class ResourceDefinition {
     return childDefinition.map(definition -> ElementDefinition.build(definition, name));
   }
 
+  /**
+   * Returns the {@link ResourceType} for a HAPI resource class.
+   *
+   * @param resourceClass the resource class, extending {@link IBaseResource}
+   * @return a {@link ResourceType} value
+   * @throws IllegalArgumentException if the resource type was not found
+   */
+  @Nonnull
+  public static ResourceType getResourceTypeFromClass(
+      @Nonnull final Class<? extends IBaseResource> resourceClass) {
+    // List is the only resource for which the HAPI resource class name does not match the resource
+    // code.
+    final String resourceName = resourceClass == ListResource.class
+                                ? "List"
+                                : resourceClass.getSimpleName();
+    return ResourceType.fromCode(resourceName);
+  }
+
   @Override
   public boolean equals(final Object o) {
     if (this == o) {
@@ -71,5 +91,5 @@ public class ResourceDefinition {
   public int hashCode() {
     return Objects.hash(resourceType);
   }
-  
+
 }

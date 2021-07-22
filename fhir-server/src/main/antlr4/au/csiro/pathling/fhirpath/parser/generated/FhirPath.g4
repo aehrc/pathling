@@ -26,6 +26,7 @@ expression
         | expression 'and' expression                               #andExpression
         | expression ('or' | 'xor') expression                      #orExpression
         | expression 'implies' expression                           #impliesExpression
+        | expression 'combine' expression                           #combineExpression
         //| (IDENTIFIER)? '=>' expression                             #lambdaExpression
         ;
 
@@ -145,16 +146,7 @@ STRING
         ;
 
 CODING
-        : CODING_WITHOUT_VERSION
-        | CODING_WITH_VERSION
-        ;
-
-fragment CODING_WITH_VERSION
-        : CODING_WITHOUT_VERSION '|' CODING_COMPONENT
-        ;
-
-fragment CODING_WITHOUT_VERSION
-        : CODING_COMPONENT '|' CODING_COMPONENT
+        : CODING_COMPONENT '|' CODING_COMPONENT ( '|' CODING_COMPONENT )? ( '|' CODING_COMPONENT )? ( '|' CODING_COMPONENT )?
         ;
 
 fragment CODING_COMPONENT
@@ -163,7 +155,7 @@ fragment CODING_COMPONENT
         ;
 
 fragment RAW_CODING_COMPONENT
-        : ~[ '|\r\n\t(),]+
+        : ~[ '|\r\n\t(),]*
         ;
 
 fragment QUOTED_CODING_COMPONENT

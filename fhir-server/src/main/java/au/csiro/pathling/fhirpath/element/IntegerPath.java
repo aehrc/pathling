@@ -166,4 +166,9 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
     };
   }
 
+  @Override
+  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
+    return super.canBeCombinedWith(target) || target instanceof IntegerLiteralPath;
+  }
+
 }

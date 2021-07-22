@@ -15,7 +15,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * @author John Grimes
  */
-public class ResourcePathAssertion extends FhirPathAssertion<ResourcePathAssertion> {
+public class ResourcePathAssertion extends BaseFhirPathAssertion<ResourcePathAssertion> {
 
   @Nonnull
   private final ResourcePath fhirPath;

@@ -80,4 +80,15 @@ public class ImmutableCoding implements Serializable {
     return ImmutableCoding.of(system, null, code, display, null);
   }
 
+  /**
+   * Constructs an empty coding (all values null).
+   *
+   * @return empty coding.
+   */
+  @Nonnull
+  public static ImmutableCoding empty() {
+    return ImmutableCoding.of(null, null, null, null, null);
+  }
+
+
 }

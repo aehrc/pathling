@@ -24,27 +24,34 @@ import com.github.dockerjava.core.DockerClientBuilder;
 import com.github.dockerjava.core.DockerClientConfig;
 import com.github.dockerjava.okhttp.OkDockerHttpClient;
 import com.github.dockerjava.okhttp.OkDockerHttpClient.Builder;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
-import org.hl7.fhir.r4.model.CodeType;
-import org.hl7.fhir.r4.model.OperationOutcome;
-import org.hl7.fhir.r4.model.Parameters;
+import org.apache.http.message.BasicNameValuePair;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.hl7.fhir.r4.model.StringType;
 import org.json.JSONException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +72,12 @@ public class DockerImageTest {
 
   // These system properties need to be set.
   private static final String VERSION = System.getProperty("pathling.systemTest.version");
+  private static final String ISSUER = System.getProperty("pathling.systemTest.auth.issuer");
+  private static final String CLIENT_ID = System.getProperty("pathling.systemTest.auth.clientId");
+  private static final String CLIENT_SECRET = System
+      .getProperty("pathling.systemTest.auth.clientSecret");
+  private static final String REQUESTED_SCOPE = System
+      .getProperty("pathling.systemTest.auth.requestedScope");
   private static final String TERMINOLOGY_SERVICE_URL = System
       .getProperty("pathling.systemTest.terminology.serverUrl");
   private static final String DOCKER_REPOSITORY = System
@@ -140,7 +153,11 @@ public class DockerImageTest {
           .withExposedPorts(fhirServerPort)
           .withHostConfig(fhirServerHostConfig)
           .withEnv(
-              "pathling.terminology.serverUrl=" + TERMINOLOGY_SERVICE_URL)
+              "pathling.terminology.serverUrl=" + TERMINOLOGY_SERVICE_URL,
+              "pathling.auth.enabled=true",
+              "pathling.auth.issuer=" + ISSUER,
+              "pathling.auth.audience=http://localhost:8091/fhir"
+          )
           .withName(FHIR_SERVER_CONTAINER_NAME)
           .exec();
 
@@ -196,6 +213,56 @@ public class DockerImageTest {
   @Test
   public void importDataAndQuery() throws JSONException, IOException {
     try {
+      // Get the token endpoint from the CapabilityStatement.
+      final HttpUriRequest capabilitiesRequest = new HttpGet("http://localhost:8091/fhir/metadata");
+      capabilitiesRequest.addHeader("Accept", "application/fhir+json");
+
+      log.info("Sending capabilities request");
+      final CapabilityStatement capabilities;
+      try (final CloseableHttpResponse response = (CloseableHttpResponse) httpClient
+          .execute(capabilitiesRequest)) {
+        final InputStream capabilitiesStream = response.getEntity().getContent();
+        capabilities = (CapabilityStatement) jsonParser.parseResource(capabilitiesStream);
+        assertThat(response.getStatusLine().getStatusCode())
+            .withFailMessage("Capabilities operation did not succeed")
+            .isEqualTo(200);
+      }
+      final String tokenUrl = capabilities.getRest().stream()
+          .findFirst()
+          .map(rest -> ((UriType) rest.getSecurity()
+              .getExtensionByUrl(
+                  "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris")
+              .getExtensionByUrl("token")
+              .getValue()).asStringValue())
+          .orElseThrow();
+
+      // Get an access token from the token endpoint.
+      final HttpPost clientCredentialsGrant = new HttpPost(tokenUrl);
+      final List<? extends NameValuePair> nameValuePairs = Arrays.asList(
+          new BasicNameValuePair("grant_type", "client_credentials"),
+          new BasicNameValuePair("client_id", CLIENT_ID),
+          new BasicNameValuePair("client_secret", CLIENT_SECRET),
+          new BasicNameValuePair("scope", REQUESTED_SCOPE)
+      );
+      clientCredentialsGrant.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+
+      log.info("Requesting client credentials grant");
+      final String accessToken;
+      try (final CloseableHttpResponse response = (CloseableHttpResponse) httpClient
+          .execute(clientCredentialsGrant)) {
+        assertThat(response.getStatusLine().getStatusCode())
+            .withFailMessage("Client credentials grant did not succeed")
+            .isEqualTo(200);
+        final InputStream clientCredentialsStream = response.getEntity().getContent();
+        final Gson gson = new GsonBuilder()
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .create();
+        final ClientCredentialsResponse ccResponse = gson
+            .fromJson(new InputStreamReader(clientCredentialsStream),
+                ClientCredentialsResponse.class);
+        accessToken = ccResponse.getAccessToken();
+      }
+
       // Create a request to the $import operation, referencing the NDJSON files we have loaded into
       // the staging area.
       final InputStream requestStream = Thread.currentThread().getContextClassLoader()
@@ -206,6 +273,7 @@ public class DockerImageTest {
       importRequest.setEntity(new InputStreamEntity(requestStream));
       importRequest.addHeader("Content-Type", "application/json");
       importRequest.addHeader("Accept", "application/fhir+json");
+      importRequest.addHeader("Authorization", "Bearer " + accessToken);
 
       log.info("Sending import request");
       final OperationOutcome importOutcome;
@@ -254,12 +322,13 @@ public class DockerImageTest {
       inParams.getParameter().add(groupingParam);
       inParams.getParameter().add(filterParam);
 
-      // Send a request to the `$query` operation on the FHIR server.
+      // Send a request to the `$aggregate` operation on the FHIR server.
       final String requestString = jsonParser.encodeResourceToString(inParams);
       final HttpPost queryRequest = new HttpPost("http://localhost:8091/fhir/Patient/$aggregate");
       queryRequest.setEntity(new StringEntity(requestString));
       queryRequest.addHeader("Content-Type", "application/fhir+json");
       queryRequest.addHeader("Accept", "application/fhir+json");
+      queryRequest.addHeader("Authorization", "Bearer " + accessToken);
 
       log.info("Sending query request");
       try (final CloseableHttpResponse response = (CloseableHttpResponse) httpClient
@@ -342,6 +411,12 @@ public class DockerImageTest {
     public void close() {
     }
 
+  }
+
+  @Data
+  static class ClientCredentialsResponse {
+
+    String accessToken;
   }
 
 }

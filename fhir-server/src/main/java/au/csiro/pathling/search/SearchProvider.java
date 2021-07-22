@@ -11,7 +11,9 @@ import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Search;
@@ -25,6 +27,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 /**
  * HAPI resource provider that can be instantiated using any resource type to add the FHIRPath
@@ -32,6 +37,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
+@Component
+@Scope("prototype")
+@Profile("server")
 @Slf4j
 public class SearchProvider implements IResourceProvider {
 
@@ -110,9 +118,10 @@ public class SearchProvider implements IResourceProvider {
    * of results
    */
   @Search
+  @OperationAccess("search")
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search() {
-    final ResourceType subjectResource = ResourceType.fromCode(resourceClass.getSimpleName());
+    final ResourceType subjectResource = ResourceDefinition.getResourceTypeFromClass(resourceClass);
     return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
         terminologyServiceFactory, fhirEncoders,
         subjectResource, Optional.empty());
@@ -126,6 +135,7 @@ public class SearchProvider implements IResourceProvider {
    * of results
    */
   @Search(queryName = QUERY_NAME)
+  @OperationAccess("search")
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search(
       @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters) {

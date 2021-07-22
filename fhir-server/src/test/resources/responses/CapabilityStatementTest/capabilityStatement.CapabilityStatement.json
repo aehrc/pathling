@@ -1,6 +1,6 @@
 {
   "resourceType": "CapabilityStatement",
-  "url": "https://pathling.csiro.au/fhir/CapabilityStatement/pathling-fhir-api-3",
+  "url": "https://pathling.csiro.au/fhir/CapabilityStatement/pathling-fhir-api-4",
   "name": "pathling-fhir-api",
   "title": "Pathling FHIR API",
   "status": "active",
@@ -37,11 +37,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -56,11 +56,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -75,11 +75,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -94,11 +94,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -113,11 +113,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -132,11 +132,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -151,11 +151,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -170,11 +170,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -189,11 +189,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -208,11 +208,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -227,11 +227,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -246,20 +246,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
-            }
-          ]
-        },
-        {
-          "type": "OperationDefinition",
-          "profile": "http://hl7.org/fhir/StructureDefinition/OperationDefinition",
-          "interaction": [
-            {
-              "code": "read"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -274,11 +265,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -293,11 +284,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -312,11 +303,11 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
             }
           ]
         },
@@ -331,11 +322,58 @@
           "operation": [
             {
               "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
             },
             {
               "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-3"
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
+            }
+          ]
+        },
+        {
+          "type": "Questionnaire",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Questionnaire",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
+            }
+          ]
+        },
+        {
+          "type": "QuestionnaireResponse",
+          "profile": "http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse",
+          "interaction": [
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-4"
+            }
+          ]
+        },
+        {
+          "type": "OperationDefinition",
+          "profile": "http://hl7.org/fhir/StructureDefinition/OperationDefinition",
+          "interaction": [
+            {
+              "code": "read"
             }
           ]
         }
@@ -343,7 +381,7 @@
       "operation": [
         {
           "name": "import",
-          "definition": "https://pathling.csiro.au/fhir/OperationDefinition/import-3"
+          "definition": "https://pathling.csiro.au/fhir/OperationDefinition/import-4"
         }
       ]
     }

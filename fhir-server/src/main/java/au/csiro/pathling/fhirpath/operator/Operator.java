@@ -46,6 +46,7 @@ public interface Operator {
       .put("*", new MathOperator(MathOperation.MULTIPLICATION))
       .put("/", new MathOperator(MathOperation.DIVISION))
       .put("mod", new MathOperator(MathOperation.MODULUS))
+      .put("combine", new CombineOperator())
       .build();
 
   /**
