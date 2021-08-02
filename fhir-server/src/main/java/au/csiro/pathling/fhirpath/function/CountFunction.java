@@ -12,7 +12,6 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -44,7 +43,7 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     // there may be duplicate IDs in the dataset.
     // When we are counting elements, we use a non-distinct count, to account for the fact that it
     // is valid to have multiple elements with the same value.
-    final Function<Column, Column> countFunction = inputPath instanceof ResourcePath
+    final Function<Column, Column> countFunction = inputPath == input.getContext().getInputContext()
                                                    ? functions::countDistinct
                                                    : functions::count;
 
