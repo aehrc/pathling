@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -28,6 +29,7 @@ import org.apache.spark.sql.types.*;
  *
  * @author John Grimes
  */
+@Slf4j
 public class DatasetBuilder {
 
   @Nonnull
@@ -193,6 +195,7 @@ public class DatasetBuilder {
 
     final Dataset<Row> dataFrame = spark.createDataFrame(datasetRows, schema);
     checkNotNull(dataFrame);
+    log.info("Number of partitions in dataframe: " + dataFrame.rdd().getNumPartitions());
     // needs to allow for empty datasets with 0 partitions
     checkState(dataFrame.rdd().getNumPartitions() <= 1,
         "at most one partition expected in test datasets constructed from rows, but got: "
