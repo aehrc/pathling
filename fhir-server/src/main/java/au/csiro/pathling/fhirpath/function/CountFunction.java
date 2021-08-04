@@ -39,10 +39,10 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
     final Column subjectColumn = inputPath.getValueColumn();
 
-    // When we are counting resources, we use the distinct count to account for the fact that
-    // there may be duplicate IDs in the dataset.
-    // When we are counting elements, we use a non-distinct count, to account for the fact that it
-    // is valid to have multiple elements with the same value.
+    // When we are counting resources from the input context, we use the distinct count to account
+    // for the fact that there may be duplicate IDs in the dataset.
+    // When we are counting anything else, we use a non-distinct count, to account for the fact that
+    // it is valid to have multiple of the same value.
     final Function<Column, Column> countFunction = inputPath == input.getContext().getInputContext()
                                                    ? functions::countDistinct
                                                    : functions::count;
