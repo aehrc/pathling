@@ -84,7 +84,7 @@ public class TestDataImporter implements CommandLineRunner {
           targetPath + "/" + subjectResource.toCode() + ".parquet";
 
       log.info("Writing: " + outputParquet);
-      resourcesDataset.repartition(1).write().mode(SaveMode.Overwrite).parquet(outputParquet);
+      resourcesDataset.write().mode(SaveMode.Overwrite).parquet(outputParquet);
     }
   }
 
