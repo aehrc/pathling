@@ -87,6 +87,7 @@ public class TestDataImporter implements CommandLineRunner {
 
       log.info("Writing: " + outputParquet);
       resourcesDataset.orderBy(asc("id"))
+          .repartition(1)
           .write()
           .mode(SaveMode.Overwrite)
           .parquet(outputParquet);
