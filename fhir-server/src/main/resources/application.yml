@@ -114,13 +114,13 @@ spark:
   executor:
     memory: 1g
   sql:
-    autoBroadcastJoinThreshold: -1
     adaptive:
       enabled: true
     shuffle:
       service:
         enabled: true
       partitions: 2
+      autoBroadcastJoinThreshold: -1
   scheduler:
     mode: FAIR
   dynamicAllocation:
