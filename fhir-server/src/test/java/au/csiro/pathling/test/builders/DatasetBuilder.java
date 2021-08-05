@@ -193,8 +193,9 @@ public class DatasetBuilder {
     final StructType schema;
     schema = new StructType(columns.toArray(new StructField[]{}));
 
-    final Dataset<Row> dataFrame = spark.createDataFrame(datasetRows, schema);
+    Dataset<Row> dataFrame = spark.createDataFrame(datasetRows, schema);
     checkNotNull(dataFrame);
+    dataFrame = dataFrame.repartition(1);
     // needs to allow for empty datasets with 0 partitions
     checkState(dataFrame.rdd().getNumPartitions() <= 1,
         "at most one partition expected in test datasets constructed from rows, but got: "
