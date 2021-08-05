@@ -235,6 +235,8 @@
               <groups>UnitTest</groups>
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
+                <logging.level.org.apache.spark>info</logging.level.org.apache.spark>
+                <spark.logConf>true</spark.logConf>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -252,6 +254,8 @@
                   file://${project.basedir}/src/test/resources/test-data
                 </pathling.storage.warehouseUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+                <logging.level.org.apache.spark>info</logging.level.org.apache.spark>
+                <spark.logConf>true</spark.logConf>
               </systemPropertyVariables>
             </configuration>
           </execution>
