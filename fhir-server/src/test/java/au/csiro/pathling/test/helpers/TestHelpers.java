@@ -81,22 +81,40 @@ public abstract class TestHelpers {
   public static void mockResourceReader(@Nonnull final ResourceReader mockReader,
       @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {
     for (final ResourceType resourceType : resourceTypes) {
-      try {
-        final File parquetFile =
-            new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
-        @Nullable final URL parquetUrl;
-        parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
-        assertNotNull(parquetUrl);
-        @Nullable final Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-        assertNotNull(dataset);
-
-        when(mockReader.read(resourceType)).thenReturn(dataset);
-        when(mockReader.getAvailableResourceTypes())
-            .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
-      } catch (final MalformedURLException e) {
-        throw new RuntimeException("Problem mocking resource reader", e);
-      }
+      final Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType);
+      when(mockReader.read(resourceType)).thenReturn(dataset);
+      when(mockReader.getAvailableResourceTypes())
+          .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
     }
+  }
+
+  public static void mockResourceReader(@Nonnull final ResourceReader mockReader,
+      @Nonnull final SparkSession spark, final int numPartitions,
+      @Nonnull final ResourceType... resourceTypes) {
+    for (final ResourceType resourceType : resourceTypes) {
+      Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType);
+      dataset = dataset.repartition(numPartitions);
+      when(mockReader.read(resourceType)).thenReturn(dataset);
+      when(mockReader.getAvailableResourceTypes())
+          .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
+    }
+  }
+
+  @Nonnull
+  private static Dataset<Row> getDatasetForResourceType(@Nonnull final SparkSession spark,
+      @Nonnull final ResourceType resourceType) {
+    final File parquetFile =
+        new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
+    @Nullable final URL parquetUrl;
+    try {
+      parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
+    } catch (final MalformedURLException e) {
+      throw new RuntimeException("Problem getting dataset for resource type", e);
+    }
+    assertNotNull(parquetUrl);
+    @Nullable final Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
+    assertNotNull(dataset);
+    return dataset;
   }
 
 }

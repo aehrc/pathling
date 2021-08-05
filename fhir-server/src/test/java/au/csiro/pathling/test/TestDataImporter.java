@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.test;
 
+import static org.apache.spark.sql.functions.asc;
+
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.FhirContextFactory;
 import java.io.File;
@@ -84,7 +86,10 @@ public class TestDataImporter implements CommandLineRunner {
           targetPath + "/" + subjectResource.toCode() + ".parquet";
 
       log.info("Writing: " + outputParquet);
-      resourcesDataset.write().mode(SaveMode.Overwrite).parquet(outputParquet);
+      resourcesDataset.orderBy(asc("id"))
+          .write()
+          .mode(SaveMode.Overwrite)
+          .parquet(outputParquet);
     }
   }
 
