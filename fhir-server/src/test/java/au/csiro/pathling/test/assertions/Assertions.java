@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.test.assertions;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -97,7 +96,8 @@ public abstract class Assertions {
     final Dataset<Row> expectedDataset = spark.read()
         .schema(actualDataset.schema())
         .csv(url.toString());
-    assertEquals(expectedDataset.collectAsList(), actualDataset.collectAsList());
+    new DatasetAssert(actualDataset)
+        .hasRowsUnordered(expectedDataset);
   }
 
 }
