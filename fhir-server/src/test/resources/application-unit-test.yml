@@ -9,6 +9,8 @@ pathling:
 
 spark:
   master: local[1]
+  default:
+    parallelism: 1
   driver:
     bindAddress: localhost
     host: localhost
