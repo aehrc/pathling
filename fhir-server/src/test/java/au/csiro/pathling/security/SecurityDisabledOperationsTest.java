@@ -43,4 +43,5 @@ public class SecurityDisabledOperationsTest extends SecurityTestForOperations {
     assertCachingSearchSuccess();
     assertCachingSearchWithFilterSuccess();
   }
+ 
 }
