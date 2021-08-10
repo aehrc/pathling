@@ -15,8 +15,8 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
@@ -33,6 +33,7 @@ import org.springframework.stereotype.Component;
 public class Dependencies {
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   static FhirContext fhirContext() {
     log.info("Creating R4 FHIR context");
@@ -40,13 +41,14 @@ public class Dependencies {
   }
 
   @Bean
-  @Autowired
+  @ConditionalOnMissingBean
   @Nonnull
   static IParser jsonParser(@Nonnull final FhirContext fhirContext) {
     return fhirContext.newJsonParser();
   }
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   static FhirEncoders fhirEncoders() {
     log.info("Creating R4 FHIR encoders");
@@ -54,7 +56,7 @@ public class Dependencies {
   }
 
   @Bean
-  @Autowired
+  @ConditionalOnMissingBean
   @ConditionalOnProperty(prefix = "pathling", value = "terminology.enabled", havingValue = "true")
   @Nonnull
   static TerminologyClient terminologyClient(@Nonnull final Configuration configuration,
@@ -70,7 +72,7 @@ public class Dependencies {
   }
 
   @Bean
-  @Autowired
+  @ConditionalOnMissingBean
   @ConditionalOnBean(TerminologyClient.class)
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory(
