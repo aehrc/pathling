@@ -26,12 +26,10 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
-@TestPropertySource(properties = {"spark.master=local[*]"})
 public class MultipleAggregationsAndResolveTest extends IntegrationTest {
 
   @Autowired
