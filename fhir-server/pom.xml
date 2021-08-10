@@ -235,6 +235,8 @@
               <groups>UnitTest</groups>
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
+                <logging.level.org.apache.spark>info</logging.level.org.apache.spark>
+                <spark.logConf>true</spark.logConf>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -329,6 +331,10 @@
                 <property>
                   <key>pathling.terminology.enabled</key>
                   <value>false</value>
+                </property>
+                <property>
+                  <key>spark.master</key>
+                  <value>local[1]</value>
                 </property>
               </systemProperties>
               <arguments>

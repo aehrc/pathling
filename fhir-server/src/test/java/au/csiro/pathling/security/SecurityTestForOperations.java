@@ -25,7 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 
-@ActiveProfiles({"core", "server"})
+@ActiveProfiles({"core", "server", "unit-test"})
 public abstract class SecurityTestForOperations extends SecurityTest {
 
   @Autowired

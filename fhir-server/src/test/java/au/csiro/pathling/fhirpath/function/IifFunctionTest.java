@@ -208,7 +208,7 @@ class IifFunctionTest {
         .isNotSingular()
         .isElementPath(IntegerPath.class)
         .selectOrderedResultWithEid()
-        .hasRows(expectedDataset);
+        .hasRowsUnordered(expectedDataset);
   }
 
   @Test

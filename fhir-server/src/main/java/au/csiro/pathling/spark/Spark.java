@@ -14,7 +14,7 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.*;
@@ -37,7 +37,7 @@ public class Spark {
    * @return A shiny new {@link SparkSession}
    */
   @Bean(destroyMethod = "stop")
-  @Autowired
+  @ConditionalOnMissingBean
   @Nonnull
   public static SparkSession build(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment) {

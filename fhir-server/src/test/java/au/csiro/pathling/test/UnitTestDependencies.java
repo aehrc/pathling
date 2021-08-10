@@ -17,6 +17,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Component;
 public class UnitTestDependencies {
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   public static SparkSession sparkSession(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment) {
@@ -37,36 +39,42 @@ public class UnitTestDependencies {
   }
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   public static FhirContext fhirContext() {
     return FhirContext.forR4();
   }
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   public static IParser jsonParser(@Nonnull final FhirContext fhirContext) {
     return fhirContext.newJsonParser();
   }
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   public static FhirEncoders fhirEncoders() {
     return FhirEncoders.forR4().getOrCreate();
   }
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   public static TerminologyClient terminologyClient() {
     return SharedMocks.getOrCreate(TerminologyClient.class);
   }
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   public static TerminologyService terminologyService() {
     return SharedMocks.getOrCreate(TerminologyService.class);
   }
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   public static TerminologyServiceFactory terminologyClientFactory() {
     return new TestTerminologyServiceFactory();
