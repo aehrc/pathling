@@ -23,6 +23,7 @@ import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 
 /**
  * Common functionality for executing queries using Spark.
@@ -126,6 +127,9 @@ public abstract class QueryHelpers {
     return Arrays.asList(dataset.columns()).contains(column.toString());
   }
 
+  public QueryHelpers() {
+  }
+
   private static Dataset<Row> join(@Nonnull final Dataset<Row> left,
       @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
       @Nonnull final List<Column> rightColumns, @Nonnull final Optional<Column> additionalCondition,
@@ -140,12 +144,12 @@ public abstract class QueryHelpers {
       // same on the right hand side.
       final DatasetWithColumn leftWithColumn = createColumn(aliasedLeft, leftColumns.get(i));
       aliasedLeft = leftWithColumn.getDataset();
-      joinConditions.add(leftWithColumn.getColumn().equalTo(rightColumns.get(i)));
+      joinConditions.add(leftWithColumn.getColumn().eqNullSafe(rightColumns.get(i)));
     }
     additionalCondition.ifPresent(joinConditions::add);
     final Column joinCondition = joinConditions.stream()
         .reduce(Column::and)
-        .orElseThrow();
+        .orElse(functions.lit(true));
 
     final List<String> leftColumnNames = Arrays.asList(aliasedLeft.columns());
     final List<String> rightColumnNames = rightColumns.stream()

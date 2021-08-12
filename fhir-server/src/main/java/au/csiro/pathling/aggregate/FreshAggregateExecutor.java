@@ -89,9 +89,9 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     groupingsAndFilters = applyFilters(groupingsAndFilters, filters);
 
     // Create a new parser context for aggregation that includes the groupings.
-    final Optional<List<Column>> groupingColumns = Optional.of(groupings.stream()
+    final List<Column> groupingColumns = groupings.stream()
         .map(FhirPath::getValueColumn)
-        .collect(Collectors.toList()));
+        .collect(Collectors.toList());
 
     // The input context will be identical to that used for the groupings and filters, except that
     // it will use the dataset that resulted from the parsing of the groupings and filters,
@@ -103,7 +103,7 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
             inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
             Optional.empty());
     final ParserContext aggregationParserContext = buildParserContext(aggregationContext,
-        groupingColumns);
+        Optional.of(groupingColumns));
     final Parser aggregationParser = new Parser(aggregationParserContext);
 
     // Parse the aggregations, and grab the updated grouping columns. When aggregations are
@@ -117,12 +117,12 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     final List<Column> aggregationColumns = aggregations.stream()
         .map(FhirPath::getValueColumn)
         .collect(Collectors.toList());
-    final Dataset<Row> joinedAggregations = joinExpressions(aggregations);
+    final Dataset<Row> joinedAggregations = joinExpressionsByColumns(aggregations,
+        groupingColumns);
 
     // The final column selection will be the grouping columns, followed by the aggregation
     // columns.
-    final List<Column> finalSelection = new ArrayList<>();
-    groupingColumns.ifPresent(finalSelection::addAll);
+    final List<Column> finalSelection = new ArrayList<>(groupingColumns);
     finalSelection.addAll(aggregationColumns);
     final Dataset<Row> finalDataset = joinedAggregations
         .select(finalSelection.toArray(new Column[0]))

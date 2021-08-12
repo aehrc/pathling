@@ -47,13 +47,8 @@ public class MultipleAggregationsAndResolveTest extends IntegrationTest {
   @Test
   void multipleAggregationsAndResolve() throws URISyntaxException {
     mockResourceReader(resourceReader, spark, 2, ResourceType.PATIENT, ResourceType.CONDITION);
-    final String request = getResourceAsString(
+    final ResponseEntity<String> response = getResponse(
         "requests/MultipleAggregationsAndResolveTest/multipleAggregationsAndResolve.Parameters.json");
-    final String uri = "http://localhost:" + port + "/fhir/Patient/$aggregate";
-    final ResponseEntity<String> response = restTemplate
-        .exchange(uri, HttpMethod.POST,
-            RequestEntity.post(new URI(uri)).header("Content-Type", "application/fhir+json")
-                .body(request), String.class);
     assertNotNull(response.getBody());
     assertTrue(response.getStatusCode().is2xxSuccessful());
     assertJson(
@@ -61,4 +56,25 @@ public class MultipleAggregationsAndResolveTest extends IntegrationTest {
         response.getBody(), JSONCompareMode.LENIENT);
   }
 
+  @Test
+  void multipleAggregationsAndResolveWithGroupings() throws URISyntaxException {
+    mockResourceReader(resourceReader, spark, 2, ResourceType.PATIENT, ResourceType.CONDITION);
+    final ResponseEntity<String> response = getResponse(
+        "requests/MultipleAggregationsAndResolveTest/multipleAggregationsAndResolveWithGroupings.Parameters.json");
+    assertNotNull(response.getBody());
+    assertTrue(response.getStatusCode().is2xxSuccessful());
+    assertJson(
+        "responses/MultipleAggregationsAndResolve/multipleAggregationsAndResolveWithGroupings.Parameters.json",
+        response.getBody(), JSONCompareMode.LENIENT);
+  }
+
+  private ResponseEntity<String> getResponse(String requestResourcePath) throws URISyntaxException {
+    final String request = getResourceAsString(
+        requestResourcePath);
+    final String uri = "http://localhost:" + port + "/fhir/Patient/$aggregate";
+    return restTemplate
+        .exchange(uri, HttpMethod.POST,
+            RequestEntity.post(new URI(uri)).header("Content-Type", "application/fhir+json")
+                .body(request), String.class);
+  }
 }
