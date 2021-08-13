@@ -60,26 +60,21 @@ public abstract class QueryExecutor {
   }
 
   /**
-   * Joins the datasets in a list together, using their resource identity columns.
+   * Joins the datasets in a list together the provided set of shared columns.
    *
    * @param expressions a list of expressions to join
+   * @param joinColumns the columns to join by; all columns must be present in all expressions.
    * @return the joined {@link Dataset}
    */
   @Nonnull
-  protected static Dataset<Row> joinExpressions(@Nonnull final List<FhirPath> expressions) {
+  protected static Dataset<Row> joinExpressionsByColumns(
+      @Nonnull final Collection<FhirPath> expressions, @Nonnull final List<Column> joinColumns) {
     checkArgument(!expressions.isEmpty(), "expressions must not be empty");
 
-    FhirPath previous = expressions.get(0);
-    Dataset<Row> result = previous.getDataset();
-
-    for (int i = 1; i < expressions.size(); i++) {
-      final FhirPath current = expressions.get(i);
-      final Column idColumn = previous.getIdColumn();
-      result = join(result, idColumn, current, JoinType.LEFT_OUTER);
-      previous = current;
-    }
-
-    return result;
+    final Optional<Dataset<Row>> maybeJoinResult = expressions.stream()
+        .map(FhirPath::getDataset)
+        .reduce((l, r) -> join(l, joinColumns, r, joinColumns, JoinType.LEFT_OUTER));
+    return maybeJoinResult.orElseThrow();
   }
 
   @Nonnull
