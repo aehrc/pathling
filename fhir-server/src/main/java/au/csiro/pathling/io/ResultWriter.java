@@ -8,12 +8,22 @@ package au.csiro.pathling.io;
 
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.io.PersistenceScheme.convertS3aToS3Url;
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.Configuration;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.SparkSession;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -24,16 +34,23 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("core")
+@Slf4j
 public class ResultWriter {
 
   @Nonnull
-  private final String resultUrl;
+  private final Configuration configuration;
+
+  @Nonnull
+  private final SparkSession spark;
 
   /**
    * @param configuration A {@link Configuration} object which controls the behaviour of the writer
+   * @param spark The current {@link SparkSession}
    */
-  public ResultWriter(@Nonnull final Configuration configuration) {
-    this.resultUrl = convertS3ToS3aUrl(configuration.getStorage().getResultUrl());
+  public ResultWriter(@Nonnull final Configuration configuration,
+      @Nonnull final SparkSession spark) {
+    this.configuration = configuration;
+    this.spark = spark;
   }
 
   /**
@@ -43,12 +60,44 @@ public class ResultWriter {
    * @return the URL of the result
    */
   public String write(@Nonnull final Dataset result) {
-    final String resultFileUrl = this.resultUrl + "/" + UUID.randomUUID() + ".csv";
+    final String resultUrl = convertS3ToS3aUrl(configuration.getStorage().getResultUrl());
+
+    // Get a handle for the Hadoop FileSystem representing the result location, and check that it
+    // is accessible.
+    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
+        .hadoopConfiguration();
+    checkNotNull(hadoopConfiguration);
+    @Nullable final FileSystem resultLocation;
+    try {
+      resultLocation = FileSystem.get(new URI(resultUrl), hadoopConfiguration);
+    } catch (final IOException e) {
+      throw new RuntimeException("Problem accessing result location: " + resultUrl, e);
+    } catch (final URISyntaxException e) {
+      throw new RuntimeException("Problem parsing result URL: " + resultUrl, e);
+    }
+    checkNotNull(resultLocation);
+
+    // Write result dataset to result location.
+    final String resultFileUrl = resultUrl + "/" + UUID.randomUUID();
+    log.info("Writing result: " + resultFileUrl);
     result.write()
         .mode(SaveMode.ErrorIfExists)
         .csv(resultFileUrl);
-    //TODO: Merge partitioned files into one - possibly using FileUtil.copyMerge in Hadoop
-    return convertS3aToS3Url(resultFileUrl);
+
+    // Merge partitioned result into a single result file.
+    final String mergedUrl = resultFileUrl + ".csv";
+    log.info("Merging result: " + mergedUrl);
+    try {
+      //TODO: Reimplement this method to allow for future upgrades to the Hadoop dependency.
+      //noinspection deprecation
+      FileUtil.copyMerge(resultLocation, new Path(resultFileUrl), resultLocation,
+          new Path(mergedUrl),
+          true, hadoopConfiguration, null);
+    } catch (final IOException e) {
+      throw new RuntimeException("Problem merging result", e);
+    }
+
+    return convertS3aToS3Url(mergedUrl);
   }
 
 }

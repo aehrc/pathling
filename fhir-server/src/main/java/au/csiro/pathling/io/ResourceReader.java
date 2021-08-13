@@ -125,8 +125,7 @@ public class ResourceReader implements Cacheable {
     // types.
     @Nullable final FileStatus[] fileStatuses;
     try {
-      fileStatuses = warehouse
-          .listStatus(new Path(databasePath));
+      fileStatuses = warehouse.listStatus(new Path(databasePath));
     } catch (final IOException e) {
       throw new RuntimeException(
           "Problem listing file status at database path: " + databasePath, e);
