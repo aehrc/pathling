@@ -13,7 +13,7 @@ import org.hl7.fhir.r4.model.Type;
 
 /**
  * Designates an expression that is capable of being extracted from a Spark dataset and materialized
- * back into a FHIR value, e.g. for use in a grouping label.
+ * back into a FHIR value, e.g. for use in a grouping label or an extract column.
  *
  * @author John Grimes
  */

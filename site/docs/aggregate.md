@@ -37,12 +37,14 @@ resource. The following parameters are supported:
 
 - `aggregation [1..*]` - (string) A FHIRPath expression which is used to 
   calculate a summary value from each grouping. The context is a collection of 
-  resources of the subject resource type. The expression must evaluate to a 
-  primitive value.
+  resources of the subject resource type. The expression must return a
+  [materializable type](./fhirpath/data-types.html#materializable-types) and also be 
+  singular.
 - `grouping [0..*]` - (string) A FHIRPath expression that can be evaluated 
   against each resource in the data set to determine which groupings it should 
   be counted within. The context is an individual resource of the subject 
-  resource type. The expression must evaluate to a primitive value.
+  resource type. The expression must return a
+  [materializable type](./fhirpath/data-types.html#materializable-types).
 - `filter [0..*]` - (string) A FHIRPath expression that can be evaluated against 
   each resource in the data set to determine whether it is included within the 
   result. The context is an individual resource of the subject resource type. 
@@ -84,4 +86,4 @@ Check out example `aggregate` requests in the Postman collection:
    href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d4afec33-89d8-411c-8e4d-9169b9af42e0">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
-Next: [FHIRPath](./fhirpath)
+Next: [Extract](./extract.html)

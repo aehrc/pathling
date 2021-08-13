@@ -1,7 +1,7 @@
 ---
 layout: page
 title: FHIRPath
-nav_order: 4
+nav_order: 5
 parent: Documentation
 has_children: true
 ---
@@ -30,11 +30,3 @@ For convenience, this document does contain some redundant information copied
 from the source specification. Where there are variations from the
 specification, this document describes the behaviour as implemented within
 Pathling.
-
-The following sections from the FHIRPath specification are recommended reading:
-
-- [Overview](https://hl7.org/fhirpath/#overview);
-- [Navigation model](https://hl7.org/fhirpath/#navigation-model).
-- [Path selection](https://hl7.org/fhirpath/#path-selection);
-- [Collections](https://hl7.org/fhirpath/#collections), and;
-- [Paths and polymorphic items](https://hl7.org/fhirpath/#paths-and-polymorphic-items).
