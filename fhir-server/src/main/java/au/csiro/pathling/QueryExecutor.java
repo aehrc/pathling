@@ -68,8 +68,7 @@ public abstract class QueryExecutor {
    */
   @Nonnull
   protected static Dataset<Row> joinExpressionsByColumns(
-      @Nonnull final List<FhirPath> expressions,
-      @Nonnull final List<Column> joinColumns) {
+      @Nonnull final Collection<FhirPath> expressions, @Nonnull final List<Column> joinColumns) {
     checkArgument(!expressions.isEmpty(), "expressions must not be empty");
 
     final Optional<Dataset<Row>> maybeJoinResult = expressions.stream()

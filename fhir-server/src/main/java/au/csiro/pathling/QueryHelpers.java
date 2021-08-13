@@ -9,6 +9,7 @@ package au.csiro.pathling;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -23,7 +24,6 @@ import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 
 /**
  * Common functionality for executing queries using Spark.
@@ -127,9 +127,6 @@ public abstract class QueryHelpers {
     return Arrays.asList(dataset.columns()).contains(column.toString());
   }
 
-  public QueryHelpers() {
-  }
-
   private static Dataset<Row> join(@Nonnull final Dataset<Row> left,
       @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
       @Nonnull final List<Column> rightColumns, @Nonnull final Optional<Column> additionalCondition,
@@ -149,7 +146,7 @@ public abstract class QueryHelpers {
     additionalCondition.ifPresent(joinConditions::add);
     final Column joinCondition = joinConditions.stream()
         .reduce(Column::and)
-        .orElse(functions.lit(true));
+        .orElse(lit(true));
 
     final List<String> leftColumnNames = Arrays.asList(aliasedLeft.columns());
     final List<String> rightColumnNames = rightColumns.stream()

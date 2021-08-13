@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.io.ResourceReader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
@@ -68,7 +69,8 @@ public class MultipleAggregationsAndResolveTest extends IntegrationTest {
         response.getBody(), JSONCompareMode.LENIENT);
   }
 
-  private ResponseEntity<String> getResponse(String requestResourcePath) throws URISyntaxException {
+  private ResponseEntity<String> getResponse(@Nonnull final String requestResourcePath)
+      throws URISyntaxException {
     final String request = getResourceAsString(
         requestResourcePath);
     final String uri = "http://localhost:" + port + "/fhir/Patient/$aggregate";
@@ -77,4 +79,5 @@ public class MultipleAggregationsAndResolveTest extends IntegrationTest {
             RequestEntity.post(new URI(uri)).header("Content-Type", "application/fhir+json")
                 .body(request), String.class);
   }
+  
 }
