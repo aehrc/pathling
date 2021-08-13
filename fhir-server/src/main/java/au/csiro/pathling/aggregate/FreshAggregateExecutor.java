@@ -6,17 +6,14 @@
 
 package au.csiro.pathling.aggregate;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
@@ -76,12 +73,13 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
     final ParserContext groupingAndFilterContext = buildParserContext(inputContext);
     final Parser parser = new Parser(groupingAndFilterContext);
     final List<FhirPath> filters = parseFilters(parser, query.getFilters());
-    final List<FhirPath> groupings = parseGroupings(parser, query.getGroupings());
+    final List<FhirPath> groupings = parseMaterializableExpressions(parser, query.getGroupings(),
+        "Grouping");
 
     // Join all filter and grouping expressions together.
     final Column idColumn = inputContext.getIdColumn();
     Dataset<Row> groupingsAndFilters = filters.size() + groupings.size() > 0
-                                       ? joinGroupingsAndFilters(inputContext, groupings, filters,
+                                       ? joinExpressionsAndFilters(inputContext, groupings, filters,
         idColumn)
                                        : inputContext.getDataset();
 
@@ -132,58 +130,6 @@ public class FreshAggregateExecutor extends QueryExecutor implements AggregateEx
 
     // Translate the result into a response object to be passed back to the user.
     return buildResponse(finalDataset, aggregations, groupings, filters);
-  }
-
-  @Nonnull
-  private Dataset<Row> joinGroupingsAndFilters(final FhirPath inputContext,
-      @Nonnull final Collection<FhirPath> groupings,
-      @Nonnull final Collection<FhirPath> filters, @Nonnull final Column idColumn) {
-    final List<Dataset<Row>> datasets = groupings.stream()
-        .map(grouping -> {
-          // We need to remove any trailing null values from non-empty collections, so that
-          // aggregations do not count non-empty collections in the empty collection grouping. We do
-          // this by joining the distinct set of resource IDs to the dataset using an outer join,
-          // where the value is not null.
-          return join(grouping.getDataset(), idColumn, inputContext.getDataset(),
-              idColumn, grouping.getValueColumn().isNotNull(), JoinType.RIGHT_OUTER);
-        }).collect(Collectors.toList());
-    datasets.addAll(filters.stream()
-        .map(FhirPath::getDataset)
-        .collect(Collectors.toList()));
-
-    return datasets.stream()
-        .reduce((a, b) -> join(a, idColumn, b, idColumn, JoinType.LEFT_OUTER))
-        .orElseThrow();
-  }
-
-  @Nonnull
-  private List<FhirPath> parseGroupings(@Nonnull final Parser parser,
-      @Nonnull final Collection<String> groupings) {
-    return groupings.stream()
-        .map(grouping -> {
-          final FhirPath result = parser.parse(grouping);
-          // Each grouping expression must evaluate to a Materializable path, or a user error will
-          // be thrown. There is no requirement for it to be singular, multiple values will result
-          // in the resource being counted within multiple different groupings.
-          checkUserInput(result instanceof Materializable,
-              "Grouping expression is not of a supported type: " + grouping);
-          return result;
-        }).collect(Collectors.toList());
-  }
-
-  @Nonnull
-  private List<FhirPath> parseFilters(@Nonnull final Parser parser,
-      @Nonnull final Collection<String> filters) {
-    return filters.stream().map(expression -> {
-      final FhirPath result = parser.parse(expression);
-      // Each filter expression must evaluate to a singular Boolean value, or a user error will be
-      // thrown.
-      checkUserInput(result instanceof BooleanPath,
-          "Filter expression is not a non-literal boolean: " + expression);
-      checkUserInput(result.isSingular(),
-          "Filter expression must represent a singular value: " + expression);
-      return result;
-    }).collect(Collectors.toList());
   }
 
   @Nonnull

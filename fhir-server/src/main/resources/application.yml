@@ -33,6 +33,10 @@ pathling:
     # URL.
     warehouseUrl: file:///usr/share/warehouse
 
+    # The URL that Pathling will use to output the results of bulk operations such as Extract. Can
+    # be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://) URL.
+    resultUrl: file:///usr/share/results
+
     # The subdirectory within the warehouse path used to read and write data.
     databaseName: default
 

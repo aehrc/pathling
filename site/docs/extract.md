@@ -38,9 +38,9 @@ The request for the `$extract` operation is either a GET request, or a POST
 request containing a [Parameters](https://hl7.org/fhir/R4/parameters.html) 
 resource. The following parameters are supported:
 
-- `column [1..*]` - (string) A FHIRPath expression that defines the column. The 
-  context is a single resource of the type specified in the subjectResource 
-  parameter. The expression must return a 
+- `column [1..*]` - (string) A FHIRPath expression that defines a column within 
+  the result. The context is a single resource of the type specified in the 
+  subjectResource parameter. The expression must return a 
   [materializable type](./fhirpath/data-types.html#materializable-types). 
 - `filter [0..*]` - (string) A FHIRPath expression that can be evaluated against 
   each resource in the data set to determine whether it is included within the 

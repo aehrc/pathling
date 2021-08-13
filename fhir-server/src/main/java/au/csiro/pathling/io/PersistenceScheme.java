@@ -34,4 +34,13 @@ public abstract class PersistenceScheme {
     return s3Url.replaceFirst("s3:", "s3a:");
   }
 
+  /**
+   * @param s3aUrl The S3A URL that should be converted
+   * @return A S3 URL
+   */
+  @Nonnull
+  public static String convertS3aToS3Url(@Nonnull final String s3aUrl) {
+    return s3aUrl.replaceFirst("s3a:", "s3:");
+  }
+
 }

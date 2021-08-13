@@ -12,6 +12,9 @@ import au.csiro.pathling.aggregate.AggregateProvider;
 import au.csiro.pathling.aggregate.CachingAggregateExecutor;
 import au.csiro.pathling.aggregate.FreshAggregateExecutor;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.extract.ExtractExecutor;
+import au.csiro.pathling.extract.ExtractProvider;
+import au.csiro.pathling.extract.FreshExtractExecutor;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.CachingSearchProvider;
 import au.csiro.pathling.search.SearchExecutorCache;
@@ -44,6 +47,9 @@ public class ResourceProviderFactory {
 
   @Nonnull
   private final AggregateExecutor aggregateExecutor;
+
+  @Nonnull
+  private final ExtractExecutor extractExecutor;
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -79,6 +85,8 @@ public class ResourceProviderFactory {
    * aggregate operation, when caching is enabled
    * @param freshAggregateExecutor A {@link FreshAggregateExecutor} for processing requests to the
    * aggregate operation, when caching is not enabled
+   * @param freshExtractExecutor A {@link FreshExtractExecutor} for processing requests to the
+   * extract operation
    */
   public ResourceProviderFactory(
       @Nonnull final ApplicationContext applicationContext,
@@ -90,7 +98,8 @@ public class ResourceProviderFactory {
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final SearchExecutorCache searchExecutorCache,
       @Nonnull final CachingAggregateExecutor cachingAggregateExecutor,
-      @Nonnull final FreshAggregateExecutor freshAggregateExecutor
+      @Nonnull final FreshAggregateExecutor freshAggregateExecutor,
+      @Nonnull final FreshExtractExecutor freshExtractExecutor
   ) {
     this.applicationContext = applicationContext;
     this.fhirContext = fhirContext;
@@ -103,6 +112,7 @@ public class ResourceProviderFactory {
     this.aggregateExecutor = configuration.getCaching().isEnabled()
                              ? cachingAggregateExecutor
                              : freshAggregateExecutor;
+    this.extractExecutor = freshExtractExecutor;
   }
 
   /**
@@ -118,6 +128,21 @@ public class ResourceProviderFactory {
         .getResourceDefinition(resourceType.name()).getImplementingClass();
     return applicationContext
         .getBean(AggregateProvider.class, aggregateExecutor, resourceTypeClass);
+  }
+
+  /**
+   * Creates an {@link au.csiro.pathling.extract.ExtractProvider} bean for given resource type.
+   *
+   * @param resourceType the type of resource to create the provider for.
+   * @return {@link au.csiro.pathling.extract.ExtractProvider} bean.
+   */
+  @Nonnull
+  public IResourceProvider createExtractResourceProvider(
+      @Nonnull final ResourceType resourceType) {
+    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
+        .getResourceDefinition(resourceType.name()).getImplementingClass();
+    return applicationContext
+        .getBean(ExtractProvider.class, extractExecutor, resourceTypeClass);
   }
 
   /**
