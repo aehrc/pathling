@@ -50,8 +50,8 @@ The named query is invoked using a parameter of `_query` with a value of
 `fhirPath`.
 
 Parameters are passed in the query portion of the URL for GET requests, and can
-be passed either in the URL or in a `application/x-www-form-urlencoded` for POST
-requests.
+be passed either in the URL or in a `application/x-www-form-urlencoded` body for 
+POST requests.
 
 ## Response
 

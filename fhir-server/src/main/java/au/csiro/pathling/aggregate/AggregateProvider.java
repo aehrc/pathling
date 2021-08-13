@@ -24,9 +24,10 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 /**
- * HAPI plain provider that provides an entry point for the "aggregate" system-wide operation.
+ * HAPI resource provider that provides an entry point for the "aggregate" type-level operation.
  *
  * @author John Grimes
+ * @see <a href="https://pathling.csiro.au/docs/aggregate.html">Aggregate</a>
  */
 @Component
 @Scope("prototype")

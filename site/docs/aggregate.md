@@ -18,7 +18,11 @@ This operation allows a user to perform aggregate queries on data held within
 the FHIR server by specifying aggregation, grouping and filter expressions.
 
 ```
-POST [FHIR endpoint]/$aggregate
+GET [FHIR endpoint]/[resource type]/$aggregate?[parameters...]
+```
+
+```
+POST [FHIR endpoint]/[resource type]/$aggregate
 ```
 
 <img src="/images/aggregate.png" 
@@ -27,28 +31,24 @@ POST [FHIR endpoint]/$aggregate
 
 ## Request
 
-The request for the `$aggregate` operation is a
-[Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
-following parameters:
+The request for the `$aggregate` operation is either a GET request, or a POST 
+request containing a [Parameters](https://hl7.org/fhir/R4/parameters.html) 
+resource. The following parameters are supported:
 
-- `subjectResource [1..1]` - (code) The subject resource that the expressions
-  within this query are evaluated against. The code must be a member of
-  [http://hl7.org/fhir/ValueSet/resource-types](https://hl7.org/fhir/ValueSet/resource-types).
 - `aggregation [1..*]` - (string) A FHIRPath expression which is used to 
   calculate a summary value from each grouping. The context is a collection of 
-  resources of the type specified in the subjectResource parameter. 
-  The expression must evaluate to a primitive value.
+  resources of the subject resource type. The expression must evaluate to a 
+  primitive value.
 - `grouping [0..*]` - (string) A FHIRPath expression that can be evaluated 
   against each resource in the data set to determine which groupings it should 
-  be counted within. The context is an individual resource of the type specified 
-  in the subjectResource parameter. The expression must evaluate to a primitive 
-  value.
+  be counted within. The context is an individual resource of the subject 
+  resource type. The expression must evaluate to a primitive value.
 - `filter [0..*]` - (string) A FHIRPath expression that can be evaluated against 
   each resource in the data set to determine whether it is included within the 
-  result. The context is an individual resource of the type specified in the 
-  subjectResource parameter. The expression must evaluate to a singular Boolean 
-  value. Multiple filters are combined using AND logic.
-
+  result. The context is an individual resource of the subject resource type. 
+  The expression must evaluate to a Boolean value. Multiple filters are combined 
+  using AND logic.
+  
 ## Response
 
 The response for the `$aggregate` operation is a
