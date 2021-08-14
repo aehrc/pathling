@@ -39,8 +39,8 @@ request containing a [Parameters](https://hl7.org/fhir/R4/parameters.html)
 resource. The following parameters are supported:
 
 - `column [1..*]` - (string) A FHIRPath expression that defines a column within 
-  the result. The context is a single resource of the type specified in the 
-  subjectResource parameter. The expression must return a 
+  the result. The context is a single resource of the subject resource type. 
+  The expression must return a 
   [materializable type](./fhirpath/data-types.html#materializable-types). 
 - `filter [0..*]` - (string) A FHIRPath expression that can be evaluated against 
   each resource in the data set to determine whether it is included within the 
@@ -55,23 +55,6 @@ The response for the `$extract` operation is a
 following parameters:
 
 - `url [1]` - A URL at which the result of the operation can be retrieved.
-
-## Asynchronous execution
-
-The `$extract` operation supports the 
-[asynchronous request pattern](https://hl7.org/fhir/r4/async.html), which allows 
-for long running operations to be run outside of the context of a normal HTTP 
-request-response interaction.
-
-You can opt-in to asynchronous execution by including the 
-`Prefer: respond-async` header in your request. The operation will immediately 
-respond with a HTTP status code of `202 Accepted`, along with a 
-`Content-Location` header containing the URL relating to the asynchronous job.
-
-You can issue a GET request to the job endpoint to check whether it is finished. 
-`202 Accepted` indicates that the job is still in progress, while a `200 OK` 
-means the job is finished, and will be accompanied by the response Parameters 
-resource.
 
 ## Examples
 
