@@ -145,6 +145,12 @@
       <version>${pathling.antlrVersion}</version>
     </dependency>
 
+    <!-- AWS SDK -->
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-s3</artifactId>
+    </dependency>
+
     <!-- Error monitoring -->
     <dependency>
       <groupId>io.sentry</groupId>

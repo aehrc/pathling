@@ -44,6 +44,8 @@ pathling:
     aws:
       # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
       anonymousAccess: true
+      # Number of seconds that S3 pre-signed URLs should remain valid for.
+      signedUrlExpiry: 3600
       # Authentication details for connecting to protected Amazon S3 locations.
       # accessKeyId: [AWS access key ID]
       # secretAccessKey: [AWS secret access key]

@@ -176,6 +176,12 @@ public class Configuration {
       @ToString.Exclude
       private String secretAccessKey;
 
+      /**
+       * Number of seconds that S3 pre-signed URLs should remain valid for.
+       */
+      @NotNull
+      private long signedUrlExpiry;
+
       @Nonnull
       public Optional<String> getAccessKeyId() {
         return Optional.ofNullable(accessKeyId);

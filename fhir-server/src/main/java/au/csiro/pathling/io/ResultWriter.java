@@ -9,11 +9,18 @@ package au.csiro.pathling.io;
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.io.PersistenceScheme.convertS3aToS3Url;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
+import com.amazonaws.HttpMethod;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Instant;
+import java.util.Date;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -21,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
@@ -97,7 +105,41 @@ public class ResultWriter {
       throw new RuntimeException("Problem merging result", e);
     }
 
-    return convertS3aToS3Url(mergedUrl);
+    // If the result is an S3 URL, it will need to be converted into a signed URL.
+    final String convertedUrl = convertS3aToS3Url(mergedUrl);
+    if (convertedUrl.startsWith("s3://")) {
+      final URI parsedUrl;
+      try {
+        parsedUrl = new URI(convertedUrl);
+      } catch (final URISyntaxException e) {
+        throw new RuntimeException("Problem parsing S3 result url: " + convertedUrl, e);
+      }
+      return generateSignedS3Url(configuration.getStorage().getAws(),
+          parsedUrl.getHost(), parsedUrl.getPath().replaceFirst("/", ""));
+    } else {
+      return convertedUrl;
+    }
+  }
+
+  @Nonnull
+  private static String generateSignedS3Url(@Nonnull final Configuration.Storage.Aws awsConfig,
+      @Nonnull final String bucketName, @Nonnull final String objectKey) {
+    final String accessKeyId = checkPresent(awsConfig.getAccessKeyId());
+    final String secretAccessKey = checkPresent(awsConfig.getSecretAccessKey());
+    final AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+        .withCredentials(new BasicAWSCredentialsProvider(accessKeyId, secretAccessKey))
+        .build();
+    final Date expiration = new Date();
+    final long expiryTimeMilliseconds =
+        Instant.now().toEpochMilli() + (awsConfig.getSignedUrlExpiry() * 1000);
+    expiration.setTime(expiryTimeMilliseconds);
+    final GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName,
+        objectKey)
+        .withMethod(HttpMethod.GET)
+        .withExpiration(expiration);
+    log.info("Generating signed URL: {}, {}, {}, {}", request.getMethod(), request.getExpiration(),
+        request.getBucketName(), request.getKey());
+    return s3Client.generatePresignedUrl(request).toExternalForm();
   }
 
 }
