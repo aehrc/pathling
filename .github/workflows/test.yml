@@ -61,7 +61,7 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
+          files: encoders/target/site/jacoco/jacoco.xml
   fhir-server:
     name: Build and test FHIR server
     runs-on: ubuntu-latest
@@ -119,7 +119,7 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
+          files: fhir-server/target/site/jacoco/jacoco.xml
   site:
     name: Build site
     runs-on: ubuntu-latest
