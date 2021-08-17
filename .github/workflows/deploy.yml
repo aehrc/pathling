@@ -146,6 +146,10 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 11
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.6.3
       - name: Cache local Maven repository
         uses: actions/cache@v2
         with:
