@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Grimes"
+  given-names: "John"
+  orcid: "https://orcid.org/0000-0002-9575-7641"
+- family-names: "Szul"
+  given-names: "Piotr"
+- family-names: "Metke Jimenez"
+  given-names: "Alejandro"
+- family-names: "Lawley"
+  given-names: "Michael"
+- family-names: "Loi"
+  given-names: "Kylynn"
+title: "Pathling"
+version: 4.0.0
+doi: 10.25919/71v9-d232
+date-released: 2021-08-17
+url: "https://github.com/aehrc/pathling"

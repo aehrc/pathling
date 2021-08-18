@@ -134,7 +134,6 @@ The `combine` operator merges the left and right operands into a single
 collection, preserving duplicates. The result is not ordered.
 
 This reflects the semantics of the [combine function](https://hl7.org/fhirpath/#combineother-collection-collection) 
-within the FHIRPath specification, but implemented as an operator to allow for 
-easier chaining.
+within the FHIRPath specification, but implemented as an operator.
 
 Next: [Functions](./functions.html)

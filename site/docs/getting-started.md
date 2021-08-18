@@ -56,7 +56,7 @@ several configuration parameters using environment variables.
 version: "3"
 services:
   pathling:
-    image: aehrc/pathling:3
+    image: aehrc/pathling:4
     ports:
       - 8080:8080
     environment:
@@ -77,7 +77,7 @@ directory. Then the following command can be issued to run the Pathling server:
 docker-compose up
 ```
 
-In this example, the `image` key is being used to refer to the latest `3.x` 
+In this example, the `image` key is being used to refer to the latest `4.x` 
 version of the Pathling image on Docker Hub.
 
 We are setting the `spark.executor.memory` configuration variable to 6GB, to

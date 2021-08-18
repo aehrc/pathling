@@ -13,6 +13,7 @@ exclude:
   - pom.xml
   - src
   - target
+  - site.iml
 destination: ./target/site
 plugins:
   - jekyll-sitemap

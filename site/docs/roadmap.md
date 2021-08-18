@@ -13,13 +13,11 @@ themes:
 1. [Extract operation](#extract-operation)
 2. [Improved FHIRPath support](#improved-fhirpath-support)
 3. [APIs for Python and R](#apis-for-python-and-r)
-4. [authorization enhancements](#authorization-enhancements)
-5. [Incremental update](#incremental-update)
-6. [Subscriptions](#subscriptions)
-7. [Extension content](#extension-content)
+4. [Incremental update](#incremental-update)
+5. [Subscriptions](#subscriptions)
+6. [Extension content](#extension-content)
+7. [CLI mode](#cli-mode)
 8. [Temporal query](#temporal-query)
-9. [Multi-tenancy](#multi-tenancy)
-10. [Cell suppression](#cell-suppression)
 
 ---
 
@@ -74,11 +72,12 @@ following parameters:
 
 ## Improved FHIRPath support
 
-Implementation of a number of operators, functions and syntax elements from the
-FHIRPath specifications is planned:
+Implementation of a number of operators, functions and syntax elements (some 
+from the FHIRPath specifications, some novel) is planned:
 
 - Various aggregate functions (`average`, `covarPop`, `covarSample`, `max`,
-  `min`, `mean`, `stddevPop`, `stddevSample`, `sum`, `varPop`, `varSample`)
+  `min`, `mean`, `median`, `stddevPop`, `stddevSample`, `sum`, `varPop`, 
+  `varSample`)
 - Date component functions (`toSeconds`, `toMinutes`, `toHours`, `dayOfMonth`,
   `dayOfWeek`, `weekOfYear`, `toMonthNumber`, `toQuarter`, `toYear`)
 - `dateFormat` function
@@ -89,9 +88,10 @@ FHIRPath specifications is planned:
 - `Quantity` data type, including support for unit-aware operations using
   [UCUM](https://unitsofmeasure.org) (see
   [Quantity](https://hl7.org/fhirpath/#types) and
-  [Operations](https://hl7.org/fhirpath/#operations))
-- `aggregate` function (see
-  [aggregate](https://hl7.org/fhirpath/#aggregateaggregator-expression-init-value-value))
+  [Operations](https://hl7.org/fhirpath/#operations)), and use within 
+  [Date/time arithmetic](https://hl7.org/fhirpath/#datetime-arithmetic)
+- Non-reference resource joins (see 
+  [#338](https://github.com/aehrc/pathling/issues/338))
 
 ---
 
@@ -115,20 +115,6 @@ Two variations of this integration could be created:
 
 See [(#194) Python integration](https://github.com/aehrc/pathling/issues/194)
 and [(#193) R integration](https://github.com/aehrc/pathling/issues/193).
-
----
-
-## authorization enhancements
-
-This change will enhance the existing support for
-[SMART](https://hl7.org/fhir/smart-app-launch/index.html) authorization within
-the Pathling server, adding the following capabilities:
-
-- Individual control of read and write operations
-- Access control for individual resource types (e.g. `user/DiagnosticReport.read`)
-- Control of access to types of operations (e.g. `operation:search`)
-
-See [(#282) Add operation and resource level authorization](https://github.com/aehrc/pathling/issues/282).
 
 ---
 
@@ -172,7 +158,19 @@ within databases, and implement the `extension` FHIRPath function (see
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)), to
 facilitate the use of extensions within expressions.
 
-See [(#163) Extension content](https://github.com/aehrc/pathling/issues/163).
+See [(#163) Extension content](https://github.com/aehrc/pathling/issues/163). 
+Also related to this is 
+[(#322) Allow for nested elements at arbitrary depth](https://github.com/aehrc/pathling/issues/322).
+
+---
+
+## CLI mode
+
+This change will create a new execution mode which can be used to invoke 
+Pathling operations from the command line. This will remove the need for a 
+running server to use Pathling for batch data transformation operations.
+
+See [(#349) CLI mode](https://github.com/aehrc/pathling/issues/349).
 
 ---
 
@@ -189,28 +187,7 @@ within the Pathling data store. This will include the ability to query the state
 of a resource at a point in time and compare it to other versions of that 
 resource. 
 
----
-
-## Multi-tenancy
-
-This change will allow for the hosting of multiple databases by a single
-Pathling server.
-
-Each database will expose its own FHIR endpoint, for example:
-
-```
-myserver.com/database1/fhir
-myserver.com/database2/fhir
-```
-
----
-
-## Cell suppression
-
-A feature is planned to enable suppression of grouping values within the
-response of the [aggregate operation](./aggregate.html), based upon certain risk
-factors such as cell size. This would reduce the risk of re-identification when
-using Pathling to deploy aggregate-only data query services.
+See [(#350) Temporal query](https://github.com/aehrc/pathling/issues/350).
 
 ---
 

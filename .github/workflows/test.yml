@@ -9,6 +9,9 @@ on:
   push:
     branches-ignore: [ master ]
 
+# If the actor is Dependabot, we need to avoid anything that requires privileged access - so we skip
+# the integration test (which requires a secret), and also the test reporting actions (which require
+# a GitHub token).
 jobs:
   encoders:
     name: Build and test encoders
@@ -17,9 +20,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Set up JDK
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v2
         with:
           java-version: 11
+          distribution: 'zulu'
       - name: Cache local Maven repository
         uses: actions/cache@v2
         with:
@@ -28,6 +32,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        run: |
+          mvn --batch-mode verify \
+          -pl encoders -am
+        timeout-minutes: 30
+      - name: Run the verify goal with Maven
+        if: ${{ github.actor != 'dependabot[bot]' }}
         run: |
           mvn --batch-mode verify \
           -pl encoders -am \
@@ -39,16 +50,18 @@ jobs:
           name: encoders-surefire-reports
           path: encoders/target/surefire-reports
       - name: Publish test results
+        if: ${{ github.actor != 'dependabot[bot]' }}
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Encoders test report
           fail_on_test_failures: true
       - name: Upload coverage to Codecov
+        if: ${{ github.actor != 'dependabot[bot]' }}
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
+          files: encoders/target/site/jacoco/jacoco.xml
   fhir-server:
     name: Build and test FHIR server
     runs-on: ubuntu-latest
@@ -68,6 +81,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        run: |
+          mvn --batch-mode verify \
+          -pl fhir-server -am \
+          -Pdocker,skip-encoders-tests \
+          -DskipITs
+        timeout-minutes: 30
+      - name: Run the verify goal with Maven
+        if: ${{ github.actor != 'dependabot[bot]' }}
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
@@ -86,16 +108,18 @@ jobs:
           name: fhir-server-timing-log
           path: fhir-server/target/timing.log
       - name: Publish test results
+        if: ${{ github.actor != 'dependabot[bot]' }}
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report
           fail_on_test_failures: true
       - name: Upload coverage to Codecov
+        if: ${{ github.actor != 'dependabot[bot]' }}
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
+          files: fhir-server/target/site/jacoco/jacoco.xml
   site:
     name: Build site
     runs-on: ubuntu-latest
