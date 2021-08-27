@@ -16,8 +16,8 @@
   },
   "fhirVersion": "4.0.1",
   "format": [
-    "application/fhir+json",
-    "application/fhir+xml"
+    "json",
+    "xml"
   ],
   "rest": [
     {
