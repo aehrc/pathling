@@ -29,7 +29,7 @@
           "type": "code",
           "binding": {
             "strength": "required",
-            "valueSet": "http://hl7.org/fhir/ValueSet/resource-types|4.0.0"
+            "valueSet": "http://hl7.org/fhir/ValueSet/resource-types|4.0.1"
           }
         },
         {
