@@ -121,8 +121,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     capabilityStatement.setImplementation(implementation);
 
     capabilityStatement.setFhirVersion(FHIRVersion._4_0_1);
-    capabilityStatement.setFormat(
-        Arrays.asList(new CodeType("application/fhir+json"), new CodeType("application/fhir+xml")));
+    capabilityStatement.setFormat(Arrays.asList(new CodeType("json"), new CodeType("xml")));
     capabilityStatement.setRest(buildRestComponent());
 
     return capabilityStatement;

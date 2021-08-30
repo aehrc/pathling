@@ -165,6 +165,7 @@ jobs:
       - name: Run the deploy goal with Maven
         run: |
           mvn --batch-mode deploy \
+          -pl fhir-server -am \
           -Pdocker \
           -DskipTests \
           -Dmaven.deploy.skip
