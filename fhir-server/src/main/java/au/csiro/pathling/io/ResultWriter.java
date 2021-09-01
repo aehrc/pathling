@@ -20,13 +20,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider;
 import org.apache.spark.sql.Dataset;
@@ -89,28 +90,31 @@ public class ResultWriter {
     final String resultFileUrl = resultUrl + "/" + UUID.randomUUID();
     log.info("Writing result: " + resultFileUrl);
     try {
-      result.write()
+      result.coalesce(1)
+          .write()
           .mode(SaveMode.ErrorIfExists)
           .csv(resultFileUrl);
     } catch (final Exception e) {
       throw new RuntimeException("Problem writing to file: " + resultFileUrl, e);
     }
 
-    // Merge partitioned result into a single result file.
-    final String mergedUrl = resultFileUrl + ".csv";
-    log.info("Merging result: " + mergedUrl);
+    // Find the single file and copy it into the final location.
+    final String targetUrl = resultFileUrl + ".csv";
+    log.info("Renaming result to: " + targetUrl);
     try {
-      // TODO: Reimplement this method to allow for future upgrades to the Hadoop dependency.
-      //noinspection deprecation
-      FileUtil.copyMerge(resultLocation, new Path(resultFileUrl), resultLocation,
-          new Path(mergedUrl),
-          true, hadoopConfiguration, null);
+      final FileStatus[] partitionFiles = resultLocation.listStatus(new Path(resultFileUrl));
+      final String targetFile = Arrays.stream(partitionFiles)
+          .map(f -> f.getPath().toString())
+          .filter(f -> f.endsWith(".csv"))
+          .findFirst()
+          .orElseThrow(() -> new IOException("Partition file not found"));
+      resultLocation.rename(new Path(targetFile), new Path(targetUrl));
     } catch (final IOException e) {
-      throw new RuntimeException("Problem merging result", e);
+      throw new RuntimeException("Problem copying partition file", e);
     }
 
     // If the result is an S3 URL, it will need to be converted into a signed URL.
-    final String convertedUrl = convertS3aToS3Url(mergedUrl);
+    final String convertedUrl = convertS3aToS3Url(targetUrl);
     if (convertedUrl.startsWith("s3://")) {
       final URI parsedUrl;
       try {
