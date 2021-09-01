@@ -100,15 +100,18 @@ public class ResultWriter {
 
     // Find the single file and copy it into the final location.
     final String targetUrl = resultFileUrl + ".csv";
-    log.info("Renaming result to: " + targetUrl);
     try {
-      final FileStatus[] partitionFiles = resultLocation.listStatus(new Path(resultFileUrl));
+      final Path resultPath = new Path(resultFileUrl);
+      final FileStatus[] partitionFiles = resultLocation.listStatus(resultPath);
       final String targetFile = Arrays.stream(partitionFiles)
           .map(f -> f.getPath().toString())
           .filter(f -> f.endsWith(".csv"))
           .findFirst()
           .orElseThrow(() -> new IOException("Partition file not found"));
+      log.info("Renaming result to: " + targetUrl);
       resultLocation.rename(new Path(targetFile), new Path(targetUrl));
+      log.info("Cleaning up: " + resultFileUrl);
+      resultLocation.delete(resultPath, true);
     } catch (final IOException e) {
       throw new RuntimeException("Problem copying partition file", e);
     }
