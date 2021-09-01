@@ -71,6 +71,7 @@
             </goals>
             <configuration>
               <sourceDirectory>${project.build.directory}/dependency</sourceDirectory>
+              <outputDirectory>${project.build.directory}/javadoc-sources</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -88,7 +89,7 @@
           </execution>
         </executions>
         <configuration>
-          <sourcepath>${project.build.directory}/generated-sources/delombok</sourcepath>
+          <sourcepath>${project.build.directory}/javadoc-sources</sourcepath>
           <sourceFileExcludes>
             <exclude>au/csiro/pathling/spark/Spark.java</exclude>
           </sourceFileExcludes>

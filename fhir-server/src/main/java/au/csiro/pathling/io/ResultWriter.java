@@ -88,15 +88,19 @@ public class ResultWriter {
     // Write result dataset to result location.
     final String resultFileUrl = resultUrl + "/" + UUID.randomUUID();
     log.info("Writing result: " + resultFileUrl);
-    result.write()
-        .mode(SaveMode.ErrorIfExists)
-        .csv(resultFileUrl);
+    try {
+      result.write()
+          .mode(SaveMode.ErrorIfExists)
+          .csv(resultFileUrl);
+    } catch (final Exception e) {
+      throw new RuntimeException("Problem writing to file: " + resultFileUrl, e);
+    }
 
     // Merge partitioned result into a single result file.
     final String mergedUrl = resultFileUrl + ".csv";
     log.info("Merging result: " + mergedUrl);
     try {
-      //TODO: Reimplement this method to allow for future upgrades to the Hadoop dependency.
+      // TODO: Reimplement this method to allow for future upgrades to the Hadoop dependency.
       //noinspection deprecation
       FileUtil.copyMerge(resultLocation, new Path(resultFileUrl), resultLocation,
           new Path(mergedUrl),

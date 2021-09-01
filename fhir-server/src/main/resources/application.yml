@@ -83,17 +83,6 @@ pathling:
     # Provides the URL which will be advertised as the token revocation endpoint.
     # revokeUrl: [token revocation URL]
 
-  caching:
-    # Controls whether request caching is enabled.
-    enabled: true
-
-    # Controls the maximum number of cache entries held in memory for each of the individual cache
-    # types. You can disable a particular type of caching by setting this number to zero.
-    aggregateRequestCacheSize: 100
-    searchBundleCacheSize: 100
-    searchPageCacheSize: 100
-    resourceReaderCacheSize: 100
-
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:

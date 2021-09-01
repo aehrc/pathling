@@ -78,9 +78,6 @@ public class Configuration {
   private Configuration.Authorization auth;
 
   @NotNull
-  private Caching caching;
-
-  @NotNull
   private Cors cors;
 
   // Handle the `import` property outside of Lombok, as import is a Java keyword.
@@ -262,39 +259,6 @@ public class Configuration {
     public Optional<String> getAudience() {
       return Optional.ofNullable(audience);
     }
-
-  }
-
-  /**
-   * Represents configuration specific to request caching.
-   */
-  @Data
-  public static class Caching {
-
-    /**
-     * Controls whether request caching is enabled.
-     */
-    @NotNull
-    private boolean enabled;
-
-    /**
-     * Controls the maximum number of cache entries held in memory.
-     */
-    @NotNull
-    @Min(0)
-    private Long aggregateRequestCacheSize;
-
-    @NotNull
-    @Min(0)
-    private Long searchBundleCacheSize;
-
-    @NotNull
-    @Min(0)
-    private Long searchPageCacheSize;
-
-    @NotNull
-    @Min(0)
-    private Long resourceReaderCacheSize;
 
   }
 

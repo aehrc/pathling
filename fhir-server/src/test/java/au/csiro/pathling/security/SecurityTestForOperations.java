@@ -13,7 +13,6 @@ import au.csiro.pathling.aggregate.AggregateProvider;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.ResourceProviderFactory;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.search.CachingSearchProvider;
 import au.csiro.pathling.search.SearchProvider;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.update.ImportProvider;
@@ -65,28 +64,15 @@ public abstract class SecurityTestForOperations extends SecurityTest {
   }
 
   public void assertSearchSuccess() {
-    final SearchProvider searchProvider = (SearchProvider) resourceProviderFactory
-        .createSearchResourceProvider(ResourceType.Patient, false);
+    final SearchProvider searchProvider = resourceProviderFactory
+        .createSearchResourceProvider(ResourceType.Patient);
     searchProvider.search(null);
   }
 
   public void assertSearchWithFilterSuccess() {
-    final SearchProvider searchProvider = (SearchProvider) resourceProviderFactory
-        .createSearchResourceProvider(ResourceType.Patient, false);
+    final SearchProvider searchProvider = resourceProviderFactory
+        .createSearchResourceProvider(ResourceType.Patient);
     searchProvider.search(null);
-  }
-
-  public void assertCachingSearchSuccess() {
-    final CachingSearchProvider cachingSearchProvider = (CachingSearchProvider) resourceProviderFactory
-        .createSearchResourceProvider(ResourceType.Patient, true);
-    cachingSearchProvider.search();
-    cachingSearchProvider.search(null);
-  }
-
-  public void assertCachingSearchWithFilterSuccess() {
-    final CachingSearchProvider cachingSearchProvider = (CachingSearchProvider) resourceProviderFactory
-        .createSearchResourceProvider(ResourceType.Patient, true);
-    cachingSearchProvider.search(null);
   }
 
 }

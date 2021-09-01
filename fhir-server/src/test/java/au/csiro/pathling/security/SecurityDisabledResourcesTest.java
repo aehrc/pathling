@@ -9,11 +9,7 @@ package au.csiro.pathling.security;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(
-    properties = {
-        "pathling.auth.enabled=false",
-        "pathling.caching.enabled=false"
-    })
+@TestPropertySource(properties = {"pathling.auth.enabled=false"})
 public class SecurityDisabledResourcesTest extends SecurityTestForResources {
 
   @Test
@@ -25,4 +21,5 @@ public class SecurityDisabledResourcesTest extends SecurityTestForResources {
   public void testPassIfResourceReadWithNoAuth() {
     assertReadSuccess();
   }
+  
 }

@@ -11,13 +11,9 @@ import static au.csiro.pathling.io.PersistenceScheme.fileNameForResource;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -48,7 +44,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("core")
 @Slf4j
-public class ResourceReader implements Cacheable {
+public class ResourceReader {
 
   @Nonnull
   private final SparkSession spark;
@@ -63,9 +59,6 @@ public class ResourceReader implements Cacheable {
   private Set<ResourceType> availableResourceTypes = Collections
       .unmodifiableSet(EnumSet.noneOf(ResourceType.class));
 
-  @Nullable
-  private LoadingCache<ResourceType, Dataset<Row>> cache = null;
-
   /**
    * @param configuration A {@link Configuration} object which controls the behaviour of the reader
    * @param spark A {@link SparkSession} for interacting with Spark
@@ -75,23 +68,7 @@ public class ResourceReader implements Cacheable {
     this.spark = spark;
     this.warehouseUrl = convertS3ToS3aUrl(configuration.getStorage().getWarehouseUrl());
     this.databaseName = configuration.getStorage().getDatabaseName();
-    if (configuration.getCaching().isEnabled()) {
-      cache = initializeCache(configuration.getCaching().getResourceReaderCacheSize());
-    }
     updateAvailableResourceTypes();
-  }
-
-  private LoadingCache<ResourceType, Dataset<Row>> initializeCache(final long maximumSize) {
-    return CacheBuilder.newBuilder()
-        .maximumSize(maximumSize)
-        .build(
-            new CacheLoader<>() {
-              @Override
-              public Dataset<Row> load(@Nonnull final ResourceType resourceType) {
-                return getDatasetForResourceType(resourceType);
-              }
-            }
-        );
   }
 
   /**
@@ -167,18 +144,9 @@ public class ResourceReader implements Cacheable {
    * @param resourceType The desired {@link ResourceType}.
    * @return A {@link Dataset} containing the raw resource, i.e. NOT wrapped in a value column.
    */
-  @Nonnull
   @ResourceAccess(AccessType.READ)
-  public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
-    if (cache == null) {
-      return getDatasetForResourceType(resourceType);
-    } else {
-      return cache.getUnchecked(resourceType);
-    }
-  }
-
   @Nonnull
-  private Dataset<Row> getDatasetForResourceType(@Nonnull final ResourceType resourceType) {
+  public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
     if (!getAvailableResourceTypes().contains(resourceType)) {
       throw new ResourceNotFoundError(
           "Requested resource type not available within selected database: " + resourceType
@@ -195,10 +163,4 @@ public class ResourceReader implements Cacheable {
     return resources;
   }
 
-  @Override
-  public void invalidateCache() {
-    if (cache != null) {
-      cache.invalidateAll();
-    }
-  }
 }

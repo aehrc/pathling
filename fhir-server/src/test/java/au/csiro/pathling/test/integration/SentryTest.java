@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.aggregate.CachingAggregateExecutor;
+import au.csiro.pathling.aggregate.AggregateExecutor;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +39,7 @@ class SentryTest extends WireMockTest {
   private TestRestTemplate restTemplate;
 
   @MockBean
-  private CachingAggregateExecutor aggregateExecutor;
+  private AggregateExecutor aggregateExecutor;
 
   @BeforeEach
   void setUp() {

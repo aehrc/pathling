@@ -113,19 +113,6 @@ Here are a few that you might be particularly interested in:
   [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3) 
   within bearer tokens.
   
-### Caching
-
-- `pathling.caching.enabled` - (default: `true`) Controls whether request 
-  caching is enabled.
-- `pathling.caching.aggregateRequestCacheSize` - (default: `100`) Controls the 
-  maximum number of cache entries held in memory for the aggregate operation.
-- `pathling.caching.searchBundleCacheSize` - (default: `100`) Controls the 
-  maximum number of cache entries held in memory for the search operation.
-- `pathling.caching.searchPageCacheSize` - (default: `100`) Controls the 
-  maximum number of pages held in memory for each search operation.
-- `pathling.caching.resourceReaderCacheSize` - (default: `100`) Controls the 
-  maximum number of resource tables held in memory.
-
 ### Cross-Origin Resource Sharing (CORS)
 
 See the 

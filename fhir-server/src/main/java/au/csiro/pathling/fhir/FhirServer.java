@@ -69,6 +69,9 @@ public class FhirServer extends RestfulServer {
   private final ErrorReportingInterceptor errorReportingInterceptor;
 
   @Nonnull
+  private final EntityTagInterceptor entityTagInterceptor;
+
+  @Nonnull
   private final ConformanceProvider conformanceProvider;
 
   @Nonnull
@@ -86,6 +89,7 @@ public class FhirServer extends RestfulServer {
    * @param requestIdInterceptor A {@link RequestIdInterceptor} for adding request IDs to logging
    * @param errorReportingInterceptor A {@link ErrorReportingInterceptor} for reporting errors to
    * Sentry
+   * @param entityTagInterceptor A {@link EntityTagInterceptor} validating and returning ETags
    * @param conformanceProvider A {@link ConformanceProvider} for receiving requests for the server
    * CapabilityStatement
    * @param resourceProviderFactory A {@link ResourceProviderFactory} for providing instances of
@@ -99,6 +103,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
+      @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
       @Nonnull final ResourceProviderFactory resourceProviderFactory) {
     super(fhirContext);
@@ -108,6 +113,7 @@ public class FhirServer extends RestfulServer {
     this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
+    this.entityTagInterceptor = entityTagInterceptor;
     this.conformanceProvider = conformanceProvider;
     this.resourceProviderFactory = resourceProviderFactory;
     log.info("Starting FHIR server with configuration: {}", configuration);
@@ -157,6 +163,9 @@ public class FhirServer extends RestfulServer {
       // Register error handling interceptor.
       registerInterceptor(new ErrorHandlingInterceptor());
 
+      // Register ETag handling interceptor.
+      registerInterceptor(entityTagInterceptor);
+
       // Report errors to Sentry, if configured.
       registerInterceptor(errorReportingInterceptor);
 
@@ -201,8 +210,8 @@ public class FhirServer extends RestfulServer {
 
     // Instantiate a search provider for every resource type in FHIR.
     for (final ResourceType resourceType : ResourceType.values()) {
-      final IResourceProvider searchProvider = resourceProviderFactory
-          .createSearchResourceProvider(resourceType, configuration.getCaching().isEnabled());
+      final IResourceProvider searchProvider =
+          resourceProviderFactory.createSearchResourceProvider(resourceType);
       providers.add(searchProvider);
     }
     return providers;
