@@ -1,21 +1,21 @@
 ---
 layout: page
 title: Aggregate
-nav_order: 3
-parent: Documentation
+nav_order: 2
+parent: Operations
+grand_parent: Documentation
 ---
 
 # Aggregate
 
 [FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4)
 
-Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
-interface, and the `$aggregate` operation is an
-[extended operation](https://hl7.org/fhir/R4/operations.html) defined on that
-interface.
-
 This operation allows a user to perform aggregate queries on data held within
-the FHIR server by specifying aggregation, grouping and filter expressions.
+the FHIR server. You call the operation by specifying aggregation, grouping and 
+filter expressions, and grouped results are returned.
+
+The aggregate operation is useful for exploratory data analysis, as well as 
+powering visualizations and other summarized views of the data.
 
 ```
 GET [FHIR endpoint]/[resource type]/$aggregate?[parameters...]

@@ -1,18 +1,14 @@
 ---
 layout: page
 title: Import
-nav_order: 1
-parent: Documentation
+nav_order: 0
+parent: Operations
+grand_parent: Documentation
 ---
 
 # Import
 
 [FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-4)
-
-Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
-interface, and the `$import` operation is an
-[extended operation](https://hl7.org/fhir/R4/operations.html) defined on that
-interface.
 
 This operation allows FHIR R4 data to be imported into the server, making it
 available for query via other operations such as [search](./search.html) and

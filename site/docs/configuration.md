@@ -58,6 +58,9 @@ Additionally, you can set any variable supported by Spring Boot, see
   [Amazon S3](https://aws.amazon.com/s3/) (`s3://`),
   [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`) or
   filesystem (`file://`) URL.
+- `pathling.storage.resultUrl` - (default: `file:///usr/share/results`) The URL 
+  that Pathling will use to output the results of bulk operations such as 
+  [extract](./extract.html). Supports the same types of URLs as `warehouseUrl`.
 - `pathling.storage.databaseName` - (default: `default`) The subdirectory within 
   the warehouse path used to read and write data.
 - `pathling.storage.aws.anonymousAccess` - (default: `true`) Public S3 buckets 
@@ -66,6 +69,9 @@ Additionally, you can set any variable supported by Spring Boot, see
   a protected Amazon S3 bucket.
 - `pathling.storage.aws.secretAccessKey` - Authentication details for connecting 
   to a protected Amazon S3 bucket.
+- `pathling.storage.aws.signedUrlExpiry` - (default: `3600`) Number of seconds 
+  that S3 pre-signed URLs should remain valid for. This is relevant when using 
+  an S3 URL for `resultUrl`.
 
 ### Apache Spark
 
@@ -147,79 +153,4 @@ that are controlled by this configuration.
 - `pathling.sentryEnvironment` - If this variable is set, this will be sent as
   the environment when reporting errors to Sentry.
 
-## Server base
-
-There are a number of operations within the Pathling FHIR API that pass back
-URLs referring back to API endpoints. The host and protocol components of these
-URLs are automatically detected based upon the details of the incoming request.
-
-In some cases it might be desirable to override the hostname and protocol,
-particularly where Pathling is being hosted behind some sort of proxy. To
-account for this, Pathling also supports the use of the
-[X-Forwarded-Proto](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto),
-[X-Forwarded-Host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host)
-and `X-Forwarded-Port` headers to override the protocol, hostname and port 
-within URLs sent back by the API.
-
-## Authorization
-
-Pathling can perform the role of a resource server within the
-[OpenID Connect framework](https://openid.net/connect/).
-
-When authorization is enabled through configuration, Pathling will refuse any
-requests which are not accompanied by a valid
-[bearer token](https://tools.ietf.org/html/rfc6750). The following requirements
-must be met:
-
-- Token is a [JSON Web Token](https://tools.ietf.org/html/rfc7519)
-- Token contains an
-  [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3) that
-  matches the configured value
-- Token contains an [issuer claim](https://tools.ietf.org/html/rfc7519#section-4.1.1)
-  that matches the configured value
-- Issuer provides an [OpenID Connect Discovery endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html) that provides information 
-  about how to validate the token, including a link to a 
-  [JSON Web Key Set](https://tools.ietf.org/html/rfc7517) containing the signing 
-  key. This endpoint needs to be accessible to the Pathling server.
-  
-### Authorities
-
-Pathling supports a set of authorities that control access to resources and 
-operations. Authorities must be provided within the `authorities` claim within 
-the JWT bearer token provided with each request.
-
-<img src="/images/authorities.png"
-srcset="/images/authorities@2x.png 2x, /images/authorities.png 1x"
-alt="Authorities" />
-
-| Authority                        | Description                                                                        |
-| -------------------------------- | ---------------------------------------------------------------------------------- |
-| `pathling`                       | Provides access to all operations and resources, implies all other authorities.    |
-| `pathling:read`                  | Provides read access to all resource types.                                        |
-| `pathling:read:[resource type]`  | Provides read access to only a specified resource type.                            |
-| `pathling:write`                 | Provides write access to all resource types.                                       |
-| `pathling:write:[resource type]` | Provides write access to only a specified resource type.                           |
-| `pathling:import`                | Provides access to the import operation.                                           |
-| `pathling:aggregate`             | Provides access to the aggregate operation.                                        |
-| `pathling:search`                | Provides access to the search operation.                                           |
-
-In order to enable access to an operation, an operation authority (e.g. 
-`pathling:search`) must be provided along with a `read` or `write` authority 
-(e.g. `pathling:read:Patient`).
-
-Where expressions within a request reference multiple different resource types 
-(e.g. through resource references), authority for read access to all those 
-resources must be present within the token.
-
-The import operation requires `write` authority for all resource types that are 
-referenced within the request.
-
-## Apache Spark
-
-Pathling can also be run directly within an Apache Spark cluster as a persistent
-application.
-
-For compatibility, Pathling runs Spark 3.1.2 (Scala 2.12), with Hadoop version
-2.10.1.
-
-Next: [Roadmap](./roadmap.html)
+Next: [Deployment](./deployment)
