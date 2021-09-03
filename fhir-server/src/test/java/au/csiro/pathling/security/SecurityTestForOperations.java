@@ -47,7 +47,7 @@ public abstract class SecurityTestForOperations extends SecurityTest {
 
   public void assertImportSuccess() {
     try {
-      importProvider.importOperation(new Parameters());
+      importProvider.importOperation(new Parameters(), null, null, null);
     } catch (final InvalidUserInputError ex) {
       // pass
     }
@@ -57,7 +57,7 @@ public abstract class SecurityTestForOperations extends SecurityTest {
     final AggregateProvider aggregateProvider = (AggregateProvider) resourceProviderFactory
         .createAggregateResourceProvider(ResourceType.Patient);
     try {
-      aggregateProvider.aggregate(null, null, null);
+      aggregateProvider.aggregate(null, null, null, null, null, null);
     } catch (final InvalidUserInputError ex) {
       // pass
     }

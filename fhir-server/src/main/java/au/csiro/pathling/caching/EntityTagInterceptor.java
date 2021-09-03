@@ -4,18 +4,18 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.fhir;
+package au.csiro.pathling.caching;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.caching.EntityTagValidator;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
 import java.util.Date;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -35,6 +35,8 @@ import org.springframework.stereotype.Component;
 @Interceptor
 @Slf4j
 public class EntityTagInterceptor {
+
+  private static final List<String> NON_CACHEABLE_OPERATIONS = List.of("$job");
 
   @Nonnull
   private final EntityTagValidator validator;
@@ -68,7 +70,7 @@ public class EntityTagInterceptor {
     checkNotNull(request);
     checkNotNull(response);
     checkNotNull(requestDetails);
-    if (requestIsCacheable(request)) {
+    if (requestIsCacheable(request, requestDetails)) {
       final String tagHeader = request.getHeader("If-None-Match");
       if (tagMatches(tagHeader, requestDetails)) {
         log.info("Entity tag validation succeeded, processing not required");
@@ -107,8 +109,11 @@ public class EntityTagInterceptor {
         requestDetails.getOperation().equals("$extract");
   }
 
-  private static boolean requestIsCacheable(@Nonnull final HttpServletRequest request) {
-    return request.getMethod().equals("GET") || request.getMethod().equals("HEAD");
+  private static boolean requestIsCacheable(@Nonnull final HttpServletRequest request,
+      @Nonnull final RequestDetails requestDetails) {
+    //noinspection RedundantCollectionOperation
+    return (request.getMethod().equals("GET") || request.getMethod().equals("HEAD"))
+        && !NON_CACHEABLE_OPERATIONS.contains(requestDetails.getOperation());
   }
 
 }

@@ -70,7 +70,7 @@ public class ExtractExecutor extends QueryExecutor {
     final Dataset<Row> result = buildQuery(query);
 
     // Write the result and get the URL.
-    final String resultUrl = resultWriter.write(result);
+    final String resultUrl = resultWriter.write(result, query.getRequestId());
 
     // TODO: Figure out what to do with ETags and signed URLs.
     return new ExtractResponse(resultUrl);

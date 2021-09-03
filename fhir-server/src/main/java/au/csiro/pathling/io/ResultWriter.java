@@ -22,7 +22,7 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.UUID;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -65,10 +65,11 @@ public class ResultWriter {
   /**
    * Writes a result to the configured result storage area.
    *
-   * @param result The {@link Dataset} containing the result.
+   * @param result the {@link Dataset} containing the result
+   * @param requestId a request ID to use in the filename
    * @return the URL of the result
    */
-  public String write(@Nonnull final Dataset result) {
+  public String write(@Nonnull final Dataset result, @Nonnull final Optional<String> requestId) {
     final String resultUrl = convertS3ToS3aUrl(configuration.getStorage().getResultUrl());
 
     // Get a handle for the Hadoop FileSystem representing the result location, and check that it
@@ -87,7 +88,8 @@ public class ResultWriter {
     checkNotNull(resultLocation);
 
     // Write result dataset to result location.
-    final String resultFileUrl = resultUrl + "/" + UUID.randomUUID();
+    final String validatedRequestId = checkPresent(requestId);
+    final String resultFileUrl = resultUrl + "/" + validatedRequestId;
     log.info("Writing result: " + resultFileUrl);
     try {
       result.coalesce(1)

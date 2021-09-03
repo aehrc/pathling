@@ -8,14 +8,18 @@ package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
+import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
@@ -64,15 +68,25 @@ public class ExtractProvider implements IResourceProvider {
    *
    * @param column a list of column expressions
    * @param filter a list of filter expressions
+   * @param request the {@link HttpServletRequest} details
+   * @param requestDetails the {@link RequestDetails} containing HAPI inferred info
+   * @param response the {@link HttpServletResponse} response
    * @return {@link Parameters} object representing the result
    */
   @Operation(name = "$extract", idempotent = true)
   @OperationAccess("extract")
+  @AsyncSupported
   public Parameters extract(
       @Nullable @OperationParam(name = "column") final List<String> column,
-      @Nullable @OperationParam(name = "filter") final List<String> filter) {
-    final ExtractRequest query = new ExtractRequest(
-        resourceType, Optional.ofNullable(column), Optional.ofNullable(filter));
+      @Nullable @OperationParam(name = "filter") final List<String> filter,
+      @SuppressWarnings("unused") @Nullable final HttpServletRequest request,
+      @SuppressWarnings("unused") @Nullable final RequestDetails requestDetails,
+      @SuppressWarnings("unused") @Nullable final HttpServletResponse response) {
+    final Optional<String> requestId = requestDetails != null
+                                       ? Optional.ofNullable(requestDetails.getRequestId())
+                                       : Optional.empty();
+    final ExtractRequest query = new ExtractRequest(resourceType, Optional.ofNullable(column),
+        Optional.ofNullable(filter), requestId);
     final ExtractResponse result = extractExecutor.execute(query);
     return result.toParameters();
   }

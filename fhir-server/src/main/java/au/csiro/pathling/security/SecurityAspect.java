@@ -62,7 +62,12 @@ public class SecurityAspect {
     checkHasAuthority(PathlingAuthority.operationAccess(operationAccess.value()));
   }
 
-  private static void checkHasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
+  /**
+   * Checks for the supplied authority and raises an error if it is not present.
+   *
+   * @param requiredAuthority the authority required for the operation
+   */
+  public static void checkHasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
     final Authentication authentication = SecurityContextHolder
         .getContext().getAuthentication();
     final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken)

@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Storage;
 import au.csiro.pathling.Configuration.Storage.Aws;
+import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.caching.EntityTagValidator;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;

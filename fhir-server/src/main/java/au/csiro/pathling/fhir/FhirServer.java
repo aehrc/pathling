@@ -9,6 +9,8 @@ package au.csiro.pathling.fhir;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.async.JobProvider;
+import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
@@ -60,6 +62,9 @@ public class FhirServer extends RestfulServer {
   private final ImportProvider importProvider;
 
   @Nonnull
+  private final JobProvider jobProvider;
+
+  @Nonnull
   private final OperationDefinitionProvider operationDefinitionProvider;
 
   @Nonnull
@@ -78,28 +83,29 @@ public class FhirServer extends RestfulServer {
   private final ResourceProviderFactory resourceProviderFactory;
 
   /**
-   * @param fhirContext A {@link FhirContext} for use in executing FHIR operations
-   * @param configuration A {@link Configuration} instance which controls the behaviour of the
+   * @param fhirContext a {@link FhirContext} for use in executing FHIR operations
+   * @param configuration a {@link Configuration} instance which controls the behaviour of the
    * server
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
-   * @param importProvider A {@link ImportProvider} for receiving requests to the import operation
-   * @param operationDefinitionProvider A {@link OperationDefinitionProvider} for receiving requests
+   * @param importProvider a {@link ImportProvider} for receiving requests to the import operation
+   * @param jobProvider a {@link JobProvider} for checking on the status of jobs
+   * @param operationDefinitionProvider a {@link OperationDefinitionProvider} for receiving requests
    * for OperationDefinitions
-   * @param requestIdInterceptor A {@link RequestIdInterceptor} for adding request IDs to logging
-   * @param errorReportingInterceptor A {@link ErrorReportingInterceptor} for reporting errors to
+   * @param requestIdInterceptor a {@link RequestIdInterceptor} for adding request IDs to logging
+   * @param errorReportingInterceptor a {@link ErrorReportingInterceptor} for reporting errors to
    * Sentry
-   * @param entityTagInterceptor A {@link EntityTagInterceptor} validating and returning ETags
-   * @param conformanceProvider A {@link ConformanceProvider} for receiving requests for the server
+   * @param entityTagInterceptor a {@link EntityTagInterceptor} validating and returning ETags
+   * @param conformanceProvider a {@link ConformanceProvider} for receiving requests for the server
    * CapabilityStatement
-   * @param resourceProviderFactory A {@link ResourceProviderFactory} for providing instances of
-   * resource providers
+   * @param resourceProviderFactory a {@link ResourceProviderFactory} for providing instances of
    */
   @SuppressWarnings("TypeMayBeWeakened")
   public FhirServer(@Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final ImportProvider importProvider,
+      @Nonnull final JobProvider jobProvider,
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
@@ -110,6 +116,7 @@ public class FhirServer extends RestfulServer {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.importProvider = importProvider;
+    this.jobProvider = jobProvider;
     this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
@@ -145,6 +152,9 @@ public class FhirServer extends RestfulServer {
 
       // Register resource providers.
       registerProvider(operationDefinitionProvider);
+
+      // Register job provider.
+      registerProvider(jobProvider);
 
       // Configure interceptors.
       configureRequestLogging();
