@@ -58,8 +58,11 @@ public class SparkListener implements SparkListenerInterface {
     checkNotNull(stageSubmitted);
     @Nullable final String jobGroupId = stageSubmitted.properties()
         .getProperty("spark.jobGroup.id");
+    if (jobGroupId == null) {
+      return;
+    }
     @Nullable final Job job = jobRegistry.get(jobGroupId);
-    if (jobGroupId != null && job != null) {
+    if (job != null) {
       stageMap.put(stageSubmitted.stageInfo().stageId(), jobGroupId);
       job.incrementTotalStages();
     }
