@@ -25,6 +25,10 @@ The URL that is returned by the operation is determined by the
 parameter. If you are using Amazon S3 for storing of results, the 
 `pathling.storage.aws.signedUrlExpiry` will also be relevant.
 
+<div class="callout info">
+   If you request a column with the <code>Coding</code> type, it will be expressed within the resulting extract using the <a href="../fhirpath/data-types.html#coding">Coding literal format</a>. 
+</div>
+
 ```
 GET [FHIR endpoint]/[resource type]/$extract?[parameters...]
 ```

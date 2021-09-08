@@ -83,7 +83,7 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
         lit(value.getVersion()).as("version"),
         lit(value.getCode()).as("code"),
         lit(value.getDisplay()).as("display"),
-        lit(value.hasUserSelected()?value.getUserSelected():null).as("userSelected"));
+        lit(value.hasUserSelected() ? value.getUserSelected() : null).as("userSelected"));
   }
 
   @Override
@@ -107,5 +107,11 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof CodingPath;
   }
- 
+
+  @Nonnull
+  @Override
+  public Column getExtractableColumn() {
+    return lit(CodingLiteral.toLiteral(getLiteralValue()));
+  }
+
 }

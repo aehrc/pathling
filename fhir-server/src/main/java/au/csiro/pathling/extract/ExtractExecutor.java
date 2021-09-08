@@ -10,6 +10,7 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -72,7 +73,6 @@ public class ExtractExecutor extends QueryExecutor {
     // Write the result and get the URL.
     final String resultUrl = resultWriter.write(result, query.getRequestId());
 
-    // TODO: Figure out what to do with ETags and signed URLs.
     return new ExtractResponse(resultUrl);
   }
 
@@ -91,13 +91,14 @@ public class ExtractExecutor extends QueryExecutor {
             query.getSubjectResource().toCode(), true);
     final ParserContext groupingAndFilterContext = buildParserContext(inputContext);
     final Parser parser = new Parser(groupingAndFilterContext);
-    final List<FhirPath> columns = parseMaterializableExpressions(parser, query.getColumns(),
-        "Column");
+    final List<FhirPath> columns = parseMaterializableExpressions(parser,
+        query.getColumns(), "Column");
     final List<FhirPath> filters = parseFilters(parser, query.getFilters());
 
     // Join all filter and column expressions together.
     final Column idColumn = inputContext.getIdColumn();
-    Dataset<Row> columnsAndFilters = joinExpressionsAndFilters(inputContext, columns, filters,
+    Dataset<Row> columnsAndFilters = joinExpressionsAndFilters(inputContext, columns,
+        filters,
         idColumn);
 
     // Apply filters.
@@ -105,7 +106,8 @@ public class ExtractExecutor extends QueryExecutor {
 
     // Select the column values.
     final Column[] columnValues = columns.stream()
-        .map(FhirPath::getValueColumn).toArray(Column[]::new);
+        .map(path -> ((Materializable) path).getExtractableColumn())
+        .toArray(Column[]::new);
     return columnsAndFilters.select(columnValues);
   }
 

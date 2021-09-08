@@ -254,6 +254,9 @@
                 <pathling.storage.warehouseUrl>
                   file://${project.basedir}/src/test/resources/test-data
                 </pathling.storage.warehouseUrl>
+                <pathling.storage.resultUrl>
+                  file://${project.basedir}/src/test/resources/test-data/results
+                </pathling.storage.resultUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
               </systemPropertyVariables>
             </configuration>

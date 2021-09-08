@@ -36,7 +36,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 @Tag("UnitTest")
 @ExtendWith(TimingExtension.class)
-class ExtractExecutorTest {
+class ExtractQueryTest {
 
   @Autowired
   private Configuration configuration;
@@ -57,15 +57,13 @@ class ExtractExecutorTest {
 
   private ResourceReader resourceReader;
 
-  private ResultWriter resultWriter;
-
   private ExtractExecutor executor;
 
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
     resourceReader = mock(ResourceReader.class);
-    resultWriter = mock(ResultWriter.class);
+    final ResultWriter resultWriter = mock(ResultWriter.class);
     executor = new ExtractExecutor(configuration, fhirContext, spark, resourceReader,
         Optional.ofNullable(terminologyServiceFactory), resultWriter);
   }
@@ -85,7 +83,23 @@ class ExtractExecutorTest {
 
     final Dataset<Row> result = executor.buildQuery(request);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractExecutorTest/simpleQuery.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/simpleQuery.csv");
+  }
+
+  @Test
+  void multipleResolves() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("reverseResolve(Condition.subject).code.coding.system")
+        .withColumn("reverseResolve(Condition.subject).code.coding.code")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .debugAllRows();
+    // .hasRows(spark, "responses/ExtractQueryTest/simpleQuery.csv");
   }
 
   private void mockResourceReader(final ResourceType... resourceTypes) {

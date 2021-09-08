@@ -136,6 +136,11 @@ public abstract class NonLiteralPath implements FhirPath {
     return eidColumn.orElse(ORDERING_NULL_VALUE);
   }
 
+  @Nonnull
+  public Column getExtractableColumn() {
+    return getValueColumn();
+  }
+
   /**
    * Returns the specified child of this path, if there is one.
    *
@@ -276,9 +281,9 @@ public abstract class NonLiteralPath implements FhirPath {
       @Nonnull final Column arrayCol,
       @Nonnull final MutablePair<Column, Column> outValueAndEidCols) {
     final Column[] allColumns = Stream.concat(Arrays.stream(dataset.columns())
-        .map(dataset::col), Stream
-        .of(posexplode_outer(arrayCol)
-            .as(new String[]{"index", "value"})))
+            .map(dataset::col), Stream
+            .of(posexplode_outer(arrayCol)
+                .as(new String[]{"index", "value"})))
         .toArray(Column[]::new);
     final Dataset<Row> resultDataset = arrayDataset.select(allColumns);
     outValueAndEidCols.setLeft(resultDataset.col("value"));
