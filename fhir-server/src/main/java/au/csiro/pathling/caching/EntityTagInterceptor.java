@@ -105,15 +105,18 @@ public class EntityTagInterceptor {
   }
 
   private boolean requestIsExtractWithS3Result(@Nonnull final RequestDetails requestDetails) {
-    return configuration.getStorage().getResultUrl().startsWith("s3://") &&
+    final boolean operationExtract = requestDetails.getOperation() != null &&
         requestDetails.getOperation().equals("$extract");
+    return configuration.getStorage().getResultUrl().startsWith("s3://") && operationExtract;
   }
 
   private static boolean requestIsCacheable(@Nonnull final HttpServletRequest request,
       @Nonnull final RequestDetails requestDetails) {
     //noinspection RedundantCollectionOperation
+    final boolean operationCacheable = requestDetails.getOperation() == null ||
+        !NON_CACHEABLE_OPERATIONS.contains(requestDetails.getOperation());
     return (request.getMethod().equals("GET") || request.getMethod().equals("HEAD"))
-        && !NON_CACHEABLE_OPERATIONS.contains(requestDetails.getOperation());
+        && operationCacheable;
   }
 
 }

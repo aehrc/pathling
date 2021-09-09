@@ -106,6 +106,17 @@ class EntityTagInterceptorTest {
   }
 
   @Test
+  void setsETagForSearchRequest() {
+    setupCacheableRequest("GET", null, NON_S3_RESULT_URL, null);
+    when(validator.matches(isNull())).thenReturn(false);
+    when(validator.tag()).thenReturn(TAG);
+
+    interceptor.checkIncomingTag(request, requestDetails, response);
+
+    verifyResponseHeaders();
+  }
+
+  @Test
   void returnsNotModifiedForS3ExtractRequest() {
     setupCacheableRequest("GET", TAG, S3_RESULT_URL, "$extract");
     when(validator.validWithExpiry(eq(TAG), eq(SIGNED_URL_EXPIRY), anyLong())).thenReturn(true);
@@ -138,7 +149,7 @@ class EntityTagInterceptorTest {
   }
 
   private void setupCacheableRequest(@Nonnull final String method, @Nullable final String tag,
-      @Nonnull final String resultUrl, @Nonnull final String operation) {
+      @Nonnull final String resultUrl, @Nullable final String operation) {
     when(request.getMethod()).thenReturn(method);
     when(request.getHeader(eq("If-None-Match"))).thenReturn(tag);
     when(storage.getResultUrl()).thenReturn(resultUrl);
