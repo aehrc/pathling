@@ -18,13 +18,17 @@ import ca.uhn.fhir.context.{RuntimeChildChoiceDefinition, _}
 import org.apache.spark.sql.types.{BooleanType => _, DateType => _, StringType => _, _}
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
 
-import scala.collection.JavaConversions._
+import scala.collection.convert.ImplicitConversions._
 import scala.collection.immutable.Stream.Empty
 
 /**
  * Extracts a Spark schema based on a FHIR data model.
  */
-class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappings) {
+class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappings, maxNestingLevel: Int) {
+
+  def this(fhirContext: FhirContext, dataTypeMappings: DataTypeMappings) {
+    this(fhirContext, dataTypeMappings, 0)
+  }
 
   /**
    * Returns the Spark schema that represents the given FHIR resource
@@ -33,10 +37,38 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
    * @return The schema as a Spark StructType
    */
   def resourceSchema[T <: IBaseResource](resourceClass: Class[T]): StructType = {
-    val definition = fhirContext.getResourceDefinition(resourceClass)
-    compositeToStructType(definition)
+    EncodingContext.runWithContext {
+      val definition = fhirContext.getResourceDefinition(resourceClass)
+      compositeToStructType(definition)
+    }
   }
 
+  /**
+   * Returns the Spark struct type used to encode the given FHIR composite.
+   *
+   * @param definition The FHIR definition of a composite type.
+   * @return The schema as a Spark StructType
+   */
+  private[encoders] def compositeToStructType(definition: BaseRuntimeElementCompositeDefinition[_]): StructType = {
+    EncodingContext.withDefinition(definition) {
+      // Map to (name, value, name, value) expressions for child elements.
+      val fields: Seq[StructField] = definition
+        .getChildren
+        .filter(child => !dataTypeMappings.skipField(definition, child))
+        .flatMap(childToFields)
+      StructType(fields)
+    }
+  }
+
+  /**
+   * Returns the Spark struct type used to encode the given FHIR composite.
+   *
+   * @param definition The FHIR definition of a composite type.
+   * @return The schema as a Spark StructType
+   */
+  private[encoders] def shouldExpand(definition: BaseRuntimeElementDefinition[_]): Boolean = {
+    EncodingContext.currentNestingLevel(definition) <= maxNestingLevel
+  }
 
   /**
    * Returns the fields used to represent the given element definition.
@@ -48,7 +80,8 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
    */
   private def elementToFields(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String, isCollection: Boolean): Seq[StructField] = {
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
-    assert(customEncoder.isEmpty || !isCollection, "Collections are not supported for custom encoders")
+    assert(customEncoder.isEmpty || !isCollection,
+      "Collections are not supported for custom encoders for: " + elementName + "-> " + elementDefinition)
     customEncoder.map(_.schema).getOrElse {
       val childType = elementDefinition match {
         case composite: BaseRuntimeElementCompositeDefinition[_] => compositeToStructType(composite)
@@ -65,37 +98,38 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
   }
 
   /**
+   * Returns the fields used to given named child.
+   *
+   * @param childDefinition the of the child.
+   * @param childName       the name of the child.
+   * @return the list of fields for the named child representation.
+   */
+  private def namedChildToFields(childDefinition: BaseRuntimeChildDefinition, childName: String): Seq[StructField] = {
+
+    val definition = childDefinition.getChildByName(childName)
+    if (shouldExpand(definition)) {
+      elementToFields(definition, childName, isCollection = childDefinition.getMax != 1)
+    } else {
+      Empty
+    }
+  }
+
+  /**
    * Returns the fields used to represent the given child definition. In most cases this
    * will contain a single element, but in special cases like Choice elements, it will
    * contain a field for each possible FHIR choice.
    */
-  private[encoders] def childToFields(childDefinition: BaseRuntimeChildDefinition): Seq[StructField] = {
+  private def childToFields(childDefinition: BaseRuntimeChildDefinition): Seq[StructField] = {
     childDefinition match {
       case _: RuntimeChildContainedResources | _: RuntimeChildExtension => Empty
       case choiceDefinition: RuntimeChildChoiceDefinition =>
         assert(childDefinition.getMax == 1, "Collections of choice elements are not supported")
         getOrderedListOfChoiceTypes(choiceDefinition)
           .map(choiceDefinition.getChildNameByDatatype)
-          .flatMap(childName => elementToFields(choiceDefinition.getChildByName(childName), childName, isCollection = false))
+          .flatMap(childName => namedChildToFields(choiceDefinition, childName))
       case _ =>
-        val definition = childDefinition.getChildByName(childDefinition.getElementName)
-        elementToFields(definition, childDefinition.getElementName, isCollection = childDefinition.getMax != 1)
+        namedChildToFields(childDefinition, childDefinition.getElementName)
     }
-  }
-
-  /**
-   * Returns the Spark struct type used to encode the given FHIR composite.
-   *
-   * @param definition The FHIR definition of a composite type.
-   * @return The schema as a Spark StructType
-   */
-  private[encoders] def compositeToStructType(definition: BaseRuntimeElementCompositeDefinition[_]): StructType = {
-    // Map to (name, value, name, value) expressions for child elements.
-    val fields: Seq[StructField] = definition
-      .getChildren
-      .filter(child => !dataTypeMappings.skipField(definition, child))
-      .flatMap(childToFields)
-    StructType(fields)
   }
 
   /**
@@ -107,8 +141,8 @@ class SchemaConverter(fhirContext: FhirContext, dataTypeMappings: DataTypeMappin
    *                   types.
    * @return The schema of the parent as a Spark StructType
    */
-  private[encoders] def parentToStructType(definition: BaseRuntimeElementCompositeDefinition[_],
-                                           contained: Seq[BaseRuntimeElementCompositeDefinition[_]]): StructType = {
+  private def parentToStructType(definition: BaseRuntimeElementCompositeDefinition[_],
+                                 contained: Seq[BaseRuntimeElementCompositeDefinition[_]]): StructType = {
 
     val parent = compositeToStructType(definition)
 
@@ -132,8 +166,8 @@ object SchemaConverter {
   /**
    * Returns a deterministically ordered list of child types of choice.
    *
-   * @param choice
-   * @return
+   * @param choice the choice child definition.
+   * @return ordered list of child types of choice.
    */
   def getOrderedListOfChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]] = {
     choice.getValidChildTypes.toList.sortBy(_.getTypeName())

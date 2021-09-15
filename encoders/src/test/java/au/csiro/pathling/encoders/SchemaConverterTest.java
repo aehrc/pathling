@@ -27,30 +27,38 @@ import org.apache.spark.sql.types.IntegerType;
 import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.*;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class SchemaConverterTest {
 
-  private static final SchemaConverter converter = new SchemaConverter(FhirContext.forR4(),
-      new R4DataTypeMappings());
+  private static final SchemaConverter CONVERTER_L0 = new SchemaConverter(FhirContext.forR4(),
+      new R4DataTypeMappings(), 0);
 
-  private static final StructType conditionSchema = converter.resourceSchema(Condition.class);
+  private static final SchemaConverter CONVERTER_L1 = new SchemaConverter(FhirContext.forR4(),
+      new R4DataTypeMappings(), 1);
 
-  private static final StructType observationSchema = converter.resourceSchema(Observation.class);
+  private static final SchemaConverter CONVERTER_L2 = new SchemaConverter(FhirContext.forR4(),
+      new R4DataTypeMappings(), 2);
 
-  private static final StructType medRequestSchema = converter
+  private static final StructType conditionSchema = CONVERTER_L0.resourceSchema(Condition.class);
+
+  private static final StructType observationSchema = CONVERTER_L0
+      .resourceSchema(Observation.class);
+
+  private static final StructType medRequestSchema = CONVERTER_L0
       .resourceSchema(MedicationRequest.class);
 
-  private static final StructType questionnaireSchema = converter
+  private static final StructType questionnaireSchema = CONVERTER_L0
       .resourceSchema(Questionnaire.class);
 
-  private static final StructType questionnaireResponseSchema = converter
+  private static final StructType questionnaireResponseSchema = CONVERTER_L0
       .resourceSchema(QuestionnaireResponse.class);
 
   /**
    * Returns the type of a nested field.
    */
-  private DataType getField(final DataType dataType, final boolean isNullable,
+  private static DataType getField(final DataType dataType, final boolean isNullable,
       final String... names) {
 
     final StructType schema = dataType instanceof ArrayType
@@ -77,6 +85,22 @@ public class SchemaConverterTest {
       return getField(child, isNullable, Arrays.copyOfRange(names, 1, names.length));
     }
   }
+
+  private static DataType unArray(final DataType maybeArrayType) {
+    return maybeArrayType instanceof ArrayType
+           ?
+           ((ArrayType) maybeArrayType).elementType()
+           : maybeArrayType;
+  }
+
+  private static void assertFieldNotPresent(final String fieldName,
+      final DataType maybeStructType) {
+    assertTrue("Must be struct type.", maybeStructType instanceof StructType);
+    assertTrue("Field: '" + fieldName + "' not present in struct type.",
+        ((StructType) maybeStructType).getFieldIndex(
+            fieldName).isEmpty());
+  }
+
 
   @Test
   public void resourceHasId() {
@@ -194,5 +218,82 @@ public class SchemaConverterTest {
         "medicationMedication").isEmpty());
     assertTrue(medRequestSchema.getFieldIndex(
         "medicationResource").isEmpty());
+  }
+
+  @Test
+  public void testDirectlyNestedType() {
+    // level 0  - only the backbone element from the resource
+    // Questionnaire/item
+    final StructType questionnaireSchema_L0 = CONVERTER_L0
+        .resourceSchema(Questionnaire.class);
+
+    assertFieldNotPresent("item", unArray(getField(questionnaireSchema_L0, true, "item")));
+
+    // level 1
+    // Questionnaire/item/item
+    final StructType questionnaireSchema_L1 = CONVERTER_L1
+        .resourceSchema(Questionnaire.class);
+
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireSchema_L1, true, "item", "item", "linkId"));
+    assertFieldNotPresent("item", unArray(getField(questionnaireSchema_L1, true, "item", "item")));
+
+    // level 2
+    // Questionnaire/item/item/item
+    final StructType questionnaireSchema_L2 = CONVERTER_L2
+        .resourceSchema(Questionnaire.class);
+
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireSchema_L2, true, "item", "item", "item", "linkId"));
+    assertFieldNotPresent("item",
+        unArray(getField(questionnaireSchema_L2, true, "item", "item", "item")));
+  }
+
+
+  @Test
+  public void testIndirectlyNestedType() {
+    // level 0  - only the backbone element from the resource
+    // QuestionnaireResponse/item/answer
+    final StructType questionnaireResponseSchema_L0 = CONVERTER_L0
+        .resourceSchema(QuestionnaireResponse.class);
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L0, true, "item", "answer", "id"));
+    assertFieldNotPresent("item",
+        unArray(getField(questionnaireResponseSchema_L0, true, "item", "answer")));
+    // level 1
+    // QuestionnaireResponse/item/answer/item/answer
+    final StructType questionnaireResponseSchema_L1 = CONVERTER_L1
+        .resourceSchema(QuestionnaireResponse.class);
+
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L1, true, "item", "answer", "item", "linkId"));
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L1, true, "item", "answer", "item", "answer", "id"));
+    assertFieldNotPresent("item", unArray(
+        getField(questionnaireResponseSchema_L1, true, "item", "answer", "item", "answer")));
+
+    // level 2
+    // QuestionnaireResponse/item/answer/item/answer/item/answer/item/answer
+    final StructType questionnaireResponseSchema_L2 = CONVERTER_L2
+        .resourceSchema(QuestionnaireResponse.class);
+
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L2, true,
+            "item", "answer", "item", "answer", "item", "linkId"));
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L2, true,
+            "item", "answer", "item", "answer", "item", "answer", "id"));
+    assertFieldNotPresent("item", unArray(getField(questionnaireResponseSchema_L2, true,
+        "item", "answer", "item", "answer", "item", "answer")));
+  }
+
+  // TODO: Complete when "#375 - Collections are not supported for custom encoders is fixed"
+  @Test
+  @Ignore
+  public void testNestedTypeInChoice() {
+
+    //  Parameters
+    //  ElementDefinition: parameter.valueElementDefinition-> parameter.valueElementDefinition.fixedElementDefinition
+    //  ElementDefinition: parameter.valueElementDefinition-> parameter.valueElementDefinition.example.valueElementDefinition (indirect)
   }
 }

@@ -15,6 +15,9 @@ package au.csiro.pathling.encoders;
 import com.google.common.collect.ImmutableList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Medication.MedicationIngredientComponent;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
@@ -276,11 +279,64 @@ public class TestData {
   }
 
 
-  private static QuestionnaireItemComponent newNestedItem(final int nestingLevel) {
-    final QuestionnaireItemComponent item = new QuestionnaireItemComponent();
+  private static List<QuestionnaireItemComponent> newNestedItems(final int nestingLevel,
+      final int noChildren, final String parentId) {
+
+    return IntStream.range(0, noChildren)
+        .mapToObj(i -> {
+          final QuestionnaireItemComponent item = new QuestionnaireItemComponent();
+          final String thisItemId = parentId + i;
+          item.setLinkId("Item/" + thisItemId);
+          if (nestingLevel > 0) {
+            item.setItem(newNestedItems(nestingLevel - 1, noChildren, thisItemId + "."));
+          }
+          return item;
+        })
+        .collect(
+            Collectors.toList());
+  }
+
+  /**
+   * Returns a FHIR Questionnaire resource with nested Item elements for testing purposes.
+   *
+   * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
+   * present in the Questionnaire but with no nested items.
+   * @param noChildren the number of Item elements at each nesting level.
+   */
+  public static Questionnaire newNestedQuestionnaire(final int maxNestingLevel,
+      final int noChildren) {
+    final Questionnaire questionnaire = new Questionnaire();
+    questionnaire.setId("Questionnaire/1");
+    questionnaire.setItem(newNestedItems(maxNestingLevel, noChildren, ""));
+    return questionnaire;
+  }
+
+  /**
+   * Returns a FHIR Questionnaire resource with nested Item elements for testing purposes.
+   *
+   * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
+   * present in the Questionnaire but with no nested items.
+   */
+  public static Questionnaire newNestedQuestionnaire(final int maxNestingLevel) {
+    return newNestedQuestionnaire(maxNestingLevel, 1);
+  }
+
+
+  private static QuestionnaireResponseItemAnswerComponent newNestedResponseAnswer(
+      final int nestingLevel) {
+    final QuestionnaireResponseItemAnswerComponent answer = new QuestionnaireResponseItemAnswerComponent();
+    answer.setId("AnswerLevel/" + nestingLevel);
+    answer.setItem(Collections.singletonList(newNestedResponseItem(nestingLevel - 1)));
+    return answer;
+  }
+
+
+  private static QuestionnaireResponseItemComponent newNestedResponseItem(final int nestingLevel) {
+    final QuestionnaireResponseItemComponent item = new QuestionnaireResponseItemComponent();
     item.setLinkId("ItemLevel/" + nestingLevel);
     if (nestingLevel > 0) {
-      item.setItem(Collections.singletonList(newNestedItem(nestingLevel - 1)));
+      item.setAnswer(Collections.singletonList(newNestedResponseAnswer(nestingLevel)));
+      item.setItem(Collections.singletonList(newNestedResponseItem(nestingLevel - 1)));
     }
     return item;
   }
@@ -291,11 +347,11 @@ public class TestData {
    * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
    * present in the Questionnaire but with no nested items.
    */
-  public static Questionnaire newNestedQuestionnaire(final int maxNestingLevel) {
-    final Questionnaire questionnaire = new Questionnaire();
-    questionnaire.setId("Questionnaire/1");
-    questionnaire.setItem(Collections.singletonList(newNestedItem(maxNestingLevel)));
-    return questionnaire;
+  public static QuestionnaireResponse newNestedQuestionnaireResponse(final int maxNestingLevel) {
+    final QuestionnaireResponse questionnaireResponse = new QuestionnaireResponse();
+    questionnaireResponse.setId("QuestionnaireResponse/1");
+    questionnaireResponse
+        .setItem(Collections.singletonList(newNestedResponseItem(maxNestingLevel)));
+    return questionnaireResponse;
   }
-
 }
