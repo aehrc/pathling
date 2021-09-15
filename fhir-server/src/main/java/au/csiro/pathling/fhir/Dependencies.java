@@ -50,9 +50,10 @@ public class Dependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static FhirEncoders fhirEncoders() {
-    log.info("Creating R4 FHIR encoders");
-    return FhirEncoders.forR4().getOrCreate();
+  static FhirEncoders fhirEncoders(@Nonnull final Configuration configuration) {
+    final int maxNestingLevel = configuration.getEncoding().getMaxNestingLevel();
+    log.info("Creating R4 FHIR encoders with maxNestingLevel: " + maxNestingLevel);
+    return FhirEncoders.forR4().withMaxNestingLevel(maxNestingLevel).getOrCreate();
   }
 
   @Bean

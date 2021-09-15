@@ -95,7 +95,7 @@ public class ParserTest {
     mockReader = mock(ResourceReader.class);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
         ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
-        ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION);
+        ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE);
 
     final ResourcePath subjectResource = ResourcePath
         .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
@@ -122,12 +122,11 @@ public class ParserTest {
     }
   }
 
-  @SuppressWarnings("rawtypes")
   private FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
   }
 
-  @SuppressWarnings({"rawtypes", "SameParameterValue"})
+  @SuppressWarnings("SameParameterValue")
   @Nonnull
   private FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
@@ -141,6 +140,22 @@ public class ParserTest {
         .build();
     final Parser resourceParser = new Parser(parserContext);
     return assertThat(resourceParser.parse(expression));
+  }
+
+  @Test
+  void testNestedQuestionnaire() {
+    assertThatResultOf(ResourceType.QUESTIONNAIRE,
+        "%resource.item.item.item")
+        .selectOrderedResult()
+        .debugAllRows();
+  }
+
+  @Test
+  void testNestedQuestionnaireWithAggregation() {
+    assertThatResultOf(ResourceType.QUESTIONNAIRE,
+        "%resource.item.item.item.where($this.linkId = '1.1.1').count()")
+        .selectOrderedResult()
+        .debugAllRows();
   }
 
   @Test
