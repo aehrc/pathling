@@ -20,11 +20,13 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Getter;
+import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -71,20 +73,26 @@ public abstract class QueryExecutor {
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
       @Nonnull final Optional<List<Column>> groupingColumns) {
     return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
-        terminologyClientFactory, groupingColumns);
+        terminologyClientFactory, groupingColumns, new HashMap<>());
   }
 
   @Nonnull
-  protected List<FhirPath> parseMaterializableExpressions(@Nonnull final Parser parser,
-      @Nonnull final Collection<String> expressions, @Nonnull final String display) {
+  protected List<FhirPathAndContext> parseMaterializableExpressions(
+      @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions,
+      @Nonnull final String display) {
     return expressions.stream()
         .map(expression -> {
+          final ParserContext currentContext = new ParserContext(parserContext.getInputContext(),
+              parserContext.getFhirContext(), parserContext.getSparkSession(),
+              parserContext.getResourceReader(), parserContext.getTerminologyServiceFactory(),
+              parserContext.getGroupingColumns(), new HashMap<>());
+          final Parser parser = new Parser(currentContext);
           final FhirPath result = parser.parse(expression);
           // Each expression must evaluate to a Materializable path, or a user error will be thrown.
           // There is no requirement for it to be singular.
           checkUserInput(result instanceof Materializable,
               display + " expression is not of a supported type: " + expression);
-          return result;
+          return new FhirPathAndContext(result, parser.getContext());
         }).collect(Collectors.toList());
   }
 
@@ -152,6 +160,17 @@ public abstract class QueryExecutor {
         .reduce(Column::and)
         .flatMap(filter -> Optional.of(dataset.filter(filter)))
         .orElse(dataset);
+  }
+
+  @Value
+  protected static class FhirPathAndContext {
+
+    @Nonnull
+    FhirPath fhirPath;
+
+    @Nonnull
+    ParserContext context;
+
   }
 
 }

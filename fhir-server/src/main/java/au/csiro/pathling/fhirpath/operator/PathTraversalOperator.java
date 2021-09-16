@@ -6,10 +6,12 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -86,14 +88,20 @@ public class PathTraversalOperator {
       resultDataset = leftDataset;
     } else {
       final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
-      resultDataset = left.explodeArray(leftDataset, field, valueAndEidColumns);
-      valueColumn = valueAndEidColumns.getLeft();
-      eidColumnCandidate = Optional.of(valueAndEidColumns.getRight());
+      final Dataset<Row> explodedDataset = left.explodeArray(leftDataset, field,
+          valueAndEidColumns);
+      final DatasetWithColumnMap datasetWithColumnMap = createColumns(explodedDataset,
+          valueAndEidColumns.getLeft(), valueAndEidColumns.getRight());
+      resultDataset = datasetWithColumnMap.getDataset();
+      valueColumn = datasetWithColumnMap.getColumn(valueAndEidColumns.getLeft());
+      eidColumnCandidate = Optional.of(
+          datasetWithColumnMap.getColumn(valueAndEidColumns.getRight()));
     }
 
     final Optional<Column> eidColumn = resultSingular
                                        ? Optional.empty()
                                        : eidColumnCandidate;
+    eidColumn.ifPresent(c -> input.getContext().getNodeIdColumns().putIfAbsent(expression, c));
     return ElementPath.build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,
         resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
   }

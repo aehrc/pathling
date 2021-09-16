@@ -10,6 +10,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
 import javax.annotation.Nonnull;
+import lombok.Getter;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
@@ -20,6 +21,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
  *
  * @author John Grimes
  */
+@Getter
 public class Parser {
 
   @Nonnull

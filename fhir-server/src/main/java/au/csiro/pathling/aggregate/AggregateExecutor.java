@@ -91,8 +91,11 @@ public class AggregateExecutor extends QueryExecutor {
     final ParserContext groupingAndFilterContext = buildParserContext(inputContext);
     final Parser parser = new Parser(groupingAndFilterContext);
     final List<FhirPath> filters = parseFilters(parser, query.getFilters());
-    final List<FhirPath> groupings = parseMaterializableExpressions(parser, query.getGroupings(),
-        "Grouping");
+    final List<FhirPathAndContext> groupingParseResult = parseMaterializableExpressions(
+        groupingAndFilterContext, query.getGroupings(), "Grouping");
+    final List<FhirPath> groupings = groupingParseResult.stream()
+        .map(FhirPathAndContext::getFhirPath)
+        .collect(Collectors.toList());
 
     // Join all filter and grouping expressions together.
     final Column idColumn = inputContext.getIdColumn();
