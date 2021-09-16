@@ -8,14 +8,22 @@ package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
+import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResultWriter;
@@ -23,6 +31,7 @@ import ca.uhn.fhir.context.FhirContext;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -100,22 +109,21 @@ public class ExtractExecutor extends QueryExecutor {
         .map(FhirPathAndContext::getFhirPath)
         .collect(Collectors.toList());
 
-    // Parse the filter expressions.
-    // final Parser filterParser = new Parser(parserContext);
-    // final List<FhirPath> filters = parseFilters(filterParser, query.getFilters());
-
-    // Join all filter and column expressions together.
+    // Join all the column expressions together.
     final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
 
-    // Apply filters.
-    // final Dataset<Row> dataset = applyFilters(columnJoinResult.getResult(), filters);
-    final Dataset<Row> dataset = columnJoinResult.getResult();
+    // Apply the filters.
+    final DatasetWithColumn filteredIdsResult = getFilteredIds(query.getFilters(), inputContext);
+    final Dataset<Row> filteredIds = filteredIdsResult.getDataset();
+    final Column filteredIdColumn = filteredIdsResult.getColumn();
+    final Dataset<Row> filteredDataset = columnJoinResult.getResult().join(filteredIds,
+        inputContext.getIdColumn().equalTo(filteredIdColumn), "left_semi");
 
     // Select the column values.
     final Column[] columnValues = columns.stream()
         .map(path -> ((Materializable) path).getExtractableColumn())
         .toArray(Column[]::new);
-    return dataset.select(columnValues);
+    return filteredDataset.select(columnValues);
   }
 
   @Nonnull
@@ -177,6 +185,43 @@ public class ExtractExecutor extends QueryExecutor {
     }
 
     return result;
+  }
+
+  @Nonnull
+  private DatasetWithColumn getFilteredIds(@Nonnull final Iterable<String> filters,
+      @Nonnull final ResourcePath inputContext) {
+    ResourcePath currentContext = inputContext;
+    @Nullable Column filterColumn = null;
+
+    for (final String filter : filters) {
+      // Parse the filter expression.
+      final ParserContext parserContext = buildParserContext(currentContext);
+      final Parser parser = new Parser(parserContext);
+      final FhirPath fhirPath = parser.parse(filter);
+
+      // Check that it is a Boolean expression.
+      checkUserInput(fhirPath instanceof BooleanPath || fhirPath instanceof BooleanLiteralPath,
+          "Filter expression must be of Boolean type: " + fhirPath.getExpression());
+
+      // Add the filter column to the overall filter expression using Boolean AND logic.
+      final Column filterValue = fhirPath.getValueColumn();
+      filterColumn = filterColumn == null
+                     ? filterValue
+                     : filterColumn.and(filterValue);
+
+      // Update the context to build the next expression from the same dataset.
+      currentContext = currentContext
+          .copy(currentContext.getExpression(), fhirPath.getDataset(), currentContext.getIdColumn(),
+              currentContext.getEidColumn(), currentContext.getValueColumn(),
+              currentContext.isSingular(), currentContext.getThisColumn());
+    }
+    checkNotNull(filterColumn);
+
+    // Return a dataset of filtered IDs with an aliased ID column, ready for joining.
+    final String filterIdAlias = randomAlias();
+    final Dataset<Row> dataset = currentContext.getDataset().select(
+        currentContext.getIdColumn().alias(filterIdAlias));
+    return new DatasetWithColumn(dataset.filter(filterColumn), col(filterIdAlias));
   }
 
   @Value
