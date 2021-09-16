@@ -143,22 +143,6 @@ public class ParserTest {
   }
 
   @Test
-  void testNestedQuestionnaire() {
-    assertThatResultOf(ResourceType.QUESTIONNAIRE,
-        "%resource.item.item.item")
-        .selectOrderedResult()
-        .debugAllRows();
-  }
-
-  @Test
-  void testNestedQuestionnaireWithAggregation() {
-    assertThatResultOf(ResourceType.QUESTIONNAIRE,
-        "%resource.item.item.item.where($this.linkId = '1.1.1').count()")
-        .selectOrderedResult()
-        .debugAllRows();
-  }
-
-  @Test
   public void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
         .isElementPath(BooleanPath.class)

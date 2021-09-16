@@ -26,6 +26,10 @@ import org.apache.spark.sql.SparkSession;
  */
 public class DatasetAssert {
 
+  public static DatasetAssert of(@Nonnull final Dataset<Row> dataset) {
+    return new DatasetAssert(dataset);
+  }
+
   @Nonnull
   private final Dataset<Row> dataset;
 
