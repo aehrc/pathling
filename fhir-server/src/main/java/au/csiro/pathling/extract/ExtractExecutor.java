@@ -113,17 +113,23 @@ public class ExtractExecutor extends QueryExecutor {
     final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
 
     // Apply the filters.
-    final DatasetWithColumn filteredIdsResult = getFilteredIds(query.getFilters(), inputContext);
-    final Dataset<Row> filteredIds = filteredIdsResult.getDataset();
-    final Column filteredIdColumn = filteredIdsResult.getColumn();
-    final Dataset<Row> filteredDataset = columnJoinResult.getResult().join(filteredIds,
-        inputContext.getIdColumn().equalTo(filteredIdColumn), "left_semi");
+    final Dataset<Row> filteredDataset;
+    final Column idColumn = inputContext.getIdColumn();
+    if (query.getFilters().isEmpty()) {
+      filteredDataset = columnJoinResult.getResult();
+    } else {
+      final DatasetWithColumn filteredIdsResult = getFilteredIds(query.getFilters(), inputContext);
+      final Dataset<Row> filteredIds = filteredIdsResult.getDataset();
+      final Column filteredIdColumn = filteredIdsResult.getColumn();
+      filteredDataset = columnJoinResult.getResult().join(filteredIds,
+          idColumn.equalTo(filteredIdColumn), "left_semi");
+    }
 
     // Select the column values.
     final Column[] columnValues = columns.stream()
         .map(path -> ((Materializable) path).getExtractableColumn())
         .toArray(Column[]::new);
-    return filteredDataset.select(columnValues);
+    return filteredDataset.select(columnValues).filter(idColumn.isNotNull());
   }
 
   @Nonnull
@@ -142,8 +148,10 @@ public class ExtractExecutor extends QueryExecutor {
         // Get the set of unique prefixes from the two parser contexts, and sort them in descending
         // order of prefix length.
         final Set<String> prefixes = new HashSet<>();
-        prefixes.addAll(result.getContext().getNodeIdColumns().keySet());
-        prefixes.addAll(current.getContext().getNodeIdColumns().keySet());
+        final Map<String, Column> resultNodeIds = result.getContext().getNodeIdColumns();
+        final Map<String, Column> currentNodeIds = current.getContext().getNodeIdColumns();
+        prefixes.addAll(resultNodeIds.keySet());
+        prefixes.addAll(currentNodeIds.keySet());
         final List<String> sortedCommonPrefixes = new ArrayList<>(prefixes).stream()
             .sorted(Comparator.comparingInt(String::length).reversed())
             .collect(Collectors.toList());
@@ -155,14 +163,16 @@ public class ExtractExecutor extends QueryExecutor {
                 current.getFhirPath().getExpression().startsWith(p))
             .findFirst();
 
-        if (commonPrefix.isPresent()) {
+        if (commonPrefix.isPresent() &&
+            resultNodeIds.containsKey(commonPrefix.get()) &&
+            currentNodeIds.containsKey(commonPrefix.get())) {
           // If there is a common prefix, we add the corresponding node identifier column to the
           // join condition.
-          final Column previousNodeId = result.getContext().getNodeIdColumns()
+          final Column previousNodeId = resultNodeIds
               .get(commonPrefix.get());
           final List<Column> previousJoinColumns = Arrays.asList(result.getFhirPath().getIdColumn(),
               previousNodeId);
-          final Column currentNodeId = current.getContext().getNodeIdColumns()
+          final Column currentNodeId = currentNodeIds
               .get(commonPrefix.get());
           final List<Column> currentJoinColumns = Arrays.asList(current.getFhirPath().getIdColumn(),
               currentNodeId);
