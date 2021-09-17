@@ -120,6 +120,39 @@ class ExtractQueryTest {
         .hasRows(spark, "responses/ExtractQueryTest/multipleReverseResolves.csv");
   }
 
+  @Test
+  void multiplePolymorphicResolves() {
+    subjectResource = ResourceType.DIAGNOSTICREPORT;
+    mockResourceReader(ResourceType.DIAGNOSTICREPORT, ResourceType.PATIENT);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("subject.resolve().ofType(Patient).id")
+        .withColumn("subject.resolve().ofType(Patient).gender")
+        .withColumn("subject.resolve().ofType(Patient).name.given")
+        .withColumn("subject.resolve().ofType(Patient).name.family")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/multiplePolymorphicResolves.csv");
+  }
+
+  @Test
+  void codingColumn() {
+    subjectResource = ResourceType.CONDITION;
+    mockResourceReader(ResourceType.CONDITION);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("code.coding")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/codingColumn.csv");
+  }
+
   private void mockResourceReader(final ResourceType... resourceTypes) {
     TestHelpers.mockResourceReader(resourceReader, spark, resourceTypes);
   }

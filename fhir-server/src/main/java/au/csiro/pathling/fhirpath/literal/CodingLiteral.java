@@ -27,8 +27,8 @@ public class CodingLiteral {
   /**
    * Special characters that require quoting within a Coding literal component.
    */
-  public static final String SPECIAL_CHARACTERS = " '|\\r\\n\\t(),";
- 
+  private static final String SPECIAL_CHARACTERS = "\\s'|\\r\\n\\t(),";
+
   private static final String COMPONENT_REGEX = String
       .format("('.*?(?<!\\\\)'|[^%s]*)", SPECIAL_CHARACTERS);
 

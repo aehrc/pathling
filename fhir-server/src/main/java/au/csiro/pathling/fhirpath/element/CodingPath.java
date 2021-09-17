@@ -6,29 +6,28 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
+import au.csiro.pathling.sql.CodingToLiteral;
 import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -156,25 +155,7 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   @Nonnull
   @Override
   public Column getExtractableColumn() {
-    // We test to see if each component contains special characters, so that we know if it needs to
-    // be quoted.
-    final UnaryOperator<Column> quote = col -> when(col.rlike(CodingLiteral.SPECIAL_CHARACTERS),
-        concat(lit("'"), col, lit("'"))).otherwise(col);
-    final Column system = quote.apply(getValueColumn().getField("system"));
-    final Column code = quote.apply(getValueColumn().getField("code"));
-    final Column version = quote.apply(getValueColumn().getField("version"));
-    final Column display = quote.apply(getValueColumn().getField("display"));
-
-    // The userSelected component is a Boolean, so we need to cast it to a string.
-    final Column userSelected = getValueColumn().getField("userSelected")
-        .cast(DataTypes.StringType);
-    final Column array = array(system, code, version, display, userSelected);
-
-    // Join the components using the pipe character, replacing nulls with empty strings.
-    final Column joinedString = array_join(array, "|", "");
-   
-    // Trim any trailing pipes off the end.
-    return regexp_replace(joinedString, "(\\|+)$", "");
+    return callUDF(CodingToLiteral.FUNCTION_NAME, getValueColumn());
   }
 
 }

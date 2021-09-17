@@ -9,6 +9,7 @@ package au.csiro.pathling.spark;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Storage.Aws;
 import au.csiro.pathling.async.SparkListener;
+import au.csiro.pathling.sql.CodingToLiteral;
 import au.csiro.pathling.sql.PathlingStrategy;
 import java.util.Arrays;
 import java.util.Objects;
@@ -16,6 +17,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
@@ -55,6 +57,8 @@ public class Spark {
 
     // Configure user defined functions.
     PathlingStrategy.setup(spark);
+    spark.udf()
+        .register(CodingToLiteral.FUNCTION_NAME, new CodingToLiteral(), DataTypes.StringType);
 
     // Configure AWS driver and credentials.
     final Aws awsConfig = configuration.getStorage().getAws();
