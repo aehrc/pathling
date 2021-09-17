@@ -139,6 +139,21 @@ class ExtractQueryTest {
   }
 
   @Test
+  void literalColumn() {
+    subjectResource = ResourceType.CONDITION;
+    mockResourceReader(ResourceType.CONDITION);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("19")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/literalColumn.csv");
+  }
+
+  @Test
   void codingColumn() {
     subjectResource = ResourceType.CONDITION;
     mockResourceReader(ResourceType.CONDITION);
@@ -151,6 +166,22 @@ class ExtractQueryTest {
     final Dataset<Row> result = executor.buildQuery(request);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/codingColumn.csv");
+  }
+
+  @Test
+  void codingLiteralColumn() {
+    subjectResource = ResourceType.CONDITION;
+    mockResourceReader(ResourceType.CONDITION);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn(
+            "http://snomed.info/sct|'46,2'|http://snomed.info/sct/32506021000036107/version/20201231")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/codingLiteralColumn.csv");
   }
 
   private void mockResourceReader(final ResourceType... resourceTypes) {
