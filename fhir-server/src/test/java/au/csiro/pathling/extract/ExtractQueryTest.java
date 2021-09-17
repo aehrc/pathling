@@ -7,9 +7,12 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResultWriter;
@@ -182,6 +185,65 @@ class ExtractQueryTest {
     final Dataset<Row> result = executor.buildQuery(request);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/codingLiteralColumn.csv");
+  }
+
+  @Test
+  void multipleFilters() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("gender")
+        .withColumn("name.given.first()")
+        .withColumn("reverseResolve(Condition.subject).count()")
+        .withFilter("gender = 'female'")
+        .withFilter("reverseResolve(Condition.subject).count() >= 10")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/multipleFilters.csv");
+  }
+
+  @Test
+  void emptyColumn() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.PATIENT);
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new ExtractRequestBuilder(subjectResource)
+            .withColumn("id")
+            .withColumn("")
+            .withFilter("gender = 'female'")
+            .build());
+    assertEquals("Column expression cannot be blank", error.getMessage());
+  }
+
+  @Test
+  void emptyFilter() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.PATIENT);
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> new ExtractRequestBuilder(subjectResource)
+            .withColumn("id")
+            .withFilter("")
+            .build());
+    assertEquals("Filter expression cannot be blank", error.getMessage());
+  }
+
+  @Test
+  void noColumns() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.PATIENT);
+
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> new ExtractRequestBuilder(subjectResource)
+            .withFilter("gender = 'female'")
+            .build());
+    assertEquals("Query must have at least one column expression", error.getMessage());
   }
 
   private void mockResourceReader(final ResourceType... resourceTypes) {
