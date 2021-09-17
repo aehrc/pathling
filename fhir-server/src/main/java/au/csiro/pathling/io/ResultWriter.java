@@ -66,10 +66,23 @@ public class ResultWriter {
    * Writes a result to the configured result storage area.
    *
    * @param result the {@link Dataset} containing the result
-   * @param requestId a request ID to use in the filename
+   * @param name a name to use as the filename
    * @return the URL of the result
    */
-  public String write(@Nonnull final Dataset result, @Nonnull final Optional<String> requestId) {
+  public String write(@Nonnull final Dataset result, @Nonnull final Optional<String> name) {
+    return write(result, name, SaveMode.ErrorIfExists);
+  }
+
+  /**
+   * Writes a result to the configured result storage area.
+   *
+   * @param result the {@link Dataset} containing the result
+   * @param name a name to use as the filename
+   * @param saveMode the {@link SaveMode} to use
+   * @return the URL of the result
+   */
+  public String write(@Nonnull final Dataset result, @Nonnull final Optional<String> name,
+      @Nonnull final SaveMode saveMode) {
     final String resultUrl = convertS3ToS3aUrl(configuration.getStorage().getResultUrl());
 
     // Get a handle for the Hadoop FileSystem representing the result location, and check that it
@@ -88,13 +101,13 @@ public class ResultWriter {
     checkNotNull(resultLocation);
 
     // Write result dataset to result location.
-    final String validatedRequestId = checkPresent(requestId);
+    final String validatedRequestId = checkPresent(name);
     final String resultFileUrl = resultUrl + "/" + validatedRequestId;
     log.info("Writing result: " + resultFileUrl);
     try {
       result.coalesce(1)
           .write()
-          .mode(SaveMode.ErrorIfExists)
+          .mode(saveMode)
           .csv(resultFileUrl);
     } catch (final Exception e) {
       throw new RuntimeException("Problem writing to file: " + resultFileUrl, e);

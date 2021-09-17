@@ -10,11 +10,19 @@ import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstC
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.Configuration;
+import au.csiro.pathling.Configuration.Storage;
+import au.csiro.pathling.io.ResultWriter;
 import au.csiro.pathling.test.builders.DatasetBuilder;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -24,6 +32,7 @@ import org.apache.spark.sql.SparkSession;
  * @author Piotr Szul
  * @author John Grimes
  */
+@Slf4j
 public class DatasetAssert {
 
   @Nonnull
@@ -72,6 +81,7 @@ public class DatasetAssert {
   }
 
   @Nonnull
+  @SuppressWarnings("UnusedReturnValue")
   public DatasetAssert hasRowsUnordered(@Nonnull final Dataset<Row> expected) {
     return hasRowsUnordered(expected.collectAsList());
   }
@@ -91,16 +101,35 @@ public class DatasetAssert {
   }
 
   @Nonnull
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"unused", "UnusedReturnValue"})
   public DatasetAssert debugAllRows() {
     dataset.collectAsList().forEach(System.out::println);
     return this;
   }
 
   @Nonnull
-  @SuppressWarnings("unused")
-  public DatasetAssert saveAllRowsToCsv(final String path) {
-    dataset.coalesce(1).write().mode(SaveMode.Overwrite).csv(path);
+  @SuppressWarnings({"unused", "UnusedReturnValue"})
+  public DatasetAssert saveAllRowsToCsv(@Nonnull final SparkSession spark,
+      @Nonnull final String location, @Nonnull final String name) {
+    try {
+      Files.delete(Path.of(location, name + ".csv"));
+    } catch (final IOException e) {
+      log.info("Existing file not found, skipping delete");
+    }
+
+    final Configuration configuration = new Configuration();
+    final Storage storage = new Storage();
+    storage.setResultUrl("file://" + location);
+    configuration.setStorage(storage);
+    final ResultWriter resultWriter = new ResultWriter(configuration, spark);
+    resultWriter.write(dataset, Optional.of(name), SaveMode.Overwrite);
+
+    try {
+      Files.delete(Path.of(location, "." + name + ".csv.crc"));
+    } catch (final IOException e) {
+      log.info("CRC file not found, skipping delete");
+    }
+   
     return this;
   }
 }

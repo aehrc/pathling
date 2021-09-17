@@ -88,18 +88,36 @@ class ExtractQueryTest {
 
   @Test
   void multipleResolves() {
+    subjectResource = ResourceType.ENCOUNTER;
+    mockResourceReader(ResourceType.ENCOUNTER, ResourceType.ORGANIZATION);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("serviceProvider.resolve().id")
+        .withColumn("serviceProvider.resolve().name")
+        .withColumn("serviceProvider.resolve().address.postalCode")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/multipleResolves.csv");
+  }
+
+  @Test
+  void multipleReverseResolves() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("reverseResolve(Condition.subject).id")
         .withColumn("reverseResolve(Condition.subject).code.coding.system")
         .withColumn("reverseResolve(Condition.subject).code.coding.code")
         .build();
 
     final Dataset<Row> result = executor.buildQuery(request);
     assertThat(result)
-        .debugAllRows();
-    // .hasRows(spark, "responses/ExtractQueryTest/simpleQuery.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/multipleReverseResolves.csv");
   }
 
   private void mockResourceReader(final ResourceType... resourceTypes) {

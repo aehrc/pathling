@@ -12,6 +12,8 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.row_number;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.QueryHelpers;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -88,11 +90,14 @@ public class ReverseResolveFunction implements NamedFunction {
     final Column foreignResourceIndex = when(foreignResourceValue.isNull(), lit(null))
         .otherwise(row_number().over(windowSpec).minus(lit(1)));
 
+    // We need to add the synthetic EID column to the parser context so that it can be used within
+    // joins in certain situations, e.g. extract.
     final Column syntheticEid = inputPath.expandEid(foreignResourceIndex);
+    final DatasetWithColumn datasetWithEid = QueryHelpers.createColumn(dataset, syntheticEid);
+    input.getContext().getNodeIdColumns().putIfAbsent(expression, datasetWithEid.getColumn());
 
     return foreignResource
-        .copy(expression, dataset, inputPath.getIdColumn(), Optional.of(syntheticEid),
-            foreignResource.getValueColumn(),
-            false, thisColumn);
+        .copy(expression, datasetWithEid.getDataset(), inputPath.getIdColumn(),
+            Optional.of(syntheticEid), foreignResource.getValueColumn(), false, thisColumn);
   }
 }

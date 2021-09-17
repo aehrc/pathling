@@ -25,6 +25,7 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("server")
+@ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Slf4j
 public class JobProvider {
 

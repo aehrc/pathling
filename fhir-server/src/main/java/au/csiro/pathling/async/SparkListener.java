@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.scheduler.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("server")
+@ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Slf4j
 public class SparkListener implements SparkListenerInterface {
 

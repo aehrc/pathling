@@ -101,7 +101,11 @@ public class PathTraversalOperator {
     final Optional<Column> eidColumn = resultSingular
                                        ? Optional.empty()
                                        : eidColumnCandidate;
+
+    // If there is an element ID column, we need to add it to the parser context so that it can
+    // be used within joins in certain situations, e.g. extract.
     eidColumn.ifPresent(c -> input.getContext().getNodeIdColumns().putIfAbsent(expression, c));
+
     return ElementPath.build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,
         resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
   }

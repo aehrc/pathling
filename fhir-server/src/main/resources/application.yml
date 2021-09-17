@@ -101,6 +101,9 @@ pathling:
     allowableSources:
       - "file:///usr/share/staging"
 
+  async:
+    enabled: true
+
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.
 # Here is the full list: https://spark.apache.org/docs/latest/configuration.html

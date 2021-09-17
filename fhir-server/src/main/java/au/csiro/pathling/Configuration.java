@@ -86,6 +86,9 @@ public class Configuration {
   @NotNull
   private Import import_;
 
+  @NotNull
+  private Async async;
+
   @Nonnull
   public Import getImport() {
     return import_;
@@ -297,6 +300,20 @@ public class Configuration {
      */
     @NotNull
     private List<String> allowableSources;
+
+  }
+
+  /**
+   * Represents configuration relating to asynchronous processing.
+   */
+  @Data
+  public static class Async {
+
+    /**
+     * Enables asynchronous process of requests.
+     */
+    @NotNull
+    private boolean enabled;
 
   }
 

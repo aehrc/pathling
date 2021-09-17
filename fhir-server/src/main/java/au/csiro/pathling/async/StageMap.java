@@ -7,6 +7,7 @@
 package au.csiro.pathling.async;
 
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -18,8 +19,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("server")
+@ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 public class StageMap extends ConcurrentHashMap<Integer, String> {
 
   private static final long serialVersionUID = -8385386725080021575L;
- 
+
 }

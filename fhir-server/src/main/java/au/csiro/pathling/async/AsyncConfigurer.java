@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.async;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -19,6 +20,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @Configuration
 @EnableAsync
 @Profile("server")
+@ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 public class AsyncConfigurer implements org.springframework.scheduling.annotation.AsyncConfigurer {
 
   @Override

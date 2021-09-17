@@ -50,6 +50,11 @@ Additionally, you can set any variable supported by Spring Boot, see
   could create an alternative URL with the same prefix, e.g. `s3://some-bucket` 
   would also match `s3://some-bucket-alternative`.
 
+### Asynchronous processing
+
+- `pathling.async.enabled` - (default: `true`) Enables asynchronous processing 
+  for those operations that support it, when explicitly requested.
+
 ### Storage
 
 - `pathling.storage.warehouseUrl` - (default: `file:///usr/share/warehouse`) The 

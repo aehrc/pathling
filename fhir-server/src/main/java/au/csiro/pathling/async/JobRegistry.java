@@ -7,6 +7,7 @@
 package au.csiro.pathling.async;
 
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("server")
+@ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 public class JobRegistry extends ConcurrentHashMap<String, Job> {
 
   private static final long serialVersionUID = -1895384364583552139L;
