@@ -10,7 +10,7 @@ import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.UrlType;
 
 /**
  * Represents the information to be provided as the result of the invocation of the "extract"
@@ -41,7 +41,7 @@ public class ExtractResponse {
     final Parameters parameters = new Parameters();
     final ParametersParameterComponent urlParameter = new ParametersParameterComponent();
     urlParameter.setName("url");
-    urlParameter.setValue(new UriType(url));
+    urlParameter.setValue(new UrlType(url));
     parameters.getParameter().add(urlParameter);
     return parameters;
   }
