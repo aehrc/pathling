@@ -23,6 +23,10 @@ Currently Pathling supports retrieval of NDJSON files from
 filesystem (`file://`) URLs. Authentication is supported for S3, see
 [Configuration](./configuration.html) for details.
 
+<div class="callout info">
+    The <code>import</code> operation supports the <a href="https://hl7.org/fhir/r4/async.html">Asynchronous Request Pattern</a>, which allows you to kick off a long-running request and check on its progress using a status endpoint.
+</div>
+
 <div class="callout warning">
     The <code>import</code> operation overwrites all existing data, on a per-resource basis. For example, an import operation that includes the <code>Patient</code> resource will delete all existing <code>Patient</code> resources within the Pathling server, replacing them with the contents of the referenced NDJSON file.
 </div>

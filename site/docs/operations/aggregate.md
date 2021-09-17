@@ -17,6 +17,10 @@ filter expressions, and grouped results are returned.
 The aggregate operation is useful for exploratory data analysis, as well as 
 powering visualizations and other summarized views of the data.
 
+<div class="callout info">
+    The <code>aggregate</code> operation supports the <a href="https://hl7.org/fhir/r4/async.html">Asynchronous Request Pattern</a>, which allows you to kick off a long-running request and check on its progress using a status endpoint.
+</div>
+
 ```
 GET [FHIR endpoint]/[resource type]/$aggregate?[parameters...]
 ```

@@ -29,6 +29,10 @@ parameter. If you are using Amazon S3 for storing of results, the
    If you request a column with the <code>Coding</code> type, it will be expressed within the resulting extract using the <a href="../fhirpath/data-types.html#coding">Coding literal format</a>. 
 </div>
 
+<div class="callout info">
+    The <code>extract</code> operation supports the <a href="https://hl7.org/fhir/r4/async.html">Asynchronous Request Pattern</a>, which allows you to kick off a long-running request and check on its progress using a status endpoint.
+</div>
+
 ```
 GET [FHIR endpoint]/[resource type]/$extract?[parameters...]
 ```
