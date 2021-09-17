@@ -27,11 +27,13 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * @author John Grimes
  */
+@Tag("UnitTest")
 class EntityTagInterceptorTest {
 
   private static final String TAG = "W/\"abc123\"";
