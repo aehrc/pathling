@@ -11,9 +11,11 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.fhir.ErrorHandlingInterceptor;
 import au.csiro.pathling.security.PathlingAuthority;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -82,8 +84,12 @@ public class JobProvider {
       // If the job is done, we return the Parameters resource.
       try {
         return job.getResult().get();
-      } catch (final InterruptedException | ExecutionException e) {
-        throw new RuntimeException("Problem retrieving job result", e);
+      } catch (final InterruptedException e) {
+        throw new InternalErrorException("Job was interrupted", e);
+      } catch (final ExecutionException e) {
+        // This needs to go down two levels of causes: one for the ExecutionException added by the
+        // Future, and another one for the RuntimeException added by the AsyncAspect.
+        throw ErrorHandlingInterceptor.convertError(e.getCause().getCause());
       }
     } else {
       // If the job is not done, we return a 202 along with an OperationOutcome and progress header.

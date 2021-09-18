@@ -13,11 +13,13 @@ import static org.mockito.Mockito.when;
 
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.SparkSession;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * @author John Grimes
  */
+@Tag("UnitTest")
 class CacheInvalidatorTest {
 
   @Test
@@ -29,7 +31,7 @@ class CacheInvalidatorTest {
 
     final CacheInvalidator invalidator = new CacheInvalidator(validator, spark);
     invalidator.invalidateAll();
-   
+
     verify(validator).expire(anyLong());
     verify(sqlContext).clearCache();
   }

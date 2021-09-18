@@ -62,7 +62,7 @@ public class FhirServer extends RestfulServer {
   private final ImportProvider importProvider;
 
   @Nonnull
-  private final JobProvider jobProvider;
+  private final Optional<JobProvider> jobProvider;
 
   @Nonnull
   private final OperationDefinitionProvider operationDefinitionProvider;
@@ -105,7 +105,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final Configuration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final ImportProvider importProvider,
-      @Nonnull final JobProvider jobProvider,
+      @Nonnull final Optional<JobProvider> jobProvider,
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
@@ -153,8 +153,8 @@ public class FhirServer extends RestfulServer {
       // Register resource providers.
       registerProvider(operationDefinitionProvider);
 
-      // Register job provider.
-      registerProvider(jobProvider);
+      // Register job provider, if async is enabled.
+      jobProvider.ifPresent(this::registerProvider);
 
       // Configure interceptors.
       configureRequestLogging();
