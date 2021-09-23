@@ -62,7 +62,7 @@ operand, and a `false` otherwise. The `!=` is the inverse of the `=` operator.
 
 Both operands must be singular. The valid types and their combinations is the 
 same as for the [Comparison operators](#comparison). In addition to this, 
-[Coding](http://localhost:4000/docs/fhirpath/data-types.html#coding) types can 
+[Coding](./data-types.html#coding) types can 
 be compared using the equality operators.
 
 If one or both of the operands is an empty collection, the operator will return
