@@ -74,7 +74,6 @@ public class ExtractProvider implements IResourceProvider {
    * @return {@link Parameters} object representing the result
    */
   @Operation(name = "$extract", idempotent = true)
-  @OperationAccess("extract")
   @AsyncSupported
   public Parameters extract(
       @Nullable @OperationParam(name = "column") final List<String> column,
@@ -82,6 +81,12 @@ public class ExtractProvider implements IResourceProvider {
       @SuppressWarnings("unused") @Nullable final HttpServletRequest request,
       @SuppressWarnings("unused") @Nullable final RequestDetails requestDetails,
       @SuppressWarnings("unused") @Nullable final HttpServletResponse response) {
+    return invoke(column, filter, requestDetails);
+  }
+
+  @OperationAccess("extract")
+  private Parameters invoke(@Nullable final List<String> column,
+      @Nullable final List<String> filter, @Nullable final RequestDetails requestDetails) {
     final Optional<String> requestId = requestDetails != null
                                        ? Optional.ofNullable(requestDetails.getRequestId())
                                        : Optional.empty();

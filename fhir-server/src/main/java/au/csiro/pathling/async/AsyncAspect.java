@@ -31,6 +31,8 @@ import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -97,11 +99,13 @@ public class AsyncAspect {
     final RequestDetails requestDetails = getRequestDetails(args);
     final HttpServletResponse response = getResponse(args);
     final String requestId = requestDetails.getRequestId();
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     checkNotNull(requestId);
     final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
     final Future<IBaseResource> result = executor.submit(() -> {
       try {
         MDC.put("requestId", requestId);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         spark.sparkContext().setJobGroup(requestId, requestId, true);
         return (IBaseResource) joinPoint.proceed(args);
       } catch (final Throwable e) {

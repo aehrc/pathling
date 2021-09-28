@@ -75,7 +75,6 @@ public class AggregateProvider implements IResourceProvider {
    * @return {@link Parameters} object representing the result
    */
   @Operation(name = "$aggregate", idempotent = true)
-  @OperationAccess("aggregate")
   @AsyncSupported
   public Parameters aggregate(
       @Nullable @OperationParam(name = "aggregation") final List<String> aggregation,
@@ -84,6 +83,12 @@ public class AggregateProvider implements IResourceProvider {
       @SuppressWarnings("unused") @Nullable final HttpServletRequest request,
       @SuppressWarnings("unused") @Nullable final RequestDetails requestDetails,
       @SuppressWarnings("unused") @Nullable final HttpServletResponse response) {
+    return invoke(aggregation, grouping, filter);
+  }
+
+  @OperationAccess("aggregate")
+  private Parameters invoke(@Nullable final List<String> aggregation,
+      @Nullable final List<String> grouping, @Nullable final List<String> filter) {
     final AggregateRequest query = new AggregateRequest(
         resourceType, Optional.ofNullable(aggregation), Optional.ofNullable(grouping),
         Optional.ofNullable(filter));

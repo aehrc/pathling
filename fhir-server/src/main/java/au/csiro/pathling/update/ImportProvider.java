@@ -57,13 +57,18 @@ public class ImportProvider {
    * @return A FHIR {@link OperationOutcome} resource describing the result
    */
   @Operation(name = "$import")
-  @OperationAccess("import")
   @SuppressWarnings("UnusedReturnValue")
   @AsyncSupported
   public OperationOutcome importOperation(@ResourceParam final Parameters parameters,
       @SuppressWarnings("unused") @Nullable final HttpServletRequest request,
       @SuppressWarnings("unused") @Nullable final RequestDetails requestDetails,
       @SuppressWarnings("unused") @Nullable final HttpServletResponse response) {
+    return invoke(parameters);
+  }
+
+  @OperationAccess("import")
+  @Nonnull
+  private OperationOutcome invoke(@Nonnull final Parameters parameters) {
     return executor.execute(parameters);
   }
 
