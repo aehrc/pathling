@@ -73,7 +73,7 @@
     <pathling.hapiFhirVersion>5.5.0</pathling.hapiFhirVersion>
     <pathling.sparkVersion>3.1.2</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
-    <pathling.dockerJavaVersion>3.2.11</pathling.dockerJavaVersion>
+    <pathling.dockerJavaVersion>3.2.12</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.2.2</pathling.hadoopVersion>
     <pathling.hadoopMirror>https://downloads.apache.org/hadoop/common</pathling.hadoopMirror>
     <pathling.awsSdkVersion>1.12.47</pathling.awsSdkVersion>
