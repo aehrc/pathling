@@ -1,3 +1,15 @@
+/*
+ * This is a modified version of the Bunsen library, originally published at
+ * https://github.com/cerner/bunsen.
+ *
+ * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
+ * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+ *
+ * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
+ * under the CSIRO Open Source Software Licence Agreement.
+ */
+
 package au.csiro.pathling.encoders
 
 import ca.uhn.fhir.context.{BaseRuntimeElementCompositeDefinition, BaseRuntimeElementDefinition}
@@ -36,10 +48,10 @@ private[encoders] class EncodingContext {
  *   EncodingContext.runWithContext {
  *
  *    // anywhere in the call stack to increase the nesting level
- *    // of someDefintion
+ *    // of someDefinition
  *
  *    EncodingContext.withDefinition(someDefinition) {
- *      // anwhere in the call stqck to check the current nesting
+ *      // anywhere in the call stack to check the current nesting
  *      // level of someDefinition
  *
  *      EncodingContext.currentNestingLevel(someDefinition)
@@ -53,7 +65,7 @@ private[encoders] object EncodingContext {
 
   private def currentContext(): EncodingContext = {
     val thisContext = CONTEXT_STORAGE.get()
-    assert(thisContext != null, "Current EncodingContext does not exists.")
+    assert(thisContext != null, "Current EncodingContext does not exist.")
     thisContext
   }
 
