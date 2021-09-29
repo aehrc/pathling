@@ -56,18 +56,19 @@ private[encoders] object EncoderBuilder {
          contained: mutable.Buffer[BaseRuntimeElementCompositeDefinition[_]] = mutable.Buffer.empty): ExpressionEncoder[_] = {
 
     val fhirClass = definition.getImplementingClass
-
-    val schema = converter.parentToStructType(definition, contained)
-
     val inputObject = BoundReference(0, ObjectType(fhirClass), nullable = true)
 
     val encoderBuilder = new EncoderBuilder(context,
       mappings,
       converter)
 
-    val serializers = encoderBuilder.serializer(inputObject, definition, contained)
+    val serializers = EncodingContext.runWithContext {
+      encoderBuilder.serializer(inputObject, definition, contained)
+    }
 
-    val deserializer = encoderBuilder.compositeToDeserializer(definition, None, contained)
+    val deserializer = EncodingContext.runWithContext {
+      encoderBuilder.compositeToDeserializer(definition, None, contained)
+    }
 
     new ExpressionEncoder(
       serializers,
@@ -210,6 +211,8 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
 
     } else if (childDefinition.isInstanceOf[RuntimeChildChoiceDefinition]) {
 
+      // TODO: Add nesting check here when #375 is fixed.
+
       val getterFunc = if (childDefinition.getElementName.equals("class")) {
         "get" + childDefinition.getElementName.capitalize + "_"
       } else {
@@ -249,38 +252,41 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
     } else {
 
       val definition: BaseRuntimeElementDefinition[_] = childDefinition.getChildByName(childDefinition.getElementName)
-
-      if (childDefinition.getMax != 1) {
-
-        val childList = Invoke(parentObject,
-          accessorFor(childDefinition),
-          ObjectType(classOf[java.util.List[_]]))
-
-        val elementExpr = definition match {
-          case composite: BaseRuntimeElementCompositeDefinition[_] => (elem: Expression) => compositeToExpr(elem, composite)
-          case primitive: RuntimePrimitiveDatatypeDefinition => (elem: Expression) => dataTypeMappings.primitiveEncoderExpression(elem, primitive)
-        }
-
-        val childExpr = MapObjects(elementExpr,
-          childList,
-          objectTypeFor(childDefinition))
-
-        List(Literal(childDefinition.getElementName), childExpr)
-
+      if (!schemaConverter.shouldExpand(definition)) {
+        Empty
       } else {
+        if (childDefinition.getMax != 1) {
 
-        // Get the field accessor
-        val childObject = Invoke(parentObject,
-          accessorFor(childDefinition),
-          objectTypeFor(childDefinition))
+          val childList = Invoke(parentObject,
+            accessorFor(childDefinition),
+            ObjectType(classOf[java.util.List[_]]))
 
-        def toChildSerializer = toNamedSerializer(childDefinition.getElementName)(_)
+          val elementExpr = definition match {
+            case composite: BaseRuntimeElementCompositeDefinition[_] => (elem: Expression) => compositeToExpr(elem, composite)
+            case primitive: RuntimePrimitiveDatatypeDefinition => (elem: Expression) => dataTypeMappings.primitiveEncoderExpression(elem, primitive)
+          }
 
-        definition match {
-          case composite: BaseRuntimeElementCompositeDefinition[_] => toChildSerializer(compositeToExpr(childObject, composite))
-          case primitive: RuntimePrimitiveDatatypeDefinition => primitiveToSerializer(childObject, primitive, childDefinition.getElementName);
-          case narrative: RuntimePrimitiveDatatypeNarrativeDefinition => toChildSerializer(dataTypeToUtf8Expr(childObject))
-          case htmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => toChildSerializer(dataTypeToUtf8Expr(childObject))
+          val childExpr = MapObjects(elementExpr,
+            childList,
+            objectTypeFor(childDefinition))
+
+          List(Literal(childDefinition.getElementName), childExpr)
+
+        } else {
+
+          // Get the field accessor
+          val childObject = Invoke(parentObject,
+            accessorFor(childDefinition),
+            objectTypeFor(childDefinition))
+
+          def toChildSerializer = toNamedSerializer(childDefinition.getElementName)(_)
+
+          definition match {
+            case composite: BaseRuntimeElementCompositeDefinition[_] => toChildSerializer(compositeToExpr(childObject, composite))
+            case primitive: RuntimePrimitiveDatatypeDefinition => primitiveToSerializer(childObject, primitive, childDefinition.getElementName);
+            case _: RuntimePrimitiveDatatypeNarrativeDefinition => toChildSerializer(dataTypeToUtf8Expr(childObject))
+            case _: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => toChildSerializer(dataTypeToUtf8Expr(childObject))
+          }
         }
       }
     }
@@ -311,27 +317,30 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
   private def compositeToExpr(inputObject: Expression,
                               definition: BaseRuntimeElementCompositeDefinition[_]): Expression = {
 
-    // Handle references as special cases, since they include a recursive structure
-    // that can't be mapped onto a dataframe
-    val fields = dataTypeMappings.overrideCompositeExpression(inputObject, definition) match {
+    EncodingContext.withDefinition(definition) {
 
-      case Some(fields) => fields;
-      case None => {
+      // Handle references as special cases, since they include a recursive structure
+      // that can't be mapped onto a dataframe
+      val fields = dataTypeMappings.overrideCompositeExpression(inputObject, definition) match {
 
-        // Map to (name, value, name, value) expressions for child elements.
-        val children: util.List[BaseRuntimeChildDefinition] = definition.getChildren
+        case Some(fields) => fields;
+        case None => {
 
-        children
-          .filter(child => !dataTypeMappings.skipField(definition, child))
-          .flatMap(child => childToSerializer(inputObject, child))
+          // Map to (name, value, name, value) expressions for child elements.
+          val children: util.List[BaseRuntimeChildDefinition] = definition.getChildren
+
+          children
+            .filter(child => !dataTypeMappings.skipField(definition, child))
+            .flatMap(child => childToSerializer(inputObject, child))
+        }
       }
+
+      val createStruct = CreateNamedStruct(fields)
+
+      expressions.If(IsNull(inputObject),
+        Literal.create(null, createStruct.dataType),
+        createStruct)
     }
-
-    val createStruct = CreateNamedStruct(fields)
-
-    expressions.If(IsNull(inputObject),
-      Literal.create(null, createStruct.dataType),
-      createStruct)
   }
 
   private def serializer(inputObject: Expression,
@@ -339,32 +348,36 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
                          contained: Seq[BaseRuntimeElementCompositeDefinition[_]]):
   Expression = {
 
-    // Map to (name, value, name, value) expressions for child elements.
-    val childFields: Seq[Expression] =
-      definition.getChildren
-        .flatMap(child => childToSerializer(inputObject, child))
 
-    // Map to (name, value, name, value) expressions for all contained resources.
-    val containedChildFields = contained.flatMap { containedDefinition =>
+    EncodingContext.withDefinition(definition) {
 
-      val containedChild = GetClassFromContained(inputObject,
-        containedDefinition.getImplementingClass)
+      // Map to (name, value, name, value) expressions for child elements.
+      val childFields: Seq[Expression] =
+        definition.getChildren
+          .flatMap(child => childToSerializer(inputObject, child))
 
-      Literal(containedDefinition.getName) ::
-        CreateNamedStruct(containedDefinition.getChildren
-          .flatMap(child => childToSerializer(containedChild, child))) ::
+      // Map to (name, value, name, value) expressions for all contained resources.
+      val containedChildFields = contained.flatMap { containedDefinition =>
+
+        val containedChild = GetClassFromContained(inputObject,
+          containedDefinition.getImplementingClass)
+
+        Literal(containedDefinition.getName) ::
+          CreateNamedStruct(containedDefinition.getChildren
+            .flatMap(child => childToSerializer(containedChild, child))) ::
+          Nil
+      }
+
+      // Create a 'contained' struct having the contained elements if declared for the parent.
+      val containedChildren = if (contained.nonEmpty) {
+        Literal("contained") :: CreateNamedStruct(containedChildFields) :: Nil
+      } else {
         Nil
-    }
+      }
 
-    // Create a 'contained' struct having the contained elements if declared for the parent.
-    val containedChildren = if (contained.nonEmpty) {
-      Literal("contained") :: CreateNamedStruct(containedChildFields) :: Nil
-    } else {
-      Nil
+      val struct = CreateNamedStruct(childFields ++ containedChildren)
+      If(IsNull(struct), Literal.create(null, struct.dataType), struct)
     }
-
-    val struct = CreateNamedStruct(childFields ++ containedChildren)
-    If(IsNull(struct), Literal.create(null, struct.dataType), struct)
   }
 
   private def listToDeserializer(definition: BaseRuntimeElementDefinition[_ <: IBase],
@@ -498,9 +511,13 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       val definition = childDefinition.getChildByName(childDefinition.getElementName)
         .asInstanceOf[BaseRuntimeElementDefinition[_ <: IBase]]
 
-      // Handle lists
-      Map(childDefinition.getElementName -> listToDeserializer(definition, addToPath(childDefinition.getElementName)))
 
+      if (!schemaConverter.shouldExpand(definition)) {
+        Map.empty
+      } else {
+        // Handle lists
+        Map(childDefinition.getElementName -> listToDeserializer(definition, addToPath(childDefinition.getElementName)))
+      }
     } else {
 
       val childPath = Some(addToPath(childDefinition.getElementName))
@@ -621,47 +638,50 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
     def getPath: Expression = path.getOrElse(GetColumnByOrdinal(0,
       schemaConverter.compositeToStructType(definition)))
 
-    // Map to (name, value, name, value) expressions for child elements.
-    val childExpressions: Map[String, Expression] = definition.getChildren
-      .filter(child => !dataTypeMappings.skipField(definition, child))
-      .flatMap(child => childToDeserializer(child, path)).toMap
 
-    val compositeInstance = NewInstance(definition.getImplementingClass,
-      Nil,
-      ObjectType(definition.getImplementingClass))
+    EncodingContext.withDefinition(definition) {
+      // Map to (name, value, name, value) expressions for child elements.
+      val childExpressions: Map[String, Expression] = definition.getChildren
+        .filter(child => !dataTypeMappings.skipField(definition, child))
+        .flatMap(child => childToDeserializer(child, path)).toMap
 
-    val setters = childExpressions.map { case (name, expression) =>
+      val compositeInstance = NewInstance(definition.getImplementingClass,
+        Nil,
+        ObjectType(definition.getImplementingClass))
 
-      // Option types are not visible in the getChildByName, so we fall back
-      // to looking for them in the child list.
-      val childDefinition = if (definition.getChildByName(name) != null)
-        definition.getChildByName(name)
-      else
-        definition.getChildren.find(childDef => childDef.getElementName == name).get
+      val setters = childExpressions.map { case (name, expression) =>
 
-      (setterFor(childDefinition), expression)
-    }
+        // Option types are not visible in the getChildByName, so we fall back
+        // to looking for them in the child list.
+        val childDefinition = if (definition.getChildByName(name) != null)
+          definition.getChildByName(name)
+        else
+          definition.getChildren.find(childDef => childDef.getElementName == name).get
 
-    val bean: Expression = InitializeJavaBean(compositeInstance, setters)
+        (setterFor(childDefinition), expression)
+      }
 
-    // Deserialize any Contained resources to the new Object through successive calls
-    // to 'addContained'.
-    val result = contained.foldLeft(bean)((value, containedResource) => {
+      val bean: Expression = InitializeJavaBean(compositeInstance, setters)
 
-      Invoke(value,
-        "addContained",
-        ObjectType(definition.getImplementingClass),
-        compositeToDeserializer(containedResource,
-          Some(UnresolvedAttribute("contained." + containedResource.getName))) :: Nil)
-    })
+      // Deserialize any Contained resources to the new Object through successive calls
+      // to 'addContained'.
+      val result = contained.foldLeft(bean)((value, containedResource) => {
 
-    if (path.nonEmpty) {
-      expressions.If(
-        IsNull(getPath),
-        expressions.Literal.create(null, ObjectType(definition.getImplementingClass)),
-        result)
-    } else {
-      result
+        Invoke(value,
+          "addContained",
+          ObjectType(definition.getImplementingClass),
+          compositeToDeserializer(containedResource,
+            Some(UnresolvedAttribute("contained." + containedResource.getName))) :: Nil)
+      })
+
+      if (path.nonEmpty) {
+        expressions.If(
+          IsNull(getPath),
+          expressions.Literal.create(null, ObjectType(definition.getImplementingClass)),
+          result)
+      } else {
+        result
+      }
     }
   }
 }

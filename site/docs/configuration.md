@@ -50,6 +50,13 @@ Additionally, you can set any variable supported by Spring Boot, see
   could create an alternative URL with the same prefix, e.g. `s3://some-bucket` 
   would also match `s3://some-bucket-alternative`.
 
+### Encoding
+
+- `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum 
+  depth of nested element data that is encoded upon import. This affects certain 
+  elements within FHIR resources that contain recursive references, e.g. 
+  [QuestionnaireResponse.item](https://hl7.org/fhir/R4/questionnaireresponse.html).
+
 ### Storage
 
 - `pathling.storage.warehouseUrl` - (default: `file:///usr/share/warehouse`) The 

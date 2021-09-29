@@ -98,6 +98,9 @@ public class Configuration {
     this.import_ = import_;
   }
 
+  @NotNull
+  private Encoding encoding;
+
   /**
    * Represents configuration that controls the behaviour of Apache Spark.
    */
@@ -320,6 +323,22 @@ public class Configuration {
      */
     @NotNull
     private List<String> allowableSources;
+
+  }
+
+
+  /**
+   * Represents configuration specific to FHIR encoding.
+   */
+  @Data
+  public static class Encoding {
+
+    /**
+     * The maximum nesting level for recursive data types.
+     */
+    @NotNull
+    @Min(0)
+    private Integer maxNestingLevel;
 
   }
 

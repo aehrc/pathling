@@ -106,6 +106,10 @@ pathling:
     allowableSources:
       - "file:///usr/share/staging"
 
+  encoding:
+    # Controls the maximum depth of nested element data that is encoded upon import.
+    maxNestingLevel: 3
+
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.
 # Here is the full list: https://spark.apache.org/docs/latest/configuration.html
