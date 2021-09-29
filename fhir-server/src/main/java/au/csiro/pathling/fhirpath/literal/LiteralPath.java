@@ -146,6 +146,11 @@ public abstract class LiteralPath implements FhirPath {
     return ORDERING_NULL_VALUE;
   }
 
+  @Nonnull
+  public Column getExtractableColumn() {
+    return getValueColumn();
+  }
+
   /**
    * Returns the Java object that represents the value of this literal.
    *

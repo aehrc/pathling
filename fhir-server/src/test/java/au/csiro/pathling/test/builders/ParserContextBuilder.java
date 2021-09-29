@@ -16,7 +16,9 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.DefaultAnswer;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,6 +49,9 @@ public class ParserContextBuilder {
   @Nonnull
   private Optional<List<Column>> groupingColumns;
 
+  @Nonnull
+  private final Map<String, Column> nodeIdColumns;
+
   public ParserContextBuilder(@Nonnull final SparkSession spark,
       @Nonnull final FhirContext fhirContext) {
     this.fhirContext = fhirContext;
@@ -56,6 +61,7 @@ public class ParserContextBuilder {
     when(inputContext.getDataset()).thenReturn(spark.emptyDataFrame());
     resourceReader = Mockito.mock(ResourceReader.class, new DefaultAnswer());
     groupingColumns = Optional.empty();
+    nodeIdColumns = new HashMap<>();
   }
 
   @Nonnull
@@ -98,7 +104,7 @@ public class ParserContextBuilder {
   @Nonnull
   public ParserContext build() {
     return new ParserContext(inputContext, fhirContext, spark, resourceReader,
-        Optional.ofNullable(terminologyServiceFactory), groupingColumns);
+        Optional.ofNullable(terminologyServiceFactory), groupingColumns, nodeIdColumns);
   }
 
 }

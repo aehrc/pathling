@@ -6,6 +6,8 @@ pathling:
   warehouseUrl: file:///some/nonexistent/path
   terminology:
     serverUrl: https://somenonexistenttxserver.com/fhir
+  async:
+    enabled: false
 
 spark:
   master: local[1]

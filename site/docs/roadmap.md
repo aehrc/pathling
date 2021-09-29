@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Roadmap
-nav_order: 6
+nav_order: 8
 parent: Documentation
 ---
 
@@ -10,64 +10,14 @@ parent: Documentation
 The roadmap for future development on Pathling is based upon the following
 themes:
 
-1. [Extract operation](#extract-operation)
-2. [Improved FHIRPath support](#improved-fhirpath-support)
-3. [APIs for Python and R](#apis-for-python-and-r)
-4. [Incremental update](#incremental-update)
-5. [Subscriptions](#subscriptions)
-6. [Extension content](#extension-content)
-7. [CLI mode](#cli-mode)
-8. [Temporal query](#temporal-query)
+1. [Improved FHIRPath support](#improved-fhirpath-support)
+2. [APIs for Python and R](#apis-for-python-and-r)
+3. [Incremental update](#incremental-update)
+4. [Subscriptions](#subscriptions)
+5. [Extension content](#extension-content)
+6. [CLI mode](#cli-mode)
+7. [Temporal query](#temporal-query)
 
----
-
-## Extract operation
-
-This change will introduce a new operation called `extract`. This operation is
-designed for transforming FHIR data into a flattened form, for use within other 
-tools, such as statistical and machine learning models.
-
-The operation takes a set of expressions that define columns in a tabular view
-of the data. A URL pointing to a delimited text file is returned, which contains
-the result of executing the expressions against each subject resource.
-
-<img src="/images/extract.png" 
-     srcset="/images/extract@2x.png 2x, /images/extract.png 1x"
-     alt="Extract operation" />
-
-### Request
-
-The request for the `$extract` operation is a
-[Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
-following parameters:
-
-- `subjectResource [1..1]` - (code) The subject resource that the expressions
-  within this query are evaluated against. Code must be a member of
-  [http://hl7.org/fhir/ValueSet/resource-types](http://hl7.org/fhir/ValueSet/resource-types).
-- `column [1..*]` - An expression which is used to extract a value from each
-  resource.
-  - `expression [1..1]` - (string) A FHIRPath expression that defines the
-    column. The context is a single resource of the type specified in the
-    subjectResource parameter. The expression must evaluate to a primitive
-    value. If any columns preceding this column end in an aggregate function,
-    this column expression must also.
-  - `label [0..1]` - (string) A short description for the column, for display
-    purposes.
-- `filter [0..*]` - (string) A FHIRPath expression that can be evaluated against
-  each resource in the data set to determine whether it is included within the
-  result. The context is an individual resource of the type specified in the
-  subjectResource parameter. The expression must evaluate to a Boolean value.
-  Multiple filters are combined using AND logic.
-
-### Response
-
-The response for the `$extract` operation is a
-[Parameters](https://hl7.org/fhir/R4/parameters.html) resource containing the
-following parameters:
-
-- `url [1..1]` - (uri) A URL at which the result of the operation can be
-  retrieved.
-  
 ---
 
 ## Improved FHIRPath support

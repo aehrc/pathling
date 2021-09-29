@@ -33,6 +33,10 @@ pathling:
     # URL.
     warehouseUrl: file:///usr/share/warehouse
 
+    # The URL that Pathling will use to output the results of bulk operations such as Extract. Can
+    # be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://) URL.
+    resultUrl: file:///usr/share/results
+
     # The subdirectory within the warehouse path used to read and write data.
     databaseName: default
 
@@ -40,6 +44,8 @@ pathling:
     aws:
       # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
       anonymousAccess: true
+      # Number of seconds that S3 pre-signed URLs should remain valid for.
+      signedUrlExpiry: 3600
       # Authentication details for connecting to protected Amazon S3 locations.
       # accessKeyId: [AWS access key ID]
       # secretAccessKey: [AWS secret access key]
@@ -77,17 +83,6 @@ pathling:
     # Provides the URL which will be advertised as the token revocation endpoint.
     # revokeUrl: [token revocation URL]
 
-  caching:
-    # Controls whether request caching is enabled.
-    enabled: true
-
-    # Controls the maximum number of cache entries held in memory for each of the individual cache
-    # types. You can disable a particular type of caching by setting this number to zero.
-    aggregateRequestCacheSize: 100
-    searchBundleCacheSize: 100
-    searchPageCacheSize: 100
-    resourceReaderCacheSize: 100
-
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
@@ -105,6 +100,9 @@ pathling:
   import:
     allowableSources:
       - "file:///usr/share/staging"
+
+  async:
+    enabled: true
 
   encoding:
     # Controls the maximum depth of nested element data that is encoded upon import.

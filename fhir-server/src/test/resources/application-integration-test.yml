@@ -1,3 +1,7 @@
+pathling:
+  async:
+    enabled: false
+
 spring:
   main:
     banner-mode: off

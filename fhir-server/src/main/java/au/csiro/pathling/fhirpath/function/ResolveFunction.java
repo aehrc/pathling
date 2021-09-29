@@ -70,18 +70,20 @@ public class ResolveFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     if (isPolymorphic) {
-      return resolvePolymorphicReference(inputPath, resourceReader, referenceTypes, expression);
+      return resolvePolymorphicReference(input, resourceReader, referenceTypes, expression);
     } else {
       final FhirContext fhirContext = input.getContext().getFhirContext();
-      return resolveMonomorphicReference(inputPath, resourceReader, fhirContext, referenceTypes,
+      return resolveMonomorphicReference(input, resourceReader, fhirContext, referenceTypes,
           expression);
     }
   }
 
   @Nonnull
-  private static FhirPath resolvePolymorphicReference(@Nonnull final ReferencePath referencePath,
+  private static FhirPath resolvePolymorphicReference(@Nonnull final NamedFunctionInput input,
       @Nonnull final ResourceReader resourceReader,
       @Nonnull final Iterable<ResourceType> referenceTypes, final String expression) {
+    final ReferencePath referencePath = (ReferencePath) input.getInput();
+
     // If this is a polymorphic reference, create a dataset for each reference type, and union
     // them together to produce the target dataset. The dataset will not contain the resources
     // themselves, only a type and identifier for later resolution.
@@ -126,9 +128,11 @@ public class ResolveFunction implements NamedFunction {
   }
 
   @Nonnull
-  private FhirPath resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
+  private FhirPath resolveMonomorphicReference(@Nonnull final NamedFunctionInput input,
       @Nonnull final ResourceReader resourceReader, @Nonnull final FhirContext fhirContext,
       @Nonnull final Collection<ResourceType> referenceTypes, final String expression) {
+    final ReferencePath referencePath = (ReferencePath) input.getInput();
+
     // If this is a monomorphic reference, we just need to retrieve the appropriate table and
     // create a dataset with the full resources.
     final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
@@ -142,6 +146,11 @@ public class ResolveFunction implements NamedFunction {
 
     final Column inputId = referencePath.getIdColumn();
     final Optional<Column> inputEid = referencePath.getEidColumn();
+
+    // We need to add the resource ID column to the parser context so that it can be used within
+    // joins in certain situations, e.g. extract.
+    input.getContext().getNodeIdColumns()
+        .putIfAbsent(expression, resourcePath.getElementColumn("id"));
 
     return resourcePath.copy(expression, dataset, inputId, inputEid, resourcePath.getValueColumn(),
         referencePath.isSingular(), referencePath.getThisColumn());

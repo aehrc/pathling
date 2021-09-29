@@ -60,6 +60,24 @@ public interface CodingEncoding {
   }
 
   /**
+   * Decodes a Coding from a Row.
+   *
+   * @param row the row to decode
+   * @return the resulting Coding
+   */
+  static Coding decode(@Nonnull final Row row) {
+    final Coding coding = new Coding();
+    coding.setSystem(row.getString(1));
+    coding.setVersion(row.getString(2));
+    coding.setCode(row.getString(3));
+    coding.setDisplay(row.getString(4));
+    if (!row.isNullAt(5)) {
+      coding.setUserSelected(row.getBoolean(5));
+    }
+    return coding;
+  }
+
+  /**
    * Encodes a  list of Codings to a Row[] (spark SQL compatible type)
    *
    * @param codings a  list of codings to encode

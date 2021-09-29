@@ -56,16 +56,22 @@ public class ErrorHandlingInterceptor {
    */
   @Hook(Pointcut.SERVER_PRE_PROCESS_OUTGOING_EXCEPTION)
   @SuppressWarnings("unused")
-  public BaseServerResponseException convertError(@Nullable final RequestDetails requestDetails,
+  public BaseServerResponseException handleOutgoingException(
+      @Nullable final RequestDetails requestDetails,
       @Nullable final ServletRequestDetails servletRequestDetails,
       @Nonnull final Throwable throwable,
       @Nullable final HttpServletRequest request, @Nullable final HttpServletResponse response) {
 
-    return doConvertError(throwable);
+    return convertError(throwable);
   }
 
+  /**
+   * @param error an error that could be raised during processing
+   * @return a HAPI {@link BaseServerResponseException} that will deliver an appropriate response to
+   * a user of the FHIR API
+   */
   @Nonnull
-  private BaseServerResponseException doConvertError(@Nonnull final Throwable error) {
+  public static BaseServerResponseException convertError(@Nonnull final Throwable error) {
     try {
       throw error;
 
@@ -80,7 +86,7 @@ public class ErrorHandlingInterceptor {
       // (see: ca.uhn.fhir.rest.server.method.BaseMethodBinding.invokeServerMethod )
       @Nullable final Throwable cause = e.getCause();
       if (cause != null) {
-        return doConvertError(cause);
+        return convertError(cause);
       } else {
         return internalServerError(e);
       }
@@ -120,7 +126,7 @@ public class ErrorHandlingInterceptor {
 
   @Nonnull
   @SuppressWarnings("SameParameterValue")
-  private BaseServerResponseException buildException(final int theStatusCode,
+  private static BaseServerResponseException buildException(final int theStatusCode,
       @Nonnull final String message,
       @Nonnull final IssueType issueType) {
     final OperationOutcome opOutcome = new OperationOutcome();
@@ -137,7 +143,7 @@ public class ErrorHandlingInterceptor {
 
 
   @Nonnull
-  private BaseServerResponseException convertDataFormatException(
+  private static BaseServerResponseException convertDataFormatException(
       @Nonnull final DataFormatException e) {
     final Throwable cause = e.getCause();
     if (cause == null) {
@@ -156,7 +162,7 @@ public class ErrorHandlingInterceptor {
   }
 
   @Nonnull
-  private InternalErrorException internalServerError(final @Nonnull Throwable error) {
+  private static InternalErrorException internalServerError(final @Nonnull Throwable error) {
     return error instanceof InternalErrorException
            ? (InternalErrorException) error
            : new InternalErrorException("Unexpected error occurred", error);

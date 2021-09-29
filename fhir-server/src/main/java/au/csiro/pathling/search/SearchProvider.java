@@ -46,12 +46,12 @@ public class SearchProvider implements IResourceProvider {
   /**
    * The name of the FHIR search profile.
    */
-  public static final String QUERY_NAME = "fhirPath";
+  private static final String QUERY_NAME = "fhirPath";
 
   /**
    * The name of the parameter which is passed to the search profile.
    */
-  public static final String FILTER_PARAM = "filter";
+  private static final String FILTER_PARAM = "filter";
 
   @Nonnull
   private final Configuration configuration;
@@ -122,9 +122,7 @@ public class SearchProvider implements IResourceProvider {
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search() {
     final ResourceType subjectResource = ResourceDefinition.getResourceTypeFromClass(resourceClass);
-    return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
-        terminologyServiceFactory, fhirEncoders,
-        subjectResource, Optional.empty());
+    return buildSearchExecutor(subjectResource, Optional.empty());
   }
 
   /**
@@ -139,8 +137,14 @@ public class SearchProvider implements IResourceProvider {
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search(
       @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters) {
-    return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
-        terminologyServiceFactory, fhirEncoders,
-        resourceType, Optional.ofNullable(filters));
+    return buildSearchExecutor(resourceType, Optional.ofNullable(filters));
   }
+
+  @Nonnull
+  private IBundleProvider buildSearchExecutor(@Nonnull final ResourceType subjectResource,
+      @Nonnull final Optional<StringAndListParam> filters) {
+    return new SearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
+        terminologyServiceFactory, fhirEncoders, subjectResource, filters);
+  }
+
 }

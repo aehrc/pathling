@@ -19,11 +19,7 @@ import org.springframework.test.context.TestPropertySource;
  * @see <a href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
-@TestPropertySource(
-    properties = {
-        "pathling.auth.enabled=true",
-        "pathling.caching.enabled=false"
-    })
+@TestPropertySource(properties = {"pathling.auth.enabled=true"})
 @MockBean(OidcConfiguration.class)
 @MockBean(JwtDecoder.class)
 @MockBean(JwtAuthenticationConverter.class)
@@ -32,8 +28,7 @@ public class SecurityEnabledOperationsTest extends SecurityTestForOperations {
   @Test
   @WithMockUser(username = "admin")
   public void testForbiddenIfImportWithoutAuthority() {
-    assertThrowsAccessDenied(this::assertImportSuccess, "pathling:import"
-    );
+    assertThrowsAccessDenied(this::assertImportSuccess, "pathling:import");
   }
 
   @Test
@@ -45,8 +40,7 @@ public class SecurityEnabledOperationsTest extends SecurityTestForOperations {
   @Test
   @WithMockUser(username = "admin")
   public void testForbiddenIfAggregateWithoutAuthority() {
-    assertThrowsAccessDenied(this::assertAggregateSuccess, "pathling:aggregate"
-    );
+    assertThrowsAccessDenied(this::assertAggregateSuccess, "pathling:aggregate");
   }
 
   @Test
@@ -58,10 +52,8 @@ public class SecurityEnabledOperationsTest extends SecurityTestForOperations {
   @Test
   @WithMockUser(username = "admin")
   public void testForbiddenIfSearchWithoutAuthority() {
-    assertThrowsAccessDenied(this::assertSearchSuccess, "pathling:search"
-    );
-    assertThrowsAccessDenied(this::assertSearchWithFilterSuccess, "pathling:search"
-    );
+    assertThrowsAccessDenied(this::assertSearchSuccess, "pathling:search");
+    assertThrowsAccessDenied(this::assertSearchWithFilterSuccess, "pathling:search");
   }
 
   @Test
@@ -70,18 +62,4 @@ public class SecurityEnabledOperationsTest extends SecurityTestForOperations {
     assertSearchSuccess();
   }
 
-  @Test
-  @WithMockUser(username = "admin")
-  public void testForbiddenIfCachingSearchWithoutAuthority() {
-    // TODO: this become somewhat messy because of the current caching implementation.
-    //  Perhaps we could use AOP here as well to simplify?
-    assertThrowsAccessDenied(this::assertCachingSearchSuccess, "pathling:search");
-    assertThrowsAccessDenied(this::assertCachingSearchWithFilterSuccess, "pathling:search");
-  }
-
-  @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:search"})
-  public void testPassIfCachingSearchWithAuthority() {
-    assertCachingSearchSuccess();
-  }
 }

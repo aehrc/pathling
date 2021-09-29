@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.update;
 
-import au.csiro.pathling.caching.CacheManager;
+import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.SecurityError;
@@ -17,6 +17,7 @@ import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResourceWriter;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +65,7 @@ public class ImportExecutor {
   private final FhirContextFactory fhirContextFactory;
 
   @Nonnull
-  private final CacheManager cacheManager;
+  private final Optional<CacheInvalidator> cacheInvalidator;
 
   @Nonnull
   private final AccessRules accessRules;
@@ -74,31 +75,31 @@ public class ImportExecutor {
    * @param resourceReader A {@link ResourceReader} for retrieving resources
    * @param resourceWriter A {@link ResourceWriter} for saving resources
    * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
-   * @param fhirContextFactory A {@link FhirContextFactory} for constructing {@link
-   * ca.uhn.fhir.context.FhirContext} objects in the context of parallel processing
-   * @param cacheManager A {@link CacheManager} for invalidating caches upon import
+   * @param fhirContextFactory A {@link FhirContextFactory} for constructing FhirContext objects in
+   * the context of parallel processing
+   * @param cacheInvalidator A {@link CacheInvalidator} for invalidating caches upon import
    * @param accessRules A {@link AccessRules} for validating access to URLs
    */
   public ImportExecutor(@Nonnull final SparkSession spark,
       @Nonnull final ResourceReader resourceReader, @Nonnull final ResourceWriter resourceWriter,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final FhirContextFactory fhirContextFactory,
-      @Nonnull final CacheManager cacheManager,
+      @Nonnull final Optional<CacheInvalidator> cacheInvalidator,
       @Nonnull final AccessRules accessRules) {
     this.spark = spark;
     this.resourceReader = resourceReader;
     this.resourceWriter = resourceWriter;
     this.fhirEncoders = fhirEncoders;
     this.fhirContextFactory = fhirContextFactory;
-    this.cacheManager = cacheManager;
+    this.cacheInvalidator = cacheInvalidator;
     this.accessRules = accessRules;
   }
 
   /**
    * Executes an import request.
    *
-   * @param inParams A FHIR {@link Parameters} object describing the import request
-   * @return A FHIR {@link OperationOutcome} resource describing the result
+   * @param inParams a FHIR {@link Parameters} object describing the import request
+   * @return a FHIR {@link OperationOutcome} resource describing the result
    */
   @Nonnull
   public OperationOutcome execute(@Nonnull @ResourceParam final Parameters inParams) {
@@ -158,7 +159,7 @@ public class ImportExecutor {
     log.info("Import complete");
 
     // Invalidate all caches following the import.
-    cacheManager.invalidateAll();
+    cacheInvalidator.ifPresent(CacheInvalidator::invalidateAll);
 
     // Construct a response.
     final OperationOutcome opOutcome = new OperationOutcome();

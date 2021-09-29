@@ -74,7 +74,7 @@ public abstract class AggregateExecutorTest {
   void setUp() {
     SharedMocks.resetAll();
     resourceReader = mock(ResourceReader.class);
-    executor = new FreshAggregateExecutor(configuration, fhirContext, spark, resourceReader,
+    executor = new AggregateExecutor(configuration, fhirContext, spark, resourceReader,
         Optional.of(terminologyServiceFactory));
   }
 

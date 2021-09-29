@@ -78,9 +78,6 @@ public class Configuration {
   private Configuration.Authorization auth;
 
   @NotNull
-  private Caching caching;
-
-  @NotNull
   private Cors cors;
 
   // Handle the `import` property outside of Lombok, as import is a Java keyword.
@@ -88,6 +85,9 @@ public class Configuration {
   @Setter(AccessLevel.NONE)
   @NotNull
   private Import import_;
+
+  @NotNull
+  private Async async;
 
   @Nonnull
   public Import getImport() {
@@ -144,6 +144,13 @@ public class Configuration {
     @Size(min = 1, max = 50)
     private String databaseName;
 
+    /**
+     * The URL that Pathling will use to output the results of bulk operations such as Extract. Can
+     * be an Amazon S3 ({@code s3://}), HDFS ({@code hdfs://}) or filesystem ({@code file://}) URL.
+     */
+    @NotBlank
+    private String resultUrl;
+
     @NotNull
     private Aws aws;
 
@@ -171,6 +178,12 @@ public class Configuration {
       @Nullable
       @ToString.Exclude
       private String secretAccessKey;
+
+      /**
+       * Number of seconds that S3 pre-signed URLs should remain valid for.
+       */
+      @NotNull
+      private long signedUrlExpiry;
 
       @Nonnull
       public Optional<String> getAccessKeyId() {
@@ -256,39 +269,6 @@ public class Configuration {
   }
 
   /**
-   * Represents configuration specific to request caching.
-   */
-  @Data
-  public static class Caching {
-
-    /**
-     * Controls whether request caching is enabled.
-     */
-    @NotNull
-    private boolean enabled;
-
-    /**
-     * Controls the maximum number of cache entries held in memory.
-     */
-    @NotNull
-    @Min(0)
-    private Long aggregateRequestCacheSize;
-
-    @NotNull
-    @Min(0)
-    private Long searchBundleCacheSize;
-
-    @NotNull
-    @Min(0)
-    private Long searchPageCacheSize;
-
-    @NotNull
-    @Min(0)
-    private Long resourceReaderCacheSize;
-
-  }
-
-  /**
    * Represents configuration relating to Cross-Origin Resource Sharing (CORS).
    */
   @Data
@@ -323,6 +303,20 @@ public class Configuration {
      */
     @NotNull
     private List<String> allowableSources;
+
+  }
+
+  /**
+   * Represents configuration relating to asynchronous processing.
+   */
+  @Data
+  public static class Async {
+
+    /**
+     * Enables asynchronous process of requests.
+     */
+    @NotNull
+    private boolean enabled;
 
   }
 

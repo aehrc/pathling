@@ -37,27 +37,22 @@
       <artifactId>spring-boot-configuration-processor</artifactId>
       <optional>true</optional>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-aop</artifactId>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-oauth2-resource-server</artifactId>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-oauth2-jose</artifactId>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
@@ -143,6 +138,12 @@
       <groupId>org.antlr</groupId>
       <artifactId>antlr4</artifactId>
       <version>${pathling.antlrVersion}</version>
+    </dependency>
+
+    <!-- AWS SDK -->
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-s3</artifactId>
     </dependency>
 
     <!-- Error monitoring -->
@@ -253,6 +254,9 @@
                 <pathling.storage.warehouseUrl>
                   file://${project.basedir}/src/test/resources/test-data
                 </pathling.storage.warehouseUrl>
+                <pathling.storage.resultUrl>
+                  file://${project.basedir}/src/test/resources/test-data/results
+                </pathling.storage.resultUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
               </systemPropertyVariables>
             </configuration>

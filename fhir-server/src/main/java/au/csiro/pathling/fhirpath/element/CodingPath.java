@@ -6,6 +6,9 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.lit;
+
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -13,6 +16,7 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
+import au.csiro.pathling.sql.CodingToLiteral;
 import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
 import java.util.List;
@@ -115,7 +119,7 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   private static BiFunction<Column, Column, Column> codingEqual() {
     //noinspection OptionalGetWithoutIsPresent
     return (l, r) ->
-        functions.when(l.isNull().or(r.isNull()), functions.lit(null))
+        functions.when(l.isNull().or(r.isNull()), lit(null))
             .otherwise(
                 EQUALITY_COLUMNS.stream()
                     .map(f -> l.getField(f).eqNullSafe(r.getField(f))).reduce(Column::and).get()
@@ -147,4 +151,11 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof CodingLiteralPath;
   }
+
+  @Nonnull
+  @Override
+  public Column getExtractableColumn() {
+    return callUDF(CodingToLiteral.FUNCTION_NAME, getValueColumn());
+  }
+
 }

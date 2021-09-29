@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 @Tag("UnitTest")
 public class AccessRulesTest {
 
-  final AccessRules accessRules;
+  private final AccessRules accessRules;
 
   public AccessRulesTest() {
     final Configuration configuration = new Configuration();
@@ -41,7 +41,8 @@ public class AccessRulesTest {
 
   @Test
   public void prohibitsAccessToUnlistedSources() {
-    assertThrows(SecurityError.class, () -> accessRules.checkCanImportFrom("file:///usr/share/other"));
+    assertThrows(SecurityError.class,
+        () -> accessRules.checkCanImportFrom("file:///usr/share/other"));
   }
 
   @Test

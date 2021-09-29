@@ -1,21 +1,25 @@
 ---
 layout: page
 title: Aggregate
-nav_order: 3
-parent: Documentation
+nav_order: 2
+parent: Operations
+grand_parent: Documentation
 ---
 
 # Aggregate
 
 [FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/aggregate-4)
 
-Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
-interface, and the `$aggregate` operation is an
-[extended operation](https://hl7.org/fhir/R4/operations.html) defined on that
-interface.
-
 This operation allows a user to perform aggregate queries on data held within
-the FHIR server by specifying aggregation, grouping and filter expressions.
+the FHIR server. You call the operation by specifying aggregation, grouping and 
+filter expressions, and grouped results are returned.
+
+The aggregate operation is useful for exploratory data analysis, as well as 
+powering visualizations and other summarized views of the data.
+
+<div class="callout info">
+    The <code>aggregate</code> operation supports the <a href="https://hl7.org/fhir/r4/async.html">Asynchronous Request Pattern</a>, which allows you to kick off a long-running request and check on its progress using a status endpoint.
+</div>
 
 ```
 GET [FHIR endpoint]/[resource type]/$aggregate?[parameters...]
@@ -37,12 +41,14 @@ resource. The following parameters are supported:
 
 - `aggregation [1..*]` - (string) A FHIRPath expression which is used to 
   calculate a summary value from each grouping. The context is a collection of 
-  resources of the subject resource type. The expression must evaluate to a 
-  primitive value.
+  resources of the subject resource type. The expression must return a
+  [materializable type](./fhirpath/data-types.html#materializable-types) and also be 
+  singular.
 - `grouping [0..*]` - (string) A FHIRPath expression that can be evaluated 
   against each resource in the data set to determine which groupings it should 
   be counted within. The context is an individual resource of the subject 
-  resource type. The expression must evaluate to a primitive value.
+  resource type. The expression must return a
+  [materializable type](./fhirpath/data-types.html#materializable-types).
 - `filter [0..*]` - (string) A FHIRPath expression that can be evaluated against 
   each resource in the data set to determine whether it is included within the 
   result. The context is an individual resource of the subject resource type. 
@@ -84,4 +90,4 @@ Check out example `aggregate` requests in the Postman collection:
    href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d4afec33-89d8-411c-8e4d-9169b9af42e0">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
-Next: [FHIRPath](./fhirpath)
+Next: [Extract](./extract.html)

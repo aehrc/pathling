@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Configuration
-nav_order: 5
+nav_order: 6
 parent: Documentation
 ---
 
@@ -50,6 +50,11 @@ Additionally, you can set any variable supported by Spring Boot, see
   could create an alternative URL with the same prefix, e.g. `s3://some-bucket` 
   would also match `s3://some-bucket-alternative`.
 
+### Asynchronous processing
+
+- `pathling.async.enabled` - (default: `true`) Enables asynchronous processing 
+  for those operations that support it, when explicitly requested.
+
 ### Encoding
 
 - `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum 
@@ -65,6 +70,9 @@ Additionally, you can set any variable supported by Spring Boot, see
   [Amazon S3](https://aws.amazon.com/s3/) (`s3://`),
   [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`) or
   filesystem (`file://`) URL.
+- `pathling.storage.resultUrl` - (default: `file:///usr/share/results`) The URL 
+  that Pathling will use to output the results of bulk operations such as 
+  [extract](./extract.html). Supports the same types of URLs as `warehouseUrl`.
 - `pathling.storage.databaseName` - (default: `default`) The subdirectory within 
   the warehouse path used to read and write data.
 - `pathling.storage.aws.anonymousAccess` - (default: `true`) Public S3 buckets 
@@ -73,6 +81,9 @@ Additionally, you can set any variable supported by Spring Boot, see
   a protected Amazon S3 bucket.
 - `pathling.storage.aws.secretAccessKey` - Authentication details for connecting 
   to a protected Amazon S3 bucket.
+- `pathling.storage.aws.signedUrlExpiry` - (default: `3600`) Number of seconds 
+  that S3 pre-signed URLs should remain valid for. This is relevant when using 
+  an S3 URL for `resultUrl`.
 
 ### Apache Spark
 
@@ -120,19 +131,6 @@ Here are a few that you might be particularly interested in:
   [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3) 
   within bearer tokens.
   
-### Caching
-
-- `pathling.caching.enabled` - (default: `true`) Controls whether request 
-  caching is enabled.
-- `pathling.caching.aggregateRequestCacheSize` - (default: `100`) Controls the 
-  maximum number of cache entries held in memory for the aggregate operation.
-- `pathling.caching.searchBundleCacheSize` - (default: `100`) Controls the 
-  maximum number of cache entries held in memory for the search operation.
-- `pathling.caching.searchPageCacheSize` - (default: `100`) Controls the 
-  maximum number of pages held in memory for each search operation.
-- `pathling.caching.resourceReaderCacheSize` - (default: `100`) Controls the 
-  maximum number of resource tables held in memory.
-
 ### Cross-Origin Resource Sharing (CORS)
 
 See the 
@@ -242,4 +240,4 @@ application.
 For compatibility, Pathling runs Spark 3.1.2 (Scala 2.12), with Hadoop version
 3.2.2.
 
-Next: [Roadmap](./roadmap.html)
+Next: [Deployment](./deployment)

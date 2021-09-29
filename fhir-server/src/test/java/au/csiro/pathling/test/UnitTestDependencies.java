@@ -7,6 +7,7 @@
 package au.csiro.pathling.test;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
@@ -15,6 +16,7 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -34,8 +36,9 @@ public class UnitTestDependencies {
   @ConditionalOnMissingBean
   @Nonnull
   public static SparkSession sparkSession(@Nonnull final Configuration configuration,
-      @Nonnull final Environment environment) {
-    return Spark.build(configuration, environment);
+      @Nonnull final Environment environment,
+      @Nonnull final Optional<SparkListener> sparkListener) {
+    return Spark.build(configuration, environment, sparkListener);
   }
 
   @Bean

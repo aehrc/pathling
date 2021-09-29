@@ -1,20 +1,20 @@
 ---
 layout: page
 title: Search
-nav_order: 2
-parent: Documentation
+nav_order: 1
+parent: Operations
+grand_parent: Documentation
 ---
 
 # Search
 
 [FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-4)
 
-Pathling provides a [FHIR&reg; REST](https://hl7.org/fhir/R4/http.html)
-interface, and defines a
-[named search query](https://hl7.org/fhir/R4/search.html#query) on all resource
-types called `fhirPath`.
+This operation extends the search capabilities of FHIR using a
+[search profile](https://hl7.org/fhir/R4/search.html#query) called `fhirPath`, 
+for use with all resource types.
 
-This search query allows the user to retrieve a set of FHIR resources from the
+This search profile allows the user to retrieve a set of FHIR resources from the
 server filtered by one or more [FHIRPath](./fhirpath) expressions. Each
 expression is evaluated against each resource, returning a Boolean value which
 determines whether the resource will be included in the search result.

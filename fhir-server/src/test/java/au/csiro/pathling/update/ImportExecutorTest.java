@@ -54,11 +54,12 @@ class ImportExecutorTest {
 
   @TempDir
   static File testRootDir;
-  static File warehouseDir;
+
+  private static File warehouseDir;
 
   @DynamicPropertySource
   @SuppressWarnings("unused")
-  static void registerProperties(final DynamicPropertyRegistry registry) {
+  static void registerProperties(@Nonnull final DynamicPropertyRegistry registry) {
     warehouseDir = new File(testRootDir, "default");
     assertTrue(warehouseDir.mkdir());
     registry.add("pathling.storage.warehouseUrl",
@@ -70,7 +71,6 @@ class ImportExecutorTest {
     FileSystemUtils.deleteRecursively(warehouseDir);
     assertTrue(warehouseDir.mkdir());
     resourceReader.updateAvailableResourceTypes();
-    resourceReader.invalidateCache();
     assertEquals(Collections.emptySet(), resourceReader.getAvailableResourceTypes());
   }
 
@@ -80,10 +80,12 @@ class ImportExecutorTest {
   @Autowired
   private ImportExecutor importExecutor;
 
+  @SuppressWarnings("SameParameterValue")
   @Nonnull
-  private Parameters buildImportParameters(URL jsonURL, ResourceType resourceType) {
-    Parameters parameters = new Parameters();
-    ParametersParameterComponent sourceParam = parameters.addParameter().setName("source");
+  private Parameters buildImportParameters(@Nonnull final URL jsonURL,
+      @Nonnull final ResourceType resourceType) {
+    final Parameters parameters = new Parameters();
+    final ParametersParameterComponent sourceParam = parameters.addParameter().setName("source");
     sourceParam.addPart().setName("resourceType").setValue(new CodeType(resourceType.toCode()));
     sourceParam.addPart().setName("url").setValue(new UrlType(jsonURL.toExternalForm()));
     return parameters;
@@ -104,7 +106,6 @@ class ImportExecutorTest {
     assertEquals(ImmutableSet.of(ResourceType.PATIENT), resourceReader.getAvailableResourceTypes());
     assertEquals(9, resourceReader.read(ResourceType.PATIENT).count());
   }
-
 
   @Test
   public void testImportJsonFileWithRecursiveDatatype() {

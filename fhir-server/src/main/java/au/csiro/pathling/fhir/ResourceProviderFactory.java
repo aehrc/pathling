@@ -9,12 +9,10 @@ package au.csiro.pathling.fhir;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateProvider;
-import au.csiro.pathling.aggregate.CachingAggregateExecutor;
-import au.csiro.pathling.aggregate.FreshAggregateExecutor;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.extract.ExtractExecutor;
+import au.csiro.pathling.extract.ExtractProvider;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.search.CachingSearchProvider;
-import au.csiro.pathling.search.SearchExecutorCache;
 import au.csiro.pathling.search.SearchProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.IResourceProvider;
@@ -46,6 +44,9 @@ public class ResourceProviderFactory {
   private final AggregateExecutor aggregateExecutor;
 
   @Nonnull
+  private final ExtractExecutor extractExecutor;
+
+  @Nonnull
   private final FhirContext fhirContext;
 
   @Nonnull
@@ -60,9 +61,6 @@ public class ResourceProviderFactory {
   @Nonnull
   private final FhirEncoders fhirEncoders;
 
-  @Nonnull
-  private final SearchExecutorCache searchExecutorCache;
-
   /**
    * @param applicationContext The Spring {@link ApplicationContext}
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
@@ -74,11 +72,10 @@ public class ResourceProviderFactory {
    * queries within parallel processing
    * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
    * objects
-   * @param searchExecutorCache A {@link SearchExecutorCache} for caching search requests
-   * @param cachingAggregateExecutor A {@link CachingAggregateExecutor} for processing requests to
-   * aggregate operation, when caching is enabled
-   * @param freshAggregateExecutor A {@link FreshAggregateExecutor} for processing requests to the
-   * aggregate operation, when caching is not enabled
+   * @param aggregateExecutor A {@link AggregateExecutor} for processing requests to the aggregate
+   * operation
+   * @param extractExecutor A {@link ExtractExecutor} for processing requests to the extract
+   * operation
    */
   public ResourceProviderFactory(
       @Nonnull final ApplicationContext applicationContext,
@@ -88,9 +85,8 @@ public class ResourceProviderFactory {
       @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders,
-      @Nonnull final SearchExecutorCache searchExecutorCache,
-      @Nonnull final CachingAggregateExecutor cachingAggregateExecutor,
-      @Nonnull final FreshAggregateExecutor freshAggregateExecutor
+      @Nonnull final AggregateExecutor aggregateExecutor,
+      @Nonnull final ExtractExecutor extractExecutor
   ) {
     this.applicationContext = applicationContext;
     this.fhirContext = fhirContext;
@@ -99,10 +95,8 @@ public class ResourceProviderFactory {
     this.resourceReader = resourceReader;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.fhirEncoders = fhirEncoders;
-    this.searchExecutorCache = searchExecutorCache;
-    this.aggregateExecutor = configuration.getCaching().isEnabled()
-                             ? cachingAggregateExecutor
-                             : freshAggregateExecutor;
+    this.aggregateExecutor = aggregateExecutor;
+    this.extractExecutor = extractExecutor;
   }
 
   /**
@@ -121,27 +115,32 @@ public class ResourceProviderFactory {
   }
 
   /**
-   * Creates a {@link SearchProvider} or {@link CachingSearchProvider} bean for given resource
-   * type.
+   * Creates an {@link au.csiro.pathling.extract.ExtractProvider} bean for given resource type.
    *
    * @param resourceType the type of resource to create the provider for.
-   * @param cached whether to create the {@link CachingSearchProvider}
+   * @return {@link au.csiro.pathling.extract.ExtractProvider} bean.
+   */
+  @Nonnull
+  public IResourceProvider createExtractResourceProvider(
+      @Nonnull final ResourceType resourceType) {
+    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
+        .getResourceDefinition(resourceType.name()).getImplementingClass();
+    return applicationContext
+        .getBean(ExtractProvider.class, extractExecutor, resourceTypeClass);
+  }
+
+  /**
+   * Creates a {@link SearchProvider} bean for given resource type.
+   *
+   * @param resourceType the type of resource to create the provider for.
    * @return the SearchProvider bean.
    */
   @Nonnull
-  public IResourceProvider createSearchResourceProvider(@Nonnull final ResourceType resourceType,
-      final boolean cached) {
+  public SearchProvider createSearchResourceProvider(@Nonnull final ResourceType resourceType) {
     final Class<? extends IBaseResource> resourceTypeClass = fhirContext
         .getResourceDefinition(resourceType.name()).getImplementingClass();
 
-    return cached
-           ? applicationContext
-               .getBean(CachingSearchProvider.class, configuration, fhirContext, sparkSession,
-                   resourceReader,
-                   terminologyServiceFactory, fhirEncoders, resourceTypeClass, searchExecutorCache)
-           : applicationContext
-               .getBean(SearchProvider.class, configuration, fhirContext, sparkSession,
-                   resourceReader,
-                   terminologyServiceFactory, fhirEncoders, resourceTypeClass);
+    return applicationContext.getBean(SearchProvider.class, configuration, fhirContext,
+        sparkSession, resourceReader, terminologyServiceFactory, fhirEncoders, resourceTypeClass);
   }
 }
