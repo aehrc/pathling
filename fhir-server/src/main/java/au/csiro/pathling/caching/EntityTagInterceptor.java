@@ -8,13 +8,11 @@ package au.csiro.pathling.caching;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.Configuration;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
-import java.util.Date;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,17 +39,11 @@ public class EntityTagInterceptor {
   @Nonnull
   private final EntityTagValidator validator;
 
-  @Nonnull
-  private final Configuration configuration;
-
   /**
    * @param validator an {@link EntityTagValidator} for validating the tags
-   * @param configuration a {@link Configuration} that controls the behaviour of validation
    */
-  public EntityTagInterceptor(@Nonnull final EntityTagValidator validator,
-      @Nonnull final Configuration configuration) {
+  public EntityTagInterceptor(@Nonnull final EntityTagValidator validator) {
     this.validator = validator;
-    this.configuration = configuration;
   }
 
   /**
@@ -72,42 +64,15 @@ public class EntityTagInterceptor {
     checkNotNull(requestDetails);
     if (requestIsCacheable(request, requestDetails)) {
       final String tagHeader = request.getHeader("If-None-Match");
-      if (tagMatches(tagHeader, requestDetails)) {
+      if (validator.matches(tagHeader)) {
         log.info("Entity tag validation succeeded, processing not required");
         throw new NotModifiedException("Supplied entity tag matches");
       } else {
-        response.setHeader("ETag", getTag(requestDetails));
+        response.setHeader("ETag", validator.tag());
         response.setHeader("Cache-Control", "must-revalidate");
         response.addHeader("Cache-Control", "max-age=1");
       }
     }
-  }
-
-  @Nonnull
-  private String getTag(@Nonnull final RequestDetails requestDetails) {
-    // If this is an extract operation and we are using S3 for results, send back an ETag based on
-    // the current time, rather than the normal method.
-    return requestIsExtractWithS3Result(requestDetails)
-           ? validator.tagForTime(new Date().getTime())
-           : validator.tag();
-  }
-
-  private boolean tagMatches(@Nonnull final String tag,
-      @Nonnull final RequestDetails requestDetails) {
-    if (requestIsExtractWithS3Result(requestDetails)) {
-      // If this is an extract operation, we check that the tag is not older than the configured
-      // expiry time for S3 URLs, if S3 is configured for results.
-      return validator.validWithExpiry(tag,
-          configuration.getStorage().getAws().getSignedUrlExpiry(), new Date().getTime());
-    } else {
-      return validator.matches(tag);
-    }
-  }
-
-  private boolean requestIsExtractWithS3Result(@Nonnull final RequestDetails requestDetails) {
-    final boolean operationExtract = requestDetails.getOperation() != null &&
-        requestDetails.getOperation().equals("$extract");
-    return configuration.getStorage().getResultUrl().startsWith("s3://") && operationExtract;
   }
 
   private static boolean requestIsCacheable(@Nonnull final HttpServletRequest request,

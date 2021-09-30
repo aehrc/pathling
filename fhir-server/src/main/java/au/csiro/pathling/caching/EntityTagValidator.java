@@ -7,8 +7,6 @@
 package au.csiro.pathling.caching;
 
 import java.util.Date;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.springframework.context.annotation.Profile;
@@ -23,8 +21,6 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("server")
 public class EntityTagValidator {
-
-  private static final Pattern ETAG = Pattern.compile("W/\"(.*)\"");
 
   private long updatedAt;
 
@@ -70,29 +66,6 @@ public class EntityTagValidator {
       return false;
     }
     return tag.equals(tag());
-  }
-
-  /**
-   * @param tag the tag to be validated
-   * @param expiryPeriod an expiry period, which is checked against the time encoded within the tag
-   * @param comparisonTime the time to compare the tag to, for the purposes of expiry
-   * @return true if the tag is valid when compared against the state, and also accounting for
-   * expiry
-   */
-  public boolean validWithExpiry(@Nullable final CharSequence tag, final long expiryPeriod,
-      final long comparisonTime) {
-    if (tag == null) {
-      return false;
-    }
-    final Matcher matcher = ETAG.matcher(tag);
-    final boolean found = matcher.find();
-    if (!found) {
-      return false;
-    }
-    final String tagValue = matcher.group(1);
-    final long decodedTime = Long.parseLong(tagValue, Character.MAX_RADIX);
-    return (comparisonTime - decodedTime < (expiryPeriod * 1000))
-        && (decodedTime >= updatedAt);
   }
 
   /**

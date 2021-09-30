@@ -33,7 +33,7 @@ public class ExtractRequest {
   List<String> filters;
 
   @Nonnull
-  Optional<String> requestId;
+  String requestId;
 
   /**
    * @param subjectResource the resource which will serve as the input context for each expression
@@ -43,7 +43,7 @@ public class ExtractRequest {
    */
   public ExtractRequest(@Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<List<String>> columns, @Nonnull final Optional<List<String>> filters,
-      @Nonnull final Optional<String> requestId) {
+      @Nonnull final String requestId) {
     checkUserInput(columns.isPresent() && columns.get().size() > 0,
         "Query must have at least one column expression");
     checkUserInput(columns.get().stream().noneMatch(String::isBlank),

@@ -47,6 +47,7 @@ public class ExtractRequestBuilder {
     return this;
   }
 
+  @SuppressWarnings("unused")
   public ExtractRequestBuilder withRequestId(@Nonnull final String requestId) {
     this.requestId = requestId;
     return this;
@@ -54,7 +55,7 @@ public class ExtractRequestBuilder {
 
   public ExtractRequest build() {
     return new ExtractRequest(subjectResource, Optional.of(columns), Optional.of(filters),
-        Optional.of(requestId));
+        requestId);
   }
 
 }

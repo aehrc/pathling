@@ -44,18 +44,6 @@ class EntityTagValidatorTest {
   }
 
   @Test
-  void validWithExpiry() {
-    final EntityTagValidator validator = new EntityTagValidator(1630000000000L);
-    final long comparisonTime = 1650000000000L;
-    final long expiryPeriod = 3600L;
-    final String validTag = validator.tagForTime(comparisonTime - 60000);
-    final String invalidTag = validator.tagForTime(comparisonTime - ((expiryPeriod + 60) * 1000));
-    assertTrue(validator.validWithExpiry(validTag, expiryPeriod, comparisonTime));
-    assertFalse(validator.validWithExpiry(invalidTag, expiryPeriod, comparisonTime));
-    assertFalse(validator.validWithExpiry(null, expiryPeriod, comparisonTime));
-  }
-
-  @Test
   void expire() {
     final EntityTagValidator validator = new EntityTagValidator(1630000000000L);
     validator.expire(1630000000001L);

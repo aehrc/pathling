@@ -67,8 +67,9 @@ class ExtractQueryTest {
     SharedMocks.resetAll();
     resourceReader = mock(ResourceReader.class);
     final ResultWriter resultWriter = mock(ResultWriter.class);
+    final ResultRegistry resultRegistry = mock(ResultRegistry.class);
     executor = new ExtractExecutor(configuration, fhirContext, spark, resourceReader,
-        Optional.ofNullable(terminologyServiceFactory), resultWriter);
+        Optional.ofNullable(terminologyServiceFactory), resultWriter, resultRegistry);
   }
 
   @Test

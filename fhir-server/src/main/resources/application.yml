@@ -33,10 +33,6 @@ pathling:
     # URL.
     warehouseUrl: file:///usr/share/warehouse
 
-    # The URL that Pathling will use to output the results of bulk operations such as Extract. Can
-    # be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://) URL.
-    resultUrl: file:///usr/share/results
-
     # The subdirectory within the warehouse path used to read and write data.
     databaseName: default
 
@@ -44,8 +40,6 @@ pathling:
     aws:
       # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
       anonymousAccess: true
-      # Number of seconds that S3 pre-signed URLs should remain valid for.
-      signedUrlExpiry: 3600
       # Authentication details for connecting to protected Amazon S3 locations.
       # accessKeyId: [AWS access key ID]
       # secretAccessKey: [AWS secret access key]

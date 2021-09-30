@@ -7,6 +7,7 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.security.OperationAccess;
@@ -16,6 +17,7 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -87,12 +89,16 @@ public class ExtractProvider implements IResourceProvider {
   @OperationAccess("extract")
   private Parameters invoke(@Nullable final List<String> column,
       @Nullable final List<String> filter, @Nullable final RequestDetails requestDetails) {
-    final Optional<String> requestId = requestDetails != null
-                                       ? Optional.ofNullable(requestDetails.getRequestId())
-                                       : Optional.empty();
+    checkNotNull(requestDetails);
+
+    final String requestId = requestDetails.getRequestId();
+    final String resultId = requestId != null ? requestId : UUID.randomUUID().toString();
+
     final ExtractRequest query = new ExtractRequest(resourceType, Optional.ofNullable(column),
-        Optional.ofNullable(filter), requestId);
-    final ExtractResponse result = extractExecutor.execute(query);
+        Optional.ofNullable(filter), resultId);
+    final ExtractResponse result = extractExecutor.execute(query,
+        requestDetails.getFhirServerBase());
+
     return result.toParameters();
   }
 

@@ -54,39 +54,53 @@ public class ExtractExecutor extends QueryExecutor {
   @Nonnull
   private final ResultWriter resultWriter;
 
+  @Nonnull
+  private final ResultRegistry resultRegistry;
+
   /**
-   * @param configuration A {@link Configuration} object to control the behaviour of the executor
-   * @param fhirContext A {@link FhirContext} for doing FHIR stuff
-   * @param sparkSession A {@link SparkSession} for resolving Spark queries
-   * @param resourceReader A {@link ResourceReader} for retrieving resources
-   * @param terminologyClientFactory A {@link TerminologyServiceFactory} for resolving terminology
-   * @param resultWriter A {@link ResultWriter} for writing results for later retrieval
+   * @param configuration a {@link Configuration} object to control the behaviour of the executor
+   * @param fhirContext a {@link FhirContext} for doing FHIR stuff
+   * @param sparkSession a {@link SparkSession} for resolving Spark queries
+   * @param resourceReader a {@link ResourceReader} for retrieving resources
+   * @param terminologyClientFactory a {@link TerminologyServiceFactory} for resolving terminology
+   * @param resultWriter a {@link ResultWriter} for writing results for later retrieval
+   * @param resultRegistry a {@link ResultRegistry} for storing the mapping between request ID and
+   * result URL
    */
   public ExtractExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory,
-      @Nonnull final ResultWriter resultWriter) {
+      @Nonnull final ResultWriter resultWriter,
+      @Nonnull final ResultRegistry resultRegistry) {
     super(configuration, fhirContext, sparkSession, resourceReader,
         terminologyClientFactory);
     this.resultWriter = resultWriter;
+    this.resultRegistry = resultRegistry;
   }
 
   /**
    * Executes an extract request.
    *
    * @param query an {@link ExtractRequest}
+   * @param serverBase the base URL of this server, used to construct result URLs
    * @return an {@link ExtractResponse}
    */
   @Nonnull
-  public ExtractResponse execute(@Nonnull final ExtractRequest query) {
+  public ExtractResponse execute(@Nonnull final ExtractRequest query,
+      @Nonnull final String serverBase) {
     log.info("Executing request: {}", query);
+    final String requestId = query.getRequestId();
     final Dataset<Row> result = buildQuery(query);
 
     // Write the result and get the URL.
-    final String resultUrl = resultWriter.write(result, query.getRequestId());
+    final String resultUrl = resultWriter.write(result, requestId);
 
-    return new ExtractResponse(resultUrl);
+    // Store a mapping between the request ID and the result URL, for later retrieval via the result
+    // operation.
+    resultRegistry.put(requestId, resultUrl);
+
+    return new ExtractResponse(serverBase + "/$result?id=" + requestId);
   }
 
   /**
