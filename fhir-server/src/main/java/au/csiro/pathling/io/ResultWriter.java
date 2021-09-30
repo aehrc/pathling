@@ -13,6 +13,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
 import com.amazonaws.HttpMethod;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
@@ -29,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider;
+import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
@@ -134,14 +135,13 @@ public class ResultWriter {
     // If the result is an S3 URL, it will need to be converted into a signed URL.
     final String convertedUrl = convertS3aToS3Url(targetUrl);
     if (convertedUrl.startsWith("s3://")) {
-      final URI parsedUrl;
       try {
-        parsedUrl = new URI(convertedUrl);
-      } catch (final URISyntaxException e) {
-        throw new RuntimeException("Problem parsing S3 result url: " + convertedUrl, e);
+        final URI parsedUrl = new URI(convertedUrl);
+        return generateSignedS3Url(configuration.getStorage().getAws(),
+            parsedUrl.getHost(), parsedUrl.getPath().replaceFirst("/", ""));
+      } catch (final IOException | URISyntaxException e) {
+        throw new RuntimeException("Problem generating signed S3 URL: " + convertedUrl, e);
       }
-      return generateSignedS3Url(configuration.getStorage().getAws(),
-          parsedUrl.getHost(), parsedUrl.getPath().replaceFirst("/", ""));
     } else {
       return convertedUrl;
     }
@@ -149,12 +149,20 @@ public class ResultWriter {
 
   @Nonnull
   private static String generateSignedS3Url(@Nonnull final Configuration.Storage.Aws awsConfig,
-      @Nonnull final String bucketName, @Nonnull final String objectKey) {
+      @Nonnull final String bucketName, @Nonnull final String objectKey)
+      throws IOException, URISyntaxException {
     final String accessKeyId = checkPresent(awsConfig.getAccessKeyId());
     final String secretAccessKey = checkPresent(awsConfig.getSecretAccessKey());
-    final AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-        .withCredentials(new BasicAWSCredentialsProvider(accessKeyId, secretAccessKey))
+    final org.apache.hadoop.conf.Configuration configuration = new org.apache.hadoop.conf.Configuration();
+    configuration.set("fs.s3a.access.key", accessKeyId);
+    configuration.set("fs.s3a.secret.key", secretAccessKey);
+    final AmazonS3 s3Client;
+    final AWSCredentialsProvider credentialsProvider =
+        new SimpleAWSCredentialsProvider(new URI("s3://" + bucketName), configuration);
+    s3Client = AmazonS3ClientBuilder.standard()
+        .withCredentials(credentialsProvider)
         .build();
+
     final Date expiration = new Date();
     final long expiryTimeMilliseconds =
         Instant.now().toEpochMilli() + (awsConfig.getSignedUrlExpiry() * 1000);
