@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("server")
+@Profile("core")
 @Slf4j
 public class ResultWriter {
 
@@ -59,7 +59,7 @@ public class ResultWriter {
    * @param name a name to use as the filename
    * @return the URL of the result
    */
-  public String write(@Nonnull final Dataset result, @Nonnull final String name) {
+  public String write(@Nonnull final Dataset<?> result, @Nonnull final String name) {
     return write(result, name, SaveMode.ErrorIfExists);
   }
 
@@ -71,7 +71,7 @@ public class ResultWriter {
    * @param saveMode the {@link SaveMode} to use
    * @return the URL of the result
    */
-  public String write(@Nonnull final Dataset result, @Nonnull final String name,
+  public String write(@Nonnull final Dataset<?> result, @Nonnull final String name,
       @Nonnull final SaveMode saveMode) {
     final String warehouseUrl = convertS3ToS3aUrl(configuration.getStorage().getWarehouseUrl());
 

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("server")
+@Profile("core")
 public class ResultRegistry extends ConcurrentHashMap<String, String> {
 
   private static final long serialVersionUID = 585940346788136462L;
