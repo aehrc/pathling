@@ -107,17 +107,10 @@ pathling:
 # Here is the full list: https://spark.apache.org/docs/latest/configuration.html
 spark:
   master: local[*]
-  executor:
-    memory: 1g
   sql:
     adaptive:
       enabled: true
-    shuffle:
-      service:
+      coalescePartitions:
         enabled: true
-      partitions: 2
-      autoBroadcastJoinThreshold: -1
   scheduler:
     mode: FAIR
-  dynamicAllocation:
-    enabled: true
