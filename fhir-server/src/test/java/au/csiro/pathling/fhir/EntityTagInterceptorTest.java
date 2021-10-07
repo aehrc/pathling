@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhir;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -15,9 +14,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Storage;
-import au.csiro.pathling.Configuration.Storage.Aws;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.caching.EntityTagValidator;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -42,7 +38,6 @@ class EntityTagInterceptorTest {
   private static final long SIGNED_URL_EXPIRY = 3600L;
 
   private EntityTagValidator validator;
-  private Storage storage;
   private HttpServletRequest request;
   private RequestDetails requestDetails;
   private HttpServletResponse response;
@@ -51,16 +46,10 @@ class EntityTagInterceptorTest {
   @BeforeEach
   void setUp() {
     validator = mock(EntityTagValidator.class);
-    final Configuration configuration = mock(Configuration.class);
-    storage = mock(Storage.class);
-    final Aws aws = mock(Aws.class);
-    when(configuration.getStorage()).thenReturn(storage);
-    when(storage.getAws()).thenReturn(aws);
-    when(aws.getSignedUrlExpiry()).thenReturn(SIGNED_URL_EXPIRY);
     request = mock(HttpServletRequest.class);
     requestDetails = mock(RequestDetails.class);
     response = mock(HttpServletResponse.class);
-    interceptor = new EntityTagInterceptor(validator, configuration);
+    interceptor = new EntityTagInterceptor(validator);
   }
 
   @Test
@@ -97,17 +86,6 @@ class EntityTagInterceptorTest {
   }
 
   @Test
-  void setsETagForS3ExtractRequest() {
-    setupCacheableRequest("GET", null, S3_RESULT_URL, "$extract");
-    when(validator.matches(isNull())).thenReturn(false);
-    when(validator.tagForTime(anyLong())).thenReturn(TAG);
-
-    interceptor.checkIncomingTag(request, requestDetails, response);
-
-    verifyResponseHeaders();
-  }
-
-  @Test
   void setsETagForSearchRequest() {
     setupCacheableRequest("GET", null, NON_S3_RESULT_URL, null);
     when(validator.matches(isNull())).thenReturn(false);
@@ -116,17 +94,6 @@ class EntityTagInterceptorTest {
     interceptor.checkIncomingTag(request, requestDetails, response);
 
     verifyResponseHeaders();
-  }
-
-  @Test
-  void returnsNotModifiedForS3ExtractRequest() {
-    setupCacheableRequest("GET", TAG, S3_RESULT_URL, "$extract");
-    when(validator.validWithExpiry(eq(TAG), eq(SIGNED_URL_EXPIRY), anyLong())).thenReturn(true);
-
-    assertThrows(NotModifiedException.class,
-        () -> interceptor.checkIncomingTag(request, requestDetails, response));
-
-    verifyNoInteractions(response);
   }
 
   @Test
@@ -154,7 +121,6 @@ class EntityTagInterceptorTest {
       @Nonnull final String resultUrl, @Nullable final String operation) {
     when(request.getMethod()).thenReturn(method);
     when(request.getHeader(eq("If-None-Match"))).thenReturn(tag);
-    when(storage.getResultUrl()).thenReturn(resultUrl);
     when(requestDetails.getOperation()).thenReturn(operation);
   }
 

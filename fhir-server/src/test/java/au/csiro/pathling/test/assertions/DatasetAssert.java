@@ -15,14 +15,16 @@ import au.csiro.pathling.Configuration.Storage;
 import au.csiro.pathling.io.ResultWriter;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.file.SimplePathVisitor;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -114,26 +116,47 @@ public class DatasetAssert {
   @Nonnull
   @SuppressWarnings({"unused", "UnusedReturnValue"})
   public DatasetAssert saveAllRowsToCsv(@Nonnull final SparkSession spark,
-      @Nonnull final String location, @Nonnull final String name) {
+      @Nonnull final String location, @Nonnull final String name) throws IOException {
+    final Path path = Path.of(location, name + ".csv");
+
     try {
-      Files.delete(Path.of(location, name + ".csv"));
+      Files.delete(path);
     } catch (final IOException e) {
       log.info("Existing file not found, skipping delete");
     }
 
     final Configuration configuration = new Configuration();
     final Storage storage = new Storage();
-    storage.setResultUrl("file://" + location);
+    storage.setWarehouseUrl("file://" + location);
     configuration.setStorage(storage);
     final ResultWriter resultWriter = new ResultWriter(configuration, spark);
-    resultWriter.write(dataset, Optional.of(name), SaveMode.Overwrite);
+    resultWriter.write(dataset, name, SaveMode.Overwrite);
+    final Path tempPath = Path.of(location, "results", name + ".csv");
+    Files.copy(tempPath, path);
 
     try {
-      Files.delete(Path.of(location, "." + name + ".csv.crc"));
+      Files.walkFileTree(Path.of(location, "results"), new DeleteDirectoryVisitor());
     } catch (final IOException e) {
-      log.info("CRC file not found, skipping delete");
+      log.error("Problem cleaning up", e);
     }
-   
+
     return this;
+  }
+
+  private static class DeleteDirectoryVisitor extends SimplePathVisitor {
+
+    @Override
+    public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs)
+        throws IOException {
+      Files.delete(file);
+      return FileVisitResult.CONTINUE;
+    }
+
+    @Override
+    public FileVisitResult postVisitDirectory(final Path dir, final IOException exc)
+        throws IOException {
+      Files.delete(dir);
+      return FileVisitResult.CONTINUE;
+    }
   }
 }

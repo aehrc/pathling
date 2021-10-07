@@ -18,6 +18,7 @@ import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import com.google.common.collect.ImmutableMap;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,29 @@ import org.springframework.stereotype.Component;
 @Profile("server")
 public class OperationDefinitionProvider implements IResourceProvider {
 
+  /**
+   * All system-level operations available within Pathling.
+   */
+  public static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("import", "extract",
+      "result", "job");
+
+  /**
+   * All resource-level operations available within Pathling.
+   */
+  private static final List<String> RESOURCE_LEVEL_OPERATIONS = Arrays.asList("aggregate",
+      "search");
+
+  /**
+   * All operations available within Pathling.
+   */
+  private static final List<String> OPERATIONS;
+
+  static {
+    OPERATIONS = new ArrayList<>();
+    OPERATIONS.addAll(SYSTEM_LEVEL_OPERATIONS);
+    OPERATIONS.addAll(RESOURCE_LEVEL_OPERATIONS);
+  }
+
   private static final String UNKNOWN_VERSION = "UNKNOWN";
 
   @Nonnull
@@ -55,9 +79,8 @@ public class OperationDefinitionProvider implements IResourceProvider {
     this.jsonParser = jsonParser;
     this.version = version;
 
-    final List<String> operations = Arrays.asList("aggregate", "import", "search");
     final ImmutableMap.Builder<String, OperationDefinition> mapBuilder = new ImmutableMap.Builder<>();
-    for (final String operation : operations) {
+    for (final String operation : OPERATIONS) {
       final String id =
           "OperationDefinition/" + operation + "-" + getMajorVersion(
               version.getMajorVersion().orElse("UNKNOWN"));

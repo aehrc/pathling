@@ -21,6 +21,8 @@ import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -67,8 +69,9 @@ class ExtractQueryTest {
     SharedMocks.resetAll();
     resourceReader = mock(ResourceReader.class);
     final ResultWriter resultWriter = mock(ResultWriter.class);
+    final ResultRegistry resultRegistry = mock(ResultRegistry.class);
     executor = new ExtractExecutor(configuration, fhirContext, spark, resourceReader,
-        Optional.ofNullable(terminologyServiceFactory), resultWriter);
+        Optional.ofNullable(terminologyServiceFactory), resultWriter, resultRegistry);
   }
 
   @Test
@@ -207,6 +210,23 @@ class ExtractQueryTest {
   }
 
   @Test
+  void limit() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("gender")
+        .withFilter("gender = 'female'")
+        .withLimit(3)
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/limit.csv");
+  }
+
+  @Test
   void emptyColumn() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.PATIENT);
@@ -244,6 +264,23 @@ class ExtractQueryTest {
             .withFilter("gender = 'female'")
             .build());
     assertEquals("Query must have at least one column expression", error.getMessage());
+  }
+
+  @Test
+  void nonPositiveLimit() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(ResourceType.PATIENT);
+    final List<Integer> limits = Arrays.asList(0, -1);
+
+    for (final Integer limit : limits) {
+      final InvalidUserInputError error = assertThrows(
+          InvalidUserInputError.class,
+          () -> new ExtractRequestBuilder(subjectResource)
+              .withColumn("id")
+              .withLimit(limit)
+              .build());
+      assertEquals("Limit must be greater than zero", error.getMessage());
+    }
   }
 
   private void mockResourceReader(final ResourceType... resourceTypes) {

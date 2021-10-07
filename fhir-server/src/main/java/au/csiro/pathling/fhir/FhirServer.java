@@ -11,6 +11,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
+import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
@@ -65,6 +66,9 @@ public class FhirServer extends RestfulServer {
   private final Optional<JobProvider> jobProvider;
 
   @Nonnull
+  private final ResultProvider resultProvider;
+
+  @Nonnull
   private final OperationDefinitionProvider operationDefinitionProvider;
 
   @Nonnull
@@ -90,6 +94,7 @@ public class FhirServer extends RestfulServer {
    * from OIDC discovery
    * @param importProvider a {@link ImportProvider} for receiving requests to the import operation
    * @param jobProvider a {@link JobProvider} for checking on the status of jobs
+   * @param resultProvider {@link ResultProvider} for retrieving the result of extract requests
    * @param operationDefinitionProvider a {@link OperationDefinitionProvider} for receiving requests
    * for OperationDefinitions
    * @param requestIdInterceptor a {@link RequestIdInterceptor} for adding request IDs to logging
@@ -106,6 +111,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final ImportProvider importProvider,
       @Nonnull final Optional<JobProvider> jobProvider,
+      @Nonnull final ResultProvider resultProvider,
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
@@ -117,6 +123,7 @@ public class FhirServer extends RestfulServer {
     this.oidcConfiguration = oidcConfiguration;
     this.importProvider = importProvider;
     this.jobProvider = jobProvider;
+    this.resultProvider = resultProvider;
     this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
@@ -156,6 +163,9 @@ public class FhirServer extends RestfulServer {
       // Register job provider, if async is enabled.
       jobProvider.ifPresent(this::registerProvider);
 
+      // Register extract result provider.
+      registerProvider(resultProvider);
+     
       // Configure interceptors.
       configureRequestLogging();
 

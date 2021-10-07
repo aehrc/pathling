@@ -30,6 +30,7 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,6 +47,7 @@ import org.springframework.stereotype.Component;
 @Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Slf4j
+@Order(200)
 public class AsyncAspect {
 
   private static final String ASYNC_HEADER = "Prefer";

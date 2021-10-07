@@ -382,6 +382,18 @@
         {
           "name": "import",
           "definition": "https://pathling.csiro.au/fhir/OperationDefinition/import-4"
+        },
+        {
+          "name": "extract",
+          "definition": "https://pathling.csiro.au/fhir/OperationDefinition/extract-4"
+        },
+        {
+          "name": "result",
+          "definition": "https://pathling.csiro.au/fhir/OperationDefinition/result-4"
+        },
+        {
+          "name": "job",
+          "definition": "https://pathling.csiro.au/fhir/OperationDefinition/job-4"
         }
       ]
     }

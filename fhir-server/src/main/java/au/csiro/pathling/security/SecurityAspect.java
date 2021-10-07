@@ -16,6 +16,7 @@ import org.aspectj.lang.annotation.Before;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -34,6 +35,7 @@ import org.springframework.stereotype.Component;
 @Profile("core")
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 @Slf4j
+@Order(100)
 public class SecurityAspect {
 
   /**
@@ -81,7 +83,7 @@ public class SecurityAspect {
         .filter(authority -> authority.startsWith("pathling"))
         .map(PathlingAuthority::fromAuthority)
         .collect(Collectors.toList());
-    if (authToken == null || authToken.getAuthorities() == null || !requiredAuthority
+    if (authToken.getAuthorities() == null || !requiredAuthority
         .subsumedByAny(authorities)) {
       throw new AccessDeniedError(
           String.format("Missing authority: '%s'", requiredAuthority),

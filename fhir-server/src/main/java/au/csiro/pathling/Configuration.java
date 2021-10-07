@@ -144,13 +144,6 @@ public class Configuration {
     @Size(min = 1, max = 50)
     private String databaseName;
 
-    /**
-     * The URL that Pathling will use to output the results of bulk operations such as Extract. Can
-     * be an Amazon S3 ({@code s3://}), HDFS ({@code hdfs://}) or filesystem ({@code file://}) URL.
-     */
-    @NotBlank
-    private String resultUrl;
-
     @NotNull
     private Aws aws;
 
@@ -178,12 +171,6 @@ public class Configuration {
       @Nullable
       @ToString.Exclude
       private String secretAccessKey;
-
-      /**
-       * Number of seconds that S3 pre-signed URLs should remain valid for.
-       */
-      @NotNull
-      private long signedUrlExpiry;
 
       @Nonnull
       public Optional<String> getAccessKeyId() {

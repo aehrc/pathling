@@ -70,9 +70,6 @@ Additionally, you can set any variable supported by Spring Boot, see
   [Amazon S3](https://aws.amazon.com/s3/) (`s3://`),
   [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`) or
   filesystem (`file://`) URL.
-- `pathling.storage.resultUrl` - (default: `file:///usr/share/results`) The URL 
-  that Pathling will use to output the results of bulk operations such as 
-  [extract](./extract.html). Supports the same types of URLs as `warehouseUrl`.
 - `pathling.storage.databaseName` - (default: `default`) The subdirectory within 
   the warehouse path used to read and write data.
 - `pathling.storage.aws.anonymousAccess` - (default: `true`) Public S3 buckets 
@@ -81,9 +78,6 @@ Additionally, you can set any variable supported by Spring Boot, see
   a protected Amazon S3 bucket.
 - `pathling.storage.aws.secretAccessKey` - Authentication details for connecting 
   to a protected Amazon S3 bucket.
-- `pathling.storage.aws.signedUrlExpiry` - (default: `3600`) Number of seconds 
-  that S3 pre-signed URLs should remain valid for. This is relevant when using 
-  an S3 URL for `resultUrl`.
 
 ### Apache Spark
 
