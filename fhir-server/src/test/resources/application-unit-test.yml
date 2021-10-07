@@ -19,6 +19,5 @@ spark:
   sql:
     shuffle:
       partitions: 1
-      autoBroadcastJoinThreshold: -1
   ui:
     enabled: false
