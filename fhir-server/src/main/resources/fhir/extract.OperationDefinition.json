@@ -30,6 +30,14 @@
       "type": "string"
     },
     {
+      "name": "limit",
+      "use": "in",
+      "min": 0,
+      "max": 1,
+      "documentation": "The maximum number of rows to return.",
+      "type": "integer"
+    },
+    {
       "name": "url",
       "use": "out",
       "min": 1,

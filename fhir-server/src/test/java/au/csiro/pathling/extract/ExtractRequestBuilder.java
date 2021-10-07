@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -27,6 +28,9 @@ public class ExtractRequestBuilder {
   @Nonnull
   private final List<String> filters;
 
+  @Nullable
+  private Integer limit;
+
   @Nonnull
   private String requestId;
 
@@ -34,6 +38,7 @@ public class ExtractRequestBuilder {
     this.subjectResource = subjectResource;
     columns = new ArrayList<>();
     filters = new ArrayList<>();
+    limit = null;
     requestId = UUID.randomUUID().toString();
   }
 
@@ -47,6 +52,11 @@ public class ExtractRequestBuilder {
     return this;
   }
 
+  public ExtractRequestBuilder withLimit(@Nonnull final Integer limit) {
+    this.limit = limit;
+    return this;
+  }
+
   @SuppressWarnings("unused")
   public ExtractRequestBuilder withRequestId(@Nonnull final String requestId) {
     this.requestId = requestId;
@@ -55,7 +65,7 @@ public class ExtractRequestBuilder {
 
   public ExtractRequest build() {
     return new ExtractRequest(subjectResource, Optional.of(columns), Optional.of(filters),
-        requestId);
+        Optional.ofNullable(limit), requestId);
   }
 
 }

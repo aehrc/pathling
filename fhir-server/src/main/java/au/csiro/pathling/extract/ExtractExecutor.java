@@ -143,7 +143,13 @@ public class ExtractExecutor extends QueryExecutor {
     final Column[] columnValues = columns.stream()
         .map(path -> ((Materializable) path).getExtractableColumn())
         .toArray(Column[]::new);
-    return filteredDataset.select(columnValues).filter(idColumn.isNotNull());
+    final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
+        .filter(idColumn.isNotNull());
+
+    // If there is a limit, apply it.
+    return query.getLimit().isPresent()
+           ? selectedDataset.limit(query.getLimit().get())
+           : selectedDataset;
   }
 
   @Nonnull
