@@ -17,6 +17,7 @@ import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
@@ -40,6 +41,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class JobProvider {
 
+  private static final Pattern ID_PATTERN = Pattern.compile("^\\w{1,50}$");
   private static final String PROGRESS_HEADER = "X-Progress";
 
   @Nonnull
@@ -65,10 +67,15 @@ public class JobProvider {
    * @param response the {@link HttpServletResponse} for updating the response
    * @return the final result of the job, as a {@link Parameters} resource
    */
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"unused", "TypeMayBeWeakened"})
   @Operation(name = "$job", idempotent = true)
   public IBaseResource job(@Nullable @OperationParam(name = "id") final String id,
       @Nullable final HttpServletResponse response) {
+    // Validate that the ID looks reasonable.
+    if (id == null || !ID_PATTERN.matcher(id).matches()) {
+      throw new ResourceNotFoundError("Job ID not found");
+    }
+
     @Nullable final Job job = jobRegistry.get(id);
     // Check that the job exists.
     if (job == null) {
