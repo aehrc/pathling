@@ -15,6 +15,7 @@ import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
@@ -30,6 +31,8 @@ import org.springframework.stereotype.Component;
 @Profile("server")
 @Slf4j
 public class ResultProvider {
+
+  private static final Pattern ID_PATTERN = Pattern.compile("^\\w{1,50}$");
 
   @Nonnull
   private final ResultRegistry resultRegistry;
@@ -53,13 +56,18 @@ public class ResultProvider {
    * @param id the ID of the extract request
    * @param response the {@link HttpServletResponse} for updating the response
    */
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"unused", "TypeMayBeWeakened"})
   @OperationAccess("extract")
   @Operation(name = "$result", idempotent = true, manualResponse = true)
   public void result(@Nullable @OperationParam(name = "id") final String id,
       @Nullable final HttpServletResponse response) {
     checkNotNull(response);
     log.info("Retrieving extract result: {}", id);
+
+    // Validate that the ID looks reasonable.
+    if (id == null || !ID_PATTERN.matcher(id).matches()) {
+      throw new ResourceNotFoundError("Result ID not found");
+    }
 
     final String resultUrl = resultRegistry.get(id);
     // Check that the result exists.
