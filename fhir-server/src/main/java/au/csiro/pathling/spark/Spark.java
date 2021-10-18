@@ -72,6 +72,9 @@ public class Spark {
         .ifPresent(accessKeyId -> hadoopConfig.set("fs.s3a.access.key", accessKeyId));
     awsConfig.getSecretAccessKey()
         .ifPresent(secretAccessKey -> hadoopConfig.set("fs.s3a.secret.key", secretAccessKey));
+    hadoopConfig.set("fs.s3a.connection.maximum", "100");
+    hadoopConfig.set("fs.s3a.committer.magic.enabled", "true");
+    hadoopConfig.set("fs.s3a.committer.name", "magic");
 
     return spark;
   }
