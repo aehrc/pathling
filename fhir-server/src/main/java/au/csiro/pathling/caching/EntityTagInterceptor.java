@@ -13,7 +13,6 @@ import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
-import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -33,8 +32,6 @@ import org.springframework.stereotype.Component;
 @Interceptor
 @Slf4j
 public class EntityTagInterceptor {
-
-  private static final List<String> NON_CACHEABLE_OPERATIONS = List.of("$job");
 
   @Nonnull
   private final EntityTagValidator validator;
@@ -62,7 +59,7 @@ public class EntityTagInterceptor {
     checkNotNull(request);
     checkNotNull(response);
     checkNotNull(requestDetails);
-    if (requestIsCacheable(request, requestDetails)) {
+    if (requestIsCacheable(request)) {
       final String tagHeader = request.getHeader("If-None-Match");
       if (validator.matches(tagHeader)) {
         log.info("Entity tag validation succeeded, processing not required");
@@ -75,13 +72,26 @@ public class EntityTagInterceptor {
     }
   }
 
-  private static boolean requestIsCacheable(@Nonnull final HttpServletRequest request,
-      @Nonnull final RequestDetails requestDetails) {
-    //noinspection RedundantCollectionOperation
-    final boolean operationCacheable = requestDetails.getOperation() == null ||
-        !NON_CACHEABLE_OPERATIONS.contains(requestDetails.getOperation());
-    return (request.getMethod().equals("GET") || request.getMethod().equals("HEAD"))
-        && operationCacheable;
+  /**
+   * Sets caching headers on a response to make sure that it doesn't get cached.
+   *
+   * @param response a {@link HttpServletResponse} upon which to set caching headers
+   */
+  public static void makeRequestNonCacheable(@Nullable final HttpServletResponse response) {
+    if (response == null) {
+      return;
+    }
+    // We set the ETag to this value because we can't unset it, and this value won't match any valid
+    // tag.
+    response.setHeader("ETag", "W/\"0\"");
+    response.setHeader("Cache-Control", "no-cache");
+    response.addHeader("Cache-Control", "no-store");
+    response.addHeader("Cache-Control", "max-age=0");
+    response.addHeader("Cache-Control", "must-revalidate");
+  }
+
+  private static boolean requestIsCacheable(@Nonnull final HttpServletRequest request) {
+    return (request.getMethod().equals("GET") || request.getMethod().equals("HEAD"));
   }
 
 }

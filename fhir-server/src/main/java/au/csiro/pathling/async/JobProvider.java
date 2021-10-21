@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.async;
 
+import static au.csiro.pathling.caching.EntityTagInterceptor.makeRequestNonCacheable;
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
@@ -101,6 +102,9 @@ public class JobProvider {
     } else {
       // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
       checkNotNull(response);
+      // We need to set the caching headers such that the incomplete response is never cached.
+      makeRequestNonCacheable(response);
+      // Add progress information to the response.
       if (job.getTotalStages() > 0) {
         final int progress = job.getProgressPercentage();
         if (progress != 100) {
