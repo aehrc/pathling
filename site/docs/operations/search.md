@@ -8,7 +8,7 @@ grand_parent: Documentation
 
 # Search
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-4)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-5)
 
 This operation extends the search capabilities of FHIR using a
 [search profile](https://hl7.org/fhir/R4/search.html#query) called `fhirPath`, 

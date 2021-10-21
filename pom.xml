@@ -19,7 +19,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>4.0.1</version>
+  <version>5.0.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -67,7 +67,7 @@
   </ciManagement>
 
   <properties>
-    <project.majorVersion>4</project.majorVersion>
+    <project.majorVersion>5</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <pathling.hapiFhirVersion>5.5.1</pathling.hapiFhirVersion>
