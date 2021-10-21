@@ -27,7 +27,7 @@ RUN mkdir -p /usr/share/warehouse/default
 
 ARG VERSION
 ENV PATHLING_VERSION=$VERSION
-ENV JAVA_OPTS=-Xmx2g
+ENV JAVA_OPTS="-Xmx2g -XX:MaxMetaspaceSize=400m -XX:ReservedCodeCacheSize=240m -Xss1m"
 
 COPY run.sh /
 CMD ["bash", "/run.sh"]
