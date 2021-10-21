@@ -124,10 +124,21 @@ public class AsyncTest extends IntegrationTest {
           restTemplate.exchange(statusUrl.toURI(), HttpMethod.GET, statusRequest, String.class);
 
       statusCode = statusResponse.getStatusCodeValue();
+      final List<String> eTag = statusResponse.getHeaders().get("ETag");
+      final List<String> cacheControl = statusResponse.getHeaders().get("Cache-Control");
+      assertNotNull(eTag);
+      assertNotNull(cacheControl);
+      assertTrue(cacheControl.contains("must-revalidate"));
       if (statusCode != expectedStatus) {
         assertEquals(HttpStatus.ACCEPTED_202, statusCode);
+        assertTrue(eTag.contains("W/\"0\""));
+        assertTrue(cacheControl.contains("no-cache"));
+        assertTrue(cacheControl.contains("no-store"));
+        assertTrue(cacheControl.contains("max-age=0"));
         encounteredInProgressResponse = true;
         Thread.sleep(POLL_FREQUENCY);
+      } else {
+        assertTrue(cacheControl.contains("max-age=1"));
       }
     } while (statusCode != expectedStatus);
 
