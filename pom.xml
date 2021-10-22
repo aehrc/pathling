@@ -44,7 +44,7 @@
 
   <organization>
     <name>Australian e-Health Research Centre, CSIRO</name>
-    <url>https://aehrc.com</url>
+    <url>https://aehrc.csiro.au</url>
   </organization>
   <licenses>
     <license>
@@ -82,6 +82,7 @@
   <modules>
     <module>encoders</module>
     <module>fhir-server</module>
+    <module>lib/import</module>
     <module>site</module>
   </modules>
 

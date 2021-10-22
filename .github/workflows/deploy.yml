@@ -163,9 +163,11 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Run the deploy goal with Maven
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           mvn --batch-mode deploy \
-          -pl fhir-server -am \
+          -pl fhir-server,lib/import -am \
           -Pdocker \
           -DskipTests \
           -Dmaven.deploy.skip

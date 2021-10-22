@@ -1,0 +1,60 @@
+{
+  "name": "pathling-import",
+  "version": "1.0.1",
+  "description": "A set of functions for performing bulk export from a FHIR server and importing to Pathling.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "bin": {
+    "pathling-import": "lib/index.js"
+  },
+  "dependencies": {
+    "@ahryman40k/ts-fhir-types": "^4.0.36",
+    "@aws-sdk/client-s3": "^3.37.0",
+    "@types/aws-lambda": "^8.10.84",
+    "@types/node": "^16.11.2",
+    "@types/uuid": "^8.3.1",
+    "axios": "^0.23.0",
+    "case": "^1.6.3",
+    "client-oauth2": "^4.3.3",
+    "p-retry": "^4.6.1",
+    "temp-dir": "^2.0.0",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "prettier": "^2.4.1",
+    "typescript": "^4.4.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aehrc/pathling"
+  },
+  "homepage": "https://github.com/aehrc/pathling/tree/master/lib/import#readme",
+  "keywords": [
+    "pathling",
+    "fhir",
+    "analytics",
+    "spark",
+    "standards",
+    "terminology"
+  ],
+  "author": {
+    "name": "Australian e-Health Research Centre, CSIRO",
+    "url": "https://aehrc.csiro.au"
+  },
+  "contributors": [
+    {
+      "name": "John Grimes",
+      "url": "https://github.com/johngrimes"
+    }
+  ],
+  "license": "SEE LICENSE IN LICENSE.md",
+  "scripts": {
+    "compile": "tsc",
+    "prepare": "npm run compile"
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE.md"
+  ]
+}
