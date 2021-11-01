@@ -2,7 +2,7 @@ package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.EncodingContext
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
-import ca.uhn.fhir.context._
+import ca.uhn.fhir.context.{BaseRuntimeElementDefinition, _}
 import org.hl7.fhir.instance.model.api.IBaseResource
 
 import scala.collection.convert.ImplicitConversions._
@@ -18,6 +18,21 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
   def buildPrimitiveDatatypeNarrative: DT
 
   def buildPrimitiveDatatypeXhtmlHl7Org: DT
+
+  def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (CTX, BaseRuntimeElementDefinition[_]) => DT
+
+  /**
+   * Returns the Spark schema that represents the given FHIR resource
+   *
+   * @param resourceClass The class implementing the FHIR resource.
+   * @return The schema as a Spark StructType
+   */
+  def visitResource[T <: IBaseResource](ctx: CTX, resourceClass: Class[T]): DT = {
+    EncodingContext.runWithContext {
+      val definition = fhirContext.getResourceDefinition(resourceClass)
+      visitComposite(ctx, definition)
+    }
+  }
 
 
   def visitComposite(ctx: CTX, definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
@@ -51,42 +66,38 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
   def visitChoiceChildOption(ctx: CTX, choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): Seq[SF] = {
     val definition = choiceDefinition.getChildByName(optionName)
-    visitElement(ctx, definition, optionName, isCollection = choiceDefinition.getMax != 1)
+    visitElement(ctx, definition, optionName, visitElementValue)
   }
 
   def visitElementChild(ctx: CTX, childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
     val elementName = childDefinition.getElementName
     println(s"visitNamedChild: ${childDefinition}.${elementName}")
     val definition = childDefinition.getChildByName(childDefinition.getElementName)
-    visitElement(ctx, definition, elementName, isCollection = childDefinition.getMax != 1)
+    val valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT = (childDefinition.getMax != 1) match {
+      case true => buildArrayTransformer(childDefinition)
+      case false => visitElementValue
+    }
+    visitElement(ctx, definition, elementName, valueBuilder)
   }
 
-  def visitElement(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String, isCollection: Boolean): Seq[SF] = {
-    println(s"visitElement: ${elementDefinition}.${elementName}[${isCollection}]")
+  def visitElement(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
+                   valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT): Seq[SF] = {
+    println(s"visitElement: ${elementDefinition}.${elementName}[${valueBuilder}]")
     if (shouldExpand(elementDefinition)) {
-      val childType: DT = elementDefinition match {
-        case composite: BaseRuntimeElementCompositeDefinition[_] => visitComposite(ctx, composite)
-        case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(ctx, primitive)
-        case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative
-        case _: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org
-      }
-      Seq(buildElement(elementName, childType, elementDefinition))
+      Seq(buildElement(elementName,
+        valueBuilder(ctx, elementDefinition),
+        elementDefinition))
     } else {
       Nil
     }
-    // TODO: Need to add arrays somewhere here or above here
   }
 
-  /**
-   * Returns the Spark schema that represents the given FHIR resource
-   *
-   * @param resourceClass The class implementing the FHIR resource.
-   * @return The schema as a Spark StructType
-   */
-  def visitResource[T <: IBaseResource](ctx: CTX, resourceClass: Class[T]): DT = {
-    EncodingContext.runWithContext {
-      val definition = fhirContext.getResourceDefinition(resourceClass)
-      visitComposite(ctx, definition)
+  def visitElementValue(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_]): DT = {
+    elementDefinition match {
+      case composite: BaseRuntimeElementCompositeDefinition[_] => visitComposite(ctx, composite)
+      case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(ctx, primitive)
+      case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative
+      case _: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org
     }
   }
 

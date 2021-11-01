@@ -1,7 +1,7 @@
 package au.csiro.pathling.encoders2
 
-import ca.uhn.fhir.context.{BaseRuntimeElementDefinition, FhirContext, RuntimePrimitiveDatatypeDefinition}
-import org.apache.spark.sql.types.{DataType, DataTypes, StructField, StructType}
+import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementDefinition, FhirContext, RuntimePrimitiveDatatypeDefinition}
+import org.apache.spark.sql.types._
 
 class SchemaConverter2(fhirContext: FhirContext, maxNestingLevel: Int) extends
   SchemaTraversal[DataType, StructField, Unit](fhirContext, maxNestingLevel) {
@@ -18,6 +18,13 @@ class SchemaConverter2(fhirContext: FhirContext, maxNestingLevel: Int) extends
 
   override def buildElement(elementName: String, elementType: DataType, elementDefinition: BaseRuntimeElementDefinition[_]): StructField = {
     StructField(elementName, elementType)
+  }
+
+  override def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (Unit, BaseRuntimeElementDefinition[_]) => DataType = {
+    // TODO: Should be able to use function composition here
+    (ctx, elementDefinition) => {
+      ArrayType(visitElementValue(ctx, elementDefinition))
+    }
   }
 
   override def buildPrimitiveDatatypeNarrative: DataType = DataTypes.StringType

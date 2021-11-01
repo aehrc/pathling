@@ -2,10 +2,10 @@ package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.encoders.{InstanceOf, ObjectCast}
-import au.csiro.pathling.encoders2.SerializerBuilder.getChildExpression
+import au.csiro.pathling.encoders2.SerializerBuilder.{getChildExpression, objectTypeFor}
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
 import ca.uhn.fhir.context._
-import org.apache.spark.sql.catalyst.expressions.objects.Invoke
+import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, MapObjects}
 import org.apache.spark.sql.catalyst.expressions.{BoundReference, CreateNamedStruct, Expression, If, IsNull, Literal}
 import org.apache.spark.sql.types.{DataType, ObjectType}
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseResource}
@@ -32,6 +32,14 @@ class SerializerBuilder(mappings: DataTypeMappings, fhirContext: FhirContext, ma
 
   override def buildPrimitiveDatatypeXhtmlHl7Org: Expression = Literal(1)
 
+  override def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (Expression, BaseRuntimeElementDefinition[_]) => Expression = {
+    (ctx, elementDefinition) => {
+      MapObjects(visitElementValue(_, elementDefinition),
+        ctx,
+        objectTypeFor(arrayDefinition))
+    }
+  }
+
   override def visitChoiceChild(ctx: Expression, choiceDefinition: RuntimeChildChoiceDefinition): Seq[(String, Expression)] = {
     // At this point we don't the actual type of the child, so get it as the general IBaseDatatype
     super.visitChoiceChild(getChildExpression(ctx, choiceDefinition, ObjectType(classOf[IBaseDatatype])),
@@ -47,9 +55,11 @@ class SerializerBuilder(mappings: DataTypeMappings, fhirContext: FhirContext, ma
     super.visitChoiceChildOption(elementCtx, choiceDefinition, optionName)
   }
 
+
   override def visitElementChild(ctx: Expression, childDefinition: BaseRuntimeChildDefinition): Seq[(String, Expression)] = {
     // switch the context to the child
     // Get the field accessor
+    // this needs to be different for lists (the type must be different)
     super.visitElementChild(getChildExpression(ctx, childDefinition), childDefinition)
   }
 
@@ -116,7 +126,6 @@ class SerializerBuilder(mappings: DataTypeMappings, fhirContext: FhirContext, ma
   //
   //    ObjectType(cls)
   //  }
-
 
 }
 
