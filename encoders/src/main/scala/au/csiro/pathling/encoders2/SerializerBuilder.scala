@@ -63,6 +63,11 @@ class SerializerBuilder(mappings: DataTypeMappings, fhirContext: FhirContext, ma
     super.visitElementChild(getChildExpression(ctx, childDefinition), childDefinition)
   }
 
+
+  override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
+    !mappings.skipField(definition, childDefinition)
+  }
+
   def buildSerializer[T <: IBaseResource](resourceClass: Class[T]): Expression = {
     val definition: BaseRuntimeElementCompositeDefinition[_] = fhirContext.getResourceDefinition(resourceClass)
     val fhirClass = definition.getImplementingClass

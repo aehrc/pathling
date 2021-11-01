@@ -21,6 +21,8 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
   def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (CTX, BaseRuntimeElementDefinition[_]) => DT
 
+  def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean
+
   /**
    * Returns the Spark schema that represents the given FHIR resource
    *
@@ -36,17 +38,18 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
 
   def visitComposite(ctx: CTX, definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
-    println(s"visitComposite: ${definition}")
+    //println(s"visitComposite: ${definition}")
     EncodingContext.withDefinition(definition) {
       val fields: Seq[SF] = definition
         .getChildren
+        .filter(shouldExpandChild(definition, _))
         .flatMap(visitChild(ctx, _))
       buildComposite(ctx, fields)
     }
   }
 
   def visitChild(ctx: CTX, childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
-    println(s"visitChild: ${childDefinition}")
+    //println(s"visitChild: ${childDefinition}")
 
     childDefinition match {
       case _: RuntimeChildContainedResources | _: RuntimeChildExtension => Nil
@@ -71,7 +74,7 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
   def visitElementChild(ctx: CTX, childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
     val elementName = childDefinition.getElementName
-    println(s"visitNamedChild: ${childDefinition}.${elementName}")
+    //println(s"visitNamedChild: ${childDefinition}.${elementName}")
     val definition = childDefinition.getChildByName(childDefinition.getElementName)
     val valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT = (childDefinition.getMax != 1) match {
       case true => buildArrayTransformer(childDefinition)
@@ -82,7 +85,7 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
   def visitElement(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
                    valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT): Seq[SF] = {
-    println(s"visitElement: ${elementDefinition}.${elementName}[${valueBuilder}]")
+    //println(s"visitElement: ${elementDefinition}.${elementName}[${valueBuilder}]")
     if (shouldExpand(elementDefinition)) {
       Seq(buildElement(elementName,
         valueBuilder(ctx, elementDefinition),
