@@ -60,7 +60,7 @@ private[encoders] class EncodingContext {
  * }}}
  *
  */
-private[encoders] object EncodingContext {
+object EncodingContext {
   private val CONTEXT_STORAGE = new ThreadLocal[EncodingContext]()
 
   private def currentContext(): EncodingContext = {
