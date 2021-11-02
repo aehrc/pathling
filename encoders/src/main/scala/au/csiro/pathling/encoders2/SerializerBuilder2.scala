@@ -13,9 +13,9 @@ import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseResource}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
 class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, maxNestingLevel: Int) extends
-  SchemaTraversal[Expression, NamedSerializer, Expression](fhirContext, maxNestingLevel) {
+  SchemaTraversal[Expression, ExpressionWithName, Expression](fhirContext, maxNestingLevel) {
 
-  override def buildComposite(ctx: Expression, fields: Seq[NamedSerializer]): Expression = {
+  override def buildComposite(ctx: Expression, fields: Seq[ExpressionWithName], definition: BaseRuntimeElementCompositeDefinition[_]): Expression = {
     val struct = CreateNamedStruct(fields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
     If(IsNull(ctx), Literal.create(null, struct.dataType), struct)
   }
@@ -24,7 +24,7 @@ class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, m
     mappings.primitiveEncoderExpression(ctx, primitive)
   }
 
-  override def buildElement(elementName: String, elementType: Expression, definition: BaseRuntimeElementDefinition[_]): NamedSerializer = {
+  override def buildElement(elementName: String, elementType: Expression, definition: BaseRuntimeElementDefinition[_]): ExpressionWithName = {
     // Named serializer
     (elementName, elementType)
   }
@@ -33,7 +33,7 @@ class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, m
     dataTypeToUtf8Expr(ctx)
   }
 
-  override def buildPrimitiveDatatypeXhtmlHl7Org(ctx: Expression): Expression = {
+  override def buildPrimitiveDatatypeXhtmlHl7Org(ctx: Expression, xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): Expression = {
     dataTypeToUtf8Expr(ctx)
   }
 

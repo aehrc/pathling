@@ -8,7 +8,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource
 class SchemaConverter2(fhirContext: FhirContext, dataTypeMappings: DataTypeMappings, maxNestingLevel: Int) extends
   SchemaTraversal[DataType, StructField, Unit](fhirContext, maxNestingLevel) {
 
-  override def buildComposite(ctx: Unit, fields: Seq[StructField]): DataType = {
+  override def buildComposite(ctx: Unit, fields: Seq[StructField], definition: BaseRuntimeElementCompositeDefinition[_]): DataType = {
     StructType(fields)
   }
 
@@ -30,7 +30,7 @@ class SchemaConverter2(fhirContext: FhirContext, dataTypeMappings: DataTypeMappi
 
   override def buildPrimitiveDatatypeNarrative(ctx: Unit): DataType = DataTypes.StringType
 
-  override def buildPrimitiveDatatypeXhtmlHl7Org(ctx: Unit): DataType = DataTypes.StringType
+  override def buildPrimitiveDatatypeXhtmlHl7Org(ctx: Unit, xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DataType = DataTypes.StringType
 
   override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
     // TODO: This should be unified somewhere else

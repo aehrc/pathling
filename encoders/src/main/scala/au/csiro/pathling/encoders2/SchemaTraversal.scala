@@ -9,7 +9,7 @@ import scala.collection.convert.ImplicitConversions._
 
 abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNestingLevel: Int) {
 
-  def buildComposite(ctx: CTX, fields: Seq[SF]): DT
+  def buildComposite(ctx: CTX, fields: Seq[SF], definition: BaseRuntimeElementCompositeDefinition[_]): DT
 
   def buildElement(elementName: String, elementType: DT, definition: BaseRuntimeElementDefinition[_]): SF
 
@@ -17,7 +17,7 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
   def buildPrimitiveDatatypeNarrative(ctx: CTX): DT
 
-  def buildPrimitiveDatatypeXhtmlHl7Org(ctx: CTX): DT
+  def buildPrimitiveDatatypeXhtmlHl7Org(ctx: CTX, xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DT
 
   def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (CTX, BaseRuntimeElementDefinition[_]) => DT
 
@@ -54,7 +54,7 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
         .getChildren
         .filter(shouldExpandChild(definition, _))
         .flatMap(visitChild(ctx, _))
-      buildComposite(ctx, fields)
+      buildComposite(ctx, fields, definition)
     }
   }
 
@@ -111,7 +111,7 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
       case composite: BaseRuntimeElementCompositeDefinition[_] => visitComposite(ctx, composite)
       case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(ctx, primitive)
       case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative(ctx)
-      case _: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(ctx)
+      case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(ctx, xhtmlHl7Org)
     }
   }
 

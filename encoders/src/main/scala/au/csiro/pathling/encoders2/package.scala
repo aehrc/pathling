@@ -6,6 +6,6 @@ package object encoders2 {
 
   type Serializer = Expression => Expression
 
-  type NamedSerializer = (String, Expression)
+  type ExpressionWithName = (String, Expression)
 
 }
