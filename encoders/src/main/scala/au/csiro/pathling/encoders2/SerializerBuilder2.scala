@@ -2,16 +2,17 @@ package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.encoders.{InstanceOf, ObjectCast}
-import au.csiro.pathling.encoders2.SerializerBuilder.{getChildExpression, objectTypeFor}
+import au.csiro.pathling.encoders2.SerializerBuilder2.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
 import ca.uhn.fhir.context._
-import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, MapObjects}
+import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, MapObjects, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{BoundReference, CreateNamedStruct, Expression, If, IsNull, Literal}
-import org.apache.spark.sql.types.{DataType, ObjectType}
+import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
+import org.apache.spark.unsafe.types.UTF8String
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseResource}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
-class SerializerBuilder(mappings: DataTypeMappings, fhirContext: FhirContext, maxNestingLevel: Int) extends
+class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, maxNestingLevel: Int) extends
   SchemaTraversal[Expression, NamedSerializer, Expression](fhirContext, maxNestingLevel) {
 
   override def buildComposite(ctx: Expression, fields: Seq[NamedSerializer]): Expression = {
@@ -28,9 +29,13 @@ class SerializerBuilder(mappings: DataTypeMappings, fhirContext: FhirContext, ma
     (elementName, elementType)
   }
 
-  override def buildPrimitiveDatatypeNarrative: Expression = Literal(1)
+  override def buildPrimitiveDatatypeNarrative(ctx: Expression): Expression = {
+    dataTypeToUtf8Expr(ctx)
+  }
 
-  override def buildPrimitiveDatatypeXhtmlHl7Org: Expression = Literal(1)
+  override def buildPrimitiveDatatypeXhtmlHl7Org(ctx: Expression): Expression = {
+    dataTypeToUtf8Expr(ctx)
+  }
 
   override def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (Expression, BaseRuntimeElementDefinition[_]) => Expression = {
     (ctx, elementDefinition) => {
@@ -38,6 +43,15 @@ class SerializerBuilder(mappings: DataTypeMappings, fhirContext: FhirContext, ma
         ctx,
         objectTypeFor(arrayDefinition))
     }
+  }
+
+  override def buildValue(ctx: Expression, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String, valueBuilder: (Expression, BaseRuntimeElementDefinition[_]) => Expression): Seq[(String, Expression)] = {
+    // add custom encoder
+    val customEncoder = mappings.customEncoder(elementDefinition, elementName)
+    // TODO: Enable this check or implement
+    //assert(customEncoder.isEmpty || !isCollection,
+    //"Collections are not supported for custom encoders for: " + elementName + "-> " + elementDefinition)
+    customEncoder.map(_.customSerializer2(ctx)).getOrElse(super.buildValue(ctx, elementDefinition, elementName, valueBuilder))
   }
 
   override def visitChoiceChild(ctx: Expression, choiceDefinition: RuntimeChildChoiceDefinition): Seq[(String, Expression)] = {
@@ -72,70 +86,12 @@ class SerializerBuilder(mappings: DataTypeMappings, fhirContext: FhirContext, ma
     val definition: BaseRuntimeElementCompositeDefinition[_] = fhirContext.getResourceDefinition(resourceClass)
     val fhirClass = definition.getImplementingClass
     val inputObject = BoundReference(0, ObjectType(fhirClass), nullable = true)
-    visitResource(inputObject, resourceClass)
+    enterResource(inputObject, resourceClass)
   }
-
-
-  //  /**
-  //   * Returns the accessor method for the given child field.
-  //   */
-  //  private def accessorFor(definition: BaseRuntimeElementDefinition[_], elementName: String): String = {
-  //
-  //    // Primitive single-value types typically use the Element suffix in their
-  //    // accessors, with the exception of the "div" field for reasons that are not clear.
-  //    if (definition.isInstanceOf[RuntimePrimitiveDatatypeDefinition] &&
-  //      //TODO ??? field.getMax == 1 &&
-  //      elementName != "div")
-  //      "get" + elementName.capitalize + "Element"
-  //    else {
-  //      if (elementName.equals("class")) {
-  //        "get" + elementName.capitalize + "_"
-  //      } else {
-  //        "get" + elementName.capitalize
-  //      }
-  //    }
-  //  }
-
-
-  //  /**
-  //   * Returns the object type of the given child
-  //   */
-  //  private def objectTypeFor(definition: BaseRuntimeElementDefinition[_]): ObjectType = {
-  //
-  //    val cls = definition match {
-  //
-  //      case resource: RuntimeResourceDefinition =>
-  //        resource.getImplementingClass
-  //
-  //      case block: RuntimeResourceBlockDefinition =>
-  //        block.getImplementingClass
-  //
-  //      case composite: RuntimeCompositeDatatypeDefinition =>
-  //        composite.getImplementingClass
-  //
-  //      case primitive: RuntimePrimitiveDatatypeDefinition =>
-  //        primitive.getChildType match {
-  //          case ChildTypeEnum.PRIMITIVE_DATATYPE =>
-  //            primitive.getImplementingClass
-  //
-  //          case ChildTypeEnum.PRIMITIVE_XHTML_HL7ORG =>
-  //            classOf[XhtmlNode]
-  //
-  //          case ChildTypeEnum.ID_DATATYPE =>
-  //            primitive.getImplementingClass
-  //
-  //          case unsupported =>
-  //            throw new IllegalArgumentException("Unsupported child primitive type: " + unsupported)
-  //        }
-  //    }
-  //
-  //    ObjectType(cls)
-  //  }
-
 }
 
 
-object SerializerBuilder {
+object SerializerBuilder2 {
 
   private def getChildExpression(parentObject: Expression,
                                  childDefinition: BaseRuntimeChildDefinition, dataType: DataType): Expression = {
@@ -148,6 +104,17 @@ object SerializerBuilder {
                                  childDefinition: BaseRuntimeChildDefinition): Expression = {
     getChildExpression(parentObject, childDefinition, objectTypeFor(childDefinition))
   }
+
+  private def dataTypeToUtf8Expr(inputObject: Expression): Expression = {
+    StaticInvoke(
+      classOf[UTF8String],
+      DataTypes.StringType,
+      "fromString",
+      List(Invoke(inputObject,
+        "getValueAsString",
+        ObjectType(classOf[String]))))
+  }
+
 
   /**
    * Returns the accessor method for the given child field.

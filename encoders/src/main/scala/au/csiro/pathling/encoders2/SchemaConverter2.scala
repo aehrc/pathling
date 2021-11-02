@@ -28,16 +28,25 @@ class SchemaConverter2(fhirContext: FhirContext, dataTypeMappings: DataTypeMappi
     }
   }
 
-  override def buildPrimitiveDatatypeNarrative: DataType = DataTypes.StringType
+  override def buildPrimitiveDatatypeNarrative(ctx: Unit): DataType = DataTypes.StringType
 
-  override def buildPrimitiveDatatypeXhtmlHl7Org: DataType = DataTypes.StringType
+  override def buildPrimitiveDatatypeXhtmlHl7Org(ctx: Unit): DataType = DataTypes.StringType
 
   override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
     // TODO: This should be unified somewhere else
     !dataTypeMappings.skipField(definition, childDefinition)
   }
 
+  override def buildValue(ctx: Unit, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String, valueBuilder: (Unit, BaseRuntimeElementDefinition[_]) => DataType): Seq[StructField] = {
+    // add custom encoder
+    val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
+    // TODO: Enable this check or implement
+    //assert(customEncoder.isEmpty || !isCollection,
+    //"Collections are not supported for custom encoders for: " + elementName + "-> " + elementDefinition)
+    customEncoder.map(_.schema).getOrElse(super.buildValue(ctx, elementDefinition, elementName, valueBuilder))
+  }
+
   def resourceSchema[T <: IBaseResource](resourceClass: Class[T]): StructType = {
-    visitResource(null, resourceClass).asInstanceOf[StructType]
+    enterResource(null, resourceClass).asInstanceOf[StructType]
   }
 }

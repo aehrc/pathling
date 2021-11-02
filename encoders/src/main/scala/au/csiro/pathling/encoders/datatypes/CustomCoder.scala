@@ -12,6 +12,7 @@
 
 package au.csiro.pathling.encoders.datatypes
 
+import au.csiro.pathling.encoders2.NamedSerializer
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.types.StructField
 
@@ -21,6 +22,12 @@ trait CustomCoder {
 
   def customDecoderExpression(addToPath: String => Expression): Expression
 
+  def customSerializer2(inputObject: Expression): Seq[NamedSerializer]
+
+  @Deprecated
   def customSerializer(inputObject: Expression): List[Expression]
 
+  //  = {
+  //    customSerializer2(inputObject).flatMap({ case (name, exp) => Seq(Literal(name), exp) }).toList
+  //  }
 }

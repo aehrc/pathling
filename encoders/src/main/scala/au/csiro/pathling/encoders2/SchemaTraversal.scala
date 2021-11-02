@@ -15,11 +15,18 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
   def buildPrimitiveDatatype(ctx: CTX, primitive: RuntimePrimitiveDatatypeDefinition): DT
 
-  def buildPrimitiveDatatypeNarrative: DT
+  def buildPrimitiveDatatypeNarrative(ctx: CTX): DT
 
-  def buildPrimitiveDatatypeXhtmlHl7Org: DT
+  def buildPrimitiveDatatypeXhtmlHl7Org(ctx: CTX): DT
 
   def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (CTX, BaseRuntimeElementDefinition[_]) => DT
+
+  def buildValue(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
+                 valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT): Seq[SF] = {
+    Seq(buildElement(elementName,
+      valueBuilder(ctx, elementDefinition),
+      elementDefinition))
+  }
 
   def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean
 
@@ -29,13 +36,16 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
    * @param resourceClass The class implementing the FHIR resource.
    * @return The schema as a Spark StructType
    */
-  def visitResource[T <: IBaseResource](ctx: CTX, resourceClass: Class[T]): DT = {
+  def enterResource[T <: IBaseResource](ctx: CTX, resourceClass: Class[T]): DT = {
+    val definition = fhirContext.getResourceDefinition(resourceClass)
+    enterComposite(ctx, definition)
+  }
+
+  def enterComposite(ctx: CTX, definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
     EncodingContext.runWithContext {
-      val definition = fhirContext.getResourceDefinition(resourceClass)
       visitComposite(ctx, definition)
     }
   }
-
 
   def visitComposite(ctx: CTX, definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
     //println(s"visitComposite: ${definition}")
@@ -87,9 +97,10 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
                    valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT): Seq[SF] = {
     //println(s"visitElement: ${elementDefinition}.${elementName}[${valueBuilder}]")
     if (shouldExpand(elementDefinition)) {
-      Seq(buildElement(elementName,
-        valueBuilder(ctx, elementDefinition),
-        elementDefinition))
+      // here we need to plug custom encoders in one way or another
+      // so this here should essentialy be delegated to the visitor
+      // it should be reponsible for doing the possile custom encoding
+      buildValue(ctx, elementDefinition, elementName, valueBuilder)
     } else {
       Nil
     }
@@ -99,8 +110,8 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
     elementDefinition match {
       case composite: BaseRuntimeElementCompositeDefinition[_] => visitComposite(ctx, composite)
       case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(ctx, primitive)
-      case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative
-      case _: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org
+      case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative(ctx)
+      case _: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(ctx)
     }
   }
 

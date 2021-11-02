@@ -59,6 +59,20 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
     )
     List(Literal(elementName), valueExpression, Literal(scaleFieldName), scaleExpression)
   }
+
+  override def customSerializer2(inputObject: Expression): Seq[(String, Expression)] = {
+    val valueExpression = StaticInvoke(classOf[Decimal],
+      decimalType,
+      "apply",
+      Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil)
+    val scaleExpression = StaticInvoke(classOf[Math],
+      IntegerType,
+      "min", Literal(decimalType.scale) ::
+        Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])),
+          "scale", DataTypes.IntegerType) :: Nil
+    )
+    Seq((elementName, valueExpression), (scaleFieldName, scaleExpression))
+  }
 }
 
 object DecimalCustomCoder {
