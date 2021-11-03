@@ -102,7 +102,15 @@ object SerializerBuilder2 {
 
   private def getChildExpression(parentObject: Expression,
                                  childDefinition: BaseRuntimeChildDefinition): Expression = {
-    getChildExpression(parentObject, childDefinition, objectTypeFor(childDefinition))
+
+    // get the child object type
+    // for children with cardinality of MANY this is java.util.List
+    val childObjectType = if (childDefinition.getMax != 1) {
+      ObjectType(classOf[java.util.List[_]])
+    } else {
+      objectTypeFor(childDefinition)
+    }
+    getChildExpression(parentObject, childDefinition, childObjectType)
   }
 
   private def dataTypeToUtf8Expr(inputObject: Expression): Expression = {

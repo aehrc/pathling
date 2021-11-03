@@ -28,6 +28,10 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
       elementDefinition))
   }
 
+  def aggregateChoice(ctx: CTX, choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[SF]]): Seq[SF] = {
+    optionValues.flatten
+  }
+
   def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean
 
   /**
@@ -65,6 +69,8 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
       case _: RuntimeChildContainedResources | _: RuntimeChildExtension => Nil
       case choiceDefinition: RuntimeChildChoiceDefinition =>
         visitChoiceChild(ctx, choiceDefinition)
+      case enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition =>
+        visitEnumChild(ctx, enumChildDefinition)
       case _ =>
         visitElementChild(ctx, childDefinition)
     }
@@ -72,14 +78,20 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
   def visitChoiceChild(ctx: CTX, choiceDefinition: RuntimeChildChoiceDefinition): Seq[SF] = {
     assert(choiceDefinition.getMax == 1, "Collections of choice elements are not supported")
-    getOrderedListOfChoiceTypes(choiceDefinition)
+    val childValues = getOrderedListOfChoiceTypes(choiceDefinition)
       .map(choiceDefinition.getChildNameByDatatype)
-      .flatMap(childName => visitChoiceChildOption(ctx, choiceDefinition, childName))
+      .map(childName => visitChoiceChildOption(ctx, choiceDefinition, childName))
+    aggregateChoice(ctx, choiceDefinition, childValues)
   }
 
   def visitChoiceChildOption(ctx: CTX, choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): Seq[SF] = {
     val definition = choiceDefinition.getChildByName(optionName)
     visitElement(ctx, definition, optionName, visitElementValue)
+  }
+
+  def visitEnumChild(ctx: CTX, enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Seq[SF] = {
+    // by default defer to visit element child
+    visitElementChild(ctx, enumChildDefinition)
   }
 
   def visitElementChild(ctx: CTX, childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {

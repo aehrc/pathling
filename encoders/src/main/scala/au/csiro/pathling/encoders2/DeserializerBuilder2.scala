@@ -1,13 +1,14 @@
 package au.csiro.pathling.encoders2
 
+import au.csiro.pathling.encoders.ObjectCast
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders2.DeserializerBuilder2.{expandPath, setterFor}
+import au.csiro.pathling.encoders2.DeserializerBuilder2.{expandPath, expandPathToExpression, setterFor}
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
 import org.apache.spark.sql.catalyst.expressions
-import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance}
-import org.apache.spark.sql.catalyst.expressions.{Expression, IsNull}
-import org.apache.spark.sql.types.ObjectType
+import org.apache.spark.sql.catalyst.expressions.objects._
+import org.apache.spark.sql.catalyst.expressions.{Expression, If, IsNotNull, IsNull, Literal}
+import org.apache.spark.sql.types.{DataType, ObjectType}
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
@@ -54,10 +55,8 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
     // It's what the current code does but it might be wrong too, e.g. getPath may need to be called regardless
     // of the option status
     ctx.map(path =>
-      expressions.If(
-        IsNull(path),
-        expressions.Literal.create(null, ObjectType(definition.getImplementingClass)),
-        result)).getOrElse(result)
+      If(IsNull(path), Literal.create(null, ObjectType(definition.getImplementingClass)), result))
+      .getOrElse(result)
   }
 
   override def buildElement(elementName: String, elementType: Expression, definition: BaseRuntimeElementDefinition[_]): (String, Expression) = {
@@ -85,12 +84,54 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
 
     // If there is a non-null value, create and set the xhtml node.
     expressions.If(IsNull(stringValue),
-      expressions.Literal.create(null, newInstance.dataType),
+      Literal.create(null, newInstance.dataType),
       InitializeJavaBean(newInstance, Map("setValueAsString" ->
         stringValue)))
   }
 
-  override def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (Option[Expression], BaseRuntimeElementDefinition[_]) => Expression = ???
+  override def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (Option[Expression], BaseRuntimeElementDefinition[_]) => Expression = {
+    (ctx, elementDefinition) => {
+      assert(ctx.isDefined, "We expect a non empty path here")
+      val elementType: DataType = getSqlDatatypeFor(elementDefinition)
+      val arrayExpression = Invoke(
+        MapObjects(element =>
+          visitElementValue(Some(element), elementDefinition),
+          ctx.get,
+          elementType),
+        "array",
+        ObjectType(classOf[Array[Any]]))
+      StaticInvoke(
+        classOf[java.util.Arrays],
+        ObjectType(classOf[java.util.List[_]]),
+        "asList",
+        arrayExpression :: Nil)
+    }
+  }
+
+
+  override def aggregateChoice(ctx: Option[Expression], choiceDefinition: RuntimeChildChoiceDefinition,
+                               optionValues: Seq[Seq[(String, Expression)]]): Seq[(String, Expression)] = {
+    // so how do we aggregate children of a choice
+    // we need to fold all the child expression ignoring the name and then
+    // create decoder for this choice
+
+    // Create a list of child expressions
+    // We expect all of them to be one element lists
+    val optionExpressions = optionValues.map {
+      case head :: Nil => head
+      case _ => throw new IllegalArgumentException("A single element value expected")
+    }
+    // Fold child expressions into one
+    val nullDeserializer: Expression = Literal.create(null, ObjectType(mappings.baseType()))
+    val choiceDeserializer = optionExpressions.foldLeft(nullDeserializer) {
+      case (composite, (optionName, optionDeserializer)) => {
+        If(IsNotNull(expandPathToExpression(ctx, optionName)),
+          ObjectCast(optionDeserializer, ObjectType(mappings.baseType())),
+          composite)
+      }
+    }
+    Seq((choiceDefinition.getElementName, choiceDeserializer))
+  }
 
   override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
     // TODO: This should be unified somewhere else
@@ -98,10 +139,51 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
   }
 
 
+  override def visitEnumChild(ctx: Option[Expression], enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Seq[(String, Expression)] = {
+    // need to manually expand context here
+    val childExpression = expandPathToExpression(ctx, enumChildDefinition.getElementName)
+
+    // Get the value and initialize the instance.
+    // expandPath always returns Some
+    val utfToString = Invoke(childExpression, "toString", ObjectType(classOf[String]), Nil)
+
+    val enumFactory = Class.forName(enumChildDefinition.getBoundEnumType.getName + "EnumFactory")
+
+    // Creates a new enum factory instance for each invocation, but this is cheap
+    // on modern JVMs and probably more efficient than attempting to pool the underlying
+    // FHIR enum factory ourselves.
+    val factoryInstance = NewInstance(enumFactory, Nil, false, ObjectType(enumFactory), None)
+
+    val expression = Invoke(factoryInstance, "fromCode",
+      ObjectType(enumChildDefinition.getBoundEnumType),
+      List(utfToString))
+
+    // Manually create the output
+    // TODO: I am guessing this wont be needed if we had access to RuntimeChildDefinition at the value creation tim
+    // So refactor as these all can be treated as single child element
+    Seq((enumChildDefinition.getElementName, expression))
+  }
+
   override def visitElementChild(ctx: Option[Expression], childDefinition: BaseRuntimeChildDefinition): Seq[(String, Expression)] = {
     // switch the context to the child
     // traverse the expression path
     super.visitElementChild(expandPath(ctx, childDefinition.getElementName), childDefinition)
+  }
+
+  override def visitChoiceChildOption(ctx: Option[Expression], choiceDefinition: RuntimeChildChoiceDefinition,
+                                      optionName: String): Seq[(String, Expression)] = {
+    // Here we actually only need to switch context for choice options
+    // Not for choices themselves as we iterate over the parquet schema which
+    // does not have an explicit representation of the choice child
+    // Rather we just have the fields for each option
+    super.visitChoiceChildOption(expandPath(ctx, optionName), choiceDefinition, optionName)
+  }
+
+  def getSqlDatatypeFor(elementDefinition: BaseRuntimeElementDefinition[_]): DataType = {
+    elementDefinition match {
+      case compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_] => ??? // convert schema
+      case primitive: RuntimePrimitiveDatatypeDefinition => mappings.primitiveToDataType(primitive)
+    }
   }
 }
 
@@ -110,10 +192,14 @@ object DeserializerBuilder2 {
    * Returns the setter for the given field name.s
    */
 
-  private def expandPath(ctx: Option[Expression], name: String): Option[Expression] = {
-    Some(ctx
+  private def expandPathToExpression(ctx: Option[Expression], name: String): Expression = {
+    ctx
       .map(UnresolvedExtractValue(_, expressions.Literal(name)))
-      .getOrElse(UnresolvedAttribute(name)))
+      .getOrElse(UnresolvedAttribute(name))
+  }
+
+  private def expandPath(ctx: Option[Expression], name: String): Option[Expression] = {
+    Some(expandPathToExpression(ctx, name))
   }
 
   private def setterFor(field: BaseRuntimeChildDefinition): String = {
