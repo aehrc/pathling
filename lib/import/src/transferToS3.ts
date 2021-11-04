@@ -305,7 +305,8 @@ async function* downloadFiles(
 
     // In the case of a single temporary file, we need to make sure it becomes part of the list. It is
     // ok for this file to be less than the minimum part size.
-    if (downloadedFiles.length === 0) {
+    const stats = await stat(currentFile);
+    if (stats.size > 0) {
       yield currentFile;
     }
     return downloadedFiles;
