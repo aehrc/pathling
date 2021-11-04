@@ -8,7 +8,7 @@ pool:
 variables:
   mavenCache: $(Pipeline.Workspace)/.m2/repository
   mavenOptions: '-Dmaven.repo.local=$(mavenCache)'
-  branchTag: $[replace(Build.SourceBranch, '/', '-')]
+  branchTag: $[replace(variables['Build.SourceBranch'], '/', '-')]
 
 stages:
   - stage: build
@@ -50,7 +50,7 @@ stages:
               containerRegistry: $(containerRegistry)
               repository: $(dockerRepo)
               command: tag
-              arguments: aehrc/pathling:latest $(dockerRegistry)/$(dockerRepo):$(branchTag)
+              arguments: aehrc/pathling:latest $(dockerRegistry)/$(dockerRepo):$(variables.branchTag)
           - task: Docker@2
             condition: succeeded()
             displayName: Push image
@@ -60,4 +60,4 @@ stages:
               command: push
               tags: |
                 $(Build.BuildNumber)
-                $(branchTag)
+                $(variables.branchTag)
