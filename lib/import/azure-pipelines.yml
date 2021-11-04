@@ -2,7 +2,8 @@ name: pathling-import-$(Date:yyyyMMdd)$(Rev:.r)
 
 trigger:
   branches:
-    - release/5.0.0
+    include:
+      - release/5.0.0
 pr: none
 
 pool:
