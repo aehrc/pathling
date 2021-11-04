@@ -1,6 +1,9 @@
 name: pathling-import-$(Date:yyyyMMdd)$(Rev:.r)
 
-trigger: none
+trigger:
+  branches:
+    - release/5.0.0
+pr: none
 
 pool:
   vmImage: 'ubuntu-latest'
