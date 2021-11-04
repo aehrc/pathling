@@ -1,5 +1,11 @@
 name: pathling-import-$(Date:yyyyMMdd)$(Rev:.r)
 
+trigger:
+  batch: true
+  paths:
+    include:
+      - lib/import/**/*
+
 pool:
   vmImage: 'ubuntu-latest'
 

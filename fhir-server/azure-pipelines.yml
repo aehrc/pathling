@@ -1,5 +1,7 @@
 name: pathling-$(Date:yyyyMMdd)$(Rev:.r)
 
+trigger: none
+
 pool:
   vmImage: 'ubuntu-latest'
 
