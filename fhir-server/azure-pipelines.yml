@@ -8,7 +8,7 @@ pool:
 variables:
   mavenCache: $(Pipeline.Workspace)/.m2/repository
   mavenOptions: '-Dmaven.repo.local=$(mavenCache)'
-  branchTag: $[replace(variables['Build.SourceBranch'], '/', '-')]
+  branchTag: $[replace(variables['Build.SourceBranchName'], '/', '-')]
 
 stages:
   - stage: build
