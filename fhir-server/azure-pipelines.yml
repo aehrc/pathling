@@ -55,7 +55,7 @@ stages:
               containerRegistry: $(containerRegistry)
               repository: $(dockerRepo)
               command: tag
-              arguments: aehrc/pathling:latest $(dockerRegistry)/$(dockerRepo):$(variables.branchTag)
+              arguments: aehrc/pathling:latest $(dockerRegistry)/$(dockerRepo):$(branchTag)
           - task: Docker@2
             condition: succeeded()
             displayName: Push image
@@ -65,4 +65,4 @@ stages:
               command: push
               tags: |
                 $(Build.BuildNumber)
-                $(variables.branchTag)
+                $(branchTag)
