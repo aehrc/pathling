@@ -2,6 +2,11 @@ name: pathling-$(Date:yyyyMMdd)$(Rev:.r)
 
 trigger: none
 
+pr:
+  branches:
+    exclude:
+      - dependabot/*
+
 pool:
   vmImage: 'ubuntu-latest'
 
