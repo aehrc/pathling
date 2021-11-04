@@ -32,6 +32,6 @@ stages:
               jdkArchitectureOption: 'x64'
               goals: 'package'
             timeoutInMinutes: 5
-      - publish: lib/import/target/pathling-import-lambda.zip
-        artifact: pathling-import-lambda
-        displayName: Publish artifact
+          - publish: lib/import/target/pathling-import-lambda.zip
+            artifact: pathling-import-lambda
+            displayName: Publish artifact
