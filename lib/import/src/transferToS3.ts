@@ -279,7 +279,10 @@ async function* downloadFiles(
       // source files from the FHIR server.
       const writeStream = createWriteStream(currentFile, { flags: "a" });
       console.info("[%s] Downloading %s => %s", resourceType, url, currentFile);
-      const response = await client.get<undefined, AxiosResponse<ReadableStream>>(url, {
+      const response = await client.get<
+        undefined,
+        AxiosResponse<ReadableStream>
+      >(url, {
         headers: {
           Accept: FHIR_NDJSON_CONTENT_TYPE,
         },
@@ -318,7 +321,9 @@ async function* downloadFiles(
       resourceType,
       downloadedFiles
     );
-    await Promise.all(downloadedFiles.map((file) => rm(file)));
+    await Promise.all(downloadedFiles.map((file) => rm(file))).catch((e) =>
+      console.warn("Problem deleting files: %j (%s)", downloadedFiles, e)
+    );
     throw e;
   }
 }
@@ -358,7 +363,9 @@ async function uploadFile(
       resourceType,
       downloadedFile
     );
-    await rm(downloadedFile);
+    await rm(downloadedFile).catch((e) =>
+      console.warn("Problem deleting file: %s (%s)", downloadedFile, e)
+    );
   }
 }
 
