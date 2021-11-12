@@ -89,6 +89,7 @@ pathling:
     allowedHeaders:
       - Content-Type
       - Authorization
+      - Prefer
     maxAge: 600
 
   import:
