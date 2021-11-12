@@ -80,8 +80,8 @@ pathling:
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: []
-    allowedOriginPatterns: []
+    allowedOrigins: [ ]
+    allowedOriginPatterns: [ ]
     allowedMethods:
       - OPTIONS
       - GET
@@ -90,6 +90,9 @@ pathling:
       - Content-Type
       - Authorization
       - Prefer
+    exposedHeaders:
+      - Content-Location
+      - X-Progress
     maxAge: 600
 
   import:
