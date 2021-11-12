@@ -83,6 +83,7 @@
     <module>encoders</module>
     <module>fhir-server</module>
     <module>lib/import</module>
+    <module>lib/js</module>
     <module>site</module>
   </modules>
 

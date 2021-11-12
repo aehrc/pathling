@@ -1,0 +1,50 @@
+{
+  "name": "pathling-client",
+  "version": "1.0.0",
+  "description": "Client library for the Pathling FHIR API.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "dependencies": {
+    "@ahryman40k/ts-fhir-types": "^4.0.36",
+    "@types/node": "^16.11.7",
+    "axios": "^0.24.0",
+    "p-retry": "^4.6.1"
+  },
+  "devDependencies": {
+    "prettier": "^2.4.1",
+    "typescript": "^4.4.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aehrc/pathling"
+  },
+  "homepage": "https://github.com/aehrc/pathling/tree/master/lib/js#readme",
+  "keywords": [
+    "pathling",
+    "fhir",
+    "analytics",
+    "spark",
+    "standards",
+    "terminology"
+  ],
+  "author": {
+    "name": "Australian e-Health Research Centre, CSIRO",
+    "url": "https://aehrc.csiro.au"
+  },
+  "contributors": [
+    {
+      "name": "John Grimes",
+      "url": "https://github.com/johngrimes"
+    }
+  ],
+  "license": "SEE LICENSE IN LICENSE.md",
+  "scripts": {
+    "compile": "tsc",
+    "prepare": "npm run compile"
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE.md"
+  ]
+}
