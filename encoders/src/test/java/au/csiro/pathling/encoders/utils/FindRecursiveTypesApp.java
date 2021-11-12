@@ -1,3 +1,15 @@
+/*
+ * This is a modified version of the Bunsen library, originally published at
+ * https://github.com/cerner/bunsen.
+ *
+ * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
+ * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+ *
+ * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
+ * under the CSIRO Open Source Software Licence Agreement.
+ */
+
 package au.csiro.pathling.encoders.utils;
 
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
@@ -14,23 +26,25 @@ public class FindRecursiveTypesApp {
 
   private final FhirContext fhirContext = FhirContext.forR4();
   private final Map<String, String> path = new HashMap<>();
-  private final Set<String> recursive = new HashSet<>();
+  private final Collection<String> recursive = new HashSet<>();
 
-  void traverseDefinition(BaseRuntimeElementDefinition<?> definition, String name, int level) {
+  private void traverseDefinition(final BaseRuntimeElementDefinition<?> definition,
+      final String name,
+      final int level) {
     final String thisType = definition.getName();
     if (path.containsKey(thisType)) {
-      String parentPath = path.get(thisType);
-      boolean isIndirect = name.substring(parentPath.length() + 1).indexOf('.') > 0;
+      final String parentPath = path.get(thisType);
+      final boolean isIndirect = name.substring(parentPath.length() + 1).indexOf('.') > 0;
       recursive.add(definition.getName() + ": " + parentPath + "-> " + name + (isIndirect
                                                                                ? " (indirect)"
                                                                                : ""));
     } else {
       if (!("Reference".equals(definition.getName()) || "Extension".equals(definition.getName()))) {
         path.put(thisType, name);
-        List<BaseRuntimeChildDefinition> children = definition.getChildren();
+        final List<BaseRuntimeChildDefinition> children = definition.getChildren();
         // for each child
-        for (BaseRuntimeChildDefinition child : children) {
-          for (String validChildName : child.getValidChildNames()) {
+        for (final BaseRuntimeChildDefinition child : children) {
+          for (final String validChildName : child.getValidChildNames()) {
             if (!validChildName.equals("modifierExtension")) {
               traverseDefinition(child.getChildByName(validChildName), name.isBlank()
                                                                        ? validChildName
@@ -45,10 +59,10 @@ public class FindRecursiveTypesApp {
     }
   }
 
-  void findRecursiveTypes() {
+  private void findRecursiveTypes() {
     System.out.println(">>> Listing recursive types:");
-    for (String resourceType : fhirContext.getResourceTypes()) {
-      RuntimeResourceDefinition rd = fhirContext
+    for (final String resourceType : fhirContext.getResourceTypes()) {
+      final RuntimeResourceDefinition rd = fhirContext
           .getResourceDefinition(resourceType);
 
       recursive.clear();
@@ -61,7 +75,7 @@ public class FindRecursiveTypesApp {
     }
   }
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     new FindRecursiveTypesApp().findRecursiveTypes();
   }
 }

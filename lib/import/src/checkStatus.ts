@@ -1,6 +1,7 @@
 /*
- * Copyright © 2021-2021, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. All rights reserved.
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
  */
 
 /**
@@ -44,9 +45,12 @@ export async function checkExportJobStatus({
     scopes
   );
 
-  const response = await client.get<undefined, AxiosResponse<object>>(statusUrl, {
-    headers: { Accept: FHIR_JSON_CONTENT_TYPE },
-  });
+  const response = await client.get<undefined, AxiosResponse<object>>(
+    statusUrl,
+    {
+      headers: { Accept: FHIR_JSON_CONTENT_TYPE },
+    }
+  );
 
   if (response.status === 200) {
     return response.data;

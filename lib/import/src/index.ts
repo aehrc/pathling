@@ -1,11 +1,6 @@
 #!/usr/bin/env node
 // noinspection JSUnusedGlobalSymbols
 
-/*
- * Copyright © 2021-2021, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. All rights reserved.
- */
-
 /**
  * This module provides a binary that can be used to run the importer as a Node.js command line
  * program.
@@ -24,7 +19,7 @@ import {
   FileConfig,
   pathlingImportConfigured,
   RetryConfigType,
-  transferToS3Configured
+  transferToS3Configured,
 } from "./config";
 
 let config: Config;

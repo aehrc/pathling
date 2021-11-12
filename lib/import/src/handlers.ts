@@ -1,9 +1,10 @@
-// noinspection JSUnusedGlobalSymbols
-
 /*
- * Copyright © 2021-2021, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. All rights reserved.
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
  */
+
+// noinspection JSUnusedGlobalSymbols
 
 /**
  *  AWS Lambda handlers for the various functions contained in this package.
@@ -19,7 +20,7 @@ import {
   EnvironmentConfig,
   fhirExportConfigured,
   pathlingImportConfigured,
-  transferToS3Configured
+  transferToS3Configured,
 } from "./config";
 import { ImportResult } from "./import";
 import { CheckStatusResult } from "./checkStatus";

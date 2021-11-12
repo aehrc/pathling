@@ -1,6 +1,7 @@
 /*
- * Copyright © 2021-2021, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. All rights reserved.
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
  */
 
 /**
@@ -47,19 +48,23 @@ export async function buildAuthenticatedClient(
   const token = await getToken(tokenUrl, clientId, clientSecret, scopes);
   const instance = axios.create();
   instance.defaults.baseURL = endpoint;
-  instance.defaults.headers.common["Authorization"] = `Bearer ${token.accessToken}`;
+  instance.defaults.headers.common[
+    "Authorization"
+  ] = `Bearer ${token.accessToken}`;
   return instance;
 }
 
-export async function autodiscoverTokenUrl(endpoint: string): Promise<string | undefined> {
-  const response = await axios.get<undefined, AxiosResponse<SmartConfiguration>>(
-    `${endpoint}/.well-known/smart-configuration`,
-    {
-      headers: {
-        Accept: JSON_CONTENT_TYPE,
-      },
-    }
-  );
+export async function autodiscoverTokenUrl(
+  endpoint: string
+): Promise<string | undefined> {
+  const response = await axios.get<
+    undefined,
+    AxiosResponse<SmartConfiguration>
+  >(`${endpoint}/.well-known/smart-configuration`, {
+    headers: {
+      Accept: JSON_CONTENT_TYPE,
+    },
+  });
   return response.data["token_endpoint"];
 }
 
