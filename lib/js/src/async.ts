@@ -58,7 +58,7 @@ export function retry(promise: () => Promise<any>, options: RetryOptions) {
 export function getStatusUrl<T>(response: AxiosResponse<T>) {
   const statusUrl = response.headers["content-location"];
   if (!statusUrl) {
-    throw "No Content-Location header found";
+    throw new Error("No Content-Location header found");
   }
   return statusUrl;
 }
