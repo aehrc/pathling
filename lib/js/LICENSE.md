@@ -75,6 +75,7 @@ files distributed with the Software.
 * (MIT) follow-redirects@1.14.5
 * (MIT) fp-ts@2.11.5
 * (MIT) io-ts@2.2.16
+* (MIT) just-performance@4.3.0
 * (MIT) p-retry@4.6.1
 * (MIT) prettier@2.4.1
 * (Apache-2.0) reflect-metadata@0.1.13

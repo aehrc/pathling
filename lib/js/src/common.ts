@@ -8,7 +8,7 @@ import axios, { AxiosRequestConfig } from "axios";
 import { PathlingClientOptionsResolved, QueryOptions } from "./index";
 import { getStatusUrl, waitForAsyncResult } from "./async";
 import { buildResponseError } from "./OperationOutcome";
-import { performance } from "perf_hooks";
+import { performance } from "just-performance";
 
 /**
  * The FHIR JSON content type.
@@ -115,12 +115,10 @@ export function makeRequest<I, O>(
 export async function addExecutionTime<T = object>(
   executor: () => Promise<T>
 ): Promise<{ response: T; executionTime: number }> {
-  const perf =
-    performance === undefined ? require("perf_hooks").performance : performance;
-  const startTime = perf.now(),
+  const startTime = performance.now(),
     response: T = await executor();
   return {
     response,
-    executionTime: perf.now() - startTime,
+    executionTime: performance.now() - startTime,
   };
 }
