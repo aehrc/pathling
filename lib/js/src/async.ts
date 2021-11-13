@@ -7,8 +7,9 @@
 // noinspection JSUnusedGlobalSymbols
 
 import pRetry, { FailedAttemptError } from "p-retry";
-import { PathlingClientOptionsResolved, RetryConfig } from "./index";
-import axios, { AxiosResponse } from "axios";
+import { PathlingClientOptionsResolved, QueryOptions, RetryConfig } from "./index";
+import { AxiosResponse } from "axios";
+import { JobClient, JobInProgressError } from "./job";
 
 /**
  * A set of options that can be passed to the `retry` function.
@@ -64,41 +65,28 @@ export function getStatusUrl<T>(response: AxiosResponse<T>) {
 }
 
 /**
- * An error that is raised when we check on the status of a job that is not yet
- * finished.
- */
-export class JobInProgressError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "JobInProgressError";
-  }
-}
-
-/**
  * Wait for the eventual response provided by an async job status URL.
  */
 export function waitForAsyncResult(
   url: string,
   message: string,
-  options: PathlingClientOptionsResolved
+  clientOptions: PathlingClientOptionsResolved,
+  requestOptions?: QueryOptions
 ): Promise<any> {
+  const jobClient = new JobClient();
   return retry(
     async () => {
-      const response = await axios.get<any>(url);
-
-      if (response.status === 200) {
-        return response.data;
-      } else if (response.status === 202) {
-        const progress = response.headers["x-progress"];
-        const message = progress ? progress : "(no progress message)";
-        throw new JobInProgressError(`Job in progress: ${message}`);
-      } else {
-        throw `Unexpected status: ${response.status} ${response.statusText}`;
+      try {
+        return jobClient.request(url);
+      } catch (e) {
+        if (e instanceof JobInProgressError && requestOptions?.onProgress) {
+          requestOptions.onProgress(e.progress);
+        }
       }
     },
     {
-      retry: options.asyncRetry,
-      verboseLogging: options.verboseLogging,
+      retry: clientOptions.asyncRetry,
+      verboseLogging: clientOptions.verboseLogging,
       message,
     }
   );

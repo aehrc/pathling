@@ -95,7 +95,8 @@ export class ExtractClient {
     const result = await makeRequest<any, IParameters>(
       config,
       "Checking status of extract job",
-      this.options
+      this.options,
+      options
     );
     const resultUrl = result.response.parameter?.filter(
       (p) => p.name === "url"

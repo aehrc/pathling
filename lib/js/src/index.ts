@@ -8,6 +8,8 @@ import { AggregateClient } from "./aggregate";
 import { SearchClient } from "./search";
 import { ImportClient } from "./import";
 import { ExtractClient } from "./extract";
+import { CapabilitiesClient } from "./capabilities";
+import { JobClient } from "./job";
 
 /**
  * Configuration options for a Pathling client instance.
@@ -77,6 +79,11 @@ export interface QueryOptions {
    * duration of a request might exceed HTTP timeouts.
    */
   preferAsync?: boolean;
+
+  /**
+   * A callback that will report the progress of unfinished async operations.
+   */
+  onProgress?: (progress: string) => unknown;
 }
 
 /**
@@ -93,10 +100,12 @@ export interface QueryResult {
  */
 export default class PathlingClient {
   readonly options: PathlingClientOptionsResolved;
+  readonly capabilities: CapabilitiesClient;
   readonly import: ImportClient;
   readonly aggregate: AggregateClient;
   readonly search: SearchClient;
   readonly extract: ExtractClient;
+  readonly job: JobClient;
 
   constructor(options: PathlingClientOptions) {
     this.options = {
@@ -104,9 +113,11 @@ export default class PathlingClient {
       asyncRetry: options.asyncRetry || { times: 60, wait: 1, backOff: 1.0 },
       maxGetQueryLength: 1500,
     };
+    this.capabilities = new CapabilitiesClient(this.options);
     this.import = new ImportClient(this.options);
     this.aggregate = new AggregateClient(this.options);
     this.search = new SearchClient(this.options);
     this.extract = new ExtractClient(this.options);
+    this.job = new JobClient();
   }
 }

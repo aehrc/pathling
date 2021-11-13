@@ -106,7 +106,8 @@ export class AggregateClient {
     return makeRequest(
       config,
       "Checking status of aggregate job",
-      this.options
+      this.options,
+      options
     );
   }
 

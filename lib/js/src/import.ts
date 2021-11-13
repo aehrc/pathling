@@ -94,7 +94,8 @@ export class ImportClient {
     return makeRequest(
       postFhirConfig(`${this.options.endpoint}/$import`, params, options),
       "Checking status of import job",
-      this.options
+      this.options,
+      options
     );
   }
 

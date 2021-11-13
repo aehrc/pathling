@@ -87,7 +87,12 @@ export class SearchClient {
         ? postFormConfig(url, params, options)
         : getConfig(url, params, options);
 
-    return makeRequest(config, "Checking status of search job", this.options);
+    return makeRequest(
+      config,
+      "Checking status of search job",
+      this.options,
+      options
+    );
   }
 
   /**
@@ -100,7 +105,9 @@ export class SearchClient {
     const params = new URLSearchParams();
     if (query.filters) {
       params.append("_query", "fhirPath");
-      query.filters.forEach((e: string) => params.append("filter", e));
+      query.filters.forEach((e: string) =>
+        params.append("filter", escapeSearchParameter(e))
+      );
     }
     if (query.additionalParams) {
       query.additionalParams.forEach((value: string, key: string) =>
@@ -109,4 +116,19 @@ export class SearchClient {
     }
     return params;
   }
+}
+
+/**
+ * Applies the FHIR escaping rules for search parameters.
+ *
+ * @param param The parameter string to escape
+ * @return The escaped parameter
+ * @see https://www.hl7.org/fhir/R4/search.html#escaping
+ */
+export function escapeSearchParameter(param: string): string {
+  let result = param.replace(/\\/g, "\\\\");
+  result = result.replace(/\$/g, "\\$");
+  result = result.replace(/,/g, "\\,");
+  result = result.replace(/\|/g, "\\|");
+  return result;
 }

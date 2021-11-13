@@ -52,6 +52,11 @@ export class CapabilitiesClient {
       options
     );
 
-    return makeRequest(config, "Querying server capabilities", this.options);
+    return makeRequest(
+      config,
+      "Querying server capabilities",
+      this.options,
+      options
+    );
   }
 }

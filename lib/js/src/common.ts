@@ -89,17 +89,24 @@ export function postFormConfig(
  *
  * @param config The Axios request configuration.
  * @param message A message to use when logging the progress of the requesst.
- * @param options The relevant Pathling client options.
+ * @param clientOptions The relevant Pathling client options.
+ * @param requestOptions The options specific to this query.
  */
 export function makeRequest<I, O>(
   config: AxiosRequestConfig<I>,
   message: string,
-  options: PathlingClientOptionsResolved
+  clientOptions: PathlingClientOptionsResolved,
+  requestOptions?: QueryOptions
 ) {
   return addExecutionTime<O>(async () => {
     const response = await axios.request<O>(config);
     return response.status === 202
-      ? waitForAsyncResult(getStatusUrl(response), message, options)
+      ? waitForAsyncResult(
+          getStatusUrl(response),
+          message,
+          clientOptions,
+          requestOptions
+        )
       : response.data;
   }).catch((e) => {
     throw buildResponseError(e);
