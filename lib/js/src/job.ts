@@ -5,6 +5,8 @@
  */
 
 import axios from "axios";
+import { QueryOptions } from "./index";
+import { FHIR_CONTENT_TYPE } from "./common";
 
 /**
  * A class that can be used to check the progress of an asynchronous job.
@@ -17,8 +19,16 @@ export class JobClient {
    * @returns The response body, if the job is complete.
    * @throws {JobInProgressError} if the job is incomplete.
    */
-  async request(url: string): Promise<any> {
-    const response = await axios.get<any>(url);
+  async request(url: string, options?: QueryOptions): Promise<any> {
+    const auth = { Authorization: `Bearer ${options?.token}` },
+      config = {
+        url,
+        headers: {
+          Accept: FHIR_CONTENT_TYPE,
+          ...(options?.token ? auth : {}),
+        },
+      },
+      response = await axios.request<any>(config);
 
     if (response.status === 200) {
       return response.data;

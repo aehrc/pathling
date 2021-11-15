@@ -7,7 +7,11 @@
 // noinspection JSUnusedGlobalSymbols
 
 import pRetry, { FailedAttemptError } from "p-retry";
-import { PathlingClientOptionsResolved, QueryOptions, RetryConfig } from "./index";
+import {
+  PathlingClientOptionsResolved,
+  QueryOptions,
+  RetryConfig,
+} from "./index";
 import { AxiosResponse } from "axios";
 import { JobClient, JobInProgressError } from "./job";
 
@@ -77,7 +81,7 @@ export function waitForAsyncResult(
   return retry(
     async () => {
       try {
-        return await jobClient.request(url);
+        return await jobClient.request(url, requestOptions);
       } catch (e) {
         reportProgress(e as Error, requestOptions);
         throw e;
