@@ -77,11 +77,10 @@ export function waitForAsyncResult(
   return retry(
     async () => {
       try {
-        return jobClient.request(url);
+        return await jobClient.request(url);
       } catch (e) {
-        if (e instanceof JobInProgressError && requestOptions?.onProgress) {
-          requestOptions.onProgress(e.progress);
-        }
+        reportProgress(e as Error, requestOptions);
+        throw e;
       }
     },
     {
@@ -90,4 +89,14 @@ export function waitForAsyncResult(
       message,
     }
   );
+}
+
+function reportProgress(e: Error, requestOptions?: QueryOptions) {
+  if (
+    (e as Error).name === "JobInProgressError" &&
+    (e as JobInProgressError).progress &&
+    requestOptions?.onProgress
+  ) {
+    requestOptions.onProgress((e as JobInProgressError).progress);
+  }
 }
