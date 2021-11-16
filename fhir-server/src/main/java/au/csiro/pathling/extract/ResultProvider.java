@@ -62,13 +62,13 @@ public class ResultProvider {
   public void result(@Nullable @OperationParam(name = "id") final String id,
       @Nullable final HttpServletResponse response) {
     checkNotNull(response);
-    log.info("Retrieving extract result: {}", id);
 
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {
       throw new ResourceNotFoundError("Result ID not found");
     }
 
+    log.info("Retrieving extract result: {}", id);
     final String resultUrl = resultRegistry.get(id);
     // Check that the result exists.
     if (resultUrl == null) {

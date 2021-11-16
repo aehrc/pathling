@@ -47,7 +47,7 @@ public class Spark {
   public static SparkSession build(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
       @Nonnull final Optional<SparkListener> sparkListener) {
-    log.info("Creating Spark session");
+    log.debug("Creating Spark session");
     resolveSparkConfiguration(environment);
 
     final SparkSession spark = SparkSession.builder()

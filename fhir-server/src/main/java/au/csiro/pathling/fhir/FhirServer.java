@@ -36,6 +36,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ResourceType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 
 /**
@@ -130,7 +132,7 @@ public class FhirServer extends RestfulServer {
     this.entityTagInterceptor = entityTagInterceptor;
     this.conformanceProvider = conformanceProvider;
     this.resourceProviderFactory = resourceProviderFactory;
-    log.info("Starting FHIR server with configuration: {}", configuration);
+    log.debug("Starting FHIR server with configuration: {}", configuration);
   }
 
   @Override
@@ -241,9 +243,13 @@ public class FhirServer extends RestfulServer {
     // Add the request ID to the logging context before each request.
     registerInterceptor(requestIdInterceptor);
 
+    // Create a dedicated logger, so that we can control it independently through logging
+    // configuration.
+    final Logger requestLogger = LoggerFactory.getLogger("requestLogger");
+
     // Log the request duration following each successful request.
     final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
-    loggingInterceptor.setLogger(log);
+    loggingInterceptor.setLogger(requestLogger);
     loggingInterceptor.setMessageFormat("Request completed in ${processingTimeMillis} ms");
     loggingInterceptor.setLogExceptions(false);
     registerInterceptor(loggingInterceptor);

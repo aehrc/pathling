@@ -81,6 +81,7 @@ public class JobProvider {
       throw new ResourceNotFoundError("Job ID not found");
     }
 
+    log.debug("Received request to check job status: {}", id);
     @Nullable final Job job = jobRegistry.get(id);
     // Check that the job exists.
     if (job == null) {

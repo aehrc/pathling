@@ -62,7 +62,7 @@ public class EntityTagInterceptor {
     if (requestIsCacheable(request)) {
       final String tagHeader = request.getHeader("If-None-Match");
       if (validator.matches(tagHeader)) {
-        log.info("Entity tag validation succeeded, processing not required");
+        log.debug("Entity tag validation succeeded, processing not required");
         throw new NotModifiedException("Supplied entity tag matches");
       } else {
         response.setHeader("ETag", validator.tag());

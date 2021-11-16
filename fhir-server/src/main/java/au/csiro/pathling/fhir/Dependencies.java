@@ -36,7 +36,7 @@ public class Dependencies {
   @ConditionalOnMissingBean
   @Nonnull
   static FhirContext fhirContext() {
-    log.info("Creating R4 FHIR context");
+    log.debug("Creating R4 FHIR context");
     return FhirContext.forR4();
   }
 
@@ -52,7 +52,7 @@ public class Dependencies {
   @Nonnull
   static FhirEncoders fhirEncoders(@Nonnull final Configuration configuration) {
     final int maxNestingLevel = configuration.getEncoding().getMaxNestingLevel();
-    log.info("Creating R4 FHIR encoders (max nesting level of {})", maxNestingLevel);
+    log.debug("Creating R4 FHIR encoders (max nesting level of {})", maxNestingLevel);
     return FhirEncoders.forR4().withMaxNestingLevel(maxNestingLevel).getOrCreate();
   }
 
@@ -64,7 +64,7 @@ public class Dependencies {
       @Nonnull final FhirContext fhirContext) {
     final Terminology terminology = configuration.getTerminology();
     checkNotNull(terminology);
-    log.info("Creating FHIR terminology client: {}", terminology.getServerUrl());
+    log.debug("Creating FHIR terminology client: {}", terminology.getServerUrl());
     return TerminologyClient.build(fhirContext,
         terminology.getServerUrl(),
         terminology.getSocketTimeout(),
