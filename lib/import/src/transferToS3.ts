@@ -25,7 +25,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { rm, stat } from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
-import { createReadStream, createWriteStream } from "fs";
+import { createReadStream, createWriteStream, Stats } from "fs";
 import { URL } from "url";
 import tempDirectory = require("temp-dir");
 import ReadableStream = NodeJS.ReadableStream;
@@ -293,13 +293,19 @@ async function* downloadFiles(
       const completedFile = await new Promise<string | null>((resolve) => {
         response.data.on("end", async () => {
           // Check the size of the current temporary file.
-          const stats = await stat(currentFile);
-          if (stats.size > MINIMUM_PART_SIZE) {
-            downloadedFiles.push(currentFile);
-            resolve(currentFile);
-            currentFile = tempFile();
+          let stats: Stats;
+          try {
+            stats = await stat(currentFile);
+            if (stats.size > MINIMUM_PART_SIZE) {
+              downloadedFiles.push(currentFile);
+              resolve(currentFile);
+              currentFile = tempFile();
+            }
+            resolve(null);
+          } catch (e) {
+            // This can happen if nothing has been written to the file.
+            resolve(null);
           }
-          resolve(null);
         });
       });
       if (completedFile) {
@@ -309,9 +315,14 @@ async function* downloadFiles(
 
     // In the case of a single temporary file, we need to make sure it becomes part of the list. It is
     // ok for this file to be less than the minimum part size.
-    const stats = await stat(currentFile);
-    if (stats.size > 0) {
-      yield currentFile;
+    let stats: Stats;
+    try {
+      stats = await stat(currentFile);
+      if (stats.size > 0) {
+        yield currentFile;
+      }
+    } catch (e) {
+      // This can happen if nothing has been written to the file.
     }
     return downloadedFiles;
   } catch (e) {
