@@ -8,13 +8,19 @@ package au.csiro.pathling;
 
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static org.apache.spark.sql.functions.col;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
@@ -25,6 +31,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -53,17 +60,17 @@ public abstract class QueryExecutor {
   private final ResourceReader resourceReader;
 
   @Nonnull
-  private final Optional<TerminologyServiceFactory> terminologyClientFactory;
+  private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   protected QueryExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final ResourceReader resourceReader,
-      @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory) {
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.resourceReader = resourceReader;
-    this.terminologyClientFactory = terminologyClientFactory;
+    this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext) {
@@ -73,7 +80,7 @@ public abstract class QueryExecutor {
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
       @Nonnull final Optional<List<Column>> groupingColumns) {
     return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
-        terminologyClientFactory, groupingColumns, new HashMap<>());
+        terminologyServiceFactory, groupingColumns, new HashMap<>());
   }
 
   @Nonnull
@@ -160,6 +167,58 @@ public abstract class QueryExecutor {
         .reduce(Column::and)
         .flatMap(filter -> Optional.of(dataset.filter(filter)))
         .orElse(dataset);
+  }
+
+  protected Dataset<Row> filterDataset(@Nonnull final ResourcePath inputContext,
+      @Nonnull final Collection<String> filters, @Nonnull final Dataset<Row> dataset) {
+    final Dataset<Row> filteredDataset;
+    if (filters.isEmpty()) {
+      filteredDataset = dataset;
+    } else {
+      final DatasetWithColumn filteredIdsResult = getFilteredIds(filters, inputContext);
+      final Dataset<Row> filteredIds = filteredIdsResult.getDataset();
+      final Column filteredIdColumn = filteredIdsResult.getColumn();
+      filteredDataset = dataset.join(filteredIds,
+          inputContext.getIdColumn().equalTo(filteredIdColumn), "left_semi");
+    }
+    return filteredDataset;
+  }
+
+  @Nonnull
+  private DatasetWithColumn getFilteredIds(@Nonnull final Iterable<String> filters,
+      @Nonnull final ResourcePath inputContext) {
+    ResourcePath currentContext = inputContext;
+    @Nullable Column filterColumn = null;
+
+    for (final String filter : filters) {
+      // Parse the filter expression.
+      final ParserContext parserContext = buildParserContext(currentContext);
+      final Parser parser = new Parser(parserContext);
+      final FhirPath fhirPath = parser.parse(filter);
+
+      // Check that it is a Boolean expression.
+      checkUserInput(fhirPath instanceof BooleanPath || fhirPath instanceof BooleanLiteralPath,
+          "Filter expression must be of Boolean type: " + fhirPath.getExpression());
+
+      // Add the filter column to the overall filter expression using Boolean AND logic.
+      final Column filterValue = fhirPath.getValueColumn();
+      filterColumn = filterColumn == null
+                     ? filterValue
+                     : filterColumn.and(filterValue);
+
+      // Update the context to build the next expression from the same dataset.
+      currentContext = currentContext
+          .copy(currentContext.getExpression(), fhirPath.getDataset(), currentContext.getIdColumn(),
+              currentContext.getEidColumn(), currentContext.getValueColumn(),
+              currentContext.isSingular(), currentContext.getThisColumn());
+    }
+    checkNotNull(filterColumn);
+
+    // Return a dataset of filtered IDs with an aliased ID column, ready for joining.
+    final String filterIdAlias = randomAlias();
+    final Dataset<Row> dataset = currentContext.getDataset().select(
+        currentContext.getIdColumn().alias(filterIdAlias));
+    return new DatasetWithColumn(dataset.filter(filterColumn), col(filterIdAlias));
   }
 
   @Value

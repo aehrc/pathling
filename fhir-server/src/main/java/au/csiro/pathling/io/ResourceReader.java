@@ -42,12 +42,12 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("core")
+@Profile("core & !ga4gh")
 @Slf4j
 public class ResourceReader {
 
   @Nonnull
-  private final SparkSession spark;
+  protected final SparkSession spark;
 
   @Nonnull
   private final String warehouseUrl;
@@ -60,8 +60,8 @@ public class ResourceReader {
       .unmodifiableSet(EnumSet.noneOf(ResourceType.class));
 
   /**
-   * @param configuration A {@link Configuration} object which controls the behaviour of the reader
-   * @param spark A {@link SparkSession} for interacting with Spark
+   * @param configuration a {@link Configuration} object which controls the behaviour of the reader
+   * @param spark a {@link SparkSession} for interacting with Spark
    */
   public ResourceReader(@Nonnull final Configuration configuration,
       @Nonnull final SparkSession spark) {
@@ -141,8 +141,8 @@ public class ResourceReader {
   /**
    * Reads a set of resources of a particular type from the warehouse location.
    *
-   * @param resourceType The desired {@link ResourceType}.
-   * @return A {@link Dataset} containing the raw resource, i.e. NOT wrapped in a value column.
+   * @param resourceType the desired {@link ResourceType}
+   * @return a {@link Dataset} containing the raw resource, i.e. NOT wrapped in a value column
    */
   @ResourceAccess(AccessType.READ)
   @Nonnull
@@ -159,7 +159,10 @@ public class ResourceReader {
     @Nullable final Dataset<Row> resources = spark.read().parquet(tableUrl);
     checkNotNull(resources);
 
+    // Cache the raw resource data.
+    log.debug("Caching resource dataset: {}", resourceType.toCode());
     resources.cache();
+
     return resources;
   }
 

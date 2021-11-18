@@ -13,6 +13,7 @@ import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
+import au.csiro.pathling.security.ga4gh.PassportAuthorizationInterceptor;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -83,6 +84,9 @@ public class FhirServer extends RestfulServer {
   private final EntityTagInterceptor entityTagInterceptor;
 
   @Nonnull
+  private final Optional<PassportAuthorizationInterceptor> passportAuthorizationInterceptor;
+
+  @Nonnull
   private final ConformanceProvider conformanceProvider;
 
   @Nonnull
@@ -103,6 +107,8 @@ public class FhirServer extends RestfulServer {
    * @param errorReportingInterceptor a {@link ErrorReportingInterceptor} for reporting errors to
    * Sentry
    * @param entityTagInterceptor a {@link EntityTagInterceptor} validating and returning ETags
+   * @param passportAuthorizationInterceptor a {@link PassportAuthorizationInterceptor} for
+   * authorizing GA4GH passports
    * @param conformanceProvider a {@link ConformanceProvider} for receiving requests for the server
    * CapabilityStatement
    * @param resourceProviderFactory a {@link ResourceProviderFactory} for providing instances of
@@ -118,6 +124,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
+      @Nonnull final Optional<PassportAuthorizationInterceptor> passportAuthorizationInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
       @Nonnull final ResourceProviderFactory resourceProviderFactory) {
     super(fhirContext);
@@ -130,6 +137,7 @@ public class FhirServer extends RestfulServer {
     this.requestIdInterceptor = requestIdInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.entityTagInterceptor = entityTagInterceptor;
+    this.passportAuthorizationInterceptor = passportAuthorizationInterceptor;
     this.conformanceProvider = conformanceProvider;
     this.resourceProviderFactory = resourceProviderFactory;
     log.debug("Starting FHIR server with configuration: {}", configuration);
@@ -167,7 +175,7 @@ public class FhirServer extends RestfulServer {
 
       // Register extract result provider.
       registerProvider(resultProvider);
-     
+
       // Configure interceptors.
       configureRequestLogging();
 
@@ -187,6 +195,9 @@ public class FhirServer extends RestfulServer {
 
       // Register ETag handling interceptor.
       registerInterceptor(entityTagInterceptor);
+
+      // Register passport authorization interceptor.
+      passportAuthorizationInterceptor.ifPresent(this::registerInterceptor);
 
       // Report errors to Sentry, if configured.
       registerInterceptor(errorReportingInterceptor);
