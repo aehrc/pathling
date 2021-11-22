@@ -51,6 +51,12 @@ case class IdCustomCoder(elementName: String) extends CustomCoder {
     List(Literal(elementName), idExpression, Literal(versionedName), versionedIdExpression)
   }
 
+  override def customDeserializer2(addToPath: String => Expression): Seq[(String, Expression)] = {
+    Seq((elementName, NewInstance(primitiveClass,
+      Invoke(addToPath(versionedName), "toString", ObjectType(classOf[String])) :: Nil,
+      ObjectType(primitiveClass))))
+  }
+
   override def customSerializer2(inputObject: Expression): Seq[(String, Expression)] = {
     val idExpression = StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
       List(Invoke(inputObject, "getIdPart", ObjectType(classOf[String]))))

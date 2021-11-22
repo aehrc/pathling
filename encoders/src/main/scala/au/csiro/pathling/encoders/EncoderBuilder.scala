@@ -39,7 +39,8 @@ import scala.reflect.ClassTag
 /**
  * Spark Encoder for FHIR data models.
  */
-private[encoders] object EncoderBuilder {
+// TODO: uncomment: private[encoders]
+object EncoderBuilder {
 
   /**
    * Returns an encoder for the FHIR resource implemented by the given class
@@ -376,7 +377,9 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       }
 
       val struct = CreateNamedStruct(childFields ++ containedChildren)
-      If(IsNull(struct), Literal.create(null, struct.dataType), struct)
+      // TODO: This most likely should be as below
+      // If(IsNull(struct), Literal.create(null, struct.dataType), struct)
+      If(IsNull(inputObject), Literal.create(null, struct.dataType), struct)
     }
   }
 

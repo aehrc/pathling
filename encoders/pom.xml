@@ -104,6 +104,19 @@
       <artifactId>hapi-fhir-validation-resources-r4</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.skyscreamer</groupId>
+      <artifactId>jsonassert</artifactId>
+      <version>1.5.0</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>android-json</artifactId>
+          <groupId>com.vaadin.external.google</groupId>
+        </exclusion>
+      </exclusions>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

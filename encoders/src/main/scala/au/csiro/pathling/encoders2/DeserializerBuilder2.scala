@@ -7,8 +7,9 @@ import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
 import org.apache.spark.sql.catalyst.expressions
 import org.apache.spark.sql.catalyst.expressions.objects._
-import org.apache.spark.sql.catalyst.expressions.{Expression, If, IsNotNull, IsNull, Literal}
+import org.apache.spark.sql.catalyst.expressions.{BoundReference, Expression, If, IsNotNull, IsNull, Literal}
 import org.apache.spark.sql.types.{DataType, ObjectType}
+import org.hl7.fhir.instance.model.api.IBaseResource
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
@@ -133,6 +134,22 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
     Seq((choiceDefinition.getElementName, choiceDeserializer))
   }
 
+  override def buildValue(ctx: Option[Expression], elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
+                          valueBuilder: (Option[Expression], BaseRuntimeElementDefinition[_]) => Expression): Seq[(String, Expression)] = {
+
+    // what is context translation happened here
+    def addToPath(name: String): Expression = expandPathToExpression(ctx, name)
+
+    // The problem here is that the ctx has already been expanded but what we need is
+    // Is a way to apply it manually, so perhpas that should go to visitElement Child
+    val customEncoder = mappings.customEncoder(elementDefinition, elementName)
+    // TODO: Enable this check or implement
+    //assert(customEncoder.isEmpty || !isCollection,
+    //"Collections are not supported for custom encoders for: " + elementName + "-> " + elementDefinition)
+    customEncoder.map(_.customDeserializer2(addToPath))
+      .getOrElse(super.buildValue(expandPath(ctx, elementName), elementDefinition, elementName, valueBuilder))
+  }
+
   override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
     // TODO: This should be unified somewhere else
     !mappings.skipField(definition, childDefinition)
@@ -164,19 +181,10 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
     Seq((enumChildDefinition.getElementName, expression))
   }
 
-  override def visitElementChild(ctx: Option[Expression], childDefinition: BaseRuntimeChildDefinition): Seq[(String, Expression)] = {
-    // switch the context to the child
-    // traverse the expression path
-    super.visitElementChild(expandPath(ctx, childDefinition.getElementName), childDefinition)
-  }
 
-  override def visitChoiceChildOption(ctx: Option[Expression], choiceDefinition: RuntimeChildChoiceDefinition,
-                                      optionName: String): Seq[(String, Expression)] = {
-    // Here we actually only need to switch context for choice options
-    // Not for choices themselves as we iterate over the parquet schema which
-    // does not have an explicit representation of the choice child
-    // Rather we just have the fields for each option
-    super.visitChoiceChildOption(expandPath(ctx, optionName), choiceDefinition, optionName)
+  def buildDeserializer[T <: IBaseResource](resourceClass: Class[T]): Expression = {
+    val definition: BaseRuntimeElementCompositeDefinition[_] = fhirContext.getResourceDefinition(resourceClass)
+    enterResource(None, resourceClass)
   }
 
   def getSqlDatatypeFor(elementDefinition: BaseRuntimeElementDefinition[_]): DataType = {

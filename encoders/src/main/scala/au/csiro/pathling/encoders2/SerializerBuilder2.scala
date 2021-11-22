@@ -90,7 +90,6 @@ class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, m
   }
 }
 
-
 object SerializerBuilder2 {
 
   private def getChildExpression(parentObject: Expression,
@@ -179,7 +178,6 @@ object SerializerBuilder2 {
             throw new IllegalArgumentException("Unsupported child primitive type: " + unsupported)
         }
     }
-
     ObjectType(cls)
   }
 }

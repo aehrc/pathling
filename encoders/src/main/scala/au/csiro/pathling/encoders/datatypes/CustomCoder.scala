@@ -20,9 +20,11 @@ trait CustomCoder {
 
   def schema: Seq[StructField]
 
+  @deprecated
   def customDecoderExpression(addToPath: String => Expression): Expression
 
   def customSerializer2(inputObject: Expression): Seq[ExpressionWithName]
+  def customDeserializer2(addToPath: String => Expression): Seq[ExpressionWithName]
 
   @Deprecated
   def customSerializer(inputObject: Expression): List[Expression]

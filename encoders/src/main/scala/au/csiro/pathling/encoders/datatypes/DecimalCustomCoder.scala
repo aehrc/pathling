@@ -46,6 +46,19 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
     )
   }
 
+  override def customDeserializer2(addToPath: String => Expression): Seq[(String, Expression)] = {
+    Seq((
+      elementName,
+      NewInstance(primitiveClass,
+        Invoke(
+          Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
+          "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(scaleFieldName) :: Nil
+        ) :: Nil,
+        ObjectType(primitiveClass)
+      )
+    ))
+  }
+
   override def customSerializer(inputObject: Expression): List[Expression] = {
     val valueExpression = StaticInvoke(classOf[Decimal],
       decimalType,
