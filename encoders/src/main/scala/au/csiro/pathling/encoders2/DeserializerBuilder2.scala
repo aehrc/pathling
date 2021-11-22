@@ -7,7 +7,7 @@ import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
 import org.apache.spark.sql.catalyst.expressions
 import org.apache.spark.sql.catalyst.expressions.objects._
-import org.apache.spark.sql.catalyst.expressions.{BoundReference, Expression, If, IsNotNull, IsNull, Literal}
+import org.apache.spark.sql.catalyst.expressions.{Expression, If, IsNotNull, IsNull, Literal}
 import org.apache.spark.sql.types.{DataType, ObjectType}
 import org.hl7.fhir.instance.model.api.IBaseResource
 
@@ -16,7 +16,8 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 //
 // Add support for enums and "bound" things
 //
-class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, maxNestingLevel: Int) extends
+class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, maxNestingLevel: Int,
+                           schemaConverter: SchemaConverter2) extends
   SchemaTraversal[Expression, ExpressionWithName, Option[Expression]](fhirContext, maxNestingLevel) {
 
   override def buildComposite(ctx: Option[Expression], fields: Seq[(String, Expression)], definition: BaseRuntimeElementCompositeDefinition[_]): Expression = {
@@ -90,13 +91,48 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
         stringValue)))
   }
 
+  // TODO: Ok so there is a difference on how enums are handled for list and singular types
+  // For list the method is setDayOfWeek(theDayOfWeek: List[Enumeration[Timing.DayOfWeek]])
+  // but for singles is either setDayOfWeekElement(theDayOfWeek: Enumeration[Timing.DayOfWeek])
+  // or setDayOfWeek(theDayOfWeek: Timing.DayOfWeek)
+  // And thus differences in enum processing
+
+  override def buildEnumDatatype(ctx: Option[Expression], enumDefinition: RuntimePrimitiveDatatypeDefinition,
+                                 enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Expression = {
+
+    // TODO: Unify please
+    // Only apply the special case for non list
+    if (enumChildDefinition.getMax == 1) {
+
+      // need to manually expand context here
+      def getPath: Expression = ctx.getOrElse(GetColumnByOrdinal(0, ObjectType(classOf[String])))
+
+      // Get the value and initialize the instance.
+      // expandPath always returns Some
+      val utfToString = Invoke(getPath, "toString", ObjectType(classOf[String]), Nil)
+
+      val enumFactory = Class.forName(enumChildDefinition.getBoundEnumType.getName + "EnumFactory")
+
+      // Creates a new enum factory instance for each invocation, but this is cheap
+      // on modern JVMs and probably more efficient than attempting to pool the underlying
+      // FHIR enum factory ourselves.
+      val factoryInstance = NewInstance(enumFactory, Nil, false, ObjectType(enumFactory), None)
+
+      Invoke(factoryInstance, "fromCode",
+        ObjectType(enumChildDefinition.getBoundEnumType),
+        List(utfToString))
+    } else {
+      super.buildEnumDatatype(ctx, enumDefinition, enumChildDefinition)
+    }
+  }
+
   override def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (Option[Expression], BaseRuntimeElementDefinition[_]) => Expression = {
     (ctx, elementDefinition) => {
       assert(ctx.isDefined, "We expect a non empty path here")
       val elementType: DataType = getSqlDatatypeFor(elementDefinition)
       val arrayExpression = Invoke(
         MapObjects(element =>
-          visitElementValue(Some(element), elementDefinition),
+          visitElementValue(Some(element), elementDefinition, arrayDefinition),
           ctx.get,
           elementType),
         "array",
@@ -124,8 +160,9 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
     }
     // Fold child expressions into one
     val nullDeserializer: Expression = Literal.create(null, ObjectType(mappings.baseType()))
-    val choiceDeserializer = optionExpressions.foldLeft(nullDeserializer) {
-      case (composite, (optionName, optionDeserializer)) => {
+    // NOTE: Fold right is needed to maintain compatibility with v1 implementation
+    val choiceDeserializer = optionExpressions.foldRight(nullDeserializer) {
+      case ((optionName, optionDeserializer), composite) => {
         If(IsNotNull(expandPathToExpression(ctx, optionName)),
           ObjectCast(optionDeserializer, ObjectType(mappings.baseType())),
           composite)
@@ -155,33 +192,6 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
     !mappings.skipField(definition, childDefinition)
   }
 
-
-  override def visitEnumChild(ctx: Option[Expression], enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Seq[(String, Expression)] = {
-    // need to manually expand context here
-    val childExpression = expandPathToExpression(ctx, enumChildDefinition.getElementName)
-
-    // Get the value and initialize the instance.
-    // expandPath always returns Some
-    val utfToString = Invoke(childExpression, "toString", ObjectType(classOf[String]), Nil)
-
-    val enumFactory = Class.forName(enumChildDefinition.getBoundEnumType.getName + "EnumFactory")
-
-    // Creates a new enum factory instance for each invocation, but this is cheap
-    // on modern JVMs and probably more efficient than attempting to pool the underlying
-    // FHIR enum factory ourselves.
-    val factoryInstance = NewInstance(enumFactory, Nil, false, ObjectType(enumFactory), None)
-
-    val expression = Invoke(factoryInstance, "fromCode",
-      ObjectType(enumChildDefinition.getBoundEnumType),
-      List(utfToString))
-
-    // Manually create the output
-    // TODO: I am guessing this wont be needed if we had access to RuntimeChildDefinition at the value creation tim
-    // So refactor as these all can be treated as single child element
-    Seq((enumChildDefinition.getElementName, expression))
-  }
-
-
   def buildDeserializer[T <: IBaseResource](resourceClass: Class[T]): Expression = {
     val definition: BaseRuntimeElementCompositeDefinition[_] = fhirContext.getResourceDefinition(resourceClass)
     enterResource(None, resourceClass)
@@ -189,7 +199,7 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
 
   def getSqlDatatypeFor(elementDefinition: BaseRuntimeElementDefinition[_]): DataType = {
     elementDefinition match {
-      case compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_] => ??? // convert schema
+      case compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_] => schemaConverter.enterComposite(null, compositeElementDefinition) // convert schema
       case primitive: RuntimePrimitiveDatatypeDefinition => mappings.primitiveToDataType(primitive)
     }
   }

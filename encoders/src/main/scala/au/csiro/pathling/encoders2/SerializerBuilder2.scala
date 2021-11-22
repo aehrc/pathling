@@ -39,7 +39,7 @@ class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, m
 
   override def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (Expression, BaseRuntimeElementDefinition[_]) => Expression = {
     (ctx, elementDefinition) => {
-      MapObjects(visitElementValue(_, elementDefinition),
+      MapObjects(visitElementValue(_, elementDefinition, arrayDefinition),
         ctx,
         objectTypeFor(arrayDefinition))
     }

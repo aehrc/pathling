@@ -21,6 +21,12 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
   def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (CTX, BaseRuntimeElementDefinition[_]) => DT
 
+
+  def buildEnumDatatype(ctx: CTX, enumDefinition: RuntimePrimitiveDatatypeDefinition,
+                        enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): DT = {
+    buildPrimitiveDatatype(ctx, enumDefinition)
+  }
+
   def buildValue(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
                  valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT): Seq[SF] = {
     Seq(buildElement(elementName,
@@ -42,13 +48,13 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
    */
   def enterResource[T <: IBaseResource](ctx: CTX, resourceClass: Class[T]): DT = {
     val definition = fhirContext.getResourceDefinition(resourceClass)
-    enterComposite(ctx, definition)
+    EncodingContext.runWithContext {
+      enterComposite(ctx, definition)
+    }
   }
 
   def enterComposite(ctx: CTX, definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
-    EncodingContext.runWithContext {
-      visitComposite(ctx, definition)
-    }
+    visitComposite(ctx, definition)
   }
 
   def visitComposite(ctx: CTX, definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
@@ -69,8 +75,8 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
       case _: RuntimeChildContainedResources | _: RuntimeChildExtension => Nil
       case choiceDefinition: RuntimeChildChoiceDefinition =>
         visitChoiceChild(ctx, choiceDefinition)
-      case enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition =>
-        visitEnumChild(ctx, enumChildDefinition)
+      //      case enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition =>
+      //        visitEnumChild(ctx, enumChildDefinition)
       case _ =>
         visitElementChild(ctx, childDefinition)
     }
@@ -86,7 +92,7 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
 
   def visitChoiceChildOption(ctx: CTX, choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): Seq[SF] = {
     val definition = choiceDefinition.getChildByName(optionName)
-    visitElement(ctx, definition, optionName, visitElementValue)
+    visitElement(ctx, definition, optionName, visitElementValue(_, _, choiceDefinition))
   }
 
   def visitEnumChild(ctx: CTX, enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Seq[SF] = {
@@ -100,7 +106,7 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
     val definition = childDefinition.getChildByName(childDefinition.getElementName)
     val valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT = (childDefinition.getMax != 1) match {
       case true => buildArrayTransformer(childDefinition)
-      case false => visitElementValue
+      case false => visitElementValue(_, _, childDefinition)
     }
     visitElement(ctx, definition, elementName, valueBuilder)
   }
@@ -118,12 +124,19 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
     }
   }
 
-  def visitElementValue(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_]): DT = {
-    elementDefinition match {
-      case composite: BaseRuntimeElementCompositeDefinition[_] => visitComposite(ctx, composite)
-      case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(ctx, primitive)
-      case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative(ctx)
-      case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(ctx, xhtmlHl7Org)
+  def visitElementValue(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_], childDefinition: BaseRuntimeChildDefinition): DT = {
+
+    if (childDefinition.isInstanceOf[RuntimeChildPrimitiveEnumerationDatatypeDefinition]) {
+      buildEnumDatatype(ctx, elementDefinition.asInstanceOf[RuntimePrimitiveDatatypeDefinition],
+        childDefinition.asInstanceOf[RuntimeChildPrimitiveEnumerationDatatypeDefinition])
+    } else {
+
+      elementDefinition match {
+        case composite: BaseRuntimeElementCompositeDefinition[_] => visitComposite(ctx, composite)
+        case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(ctx, primitive)
+        case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative(ctx)
+        case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(ctx, xhtmlHl7Org)
+      }
     }
   }
 

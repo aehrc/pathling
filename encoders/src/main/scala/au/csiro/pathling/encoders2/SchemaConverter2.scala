@@ -24,7 +24,7 @@ class SchemaConverter2(fhirContext: FhirContext, dataTypeMappings: DataTypeMappi
   override def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (Unit, BaseRuntimeElementDefinition[_]) => DataType = {
     // TODO: Should be able to use function composition here
     (ctx, elementDefinition) => {
-      ArrayType(visitElementValue(ctx, elementDefinition))
+      ArrayType(visitElementValue(ctx, elementDefinition, arrayDefinition))
     }
   }
 
