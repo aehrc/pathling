@@ -31,10 +31,7 @@ import org.apache.spark.sql.*;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityComponent;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 /**
  * Test for FHIR encoders.
@@ -379,7 +376,9 @@ public class FhirEncodersTest {
 
   }
 
+  // TODO: Uncomment when contained resources are implemented in v2 encoders.
   @Test
+  @Ignore
   public void contained() throws FHIRException {
 
     // Contained resources should be put to the Contained list in order of the Encoder arguments

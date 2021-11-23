@@ -10,3 +10,7 @@ tmp/
 # IDEA
 .idea
 *.iml
+
+
+#Others
+lib/import/node_modules/
