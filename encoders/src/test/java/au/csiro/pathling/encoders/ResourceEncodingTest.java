@@ -46,8 +46,10 @@ public class ResourceEncodingTest {
           .getResourceDefinition(resourceType);
 
       if (!excludeResources.contains(rd.getName())) {
+
+        Class<? extends IBaseResource> implementingClass = rd.getImplementingClass();
         final StructType schema = converter
-            .resourceSchema(rd.getImplementingClass());
+            .resourceSchema(implementingClass);
         final ExpressionEncoder<? extends IBaseResource> encoder = fhirEncoders
             .of(rd.getImplementingClass());
         assertEquals(schema, encoder.schema());

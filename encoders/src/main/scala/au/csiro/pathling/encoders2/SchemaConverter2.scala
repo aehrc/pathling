@@ -47,6 +47,11 @@ class SchemaConverter2(fhirContext: FhirContext, dataTypeMappings: DataTypeMappi
   }
 
   def resourceSchema[T <: IBaseResource](resourceClass: Class[T]): StructType = {
-    enterResource(null, resourceClass).asInstanceOf[StructType]
+    resourceSchema(fhirContext.getResourceDefinition(resourceClass))
   }
+
+  def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {
+    enterResource(null, resourceDefinition).asInstanceOf[StructType]
+  }
+
 }

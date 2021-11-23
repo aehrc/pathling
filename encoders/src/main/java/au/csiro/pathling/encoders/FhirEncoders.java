@@ -13,6 +13,7 @@
 package au.csiro.pathling.encoders;
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
+import au.csiro.pathling.encoders2.EncoderBuilder2;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -221,7 +222,7 @@ public class FhirEncoders {
    * @return an encoder for the resource.
    */
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type,
-      final Class<? extends IBaseResource> ... contained) {
+      final Class<? extends IBaseResource>... contained) {
 
     final List<Class<? extends IBaseResource>> containedResourceList = new ArrayList<>();
 
@@ -251,7 +252,7 @@ public class FhirEncoders {
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type,
       final List<Class<? extends IBaseResource>> contained) {
 
-    final BaseRuntimeElementCompositeDefinition definition =
+    final RuntimeResourceDefinition definition =
         context.getResourceDefinition(type);
 
     final List<BaseRuntimeElementCompositeDefinition<?>> containedDefinitions = new ArrayList<>();
@@ -277,11 +278,17 @@ public class FhirEncoders {
       if (encoder == null) {
 
         encoder = (ExpressionEncoder<T>)
-            EncoderBuilder.of(definition,
+            EncoderBuilder2.of(definition,
                 context,
                 mappings,
-                new SchemaConverter(context, mappings, maxNestingLevel),
+                maxNestingLevel,
                 JavaConversions.asScalaBuffer(containedDefinitions));
+        // encoder = (ExpressionEncoder<T>)
+        //     EncoderBuilder.of(definition,
+        //         context,
+        //         mappings,
+        //         new SchemaConverter(context, mappings, maxNestingLevel),
+        //         JavaConversions.asScalaBuffer(containedDefinitions));
 
         encoderCache.put(key, encoder);
       }

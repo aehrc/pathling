@@ -124,8 +124,9 @@ public class CompareV2ToV1Test implements JsonMethods {
 
     final SchemaConverter2 schemaTraversal2 = new SchemaConverter2(FhirContext.forR4(),
         dataTypeMappings, nestingLevel);
-    final DeserializerBuilder2 deserializerBuilder = new DeserializerBuilder2(dataTypeMappings,
-        fhirContext, nestingLevel
+    final DeserializerBuilder2 deserializerBuilder = new DeserializerBuilder2(fhirContext,
+        dataTypeMappings,
+        nestingLevel
         , schemaTraversal2);
 
     final Expression objDeserializer_v2 = deserializerBuilder.buildDeserializer(resourceClass);

@@ -16,8 +16,7 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 //
 // Add support for enums and "bound" things
 //
-class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, maxNestingLevel: Int,
-                           schemaConverter: SchemaConverter2) extends
+class DeserializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, maxNestingLevel: Int, schemaConverter: SchemaConverter2) extends
   SchemaTraversal[Expression, ExpressionWithName, Option[Expression]](fhirContext, maxNestingLevel) {
 
   override def buildComposite(ctx: Option[Expression], fields: Seq[(String, Expression)], definition: BaseRuntimeElementCompositeDefinition[_]): Expression = {
@@ -193,8 +192,11 @@ class DeserializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext,
   }
 
   def buildDeserializer[T <: IBaseResource](resourceClass: Class[T]): Expression = {
-    val definition: BaseRuntimeElementCompositeDefinition[_] = fhirContext.getResourceDefinition(resourceClass)
-    enterResource(None, resourceClass)
+    buildDeserializer(fhirContext.getResourceDefinition(resourceClass))
+  }
+
+  def buildDeserializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
+    enterResource(None, resourceDefinition)
   }
 
   def getSqlDatatypeFor(elementDefinition: BaseRuntimeElementDefinition[_]): DataType = {

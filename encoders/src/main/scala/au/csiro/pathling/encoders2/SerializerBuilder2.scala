@@ -16,7 +16,10 @@ class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, m
   SchemaTraversal[Expression, ExpressionWithName, Expression](fhirContext, maxNestingLevel) {
 
   override def buildComposite(ctx: Expression, fields: Seq[ExpressionWithName], definition: BaseRuntimeElementCompositeDefinition[_]): Expression = {
-    val struct = CreateNamedStruct(fields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
+
+    // TODO: Fix so that it does not traverse the type
+    val structFields = mappings.overrideCompositeExpression(ctx, definition).getOrElse(fields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
+    val struct = CreateNamedStruct(structFields)
     If(IsNull(ctx), Literal.create(null, struct.dataType), struct)
   }
 
@@ -82,11 +85,15 @@ class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, m
     !mappings.skipField(definition, childDefinition)
   }
 
-  def buildSerializer[T <: IBaseResource](resourceClass: Class[T]): Expression = {
-    val definition: BaseRuntimeElementCompositeDefinition[_] = fhirContext.getResourceDefinition(resourceClass)
-    val fhirClass = definition.getImplementingClass
+  def buildSerializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
+    val fhirClass = resourceDefinition
+      .asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
     val inputObject = BoundReference(0, ObjectType(fhirClass), nullable = true)
-    enterResource(inputObject, resourceClass)
+    enterResource(inputObject, resourceDefinition)
+  }
+
+  def buildSerializer[T <: IBaseResource](resourceClass: Class[T]): Expression = {
+    buildSerializer(fhirContext.getResourceDefinition(resourceClass))
   }
 }
 

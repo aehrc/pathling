@@ -34,7 +34,7 @@ class R4DataTypeMappings extends DataTypeMappings {
   private val fhirPrimitiveToSparkTypes: Map[Class[_ <: IPrimitiveType[_]], DataType] =
     Map(
       classOf[MarkdownType] -> DataTypes.StringType,
-      classOf[IdType] -> DataTypes.StringType,
+      //classOf[IdType] -> DataTypes.StringType,
       classOf[Enumeration[_]] -> DataTypes.StringType,
       classOf[DateTimeType] -> DataTypes.StringType,
       classOf[TimeType] -> DataTypes.StringType,

@@ -43,13 +43,12 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
   /**
    * Returns the Spark schema that represents the given FHIR resource
    *
-   * @param resourceClass The class implementing the FHIR resource.
+   * @param resourceDefinition The definition of the FHIR resource
    * @return The schema as a Spark StructType
    */
-  def enterResource[T <: IBaseResource](ctx: CTX, resourceClass: Class[T]): DT = {
-    val definition = fhirContext.getResourceDefinition(resourceClass)
+  def enterResource(ctx: CTX, resourceDefinition: RuntimeResourceDefinition): DT = {
     EncodingContext.runWithContext {
-      enterComposite(ctx, definition)
+      enterComposite(ctx, resourceDefinition)
     }
   }
 
