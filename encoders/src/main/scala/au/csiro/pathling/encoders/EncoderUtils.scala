@@ -1,4 +1,4 @@
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.encoders
 
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 

@@ -26,9 +26,11 @@ object EncoderBuilder2 {
          maxNestingLevel: Int,
          contained: mutable.Buffer[BaseRuntimeElementCompositeDefinition[_]] = mutable.Buffer.empty): ExpressionEncoder[_] = {
 
+    assert(contained.isEmpty, "Contained resources are not supported")
+
+
     val fhirClass = resourceDefinition
       .asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
-    // TODO: Add contained resources
     val serializerBuilder = new SerializerBuilder2(mappings, fhirContext, maxNestingLevel)
     // TODO: Move schema converter to deserializer or make it master of all configs
     val schemaConverter = new SchemaConverter2(fhirContext, mappings, maxNestingLevel)

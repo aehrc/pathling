@@ -1,12 +1,12 @@
 package au.csiro.pathling.encoders2
 
+import au.csiro.pathling.encoders.SchemaConverter
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.types._
-import org.hl7.fhir.instance.model.api.IBaseResource
 
-class SchemaConverter2(fhirContext: FhirContext, dataTypeMappings: DataTypeMappings, maxNestingLevel: Int) extends
-  SchemaTraversal[DataType, StructField, Unit](fhirContext, maxNestingLevel) {
+class SchemaConverter2(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings, val maxNestingLevel: Int) extends
+  SchemaTraversal[DataType, StructField, Unit](fhirContext, maxNestingLevel) with SchemaConverter {
 
   override def buildComposite(ctx: Unit, fields: Seq[StructField], definition: BaseRuntimeElementCompositeDefinition[_]): DataType = {
     StructType(fields)
@@ -44,10 +44,6 @@ class SchemaConverter2(fhirContext: FhirContext, dataTypeMappings: DataTypeMappi
     //assert(customEncoder.isEmpty || !isCollection,
     //"Collections are not supported for custom encoders for: " + elementName + "-> " + elementDefinition)
     customEncoder.map(_.schema).getOrElse(super.buildValue(ctx, elementDefinition, elementName, valueBuilder))
-  }
-
-  def resourceSchema[T <: IBaseResource](resourceClass: Class[T]): StructType = {
-    resourceSchema(fhirContext.getResourceDefinition(resourceClass))
   }
 
   def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {

@@ -124,3 +124,43 @@ case class ObjectCast(value: Expression, resultType: DataType)
     ev.copy(code = code, isNull = obj.isNull)
   }
 }
+
+
+/**
+ * An Expression extracting an object having the given class definition from a List of FHIR
+ * Resources.
+ */
+case class GetClassFromContained(targetObject: Expression,
+                                 containedClass: Class[_])
+  extends Expression with NonSQLExpression {
+
+  override def nullable: Boolean = targetObject.nullable
+
+  override def children: Seq[Expression] = targetObject :: Nil
+
+  override def dataType: DataType = ObjectType(containedClass)
+
+  override def eval(input: InternalRow): Any =
+    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+
+    val javaType = containedClass.getName
+    val obj = targetObject.genCode(ctx)
+
+    ev.copy(code =
+      code"""
+            |${obj.code}
+            |$javaType ${ev.value} = null;
+            |boolean ${ev.isNull} = true;
+            |java.util.List<Object> contained = ${obj.value}.getContained();
+            |
+            |for (int containedIndex = 0; containedIndex < contained.size(); containedIndex++) {
+            |  if (contained.get(containedIndex) instanceof $javaType) {
+            |    ${ev.value} = ($javaType) contained.get(containedIndex);
+            |    ${ev.isNull} = false;
+            |  }
+            |}
+       """.stripMargin)
+  }
+}

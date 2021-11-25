@@ -3,6 +3,7 @@ package au.csiro.pathling.encoders;
 import static org.junit.Assert.assertEquals;
 
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
+import au.csiro.pathling.encoders1.SchemaConverter1;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import com.google.common.collect.ImmutableSet;
@@ -15,7 +16,7 @@ import org.junit.Test;
 public class ResourceEncodingTest {
 
   private final FhirContext fhirContext = FhirContext.forR4();
-  private final SchemaConverter converter = new SchemaConverter(fhirContext,
+  private final SchemaConverter1 converter = new SchemaConverter1(fhirContext,
       new R4DataTypeMappings(), 0);
 
   private final FhirEncoders fhirEncoders = FhirEncoders.forR4().getOrCreate();

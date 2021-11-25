@@ -13,6 +13,8 @@
 package au.csiro.pathling.encoders;
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
+import au.csiro.pathling.encoders1.EncoderBuilder1;
+import au.csiro.pathling.encoders1.SchemaConverter1;
 import au.csiro.pathling.encoders2.EncoderBuilder2;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.FhirContext;
@@ -64,18 +66,27 @@ public class FhirEncoders {
   private final int maxNestingLevel;
 
   /**
+   * The encoder version to use.
+   */
+  private final int encoderVersion;
+
+  /**
    * Consumers should generally use the {@link #forR4()} method, but this is made available for test
    * purposes and additional experimental mappings.
    *
    * @param context the FHIR context to use.
    * @param mappings mappings between Spark and FHIR data types.
    * @param maxNestingLevel maximum nesting level for expansion of recursive data types.
+   * @param encoderVersion the encoder version to use.
    */
   public FhirEncoders(final FhirContext context, final DataTypeMappings mappings,
-      final int maxNestingLevel) {
+      final int maxNestingLevel, int encoderVersion) {
+
+    assert (encoderVersion == 1 || encoderVersion == 2);
     this.context = context;
     this.mappings = mappings;
     this.maxNestingLevel = maxNestingLevel;
+    this.encoderVersion = encoderVersion;
   }
 
   /**
@@ -276,20 +287,24 @@ public class FhirEncoders {
       ExpressionEncoder<T> encoder = encoderCache.get(key);
 
       if (encoder == null) {
-
-        encoder = (ExpressionEncoder<T>)
-            EncoderBuilder2.of(definition,
-                context,
-                mappings,
-                maxNestingLevel,
-                JavaConversions.asScalaBuffer(containedDefinitions));
-        // encoder = (ExpressionEncoder<T>)
-        //     EncoderBuilder.of(definition,
-        //         context,
-        //         mappings,
-        //         new SchemaConverter(context, mappings, maxNestingLevel),
-        //         JavaConversions.asScalaBuffer(containedDefinitions));
-
+        if (encoderVersion == 2) {
+          encoder = (ExpressionEncoder<T>)
+              EncoderBuilder2.of(definition,
+                  context,
+                  mappings,
+                  maxNestingLevel,
+                  JavaConversions.asScalaBuffer(containedDefinitions));
+        } else if (encoderVersion == 1) {
+          encoder = (ExpressionEncoder<T>)
+              EncoderBuilder1.of(definition,
+                  context,
+                  mappings,
+                  new SchemaConverter1(context, mappings, maxNestingLevel),
+                  JavaConversions.asScalaBuffer(containedDefinitions));
+        } else {
+          throw new IllegalArgumentException(
+              "Unsupported encoderVersion: " + encoderVersion + ". Only 1 and 2 are supported.");
+        }
         encoderCache.put(key, encoder);
       }
 
@@ -314,10 +329,12 @@ public class FhirEncoders {
 
     final FhirVersionEnum fhirVersion;
     final int maxNestingLevel;
+    final int encoderVersion;
 
-    EncodersKey(final FhirVersionEnum fhirVersion, int maxNestingLevel) {
+    EncodersKey(final FhirVersionEnum fhirVersion, int maxNestingLevel, int encoderVersion) {
       this.fhirVersion = fhirVersion;
       this.maxNestingLevel = maxNestingLevel;
+      this.encoderVersion = encoderVersion;
     }
 
     @Override
@@ -330,12 +347,13 @@ public class FhirEncoders {
       }
       EncodersKey that = (EncodersKey) o;
       return maxNestingLevel == that.maxNestingLevel &&
+          encoderVersion == that.encoderVersion &&
           fhirVersion == that.fhirVersion;
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(fhirVersion, maxNestingLevel);
+      return Objects.hash(fhirVersion, maxNestingLevel, encoderVersion);
     }
   }
 
@@ -345,14 +363,16 @@ public class FhirEncoders {
    */
   public static class Builder {
 
+    private final static int DEFAULT_ENCODER_VERSION = 2;
     final FhirVersionEnum fhirVersion;
     int maxNestingLevel;
+    int encoderVersion;
 
     Builder(final FhirVersionEnum fhirVersion) {
       this.fhirVersion = fhirVersion;
       this.maxNestingLevel = 0;
+      this.encoderVersion = DEFAULT_ENCODER_VERSION;
     }
-
 
     /**
      * Set the maximum nesting level for recursive data types. Zero (0) indicates that all direct or
@@ -366,6 +386,15 @@ public class FhirEncoders {
       return this;
     }
 
+    public Builder withV1() {
+      this.encoderVersion = 1;
+      return this;
+    }
+
+    public Builder withV2() {
+      this.encoderVersion = 2;
+      return this;
+    }
 
     /**
      * Get or create an {@link FhirEncoders} instance that matches the builder's configuration.
@@ -374,7 +403,7 @@ public class FhirEncoders {
      */
     public FhirEncoders getOrCreate() {
 
-      final EncodersKey key = new EncodersKey(fhirVersion, maxNestingLevel);
+      final EncodersKey key = new EncodersKey(fhirVersion, maxNestingLevel, encoderVersion);
 
       synchronized (ENCODERS) {
 
@@ -386,10 +415,9 @@ public class FhirEncoders {
 
           final FhirContext context = contextFor(fhirVersion);
           final DataTypeMappings mappings = mappingsFor(fhirVersion);
-          encoders = new FhirEncoders(context, mappings, maxNestingLevel);
+          encoders = new FhirEncoders(context, mappings, maxNestingLevel, encoderVersion);
           ENCODERS.put(key, encoders);
         }
-
         return encoders;
       }
     }

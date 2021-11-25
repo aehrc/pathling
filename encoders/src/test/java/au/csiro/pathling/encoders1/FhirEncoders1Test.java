@@ -10,10 +10,12 @@
  * under the CSIRO Open Source Software Licence Agreement.
  */
 
-package au.csiro.pathling.encoders;
+package au.csiro.pathling.encoders1;
 
 import static org.junit.Assert.assertTrue;
 
+import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.TestData;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -36,15 +38,15 @@ import org.junit.*;
 /**
  * Test for FHIR encoders.
  */
-public class FhirEncodersTest {
+public class FhirEncoders1Test {
 
   private static final int NESTING_LEVEL_3 = 3;
 
   private static final FhirEncoders ENCODERS_L0 =
-      FhirEncoders.forR4().getOrCreate();
+      FhirEncoders.forR4().withV1().getOrCreate();
 
   private static final FhirEncoders ENCODERS_L3 =
-      FhirEncoders.forR4().withMaxNestingLevel(NESTING_LEVEL_3).getOrCreate();
+      FhirEncoders.forR4().withV1().withMaxNestingLevel(NESTING_LEVEL_3).getOrCreate();
 
 
   private static SparkSession spark;
@@ -105,9 +107,8 @@ public class FhirEncodersTest {
         ENCODERS_L0.of(Observation.class));
     decodedObservation = observationsDataset.head();
 
-    // TODO: Uncomment with contained resources are supported
     medDataset = spark.createDataset(ImmutableList.of(medRequest),
-        ENCODERS_L0.of(MedicationRequest.class/*, Medication.class, Provenance.class*/));
+        ENCODERS_L0.of(MedicationRequest.class, Medication.class, Provenance.class));
     decodedMedRequest = medDataset.head();
 
     encounterDataset = spark

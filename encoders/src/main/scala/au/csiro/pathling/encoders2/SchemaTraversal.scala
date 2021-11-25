@@ -133,8 +133,8 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
       elementDefinition match {
         case composite: BaseRuntimeElementCompositeDefinition[_] => visitComposite(ctx, composite)
         case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(ctx, primitive)
-        case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative(ctx)
         case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(ctx, xhtmlHl7Org)
+        case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative(ctx)
       }
     }
   }

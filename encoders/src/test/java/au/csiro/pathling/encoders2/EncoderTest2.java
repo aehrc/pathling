@@ -2,6 +2,7 @@ package au.csiro.pathling.encoders2;
 
 import static org.junit.Assert.assertTrue;
 
+import au.csiro.pathling.encoders.EncoderUtils;
 import au.csiro.pathling.encoders.FhirEncoders;
 import ca.uhn.fhir.context.FhirContext;
 import org.apache.spark.sql.catalyst.InternalRow;
@@ -63,7 +64,8 @@ public class EncoderTest2 implements JsonMethods {
     patient.setId("someId");
     final InternalRow serializedRow = resolvedPatientEncoder.createSerializer()
         .apply(patient);
-    Observation deserializedPatient = resolvedPatientEncoder.createDeserializer().apply(serializedRow);
+    Observation deserializedPatient = resolvedPatientEncoder.createDeserializer()
+        .apply(serializedRow);
     assertTrue(patient.equalsDeep(deserializedPatient));
   }
 

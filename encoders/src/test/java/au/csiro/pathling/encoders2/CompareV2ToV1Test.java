@@ -2,9 +2,9 @@ package au.csiro.pathling.encoders2;
 
 import static org.junit.Assert.assertEquals;
 
-import au.csiro.pathling.encoders.EncoderBuilder;
-import au.csiro.pathling.encoders.SchemaConverter;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
+import au.csiro.pathling.encoders1.EncoderBuilder1;
+import au.csiro.pathling.encoders1.SchemaConverter1;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,7 +77,7 @@ public class CompareV2ToV1Test implements JsonMethods {
 
   @Test
   public void testCompareSchemaConverters() {
-    final SchemaConverter converter = new SchemaConverter(FhirContext.forR4(),
+    final SchemaConverter1 converter = new SchemaConverter1(FhirContext.forR4(),
         dataTypeMappings, nestingLevel);
     final SchemaConverter2 schemaTraversal2 = new SchemaConverter2(FhirContext.forR4(),
         dataTypeMappings, nestingLevel);
@@ -88,10 +88,10 @@ public class CompareV2ToV1Test implements JsonMethods {
 
   @Test
   public void testCompareSerializers() {
-    final SchemaConverter converter_0 = new SchemaConverter(FhirContext.forR4(),
+    final SchemaConverter1 converter_0 = new SchemaConverter1(FhirContext.forR4(),
         dataTypeMappings, nestingLevel);
 
-    final ExpressionEncoder<?> encoder = EncoderBuilder
+    final ExpressionEncoder<?> encoder = EncoderBuilder1
         .of(fhirContext.getResourceDefinition(resourceClass), fhirContext, dataTypeMappings,
             converter_0, JavaConversions.asScalaBuffer(Collections.emptyList()));
 
@@ -114,9 +114,9 @@ public class CompareV2ToV1Test implements JsonMethods {
   @Test
   public void testCompareDeserializers() {
 
-    final SchemaConverter converter_0 = new SchemaConverter(FhirContext.forR4(),
+    final SchemaConverter1 converter_0 = new SchemaConverter1(FhirContext.forR4(),
         dataTypeMappings, nestingLevel);
-    final ExpressionEncoder<?> encoder = EncoderBuilder
+    final ExpressionEncoder<?> encoder = EncoderBuilder1
         .of(fhirContext.getResourceDefinition(resourceClass), fhirContext, dataTypeMappings,
             converter_0, JavaConversions.asScalaBuffer(Collections.emptyList()));
 

@@ -2,6 +2,7 @@ package au.csiro.pathling.encoders2;
 
 import static org.junit.Assert.assertTrue;
 
+import au.csiro.pathling.encoders.EncoderUtils;
 import au.csiro.pathling.encoders.FhirEncoders;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
