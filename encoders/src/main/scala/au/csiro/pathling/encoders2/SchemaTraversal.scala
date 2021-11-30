@@ -3,7 +3,6 @@ package au.csiro.pathling.encoders2
 import au.csiro.pathling.encoders.EncodingContext
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
 import ca.uhn.fhir.context.{BaseRuntimeElementDefinition, _}
-import org.hl7.fhir.instance.model.api.IBaseResource
 
 import scala.collection.convert.ImplicitConversions._
 
@@ -74,8 +73,6 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
       case _: RuntimeChildContainedResources | _: RuntimeChildExtension => Nil
       case choiceDefinition: RuntimeChildChoiceDefinition =>
         visitChoiceChild(ctx, choiceDefinition)
-      //      case enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition =>
-      //        visitEnumChild(ctx, enumChildDefinition)
       case _ =>
         visitElementChild(ctx, childDefinition)
     }
@@ -92,11 +89,6 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
   def visitChoiceChildOption(ctx: CTX, choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): Seq[SF] = {
     val definition = choiceDefinition.getChildByName(optionName)
     visitElement(ctx, definition, optionName, visitElementValue(_, _, choiceDefinition))
-  }
-
-  def visitEnumChild(ctx: CTX, enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Seq[SF] = {
-    // by default defer to visit element child
-    visitElementChild(ctx, enumChildDefinition)
   }
 
   def visitElementChild(ctx: CTX, childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
