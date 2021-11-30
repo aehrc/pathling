@@ -14,3 +14,6 @@ tmp/
 
 #Others
 lib/import/node_modules/
+
+#Mac
+.DS_Store
