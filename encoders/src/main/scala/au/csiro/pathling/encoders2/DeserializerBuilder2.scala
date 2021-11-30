@@ -71,7 +71,7 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
   }
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                          compositeBuilder: (SchemaVisitorEx[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
+                          compositeBuilder: (SchemaVisitor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
 
 
     // The problem here is that the ctx has already been expanded but what we need is
@@ -86,11 +86,11 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
       .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName, compositeBuilder))
   }
 
-  override def enterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaVisitorEx[Expression, ExpressionWithName] = {
+  override def enterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaVisitor[Expression, ExpressionWithName] = {
     expandWithName(optionName)
   }
 
-  override def enterChild(childDefinition: BaseRuntimeChildDefinition): SchemaVisitorEx[Expression, (String, Expression)] = {
+  override def enterChild(childDefinition: BaseRuntimeChildDefinition): SchemaVisitor[Expression, (String, Expression)] = {
     childDefinition match {
       case _: RuntimeChildChoiceDefinition => this
       case _ => expandWithName(childDefinition.getElementName)
@@ -98,7 +98,7 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
   }
 
   override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                               compositeBuilder: (SchemaVisitorEx[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Expression = {
+                               compositeBuilder: (SchemaVisitor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Expression = {
 
     def elementMapper(expression: Expression): Expression = {
       withPath(Some(expression)).buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder)
@@ -259,7 +259,7 @@ class DeserializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings,
   }
 
   def buildDeserializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
-    new SchemaTraversalEx[Expression, ExpressionWithName](maxNestingLevel)
+    new SchemaTraversal[Expression, ExpressionWithName](maxNestingLevel)
       .enterResource(new DeserializerBuilderVisitor(None, mappings, schemaConverter), resourceDefinition)
   }
 }

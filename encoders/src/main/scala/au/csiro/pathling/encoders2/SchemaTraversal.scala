@@ -2,42 +2,83 @@ package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.EncodingContext
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
+import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.encoders2.SchemaTraversal.{isCollection, isSingular}
 import ca.uhn.fhir.context.{BaseRuntimeElementDefinition, _}
 
 import scala.collection.convert.ImplicitConversions._
 
-abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNestingLevel: Int) {
 
-  def buildComposite(ctx: CTX, fields: Seq[SF], definition: BaseRuntimeElementCompositeDefinition[_]): DT
+trait SchemaVisitor[DT, SF] {
+
+  def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
+                 compositeBuilder: (SchemaVisitor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): Seq[SF]
+
+  def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean
+
+  def aggregateChoice(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[SF]]): Seq[SF] = optionValues.flatten
+
+  def buildComposite(fields: Seq[SF], definition: BaseRuntimeElementCompositeDefinition[_]): DT
+
+
+  // explicit control of context switching
+  def enterChild(childDefinition: BaseRuntimeChildDefinition): SchemaVisitor[DT, SF] = this
+
+  def enterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaVisitor[DT, SF] = this
+}
+
+
+trait SchemaVisitorWithTypeMappings[DT, SF] extends SchemaVisitor[DT, SF] {
+  def dataTypeMappings: DataTypeMappings
+
+  override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
+    !dataTypeMappings.skipField(definition, childDefinition)
+  }
+
+  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
+                          compositeBuilder: (SchemaVisitor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): Seq[SF] = {
+    val value = if (isCollection(childDefinition)) {
+      buildArrayValue(childDefinition, elementDefinition, elementName, compositeBuilder)
+    } else {
+      buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder)
+    }
+    Seq(buildElement(elementName, value, elementDefinition))
+  }
+
+
+  def buildSimpleValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
+                       compositeBuilder: (SchemaVisitor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): DT = {
+    if (childDefinition.isInstanceOf[RuntimeChildPrimitiveEnumerationDatatypeDefinition]) {
+      buildEnumDatatype(elementDefinition.asInstanceOf[RuntimePrimitiveDatatypeDefinition],
+        childDefinition.asInstanceOf[RuntimeChildPrimitiveEnumerationDatatypeDefinition])
+    } else {
+      elementDefinition match {
+        case composite: BaseRuntimeElementCompositeDefinition[_] => compositeBuilder(this, composite)
+        case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(primitive)
+        case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org)
+        case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative
+      }
+    }
+  }
+
+  def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
+                      compositeBuilder: (SchemaVisitor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): DT
 
   def buildElement(elementName: String, elementType: DT, definition: BaseRuntimeElementDefinition[_]): SF
 
-  def buildPrimitiveDatatype(ctx: CTX, primitive: RuntimePrimitiveDatatypeDefinition): DT
+  def buildPrimitiveDatatype(primitive: RuntimePrimitiveDatatypeDefinition): DT
 
-  def buildPrimitiveDatatypeNarrative(ctx: CTX): DT
+  def buildPrimitiveDatatypeNarrative: DT
 
-  def buildPrimitiveDatatypeXhtmlHl7Org(ctx: CTX, xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DT
+  def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DT
 
-  def buildArrayTransformer(arrayDefinition: BaseRuntimeChildDefinition): (CTX, BaseRuntimeElementDefinition[_]) => DT
-
-
-  def buildEnumDatatype(ctx: CTX, enumDefinition: RuntimePrimitiveDatatypeDefinition,
+  def buildEnumDatatype(enumDefinition: RuntimePrimitiveDatatypeDefinition,
                         enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): DT = {
-    buildPrimitiveDatatype(ctx, enumDefinition)
+    buildPrimitiveDatatype(enumDefinition)
   }
+}
 
-  def buildValue(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                 valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT): Seq[SF] = {
-    Seq(buildElement(elementName,
-      valueBuilder(ctx, elementDefinition),
-      elementDefinition))
-  }
-
-  def aggregateChoice(ctx: CTX, choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[SF]]): Seq[SF] = {
-    optionValues.flatten
-  }
-
-  def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean
+class SchemaTraversal[DT, SF](maxNestingLevel: Int) {
 
   /**
    * Returns the Spark schema that represents the given FHIR resource
@@ -45,89 +86,69 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
    * @param resourceDefinition The definition of the FHIR resource
    * @return The schema as a Spark StructType
    */
-  def enterResource(ctx: CTX, resourceDefinition: RuntimeResourceDefinition): DT = {
+  def enterResource(ctx: SchemaVisitor[DT, SF], resourceDefinition: RuntimeResourceDefinition): DT = {
     EncodingContext.runWithContext {
       enterComposite(ctx, resourceDefinition)
     }
   }
 
-  def enterComposite(ctx: CTX, definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
+  def enterComposite(ctx: SchemaVisitor[DT, SF], definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
     visitComposite(ctx, definition)
   }
 
-  def visitComposite(ctx: CTX, definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
+  def visitComposite(ctx: SchemaVisitor[DT, SF], definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
     //println(s"visitComposite: ${definition}")
     EncodingContext.withDefinition(definition) {
       val fields: Seq[SF] = definition
         .getChildren
-        .filter(shouldExpandChild(definition, _))
+        .filter(ctx.shouldExpandChild(definition, _))
         .flatMap(visitChild(ctx, _))
-      buildComposite(ctx, fields, definition)
+      ctx.buildComposite(fields, definition)
     }
   }
 
-  def visitChild(ctx: CTX, childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
+  def visitChild(ctx: SchemaVisitor[DT, SF], childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
     //println(s"visitChild: ${childDefinition}")
 
     childDefinition match {
       case _: RuntimeChildContainedResources | _: RuntimeChildExtension => Nil
       case choiceDefinition: RuntimeChildChoiceDefinition =>
-        visitChoiceChild(ctx, choiceDefinition)
+        visitChoiceChild(ctx.enterChild(choiceDefinition), choiceDefinition)
       case _ =>
-        visitElementChild(ctx, childDefinition)
+        visitElementChild(ctx.enterChild(childDefinition), childDefinition)
     }
   }
 
-  def visitChoiceChild(ctx: CTX, choiceDefinition: RuntimeChildChoiceDefinition): Seq[SF] = {
-    assert(choiceDefinition.getMax == 1, "Collections of choice elements are not supported")
+  def visitChoiceChild(ctx: SchemaVisitor[DT, SF], choiceDefinition: RuntimeChildChoiceDefinition): Seq[SF] = {
+    assert(isSingular(choiceDefinition), "Collections of choice elements are not supported")
     val childValues = getOrderedListOfChoiceTypes(choiceDefinition)
       .map(choiceDefinition.getChildNameByDatatype)
-      .map(childName => visitChoiceChildOption(ctx, choiceDefinition, childName))
-    aggregateChoice(ctx, choiceDefinition, childValues)
+      .map(childName => visitChoiceChildOption(ctx.enterChoiceOption(choiceDefinition, childName), choiceDefinition, childName))
+    ctx.aggregateChoice(choiceDefinition, childValues)
   }
 
-  def visitChoiceChildOption(ctx: CTX, choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): Seq[SF] = {
+  def visitChoiceChildOption(ctx: SchemaVisitor[DT, SF], choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): Seq[SF] = {
     val definition = choiceDefinition.getChildByName(optionName)
-    visitElement(ctx, definition, optionName, visitElementValue(_, _, choiceDefinition))
+    visitElement(ctx, choiceDefinition, definition, optionName)
   }
 
-  def visitElementChild(ctx: CTX, childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
+  def visitElementChild(ctx: SchemaVisitor[DT, SF], childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
     val elementName = childDefinition.getElementName
     //println(s"visitNamedChild: ${childDefinition}.${elementName}")
     val definition = childDefinition.getChildByName(childDefinition.getElementName)
-    val valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT = (childDefinition.getMax != 1) match {
-      case true => buildArrayTransformer(childDefinition)
-      case false => visitElementValue(_, _, childDefinition)
-    }
-    visitElement(ctx, definition, elementName, valueBuilder)
+    visitElement(ctx, childDefinition, definition, elementName)
   }
 
-  def visitElement(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                   valueBuilder: (CTX, BaseRuntimeElementDefinition[_]) => DT): Seq[SF] = {
+  def visitElement(ctx: SchemaVisitor[DT, SF], childDefinition: BaseRuntimeChildDefinition,
+                   elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[SF] = {
     //println(s"visitElement: ${elementDefinition}.${elementName}[${valueBuilder}]")
     if (shouldExpand(elementDefinition)) {
       // here we need to plug custom encoders in one way or another
       // so this here should essentialy be delegated to the visitor
       // it should be reponsible for doing the possile custom encoding
-      buildValue(ctx, elementDefinition, elementName, valueBuilder)
+      ctx.buildValue(childDefinition, elementDefinition, elementName, visitComposite)
     } else {
       Nil
-    }
-  }
-
-  def visitElementValue(ctx: CTX, elementDefinition: BaseRuntimeElementDefinition[_], childDefinition: BaseRuntimeChildDefinition): DT = {
-
-    if (childDefinition.isInstanceOf[RuntimeChildPrimitiveEnumerationDatatypeDefinition]) {
-      buildEnumDatatype(ctx, elementDefinition.asInstanceOf[RuntimePrimitiveDatatypeDefinition],
-        childDefinition.asInstanceOf[RuntimeChildPrimitiveEnumerationDatatypeDefinition])
-    } else {
-
-      elementDefinition match {
-        case composite: BaseRuntimeElementCompositeDefinition[_] => visitComposite(ctx, composite)
-        case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(ctx, primitive)
-        case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(ctx, xhtmlHl7Org)
-        case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative(ctx)
-      }
     }
   }
 
@@ -140,5 +161,15 @@ abstract class SchemaTraversal[DT, SF, CTX](fhirContext: FhirContext, maxNesting
   def shouldExpand(definition: BaseRuntimeElementDefinition[_]): Boolean = {
     EncodingContext.currentNestingLevel(definition) <= maxNestingLevel
   }
+}
 
+
+object SchemaTraversal {
+  def isCollection(childDefinition: BaseRuntimeChildDefinition): Boolean = {
+    childDefinition.getMax != 1
+  }
+
+  def isSingular(childDefinition: BaseRuntimeChildDefinition): Boolean = {
+    childDefinition.getMax == 1
+  }
 }

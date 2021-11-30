@@ -66,7 +66,7 @@ class SchemaConverterVisitor(val fhirContext: FhirContext, val dataTypeMappings:
   }
 
   override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                               compositeBuilder: (SchemaVisitorEx[DataType, StructField], BaseRuntimeElementCompositeDefinition[_]) => DataType): DataType = {
+                               compositeBuilder: (SchemaVisitor[DataType, StructField], BaseRuntimeElementCompositeDefinition[_]) => DataType): DataType = {
     ArrayType(buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder))
   }
 
@@ -79,7 +79,7 @@ class SchemaConverterVisitor(val fhirContext: FhirContext, val dataTypeMappings:
   override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DataType = DataTypes.StringType
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                          compositeBuilder: (SchemaVisitorEx[DataType, StructField], BaseRuntimeElementCompositeDefinition[_]) => DataType): Seq[StructField] = {
+                          compositeBuilder: (SchemaVisitor[DataType, StructField], BaseRuntimeElementCompositeDefinition[_]) => DataType): Seq[StructField] = {
     // add custom encoder
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     // TODO: Enable this check or implement
@@ -96,12 +96,12 @@ class SchemaConverter2(val fhirContext: FhirContext, val dataTypeMappings: DataT
 
   private[encoders2] def compositeSchema(compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_ <: IBase]): DataType = {
     // TODO: unify the traversal
-    new SchemaTraversalEx[DataType, StructField](maxNestingLevel)
+    new SchemaTraversal[DataType, StructField](maxNestingLevel)
       .enterComposite(new SchemaConverterVisitor(fhirContext, dataTypeMappings), compositeElementDefinition)
   }
 
   override def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {
-    new SchemaTraversalEx[DataType, StructField](maxNestingLevel)
+    new SchemaTraversal[DataType, StructField](maxNestingLevel)
       .enterResource(new SchemaConverterVisitor(fhirContext, dataTypeMappings), resourceDefinition).asInstanceOf[StructType]
   }
 }

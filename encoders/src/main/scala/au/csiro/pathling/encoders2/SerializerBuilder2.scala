@@ -16,7 +16,7 @@ private[encoders2] class SerializerBuilderVisitor(expression: Expression, val da
   SchemaVisitorWithTypeMappings[Expression, ExpressionWithName] {
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                          compositeBuilder: (SchemaVisitorEx[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
+                          compositeBuilder: (SchemaVisitor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
     // add custom encoder
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     // TODO: Enable this check or implement
@@ -27,7 +27,7 @@ private[encoders2] class SerializerBuilderVisitor(expression: Expression, val da
   }
 
   override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                               compositeBuilder: (SchemaVisitorEx[Expression, (String, Expression)], BaseRuntimeElementCompositeDefinition[_]) => Expression): Expression = {
+                               compositeBuilder: (SchemaVisitor[Expression, (String, Expression)], BaseRuntimeElementCompositeDefinition[_]) => Expression): Expression = {
     MapObjects(withExpression(_).buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder),
       expression,
       objectTypeFor(childDefinition))
@@ -57,7 +57,7 @@ private[encoders2] class SerializerBuilderVisitor(expression: Expression, val da
     If(IsNull(expression), Literal.create(null, struct.dataType), struct)
   }
 
-  override def enterChild(childDefinition: BaseRuntimeChildDefinition): SchemaVisitorEx[Expression, ExpressionWithName] = {
+  override def enterChild(childDefinition: BaseRuntimeChildDefinition): SchemaVisitor[Expression, ExpressionWithName] = {
     val childExpression = childDefinition match {
       // At this point we don't the actual type of the child, so get it as the general IBaseDatatype
       case _: RuntimeChildChoiceDefinition => getChildExpression(expression, childDefinition, ObjectType(classOf[IBaseDatatype]))
@@ -66,7 +66,7 @@ private[encoders2] class SerializerBuilderVisitor(expression: Expression, val da
     this.withExpression(childExpression)
   }
 
-  override def enterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaVisitorEx[Expression, ExpressionWithName] = {
+  override def enterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaVisitor[Expression, ExpressionWithName] = {
     val choiceChildDefinition = choiceDefinition.getChildByName(optionName)
     val optionExpression = If(InstanceOf(expression, choiceChildDefinition.getImplementingClass),
       ObjectCast(expression, ObjectType(choiceChildDefinition.getImplementingClass)),
@@ -177,7 +177,7 @@ class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, m
   def buildSerializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
     val fhirClass = resourceDefinition.asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
     val inputObject = BoundReference(0, ObjectType(fhirClass), nullable = true)
-    new SchemaTraversalEx[Expression, ExpressionWithName](maxNestingLevel)
+    new SchemaTraversal[Expression, ExpressionWithName](maxNestingLevel)
       .enterResource(new SerializerBuilderVisitor(inputObject, mappings), resourceDefinition)
   }
 
