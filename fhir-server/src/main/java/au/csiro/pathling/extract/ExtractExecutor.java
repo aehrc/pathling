@@ -121,7 +121,7 @@ public class ExtractExecutor extends QueryExecutor {
     final List<String> filters = query.getFilters();
     final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
     final Dataset<Row> filteredDataset = filterDataset(
-        inputContext, filters, columnJoinResultDataset);
+        inputContext, filters, columnJoinResultDataset, Column::and);
 
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();

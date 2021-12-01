@@ -26,13 +26,4 @@ public class JwtDecoderProviderConfigurationUtilsProxy {
     return JwtDecoderProviderConfigurationUtils.getConfigurationForIssuerLocation(issuer);
   }
 
-  /**
-   * @param configuration the OIDC configuration values
-   * @param issuer the issuer required to be asserted within the token
-   */
-  public static void validateIssuer(@Nonnull final Map<String, Object> configuration,
-      @Nonnull final String issuer) {
-    JwtDecoderProviderConfigurationUtils.validateIssuer(configuration, issuer);
-  }
-
 }

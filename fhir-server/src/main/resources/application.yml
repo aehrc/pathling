@@ -70,12 +70,16 @@ pathling:
 
     # Provides the URL which will be advertised as the authorization endpoint.
     # authorizeUrl: [authorization URL]
-    
+
     # Provides the URL which will be advertised as the token endpoint.
     # tokenUrl: [token URL]
 
     # Provides the URL which will be advertised as the token revocation endpoint.
     # revokeUrl: [token revocation URL]
+
+    ga4ghPassports:
+      enabled: false
+      allowedIssuers: [ ]
 
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS

@@ -4,12 +4,11 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.io;
+package au.csiro.pathling.security.ga4gh;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.security.ga4gh.PassportScope;
-import au.csiro.pathling.security.ga4gh.PassportScopeEnforcer;
+import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -18,6 +17,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +28,9 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("core & ga4gh")
+@ConditionalOnProperty(prefix = "pathling", name = {"auth.enabled", "auth.ga4gh-passports.enabled"},
+    havingValue = "true")
+@Profile("core")
 @Slf4j
 public class ScopeAwareResourceReader extends ResourceReader {
 

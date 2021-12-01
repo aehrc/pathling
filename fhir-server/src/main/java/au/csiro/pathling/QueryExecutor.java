@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -170,23 +171,30 @@ public abstract class QueryExecutor {
   }
 
   protected Dataset<Row> filterDataset(@Nonnull final ResourcePath inputContext,
-      @Nonnull final Collection<String> filters, @Nonnull final Dataset<Row> dataset) {
+      @Nonnull final Collection<String> filters, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final BinaryOperator<Column> operator) {
+    return filterDataset(inputContext, filters, dataset, inputContext.getIdColumn(), operator);
+  }
+
+  protected Dataset<Row> filterDataset(@Nonnull final ResourcePath inputContext,
+      @Nonnull final Collection<String> filters, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column idColumn, @Nonnull final BinaryOperator<Column> operator) {
     final Dataset<Row> filteredDataset;
     if (filters.isEmpty()) {
       filteredDataset = dataset;
     } else {
-      final DatasetWithColumn filteredIdsResult = getFilteredIds(filters, inputContext);
+      final DatasetWithColumn filteredIdsResult = getFilteredIds(filters, inputContext, operator);
       final Dataset<Row> filteredIds = filteredIdsResult.getDataset();
       final Column filteredIdColumn = filteredIdsResult.getColumn();
       filteredDataset = dataset.join(filteredIds,
-          inputContext.getIdColumn().equalTo(filteredIdColumn), "left_semi");
+          idColumn.equalTo(filteredIdColumn), "left_semi");
     }
     return filteredDataset;
   }
 
   @Nonnull
   private DatasetWithColumn getFilteredIds(@Nonnull final Iterable<String> filters,
-      @Nonnull final ResourcePath inputContext) {
+      @Nonnull final ResourcePath inputContext, @Nonnull final BinaryOperator<Column> operator) {
     ResourcePath currentContext = inputContext;
     @Nullable Column filterColumn = null;
 
@@ -200,11 +208,11 @@ public abstract class QueryExecutor {
       checkUserInput(fhirPath instanceof BooleanPath || fhirPath instanceof BooleanLiteralPath,
           "Filter expression must be of Boolean type: " + fhirPath.getExpression());
 
-      // Add the filter column to the overall filter expression using Boolean AND logic.
+      // Add the filter column to the overall filter expression using the supplied operator.
       final Column filterValue = fhirPath.getValueColumn();
       filterColumn = filterColumn == null
                      ? filterValue
-                     : filterColumn.and(filterValue);
+                     : operator.apply(filterColumn, filterValue);
 
       // Update the context to build the next expression from the same dataset.
       currentContext = currentContext

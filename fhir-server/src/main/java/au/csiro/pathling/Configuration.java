@@ -243,6 +243,9 @@ public class Configuration {
     @Nullable
     private String audience;
 
+    @NotNull
+    private Ga4ghPassports ga4ghPassports;
+
     @Nonnull
     public Optional<String> getIssuer() {
       return Optional.ofNullable(issuer);
@@ -251,6 +254,26 @@ public class Configuration {
     @Nonnull
     public Optional<String> getAudience() {
       return Optional.ofNullable(audience);
+    }
+
+    /**
+     * Configuration relating to support for GA4GH Passports as a method of authorization.
+     */
+    @Data
+    public static class Ga4ghPassports {
+
+      /**
+       * Enables GA4GH Passport authorization.
+       */
+      @NotNull
+      private boolean enabled;
+
+      /**
+       * A set of allowable visa issuers.
+       */
+      @NotNull
+      private List<String> allowedIssuers;
+
     }
 
   }

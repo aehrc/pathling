@@ -9,6 +9,7 @@ package au.csiro.pathling.security.ga4gh;
 import java.util.HashMap;
 import java.util.Set;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
@@ -22,7 +23,9 @@ import org.springframework.web.context.WebApplicationContext;
  * @author John Grimes
  */
 @Component
-@Profile("server & ga4gh")
+@ConditionalOnProperty(prefix = "pathling", name = {"auth.enabled", "auth.ga4gh-passports.enabled"},
+    havingValue = "true")
+@Profile("server")
 @Scope(value = WebApplicationContext.SCOPE_REQUEST, proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class PassportScope extends HashMap<ResourceType, Set<String>> {
 

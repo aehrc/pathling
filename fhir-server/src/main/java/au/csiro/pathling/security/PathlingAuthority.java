@@ -19,7 +19,9 @@ import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * The representation of the authority supporting wildcard matching and Pathling specific scopes.
+ * The representation of the authority supporting wildcard matching and Pathling-specific scopes.
+ *
+ * @author Piotr Szul
  */
 @Getter
 public class PathlingAuthority {

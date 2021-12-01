@@ -12,6 +12,8 @@ import java.lang.annotation.*;
 /**
  * Identifies methods that implement access to underlying Resources. Used by {@link SecurityAspect}
  * to enforce Resource access authorization.
+ *
+ * @author Piotr Szul
  */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

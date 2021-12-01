@@ -32,6 +32,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -42,7 +43,8 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("core & !ga4gh")
+@ConditionalOnMissingBean(ResourceReader.class)
+@Profile("core")
 @Slf4j
 public class ResourceReader {
 

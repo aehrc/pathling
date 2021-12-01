@@ -6,10 +6,7 @@
 
 package au.csiro.pathling.security;
 
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-
 import au.csiro.pathling.Configuration;
-import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,8 +16,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -44,17 +39,10 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
   @Autowired
   private Configuration configuration;
 
-  @Autowired
-  private Optional<JwtDecoder> jwtDecoder;
-
-  @Autowired
-  private Optional<JwtAuthenticationConverter> jwtAuthenticationConverter;
-
   @Override
   protected void configure(final HttpSecurity http) throws Exception {
 
-    // Will use the bean of class CorsConfigurationSource
-    // as configuration provider
+    // Will use the bean of class CorsConfigurationSource as configuration provider.
     http.cors();
 
     if (authEnabled) {
@@ -70,9 +58,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
           .authenticated()
           .and()
           .oauth2ResourceServer()
-          .jwt()
-          .decoder(checkPresent(jwtDecoder))
-          .jwtAuthenticationConverter(checkPresent(jwtAuthenticationConverter));
+          .jwt();
 
     } else {
       http

@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -38,7 +39,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param sparkSession a {@link SparkSession} for resolving Spark queries
    * @param resourceReader a {@link ResourceReader} for retrieving resources
-   * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
+   * @param terminologyServiceFactory a {@link TerminologyServiceFactory} for resolving terminology
    * queries
    * @param passportScope a request-scoped {@link PassportScope} that provides the filters that need
    * to be applied
@@ -73,7 +74,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
           .build(getFhirContext(), getResourceReader(), subjectResource,
               subjectResource.toCode(), true);
 
-      return filterDataset(inputContext, filters, dataset);
+      return filterDataset(inputContext, filters, dataset, dataset.col("id"), Column::or);
     }
   }
 
