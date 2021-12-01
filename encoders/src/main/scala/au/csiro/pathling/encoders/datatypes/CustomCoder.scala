@@ -14,22 +14,21 @@ package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders2.ExpressionWithName
 import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.types.StructField
+import org.apache.spark.sql.types.{DataType, StructField}
 
 trait CustomCoder {
-
+  @deprecated
   def schema: Seq[StructField]
 
   @deprecated
   def customDecoderExpression(addToPath: String => Expression): Expression
 
-  def customSerializer2(inputObject: Expression): Seq[ExpressionWithName]
-  def customDeserializer2(addToPath: String => Expression): Seq[ExpressionWithName]
-
   @Deprecated
   def customSerializer(inputObject: Expression): List[Expression]
 
-  //  = {
-  //    customSerializer2(inputObject).flatMap({ case (name, exp) => Seq(Literal(name), exp) }).toList
-  //  }
+  def schema2(arrayEncoder: Option[DataType => DataType]): Seq[StructField]
+
+  def customSerializer2(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName]
+
+  def customDeserializer2(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName]
 }

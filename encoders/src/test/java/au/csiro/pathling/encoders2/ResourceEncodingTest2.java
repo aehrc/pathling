@@ -4,6 +4,7 @@ import static org.junit.Assert.assertTrue;
 
 import au.csiro.pathling.encoders.EncoderUtils;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import com.google.common.collect.ImmutableSet;
@@ -13,6 +14,7 @@ import java.util.stream.Collectors;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder.Serializer;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Base;
 import org.junit.Test;
@@ -35,14 +37,10 @@ public class ResourceEncodingTest2 {
       // Collections are not supported for custom encoders for: condition-> RuntimeIdDatatypeDefinition[id, IdType]
       "StructureDefinition",
       // Collections are not supported for custom encoders for: condition-> RuntimeIdDatatypeDefinition[id, IdType]
-      "MolecularSequence",
-      // Collections are not supported for custom encoders for: precision-> RuntimePrimitiveDatatypeDefinition[decimal, DecimalType]
       "StructureMap",
       // Collections are not supported for custom encoders for: condition-> RuntimeIdDatatypeDefinition[id, IdType]
-      "Bundle",
+      "Bundle"
       // scala.MatchError: RuntimeElementDirectResource[DirectChildResource, IBaseResource] (of class ca.uhn.fhir.context.RuntimeElementDirectResource)
-      "PlanDefinition"
-      // Collections are not supported for custom encoders for: goalId-> RuntimeIdDatatypeDefinition[id, IdType]
   );
 
   private final Class<? extends IBaseResource> resourceClass;
@@ -62,8 +60,20 @@ public class ResourceEncodingTest2 {
         .collect(Collectors.toList());
   }
 
+
   @Test
-  public void testCanEncodeDecodeAllR4Resources() throws Exception {
+  public void testCanProduceSchema() throws Exception {
+    final SchemaConverter2 schemaConverter = new SchemaConverter2(fhirContext,
+        new R4DataTypeMappings(),
+        0);
+
+    final StructType schema = schemaConverter.resourceSchema(resourceClass);
+    schema.printTreeString();
+  }
+
+
+  @Test
+  public void testCanEncodeDecodeResource() throws Exception {
 
     ExpressionEncoder<? extends IBaseResource> encoder = fhirEncoders
         .of(resourceClass);

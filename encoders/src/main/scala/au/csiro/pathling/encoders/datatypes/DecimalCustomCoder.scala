@@ -13,10 +13,12 @@
 package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.decimalType
+import au.csiro.pathling.encoders2.ExpressionWithName
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
+import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.types
-import org.apache.spark.sql.types._
+import org.apache.spark.sql.types.{ObjectType, _}
 import org.hl7.fhir.r4.model.DecimalType
 
 
@@ -46,9 +48,9 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
     )
   }
 
-  override def customDeserializer2(addToPath: String => Expression): Seq[(String, Expression)] = {
-    Seq((
-      elementName,
+  override def customDeserializer2(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName] = {
+
+    val deserializer = if (!isCollection) {
       NewInstance(primitiveClass,
         Invoke(
           Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
@@ -56,7 +58,21 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
         ) :: Nil,
         ObjectType(primitiveClass)
       )
-    ))
+    } else {
+      // Let's to this manually as we need to zip two independent arrays into into one
+      val arrayExpression = StaticInvoke(
+        classOf[DecimalCustomCoder],
+        ObjectType(classOf[Array[Any]]),
+        "zipToDecimal",
+        addToPath(elementName) :: addToPath(scaleFieldName) :: Nil
+      )
+      StaticInvoke(
+        classOf[java.util.Arrays],
+        ObjectType(classOf[java.util.List[_]]),
+        "asList",
+        arrayExpression :: Nil)
+    }
+    Seq((elementName, deserializer))
   }
 
   override def customSerializer(inputObject: Expression): List[Expression] = {
@@ -73,18 +89,26 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
     List(Literal(elementName), valueExpression, Literal(scaleFieldName), scaleExpression)
   }
 
-  override def customSerializer2(inputObject: Expression): Seq[(String, Expression)] = {
-    val valueExpression = StaticInvoke(classOf[Decimal],
+  override def customSerializer2(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName] = {
+    val valueExpression = evaluator(exp => StaticInvoke(classOf[Decimal],
       decimalType,
       "apply",
-      Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil)
-    val scaleExpression = StaticInvoke(classOf[Math],
+      Invoke(exp, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil))
+    val scaleExpression = evaluator(exp => StaticInvoke(classOf[Math],
       IntegerType,
       "min", Literal(decimalType.scale) ::
-        Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])),
+        Invoke(Invoke(exp, "getValue", ObjectType(classOf[java.math.BigDecimal])),
           "scale", DataTypes.IntegerType) :: Nil
-    )
+    ))
     Seq((elementName, valueExpression), (scaleFieldName, scaleExpression))
+  }
+
+  override def schema2(arrayEncoder: Option[DataType => DataType]): Seq[StructField] = {
+    def encode(v: DataType): DataType = {
+      arrayEncoder.map(_ (v)).getOrElse(v)
+    }
+
+    Seq(StructField(elementName, encode(decimalType)), StructField(scaleFieldName, encode(IntegerType)))
   }
 }
 
@@ -115,4 +139,15 @@ object DecimalCustomCoder {
   val scale: Int = 6
   val precision: Int = 26
   val decimalType: types.DecimalType = DataTypes.createDecimalType(precision, scale)
+
+
+  /**
+   * Need a way to zip two arrays so that they can be decoded to an arrays of DecimalTYpe
+   */
+  def zipToDecimal(values: ArrayData, scales: ArrayData): Array[DecimalType] = {
+    assert(values.numElements() == scales.numElements(), "Values and scales must have the same length")
+    Array.tabulate(values.numElements()) { i =>
+      new DecimalType(values.getDecimal(i, precision, scale).toJavaBigDecimal.setScale(scales.getInt(i)))
+    }
+  }
 }

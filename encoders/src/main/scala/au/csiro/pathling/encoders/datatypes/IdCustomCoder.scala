@@ -12,7 +12,8 @@
 
 package au.csiro.pathling.encoders.datatypes
 
-import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
+import au.csiro.pathling.encoders2.ExpressionWithName
+import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, MapObjects, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
@@ -51,19 +52,48 @@ case class IdCustomCoder(elementName: String) extends CustomCoder {
     List(Literal(elementName), idExpression, Literal(versionedName), versionedIdExpression)
   }
 
-  override def customDeserializer2(addToPath: String => Expression): Seq[(String, Expression)] = {
-    Seq((elementName, NewInstance(primitiveClass,
-      Invoke(addToPath(versionedName), "toString", ObjectType(classOf[String])) :: Nil,
-      ObjectType(primitiveClass))))
+  override def customDeserializer2(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName] = {
+
+    // We can ignore the value in the `id` column and only deserialize from `id_versioned`
+    def toVersionedId(exp: Expression): Expression = {
+      NewInstance(primitiveClass,
+        Invoke(exp, "toString", ObjectType(classOf[String])) :: Nil,
+        ObjectType(primitiveClass))
+    }
+
+    val deserializerExp = if (!isCollection) {
+      toVersionedId(addToPath(versionedName))
+    } else {
+      val arrayExpression = Invoke(
+        MapObjects(toVersionedId,
+          addToPath(versionedName),
+          StringType),
+        "array",
+        ObjectType(classOf[Array[Any]]))
+      StaticInvoke(
+        classOf[java.util.Arrays],
+        ObjectType(classOf[java.util.List[_]]),
+        "asList",
+        arrayExpression :: Nil)
+    }
+    Seq((elementName, deserializerExp))
   }
 
-  override def customSerializer2(inputObject: Expression): Seq[(String, Expression)] = {
-    val idExpression = StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
-      List(Invoke(inputObject, "getIdPart", ObjectType(classOf[String]))))
+  override def customSerializer2(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName] = {
+    val idExpression = evaluator(exp => StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
+      List(Invoke(exp, "getIdPart", ObjectType(classOf[String])))))
 
-    val versionedIdExpression = StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
-      List(Invoke(inputObject, "getValue", ObjectType(classOf[String]))))
+    val versionedIdExpression = evaluator(exp => StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
+      List(Invoke(exp, "getValue", ObjectType(classOf[String])))))
     Seq((elementName, idExpression), (versionedName, versionedIdExpression))
+  }
+
+  override def schema2(arrayEncoder: Option[DataType => DataType]): Seq[StructField] = {
+    def encode(v: DataType): DataType = {
+      arrayEncoder.map(_ (v)).getOrElse(v)
+    }
+
+    Seq(StructField(elementName, encode(DataTypes.StringType)), StructField(versionedName, encode(DataTypes.StringType)))
   }
 }
 

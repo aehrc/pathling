@@ -3,6 +3,7 @@ package au.csiro.pathling.encoders2
 import au.csiro.pathling.encoders.ObjectCast
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.encoders2.DeserializerBuilderVisitor.setterFor
+import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
 import org.apache.spark.sql.catalyst.expressions
@@ -24,11 +25,14 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
     // create decoder for this choice
 
     // Create a list of child expressions
-    // We expect all of them to be one element lists
-    val optionExpressions = optionValues.map {
-      case head :: Nil => head
-      case _ => throw new IllegalArgumentException("A single element value expected")
-    }
+    // We expect all of them be either empty of one-element lists.
+    // We can drop the empty ones
+    val optionExpressions = optionValues
+      .filter(_.nonEmpty)
+      .map {
+        case head :: Nil => head
+        case _ => throw new IllegalArgumentException("A single element value expected")
+      }
     // Fold child expressions into one
     val nullDeserializer: Expression = Literal.create(null, ObjectType(dataTypeMappings.baseType()))
     // NOTE: Fold right is needed to maintain compatibility with v1 implementation
@@ -72,17 +76,10 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
                           compositeBuilder: (SchemaVisitor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
-
-
-    // The problem here is that the ctx has already been expanded but what we need is
-    // Is a way to apply it manually, so perhpas that should go to visitElement Child
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
-    // TODO: Enable this check or implement
-    //assert(customEncoder.isEmpty || !isCollection,
-    //"Collections are not supported for custom encoders for: " + elementName + "-> " + elementDefinition)
-    // We need to use parets addToPath for custom encoders as they can access multiple fields
-    // of the parent composite
-    customEncoder.map(_.customDeserializer2(parent.get.addToPath))
+    // NOTE: We need to pass the parent's addToPath to custom encoder, so that it can
+    // access multiple elements of the parent composite
+    customEncoder.map(_.customDeserializer2(parent.get.addToPath, isCollection(childDefinition)))
       .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName, compositeBuilder))
   }
 
@@ -104,7 +101,7 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
       withPath(Some(expression)).buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder)
     }
 
-    assert(path.isDefined, "We expect a non empty path here")
+    assert(path.isDefined, "We expect a non-empty path here")
     val elementType: DataType = getSqlDatatypeFor(elementDefinition)
     val arrayExpression = Invoke(
       MapObjects(elementMapper,

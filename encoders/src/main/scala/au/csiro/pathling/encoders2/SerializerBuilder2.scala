@@ -2,6 +2,7 @@ package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.encoders.{InstanceOf, ObjectCast}
+import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
 import au.csiro.pathling.encoders2.SerializerBuilderVisitor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
 import ca.uhn.fhir.context._
@@ -19,10 +20,14 @@ private[encoders2] class SerializerBuilderVisitor(expression: Expression, val da
                           compositeBuilder: (SchemaVisitor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
     // add custom encoder
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
-    // TODO: Enable this check or implement
-    //assert(customEncoder.isEmpty || !isCollection,
-    //"Collections are not supported for custom encoders for: " + elementName + "-> " + elementDefinition)
-    customEncoder.map(_.customSerializer2(expression))
+    val evaluator: (Expression => Expression) => Expression = if (isCollection(childDefinition)) {
+      MapObjects(_,
+        expression,
+        objectTypeFor(childDefinition))
+    } else {
+      encoder => encoder(expression)
+    }
+    customEncoder.map(_.customSerializer2(evaluator))
       .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName, compositeBuilder))
   }
 

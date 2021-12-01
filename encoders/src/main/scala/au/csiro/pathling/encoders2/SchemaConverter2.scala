@@ -2,6 +2,7 @@ package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.SchemaConverter
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.types._
 import org.hl7.fhir.instance.model.api.IBase
@@ -85,7 +86,7 @@ class SchemaConverterVisitor(val fhirContext: FhirContext, val dataTypeMappings:
     // TODO: Enable this check or implement
     //assert(customEncoder.isEmpty || !isCollection,
     //"Collections are not supported for custom encoders for: " + elementName + "-> " + elementDefinition)
-    customEncoder.map(_.schema).getOrElse(
+    customEncoder.map(_.schema2(if (isCollection(childDefinition)) Some(ArrayType(_)) else None)).getOrElse(
       super.buildValue(childDefinition, elementDefinition, elementName, compositeBuilder)
     )
   }
