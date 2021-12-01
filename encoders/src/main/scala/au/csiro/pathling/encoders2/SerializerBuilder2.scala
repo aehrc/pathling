@@ -1,9 +1,9 @@
 package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders.{InstanceOf, ObjectCast}
+import au.csiro.pathling.encoders.{InstanceOf, ObjectCast, SchemaConfig}
 import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
-import au.csiro.pathling.encoders2.SerializerBuilderVisitor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
+import au.csiro.pathling.encoders2.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, MapObjects, StaticInvoke}
@@ -13,11 +13,11 @@ import org.apache.spark.unsafe.types.UTF8String
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseResource}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
-private[encoders2] class SerializerBuilderVisitor(expression: Expression, val dataTypeMappings: DataTypeMappings) extends
-  SchemaVisitorWithTypeMappings[Expression, ExpressionWithName] {
+private[encoders2] class SerializerBuilderProcessor(expression: Expression, val dataTypeMappings: DataTypeMappings) extends
+  SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] {
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                          compositeBuilder: (SchemaVisitor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
+                          compositeBuilder: (SchemaProcessor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
     // add custom encoder
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     val evaluator: (Expression => Expression) => Expression = if (isCollection(childDefinition)) {
@@ -32,7 +32,7 @@ private[encoders2] class SerializerBuilderVisitor(expression: Expression, val da
   }
 
   override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                               compositeBuilder: (SchemaVisitor[Expression, (String, Expression)], BaseRuntimeElementCompositeDefinition[_]) => Expression): Expression = {
+                               compositeBuilder: (SchemaProcessor[Expression, (String, Expression)], BaseRuntimeElementCompositeDefinition[_]) => Expression): Expression = {
     MapObjects(withExpression(_).buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder),
       expression,
       objectTypeFor(childDefinition))
@@ -62,7 +62,7 @@ private[encoders2] class SerializerBuilderVisitor(expression: Expression, val da
     If(IsNull(expression), Literal.create(null, struct.dataType), struct)
   }
 
-  override def enterChild(childDefinition: BaseRuntimeChildDefinition): SchemaVisitor[Expression, ExpressionWithName] = {
+  override def beforeEnterChild(childDefinition: BaseRuntimeChildDefinition): SchemaProcessor[Expression, ExpressionWithName] = {
     val childExpression = childDefinition match {
       // At this point we don't the actual type of the child, so get it as the general IBaseDatatype
       case _: RuntimeChildChoiceDefinition => getChildExpression(expression, childDefinition, ObjectType(classOf[IBaseDatatype]))
@@ -71,7 +71,7 @@ private[encoders2] class SerializerBuilderVisitor(expression: Expression, val da
     this.withExpression(childExpression)
   }
 
-  override def enterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaVisitor[Expression, ExpressionWithName] = {
+  override def beforeEnterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaProcessor[Expression, ExpressionWithName] = {
     val choiceChildDefinition = choiceDefinition.getChildByName(optionName)
     val optionExpression = If(InstanceOf(expression, choiceChildDefinition.getImplementingClass),
       ObjectCast(expression, ObjectType(choiceChildDefinition.getImplementingClass)),
@@ -80,12 +80,12 @@ private[encoders2] class SerializerBuilderVisitor(expression: Expression, val da
   }
 
 
-  def withExpression(expression: Expression): SerializerBuilderVisitor = {
-    new SerializerBuilderVisitor(expression, dataTypeMappings)
+  def withExpression(expression: Expression): SerializerBuilderProcessor = {
+    new SerializerBuilderProcessor(expression, dataTypeMappings)
   }
 }
 
-private[encoders2] object SerializerBuilderVisitor {
+private[encoders2] object SerializerBuilderProcessor {
 
   private def getChildExpression(parentObject: Expression,
                                  childDefinition: BaseRuntimeChildDefinition, dataType: DataType): Expression = {
@@ -177,16 +177,22 @@ private[encoders2] object SerializerBuilderVisitor {
 }
 
 
-class SerializerBuilder2(mappings: DataTypeMappings, fhirContext: FhirContext, maxNestingLevel: Int) {
+class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, maxNestingLevel: Int) {
 
   def buildSerializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
     val fhirClass = resourceDefinition.asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
     val inputObject = BoundReference(0, ObjectType(fhirClass), nullable = true)
     new SchemaTraversal[Expression, ExpressionWithName](maxNestingLevel)
-      .enterResource(new SerializerBuilderVisitor(inputObject, mappings), resourceDefinition)
+      .enterResource(new SerializerBuilderProcessor(inputObject, mappings), resourceDefinition)
   }
 
   def buildSerializer[T <: IBaseResource](resourceClass: Class[T]): Expression = {
     buildSerializer(fhirContext.getResourceDefinition(resourceClass))
+  }
+}
+
+object SerializerBuilder2 {
+  def apply(config: SchemaConfig): SerializerBuilder2 = {
+    new SerializerBuilder2(config.fhirContext, config.dataTypeMappings, config.maxNestingLevel)
   }
 }

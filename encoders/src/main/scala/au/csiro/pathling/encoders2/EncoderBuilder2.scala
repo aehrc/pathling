@@ -28,13 +28,11 @@ object EncoderBuilder2 {
 
     assert(contained.isEmpty, "Contained resources are not supported")
 
-
     val fhirClass = resourceDefinition
       .asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
-    val serializerBuilder = new SerializerBuilder2(mappings, fhirContext, maxNestingLevel)
-    // TODO: Move schema converter to deserializer or make it master of all configs
     val schemaConverter = new SchemaConverter2(fhirContext, mappings, maxNestingLevel)
-    val deserializerBuilder = new DeserializerBuilder2(fhirContext, mappings, maxNestingLevel, schemaConverter)
+    val serializerBuilder = SerializerBuilder2(schemaConverter)
+    val deserializerBuilder = DeserializerBuilder2(schemaConverter)
     new ExpressionEncoder(
       serializerBuilder.buildSerializer(resourceDefinition),
       deserializerBuilder.buildDeserializer(resourceDefinition),

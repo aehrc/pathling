@@ -1,5 +1,6 @@
-package au.csiro.pathling.encoders.datatypes
+package au.csiro.pathling.encoders
 
+import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context.FhirContext
 
 trait SchemaConfig {

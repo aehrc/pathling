@@ -1,6 +1,5 @@
 package au.csiro.pathling.encoders
 
-import au.csiro.pathling.encoders.datatypes.SchemaConfig
 import ca.uhn.fhir.context.{RuntimeChildChoiceDefinition, RuntimeResourceDefinition}
 import org.apache.spark.sql.types.StructType
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}

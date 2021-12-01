@@ -2,7 +2,7 @@ package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.ObjectCast
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders2.DeserializerBuilderVisitor.setterFor
+import au.csiro.pathling.encoders2.DeserializerBuilderProcessor.setterFor
 import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
@@ -14,9 +14,9 @@ import org.hl7.fhir.instance.model.api.IBaseResource
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
-private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression], val dataTypeMappings: DataTypeMappings, schemaConverter: SchemaConverter2,
-                                                    parent: Option[DeserializerBuilderVisitor] = None)
-  extends SchemaVisitorWithTypeMappings[Expression, ExpressionWithName] {
+private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expression], val dataTypeMappings: DataTypeMappings, schemaConverter: SchemaConverter2,
+                                                      parent: Option[DeserializerBuilderProcessor] = None)
+  extends SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] {
 
 
   override def aggregateChoice(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[ExpressionWithName]]): Seq[ExpressionWithName] = {
@@ -75,7 +75,7 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
   }
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                          compositeBuilder: (SchemaVisitor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
+                          compositeBuilder: (SchemaProcessor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     // NOTE: We need to pass the parent's addToPath to custom encoder, so that it can
     // access multiple elements of the parent composite
@@ -83,11 +83,11 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
       .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName, compositeBuilder))
   }
 
-  override def enterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaVisitor[Expression, ExpressionWithName] = {
+  override def beforeEnterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaProcessor[Expression, ExpressionWithName] = {
     expandWithName(optionName)
   }
 
-  override def enterChild(childDefinition: BaseRuntimeChildDefinition): SchemaVisitor[Expression, (String, Expression)] = {
+  override def beforeEnterChild(childDefinition: BaseRuntimeChildDefinition): SchemaProcessor[Expression, (String, Expression)] = {
     childDefinition match {
       case _: RuntimeChildChoiceDefinition => this
       case _ => expandWithName(childDefinition.getElementName)
@@ -95,7 +95,7 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
   }
 
   override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                               compositeBuilder: (SchemaVisitor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Expression = {
+                               compositeBuilder: (SchemaProcessor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Expression = {
 
     def elementMapper(expression: Expression): Expression = {
       withPath(Some(expression)).buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder)
@@ -190,11 +190,11 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
     }
   }
 
-  private def withPath(path: Option[Expression]): DeserializerBuilderVisitor = {
-    new DeserializerBuilderVisitor(path, dataTypeMappings, schemaConverter, Some(this))
+  private def withPath(path: Option[Expression]): DeserializerBuilderProcessor = {
+    new DeserializerBuilderProcessor(path, dataTypeMappings, schemaConverter, Some(this))
   }
 
-  private def expandWithName(name: String): DeserializerBuilderVisitor = {
+  private def expandWithName(name: String): DeserializerBuilderProcessor = {
     withPath(Some(addToPath(name)))
   }
 
@@ -205,7 +205,7 @@ private[encoders2] class DeserializerBuilderVisitor(val path: Option[Expression]
 
 }
 
-private[encoders2] object DeserializerBuilderVisitor {
+private[encoders2] object DeserializerBuilderProcessor {
 
   /**
    * Returns the setter for the given field name.s
@@ -257,6 +257,13 @@ class DeserializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings,
 
   def buildDeserializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
     new SchemaTraversal[Expression, ExpressionWithName](maxNestingLevel)
-      .enterResource(new DeserializerBuilderVisitor(None, mappings, schemaConverter), resourceDefinition)
+      .enterResource(new DeserializerBuilderProcessor(None, mappings, schemaConverter), resourceDefinition)
+  }
+}
+
+object DeserializerBuilder2 {
+  def apply(schemaConverter: SchemaConverter2): DeserializerBuilder2 = {
+    new DeserializerBuilder2(schemaConverter.fhirContext, schemaConverter.dataTypeMappings,
+      schemaConverter.maxNestingLevel, schemaConverter)
   }
 }

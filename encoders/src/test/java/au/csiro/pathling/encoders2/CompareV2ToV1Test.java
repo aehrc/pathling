@@ -97,8 +97,9 @@ public class CompareV2ToV1Test implements JsonMethods {
 
     final Expression objSerializer_v1 = encoder.objSerializer();
 
-    final SerializerBuilder2 serializerBuilder = new SerializerBuilder2(dataTypeMappings,
-        fhirContext, nestingLevel);
+    final SerializerBuilder2 serializerBuilder = new SerializerBuilder2(fhirContext,
+        dataTypeMappings,
+        nestingLevel);
 
     final Expression objSerializer_v2 = serializerBuilder.buildSerializer(resourceClass);
     // NOTE: Cannot be compared direclty because lambda variables ids for Map expression are generated from
