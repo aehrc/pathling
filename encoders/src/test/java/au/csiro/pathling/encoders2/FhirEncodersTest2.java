@@ -15,7 +15,7 @@ import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.json4s.jackson.JsonMethods;
 import org.junit.Test;
 
-public class EncoderTest2 implements JsonMethods {
+public class FhirEncodersTest2 implements JsonMethods {
 
   private final FhirEncoders fhirEncoders = FhirEncoders.forR4().getOrCreate();
 
