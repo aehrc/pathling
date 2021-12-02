@@ -27,7 +27,7 @@ public class Preconditions {
    * Ensures the truth of an expression, throwing an {@link AssertionError} with the supplied
    * message if it does not evaluate as true.
    *
-   * @param expression The expression that should be true
+   * @param expression the expression that should be true
    */
   public static void check(final boolean expression) {
     if (!expression) {
@@ -39,9 +39,9 @@ public class Preconditions {
    * Ensures the truth of an expression, throwing an {@link AssertionError} with the supplied
    * message if it does not evaluate as true.
    *
-   * @param expression The expression that should be true
-   * @param messageTemplate The message template in the {@link String#format } format
-   * @param params The parameters to the message template
+   * @param expression the expression that should be true
+   * @param messageTemplate the message template in the {@link String#format } format
+   * @param params the parameters to the message template
    */
   public static void check(final boolean expression, final @Nonnull String messageTemplate,
       @Nonnull final Object... params) {
@@ -54,8 +54,8 @@ public class Preconditions {
    * Ensures the truth of an expression, throwing an {@link IllegalArgumentException} with the
    * supplied message if it does not evaluate as true.
    *
-   * @param expression The expression that should be true
-   * @param errorMessage The message to use if an error is thrown
+   * @param expression the expression that should be true
+   * @param errorMessage the message to use if an error is thrown
    */
   public static void checkArgument(final boolean expression, @Nonnull final String errorMessage) {
     if (!expression) {
@@ -66,9 +66,9 @@ public class Preconditions {
   /**
    * Ensures that an object is not null, throwing a {@link NullPointerException} if it is.
    *
-   * @param object The object to check
-   * @param <T> The type of the object
-   * @return The non-null object
+   * @param object the object to check
+   * @param <T> the type of the object
+   * @return the non-null object
    */
   @Nonnull
   public static <T> T checkNotNull(@Nullable final T object) {
@@ -79,16 +79,31 @@ public class Preconditions {
    * Ensures that an {@link Optional} value is present, throwing a {@link AssertionError} if it is
    * not.
    *
-   * @param object The object to check
-   * @param <T> The type of the object within the Optional
-   * @return The unwrapped object
+   * @param object the object to check
+   * @param <T> the type of the object within the Optional
+   * @return the unwrapped object
    */
   @Nonnull
   public static <T> T checkPresent(@Nonnull final Optional<T> object) {
+    return checkPresent(object, null);
+  }
+
+  /**
+   * Ensures that an {@link Optional} value is present, throwing a {@link AssertionError} if it is
+   * not.
+   *
+   * @param object the object to check
+   * @param message an error message
+   * @param <T> the type of the object within the Optional
+   * @return the unwrapped object
+   */
+  @Nonnull
+  public static <T> T checkPresent(@Nonnull final Optional<T> object,
+      @Nullable final String message) {
     try {
       return object.orElseThrow();
     } catch (final NoSuchElementException e) {
-      throw new AssertionError(e.getMessage(), e);
+      throw new AssertionError(message == null ? e.getMessage() : message);
     }
   }
 
@@ -96,8 +111,8 @@ public class Preconditions {
    * Ensures the truth of an expression, throwing an {@link InvalidUserInputError} with the supplied
    * message if it does not evaluate as true.
    *
-   * @param expression The expression that should be true
-   * @param errorMessage The message to use if an error is thrown
+   * @param expression the expression that should be true
+   * @param errorMessage the message to use if an error is thrown
    */
   public static void checkUserInput(final boolean expression, @Nonnull final String errorMessage) {
     if (!expression) {
@@ -109,8 +124,8 @@ public class Preconditions {
    * Ensures the truth of an expression, throwing an {@link IllegalStateException} with the supplied
    * message if it does not evaluate as true.
    *
-   * @param expression The expression that should be true
-   * @param errorMessage The message to use if an error is thrown
+   * @param expression the expression that should be true
+   * @param errorMessage the message to use if an error is thrown
    */
   public static void checkState(final boolean expression, @Nonnull final String errorMessage) {
     if (!expression) {
@@ -122,9 +137,9 @@ public class Preconditions {
    * Ensures the truth of an expression, throwing an {@link UnexpectedResponseException} with the
    * supplied formatted message if it does not evaluate as true.
    *
-   * @param expression The expression that should be true
-   * @param messageTemplate The message template in the {@link String#format} format
-   * @param params The parameters to the message template
+   * @param expression the expression that should be true
+   * @param messageTemplate the message template in the {@link String#format} format
+   * @param params the parameters to the message template
    */
   public static void checkResponse(final boolean expression, @Nonnull final String messageTemplate,
       final @Nonnull Object... params) {

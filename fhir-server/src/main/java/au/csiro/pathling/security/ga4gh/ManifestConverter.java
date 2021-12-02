@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -26,9 +25,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@ConditionalOnProperty(prefix = "pathling", name = {"auth.enabled", "auth.ga4gh-passports.enabled"},
-    havingValue = "true")
-@Profile("server")
+@Profile("server & ga4gh")
 public class ManifestConverter {
 
   private static final String PATIENT_IDENTIFIER_SYSTEM = "https://nagim.dev/patient";

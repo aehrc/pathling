@@ -263,16 +263,10 @@ public class Configuration {
     public static class Ga4ghPassports {
 
       /**
-       * Enables GA4GH Passport authorization.
-       */
-      @NotNull
-      private boolean enabled;
-
-      /**
        * A set of allowable visa issuers.
        */
       @NotNull
-      private List<String> allowedIssuers;
+      private List<String> allowedVisaIssuers;
 
     }
 

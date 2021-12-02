@@ -78,8 +78,7 @@ pathling:
     # revokeUrl: [token revocation URL]
 
     ga4ghPassports:
-      enabled: false
-      allowedIssuers: [ ]
+      allowedVisaIssuers: [ ]
 
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS

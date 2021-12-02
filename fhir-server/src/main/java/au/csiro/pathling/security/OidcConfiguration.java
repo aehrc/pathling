@@ -27,8 +27,8 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 @Profile("server")
+@ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 @Getter
 public class OidcConfiguration {
 

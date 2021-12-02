@@ -9,7 +9,6 @@ package au.csiro.pathling.security.ga4gh;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -32,7 +31,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;
@@ -50,26 +48,24 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@ConditionalOnProperty(prefix = "pathling", name = {"auth.enabled", "auth.ga4gh-passports.enabled"},
-    havingValue = "true")
-@Profile("server")
+@Profile("server & ga4gh")
 @Slf4j
 public class PassportAuthenticationConverter extends JwtAuthenticationConverter {
 
   /**
+   * @param visaDecoderFactory a factory for creating a visa {@link JwtDecoder}
    * @param configuration for use in creating the JWT decoder
-   * @param oidcConfiguration the overall OIDC configuration of the passport issuer
    * @param manifestConverter a {@link ManifestConverter} that we use to convert the manifest into a
    * set of query scopes
    * @param passportScope a request-scoped {@link PassportScope} used to store the extracted
    * filters
    */
-  public PassportAuthenticationConverter(@Nonnull final Configuration configuration,
-      @Nonnull final OidcConfiguration oidcConfiguration,
+  @SuppressWarnings("TypeMayBeWeakened")
+  public PassportAuthenticationConverter(@Nonnull final VisaDecoderFactory visaDecoderFactory,
+      @Nonnull final Configuration configuration,
       @Nonnull final ManifestConverter manifestConverter,
       @Nonnull final PassportScope passportScope) {
     log.debug("Instantiating passport authentication converter");
-    final VisaDecoderFactory visaDecoderFactory = new VisaDecoderFactory(oidcConfiguration);
     final JwtDecoder visaDecoder = visaDecoderFactory.createDecoder(configuration);
     final Converter<Jwt, Collection<GrantedAuthority>> authoritiesConverter = new PassportAuthoritiesConverter(
         visaDecoder, manifestConverter, passportScope);
@@ -193,6 +189,7 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
       return gson.fromJson(EntityUtils.toString(entity), VisaManifest.class);
     }
 
+    @SuppressWarnings("SameParameterValue")
     private void checkToken(@Nonnull final Runnable check, @Nonnull final String message) {
       try {
         check.run();

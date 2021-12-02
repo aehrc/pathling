@@ -6,20 +6,15 @@
 
 package au.csiro.pathling.security.ga4gh;
 
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorization;
-import au.csiro.pathling.security.OidcConfiguration;
-import au.csiro.pathling.security.PathlingJwtDecoderFactory;
-import java.util.ArrayList;
-import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.oauth2.core.OAuth2TokenValidator;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
+import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -28,27 +23,34 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@ConditionalOnProperty(prefix = "pathling", name = {"auth.enabled", "auth.ga4gh-passports.enabled"},
-    havingValue = "true")
-@Profile("server")
-public class PassportDecoderFactory extends PathlingJwtDecoderFactory {
+@Profile("server & ga4gh")
+public class PassportDecoderFactory implements JwtDecoderFactory<Configuration> {
+
+  @Nonnull
+  private final PassportDecoderBuilder builder;
 
   /**
-   * @param oidcConfiguration used to get the JWKS URI
+   * @param builder a builder that can create a {@link JwtDecoder}
    */
-  public PassportDecoderFactory(@Nonnull final OidcConfiguration oidcConfiguration) {
-    super(oidcConfiguration);
+  public PassportDecoderFactory(@Nonnull final PassportDecoderBuilder builder) {
+    this.builder = builder;
   }
 
   @Override
   public JwtDecoder createDecoder(@Nullable final Configuration configuration) {
-    final Authorization auth = getAuthConfiguration(configuration);
+    checkArgument(configuration != null, "configuration cannot be null");
+    return builder.build(configuration);
+  }
 
-    // The passport decoder is the same as the regular Pathling decoder with the exception that the
-    // audience claim is not required.
-    final List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>();
-    auth.getIssuer().ifPresent(i -> validators.add(new JwtIssuerValidator(i)));
-    return buildDecoderWithValidators(validators);
+  /**
+   * @param configuration that controls the behaviour of the decoder factory
+   * @param factory a factory that can create a {@link JwtDecoder}
+   * @return a shiny new {@link JwtDecoder}
+   */
+  @Bean
+  public static JwtDecoder passportDecoder(@Nullable final Configuration configuration,
+      @Nonnull final PassportDecoderFactory factory) {
+    return factory.createDecoder(configuration);
   }
 
 }
