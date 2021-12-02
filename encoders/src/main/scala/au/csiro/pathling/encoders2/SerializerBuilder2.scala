@@ -13,6 +13,12 @@ import org.apache.spark.unsafe.types.UTF8String
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseResource}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
+/**
+ * The schema processor for building serializer expressions.
+ *
+ * @param expression       the starting (root) expression.
+ * @param dataTypeMappings data type mappins to use.
+ */
 private[encoders2] class SerializerBuilderProcessor(expression: Expression, val dataTypeMappings: DataTypeMappings) extends
   SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] {
 
@@ -55,7 +61,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
     dataTypeToUtf8Expr(expression)
   }
 
-  override def buildComposite(fields: Seq[ExpressionWithName], definition: BaseRuntimeElementCompositeDefinition[_]): Expression = {
+  override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
     // TODO: Fix so that it does not traverse the type
     val structFields = dataTypeMappings.overrideCompositeExpression(expression, definition).getOrElse(fields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
     val struct = CreateNamedStruct(structFields)
@@ -80,7 +86,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
   }
 
 
-  def withExpression(expression: Expression): SerializerBuilderProcessor = {
+  private def withExpression(expression: Expression): SerializerBuilderProcessor = {
     new SerializerBuilderProcessor(expression, dataTypeMappings)
   }
 }
@@ -176,22 +182,50 @@ private[encoders2] object SerializerBuilderProcessor {
   }
 }
 
-
+/**
+ * The builder of serializer expressions for HAPI representation of FHIR resources.
+ *
+ * @param fhirContext     the FHIR context to use.
+ * @param mappings        the data type mappings to use.
+ * @param maxNestingLevel the max nesting level to use.
+ */
 class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, maxNestingLevel: Int) {
 
+  /**
+   * Creates the serializer expression for given resource definition.
+   *
+   * @param resourceDefinition the HAPI resource definition.
+   * @return the serializer expression.
+   */
   def buildSerializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
     val fhirClass = resourceDefinition.asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
     val inputObject = BoundReference(0, ObjectType(fhirClass), nullable = true)
     new SchemaTraversal[Expression, ExpressionWithName](maxNestingLevel)
-      .enterResource(new SerializerBuilderProcessor(inputObject, mappings), resourceDefinition)
+      .processResource(new SerializerBuilderProcessor(inputObject, mappings), resourceDefinition)
   }
 
+  /**
+   * Creates the serializer expression for given resource class.
+   *
+   * @param resourceClass the class of a HAPI resource definition.
+   * @tparam T the actual type of the resource class.
+   * @return the serializer expression.
+   */
   def buildSerializer[T <: IBaseResource](resourceClass: Class[T]): Expression = {
     buildSerializer(fhirContext.getResourceDefinition(resourceClass))
   }
 }
 
+/**
+ * Companion object for [[SerializerBuilder2]]
+ */
 object SerializerBuilder2 {
+  /**
+   * Constructs a serializer builder from a [[SchemaConfig]].
+   *
+   * @param config the schema config to use.
+   * @return the serializer builder.
+   */
   def apply(config: SchemaConfig): SerializerBuilder2 = {
     new SerializerBuilder2(config.fhirContext, config.dataTypeMappings, config.maxNestingLevel)
   }

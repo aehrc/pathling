@@ -6,9 +6,12 @@ import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
 
 import scala.collection.convert.ImplicitConversions._
 
+/**
+ * The converter from FHIR schemas to (spark) SQL schemas.
+ */
 trait SchemaConverter extends SchemaConfig {
   /**
-   * Returns the Spark schema that represents the given FHIR resource
+   * Returns the spark (SQL) schema that represents the given FHIR resource class.
    *
    * @param resourceClass The class implementing the FHIR resource.
    * @return The schema as a Spark StructType
@@ -17,10 +20,19 @@ trait SchemaConverter extends SchemaConfig {
     resourceSchema(fhirContext.getResourceDefinition(resourceClass))
   }
 
+  /**
+   * Returns the (spark) SQL schema that represents the given FHIR resource definition.
+   *
+   * @param resourceDefinition the FHIR resource definition.
+   * @return the schema as a Spark StructType
+   */
   def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType
 }
 
 
+/**
+ * Companion object for [[SchemaConverter]]
+ */
 object SchemaConverter {
   /**
    * Returns a deterministically ordered list of child types of choice.

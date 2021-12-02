@@ -7,10 +7,16 @@ import ca.uhn.fhir.context._
 import org.apache.spark.sql.types._
 import org.hl7.fhir.instance.model.api.IBase
 
-class SchemaConverterProcessor(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings) extends
+/**
+ * The schema processor for converting FHIR schemas to SQL schemas.
+ *
+ * @param fhirContext      the FHIR context to use.
+ * @param dataTypeMappings data type mappings to use.
+ */
+private[encoders2] class SchemaConverterProcessor(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings) extends
   SchemaProcessorWithTypeMappings[DataType, StructField] {
 
-  override def buildComposite(fields: Seq[StructField], definition: BaseRuntimeElementCompositeDefinition[_]): DataType = {
+  override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[StructField]): DataType = {
     StructType(fields)
   }
 
@@ -41,16 +47,22 @@ class SchemaConverterProcessor(val fhirContext: FhirContext, val dataTypeMapping
 
 }
 
+/**
+ * The converter from FHIR schemas to SQL schemas.
+ *
+ * @param fhirContext      the FHIR context to use.
+ * @param dataTypeMappings the data type mappings to use.
+ * @param maxNestingLevel  the max nesting level to use.
+ */
 class SchemaConverter2(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings, val maxNestingLevel: Int) extends SchemaConverter {
 
   private[encoders2] def compositeSchema(compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_ <: IBase]): DataType = {
-    // TODO: unify the traversal
     new SchemaTraversal[DataType, StructField](maxNestingLevel)
-      .enterComposite(new SchemaConverterProcessor(fhirContext, dataTypeMappings), compositeElementDefinition)
+      .processComposite(new SchemaConverterProcessor(fhirContext, dataTypeMappings), compositeElementDefinition)
   }
 
   override def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {
     new SchemaTraversal[DataType, StructField](maxNestingLevel)
-      .enterResource(new SchemaConverterProcessor(fhirContext, dataTypeMappings), resourceDefinition).asInstanceOf[StructType]
+      .processResource(new SchemaConverterProcessor(fhirContext, dataTypeMappings), resourceDefinition).asInstanceOf[StructType]
   }
 }

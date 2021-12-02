@@ -14,12 +14,20 @@ import org.hl7.fhir.instance.model.api.IBaseResource
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
+/**
+ * The schema processor for building deserializer expressions.
+ *
+ * @param path             the starting (root) path.
+ * @param dataTypeMappings data type mappings to use.
+ * @param schemaConverter  the schema converter to use.
+ * @param parent           the processor for the parent composite.
+ */
 private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expression], val dataTypeMappings: DataTypeMappings, schemaConverter: SchemaConverter2,
                                                       parent: Option[DeserializerBuilderProcessor] = None)
   extends SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] {
 
 
-  override def aggregateChoice(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[ExpressionWithName]]): Seq[ExpressionWithName] = {
+  override def combineChoiceOptions(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[ExpressionWithName]]): Seq[ExpressionWithName] = {
     // so how do we aggregate children of a choice
     // we need to fold all the child expression ignoring the name and then
     // create decoder for this choice
@@ -142,7 +150,7 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
         stringValue)))
   }
 
-  override def buildComposite(fields: Seq[ExpressionWithName], definition: BaseRuntimeElementCompositeDefinition[_]): Expression = {
+  override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
     val compositeInstance = NewInstance(definition.getImplementingClass,
       Nil,
       ObjectType(definition.getImplementingClass))
@@ -159,9 +167,9 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
     }
 
     val bean: Expression = InitializeJavaBean(compositeInstance, setters.toMap)
-
-    // TODO: Change when addding support for contained resources
     val result = bean
+
+    // TODO: Reconsider when fixing [#409] Adding support for contained resources
     //
     //    // Deserialize any Contained resources to the new Object through successive calls
     //    // to 'addContained'.
@@ -173,10 +181,6 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
     //        compositeToDeserializer(containedResource,
     //          Some(UnresolvedAttribute("contained." + containedResource.getName))) :: Nil)
     //    })
-
-    // TODO: Check if this is correct
-    // It's what the current code does but it might be wrong too, e.g. getPath may need to be called regardless
-    // of the option status
     path.map(path =>
       If(IsNull(path), Literal.create(null, ObjectType(definition.getImplementingClass)), result))
       .getOrElse(result)
@@ -247,20 +251,49 @@ private[encoders2] object DeserializerBuilderProcessor {
   }
 }
 
+/**
+ * The builder of deserializer expressions for HAPI representation of FHIR resources.
+ *
+ * @param fhirContext     the FHIR context to use.
+ * @param mappings        the data type mappings to use.
+ * @param maxNestingLevel the max nesting level to use.
+ * @param schemaConverter the schema converter to use.
+ */
 class DeserializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, maxNestingLevel: Int,
                            schemaConverter: SchemaConverter2) {
-
+  /**
+   * Creates the deserializer expression for given resource class.
+   *
+   * @param resourceClass the class of a HAPI resource definition.
+   * @tparam T the actual type of the resource class.
+   * @return the deserializer expression.
+   */
   def buildDeserializer[T <: IBaseResource](resourceClass: Class[T]): Expression = {
     buildDeserializer(fhirContext.getResourceDefinition(resourceClass))
   }
 
+  /**
+   * Creates the deserializer expression for given resource definition.
+   *
+   * @param resourceDefinition the HAPI resource definition.
+   * @return the deserializer expression.
+   */
   def buildDeserializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
     new SchemaTraversal[Expression, ExpressionWithName](maxNestingLevel)
-      .enterResource(new DeserializerBuilderProcessor(None, mappings, schemaConverter), resourceDefinition)
+      .processResource(new DeserializerBuilderProcessor(None, mappings, schemaConverter), resourceDefinition)
   }
 }
 
+/**
+ * Companion object for [[DeserializerBuilder2]]
+ */
 object DeserializerBuilder2 {
+  /**
+   * Constructs the deserializer builder from a [[SchemaConverter2]].
+   *
+   * @param schemaConverter the schema converter to use.
+   * @return the deserializer builder.
+   */
   def apply(schemaConverter: SchemaConverter2): DeserializerBuilder2 = {
     new DeserializerBuilder2(schemaConverter.fhirContext, schemaConverter.dataTypeMappings,
       schemaConverter.maxNestingLevel, schemaConverter)
