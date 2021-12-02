@@ -37,11 +37,10 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
     val nullDeserializer: Expression = Literal.create(null, ObjectType(dataTypeMappings.baseType()))
     // NOTE: Fold right is needed to maintain compatibility with v1 implementation
     val choiceDeserializer = optionExpressions.foldRight(nullDeserializer) {
-      case ((optionName, optionDeserializer), composite) => {
+      case ((optionName, optionDeserializer), composite) =>
         If(IsNotNull(addToPath(optionName)),
           ObjectCast(optionDeserializer, ObjectType(dataTypeMappings.baseType())),
           composite)
-      }
     }
     Seq((choiceDefinition.getElementName, choiceDeserializer))
   }
@@ -64,7 +63,7 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
       // Creates a new enum factory instance for each invocation, but this is cheap
       // on modern JVMs and probably more efficient than attempting to pool the underlying
       // FHIR enum factory ourselves.
-      val factoryInstance = NewInstance(enumFactory, Nil, false, ObjectType(enumFactory), None)
+      val factoryInstance = NewInstance(enumFactory, Nil, propagateNull = false, ObjectType(enumFactory), None)
 
       Invoke(factoryInstance, "fromCode",
         ObjectType(enumChildDefinition.getBoundEnumType),
@@ -240,7 +239,7 @@ private[encoders2] object DeserializerBuilderProcessor {
     // Creates a new enum factory instance for each invocation, but this is cheap
     // on modern JVMs and probably more efficient than attempting to pool the underlying
     // FHIR enum factory ourselves.
-    val factoryInstance = NewInstance(enumFactory, Nil, false, ObjectType(enumFactory), None)
+    val factoryInstance = NewInstance(enumFactory, Nil, propagateNull = false, ObjectType(enumFactory), None)
 
     Invoke(factoryInstance, "fromCode",
       ObjectType(enumeration.getBoundEnumType),

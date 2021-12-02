@@ -62,7 +62,7 @@ public class ResourceEncodingTest2 {
 
 
   @Test
-  public void testCanProduceSchema() throws Exception {
+  public void testCanProduceSchema()  {
     final SchemaConverter2 schemaConverter = new SchemaConverter2(fhirContext,
         new R4DataTypeMappings(),
         0);

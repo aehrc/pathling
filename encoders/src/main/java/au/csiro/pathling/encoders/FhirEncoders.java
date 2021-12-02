@@ -23,7 +23,7 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.*;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 
 /**
  * Spark Encoders for FHIR Resources. This object is thread safe.
@@ -136,7 +136,8 @@ public class FhirEncoders {
 
         try {
 
-          mappings = (DataTypeMappings) Class.forName(dataTypesClassName).newInstance();
+          mappings = (DataTypeMappings) Class.forName(dataTypesClassName).getDeclaredConstructor()
+              .newInstance();
 
           DATA_TYPE_MAPPINGS.put(fhirVersion, mappings);
 
@@ -221,6 +222,7 @@ public class FhirEncoders {
       containedClasses.add(context.getResourceDefinition(containedName).getImplementingClass());
     }
 
+    //noinspection unchecked
     return of((Class<T>) definition.getImplementingClass(), containedClasses);
   }
 
@@ -241,6 +243,7 @@ public class FhirEncoders {
 
       if (IBaseResource.class.isAssignableFrom(element)) {
 
+        //noinspection unchecked
         containedResourceList.add((Class<IBaseResource>) element);
       } else {
 
@@ -284,23 +287,26 @@ public class FhirEncoders {
 
     synchronized (encoderCache) {
 
+      //noinspection unchecked
       ExpressionEncoder<T> encoder = encoderCache.get(key);
 
       if (encoder == null) {
         if (encoderVersion == 2) {
+          //noinspection unchecked
           encoder = (ExpressionEncoder<T>)
               EncoderBuilder2.of(definition,
                   context,
                   mappings,
                   maxNestingLevel,
-                  JavaConversions.asScalaBuffer(containedDefinitions));
+                  JavaConverters.asScalaBuffer(containedDefinitions));
         } else if (encoderVersion == 1) {
+          //noinspection unchecked
           encoder = (ExpressionEncoder<T>)
               EncoderBuilder1.of(definition,
                   context,
                   mappings,
                   new SchemaConverter1(context, mappings, maxNestingLevel),
-                  JavaConversions.asScalaBuffer(containedDefinitions));
+                  JavaConverters.asScalaBuffer(containedDefinitions));
         } else {
           throw new IllegalArgumentException(
               "Unsupported encoderVersion: " + encoderVersion + ". Only 1 and 2 are supported.");

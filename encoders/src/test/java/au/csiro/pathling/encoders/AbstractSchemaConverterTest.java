@@ -29,7 +29,6 @@ import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.*;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public abstract class AbstractSchemaConverterTest {
@@ -65,7 +64,7 @@ public abstract class AbstractSchemaConverterTest {
   /**
    * Returns the type of a nested field.
    */
-  private static DataType getField(final DataType dataType, final boolean isNullable,
+  protected static DataType getField(final DataType dataType, final boolean isNullable,
       final String... names) {
 
     final StructType schema = dataType instanceof ArrayType
@@ -93,14 +92,14 @@ public abstract class AbstractSchemaConverterTest {
     }
   }
 
-  private static DataType unArray(final DataType maybeArrayType) {
+  protected static DataType unArray(final DataType maybeArrayType) {
     return maybeArrayType instanceof ArrayType
            ?
            ((ArrayType) maybeArrayType).elementType()
            : maybeArrayType;
   }
 
-  private static void assertFieldNotPresent(final String fieldName,
+  protected static void assertFieldNotPresent(final String fieldName,
       final DataType maybeStructType) {
     assertTrue("Must be struct type.", maybeStructType instanceof StructType);
     assertTrue("Field: '" + fieldName + "' not present in struct type.",
@@ -111,7 +110,6 @@ public abstract class AbstractSchemaConverterTest {
 
   @Test
   public void resourceHasId() {
-
     assertTrue(getField(conditionSchema, true, "id") instanceof StringType);
   }
 
@@ -292,15 +290,5 @@ public abstract class AbstractSchemaConverterTest {
             "item", "answer", "item", "answer", "item", "answer", "id"));
     assertFieldNotPresent("item", unArray(getField(questionnaireResponseSchema_L2, true,
         "item", "answer", "item", "answer", "item", "answer")));
-  }
-
-  // TODO: Complete when "#375 - Collections are not supported for custom encoders is fixed"
-  @Test
-  @Ignore
-  public void testNestedTypeInChoice() {
-
-    //  Parameters
-    //  ElementDefinition: parameter.valueElementDefinition-> parameter.valueElementDefinition.fixedElementDefinition
-    //  ElementDefinition: parameter.valueElementDefinition-> parameter.valueElementDefinition.example.valueElementDefinition (indirect)
   }
 }

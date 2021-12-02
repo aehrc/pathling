@@ -148,7 +148,7 @@ class R4DataTypeMappings extends DataTypeMappings {
 
 
   override def primitiveDecoderExpression(primitiveClass: Class[_ <: IPrimitiveType[_]],
-                                 path: Option[Expression]): Expression = {
+                                          path: Option[Expression]): Expression = {
 
     def getPath: Expression = path.getOrElse(GetColumnByOrdinal(0, ObjectType(primitiveClass)))
 
@@ -156,7 +156,7 @@ class R4DataTypeMappings extends DataTypeMappings {
 
       // If the FHIR primitive is represented as a string type, read it from UTF8 and
       // set the value.
-      case cls if fhirPrimitiveToSparkTypes.get(primitiveClass).contains(DataTypes.StringType) => {
+      case _ if fhirPrimitiveToSparkTypes.get(primitiveClass).contains(DataTypes.StringType) =>
 
         val newInstance = NewInstance(primitiveClass,
           Nil,
@@ -165,7 +165,6 @@ class R4DataTypeMappings extends DataTypeMappings {
         // Convert UTF8String to a regular string.
         InitializeJavaBean(newInstance, Map("setValueAsString" ->
           Invoke(getPath, "toString", ObjectType(classOf[String]), Nil)))
-      }
 
       // Classes that can be directly encoded as their primitive type.
       case cls if cls == classOf[org.hl7.fhir.r4.model.BooleanType] ||
@@ -177,7 +176,7 @@ class R4DataTypeMappings extends DataTypeMappings {
           List(getPath),
           ObjectType(primitiveClass))
 
-      case instantClass if instantClass == classOf[org.hl7.fhir.r4.model.InstantType] => {
+      case instantClass if instantClass == classOf[org.hl7.fhir.r4.model.InstantType] =>
 
         val millis = StaticField(classOf[TemporalPrecisionEnum],
           ObjectType(classOf[TemporalPrecisionEnum]),
@@ -196,7 +195,6 @@ class R4DataTypeMappings extends DataTypeMappings {
             millis,
             UTCZone),
           ObjectType(primitiveClass))
-      }
 
       case unknown => throw new IllegalArgumentException("Cannot deserialize unknown primitive type: " + unknown.getName)
     }

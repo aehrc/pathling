@@ -22,7 +22,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
-import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 
 @RunWith(Parameterized.class)
 public class CompareV2ToV1Test implements JsonMethods {
@@ -72,7 +72,7 @@ public class CompareV2ToV1Test implements JsonMethods {
     // }
 
     final String prettyJson = toPrettyJson(expression.toJSON());
-    return prettyJson.replaceAll("(?:\"id\" \\: )\\d+", "\"id\" : 0");
+    return prettyJson.replaceAll("(?:\"id\" : )\\d+", "\"id\" : 0");
   }
 
   @Test
@@ -93,7 +93,7 @@ public class CompareV2ToV1Test implements JsonMethods {
 
     final ExpressionEncoder<?> encoder = EncoderBuilder1
         .of(fhirContext.getResourceDefinition(resourceClass), fhirContext, dataTypeMappings,
-            converter_0, JavaConversions.asScalaBuffer(Collections.emptyList()));
+            converter_0, JavaConverters.asScalaBuffer(Collections.emptyList()));
 
     final Expression objSerializer_v1 = encoder.objSerializer();
 
@@ -119,7 +119,7 @@ public class CompareV2ToV1Test implements JsonMethods {
         dataTypeMappings, nestingLevel);
     final ExpressionEncoder<?> encoder = EncoderBuilder1
         .of(fhirContext.getResourceDefinition(resourceClass), fhirContext, dataTypeMappings,
-            converter_0, JavaConversions.asScalaBuffer(Collections.emptyList()));
+            converter_0, JavaConverters.asScalaBuffer(Collections.emptyList()));
 
     final Expression objDeserializer_v1 = encoder.objDeserializer();
 

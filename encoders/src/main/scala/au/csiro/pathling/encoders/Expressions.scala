@@ -40,7 +40,7 @@ case class StaticField(staticObject: Class[_],
                        dataType: DataType,
                        fieldName: String) extends Expression with NonSQLExpression {
 
-  val objectName = staticObject.getName.stripSuffix("$")
+  val objectName: String = staticObject.getName.stripSuffix("$")
 
   override def nullable: Boolean = false
 

@@ -107,6 +107,7 @@ public class FhirEncoders1Test {
         ENCODERS_L0.of(Observation.class));
     decodedObservation = observationsDataset.head();
 
+    //noinspection unchecked
     medDataset = spark.createDataset(ImmutableList.of(medRequest),
         ENCODERS_L0.of(MedicationRequest.class, Medication.class, Provenance.class));
     decodedMedRequest = medDataset.head();

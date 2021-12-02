@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import au.csiro.pathling.encoders.EncoderUtils;
 import au.csiro.pathling.encoders.FhirEncoders;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.r4.model.IdType;
@@ -31,8 +32,8 @@ public class FhirEncodersTest2 implements JsonMethods {
     final MolecularSequenceQualityRocComponent rocComponent = molecularSequence
         .getQualityFirstRep().getRoc();
 
-    rocComponent.addSensitivity(new BigDecimal("0.100").setScale(6));
-    rocComponent.addSensitivity(new BigDecimal("1.23").setScale(3));
+    rocComponent.addSensitivity(new BigDecimal("0.100").setScale(6, RoundingMode.UNNECESSARY));
+    rocComponent.addSensitivity(new BigDecimal("1.23").setScale(3, RoundingMode.UNNECESSARY));
 
     final InternalRow serializedRow = resolvedPatientEncoder.createSerializer()
         .apply(molecularSequence);

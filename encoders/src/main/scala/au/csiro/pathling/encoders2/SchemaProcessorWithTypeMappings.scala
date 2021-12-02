@@ -24,16 +24,17 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
 
   def buildSimpleValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
                        compositeBuilder: (SchemaProcessor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): DT = {
-    if (childDefinition.isInstanceOf[RuntimeChildPrimitiveEnumerationDatatypeDefinition]) {
-      buildEnumDatatype(elementDefinition.asInstanceOf[RuntimePrimitiveDatatypeDefinition],
-        childDefinition.asInstanceOf[RuntimeChildPrimitiveEnumerationDatatypeDefinition])
-    } else {
-      elementDefinition match {
-        case composite: BaseRuntimeElementCompositeDefinition[_] => compositeBuilder(this, composite)
-        case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(primitive)
-        case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org)
-        case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative
-      }
+    childDefinition match {
+      case enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition =>
+        buildEnumDatatype(elementDefinition.asInstanceOf[RuntimePrimitiveDatatypeDefinition],
+          enumChildDefinition)
+      case _ =>
+        elementDefinition match {
+          case composite: BaseRuntimeElementCompositeDefinition[_] => compositeBuilder(this, composite)
+          case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(primitive)
+          case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org)
+          case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative
+        }
     }
   }
 
