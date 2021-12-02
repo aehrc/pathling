@@ -44,9 +44,9 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
       objectTypeFor(childDefinition))
   }
 
-  override def buildElement(elementName: String, elementType: Expression, definition: BaseRuntimeElementDefinition[_]): ExpressionWithName = {
+  override def buildElement(elementName: String, elementValue: Expression, definition: BaseRuntimeElementDefinition[_]): ExpressionWithName = {
     // Named serializer
-    (elementName, elementType)
+    (elementName, elementValue)
   }
 
   override def buildPrimitiveDatatype(primitive: RuntimePrimitiveDatatypeDefinition): Expression = {

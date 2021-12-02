@@ -18,10 +18,10 @@ trait SchemaProcessor[DT, SF] {
   /**
    * Builds a representation for an child element with resolved name.
    *
-   * @param childDefinition   the HAPI child definition
-   * @param elementDefinition the HAPI element definition
-   * @param elementName       the element name
-   * @param compositeBuilder  the callback to build a representation of a composite
+   * @param childDefinition   the HAPI child definition.
+   * @param elementDefinition the HAPI element definition.
+   * @param elementName       the element name.
+   * @param compositeBuilder  the callback to build the representation of a composite.
    * @return the representation of of the named child element.
    */
   def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
@@ -30,8 +30,8 @@ trait SchemaProcessor[DT, SF] {
   /**
    * Determines if the representation of a child should be included in the representation of its composite.
    *
-   * @param definition      the HAPI definition of a composite
-   * @param childDefinition the HAPI definition of the composite child
+   * @param definition      the HAPI definition of a composite.
+   * @param childDefinition the HAPI definition of the composite child.
    * @return true if the child representation should be included.
    */
   def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean

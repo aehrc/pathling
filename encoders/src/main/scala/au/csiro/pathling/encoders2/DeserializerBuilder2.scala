@@ -53,7 +53,7 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
     Seq((choiceDefinition.getElementName, choiceDeserializer))
   }
 
-  override def buildEnumDatatype(enumDefinition: RuntimePrimitiveDatatypeDefinition, enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Expression = {
+  override def buildEnumPrimitive(enumDefinition: RuntimePrimitiveDatatypeDefinition, enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Expression = {
 
     // TODO: Unify please
     // Only apply the special case for non list
@@ -77,7 +77,7 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
         ObjectType(enumChildDefinition.getBoundEnumType),
         List(utfToString))
     } else {
-      super.buildEnumDatatype(enumDefinition, enumChildDefinition)
+      super.buildEnumPrimitive(enumDefinition, enumChildDefinition)
     }
   }
 
@@ -123,14 +123,15 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
       arrayExpression :: Nil)
   }
 
-  override def buildElement(elementName: String, elementType: Expression, definition: BaseRuntimeElementDefinition[_]): ExpressionWithName = {
-    (elementName, elementType)
+  override def buildElement(elementName: String, elementValue: Expression, definition: BaseRuntimeElementDefinition[_]): ExpressionWithName = {
+    (elementName, elementValue)
   }
 
   override def buildPrimitiveDatatype(primitive: RuntimePrimitiveDatatypeDefinition): Expression = {
     dataTypeMappings.primitiveDecoderExpression(primitive.getImplementingClass, path)
   }
 
+  // TODO: Implement
   override def buildPrimitiveDatatypeNarrative: Expression = ???
 
   override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): Expression = {

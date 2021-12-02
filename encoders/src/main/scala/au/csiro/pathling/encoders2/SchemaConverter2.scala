@@ -20,8 +20,8 @@ private[encoders2] class SchemaConverterProcessor(val fhirContext: FhirContext, 
     StructType(fields)
   }
 
-  override def buildElement(elementName: String, elementType: DataType, elementDefinition: BaseRuntimeElementDefinition[_]): StructField = {
-    StructField(elementName, elementType)
+  override def buildElement(elementName: String, elementValue: DataType, elementDefinition: BaseRuntimeElementDefinition[_]): StructField = {
+    StructField(elementName, elementValue)
   }
 
   override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
