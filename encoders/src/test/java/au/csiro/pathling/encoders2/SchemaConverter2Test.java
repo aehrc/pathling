@@ -12,7 +12,7 @@ public class SchemaConverter2Test extends AbstractSchemaConverterTest {
     return new SchemaConverter2(FHIR_CONTEXT, DATA_TYPE_MAPPINGS, maxNestingLevel);
   }
 
-  // TODO: Complete when "#375 - Collections are not supported for custom encoders is fixed"
+  // TODO: Complete when support for DirectChildResource e.g. in Parameters is added.
   @Test
   @Ignore
   public void testNestedTypeInChoice() {
