@@ -33,8 +33,6 @@ private[encoders2] class SchemaConverterProcessor(val fhirContext: FhirContext, 
     dataTypeMappings.primitiveToDataType(primitive)
   }
 
-  override def buildPrimitiveDatatypeNarrative: DataType = DataTypes.StringType
-
   override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DataType = DataTypes.StringType
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,

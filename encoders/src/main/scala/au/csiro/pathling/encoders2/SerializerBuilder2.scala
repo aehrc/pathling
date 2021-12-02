@@ -53,10 +53,6 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
     dataTypeMappings.primitiveEncoderExpression(expression, primitive)
   }
 
-  override def buildPrimitiveDatatypeNarrative: Expression = {
-    dataTypeToUtf8Expr(expression)
-  }
-
   override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): Expression = {
     dataTypeToUtf8Expr(expression)
   }

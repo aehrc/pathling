@@ -49,7 +49,7 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
           case composite: BaseRuntimeElementCompositeDefinition[_] => compositeBuilder(this, composite)
           case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(primitive)
           case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org)
-          case _: RuntimePrimitiveDatatypeNarrativeDefinition => buildPrimitiveDatatypeNarrative
+          case _ => throw new IllegalArgumentException("Cannot process element: " + elementName + " with definition: " + elementDefinition)
         }
     }
   }
@@ -85,13 +85,6 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
   def buildPrimitiveDatatype(primitive: RuntimePrimitiveDatatypeDefinition): DT
 
   /**
-   * Builds the representation of a Narrative primitive.
-   *
-   * @return the representation for the primitive.
-   */
-  def buildPrimitiveDatatypeNarrative: DT
-
-  /**
    * Builds the representation of a xhtmlHl7Org primitive.
    *
    * @param xhtmlHl7Org the definition of the xhtmlHl7Org primitive
@@ -102,8 +95,8 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
   /**
    * Builds the representation of an Enum primitive.
    *
-   * @param enumDefinition the enum child definition.
-   * @param the enum element definition.
+   * @param enumDefinition      the enum child definition.
+   * @param enumChildDefinition the enum element definition.
    * @return the representation for the primitive.
    */
   def buildEnumPrimitive(enumDefinition: RuntimePrimitiveDatatypeDefinition,

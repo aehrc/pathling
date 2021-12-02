@@ -131,9 +131,6 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
     dataTypeMappings.primitiveDecoderExpression(primitive.getImplementingClass, path)
   }
 
-  // TODO: Implement
-  override def buildPrimitiveDatatypeNarrative: Expression = ???
-
   override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): Expression = {
 
     def getPath: Expression = path.getOrElse(GetColumnByOrdinal(0, ObjectType(xhtmlHl7Org.getImplementingClass)))
