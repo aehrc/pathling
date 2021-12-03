@@ -126,6 +126,7 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
 
         // Get the issuer and use it to retrieve the manifest.
         final VisaManifest manifest = getManifest(visa.getIssuer(), datasetId);
+        log.debug("Manifest for dataset {}: {}", datasetId, manifest);
 
         // Translate each patient ID in the manifest into a set of filters, and add to the passport
         // scope.
@@ -143,6 +144,8 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
           authorities.add(new SimpleGrantedAuthority("pathling:read:" + resourceType.toCode()));
         }
       }
+
+      log.debug("Resolved passport authorities: {}", authorities);
       return authorities;
     }
 
