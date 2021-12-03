@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.security.ga4gh;
 
+import au.csiro.pathling.Configuration;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -28,15 +29,19 @@ import org.springframework.stereotype.Component;
 @Profile("server & ga4gh")
 public class ManifestConverter {
 
-  private static final String PATIENT_IDENTIFIER_SYSTEM = "https://nagim.dev/patient";
+  @Nonnull
+  private final String patientIdSystem;
 
   @Nonnull
   private final FhirContext fhirContext;
 
   /**
+   * @param configuration used to determine the patient identifier system
    * @param fhirContext a {@link FhirContext} that we use to look up the patient compartment
    */
-  public ManifestConverter(@Nonnull final FhirContext fhirContext) {
+  public ManifestConverter(@Nonnull final Configuration configuration,
+      @Nonnull final FhirContext fhirContext) {
+    patientIdSystem = configuration.getAuth().getGa4ghPassports().getPatientIdSystem();
     this.fhirContext = fhirContext;
   }
 
@@ -45,12 +50,15 @@ public class ManifestConverter {
     for (final String patientId : manifest.getPatientIds()) {
       // Add a filter for the Patient resource.
       final String patientIdFilter =
-          "identifier.where(system = '" + StringLiteralPath.escapeFhirPathString(
-              PATIENT_IDENTIFIER_SYSTEM)
+          "identifier.where(system = '" + StringLiteralPath.escapeFhirPathString(patientIdSystem)
               + "' and value = '" + StringLiteralPath.escapeFhirPathString(patientId)
               + "').empty().not()";
-      final Set<String> patientFilters = new HashSet<>(List.of(patientIdFilter));
-      passportScope.put(ResourceType.PATIENT, patientFilters);
+      final Set<String> patientFilters = passportScope.get(ResourceType.PATIENT);
+      if (patientFilters == null) {
+        passportScope.put(ResourceType.PATIENT, new HashSet<>(List.of(patientIdFilter)));
+      } else {
+        patientFilters.add(patientIdFilter);
+      }
 
       // Add a filters for each resource type covering off any resource references defined within
       // the patient compartment.

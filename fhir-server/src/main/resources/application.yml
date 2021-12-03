@@ -78,6 +78,7 @@ pathling:
     # revokeUrl: [token revocation URL]
 
     ga4ghPassports:
+      patientIdSystem: http://www.australiangenomics.org.au/id/study-number
       allowedVisaIssuers: [ ]
 
   # This section configures the CORS functionality of the server.

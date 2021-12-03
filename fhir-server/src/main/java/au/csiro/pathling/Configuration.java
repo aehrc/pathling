@@ -262,6 +262,9 @@ public class Configuration {
     @Data
     public static class Ga4ghPassports {
 
+      @NotNull
+      private String patientIdSystem;
+
       /**
        * A set of allowable visa issuers.
        */
