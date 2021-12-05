@@ -13,6 +13,7 @@
       </encoder>
     </appender>
     <logger level="INFO" name="au.csiro"/>
+    <logger level="ERROR" name="org.apache.hadoop.metrics2"/>
     <logger level="WARN" name="requestLogger"/>
     <root level="WARN">
       <appender-ref ref="STDOUT"/>
