@@ -89,12 +89,13 @@ public class ManifestConverter {
         if (pathTrimmed.endsWith(resolvePattern)) {
           filter = pathTrimmed.replace(resolvePattern,
               ".resolve().ofType(Patient)." + patientIdFilter);
-        } else if (searchParam.getTargets().size() > 1) {
-          // If the search parameter is polymorphic, we also need to resolve it to Patient.
-          filter = pathTrimmed + ".resolve().ofType(Patient)." + patientIdFilter;
-        } else {
+        } else if (searchParam.getTargets().size() == 1) {
           // If the search parameter is monomorphic, we can resolve it without `ofType`.
           filter = pathTrimmed + ".resolve()." + patientIdFilter;
+        } else {
+          // If the search parameter is polymorphic, we also need to resolve it to Patient. Note
+          // that polymorphic references with an "Any" type have zero targets.
+          filter = pathTrimmed + ".resolve().ofType(Patient)." + patientIdFilter;
         }
 
         // Add the filter to the map.
