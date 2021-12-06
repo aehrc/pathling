@@ -36,13 +36,15 @@ object EncoderBuilder2 {
    * @param mappings           the data type mappings to use
    * @param maxNestingLevel    the max nesting level to use to expand recursive data types.
    *                           Zero means that fields of type T are skipped in a composite od type T.
+   * @param enableExtensions   true is support for extensions should be enabled.
    * @return An ExpressionEncoder for the resource
    */
 
   def of(resourceDefinition: RuntimeResourceDefinition,
          fhirContext: FhirContext,
          mappings: DataTypeMappings,
-         maxNestingLevel: Int): ExpressionEncoder[_] = {
+         maxNestingLevel: Int,
+         enableExtensions: Boolean): ExpressionEncoder[_] = {
 
     if (UNSUPPORTED_RESOURCES.contains(resourceDefinition.getName)) {
       throw new UnsupportedResourceError(s"Encoding is not supported for resource: ${resourceDefinition.getName}")
@@ -50,7 +52,7 @@ object EncoderBuilder2 {
 
     val fhirClass = resourceDefinition
       .asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
-    val schemaConverter = new SchemaConverter2(fhirContext, mappings, maxNestingLevel)
+    val schemaConverter = new SchemaConverter2(fhirContext, mappings, maxNestingLevel, enableExtensions)
     val serializerBuilder = SerializerBuilder2(schemaConverter)
     val deserializerBuilder = DeserializerBuilder2(schemaConverter)
     new ExpressionEncoder(

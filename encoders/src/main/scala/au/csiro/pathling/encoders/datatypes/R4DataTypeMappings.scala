@@ -16,6 +16,7 @@ package au.csiro.pathling.encoders.datatypes
 import java.util.TimeZone
 
 import au.csiro.pathling.encoders.StaticField
+import au.csiro.pathling.encoders2.ExpressionWithName
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
@@ -94,6 +95,31 @@ class R4DataTypeMappings extends DataTypeMappings {
     }
   }
 
+
+  override def overrideCompositeExpression2(inputObject: Expression,
+                                            definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]] = {
+
+    if (definition.getImplementingClass == classOf[Reference]) {
+      // Reference type, so return only supported fields.
+      // We also explicitly use the IIDType for the reference element,
+      // since that differs from the conventions used to infer
+      // other types.
+      val reference = dataTypeToUtf8Expr(
+        Invoke(inputObject,
+          "getReferenceElement",
+          ObjectType(classOf[IdType])))
+
+      val display = dataTypeToUtf8Expr(
+        Invoke(inputObject,
+          "getDisplayElement",
+          ObjectType(classOf[org.hl7.fhir.r4.model.StringType])))
+
+      Some(List(("reference", reference), ("display", display)))
+    } else {
+      None
+    }
+  }
+
   override def skipField(definition: BaseRuntimeElementCompositeDefinition[_],
                          child: BaseRuntimeChildDefinition): Boolean = {
 
@@ -106,7 +132,12 @@ class R4DataTypeMappings extends DataTypeMappings {
     val skipContains = definition.getImplementingClass == classOf[ValueSet.ValueSetExpansionContainsComponent] &&
       child.getElementName == "contains"
 
-    skipRecursiveReference || skipContains
+    // TODO: This is due to a bug in happi RuntimeChildExtension.getChildByName() implementation
+    // which fails on assestion because the name of the child should be "modifierExtensionExtension"
+    // not "extensionExtension"
+    val skipModifierExtension = child.getElementName.equals("modifierExtension")
+
+    skipRecursiveReference || skipContains || skipModifierExtension
   }
 
   override def primitiveEncoderExpression(inputObject: Expression,

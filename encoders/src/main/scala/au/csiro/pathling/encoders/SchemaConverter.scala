@@ -13,7 +13,7 @@
 
 package au.csiro.pathling.encoders
 
-import ca.uhn.fhir.context.{RuntimeChildChoiceDefinition, RuntimeResourceDefinition}
+import ca.uhn.fhir.context.{RuntimeChildAny, RuntimeChildChoiceDefinition, RuntimeResourceDefinition}
 import org.apache.spark.sql.types.StructType
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
 
@@ -55,5 +55,25 @@ object SchemaConverter {
    */
   def getOrderedListOfChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]] = {
     choice.getValidChildTypes.toList.sortBy(_.getTypeName())
+  }
+
+  def getOrderedListOfChoiceChildNames(choice: RuntimeChildChoiceDefinition): Seq[String] = {
+    // Looks like what we need is an intersection of validTypes and valid names
+    // Also at the moment we can only support subtypes of DataMapping.baseType
+    // TODO: use the actual class of fix it otherwise
+    // The issue is in the choice implementation with XhtmlNode, which is not Type subclass.
+
+    val validChildNames = choice.getValidChildNames
+
+    choice
+      .getValidChildTypes
+      .filter(classOf[org.hl7.fhir.r4.model.Type].isAssignableFrom)
+      // TODO: for now only limit any child to primitive type values
+      // For faster development
+      .filter(cls => !choice.isInstanceOf[RuntimeChildAny] || classOf[org.hl7.fhir.r4.model.PrimitiveType[_]].isAssignableFrom(cls))
+      .toList
+      .sortBy(_.getTypeName())
+      .map(choice.getChildNameByDatatype)
+      .filter(validChildNames.contains)
   }
 }

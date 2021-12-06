@@ -14,6 +14,7 @@
 package au.csiro.pathling.encoders;
 
 import com.google.common.collect.ImmutableList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -355,4 +356,59 @@ public class TestData {
         .setItem(Collections.singletonList(newNestedResponseItem(maxNestingLevel)));
     return questionnaireResponse;
   }
+
+
+  public static Condition newConditionWithExtensions() {
+
+    // Condition
+    // - extension:
+    //   - url: uuid:ext1
+    //   - value: ext1
+    // - extension:
+    //    - url: uuid:ext2
+    //    - value: 2
+    // - extension:
+    //  - url: uuid:ext4
+    //  - extension
+    //    - url: uuid:nested
+    //    - value: nested
+    // - identifier
+    //     - id: uuid:identifier1
+    //     - extension:
+    //       - url: uuid:ext10
+    //       - value: ext10
+    //     - extension:
+    //        - url: uuid:ext11
+    //        - value: 11
+
+    final Condition conditionWithExtension = new Condition();
+    conditionWithExtension.setId("someId");
+
+    final Extension nestedExtension = new Extension("uuid:ext4");
+    nestedExtension.addExtension(new Extension("uuid:nested", new StringType("nested")));
+
+    conditionWithExtension.setExtension(Arrays.asList(
+        new Extension("uuid:ext1", new StringType("ext1")),
+        new Extension("uuid:ext2", new IntegerType(2)),
+        nestedExtension
+        )
+    );
+
+    conditionWithExtension.setMeta(new Meta().setVersionId("MetVersion"));
+
+    conditionWithExtension.setOnset(new Range());
+    conditionWithExtension
+        .setSeverity(new CodeableConcept().addCoding(new Coding("sys", "code", "name")));
+
+    final Identifier identifier = conditionWithExtension.getIdentifierFirstRep();
+    identifier.setId("uuid:identifier1");
+
+    identifier.setExtension(Arrays.asList(
+        new Extension("uuid:ext10", new StringType("ext10")),
+        new Extension("uuid:ext11", new IntegerType(11))
+        )
+    );
+    return conditionWithExtension;
+  }
+
 }

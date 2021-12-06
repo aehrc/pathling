@@ -14,7 +14,7 @@
 package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
+import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
 
 
@@ -25,18 +25,24 @@ import ca.uhn.fhir.context._
  * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
  */
 trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
+
+
+  def fhirContext: FhirContext
+
   def dataTypeMappings: DataTypeMappings
 
   override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
-    !dataTypeMappings.skipField(definition, childDefinition)
+
+    // do not expand extensions as they require custom handling
+    val expandExtension = !childDefinition.isInstanceOf[RuntimeChildExtension]
+    expandExtension && !dataTypeMappings.skipField(definition, childDefinition)
   }
 
-  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                          compositeBuilder: (SchemaProcessor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): Seq[SF] = {
+  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[SF] = {
     val value = if (isCollection(childDefinition)) {
-      buildArrayValue(childDefinition, elementDefinition, elementName, compositeBuilder)
+      buildArrayValue(childDefinition, elementDefinition, elementName)
     } else {
-      buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder)
+      buildSimpleValue(childDefinition, elementDefinition, elementName)
     }
     Seq(buildElement(elementName, value, elementDefinition))
   }
@@ -48,18 +54,16 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
    * @param childDefinition   the element child definition.
    * @param elementDefinition the element definition.
    * @param elementName       the element name.
-   * @param compositeBuilder  the callback to build the representation of a composite.
    * @return the representation of the singular element.
    */
-  def buildSimpleValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                       compositeBuilder: (SchemaProcessor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): DT = {
+  def buildSimpleValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): DT = {
     childDefinition match {
       case enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition =>
         buildEnumPrimitive(elementDefinition.asInstanceOf[RuntimePrimitiveDatatypeDefinition],
           enumChildDefinition)
       case _ =>
         elementDefinition match {
-          case composite: BaseRuntimeElementCompositeDefinition[_] => compositeBuilder(this, composite)
+          case composite: BaseRuntimeElementCompositeDefinition[_] => compositeBuilder(composite)
           case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(primitive)
           case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org)
           case _ => throw new IllegalArgumentException("Cannot process element: " + elementName + " with definition: " + elementDefinition)
@@ -73,11 +77,9 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
    * @param childDefinition   the element child definition.
    * @param elementDefinition the element definition.
    * @param elementName       the element name.
-   * @param compositeBuilder  the callback to build the representation of a composite.
    * @return the representation of a collection element.
    */
-  def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                      compositeBuilder: (SchemaProcessor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): DT
+  def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): DT
 
   /**
    * Builds the representation of a named element.
@@ -115,5 +117,11 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
   def buildEnumPrimitive(enumDefinition: RuntimePrimitiveDatatypeDefinition,
                          enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): DT = {
     buildPrimitiveDatatype(enumDefinition)
+  }
+
+
+  def buildExtensionValue(): DT = {
+    val extensionNode = ExtensionSupport.extension(fhirContext)
+    buildArrayValue(extensionNode.childDefinition, extensionNode.elementDefinition, extensionNode.elementName)
   }
 }

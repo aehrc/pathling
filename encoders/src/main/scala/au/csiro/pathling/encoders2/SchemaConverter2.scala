@@ -15,7 +15,8 @@ package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.SchemaConverter
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
+import au.csiro.pathling.encoders2.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
+import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.types._
 import org.hl7.fhir.instance.model.api.IBase
@@ -26,20 +27,38 @@ import org.hl7.fhir.instance.model.api.IBase
  * @param fhirContext      the FHIR context to use.
  * @param dataTypeMappings data type mappings to use.
  */
-private[encoders2] class SchemaConverterProcessor(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings) extends
+private[encoders2] class SchemaConverterProcessor(override val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings,
+                                                  override val maxNestingLevel: Int, override val expandExtensions: Boolean) extends
   SchemaProcessorWithTypeMappings[DataType, StructField] {
 
+
+  private def createExtensionFields(definition: BaseRuntimeElementCompositeDefinition[_]): Seq[StructField] = {
+
+    // for each composite add _fid and for resources also add _extension
+    val maybeExtensionValueField = definition match {
+      case _: RuntimeResourceDefinition =>
+        val extensionSchema = buildExtensionValue()
+        StructField(EXTENSIONS_FIELD_NAME, MapType(IntegerType, extensionSchema, valueContainsNull = false)) :: Nil
+      case _ => Nil
+    }
+    // Add _fid field
+    StructField(FID_FIELD_NAME, IntegerType) :: maybeExtensionValueField
+  }
+
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[StructField]): DataType = {
-    StructType(fields)
+    if (expandExtensions) {
+      StructType(fields ++ createExtensionFields(definition))
+    } else {
+      StructType(fields)
+    }
   }
 
   override def buildElement(elementName: String, elementValue: DataType, elementDefinition: BaseRuntimeElementDefinition[_]): StructField = {
     StructField(elementName, elementValue)
   }
 
-  override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                               compositeBuilder: (SchemaProcessor[DataType, StructField], BaseRuntimeElementCompositeDefinition[_]) => DataType): DataType = {
-    ArrayType(buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder))
+  override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): DataType = {
+    ArrayType(buildSimpleValue(childDefinition, elementDefinition, elementName))
   }
 
   override def buildPrimitiveDatatype(primitive: RuntimePrimitiveDatatypeDefinition): DataType = {
@@ -48,32 +67,32 @@ private[encoders2] class SchemaConverterProcessor(val fhirContext: FhirContext, 
 
   override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DataType = DataTypes.StringType
 
-  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                          compositeBuilder: (SchemaProcessor[DataType, StructField], BaseRuntimeElementCompositeDefinition[_]) => DataType): Seq[StructField] = {
+  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[StructField] = {
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     customEncoder.map(_.schema2(if (isCollection(childDefinition)) Some(ArrayType(_)) else None)).getOrElse(
-      super.buildValue(childDefinition, elementDefinition, elementName, compositeBuilder)
+      childDefinition match {
+        // case _: RuntimeChildExtension => Nil
+        case _ => super.buildValue(childDefinition, elementDefinition, elementName)
+      }
     )
   }
-
 }
 
 /**
  * The converter from FHIR schemas to SQL schemas.
  *
- * @param fhirContext      the FHIR context to use.
- * @param dataTypeMappings the data type mappings to use.
- * @param maxNestingLevel  the max nesting level to use.
+ * @param fhirContext        the FHIR context to use.
+ * @param dataTypeMappings   the data type mappings to use.
+ * @param maxNestingLevel    the max nesting level to use.
+ * @param supportsExtensions if the scheme should include extension representation.
  */
-class SchemaConverter2(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings, val maxNestingLevel: Int) extends SchemaConverter {
+class SchemaConverter2(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings, val maxNestingLevel: Int, val supportsExtensions: Boolean) extends SchemaConverter {
 
   private[encoders2] def compositeSchema(compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_ <: IBase]): DataType = {
-    new SchemaTraversal[DataType, StructField](maxNestingLevel)
-      .processComposite(new SchemaConverterProcessor(fhirContext, dataTypeMappings), compositeElementDefinition)
+    SchemaVisitor.traverseComposite(compositeElementDefinition, new SchemaConverterProcessor(fhirContext, dataTypeMappings, maxNestingLevel, supportsExtensions))
   }
 
   override def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {
-    new SchemaTraversal[DataType, StructField](maxNestingLevel)
-      .processResource(new SchemaConverterProcessor(fhirContext, dataTypeMappings), resourceDefinition).asInstanceOf[StructType]
+    SchemaVisitor.traverseResource(resourceDefinition, new SchemaConverterProcessor(fhirContext, dataTypeMappings, maxNestingLevel, supportsExtensions)).asInstanceOf[StructType]
   }
 }

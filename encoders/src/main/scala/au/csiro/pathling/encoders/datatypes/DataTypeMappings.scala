@@ -13,6 +13,7 @@
 
 package au.csiro.pathling.encoders.datatypes
 
+import au.csiro.pathling.encoders2.ExpressionWithName
 import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementCompositeDefinition, BaseRuntimeElementDefinition, RuntimePrimitiveDatatypeDefinition}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
@@ -70,8 +71,13 @@ trait DataTypeMappings {
    * @param definition  the composite definition to encode
    * @return an optional expression sequence if the composite is overridden.
    */
+  @deprecated
   def overrideCompositeExpression(inputObject: Expression,
                                   definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[Expression]]
+
+  def overrideCompositeExpression2(inputObject: Expression,
+                                  definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]]
+
 
   /**
    * Returns true if the given field should be skipped during encoding and decoding, false otherwise.

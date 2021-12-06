@@ -10,171 +10,65 @@
  * under the CSIRO Open Source Software Licence Agreement.
  *
  */
-
 package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.EncodingContext
-import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
-import au.csiro.pathling.encoders2.SchemaTraversal.isSingular
+import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceChildNames
+import au.csiro.pathling.encoders2.SchemaVisitor.isSingular
 import ca.uhn.fhir.context._
+import org.hl7.fhir.r4.model.Patient
 
 import scala.collection.convert.ImplicitConversions._
 
+
 /**
- * A strategy to traverse a Fhir schema with [[SchemaTraversal]].
+ * A visitor for HAPPY Fhir schema traversal
  *
  * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
  * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
  */
-trait SchemaProcessor[DT, SF] {
+trait SchemaVisitor[DT, SF] {
 
-  /**
-   * Builds a representation for an child element with resolved name.
-   *
-   * @param childDefinition   the HAPI child definition.
-   * @param elementDefinition the HAPI element definition.
-   * @param elementName       the element name.
-   * @param compositeBuilder  the callback to build the representation of a composite.
-   * @return the representation of of the named child element.
-   */
-  def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                 compositeBuilder: (SchemaProcessor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): Seq[SF]
+  def visitElement(value: ElementNode[DT, SF]): Seq[SF]
 
-  /**
-   * Determines if the representation of a child should be included in the representation of its composite.
-   *
-   * @param definition      the HAPI definition of a composite.
-   * @param childDefinition the HAPI definition of the composite child.
-   * @return true if the child representation should be included.
-   */
-  def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean
+  def aggregateComposite(ctx: CompositeNode[DT, SF], sfs: Seq[SF]): DT
 
-  /**
-   * Combines the representations of the choice options to the representation of the choice.
-   *
-   * @param choiceDefinition the HAPI choice child definition.
-   * @param optionValues     the list of representations of choice options.
-   * @return the representation of the choice element.
-   */
-  def combineChoiceOptions(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[SF]]): Seq[SF] = optionValues.flatten
+  def combineChoiceElements(ctx: ChoiceChildNode[DT, SF], seq: Seq[Seq[SF]]): Seq[SF]
 
-  /**
-   * Builds the representation of the composite from the representations of its elements.
-   *
-   * @param definition the HAPI definition of a composite
-   * @param fields     the list of representations of the composite elements.
-   * @return the representation of the composite.
-   */
-  def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[SF]): DT
+  def visitChoiceChild(value: ChoiceChildNode[DT, SF]): Seq[SF] = {
+    combineChoiceElements(value, value.visitChildren(this))
+  }
 
+  def visitElementChild(value: ElementChildNode[DT, SF]): Seq[SF] = {
+    value.visitChildren(this)
+  }
 
-  // explicit control of context switching
+  def visitChild(value: ChildNode[DT, SF]): Seq[SF] = {
+    value.proceed(this)
+  }
 
-  /**
-   * Called before the traversal enters a child. Allows to substitute the processor used to travers the child.
-   *
-   * @param childDefinition the HAPI child definition.
-   * @return the processor to be used to traverse the child.
-   */
-  def beforeEnterChild(childDefinition: BaseRuntimeChildDefinition): SchemaProcessor[DT, SF] = this
+  def visitComposite(value: CompositeNode[DT, SF]): DT = {
+    aggregateComposite(value, value.visitChildren(this))
+  }
 
-  /**
-   * Called before the traversal enters a choice option. Allows to substitute the processor used to travers the option.
-   *
-   * @param choiceDefinition the HAPI choice child definition.
-   * @param optionName       the full name of the option element.
-   * @return the processor to be used to traverse the option element.
-   */
-  def beforeEnterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaProcessor[DT, SF] = this
+  def visitResource(resourceNode: ResourceNode[DT, SF]): DT = {
+    resourceNode.proceed(this)
+  }
 }
 
-/**
- * Encapsulates the traversal a Fhir schema defined in HAPI.
- *
- * @param maxNestingLevel the maximum nesting levels to traverse.
- * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
- * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
- */
-sealed class SchemaTraversal[DT, SF](maxNestingLevel: Int) {
-
-  /**
-   * Creates the representation of given resource.
-   *
-   * @param proc               the processor to use to create the  representation.
-   * @param resourceDefinition the HAPI definition of the resource
-   * @return the representation of the resource.
-   */
-  def processResource(proc: SchemaProcessor[DT, SF], resourceDefinition: RuntimeResourceDefinition): DT = {
+object SchemaVisitor {
+  def traverseResource[DT, SF](resourceDefinition: RuntimeResourceDefinition, visitor: SchemaVisitor[DT, SF]): DT = {
+    // TODO: NOT SURE where is the best place to put it
+    // Not if it will be needed anymore if I can do recursive contexts
     EncodingContext.runWithContext {
-      processComposite(proc, resourceDefinition)
+      ResourceNode(resourceDefinition).accept(visitor)
     }
   }
 
-  /**
-   * Creates the representation of given composite.
-   *
-   * @param proc       the processor to use to create the the processor to use to create the resource representation. representation.
-   * @param definition the HAPI definition of the composite.
-   * @return the representation of the composite.
-   */
-  def processComposite(proc: SchemaProcessor[DT, SF], definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
-    EncodingContext.withDefinition(definition) {
-      val fields: Seq[SF] = definition
-        .getChildren
-        .filter(proc.shouldExpandChild(definition, _))
-        .flatMap(enterChild(proc, _))
-      proc.buildComposite(definition, fields)
-    }
+  def traverseComposite[DT, SF](compositeDefinition: BaseRuntimeElementCompositeDefinition[_], visitor: SchemaVisitor[DT, SF]): DT = {
+    CompositeNode(compositeDefinition).accept(visitor)
   }
 
-
-  private def enterChild(proc: SchemaProcessor[DT, SF], childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
-    childDefinition match {
-      case _: RuntimeChildContainedResources | _: RuntimeChildExtension => Nil
-      case choiceDefinition: RuntimeChildChoiceDefinition =>
-        enterChoiceChild(proc.beforeEnterChild(choiceDefinition), choiceDefinition)
-      case _ =>
-        enterElementChild(proc.beforeEnterChild(childDefinition), childDefinition)
-    }
-  }
-
-  private def enterChoiceChild(proc: SchemaProcessor[DT, SF], choiceDefinition: RuntimeChildChoiceDefinition): Seq[SF] = {
-    assert(isSingular(choiceDefinition), "Collections of choice elements are not supported")
-    val childValues = getOrderedListOfChoiceTypes(choiceDefinition)
-      .map(choiceDefinition.getChildNameByDatatype)
-      .map(childName => enterChoiceChildOption(proc.beforeEnterChoiceOption(choiceDefinition, childName), choiceDefinition, childName))
-    proc.combineChoiceOptions(choiceDefinition, childValues)
-  }
-
-  private def enterChoiceChildOption(proc: SchemaProcessor[DT, SF], choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): Seq[SF] = {
-    val definition = choiceDefinition.getChildByName(optionName)
-    enterElement(proc, choiceDefinition, definition, optionName)
-  }
-
-  private def enterElementChild(proc: SchemaProcessor[DT, SF], childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
-    val elementName = childDefinition.getElementName
-    val definition = childDefinition.getChildByName(childDefinition.getElementName)
-    enterElement(proc, childDefinition, definition, elementName)
-  }
-
-  private def enterElement(proc: SchemaProcessor[DT, SF], childDefinition: BaseRuntimeChildDefinition,
-                           elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[SF] = {
-    if (shouldExpand(elementDefinition)) {
-      proc.buildValue(childDefinition, elementDefinition, elementName, processComposite)
-    } else {
-      Nil
-    }
-  }
-
-  private def shouldExpand(definition: BaseRuntimeElementDefinition[_]): Boolean = {
-    EncodingContext.currentNestingLevel(definition) <= maxNestingLevel
-  }
-}
-
-/**
- * Companion object for [[SchemaTraversal]]
- */
-object SchemaTraversal {
   /**
    * Checks if the child definition represents a collection
    *
@@ -193,5 +87,108 @@ object SchemaTraversal {
    */
   def isSingular(childDefinition: BaseRuntimeChildDefinition): Boolean = {
     childDefinition.getMax == 1
+  }
+}
+
+
+trait FhirNode[DT, SF] {
+}
+
+trait TypeNode[DT, SF] extends FhirNode[DT, SF] {
+  def accept(visitor: SchemaVisitor[DT, SF]): DT
+}
+
+trait FieldNode[DT, SF] extends FhirNode[DT, SF] {
+  def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF]
+}
+
+/**
+ *
+ * @param resourceDefinition
+ * @tparam DT
+ * @tparam SF
+ */
+case class ResourceNode[DT, SF](resourceDefinition: RuntimeResourceDefinition) extends TypeNode[DT, SF] {
+  override def accept(visitor: SchemaVisitor[DT, SF]): DT = {
+    visitor.visitResource(this)
+  }
+
+  def proceed(visitor: SchemaVisitor[DT, SF]): DT = {
+    toComposite.accept(visitor)
+  }
+
+  def toComposite: CompositeNode[DT, SF] = {
+    CompositeNode[DT, SF](resourceDefinition)
+  }
+}
+
+case class CompositeNode[DT, SF](definition: BaseRuntimeElementCompositeDefinition[_]) extends TypeNode[DT, SF] {
+  override def accept(visitor: SchemaVisitor[DT, SF]): DT = {
+    visitor.visitComposite(this)
+  }
+
+  def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    definition
+      .getChildren
+      .flatMap(toChild(_).accept(visitor))
+  }
+
+  def toChild(childDefinition: BaseRuntimeChildDefinition): ChildNode[DT, SF] = {
+    ChildNode[DT, SF](childDefinition, definition)
+  }
+}
+
+case class ChildNode[DT, SF](childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldNode[DT, SF] {
+  override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    visitor.visitChild(this)
+  }
+
+  def proceed(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    childDefinition match {
+      case _: RuntimeChildContainedResources => Nil
+      // we need to handle extension before choice as it is of this type but requires
+      // the same handling as element child
+      case _: RuntimeChildExtension =>
+        ElementChildNode(childDefinition, compositeDefinition).accept(visitor)
+      case choiceDefinition: RuntimeChildChoiceDefinition =>
+        ChoiceChildNode(choiceDefinition, compositeDefinition).accept(visitor)
+      case _ =>
+        ElementChildNode(childDefinition, compositeDefinition).accept(visitor)
+    }
+  }
+}
+
+case class ElementChildNode[DT, SF](childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldNode[DT, SF] {
+  override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    visitor.visitElementChild(this)
+  }
+
+  def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    val elementName = childDefinition.getElementName
+    val definition = childDefinition.getChildByName(childDefinition.getElementName)
+    ElementNode(elementName, childDefinition, compositeDefinition).accept(visitor)
+  }
+}
+
+
+case class ChoiceChildNode[DT, SF](choiceDefinition: RuntimeChildChoiceDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldNode[DT, SF] {
+  def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    visitor.visitChoiceChild(this)
+  }
+
+  def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[Seq[SF]] = {
+
+    assert(isSingular(choiceDefinition), "Collections of choice elements are not supported")
+    getOrderedListOfChoiceChildNames(choiceDefinition)
+      .map(childName => ElementNode(childName, choiceDefinition, compositeDefinition).accept(visitor))
+  }
+}
+
+case class ElementNode[DT, SF](elementName: String, childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldNode[DT, SF] {
+
+  lazy val elementDefinition: BaseRuntimeElementDefinition[_] = childDefinition.getChildByName(elementName)
+
+  def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    visitor.visitElement(this)
   }
 }

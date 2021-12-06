@@ -47,9 +47,10 @@ public abstract class AbstractSchemaConverterTest {
   protected static final FhirContext FHIR_CONTEXT = FhirContext.forR4();
   protected static final DataTypeMappings DATA_TYPE_MAPPINGS = new R4DataTypeMappings();
 
-  private SchemaConverter converter_L0;
-  private SchemaConverter converter_L1;
-  private SchemaConverter converter_L2;
+  protected SchemaConverter converter_L0;
+  protected SchemaConverter converter_L1;
+  protected SchemaConverter converter_L2;
+
   private StructType conditionSchema;
   private StructType observationSchema;
   private StructType medRequestSchema;

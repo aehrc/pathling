@@ -26,4 +26,6 @@ trait SchemaConfig {
   def dataTypeMappings: DataTypeMappings
 
   def maxNestingLevel: Int
+
+  def supportsExtensions: Boolean
 }

@@ -78,10 +78,9 @@ public class ResourceEncoding2Test {
   public void testCanProduceSchema() {
     final SchemaConverter2 schemaConverter = new SchemaConverter2(fhirContext,
         new R4DataTypeMappings(),
-        0);
+        0, true);
 
     final StructType schema = schemaConverter.resourceSchema(resourceClass);
-    schema.printTreeString();
   }
 
 

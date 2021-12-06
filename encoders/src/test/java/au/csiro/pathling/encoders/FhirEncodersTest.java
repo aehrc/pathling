@@ -28,24 +28,10 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.functions;
+import org.apache.spark.sql.*;
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.Annotation;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Condition;
-import org.hl7.fhir.r4.model.DateTimeType;
-import org.hl7.fhir.r4.model.Encounter;
-import org.hl7.fhir.r4.model.IntegerType;
-import org.hl7.fhir.r4.model.MedicationRequest;
-import org.hl7.fhir.r4.model.Observation;
-import org.hl7.fhir.r4.model.Patient;
-import org.hl7.fhir.r4.model.Quantity;
-import org.hl7.fhir.r4.model.Questionnaire;
-import org.hl7.fhir.r4.model.QuestionnaireResponse;
+import org.hl7.fhir.r4.model.*;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -181,17 +167,21 @@ public class FhirEncodersTest {
 
   @Test
   public void boundCode() {
-    final Row coding = (Row) conditionsDataset.select("verificationStatus")
+
+    final GenericRowWithSchema verificationStatus = (GenericRowWithSchema) conditionsDataset
+        .select("verificationStatus")
         .head()
-        .getStruct(0)
-        .getList(1)
+        .getStruct(0);
+
+    final GenericRowWithSchema coding = (GenericRowWithSchema) verificationStatus
+        .getList(verificationStatus.fieldIndex("coding"))
         .get(0);
 
     Assert.assertEquals(condition.getVerificationStatus().getCoding().size(), 1);
     Assert.assertEquals(condition.getVerificationStatus().getCodingFirstRep().getSystem(),
-        coding.getString(1));
+        coding.getString(coding.fieldIndex("system")));
     Assert.assertEquals(condition.getVerificationStatus().getCodingFirstRep().getCode(),
-        coding.getString(3));
+        coding.getString(coding.fieldIndex("code")));
   }
 
   @Test

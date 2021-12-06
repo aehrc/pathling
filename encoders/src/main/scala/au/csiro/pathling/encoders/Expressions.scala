@@ -63,7 +63,7 @@ case class StaticField(staticObject: Class[_],
   override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
     StaticField(staticObject, dataType, fieldName)
   }
-  
+
 }
 
 /**
@@ -138,7 +138,7 @@ case class ObjectCast(value: Expression, resultType: DataType)
   override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
     ObjectCast(newChildren.head, resultType)
   }
-  
+
 }
 
 
@@ -183,5 +183,99 @@ case class GetClassFromContained(targetObject: Expression,
   override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
     GetClassFromContained(newChildren.head, containedClass)
   }
-  
+
+}
+
+
+/**
+ * An Expression extracting an object having the given class definition from a List of FHIR
+ * Resources.
+ */
+case class PutFid(targetObject: Expression,
+                  fidValue: Expression)
+  extends Expression with NonSQLExpression {
+
+  override def nullable: Boolean = targetObject.nullable
+
+  override def children: Seq[Expression] = targetObject :: fidValue :: Nil
+
+  override def dataType: DataType = targetObject.dataType
+
+  override def eval(input: InternalRow): Any =
+    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    val javaType = CodeGenerator.javaType(dataType)
+
+    val obj = targetObject.genCode(ctx)
+    val fid = fidValue.genCode(ctx)
+
+    ctx.addImmutableStateIfNotExists("java.util.HashMap", "_fid_mapping", vn => s"$vn = new java.util.HashMap();")
+
+    ev.copy(code =
+      code"""
+            |${obj.code}
+            |${fid.code}
+            |$javaType ${ev.value} = null;
+            |boolean ${ev.isNull} = true;
+            |if (${obj.value} != null) {
+            | _fid_mapping.put(${fid.value}, ${obj.value});
+            | ${ev.value} = ${obj.value};
+            | ${ev.isNull} = false;
+            |}
+       """.stripMargin)
+  }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    PutFid(newChildren.head, newChildren.tail.head)
+  }
+}
+
+case class AttachExtensions(targetObject: Expression,
+                            extensionMapObject: Expression)
+  extends Expression with NonSQLExpression {
+
+  override def nullable: Boolean = targetObject.nullable
+
+  override def children: Seq[Expression] = targetObject :: extensionMapObject :: Nil
+
+  override def dataType: DataType = targetObject.dataType
+
+  override def eval(input: InternalRow): Any =
+    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    val javaType = CodeGenerator.javaType(dataType)
+
+    val obj = targetObject.genCode(ctx)
+    val extensionMap = extensionMapObject.genCode(ctx)
+
+    ctx.addImmutableStateIfNotExists("java.util.HashMap", "_fid_mapping", vn => s"$vn = new java.util.HashMap();")
+
+    // essentially
+
+    ev.copy(code =
+      code"""
+            |${obj.code}
+            |${extensionMap.code}
+            |$javaType ${ev.value} = null;
+            |boolean ${ev.isNull} = true;
+            |if (${obj.value} != null) {
+            |// for each of the object in extension maps find the
+            |// corresponding object and set the extension
+            | for(java.util.Map.Entry e: scala.collection.JavaConverters.mapAsJavaMap(${extensionMap.value}).entrySet()) {
+            |   org.hl7.fhir.instance.model.api.IBaseHasExtensions extHolder = (org.hl7.fhir.instance.model.api.IBaseHasExtensions)_fid_mapping.get(e.getKey());
+            |   if (extHolder != null) {
+            |     ((java.util.List)extHolder.getExtension()).addAll((java.util.List)e.getValue());
+            |   }
+            | }
+            | ${ev.value} = ${obj.value};
+            | ${ev.isNull} = false;
+            |}
+       """.stripMargin)
+  }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    AttachExtensions(newChildren.head, newChildren.tail.head)
+  }
 }

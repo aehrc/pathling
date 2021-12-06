@@ -15,16 +15,20 @@ package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.encoders.{InstanceOf, ObjectCast, SchemaConfig}
-import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
+import au.csiro.pathling.encoders2.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
+import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
 import au.csiro.pathling.encoders2.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
 import ca.uhn.fhir.context._
-import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, MapObjects, StaticInvoke}
+import org.apache.spark.sql.catalyst.expressions.objects.{ExternalMapToCatalyst, Invoke, MapObjects, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{BoundReference, CreateNamedStruct, Expression, If, IsNull, Literal}
-import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
+import org.apache.spark.sql.types.{DataType, DataTypes, IntegerType, ObjectType}
 import org.apache.spark.unsafe.types.UTF8String
-import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseResource}
+import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBaseResource}
+import org.hl7.fhir.r4.model.{Base, DomainResource, Extension}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
+
+import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
 /**
  * The schema processor for building serializer expressions.
@@ -32,11 +36,11 @@ import org.hl7.fhir.utilities.xhtml.XhtmlNode
  * @param expression       the starting (root) expression.
  * @param dataTypeMappings data type mappings to use.
  */
-private[encoders2] class SerializerBuilderProcessor(expression: Expression, val dataTypeMappings: DataTypeMappings) extends
+private[encoders2] class SerializerBuilderProcessor(expression: Expression, val dataTypeMappings: DataTypeMappings,
+                                                    override val maxNestingLevel: Int, override val expandExtensions: Boolean, override val fhirContext: FhirContext) extends
   SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] {
 
-  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                          compositeBuilder: (SchemaProcessor[Expression, ExpressionWithName], BaseRuntimeElementCompositeDefinition[_]) => Expression): Seq[ExpressionWithName] = {
+  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[ExpressionWithName] = {
     // add custom encoder
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     val evaluator: (Expression => Expression) => Expression = if (isCollection(childDefinition)) {
@@ -47,12 +51,11 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
       encoder => encoder(expression)
     }
     customEncoder.map(_.customSerializer2(evaluator))
-      .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName, compositeBuilder))
+      .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName))
   }
 
-  override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                               compositeBuilder: (SchemaProcessor[Expression, (String, Expression)], BaseRuntimeElementCompositeDefinition[_]) => Expression): Expression = {
-    MapObjects(withExpression(_).buildSimpleValue(childDefinition, elementDefinition, elementName, compositeBuilder),
+  override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Expression = {
+    MapObjects(withExpression(_).buildSimpleValue(childDefinition, elementDefinition, elementName),
       expression,
       objectTypeFor(childDefinition))
   }
@@ -70,34 +73,79 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
     dataTypeToUtf8Expr(expression)
   }
 
+  private def createExtensionsFields(definition: BaseRuntimeElementCompositeDefinition[_]): Seq[(String, Expression)] = {
+    val maybeExtensionValueField = definition match {
+      case _: RuntimeResourceDefinition =>
+        val collectExtensionsExpression = StaticInvoke(
+          classOf[SerializerBuilderProcessor],
+          ObjectType(classOf[Map[Int, java.util.List[Extension]]]),
+          "flattenExtensions",
+          expression :: Nil
+        )
+        val mappingExpression = ExternalMapToCatalyst(collectExtensionsExpression, IntegerType, identity, keyNullable = false,
+          ObjectType(classOf[java.util.List[Extension]]),
+          obj => this.withExpression(obj).buildExtensionValue(),
+          valueNullable = false
+        )
+        (EXTENSIONS_FIELD_NAME, mappingExpression) :: Nil
+      case _ => Nil
+    }
+    // append _fid serializer
+    (FID_FIELD_NAME, StaticInvoke(
+      classOf[System], IntegerType, "identityHashCode", expression :: Nil)) :: maybeExtensionValueField
+  }
+
+  override def proceedCompositeChildren(value: CompositeNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    dataTypeMappings.overrideCompositeExpression2(expression, value.definition).getOrElse(super.proceedCompositeChildren(value))
+  }
+
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
-    // TODO: [#414] Performance improvement: do not compute fields when the composite expression is overridden.
-    val structFields = dataTypeMappings.overrideCompositeExpression(expression, definition).getOrElse(fields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
-    val struct = CreateNamedStruct(structFields)
+
+    val allFields = if (expandExtensions) {
+      fields ++ createExtensionsFields(definition)
+    } else {
+      fields
+    }
+
+    val struct = CreateNamedStruct(allFields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
     If(IsNull(expression), Literal.create(null, struct.dataType), struct)
   }
 
-  override def beforeEnterChild(childDefinition: BaseRuntimeChildDefinition): SchemaProcessor[Expression, ExpressionWithName] = {
-    val childExpression = childDefinition match {
-      // At this point we don't the actual type of the child, so get it as the general IBaseDatatype
-      case _: RuntimeChildChoiceDefinition => getChildExpression(expression, childDefinition, ObjectType(classOf[IBaseDatatype]))
-      case _ => getChildExpression(expression, childDefinition)
+  private def proceedElementChild(value: ElementChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    super.visitElementChild(value)
+  }
+
+  override def visitElementChild(value: ElementChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    withExpression(getChildExpression(expression, value.childDefinition)).proceedElementChild(value)
+  }
+
+  private def proceedChoiceChild(value: ChoiceChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    super.visitChoiceChild(value)
+  }
+
+  override def visitChoiceChild(value: ChoiceChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    withExpression(getChildExpression(expression, value.choiceDefinition, ObjectType(classOf[IBaseDatatype]))).proceedChoiceChild(value)
+  }
+
+  private def proceedElement(ctx: ElementNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    super.visitElement(ctx)
+  }
+
+  override def visitElement(ctx: ElementNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    ctx.childDefinition match {
+      case _: RuntimeChildExtension => super.visitElement(ctx)
+      case _: RuntimeChildChoiceDefinition =>
+        val implementingClass = ctx.elementDefinition.getImplementingClass
+        val optionExpression = If(InstanceOf(expression, implementingClass),
+          ObjectCast(expression, ObjectType(implementingClass)),
+          Literal.create(null, ObjectType(implementingClass)))
+        withExpression(optionExpression).proceedElement(ctx)
+      case _ => super.visitElement(ctx)
     }
-    this.withExpression(childExpression)
   }
-
-  override def beforeEnterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaProcessor[Expression, ExpressionWithName] = {
-    //noinspection DuplicatedCode
-    val choiceChildDefinition = choiceDefinition.getChildByName(optionName)
-    val optionExpression = If(InstanceOf(expression, choiceChildDefinition.getImplementingClass),
-      ObjectCast(expression, ObjectType(choiceChildDefinition.getImplementingClass)),
-      Literal.create(null, ObjectType(choiceChildDefinition.getImplementingClass)))
-    this.withExpression(optionExpression)
-  }
-
 
   private def withExpression(expression: Expression): SerializerBuilderProcessor = {
-    new SerializerBuilderProcessor(expression, dataTypeMappings)
+    new SerializerBuilderProcessor(expression, dataTypeMappings, maxNestingLevel, expandExtensions, fhirContext)
   }
 }
 
@@ -172,6 +220,8 @@ private[encoders2] object SerializerBuilderProcessor {
       case block: RuntimeChildResourceBlockDefinition =>
         getSingleChild(block).getImplementingClass
 
+      case _: RuntimeChildExtension => classOf[Extension]
+
       case composite: RuntimeChildCompositeDatatypeDefinition =>
         composite.getDatatype
 
@@ -192,6 +242,28 @@ private[encoders2] object SerializerBuilderProcessor {
     }
     ObjectType(cls)
   }
+
+
+  def flattenExtensions(resource: DomainResource): Map[Int, java.util.List[Extension]] = {
+    def flattenBase(obj: Base): List[(Int, java.util.List[Extension])] = {
+
+      val childrenExts = resource.children()
+        .map(p => obj.getProperty(p.getName.hashCode, p.getName, false))
+        .filter(_ != null)
+        .flatMap(_.flatMap(flattenBase))
+        .toList
+
+      obj match {
+        // TODO: fix the type cast
+        case hasExt: IBaseHasExtensions if hasExt.hasExtension =>
+          (System.identityHashCode(obj), hasExt.getExtension.asInstanceOf[java.util.List[Extension]]) :: childrenExts
+        case _ => childrenExts
+      }
+    }
+
+    flattenBase(resource).toMap
+  }
+
 }
 
 /**
@@ -201,7 +273,7 @@ private[encoders2] object SerializerBuilderProcessor {
  * @param mappings        the data type mappings to use.
  * @param maxNestingLevel the max nesting level to use.
  */
-class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, maxNestingLevel: Int) {
+class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, maxNestingLevel: Int, supportsExtensions: Boolean) {
 
   /**
    * Creates the serializer expression for given resource definition.
@@ -212,8 +284,8 @@ class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, m
   def buildSerializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
     val fhirClass = resourceDefinition.asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
     val inputObject = BoundReference(0, ObjectType(fhirClass), nullable = true)
-    new SchemaTraversal[Expression, ExpressionWithName](maxNestingLevel)
-      .processResource(new SerializerBuilderProcessor(inputObject, mappings), resourceDefinition)
+
+    SchemaVisitor.traverseResource(resourceDefinition, new SerializerBuilderProcessor(inputObject, mappings, maxNestingLevel, supportsExtensions, fhirContext))
   }
 
   /**
@@ -239,6 +311,6 @@ object SerializerBuilder2 {
    * @return the serializer builder.
    */
   def apply(config: SchemaConfig): SerializerBuilder2 = {
-    new SerializerBuilder2(config.fhirContext, config.dataTypeMappings, config.maxNestingLevel)
+    new SerializerBuilder2(config.fhirContext, config.dataTypeMappings, config.maxNestingLevel, config.supportsExtensions)
   }
 }
