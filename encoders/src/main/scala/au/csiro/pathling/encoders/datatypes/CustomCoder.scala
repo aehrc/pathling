@@ -23,7 +23,7 @@ trait CustomCoder {
   @deprecated
   def customDecoderExpression(addToPath: String => Expression): Expression
 
-  @Deprecated
+  @deprecated
   def customSerializer(inputObject: Expression): List[Expression]
 
   def schema2(arrayEncoder: Option[DataType => DataType]): Seq[StructField]

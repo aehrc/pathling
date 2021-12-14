@@ -34,7 +34,6 @@ class R4DataTypeMappings extends DataTypeMappings {
   private val fhirPrimitiveToSparkTypes: Map[Class[_ <: IPrimitiveType[_]], DataType] =
     Map(
       classOf[MarkdownType] -> DataTypes.StringType,
-      //classOf[IdType] -> DataTypes.StringType,
       classOf[Enumeration[_]] -> DataTypes.StringType,
       classOf[DateTimeType] -> DataTypes.StringType,
       classOf[TimeType] -> DataTypes.StringType,
@@ -145,7 +144,6 @@ class R4DataTypeMappings extends DataTypeMappings {
         throw new IllegalArgumentException("Cannot serialize unknown primitive type: " + unknown.getName)
     }
   }
-
 
   override def primitiveDecoderExpression(primitiveClass: Class[_ <: IPrimitiveType[_]],
                                           path: Option[Expression]): Expression = {

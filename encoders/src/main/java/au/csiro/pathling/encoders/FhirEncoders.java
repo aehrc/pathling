@@ -58,7 +58,7 @@ public class FhirEncoders {
   /**
    * Cached encoders to avoid having to re-create them.
    */
-  private final Map<Integer, ExpressionEncoder> encoderCache = new HashMap<>();
+  private final Map<Integer, ExpressionEncoder<?>> encoderCache = new HashMap<>();
 
   /**
    * The maximum nesting level for expansion of recursive data types.
@@ -82,7 +82,10 @@ public class FhirEncoders {
   public FhirEncoders(final FhirContext context, final DataTypeMappings mappings,
       final int maxNestingLevel, int encoderVersion) {
 
-    assert (encoderVersion == 1 || encoderVersion == 2);
+    if (encoderVersion != 1 && encoderVersion != 2) {
+      throw new IllegalArgumentException(
+          "Unsupported encoder version: " + encoderVersion + ". Valid version are 1 or 2");
+    }
     this.context = context;
     this.mappings = mappings;
     this.maxNestingLevel = maxNestingLevel;
@@ -288,7 +291,7 @@ public class FhirEncoders {
     synchronized (encoderCache) {
 
       //noinspection unchecked
-      ExpressionEncoder<T> encoder = encoderCache.get(key);
+      ExpressionEncoder<T> encoder = (ExpressionEncoder<T>) encoderCache.get(key);
 
       if (encoder == null) {
         if (encoderVersion == 2) {
