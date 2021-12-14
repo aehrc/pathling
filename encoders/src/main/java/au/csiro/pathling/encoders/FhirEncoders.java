@@ -16,11 +16,13 @@ import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
 import au.csiro.pathling.encoders1.EncoderBuilder1;
 import au.csiro.pathling.encoders1.SchemaConverter1;
 import au.csiro.pathling.encoders2.EncoderBuilder2;
-import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import scala.collection.JavaConverters;
@@ -183,13 +185,15 @@ public class FhirEncoders {
   /**
    * Returns an encoder for the given FHIR resource.
    *
-   * @param type the type of the resource to encode.
+   * @param resourceName the type of the resource to encode.
    * @param <T> the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(final String type) {
+  public final <T extends IBaseResource> ExpressionEncoder<T> of(final String resourceName) {
 
-    return of(type, new String[]{});
+    final RuntimeResourceDefinition definition = context.getResourceDefinition(resourceName);
+    //noinspection unchecked
+    return of((Class<T>) definition.getImplementingClass());
   }
 
   /**
@@ -201,91 +205,10 @@ public class FhirEncoders {
    */
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type) {
 
-    return of(type, Collections.emptyList());
-  }
-
-  /**
-   * Returns an encoder for the given FHIR resource by name, as defined by the FHIR specification.
-   *
-   * @param resourceName the name of the FHIR resource to encode, such as "Encounter", "Condition",
-   * "Observation", etc.
-   * @param contained the names of FHIR resources contained to the encoded resource.
-   * @param <T> the type of the resource to be encoded.
-   * @return an encoder for the resource.
-   */
-  public <T extends IBaseResource> ExpressionEncoder<T> of(final String resourceName,
-      final String... contained) {
-
-    final RuntimeResourceDefinition definition = context.getResourceDefinition(resourceName);
-
-    final List<Class<? extends IBaseResource>> containedClasses = new ArrayList<>();
-
-    for (final String containedName : contained) {
-
-      containedClasses.add(context.getResourceDefinition(containedName).getImplementingClass());
-    }
-
-    //noinspection unchecked
-    return of((Class<T>) definition.getImplementingClass(), containedClasses);
-  }
-
-  /**
-   * Returns an encoder for the given FHIR resource.
-   *
-   * @param type the type of the resource to encode.
-   * @param contained a list of types for FHIR resources contained to the encoded resource.
-   * @param <T> the type of the resource to be encoded.
-   * @return an encoder for the resource.
-   */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type,
-      final Class<? extends IBaseResource>... contained) {
-
-    final List<Class<? extends IBaseResource>> containedResourceList = new ArrayList<>();
-
-    for (final Class element : contained) {
-
-      if (IBaseResource.class.isAssignableFrom(element)) {
-
-        //noinspection unchecked
-        containedResourceList.add((Class<IBaseResource>) element);
-      } else {
-
-        throw new IllegalArgumentException("The contained classes provided must all implement  "
-            + "FHIR IBaseResource");
-      }
-    }
-
-    return of(type, containedResourceList);
-  }
-
-  /**
-   * Returns an encoder for the given FHIR resource.
-   *
-   * @param type the type of the resource to encode.
-   * @param contained a list of types for FHIR resources contained to the encoded resource.
-   * @param <T> the type of the resource to be encoded.
-   * @return an encoder for the resource.
-   */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type,
-      final List<Class<? extends IBaseResource>> contained) {
-
     final RuntimeResourceDefinition definition =
         context.getResourceDefinition(type);
 
-    final List<BaseRuntimeElementCompositeDefinition<?>> containedDefinitions = new ArrayList<>();
-
-    for (final Class<? extends IBaseResource> resource : contained) {
-
-      containedDefinitions.add(context.getResourceDefinition(resource));
-    }
-
     final StringBuilder keyBuilder = new StringBuilder(type.getName());
-
-    for (final Class resource : contained) {
-
-      keyBuilder.append(resource.getName());
-    }
-
     final int key = keyBuilder.toString().hashCode();
 
     synchronized (encoderCache) {
@@ -300,8 +223,7 @@ public class FhirEncoders {
               EncoderBuilder2.of(definition,
                   context,
                   mappings,
-                  maxNestingLevel,
-                  JavaConverters.asScalaBuffer(containedDefinitions));
+                  maxNestingLevel);
         } else if (encoderVersion == 1) {
           //noinspection unchecked
           encoder = (ExpressionEncoder<T>)
@@ -309,7 +231,7 @@ public class FhirEncoders {
                   context,
                   mappings,
                   new SchemaConverter1(context, mappings, maxNestingLevel),
-                  JavaConverters.asScalaBuffer(containedDefinitions));
+                  JavaConverters.asScalaBuffer(Collections.emptyList()));
         } else {
           throw new IllegalArgumentException(
               "Unsupported encoderVersion: " + encoderVersion + ". Only 1 and 2 are supported.");

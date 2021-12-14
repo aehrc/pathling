@@ -164,21 +164,7 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
       (setterFor(childDefinition), expression)
     }
 
-    val bean: Expression = InitializeJavaBean(compositeInstance, setters.toMap)
-    val result = bean
-
-    // TODO: Reconsider when fixing [#409] Adding support for contained resources
-    //
-    //    // Deserialize any Contained resources to the new Object through successive calls
-    //    // to 'addContained'.
-    //    val result = contained.foldLeft(bean)((value, containedResource) => {
-    //
-    //      Invoke(value,
-    //        "addContained",
-    //        ObjectType(definition.getImplementingClass),
-    //        compositeToDeserializer(containedResource,
-    //          Some(UnresolvedAttribute("contained." + containedResource.getName))) :: Nil)
-    //    })
+    val result = InitializeJavaBean(compositeInstance, setters.toMap)
     path.map(path =>
       If(IsNull(path), Literal.create(null, ObjectType(definition.getImplementingClass)), result))
       .getOrElse(result)

@@ -38,7 +38,6 @@ import scala.reflect.ClassTag
 /**
  * Spark Encoder for FHIR data models.
  */
-// TODO: uncomment: private[encoders]
 object EncoderBuilder1 {
 
   /**

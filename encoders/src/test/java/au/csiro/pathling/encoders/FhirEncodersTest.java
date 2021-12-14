@@ -378,44 +378,6 @@ public class FhirEncodersTest {
 
   }
 
-  // TODO: Uncomment when contained resources are implemented in v2 encoders.
-  @Test
-  @Ignore
-  public void contained() throws FHIRException {
-
-    // Contained resources should be put to the Contained list in order of the Encoder arguments
-    Assert.assertTrue(decodedMedRequest.getContained().get(0) instanceof Medication);
-
-    final Medication originalMedication = (Medication) medRequest.getContained().get(0);
-    final Medication decodedMedication = (Medication) decodedMedRequest.getContained().get(0);
-
-    Assert.assertEquals(originalMedication.getId(), decodedMedication.getId());
-    Assert.assertEquals(originalMedication.getIngredientFirstRep()
-            .getItemCodeableConcept()
-            .getCodingFirstRep()
-            .getCode(),
-        decodedMedication.getIngredientFirstRep()
-            .getItemCodeableConcept()
-            .getCodingFirstRep()
-            .getCode());
-
-    Assert.assertTrue(decodedMedRequest.getContained().get(1) instanceof Provenance);
-
-    final Provenance decodedProvenance = (Provenance) decodedMedRequest.getContained().get(1);
-    final Provenance originalProvenance = (Provenance) medRequest.getContained().get(1);
-
-    Assert.assertEquals(originalProvenance.getId(), decodedProvenance.getId());
-    Assert.assertEquals(originalProvenance.getTargetFirstRep().getReference(),
-        decodedProvenance.getTargetFirstRep().getReference());
-
-    final ProvenanceEntityComponent originalEntity = originalProvenance.getEntityFirstRep();
-    final ProvenanceEntityComponent decodedEntity = decodedProvenance.getEntityFirstRep();
-
-    Assert.assertEquals(originalEntity.getRole(), decodedEntity.getRole());
-    Assert.assertEquals(originalEntity.getWhat().getReference(),
-        decodedEntity.getWhat().getReference());
-  }
-
   /**
    * Sanity test with a deep copy to check we didn't break internal state used by copies.
    */

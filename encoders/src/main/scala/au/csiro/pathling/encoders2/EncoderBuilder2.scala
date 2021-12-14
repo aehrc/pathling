@@ -4,7 +4,6 @@ import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 
-import scala.collection.mutable
 import scala.reflect.ClassTag
 
 /**
@@ -16,17 +15,17 @@ object EncoderBuilder2 {
    * Returns an encoder for the FHIR resource implemented by the given class
    *
    * @param resourceDefinition The FHIR resource definition
-   * @param contained          The FHIR resources to be contained to the given definition
+   * @param fhirContext        the FHIR context to use
+   * @param mappings           the data type mappings to use
+   * @param maxNestingLevel    the max nesting level to use to expand recursive data types.
+   *                           Zero means that fields of type T are skipped in a composite od type T.
    * @return An ExpressionEncoder for the resource
    */
 
   def of(resourceDefinition: RuntimeResourceDefinition,
          fhirContext: FhirContext,
          mappings: DataTypeMappings,
-         maxNestingLevel: Int,
-         contained: mutable.Buffer[BaseRuntimeElementCompositeDefinition[_]] = mutable.Buffer.empty): ExpressionEncoder[_] = {
-
-    assert(contained.isEmpty, "Contained resources are not supported")
+         maxNestingLevel: Int): ExpressionEncoder[_] = {
 
     val fhirClass = resourceDefinition
       .asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
