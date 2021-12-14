@@ -20,8 +20,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 import scala.collection.JavaConverters;
 
 @RunWith(Parameterized.class)
@@ -61,7 +59,8 @@ public class CompareV2ToV1Test implements JsonMethods {
 
   String toComparableJSON(final Expression expression) {
 
-    // These are the sections when id needs fixing
+    // Expressions  internally use lambda variables, ids of which are assigned from a global counter.
+    // E.g:
     // {
     //   "class" : "org.apache.spark.sql.catalyst.expressions.objects.LambdaVariable",
     //     "num-children" : 0,
@@ -70,6 +69,9 @@ public class CompareV2ToV1Test implements JsonMethods {
     //     "nullable" : true,
     //     "id" : 45
     // }
+    // Before two expression can be compare these IDs need to reconciled.
+    // The best way would be to make them 0-based starting form the lowest id found in the expression.
+    // But setting them all to 0 should give enough power to detect most differences in expressions.
 
     final String prettyJson = toPrettyJson(expression.toJSON());
     return prettyJson.replaceAll("(?:\"id\" : )\\d+", "\"id\" : 0");
@@ -102,14 +104,12 @@ public class CompareV2ToV1Test implements JsonMethods {
         nestingLevel);
 
     final Expression objSerializer_v2 = serializerBuilder.buildSerializer(resourceClass);
-    // NOTE: Cannot be compared direclty because lambda variables ids for Map expression are generated from
-    // a global counter so the second serializer has different ids (offseted).
-    // assertEquals(encoder.objSerializer().canonicalized(), otherEncoder.objSerializer().canonicalized());
+    // NOTE: Two serializers cannot be compared directly, because of global state used
+    // to generate ids of lambda variables use in the expression.
+    // See: toComparableJSON()
 
     assertEquals(toComparableJSON(objSerializer_v1),
         toComparableJSON(objSerializer_v2));
-    JSONAssert.assertEquals(toComparableJSON(objSerializer_v1),
-        toComparableJSON(objSerializer_v2), JSONCompareMode.STRICT);
   }
 
   @Test
@@ -131,9 +131,9 @@ public class CompareV2ToV1Test implements JsonMethods {
         , schemaTraversal2);
 
     final Expression objDeserializer_v2 = deserializerBuilder.buildDeserializer(resourceClass);
-    // NOTE: Cannot be compared direclty because lambda variables ids for Map expression are generated from
-    // a global counter so the second serializer has different ids (offseted).
-    // assertEquals(encoder.objSerializer().canonicalized(), otherEncoder.objSerializer().canonicalized());
+    // NOTE: Two serializers cannot be compared directly, because of global state used
+    // to generate ids of lambda variables use in the expression.
+    // See: toComparableJSON()
 
     assertEquals(toComparableJSON(objDeserializer_v1),
         toComparableJSON(objDeserializer_v2));
