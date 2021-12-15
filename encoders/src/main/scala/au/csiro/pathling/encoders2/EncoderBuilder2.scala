@@ -11,6 +11,9 @@ import scala.reflect.ClassTag
  */
 object EncoderBuilder2 {
 
+  val UNSUPPORTED_RESOURCES: Set[String] = Set("Parameters",
+    "Task", "StructureDefinition", "StructureMap", "Bundle")
+
   /**
    * Returns an encoder for the FHIR resource implemented by the given class
    *
@@ -26,6 +29,10 @@ object EncoderBuilder2 {
          fhirContext: FhirContext,
          mappings: DataTypeMappings,
          maxNestingLevel: Int): ExpressionEncoder[_] = {
+
+    if (UNSUPPORTED_RESOURCES.contains(resourceDefinition.getName)) {
+      throw new IllegalArgumentException(s"Encoding is not supported for resource: ${resourceDefinition.getName}")
+    }
 
     val fhirClass = resourceDefinition
       .asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass

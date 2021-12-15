@@ -30,7 +30,7 @@ public class ResourceEncodingTest2 {
 
 
   // TODO: Remove when the corresponding issues are fixed (#375)
-  private final static Set<String> EXCLUDED_RESOURCES = ImmutableSet.of(
+  final static Set<String> EXCLUDED_RESOURCES = ImmutableSet.of(
       "Parameters",
       // Collections are not supported for custom encoders for: condition-> RuntimeIdDatatypeDefinition[id, IdType]
       "Task",
@@ -62,7 +62,7 @@ public class ResourceEncodingTest2 {
 
 
   @Test
-  public void testCanProduceSchema()  {
+  public void testCanProduceSchema() {
     final SchemaConverter2 schemaConverter = new SchemaConverter2(fhirContext,
         new R4DataTypeMappings(),
         0);
@@ -75,12 +75,12 @@ public class ResourceEncodingTest2 {
   @Test
   public void testCanEncodeDecodeResource() throws Exception {
 
-    ExpressionEncoder<? extends IBaseResource> encoder = fhirEncoders
+    final ExpressionEncoder<? extends IBaseResource> encoder = fhirEncoders
         .of(resourceClass);
-    ExpressionEncoder<? extends IBaseResource> resolvedEncoder = EncoderUtils
+    final ExpressionEncoder<? extends IBaseResource> resolvedEncoder = EncoderUtils
         .defaultResolveAndBind(encoder);
 
-    IBaseResource resourceInstance = resourceClass.getDeclaredConstructor().newInstance();
+    final IBaseResource resourceInstance = resourceClass.getDeclaredConstructor().newInstance();
     resourceInstance.setId("someId");
 
     Serializer<? extends IBaseResource> serializer = resolvedEncoder
@@ -90,7 +90,9 @@ public class ResourceEncodingTest2 {
     final InternalRow serializedRow = ((Serializer<IBaseResource>) serializer)
         .apply(resourceInstance);
 
-    IBaseResource deserializedResource = resolvedEncoder.createDeserializer().apply(serializedRow);
+    final IBaseResource deserializedResource = resolvedEncoder.createDeserializer()
+        .apply(serializedRow);
     assertTrue(((Base) resourceInstance).equalsDeep((Base) deserializedResource));
   }
+
 }

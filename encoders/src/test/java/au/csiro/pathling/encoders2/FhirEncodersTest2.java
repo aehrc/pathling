@@ -1,5 +1,7 @@
 package au.csiro.pathling.encoders2;
 
+import static au.csiro.pathling.encoders2.ResourceEncodingTest2.EXCLUDED_RESOURCES;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import au.csiro.pathling.encoders.EncoderUtils;
@@ -71,5 +73,12 @@ public class FhirEncodersTest2 implements JsonMethods {
     conditionWithNarrative.getText().getDiv().setValueAsString("Some Narrative Value");
 
     assertSerDeIsIdentity(encoder, conditionWithNarrative);
+  }
+
+  @Test
+  public void testThrowsExceptionWhenUnsuportedResource() {
+    for (final String resourceName : EXCLUDED_RESOURCES) {
+      assertThrows(IllegalArgumentException.class, () -> fhirEncoders.of(resourceName));
+    }
   }
 }
