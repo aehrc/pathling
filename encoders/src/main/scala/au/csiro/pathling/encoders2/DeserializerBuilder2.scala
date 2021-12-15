@@ -55,7 +55,10 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
 
   override def buildEnumPrimitive(enumDefinition: RuntimePrimitiveDatatypeDefinition, enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Expression = {
 
-    // TODO: Unify please
+    // TODO: [#414] This  seem to be an unnecessary complication as enum types can be decoded
+    //  in the same way as other types. Unless there is a substantial performance improvement
+    //  this special case should be removed.
+
     // Only apply the special case for non list
     if (enumChildDefinition.getMax == 1) {
 

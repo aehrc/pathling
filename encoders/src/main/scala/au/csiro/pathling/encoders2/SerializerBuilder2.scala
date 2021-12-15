@@ -58,7 +58,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
   }
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
-    // TODO: Fix so that it does not traverse the type
+    // TODO: [#414] Performance improvement: do not compute fields when the composite expression is overriden.
     val structFields = dataTypeMappings.overrideCompositeExpression(expression, definition).getOrElse(fields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
     val struct = CreateNamedStruct(structFields)
     If(IsNull(expression), Literal.create(null, struct.dataType), struct)
