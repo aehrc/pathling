@@ -12,13 +12,18 @@ public class SchemaConverter2Test extends AbstractSchemaConverterTest {
     return new SchemaConverter2(FHIR_CONTEXT, DATA_TYPE_MAPPINGS, maxNestingLevel);
   }
 
-  // TODO: Complete when support for DirectChildResource e.g. in Parameters is added.
+  // TODO: [#414] This is to check if nested types work correctly in choices.
+  // So far the only instances I could find are ElementDefinition values in value[*] choices
+  // But this may be HAPI artefact because according to FHIR spec ElementDefinition os not a valid
+  // type for value[*] but it is returned by HAPI getChildTypes().
+  // So that can either be tested when Extensions are implemented (as have value[*] field) or
+  // we may need to correct what is returned from HAPI as valid types for value[*].
   @Test
   @Ignore
   public void testNestedTypeInChoice() {
 
-    //  Parameters
-    //  ElementDefinition: parameter.valueElementDefinition-> parameter.valueElementDefinition.fixedElementDefinition
-    //  ElementDefinition: parameter.valueElementDefinition-> parameter.valueElementDefinition.example.valueElementDefinition (indirect)
+    //  Extension.value
+    //  ElementDefinition: extension.valueElementDefinition-> extension.valueElementDefinition.fixedElementDefinition
+    //  ElementDefinition: extension.valueElementDefinition-> extension.valueElementDefinition.example.valueElementDefinition (indirect)
   }
 }
