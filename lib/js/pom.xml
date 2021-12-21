@@ -14,11 +14,11 @@
     <version>5.0.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
-  <artifactId>import</artifactId>
+  <artifactId>js</artifactId>
   <packaging>jar</packaging>
 
-  <name>Pathling Import</name>
-  <description>A set of functions for importing data from a FHIR server.</description>
+  <name>Pathling JavaScript Client Library</name>
+  <description>A client library for the Pathling FHIR API, for use with JavaScript/TypeScript.</description>
 
   <build>
     <plugins>
@@ -53,25 +53,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <finalName>pathling-import-lambda</finalName>
-          <appendAssemblyId>false</appendAssemblyId>
-          <descriptors>
-            <descriptor>${project.basedir}/assembly.xml</descriptor>
-          </descriptors>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

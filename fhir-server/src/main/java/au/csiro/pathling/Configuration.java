@@ -274,6 +274,9 @@ public class Configuration {
     private List<String> allowedHeaders;
 
     @NotNull
+    private List<String> exposedHeaders;
+
+    @NotNull
     @Min(0)
     private Long maxAge;
 

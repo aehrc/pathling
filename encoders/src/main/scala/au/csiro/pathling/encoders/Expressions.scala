@@ -58,6 +58,11 @@ case class StaticField(staticObject: Class[_],
         """
     ev.copy(code = code, isNull = FalseLiteral)
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    StaticField(staticObject, dataType, fieldName)
+  }
+  
 }
 
 /**
@@ -90,6 +95,11 @@ case class InstanceOf(value: Expression,
 
     ev.copy(code = code, isNull = FalseLiteral)
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    InstanceOf(newChildren.head, checkedType)
+  }
+
 }
 
 /**
@@ -123,6 +133,11 @@ case class ObjectCast(value: Expression, resultType: DataType)
 
     ev.copy(code = code, isNull = obj.isNull)
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    ObjectCast(newChildren.head, resultType)
+  }
+  
 }
 
 

@@ -1,26 +1,21 @@
 {
-  "name": "pathling-import",
-  "version": "1.0.4",
-  "description": "A set of functions for performing bulk export from a FHIR server and importing to Pathling.",
+  "name": "pathling-client",
+  "version": "1.1.2",
+  "description": "Client library for the Pathling FHIR API.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "bin": {
-    "pathling-import": "lib/index.js"
-  },
   "dependencies": {
     "@ahryman40k/ts-fhir-types": "^4.0.36",
-    "@aws-sdk/client-s3": "^3.37.0",
-    "@types/aws-lambda": "^8.10.84",
-    "@types/node": "^16.11.2",
-    "@types/uuid": "^8.3.1",
-    "axios": "^0.23.0",
-    "case": "^1.6.3",
-    "client-oauth2": "^4.3.3",
-    "p-retry": "^4.6.1",
-    "temp-dir": "^2.0.0",
-    "uuid": "^8.3.2"
+    "@types/node": "^16.11.7",
+    "axios": "^0.24.0",
+    "just-performance": "^4.3.0",
+    "p-retry": "^4.6.1"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.16.0",
+    "@babel/preset-typescript": "^7.16.0",
+    "@types/jest": "^27.0.2",
+    "jest": "^27.3.1",
     "prettier": "^2.4.1",
     "typescript": "^4.4.4"
   },
@@ -28,7 +23,7 @@
     "type": "git",
     "url": "https://github.com/aehrc/pathling"
   },
-  "homepage": "https://github.com/aehrc/pathling/tree/master/lib/import#readme",
+  "homepage": "https://github.com/aehrc/pathling/tree/master/lib/js#readme",
   "keywords": [
     "pathling",
     "fhir",
@@ -50,7 +45,8 @@
   "license": "SEE LICENSE IN LICENSE.md",
   "scripts": {
     "compile": "tsc",
-    "prepare": "npm run compile"
+    "prepare": "npm run compile",
+    "test": "npx jest"
   },
   "files": [
     "lib",

@@ -62,7 +62,7 @@ public class EntityTagInterceptor {
     if (requestIsCacheable(request)) {
       final String tagHeader = request.getHeader("If-None-Match");
       if (validator.matches(tagHeader)) {
-        log.info("Entity tag validation succeeded, processing not required");
+        log.debug("Entity tag validation succeeded, processing not required");
         throw new NotModifiedException("Supplied entity tag matches");
       } else {
         response.setHeader("ETag", validator.tag());
@@ -90,7 +90,13 @@ public class EntityTagInterceptor {
     response.addHeader("Cache-Control", "must-revalidate");
   }
 
-  private static boolean requestIsCacheable(@Nonnull final HttpServletRequest request) {
+  /**
+   * Checks whether we regard this request as cacheable.
+   *
+   * @param request a {@link HttpServletRequest}
+   * @return true if the request is cacheable, false otherwise
+   */
+  public static boolean requestIsCacheable(@Nonnull final HttpServletRequest request) {
     return (request.getMethod().equals("GET") || request.getMethod().equals("HEAD"));
   }
 

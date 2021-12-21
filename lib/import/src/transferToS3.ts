@@ -1,6 +1,7 @@
 /*
- * Copyright © 2021-2021, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. All rights reserved.
+ * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
  */
 
 /**
@@ -20,11 +21,11 @@ import {
   HeadObjectCommand,
   HeadObjectCommandOutput,
   S3Client,
-  UploadPartCommand
+  UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import { rm, stat } from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
-import { createReadStream, createWriteStream } from "fs";
+import { createReadStream, createWriteStream, Stats } from "fs";
 import { URL } from "url";
 import tempDirectory = require("temp-dir");
 import ReadableStream = NodeJS.ReadableStream;
@@ -278,7 +279,10 @@ async function* downloadFiles(
       // source files from the FHIR server.
       const writeStream = createWriteStream(currentFile, { flags: "a" });
       console.info("[%s] Downloading %s => %s", resourceType, url, currentFile);
-      const response = await client.get<undefined, AxiosResponse<ReadableStream>>(url, {
+      const response = await client.get<
+        undefined,
+        AxiosResponse<ReadableStream>
+      >(url, {
         headers: {
           Accept: FHIR_NDJSON_CONTENT_TYPE,
         },
@@ -289,13 +293,19 @@ async function* downloadFiles(
       const completedFile = await new Promise<string | null>((resolve) => {
         response.data.on("end", async () => {
           // Check the size of the current temporary file.
-          const stats = await stat(currentFile);
-          if (stats.size > MINIMUM_PART_SIZE) {
-            downloadedFiles.push(currentFile);
-            resolve(currentFile);
-            currentFile = tempFile();
+          let stats: Stats;
+          try {
+            stats = await stat(currentFile);
+            if (stats.size > MINIMUM_PART_SIZE) {
+              downloadedFiles.push(currentFile);
+              resolve(currentFile);
+              currentFile = tempFile();
+            }
+            resolve(null);
+          } catch (e) {
+            // This can happen if nothing has been written to the file.
+            resolve(null);
           }
-          resolve(null);
         });
       });
       if (completedFile) {
@@ -305,8 +315,14 @@ async function* downloadFiles(
 
     // In the case of a single temporary file, we need to make sure it becomes part of the list. It is
     // ok for this file to be less than the minimum part size.
-    if (downloadedFiles.length === 0) {
-      yield currentFile;
+    let stats: Stats;
+    try {
+      stats = await stat(currentFile);
+      if (stats.size > 0) {
+        yield currentFile;
+      }
+    } catch (e) {
+      // This can happen if nothing has been written to the file.
     }
     return downloadedFiles;
   } catch (e) {
@@ -316,7 +332,9 @@ async function* downloadFiles(
       resourceType,
       downloadedFiles
     );
-    await Promise.all(downloadedFiles.map((file) => rm(file)));
+    await Promise.all(downloadedFiles.map((file) => rm(file))).catch((e) =>
+      console.warn("Problem deleting files: %j (%s)", downloadedFiles, e)
+    );
     throw e;
   }
 }
@@ -356,7 +374,9 @@ async function uploadFile(
       resourceType,
       downloadedFile
     );
-    await rm(downloadedFile);
+    await rm(downloadedFile).catch((e) =>
+      console.warn("Problem deleting file: %s (%s)", downloadedFile, e)
+    );
   }
 }
 

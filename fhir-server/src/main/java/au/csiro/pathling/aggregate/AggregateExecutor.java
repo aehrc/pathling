@@ -171,7 +171,7 @@ public class AggregateExecutor extends QueryExecutor {
       @Nonnull final ResultWithExpressions resultWithExpressions) {
     // If explain queries is on, print out a query plan to the log.
     if (getConfiguration().getSpark().getExplainQueries()) {
-      log.info("$aggregate query plan:");
+      log.debug("$aggregate query plan:");
       resultWithExpressions.getDataset().explain(true);
     }
 

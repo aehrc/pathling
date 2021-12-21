@@ -120,6 +120,36 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: fhir-server/target/site/jacoco/jacoco.xml
+  import:
+    name: Build import lambda
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Run the package goal with Maven
+        run: |
+          mvn --batch-mode package \
+          -pl lib/import -am
+        timeout-minutes: 5
+      - name: Upload import lambda
+        uses: actions/upload-artifact@v2
+        with:
+          name: import-lambda
+          path: lib/import/target/pathling-import-lambda.zip
   site:
     name: Build site
     runs-on: ubuntu-latest

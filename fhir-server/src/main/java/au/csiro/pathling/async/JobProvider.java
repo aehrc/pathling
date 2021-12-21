@@ -7,6 +7,7 @@
 package au.csiro.pathling.async;
 
 import static au.csiro.pathling.caching.EntityTagInterceptor.makeRequestNonCacheable;
+import static au.csiro.pathling.caching.EntityTagInterceptor.requestIsCacheable;
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
@@ -21,6 +22,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -65,18 +67,21 @@ public class JobProvider {
    * Queries a running job for its progress, completion status and final result.
    *
    * @param id the ID of the running job
+   * @param request the {@link HttpServletRequest} for checking its cacheability
    * @param response the {@link HttpServletResponse} for updating the response
    * @return the final result of the job, as a {@link Parameters} resource
    */
   @SuppressWarnings({"unused", "TypeMayBeWeakened"})
   @Operation(name = "$job", idempotent = true)
   public IBaseResource job(@Nullable @OperationParam(name = "id") final String id,
+      @Nullable final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {
       throw new ResourceNotFoundError("Job ID not found");
     }
 
+    log.debug("Received request to check job status: {}", id);
     @Nullable final Job job = jobRegistry.get(id);
     // Check that the job exists.
     if (job == null) {
@@ -103,7 +108,9 @@ public class JobProvider {
       // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
       checkNotNull(response);
       // We need to set the caching headers such that the incomplete response is never cached.
-      makeRequestNonCacheable(response);
+      if (request != null && requestIsCacheable(request)) {
+        makeRequestNonCacheable(response);
+      }
       // Add progress information to the response.
       if (job.getTotalStages() > 0) {
         final int progress = job.getProgressPercentage();

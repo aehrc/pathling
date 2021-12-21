@@ -95,7 +95,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   public CapabilityStatement getServerConformance(
       @Nullable final HttpServletRequest httpServletRequest,
       @Nullable final RequestDetails requestDetails) {
-    log.info("Received request for server capabilities");
+    log.debug("Received request for server capabilities");
 
     final CapabilityStatement capabilityStatement = new CapabilityStatement();
     capabilityStatement.setUrl(getCapabilityUri());

@@ -75,7 +75,7 @@ public class ResourceReader {
    * Checks the warehouse location and updates the available resource types.
    */
   public void updateAvailableResourceTypes() {
-    log.info("Getting available resource types");
+    log.debug("Getting available resource types");
     @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
         .hadoopConfiguration();
     checkNotNull(hadoopConfiguration);
