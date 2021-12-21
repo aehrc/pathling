@@ -21,6 +21,8 @@ import org.apache.spark.sql.types
 import org.apache.spark.sql.types.{ObjectType, _}
 import org.hl7.fhir.r4.model.DecimalType
 
+import java.util
+
 
 /**
  * Custom coder for DecimalType.
@@ -38,55 +40,36 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
   override val schema: Seq[StructField] = Seq(StructField(elementName, decimalType), StructField(scaleFieldName, IntegerType))
 
+  //noinspection ScalaDeprecation
   override def customDecoderExpression(addToPath: String => Expression): Expression = {
-    NewInstance(primitiveClass,
-      Invoke(
-        Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
-        "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(scaleFieldName) :: Nil
-      ) :: Nil,
-      ObjectType(primitiveClass)
-    )
+    decimalExpression(addToPath)
   }
 
   override def customDeserializer2(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName] = {
 
     val deserializer = if (!isCollection) {
-      NewInstance(primitiveClass,
-        Invoke(
-          Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
-          "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(scaleFieldName) :: Nil
-        ) :: Nil,
-        ObjectType(primitiveClass)
-      )
+      decimalExpression(addToPath)
     } else {
       // Let's to this manually as we need to zip two independent arrays into into one
-      val arrayExpression = StaticInvoke(
+      val array = StaticInvoke(
         classOf[DecimalCustomCoder],
         ObjectType(classOf[Array[Any]]),
         "zipToDecimal",
         addToPath(elementName) :: addToPath(scaleFieldName) :: Nil
       )
-      StaticInvoke(
-        classOf[java.util.Arrays],
-        ObjectType(classOf[java.util.List[_]]),
-        "asList",
-        arrayExpression :: Nil)
+      arrayExpression(array)
     }
     Seq((elementName, deserializer))
   }
 
+  //noinspection ScalaDeprecation
   override def customSerializer(inputObject: Expression): List[Expression] = {
     val valueExpression = StaticInvoke(classOf[Decimal],
       decimalType,
       "apply",
       Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil)
-    val scaleExpression = StaticInvoke(classOf[Math],
-      IntegerType,
-      "min", Literal(decimalType.scale) ::
-        Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])),
-          "scale", DataTypes.IntegerType) :: Nil
-    )
-    List(Literal(elementName), valueExpression, Literal(scaleFieldName), scaleExpression)
+    val scale = scaleExpression(inputObject)
+    List(Literal(elementName), valueExpression, Literal(scaleFieldName), scale)
   }
 
   override def customSerializer2(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName] = {
@@ -94,13 +77,8 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
       decimalType,
       "apply",
       Invoke(exp, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil))
-    val scaleExpression = evaluator(exp => StaticInvoke(classOf[Math],
-      IntegerType,
-      "min", Literal(decimalType.scale) ::
-        Invoke(Invoke(exp, "getValue", ObjectType(classOf[java.math.BigDecimal])),
-          "scale", DataTypes.IntegerType) :: Nil
-    ))
-    Seq((elementName, valueExpression), (scaleFieldName, scaleExpression))
+    val scale = evaluator(exp => scaleExpression(exp))
+    Seq((elementName, valueExpression), (scaleFieldName, scale))
   }
 
   override def schema2(arrayEncoder: Option[DataType => DataType]): Seq[StructField] = {
@@ -110,6 +88,26 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
     Seq(StructField(elementName, encode(decimalType)), StructField(scaleFieldName, encode(IntegerType)))
   }
+
+  private def decimalExpression(addToPath: String => Expression) = {
+    NewInstance(primitiveClass,
+      Invoke(
+        Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
+        "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(scaleFieldName) :: Nil
+      ) :: Nil,
+      ObjectType(primitiveClass)
+    )
+  }
+
+  private def scaleExpression(inputObject: Expression) = {
+    StaticInvoke(classOf[Math],
+      IntegerType,
+      "min", Literal(decimalType.scale) ::
+        Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])),
+          "scale", DataTypes.IntegerType) :: Nil
+    )
+  }
+  
 }
 
 object DecimalCustomCoder {

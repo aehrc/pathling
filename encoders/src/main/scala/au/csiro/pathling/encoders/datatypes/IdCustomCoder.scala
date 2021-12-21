@@ -36,12 +36,14 @@ case class IdCustomCoder(elementName: String) extends CustomCoder {
 
   override val schema: Seq[StructField] = Seq(StructField(elementName, DataTypes.StringType), StructField(versionedName, DataTypes.StringType))
 
+  //noinspection ScalaDeprecation
   override def customDecoderExpression(addToPath: String => Expression): Expression = {
     NewInstance(primitiveClass,
       Invoke(addToPath(versionedName), "toString", ObjectType(classOf[String])) :: Nil,
       ObjectType(primitiveClass))
   }
 
+  //noinspection ScalaDeprecation
   override def customSerializer(inputObject: Expression): List[Expression] = {
     val idExpression = StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
       List(Invoke(inputObject, "getIdPart", ObjectType(classOf[String]))))
@@ -64,17 +66,13 @@ case class IdCustomCoder(elementName: String) extends CustomCoder {
     val deserializerExp = if (!isCollection) {
       toVersionedId(addToPath(versionedName))
     } else {
-      val arrayExpression = Invoke(
+      val array = Invoke(
         MapObjects(toVersionedId,
           addToPath(versionedName),
           StringType),
         "array",
         ObjectType(classOf[Array[Any]]))
-      StaticInvoke(
-        classOf[java.util.Arrays],
-        ObjectType(classOf[java.util.List[_]]),
-        "asList",
-        arrayExpression :: Nil)
+      arrayExpression(array)
     }
     Seq((elementName, deserializerExp))
   }
