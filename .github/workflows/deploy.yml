@@ -166,7 +166,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           mvn --batch-mode deploy \
-          -pl fhir-server,lib/import -am \
+          -pl fhir-server,lib/import,lib/js -am \
           -Pdocker \
           -DskipTests \
           -Dmaven.deploy.skip
