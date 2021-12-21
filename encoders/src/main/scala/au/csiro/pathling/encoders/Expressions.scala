@@ -178,4 +178,9 @@ case class GetClassFromContained(targetObject: Expression,
             |}
        """.stripMargin)
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    GetClassFromContained(newChildren.head, containedClass)
+  }
+  
 }

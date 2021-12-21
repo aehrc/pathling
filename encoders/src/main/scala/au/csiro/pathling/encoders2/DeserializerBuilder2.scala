@@ -74,7 +74,11 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
       // Creates a new enum factory instance for each invocation, but this is cheap
       // on modern JVMs and probably more efficient than attempting to pool the underlying
       // FHIR enum factory ourselves.
-      val factoryInstance = NewInstance(enumFactory, Nil, propagateNull = false, ObjectType(enumFactory), None)
+      val factoryInstance = NewInstance(
+        cls = enumFactory, 
+        arguments = Nil, 
+        propagateNull = false, 
+        dataType = ObjectType(enumFactory))
 
       Invoke(factoryInstance, "fromCode",
         ObjectType(enumChildDefinition.getBoundEnumType),
@@ -230,7 +234,11 @@ private[encoders2] object DeserializerBuilderProcessor {
     // Creates a new enum factory instance for each invocation, but this is cheap
     // on modern JVMs and probably more efficient than attempting to pool the underlying
     // FHIR enum factory ourselves.
-    val factoryInstance = NewInstance(enumFactory, Nil, propagateNull = false, ObjectType(enumFactory), None)
+    val factoryInstance = NewInstance(
+      cls = enumFactory, 
+      arguments = Nil, 
+      propagateNull = false, 
+      dataType = ObjectType(enumFactory))
 
     Invoke(factoryInstance, "fromCode",
       ObjectType(enumeration.getBoundEnumType),
