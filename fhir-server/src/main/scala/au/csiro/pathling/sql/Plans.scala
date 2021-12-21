@@ -106,6 +106,10 @@ case class MapWithPartitionPreview(serializer: ExpressionWrapper, decoder: Any =
   override def output: Seq[Attribute] = child.output ++ newColumns
 
   def newColumns: Seq[Attribute] = serializer.value.map(_.toAttribute)
+
+  override protected def withNewChildInternal(newChild: LogicalPlan): LogicalPlan = {
+    MapWithPartitionPreview(serializer, decoder, deserializer, preview, mapper, newChild)
+  }
 }
 
 
@@ -164,4 +168,10 @@ case class MapWithPartitionPreviewExec(deserializer: Expression,
   }
 
   override def output: Seq[Attribute] = child.output ++ serializer.map(_.toAttribute)
+
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = {
+    MapWithPartitionPreviewExec(deserializer, expressionDecoder, serializer, preview, mapper,
+      newChild)
+  }
+  
 }

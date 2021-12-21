@@ -97,7 +97,11 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
     // Creates a new enum factory instance for each invocation, but this is cheap
     // on modern JVMs and probably more efficient than attempting to pool the underlying
     // FHIR enum factory ourselves.
-    val factoryInstance = NewInstance(enumFactory, Nil, false, ObjectType(enumFactory), None)
+    val factoryInstance = NewInstance(
+      cls = enumFactory,
+      arguments = Nil,
+      propagateNull = false,
+      dataType = ObjectType(enumFactory))
 
     Invoke(factoryInstance, "fromCode",
       ObjectType(enumeration.getBoundEnumType),
@@ -243,7 +247,7 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
 
         choiceChildDefinition match {
           case composite: BaseRuntimeElementCompositeDefinition[_] => toChildSerializer(compositeToExpr(childObject, composite))
-          case primitive: RuntimePrimitiveDatatypeDefinition => primitiveToSerializer(childObject, primitive, childName); ;
+          case primitive: RuntimePrimitiveDatatypeDefinition => primitiveToSerializer(childObject, primitive, childName);;
         }
       })
 
@@ -723,4 +727,9 @@ case class GetClassFromContained(targetObject: Expression,
             |}
        """.stripMargin)
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    GetClassFromContained(newChildren.head, containedClass)
+  }
+
 }
