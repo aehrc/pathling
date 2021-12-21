@@ -1,6 +1,6 @@
 package au.csiro.pathling.encoders2
 
-import au.csiro.pathling.encoders.ObjectCast
+import au.csiro.pathling.encoders.{Deserializer, ObjectCast}
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.encoders2.DeserializerBuilderProcessor.setterFor
 import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
@@ -24,7 +24,7 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
  */
 private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expression], val dataTypeMappings: DataTypeMappings, schemaConverter: SchemaConverter2,
                                                       parent: Option[DeserializerBuilderProcessor] = None)
-  extends SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] {
+  extends SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] with Deserializer {
 
 
   override def combineChoiceOptions(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[ExpressionWithName]]): Seq[ExpressionWithName] = {
@@ -61,28 +61,7 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
 
     // Only apply the special case for non list
     if (enumChildDefinition.getMax == 1) {
-
-      // need to manually expand context here
-      def getPath: Expression = path.getOrElse(GetColumnByOrdinal(0, ObjectType(classOf[String])))
-
-      // Get the value and initialize the instance.
-      // expandPath always returns Some
-      val utfToString = Invoke(getPath, "toString", ObjectType(classOf[String]), Nil)
-
-      val enumFactory = Class.forName(enumChildDefinition.getBoundEnumType.getName + "EnumFactory")
-
-      // Creates a new enum factory instance for each invocation, but this is cheap
-      // on modern JVMs and probably more efficient than attempting to pool the underlying
-      // FHIR enum factory ourselves.
-      val factoryInstance = NewInstance(
-        cls = enumFactory, 
-        arguments = Nil, 
-        propagateNull = false, 
-        dataType = ObjectType(enumFactory))
-
-      Invoke(factoryInstance, "fromCode",
-        ObjectType(enumChildDefinition.getBoundEnumType),
-        List(utfToString))
+      enumerationToDeserializer(enumChildDefinition, path)
     } else {
       super.buildEnumPrimitive(enumDefinition, enumChildDefinition)
     }
@@ -199,10 +178,10 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
 
 }
 
-private[encoders2] object DeserializerBuilderProcessor {
+private[encoders2] object DeserializerBuilderProcessor extends Deserializer {
 
   /**
-   * Returns the setter for the given field name.s
+   * Returns the setter for the given field name.
    */
   private def setterFor(field: BaseRuntimeChildDefinition): String = {
 
@@ -221,29 +200,6 @@ private[encoders2] object DeserializerBuilderProcessor {
     }
   }
 
-  def enumerationToDeserializer(enumeration: RuntimeChildPrimitiveEnumerationDatatypeDefinition,
-                                path: Option[Expression]): Expression = {
-
-    def getPath: Expression = path.getOrElse(GetColumnByOrdinal(0, ObjectType(classOf[String])))
-
-    // Get the value and initialize the instance.
-    val utfToString = Invoke(getPath, "toString", ObjectType(classOf[String]), Nil)
-
-    val enumFactory = Class.forName(enumeration.getBoundEnumType.getName + "EnumFactory")
-
-    // Creates a new enum factory instance for each invocation, but this is cheap
-    // on modern JVMs and probably more efficient than attempting to pool the underlying
-    // FHIR enum factory ourselves.
-    val factoryInstance = NewInstance(
-      cls = enumFactory, 
-      arguments = Nil, 
-      propagateNull = false, 
-      dataType = ObjectType(enumFactory))
-
-    Invoke(factoryInstance, "fromCode",
-      ObjectType(enumeration.getBoundEnumType),
-      List(utfToString))
-  }
 }
 
 /**

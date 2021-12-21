@@ -81,31 +81,7 @@ object EncoderBuilder1 {
  */
 private[encoders1] class EncoderBuilder1(fhirContext: FhirContext,
                                         dataTypeMappings: DataTypeMappings,
-                                        schemaConverter: SchemaConverter1) {
-
-  def enumerationToDeserializer(enumeration: RuntimeChildPrimitiveEnumerationDatatypeDefinition,
-                                path: Option[Expression]): Expression = {
-
-    def getPath: Expression = path.getOrElse(GetColumnByOrdinal(0, ObjectType(classOf[String])))
-
-    // Get the value and initialize the instance.
-    val utfToString = Invoke(getPath, "toString", ObjectType(classOf[String]), Nil)
-
-    val enumFactory = Class.forName(enumeration.getBoundEnumType.getName + "EnumFactory")
-
-    // Creates a new enum factory instance for each invocation, but this is cheap
-    // on modern JVMs and probably more efficient than attempting to pool the underlying
-    // FHIR enum factory ourselves.
-    val factoryInstance = NewInstance(
-      cls = enumFactory,
-      arguments = Nil,
-      propagateNull = false,
-      dataType = ObjectType(enumFactory))
-
-    Invoke(factoryInstance, "fromCode",
-      ObjectType(enumeration.getBoundEnumType),
-      List(utfToString))
-  }
+                                        schemaConverter: SchemaConverter1) extends Deserializer {
 
   /**
    * Converts a FHIR DataType to a UTF8 string usable by Spark.
