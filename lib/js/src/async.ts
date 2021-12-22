@@ -6,7 +6,7 @@
 
 // noinspection JSUnusedGlobalSymbols
 
-import pRetry, { FailedAttemptError } from "p-retry";
+import pRetry, { AbortError, FailedAttemptError } from "p-retry";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
@@ -14,6 +14,7 @@ import {
 } from "./index";
 import { AxiosResponse } from "axios";
 import { JobClient, JobInProgressError } from "./job";
+import { buildResponseError } from "./OperationOutcome";
 
 /**
  * A set of options that can be passed to the `retry` function.
@@ -82,7 +83,10 @@ export function waitForAsyncResult(
     async () => {
       try {
         return await jobClient.request(url, requestOptions);
-      } catch (e) {
+      } catch (e: any) {
+        if (e.response && (e.response as AxiosResponse).status !== 202) {
+          throw new AbortError(buildResponseError(e));
+        }
         reportProgress(e as Error, requestOptions);
         throw e;
       }
