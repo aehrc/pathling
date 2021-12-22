@@ -10,8 +10,16 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.*;
-import lombok.*;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.validator.constraints.URL;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -172,6 +180,12 @@ public class Configuration {
       @ToString.Exclude
       private String secretAccessKey;
 
+      /**
+       * The ARN of an IAM role that should be assumed using STS.
+       */
+      @Nullable
+      private String assumedRole;
+
       @Nonnull
       public Optional<String> getAccessKeyId() {
         return Optional.ofNullable(accessKeyId);
@@ -180,6 +194,11 @@ public class Configuration {
       @Nonnull
       public Optional<String> getSecretAccessKey() {
         return Optional.ofNullable(secretAccessKey);
+      }
+
+      @Nonnull
+      public Optional<String> getAssumedRole() {
+        return Optional.ofNullable(assumedRole);
       }
 
     }
