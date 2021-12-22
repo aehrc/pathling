@@ -174,15 +174,11 @@ public class DockerImageTest {
       boolean healthy = false;
       log.info("Waiting for container to achieve healthy state");
       while (!healthy) {
-        final List<Container> containers = dockerClient.listContainersCmd()
-            .withFilter("id", Collections.singletonList(fhirServerContainerId))
-            .withFilter("health", Collections.singletonList("healthy"))
-            .exec();
-        healthy = containers.stream()
-            .map(Container::getId)
-            .collect(Collectors.toList())
-            .contains(fhirServerContainer.getId());
-        if (!healthy) {
+        try {
+          getCapabilityStatement();
+          healthy = true;
+        } catch (Exception e) {
+          log.debug("Health check failed: {}", e.getMessage());
           Thread.sleep(1000);
         }
       }
@@ -214,19 +210,7 @@ public class DockerImageTest {
   public void importDataAndQuery() throws JSONException, IOException {
     try {
       // Get the token endpoint from the CapabilityStatement.
-      final HttpUriRequest capabilitiesRequest = new HttpGet("http://localhost:8091/fhir/metadata");
-      capabilitiesRequest.addHeader("Accept", "application/fhir+json");
-
-      log.info("Sending capabilities request");
-      final CapabilityStatement capabilities;
-      try (final CloseableHttpResponse response = (CloseableHttpResponse) httpClient
-          .execute(capabilitiesRequest)) {
-        final InputStream capabilitiesStream = response.getEntity().getContent();
-        capabilities = (CapabilityStatement) jsonParser.parseResource(capabilitiesStream);
-        assertThat(response.getStatusLine().getStatusCode())
-            .withFailMessage("Capabilities operation did not succeed")
-            .isEqualTo(200);
-      }
+      final CapabilityStatement capabilities = getCapabilityStatement();
       final String tokenUrl = capabilities.getRest().stream()
           .findFirst()
           .map(rest -> ((UriType) rest.getSecurity()
@@ -367,6 +351,23 @@ public class DockerImageTest {
     stopContainer(dockerClient, fhirServerContainerId);
     fhirServerContainerId = null;
     getRuntime().removeShutdownHook(shutdownHook);
+  }
+
+  private CapabilityStatement getCapabilityStatement() throws IOException {
+    final HttpUriRequest capabilitiesRequest = new HttpGet("http://localhost:8091/fhir/metadata");
+    capabilitiesRequest.addHeader("Accept", "application/fhir+json");
+
+    log.info("Sending capabilities request");
+    final CapabilityStatement capabilities;
+    try (final CloseableHttpResponse response = (CloseableHttpResponse) httpClient
+        .execute(capabilitiesRequest)) {
+      final InputStream capabilitiesStream = response.getEntity().getContent();
+      capabilities = (CapabilityStatement) jsonParser.parseResource(capabilitiesStream);
+      assertThat(response.getStatusLine().getStatusCode())
+          .withFailMessage("Capabilities operation did not succeed")
+          .isEqualTo(200);
+    }
+    return capabilities;
   }
 
   static class StopContainer extends Thread {

@@ -301,6 +301,50 @@
         </executions>
       </plugin>
     </plugins>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>com.google.cloud.tools</groupId>
+          <artifactId>jib-maven-plugin</artifactId>
+          <version>3.1.4</version>
+          <configuration>
+            <from>
+              <image>openjdk:11-jre-slim</image>
+            </from>
+            <to>
+              <image>${pathling.fhirServerDockerRepo}</image>
+              <tags>
+                <tag>latest</tag>
+                <tag>${project.version}</tag>
+                <tag>${project.majorVersion}</tag>
+              </tags>
+            </to>
+            <container>
+              <jvmFlags>
+                <jvmFlag>-Xmx2g</jvmFlag>
+                <jvmFlag>-XX:MaxMetaspaceSize=400m</jvmFlag>
+                <jvmFlag>-XX:ReservedCodeCacheSize=240m</jvmFlag>
+                <jvmFlag>-Xss1m</jvmFlag>
+              </jvmFlags>
+              <environment>
+                <PATHLING_VERSION>${project.version}</PATHLING_VERSION>
+              </environment>
+              <labels>
+                <copyright>Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+                  Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+                  Software Licence Agreement.
+                </copyright>
+                <author>John Grimes &lt;John.Grimes@csiro.au&gt;</author>
+              </labels>
+              <ports>
+                <port>8080</port>
+                <port>4040</port>
+              </ports>
+            </container>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
 
   <profiles>
@@ -398,53 +442,36 @@
           <plugin>
             <groupId>com.google.cloud.tools</groupId>
             <artifactId>jib-maven-plugin</artifactId>
-            <version>3.1.4</version>
             <executions>
               <execution>
                 <id>build</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>dockerBuild</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>deploy</id>
                 <phase>deploy</phase>
                 <goals>
                   <goal>build</goal>
                 </goals>
+                <configuration>
+                  <from combine.children="append">
+                    <platforms>
+                      <platform>
+                        <architecture>amd64</architecture>
+                        <os>linux</os>
+                      </platform>
+                      <platform>
+                        <architecture>arm64</architecture>
+                        <os>linux</os>
+                      </platform>
+                    </platforms>
+                  </from>
+                </configuration>
               </execution>
             </executions>
-            <configuration>
-              <from>
-                <image>openjdk:11-jre-slim</image>
-                <platforms>
-                  <platform>
-                    <architecture>amd64</architecture>
-                    <os>linux</os>
-                  </platform>
-                  <platform>
-                    <architecture>arm64</architecture>
-                    <os>linux</os>
-                  </platform>
-                </platforms>
-              </from>
-              <to>
-                <image>${pathling.fhirServerDockerRepo}</image>
-              </to>
-              <container>
-                <jvmFlags>
-                  <jvmFlag>-Xmx2g</jvmFlag>
-                  <jvmFlag>-XX:MaxMetaspaceSize=400m</jvmFlag>
-                  <jvmFlag>-XX:ReservedCodeCacheSize=240m</jvmFlag>
-                  <jvmFlag>-Xss1m</jvmFlag>
-                </jvmFlags>
-                <environment>
-                  <PATHLING_VERSION>${project.version}</PATHLING_VERSION>
-                </environment>
-                <labels>
-                  <copyright>Copyright © 2018-2021, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source Software Licence Agreement.</copyright>
-                  <author>John Grimes &lt;John.Grimes@csiro.au&gt;</author>
-                </labels>
-                <ports>
-                  <port>8080</port>
-                  <port>4040</port>
-                </ports>
-              </container>
-            </configuration>
           </plugin>
         </plugins>
       </build>
