@@ -166,6 +166,12 @@ these functions to keep a FHIR endpoint in sync with Pathling:
 can be used to schedule the running of the step function at a specified 
 frequency.
 
+### Sentry support
+
+This program can also report any errors to Sentry - just set the `SENTRY_DSN`, 
+`SENTRY_ENVIRONMENT` (optional) and `SENTRY_RELEASE` (optional) environment 
+variables.
+
 ## Use as a Node.js command-line program
 
 These functions can also be installed as an NPM package, using the following 

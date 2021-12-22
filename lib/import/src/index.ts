@@ -21,6 +21,7 @@ import {
   RetryConfigType,
   transferToS3Configured,
 } from "./config";
+import { initializeSentry } from "./sentry";
 
 let config: Config;
 const argument = process.argv[2],
@@ -35,6 +36,7 @@ try {
   );
   config = new EnvironmentConfig();
 }
+initializeSentry(config);
 
 async function run() {
   function retry(

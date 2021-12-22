@@ -25,6 +25,7 @@ import {
 import { ImportResult } from "./import";
 import { CheckStatusResult } from "./checkStatus";
 import { ExportResult } from "./export";
+import { initializeSentry } from "./sentry";
 
 export interface ExportHandlerOutput {
   statusUrl: ExportResult;
@@ -43,6 +44,7 @@ export interface ImportHandlerOutput {
 }
 
 const config = new EnvironmentConfig();
+initializeSentry(config);
 
 /**
  * Lambda handler for bulk FHIR export.
