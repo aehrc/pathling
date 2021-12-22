@@ -93,7 +93,9 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     this.result = initializeDataset();
     this.count = Optional.empty();
 
-    final String filterStrings = filters.map(SearchExecutor::filtersToString).orElse("none");
+    final String filterStrings = filters
+        .map(SearchExecutor::filtersToString)
+        .orElse("none");
     log.info("Received search request: filters=[{}]", filterStrings);
 
   }
@@ -220,7 +222,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
 
   private void reportQueryPlan(@Nonnull final Dataset<Row> resources) {
     if (getConfiguration().getSpark().getExplainQueries()) {
-      log.info("Search query plan:");
+      log.debug("Search query plan:");
       resources.explain(true);
     }
   }

@@ -141,6 +141,19 @@ class CodingLiteralPathTest {
   }
 
   @Test
+  void roundTripWithQuotedComponentWithSpace() {
+    final String expression = "'Some CodeSystem'|166056000";
+    final CodingLiteralPath codingLiteralPath = CodingLiteralPath
+        .fromString(expression, inputContext);
+    final Coding literalValue = codingLiteralPath.getLiteralValue();
+    assertEquals("Some CodeSystem", literalValue.getSystem());
+    assertEquals("166056000", literalValue.getCode());
+
+    final String actualExpression = codingLiteralPath.getExpression();
+    assertEquals(expression, actualExpression);
+  }
+
+  @Test
   void fromMalformedString() {
     assertThrows(IllegalArgumentException.class, () -> CodingLiteralPath.fromString(
         "http://snomed.info/sct", inputContext));

@@ -61,9 +61,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
       http.authorizeRequests()
           // The following requests do not require authentication.
           .mvcMatchers(HttpMethod.GET,
-              "/fhir/metadata",   // Server capabilities operation
-              "/fhir/OperationDefinition/**",  // GET on OperationDefinition resources
-              "/fhir/.well-known/**")          // SMART configuration endpoint
+              "/metadata",   // Server capabilities operation
+              "/OperationDefinition/**",  // GET on OperationDefinition resources
+              "/.well-known/**")          // SMART configuration endpoint
           .permitAll()
           // Anything else needs to be authenticated.
           .anyRequest()
@@ -95,6 +95,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     cors.setAllowedOriginPatterns(configuration.getCors().getAllowedOriginPatterns());
     cors.setAllowedMethods(configuration.getCors().getAllowedMethods());
     cors.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
+    cors.setExposedHeaders(configuration.getCors().getExposedHeaders());
     cors.setMaxAge(configuration.getCors().getMaxAge());
     cors.setAllowCredentials(configuration.getAuth().isEnabled());
 

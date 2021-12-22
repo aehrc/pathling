@@ -45,7 +45,7 @@ public class ErrorHandlingInterceptorTest {
 
   @Nonnull
   private BaseServerResponseException callInterceptor(final Throwable error) {
-    return errorHandlingInterceptor.convertError(null, null, error, null, null);
+    return errorHandlingInterceptor.handleOutgoingException(null, null, error, null, null);
   }
 
   @Test

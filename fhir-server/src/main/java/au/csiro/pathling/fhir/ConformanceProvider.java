@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.fhir.OperationDefinitionProvider.SYSTEM_LEVEL_OPERATIONS;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.AUTH_URL;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
@@ -94,7 +95,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   public CapabilityStatement getServerConformance(
       @Nullable final HttpServletRequest httpServletRequest,
       @Nullable final RequestDetails requestDetails) {
-    log.info("Received request for server capabilities");
+    log.debug("Received request for server capabilities");
 
     final CapabilityStatement capabilityStatement = new CapabilityStatement();
     capabilityStatement.setUrl(getCapabilityUri());
@@ -184,7 +185,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       resource.getInteraction().add(interaction);
 
       // Add the `aggregate` operation to all resources.
-      final CanonicalType aggregateOperationUri = new CanonicalType(getAggregateUri());
+      final CanonicalType aggregateOperationUri = new CanonicalType(getOperationUri("aggregate"));
       final CapabilityStatementRestResourceOperationComponent aggregateOperation =
           new CapabilityStatementRestResourceOperationComponent(new StringType("aggregate"),
               aggregateOperationUri);
@@ -193,7 +194,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       // Add the `fhirPath` search parameter to all resources.
       final CapabilityStatementRestResourceOperationComponent searchOperation = new CapabilityStatementRestResourceOperationComponent();
       searchOperation.setName("fhirPath");
-      searchOperation.setDefinition(getSearchUri());
+      searchOperation.setDefinition(getOperationUri("search"));
       resource.addOperation(searchOperation);
 
       resources.add(resource);
@@ -216,13 +217,14 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private List<CapabilityStatementRestResourceOperationComponent> buildOperations() {
     final List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
 
-    // Add the `import` operation at the system level.
-    final CanonicalType importOperationUri = new CanonicalType(getImportUri());
-    final CapabilityStatementRestResourceOperationComponent importOperation =
-        new CapabilityStatementRestResourceOperationComponent(new StringType("import"),
-            importOperationUri);
+    for (final String name : SYSTEM_LEVEL_OPERATIONS) {
+      final CanonicalType operationUri = new CanonicalType(getOperationUri(name));
+      final CapabilityStatementRestResourceOperationComponent operation =
+          new CapabilityStatementRestResourceOperationComponent(new StringType(name),
+              operationUri);
+      operations.add(operation);
+    }
 
-    operations.add(importOperation);
     return operations;
   }
 
@@ -233,20 +235,8 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   }
 
   @Nonnull
-  private String getSearchUri() {
-    return URI_BASE + "/OperationDefinition/search-" + version.getMajorVersion()
-        .orElse(UNKNOWN_VERSION);
-  }
-
-  @Nonnull
-  private String getAggregateUri() {
-    return URI_BASE + "/OperationDefinition/aggregate-" + version.getMajorVersion()
-        .orElse(UNKNOWN_VERSION);
-  }
-
-  @Nonnull
-  private String getImportUri() {
-    return URI_BASE + "/OperationDefinition/import-" + version.getMajorVersion()
+  private String getOperationUri(final String name) {
+    return URI_BASE + "/OperationDefinition/" + name + "-" + version.getMajorVersion()
         .orElse(UNKNOWN_VERSION);
   }
 

@@ -19,7 +19,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>4.0.1</version>
+  <version>5.0.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -44,7 +44,7 @@
 
   <organization>
     <name>Australian e-Health Research Centre, CSIRO</name>
-    <url>https://aehrc.com</url>
+    <url>https://aehrc.csiro.au</url>
   </organization>
   <licenses>
     <license>
@@ -67,20 +67,23 @@
   </ciManagement>
 
   <properties>
-    <project.majorVersion>4</project.majorVersion>
+    <project.majorVersion>5</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.hapiFhirVersion>5.5.0</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>3.1.2</pathling.sparkVersion>
+    <pathling.hapiFhirVersion>5.6.1</pathling.hapiFhirVersion>
+    <pathling.sparkVersion>3.2.0</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
-    <pathling.dockerJavaVersion>3.2.11</pathling.dockerJavaVersion>
-    <pathling.hadoopVersion>2.10.1</pathling.hadoopVersion>
+    <pathling.dockerJavaVersion>3.2.12</pathling.dockerJavaVersion>
+    <pathling.hadoopVersion>3.3.1</pathling.hadoopVersion>
     <pathling.hadoopMirror>https://downloads.apache.org/hadoop/common</pathling.hadoopMirror>
+    <pathling.awsSdkVersion>1.12.47</pathling.awsSdkVersion>
   </properties>
 
   <modules>
     <module>encoders</module>
     <module>fhir-server</module>
+    <module>lib/import</module>
+    <module>lib/js</module>
     <module>site</module>
   </modules>
 
@@ -122,7 +125,7 @@
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
         <artifactId>woodstox-core</artifactId>
-        <version>6.2.6</version>
+        <version>6.2.7</version>
       </dependency>
 
       <!-- Apache Spark -->
@@ -154,11 +157,6 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-client</artifactId>
-        <version>${pathling.hadoopVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-aws</artifactId>
         <version>${pathling.hadoopVersion}</version>
         <exclusions>
@@ -175,7 +173,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
-        <version>2.12.5</version>
+        <version>2.13.0</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.janino</groupId>
@@ -195,11 +193,20 @@
         <version>${project.version}</version>
       </dependency>
 
+      <!-- AWS SDK -->
+      <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-bom</artifactId>
+        <version>${pathling.awsSdkVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
       <!-- Error monitoring -->
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>5.1.2</version>
+        <version>5.5.2</version>
       </dependency>
 
       <!-- Testing -->
@@ -218,6 +225,8 @@
       <dependency>
         <groupId>org.skyscreamer</groupId>
         <artifactId>jsonassert</artifactId>
+        <version>1.5.0</version>
+        <scope>test</scope>
         <exclusions>
           <exclusion>
             <groupId>com.vaadin.external.google</groupId>
@@ -230,7 +239,7 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.20</version>
+        <version>1.18.22</version>
         <scope>provided</scope>
       </dependency>
     </dependencies>
@@ -266,7 +275,7 @@
         <plugin>
           <groupId>net.alchim31.maven</groupId>
           <artifactId>scala-maven-plugin</artifactId>
-          <version>4.5.4</version>
+          <version>4.5.6</version>
           <executions>
             <execution>
               <id>scala-compile-first</id>
@@ -421,7 +430,8 @@
                       License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0
                       License|Apache License 2.0|The Apache License, Version 2.0|Apache 2.0 License
                     </licenseMerge>
-                    <licenseMerge>BSD License|BSD New|The BSD License|New BSD License|BSD-3-Clause</licenseMerge>
+                    <licenseMerge>BSD License|BSD New|The BSD License|New BSD License|BSD-3-Clause
+                    </licenseMerge>
                     <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - v 1.0
                     </licenseMerge>
                     <licenseMerge>MIT License|The MIT License (MIT)|The MIT License</licenseMerge>

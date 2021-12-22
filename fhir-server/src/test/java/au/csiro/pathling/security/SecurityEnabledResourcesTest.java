@@ -10,11 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(
-    properties = {
-        "pathling.auth.enabled=true",
-        "pathling.caching.enabled=false"
-    })
+@TestPropertySource(properties = {"pathling.auth.enabled=true"})
 public class SecurityEnabledResourcesTest extends SecurityTestForResources {
 
   @Test
@@ -52,4 +48,5 @@ public class SecurityEnabledResourcesTest extends SecurityTestForResources {
   public void testPassIfResourceReadWithWildcardAuthority() {
     assertReadSuccess();
   }
+  
 }

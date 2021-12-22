@@ -40,9 +40,13 @@ pathling:
     aws:
       # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
       anonymousAccess: true
+      
       # Authentication details for connecting to protected Amazon S3 locations.
       # accessKeyId: [AWS access key ID]
       # secretAccessKey: [AWS secret access key]
+      
+      # The ARN of an IAM role to be assumed using STS.
+      # assumedRole: [ARN of IAM role]
 
   terminology:
     # Enables the use of terminology functions.
@@ -77,22 +81,11 @@ pathling:
     # Provides the URL which will be advertised as the token revocation endpoint.
     # revokeUrl: [token revocation URL]
 
-  caching:
-    # Controls whether request caching is enabled.
-    enabled: true
-
-    # Controls the maximum number of cache entries held in memory for each of the individual cache
-    # types. You can disable a particular type of caching by setting this number to zero.
-    aggregateRequestCacheSize: 100
-    searchBundleCacheSize: 100
-    searchPageCacheSize: 100
-    resourceReaderCacheSize: 100
-
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: []
-    allowedOriginPatterns: []
+    allowedOrigins: [ ]
+    allowedOriginPatterns: [ ]
     allowedMethods:
       - OPTIONS
       - GET
@@ -100,28 +93,32 @@ pathling:
     allowedHeaders:
       - Content-Type
       - Authorization
+      - Prefer
+    exposedHeaders:
+      - Content-Location
+      - X-Progress
     maxAge: 600
 
   import:
     allowableSources:
       - "file:///usr/share/staging"
 
+  async:
+    enabled: true
+
+  encoding:
+    # Controls the maximum depth of nested element data that is encoded upon import.
+    maxNestingLevel: 3
+
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.
 # Here is the full list: https://spark.apache.org/docs/latest/configuration.html
 spark:
   master: local[*]
-  executor:
-    memory: 1g
   sql:
     adaptive:
       enabled: true
-    shuffle:
-      service:
+      coalescePartitions:
         enabled: true
-      partitions: 2
-      autoBroadcastJoinThreshold: -1
   scheduler:
     mode: FAIR
-  dynamicAllocation:
-    enabled: true

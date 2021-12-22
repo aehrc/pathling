@@ -18,7 +18,7 @@
       "use": "in",
       "min": 1,
       "max": "*",
-      "documentation": "A FHIRPath expression which is used to calculate a summary value from each grouping. The context is a collection of resources of the type this operation was invoked against. The expression must evaluate to a primitive value.",
+      "documentation": "A FHIRPath expression that is used to calculate a summary value from each grouping. The context is a collection of resources of the type this operation was invoked against. The expression must evaluate to a primitive value.",
       "type": "string"
     },
     {

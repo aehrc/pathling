@@ -21,7 +21,7 @@
     <logger level="INFO" name="au.csiro.pathling.test.TimingExtension">
       <appender-ref ref="TIMING"/>
     </logger>
-    <logger level="INFO" name="au.csiro"/>
+    <logger level="DEBUG" name="au.csiro"/>
     <root level="WARN">
       <appender-ref ref="STDOUT"/>
     </root>

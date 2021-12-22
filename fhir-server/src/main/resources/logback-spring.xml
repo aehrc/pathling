@@ -13,6 +13,7 @@
       </encoder>
     </appender>
     <logger level="INFO" name="au.csiro"/>
+    <logger level="WARN" name="requestLogger"/>
     <root level="WARN">
       <appender-ref ref="STDOUT"/>
     </root>

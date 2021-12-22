@@ -1,7 +1,7 @@
 ---
 layout: page
 title: FHIRPath
-nav_order: 4
+nav_order: 5
 parent: Documentation
 has_children: true
 ---

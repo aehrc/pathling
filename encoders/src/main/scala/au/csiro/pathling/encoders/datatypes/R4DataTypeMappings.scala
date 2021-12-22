@@ -12,6 +12,8 @@
 
 package au.csiro.pathling.encoders.datatypes
 
+import java.util.TimeZone
+
 import au.csiro.pathling.encoders.StaticField
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
@@ -20,24 +22,18 @@ import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, In
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
-import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent
-import org.hl7.fhir.r4.model.QuestionnaireResponse.{QuestionnaireResponseItemAnswerComponent, QuestionnaireResponseItemComponent}
 import org.hl7.fhir.r4.model._
-
-import java.util.TimeZone
 
 /**
  * Data type mappings for FHIR STU3.
  */
 class R4DataTypeMappings extends DataTypeMappings {
-
   /**
    * Map associating FHIR primitive datatypes with the Spark types used to encode them.
    */
   private val fhirPrimitiveToSparkTypes: Map[Class[_ <: IPrimitiveType[_]], DataType] =
     Map(
       classOf[MarkdownType] -> DataTypes.StringType,
-      classOf[IdType] -> DataTypes.StringType,
       classOf[Enumeration[_]] -> DataTypes.StringType,
       classOf[DateTimeType] -> DataTypes.StringType,
       classOf[TimeType] -> DataTypes.StringType,
@@ -52,7 +48,10 @@ class R4DataTypeMappings extends DataTypeMappings {
       classOf[PositiveIntType] -> DataTypes.IntegerType,
       classOf[BooleanType] -> DataTypes.BooleanType,
       classOf[InstantType] -> DataTypes.TimestampType,
-      classOf[Base64BinaryType] -> DataTypes.BinaryType)
+      classOf[Base64BinaryType] -> DataTypes.BinaryType,
+      classOf[OidType] -> DataTypes.StringType,
+      classOf[UuidType] -> DataTypes.StringType
+    )
 
   override def primitiveToDataType(definition: RuntimePrimitiveDatatypeDefinition): DataType = {
 
@@ -97,13 +96,6 @@ class R4DataTypeMappings extends DataTypeMappings {
   override def skipField(definition: BaseRuntimeElementCompositeDefinition[_],
                          child: BaseRuntimeChildDefinition): Boolean = {
 
-    // QuestionnaireItems may recursive, so skip the nested 'item' field
-    val skipRecursiveItem = (
-      definition.getImplementingClass == classOf[QuestionnaireItemComponent] ||
-        definition.getImplementingClass == classOf[QuestionnaireResponseItemComponent] ||
-        definition.getImplementingClass == classOf[QuestionnaireResponseItemAnswerComponent]
-      ) && child.getElementName == "item"
-
     // References may be recursive, so include only the reference adn display name.
     val skipRecursiveReference = definition.getImplementingClass == classOf[Reference] &&
       !(child.getElementName == "reference" ||
@@ -113,7 +105,7 @@ class R4DataTypeMappings extends DataTypeMappings {
     val skipContains = definition.getImplementingClass == classOf[ValueSet.ValueSetExpansionContainsComponent] &&
       child.getElementName == "contains"
 
-    skipRecursiveItem || skipRecursiveReference || skipContains
+    skipRecursiveReference || skipContains
   }
 
   override def primitiveEncoderExpression(inputObject: Expression,
@@ -153,7 +145,6 @@ class R4DataTypeMappings extends DataTypeMappings {
     }
   }
 
-
   override def primitiveDecoderExpression(primitiveClass: Class[_ <: IPrimitiveType[_]],
                                           path: Option[Expression]): Expression = {
 
@@ -163,7 +154,7 @@ class R4DataTypeMappings extends DataTypeMappings {
 
       // If the FHIR primitive is represented as a string type, read it from UTF8 and
       // set the value.
-      case cls if fhirPrimitiveToSparkTypes.get(primitiveClass).contains(DataTypes.StringType) => {
+      case _ if fhirPrimitiveToSparkTypes.get(primitiveClass).contains(DataTypes.StringType) =>
 
         val newInstance = NewInstance(primitiveClass,
           Nil,
@@ -172,7 +163,6 @@ class R4DataTypeMappings extends DataTypeMappings {
         // Convert UTF8String to a regular string.
         InitializeJavaBean(newInstance, Map("setValueAsString" ->
           Invoke(getPath, "toString", ObjectType(classOf[String]), Nil)))
-      }
 
       // Classes that can be directly encoded as their primitive type.
       case cls if cls == classOf[org.hl7.fhir.r4.model.BooleanType] ||
@@ -184,7 +174,7 @@ class R4DataTypeMappings extends DataTypeMappings {
           List(getPath),
           ObjectType(primitiveClass))
 
-      case instantClass if instantClass == classOf[org.hl7.fhir.r4.model.InstantType] => {
+      case instantClass if instantClass == classOf[org.hl7.fhir.r4.model.InstantType] =>
 
         val millis = StaticField(classOf[TemporalPrecisionEnum],
           ObjectType(classOf[TemporalPrecisionEnum]),
@@ -196,14 +186,13 @@ class R4DataTypeMappings extends DataTypeMappings {
           Literal("UTC", ObjectType(classOf[String])) :: Nil)
 
         NewInstance(primitiveClass,
-          List(StaticInvoke(org.apache.spark.sql.catalyst.util.DateTimeUtils.getClass(),
+          List(StaticInvoke(org.apache.spark.sql.catalyst.util.DateTimeUtils.getClass,
             ObjectType(classOf[java.sql.Timestamp]),
             "toJavaTimestamp",
             getPath :: Nil),
             millis,
             UTCZone),
           ObjectType(primitiveClass))
-      }
 
       case unknown => throw new IllegalArgumentException("Cannot deserialize unknown primitive type: " + unknown.getName)
     }
@@ -212,13 +201,11 @@ class R4DataTypeMappings extends DataTypeMappings {
   override def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Option[CustomCoder] = {
     elementDefinition match {
       case primitive: RuntimePrimitiveDatatypeDefinition
-        if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass => {
+        if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass =>
         Some(DecimalCustomCoder(elementName))
-      }
       case primitive: RuntimePrimitiveDatatypeDefinition
-        if classOf[org.hl7.fhir.r4.model.IdType] == primitive.getImplementingClass => {
+        if classOf[org.hl7.fhir.r4.model.IdType] == primitive.getImplementingClass =>
         Some(IdCustomCoder(elementName))
-      }
       case _ => super.customEncoder(elementDefinition, elementName)
     }
   }

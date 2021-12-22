@@ -10,8 +10,16 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.*;
-import lombok.*;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.validator.constraints.URL;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -78,9 +86,6 @@ public class Configuration {
   private Configuration.Authorization auth;
 
   @NotNull
-  private Caching caching;
-
-  @NotNull
   private Cors cors;
 
   // Handle the `import` property outside of Lombok, as import is a Java keyword.
@@ -88,6 +93,9 @@ public class Configuration {
   @Setter(AccessLevel.NONE)
   @NotNull
   private Import import_;
+
+  @NotNull
+  private Async async;
 
   @Nonnull
   public Import getImport() {
@@ -97,6 +105,9 @@ public class Configuration {
   public void setImport(@Nonnull final Import import_) {
     this.import_ = import_;
   }
+
+  @NotNull
+  private Encoding encoding;
 
   /**
    * Represents configuration that controls the behaviour of Apache Spark.
@@ -169,6 +180,12 @@ public class Configuration {
       @ToString.Exclude
       private String secretAccessKey;
 
+      /**
+       * The ARN of an IAM role that should be assumed using STS.
+       */
+      @Nullable
+      private String assumedRole;
+
       @Nonnull
       public Optional<String> getAccessKeyId() {
         return Optional.ofNullable(accessKeyId);
@@ -177,6 +194,11 @@ public class Configuration {
       @Nonnull
       public Optional<String> getSecretAccessKey() {
         return Optional.ofNullable(secretAccessKey);
+      }
+
+      @Nonnull
+      public Optional<String> getAssumedRole() {
+        return Optional.ofNullable(assumedRole);
       }
 
     }
@@ -253,39 +275,6 @@ public class Configuration {
   }
 
   /**
-   * Represents configuration specific to request caching.
-   */
-  @Data
-  public static class Caching {
-
-    /**
-     * Controls whether request caching is enabled.
-     */
-    @NotNull
-    private boolean enabled;
-
-    /**
-     * Controls the maximum number of cache entries held in memory.
-     */
-    @NotNull
-    @Min(0)
-    private Long aggregateRequestCacheSize;
-
-    @NotNull
-    @Min(0)
-    private Long searchBundleCacheSize;
-
-    @NotNull
-    @Min(0)
-    private Long searchPageCacheSize;
-
-    @NotNull
-    @Min(0)
-    private Long resourceReaderCacheSize;
-
-  }
-
-  /**
    * Represents configuration relating to Cross-Origin Resource Sharing (CORS).
    */
   @Data
@@ -304,6 +293,9 @@ public class Configuration {
     private List<String> allowedHeaders;
 
     @NotNull
+    private List<String> exposedHeaders;
+
+    @NotNull
     @Min(0)
     private Long maxAge;
 
@@ -320,6 +312,36 @@ public class Configuration {
      */
     @NotNull
     private List<String> allowableSources;
+
+  }
+
+  /**
+   * Represents configuration relating to asynchronous processing.
+   */
+  @Data
+  public static class Async {
+
+    /**
+     * Enables asynchronous process of requests.
+     */
+    @NotNull
+    private boolean enabled;
+
+  }
+
+
+  /**
+   * Represents configuration specific to FHIR encoding.
+   */
+  @Data
+  public static class Encoding {
+
+    /**
+     * The maximum nesting level for recursive data types.
+     */
+    @NotNull
+    @Min(0)
+    private Integer maxNestingLevel;
 
   }
 

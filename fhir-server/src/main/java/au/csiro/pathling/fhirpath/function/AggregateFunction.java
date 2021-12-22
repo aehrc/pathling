@@ -156,6 +156,9 @@ public abstract class AggregateFunction {
         .agg(firstSelection, remainingSelection);
     final Column finalValueColumn = col("value");
 
+    // Clear out the node ID columns in the parser context - as they are no longer valid for joining.
+    parserContext.getNodeIdColumns().clear();
+
     // empty eid column as the result is singular
     return resultPathFactory
         .create(expression, finalDataset, idColumn, Optional.empty(), finalValueColumn, true,

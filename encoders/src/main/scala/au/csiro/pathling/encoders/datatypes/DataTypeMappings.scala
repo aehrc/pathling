@@ -67,14 +67,14 @@ trait DataTypeMappings {
    *
    * @param inputObject an expression referring to the composite object to encode
    * @param definition  the composite definition to encode
-   * @return an optional expression sequence if the composit is overridden.
+   * @return an optional expression sequence if the composite is overridden.
    */
   def overrideCompositeExpression(inputObject: Expression,
                                   definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[Expression]]
 
   /**
    * Returns true if the given field should be skipped during encoding and decoding, false otherwise.
-   * This allows the data type to explicitily short circuit a handful of recursive data model
+   * This allows the data type to explicitly short circuit a handful of recursive data model
    * definitions that cannot be encoded in Spark.
    */
   def skipField(compositeDefinition: BaseRuntimeElementCompositeDefinition[_],
@@ -95,8 +95,8 @@ trait DataTypeMappings {
   /**
    * Returns a specialized custom coder for this child definition.
    *
-   * @param elementDefinition
-   * @param elementName
+   * @param elementDefinition the element definition
+   * @param elementName the name of the element
    * @return a specialized custom coder
    */
 
