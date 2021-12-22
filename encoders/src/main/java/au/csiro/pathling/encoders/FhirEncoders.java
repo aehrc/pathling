@@ -208,8 +208,7 @@ public class FhirEncoders {
     final RuntimeResourceDefinition definition =
         context.getResourceDefinition(type);
 
-    final StringBuilder keyBuilder = new StringBuilder(type.getName());
-    final int key = keyBuilder.toString().hashCode();
+    final int key = type.getName().hashCode();
 
     synchronized (encoderCache) {
 
@@ -322,6 +321,7 @@ public class FhirEncoders {
       return this;
     }
 
+    @SuppressWarnings("unused")
     public Builder withV2() {
       this.encoderVersion = 2;
       return this;

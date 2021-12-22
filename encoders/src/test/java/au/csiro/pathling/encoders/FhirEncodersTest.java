@@ -27,11 +27,28 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.*;
-import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityComponent;
-import org.junit.*;
+import org.hl7.fhir.r4.model.Annotation;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.QuestionnaireResponse;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * Test for FHIR encoders.
@@ -208,7 +225,7 @@ public class FhirEncodersTest {
     final Coding actualCoding = decodedCondition.getSeverity().getCodingFirstRep();
 
     // Codings are a nested array, so we explode them into a table of the coding
-    // fields so we can easily select and compare individual fields.
+    // fields, so we can easily select and compare individual fields.
     final Dataset<Row> severityCodings = conditionsDataset
         .select(functions.explode(conditionsDataset.col("severity.coding"))
             .alias("coding"))
@@ -265,7 +282,7 @@ public class FhirEncodersTest {
         .head()
         .getInt(0);
 
-    // we expect the values to be the same but they may differ in scale
+    // we expect the values to be the same, but they may differ in scale
     Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
     Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
 
@@ -301,7 +318,7 @@ public class FhirEncodersTest {
         .head()
         .getInt(0);
 
-    // we expect the values to be the same but they may differ in scale
+    // we expect the values to be the same, but they may differ in scale
     Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
     Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
 

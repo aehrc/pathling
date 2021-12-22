@@ -1,7 +1,8 @@
 package au.csiro.pathling.encoders2
 
-import au.csiro.pathling.encoders.{Deserializer, ObjectCast}
+import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.encoders.{Deserializer, ObjectCast}
 import au.csiro.pathling.encoders2.DeserializerBuilderProcessor.setterFor
 import au.csiro.pathling.encoders2.SchemaTraversal.isCollection
 import ca.uhn.fhir.context._
@@ -96,17 +97,13 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
 
     assert(path.isDefined, "We expect a non-empty path here")
     val elementType: DataType = getSqlDatatypeFor(elementDefinition)
-    val arrayExpression = Invoke(
+    val array = Invoke(
       MapObjects(elementMapper,
         path.get,
         elementType),
       "array",
       ObjectType(classOf[Array[Any]]))
-    StaticInvoke(
-      classOf[java.util.Arrays],
-      ObjectType(classOf[java.util.List[_]]),
-      "asList",
-      arrayExpression :: Nil)
+    arrayExpression(array)
   }
 
   override def buildElement(elementName: String, elementValue: Expression, definition: BaseRuntimeElementDefinition[_]): ExpressionWithName = {
@@ -119,6 +116,7 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
 
   override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): Expression = {
 
+    //noinspection DuplicatedCode
     def getPath: Expression = path.getOrElse(GetColumnByOrdinal(0, ObjectType(xhtmlHl7Org.getImplementingClass)))
 
     val newInstance = NewInstance(xhtmlHl7Org.getImplementingClass,
@@ -135,6 +133,7 @@ private[encoders2] class DeserializerBuilderProcessor(val path: Option[Expressio
   }
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
+    //noinspection DuplicatedCode
     val compositeInstance = NewInstance(definition.getImplementingClass,
       Nil,
       ObjectType(definition.getImplementingClass))
@@ -187,6 +186,7 @@ private[encoders2] object DeserializerBuilderProcessor extends Deserializer {
 
     // Primitive single-value types typically use the Element suffix in their
     // setters, with the exception of the "div" field for reasons that are not clear.
+    //noinspection DuplicatedCode
     if (field.isInstanceOf[RuntimeChildPrimitiveDatatypeDefinition] &&
 
       // Enumerations are set directly rather than via elements.

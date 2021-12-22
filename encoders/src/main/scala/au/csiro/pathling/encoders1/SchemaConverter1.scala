@@ -69,13 +69,14 @@ class SchemaConverter1(val fhirContext: FhirContext, val dataTypeMappings: DataT
    *
    * @param elementDefinition the definition of the element
    * @param elementName       the name of the element
-   * @param isCollection      is the element is part of a collectio (max allowed occurence > 1)
+   * @param isCollection      is the element is part of a collection (max allowed occurrence > 1)
    * @return the list of fields for the element representation.
    */
   private def elementToFields(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String, isCollection: Boolean): Seq[StructField] = {
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     assert(customEncoder.isEmpty || !isCollection,
       "Collections are not supported for custom encoders for: " + elementName + "-> " + elementDefinition)
+    //noinspection ScalaDeprecation
     customEncoder.map(_.schema).getOrElse {
       val childType = elementDefinition match {
         case composite: BaseRuntimeElementCompositeDefinition[_] => compositeToStructType(composite)
@@ -135,6 +136,7 @@ class SchemaConverter1(val fhirContext: FhirContext, val dataTypeMappings: DataT
    *                   types.
    * @return The schema of the parent as a Spark StructType
    */
+  //noinspection ScalaUnusedSymbol
   private def parentToStructType(definition: BaseRuntimeElementCompositeDefinition[_],
                                  contained: Seq[BaseRuntimeElementCompositeDefinition[_]]): StructType = {
 

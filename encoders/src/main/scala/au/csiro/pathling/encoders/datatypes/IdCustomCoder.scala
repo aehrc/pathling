@@ -12,6 +12,7 @@
 
 package au.csiro.pathling.encoders.datatypes
 
+import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
 import au.csiro.pathling.encoders2.ExpressionWithName
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, MapObjects, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}

@@ -17,7 +17,7 @@ import org.hl7.fhir.utilities.xhtml.XhtmlNode
  * The schema processor for building serializer expressions.
  *
  * @param expression       the starting (root) expression.
- * @param dataTypeMappings data type mappins to use.
+ * @param dataTypeMappings data type mappings to use.
  */
 private[encoders2] class SerializerBuilderProcessor(expression: Expression, val dataTypeMappings: DataTypeMappings) extends
   SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] {
@@ -58,7 +58,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
   }
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
-    // TODO: [#414] Performance improvement: do not compute fields when the composite expression is overriden.
+    // TODO: [#414] Performance improvement: do not compute fields when the composite expression is overridden.
     val structFields = dataTypeMappings.overrideCompositeExpression(expression, definition).getOrElse(fields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
     val struct = CreateNamedStruct(structFields)
     If(IsNull(expression), Literal.create(null, struct.dataType), struct)
@@ -74,6 +74,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
   }
 
   override def beforeEnterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaProcessor[Expression, ExpressionWithName] = {
+    //noinspection DuplicatedCode
     val choiceChildDefinition = choiceDefinition.getChildByName(optionName)
     val optionExpression = If(InstanceOf(expression, choiceChildDefinition.getImplementingClass),
       ObjectCast(expression, ObjectType(choiceChildDefinition.getImplementingClass)),
@@ -126,6 +127,7 @@ private[encoders2] object SerializerBuilderProcessor {
 
     // Primitive single-value types typically use the Element suffix in their
     // accessors, with the exception of the "div" field for reasons that are not clear.
+    //noinspection DuplicatedCode
     if (field.isInstanceOf[RuntimeChildPrimitiveDatatypeDefinition] &&
       field.getMax == 1 &&
       field.getElementName != "div")
@@ -148,6 +150,7 @@ private[encoders2] object SerializerBuilderProcessor {
    */
   private def objectTypeFor(field: BaseRuntimeChildDefinition): ObjectType = {
 
+    //noinspection DuplicatedCode
     val cls = field match {
 
       case resource: RuntimeChildResourceDefinition =>

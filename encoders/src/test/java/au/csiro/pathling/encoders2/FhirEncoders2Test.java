@@ -1,22 +1,27 @@
 package au.csiro.pathling.encoders2;
 
-import static au.csiro.pathling.encoders2.ResourceEncodingTest2.EXCLUDED_RESOURCES;
+import static au.csiro.pathling.encoders2.ResourceEncoding2Test.EXCLUDED_RESOURCES;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import au.csiro.pathling.encoders.EncoderUtils;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.UnsupportedResourceError;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.BaseResource;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.MolecularSequence;
 import org.hl7.fhir.r4.model.MolecularSequence.MolecularSequenceQualityRocComponent;
+import org.hl7.fhir.r4.model.PlanDefinition;
 import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.json4s.jackson.JsonMethods;
 import org.junit.Test;
 
-public class FhirEncodersTest2 implements JsonMethods {
+public class FhirEncoders2Test implements JsonMethods {
 
   private final FhirEncoders fhirEncoders = FhirEncoders.forR4().getOrCreate();
 
@@ -76,9 +81,9 @@ public class FhirEncodersTest2 implements JsonMethods {
   }
 
   @Test
-  public void testThrowsExceptionWhenUnsuportedResource() {
+  public void testThrowsExceptionWhenUnsupportedResource() {
     for (final String resourceName : EXCLUDED_RESOURCES) {
-      assertThrows(IllegalArgumentException.class, () -> fhirEncoders.of(resourceName));
+      assertThrows(UnsupportedResourceError.class, () -> fhirEncoders.of(resourceName));
     }
   }
 }

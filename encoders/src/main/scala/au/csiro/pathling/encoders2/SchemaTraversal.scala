@@ -3,7 +3,7 @@ package au.csiro.pathling.encoders2
 import au.csiro.pathling.encoders.EncodingContext
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
 import au.csiro.pathling.encoders2.SchemaTraversal.isSingular
-import ca.uhn.fhir.context.{BaseRuntimeElementDefinition, _}
+import ca.uhn.fhir.context._
 
 import scala.collection.convert.ImplicitConversions._
 
@@ -46,7 +46,7 @@ trait SchemaProcessor[DT, SF] {
   def combineChoiceOptions(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[SF]]): Seq[SF] = optionValues.flatten
 
   /**
-   * Builds the representatoin of the composite from the representations of its elements.
+   * Builds the representation of the composite from the representations of its elements.
    *
    * @param definition the HAPI definition of a composite
    * @param fields     the list of representations of the composite elements.

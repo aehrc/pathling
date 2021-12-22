@@ -13,7 +13,11 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.QuestionnaireResponse;
 import org.json4s.StringInput;
 import org.json4s.jackson.JsonMethods;
 import org.junit.Test;
@@ -69,12 +73,12 @@ public class CompareV2ToV1Test implements JsonMethods {
     //     "nullable" : true,
     //     "id" : 45
     // }
-    // Before two expression can be compare these IDs need to reconciled.
+    // Before two expression can be compared these IDs need to be reconciled.
     // The best way would be to make them 0-based starting form the lowest id found in the expression.
     // But setting them all to 0 should give enough power to detect most differences in expressions.
 
     final String prettyJson = toPrettyJson(expression.toJSON());
-    return prettyJson.replaceAll("(?:\"id\" : )\\d+", "\"id\" : 0");
+    return prettyJson.replaceAll("\"id\" : \\d+", "\"id\" : 0");
   }
 
   @Test

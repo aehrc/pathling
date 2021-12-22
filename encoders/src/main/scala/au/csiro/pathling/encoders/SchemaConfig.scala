@@ -4,7 +4,7 @@ import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context.FhirContext
 
 /**
- * Access tocommon objects required  schema processing operations.
+ * Access to common objects required by schema processing operations.
  */
 trait SchemaConfig {
 

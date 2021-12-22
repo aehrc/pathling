@@ -23,7 +23,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-public class ResourceEncodingTest2 {
+public class ResourceEncoding2Test {
 
   private final static FhirContext fhirContext = FhirContext.forR4();
   private final static FhirEncoders fhirEncoders = FhirEncoders.forR4().getOrCreate();
@@ -45,7 +45,7 @@ public class ResourceEncodingTest2 {
 
   private final Class<? extends IBaseResource> resourceClass;
 
-  public ResourceEncodingTest2(Class<? extends IBaseResource> resourceClass) {
+  public ResourceEncoding2Test(Class<? extends IBaseResource> resourceClass) {
     this.resourceClass = resourceClass;
   }
 

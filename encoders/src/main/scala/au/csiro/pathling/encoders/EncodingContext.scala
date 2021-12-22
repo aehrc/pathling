@@ -91,7 +91,7 @@ object EncodingContext {
     try {
       CONTEXT_STORAGE.set(new EncodingContext())
       val result = body
-      // on successfull exit current should be empyt
+      // on successful exit current should be empty
       assert(CONTEXT_STORAGE.get().definitionCounters.isEmpty, "All nesting levels should be 0")
       result
     } finally

@@ -14,10 +14,7 @@ package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders2.ExpressionWithName
 import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
-import org.apache.spark.sql.types.{DataType, ObjectType, StructField}
-
-import java.util
+import org.apache.spark.sql.types.{DataType, StructField}
 
 trait CustomCoder {
   @deprecated
@@ -35,12 +32,4 @@ trait CustomCoder {
 
   def customDeserializer2(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName]
 
-  protected def arrayExpression(array: Expression): StaticInvoke = {
-    StaticInvoke(
-      classOf[util.Arrays],
-      ObjectType(classOf[util.List[_]]),
-      "asList",
-      array :: Nil)
-  }
-  
 }
