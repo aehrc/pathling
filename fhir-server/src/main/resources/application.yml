@@ -40,9 +40,11 @@ pathling:
     aws:
       # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
       anonymousAccess: true
+      
       # Authentication details for connecting to protected Amazon S3 locations.
       # accessKeyId: [AWS access key ID]
       # secretAccessKey: [AWS secret access key]
+      
       # The ARN of an IAM role to be assumed using STS.
       # assumedRole: [ARN of IAM role]
 
