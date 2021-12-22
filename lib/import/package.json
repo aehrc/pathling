@@ -14,10 +14,10 @@
     "@types/aws-lambda": "^8.10.84",
     "@types/node": "^16.11.2",
     "@types/uuid": "^8.3.1",
-    "axios": "^0.23.0",
+    "axios": "^0.24.0",
     "case": "^1.6.3",
     "client-oauth2": "^4.3.3",
-    "p-retry": "^4.6.1",
+    "p-retry": "^5.0.0",
     "temp-dir": "^2.0.0",
     "uuid": "^8.3.2"
   },
