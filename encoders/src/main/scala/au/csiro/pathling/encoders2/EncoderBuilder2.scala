@@ -1,5 +1,6 @@
 package au.csiro.pathling.encoders2
 
+import au.csiro.pathling.encoders.UnsupportedResourceError
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
@@ -31,7 +32,7 @@ object EncoderBuilder2 {
          maxNestingLevel: Int): ExpressionEncoder[_] = {
 
     if (UNSUPPORTED_RESOURCES.contains(resourceDefinition.getName)) {
-      throw new IllegalArgumentException(s"Encoding is not supported for resource: ${resourceDefinition.getName}")
+      throw new UnsupportedResourceError(s"Encoding is not supported for resource: ${resourceDefinition.getName}")
     }
 
     val fhirClass = resourceDefinition

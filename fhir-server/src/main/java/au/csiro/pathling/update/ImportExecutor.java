@@ -8,6 +8,7 @@ package au.csiro.pathling.update;
 
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.UnsupportedResourceError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.SecurityError;
 import au.csiro.pathling.fhir.FhirContextFactory;
@@ -127,9 +128,14 @@ public class ImportExecutor {
 
       final String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
-      final ExpressionEncoder<IBaseResource> fhirEncoder = fhirEncoders.of(resourceType.toCode());
-      @SuppressWarnings("UnnecessaryLocalVariable")
       final FhirContextFactory localFhirContextFactory = this.fhirContextFactory;
+
+      final ExpressionEncoder<IBaseResource> fhirEncoder;
+      try {
+        fhirEncoder = fhirEncoders.of(resourceType.toCode());
+      } catch (final UnsupportedResourceError e) {
+        throw new InvalidUserInputError("Unsupported resource type: " + resourceCode);
+      }
 
       String url = ((UrlType) urlParam.getValue()).getValueAsString();
       url = PersistenceScheme.convertS3ToS3aUrl(url);

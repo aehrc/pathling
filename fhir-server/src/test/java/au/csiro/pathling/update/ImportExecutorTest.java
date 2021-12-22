@@ -7,8 +7,10 @@
 package au.csiro.pathling.update;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.helpers.TestHelpers;
@@ -92,7 +94,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  public void testImportJsonFile() {
+  public void importJsonFile() {
     final URL jsonURL = TestHelpers.getResourceAsUrl("import/Patient.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
     assertEquals(ImmutableSet.of(ResourceType.PATIENT), resourceReader.getAvailableResourceTypes());
@@ -100,7 +102,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  public void testImportJsonFileWithBlankLines() {
+  public void importJsonFileWithBlankLines() {
     final URL jsonURL = TestHelpers.getResourceAsUrl("import/Patient_with_eol.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
     assertEquals(ImmutableSet.of(ResourceType.PATIENT), resourceReader.getAvailableResourceTypes());
@@ -108,7 +110,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  public void testImportJsonFileWithRecursiveDatatype() {
+  public void importJsonFileWithRecursiveDatatype() {
     final URL jsonURL = TestHelpers.getResourceAsUrl("import/Questionnaire.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.QUESTIONNAIRE));
     assertEquals(ImmutableSet.of(ResourceType.QUESTIONNAIRE),
@@ -133,7 +135,7 @@ class ImportExecutorTest {
             functions.col("item_l5").getField("linkId")
         );
 
-    // The actual data has maxNestingLevel = 5 but we import with maxNestingLevel == 5
+    // The actual data has maxNestingLevel = 5, but we import with maxNestingLevel == 5
     // So we expect level 5 items to be NULL
     final List<Row> expectedDataset = Arrays.asList(
         RowFactory.create("3141", "1", "1.1", "1.1.1", "1.1.1.1", "1.1.1.1.1", null),
@@ -144,4 +146,17 @@ class ImportExecutorTest {
 
     DatasetAssert.of(expandedItemsDataset).hasRows(expectedDataset);
   }
+
+  @Test
+  void throwsOnUnsupportedResourceType() {
+    final List<ResourceType> resourceTypes = Arrays.asList(ResourceType.PARAMETERS,
+        ResourceType.TASK, ResourceType.STRUCTUREDEFINITION, ResourceType.STRUCTUREMAP,
+        ResourceType.BUNDLE);
+    for (ResourceType resourceType : resourceTypes) {
+      assertThrows(InvalidUserInputError.class, () -> importExecutor.execute(
+          buildImportParameters(new URL("file://some/url"),
+              resourceType)), "Unsupported resource type: " + resourceType.toCode());
+    }
+  }
+
 }
