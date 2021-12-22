@@ -1,5 +1,8 @@
 ---
-layout: page title: Configuration nav_order: 6 parent: Documentation
+layout: page 
+title: Configuration 
+nav_order: 6 
+parent: Documentation
 ---
 
 # Configuration
