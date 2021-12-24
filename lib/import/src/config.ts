@@ -8,23 +8,25 @@
  * @author John Grimes
  */
 
-import { fhirBulkExport, FhirBulkResult } from "./export";
+import Case from "case";
+import fs from "node:fs";
+import { checkExportJobStatus, checkImportJobStatus } from "./checkStatus.js";
+import { fhirBulkExport, FhirBulkResult } from "./export.js";
 import {
   CheckStatusHandlerOutput,
   ExportHandlerOutput,
   ImportHandlerInput,
 } from "./handlers";
-import { importFromParameters } from "./import";
-import { checkExportJobStatus, checkImportJobStatus } from "./checkStatus";
-import { transferExportToS3 } from "./transferToS3";
-
-const fs = require("fs");
-const Case = require("case");
+import { importFromParameters } from "./import.js";
+import { transferExportToS3 } from "./transferToS3.js";
 
 export interface Config {
   getStringValue(name: string, optional?: boolean): string;
+
   getIntegerValue(name: string, optional?: boolean): number;
+
   getFloatValue(name: string, optional?: boolean): number;
+
   getRetryConfig(type: RetryConfigType): RetryConfig;
 }
 
@@ -111,7 +113,7 @@ export class FileConfig implements Config {
 
   getStringValue(name: string, optional = false): string {
     const value = this.getValue(name, optional);
-    if (typeof value !== "string") {
+    if (!optional && typeof value !== "string") {
       throw `Expected string value: ${name}`;
     }
     return value;
@@ -119,7 +121,7 @@ export class FileConfig implements Config {
 
   getFloatValue(name: string, optional = false): number {
     const value = this.getValue(name, optional);
-    if (typeof value !== "number") {
+    if (!optional && typeof value !== "number") {
       throw `Expected float value: ${name}`;
     }
     return value;
@@ -127,7 +129,7 @@ export class FileConfig implements Config {
 
   getIntegerValue(name: string, optional = false): number {
     const value = this.getValue(name, optional);
-    if (typeof value !== "number") {
+    if (!optional && typeof value !== "number") {
       throw `Expected integer value: ${name}`;
     }
     return value;

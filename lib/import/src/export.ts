@@ -13,7 +13,7 @@ import {
   FHIR_JSON_CONTENT_TYPE,
   FHIR_NDJSON_CONTENT_TYPE,
   getStatusUrl,
-} from "./common";
+} from "./common.js";
 
 export interface ExportParams {
   endpoint: string;

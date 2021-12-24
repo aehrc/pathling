@@ -9,7 +9,7 @@
  */
 
 import axios, { AxiosInstance, AxiosResponse } from "axios";
-import ClientOAuth2 = require("client-oauth2");
+import ClientOAuth2 from "client-oauth2";
 
 export const JSON_CONTENT_TYPE = "application/json";
 export const FHIR_JSON_CONTENT_TYPE = "application/fhir+json";

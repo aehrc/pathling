@@ -16,7 +16,7 @@ import {
   buildAuthenticatedClient,
   FHIR_JSON_CONTENT_TYPE,
   getStatusUrl,
-} from "./common";
+} from "./common.js";
 
 export interface ImportParams {
   endpoint: string;

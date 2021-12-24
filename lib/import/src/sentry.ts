@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-import { Config } from "./config";
+import { Config } from "./config.js";
 import * as Sentry from "@sentry/node";
 
 export function initializeSentry(config: Config): void {

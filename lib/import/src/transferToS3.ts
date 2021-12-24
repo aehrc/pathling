@@ -9,9 +9,12 @@
  */
 
 import { IParameters } from "@ahryman40k/ts-fhir-types/lib/R4";
-import { FhirBulkOutput } from "./export";
+import { FhirBulkOutput } from "./export.js";
 import { createHash } from "crypto";
-import { buildAuthenticatedClient, FHIR_NDJSON_CONTENT_TYPE } from "./common";
+import {
+  buildAuthenticatedClient,
+  FHIR_NDJSON_CONTENT_TYPE,
+} from "./common.js";
 import { AxiosInstance, AxiosResponse } from "axios";
 import {
   AbortMultipartUploadCommand,
@@ -27,10 +30,9 @@ import { rm, stat } from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
 import { createReadStream, createWriteStream, Stats } from "fs";
 import { URL } from "url";
-import tempDirectory = require("temp-dir");
 import ReadableStream = NodeJS.ReadableStream;
-
-const path = require("path");
+import tempDirectory from "temp-dir";
+import path from "node:path";
 
 export interface TransferParams {
   endpoint: string;

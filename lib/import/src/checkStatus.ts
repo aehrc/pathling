@@ -8,7 +8,7 @@
  * @author John Grimes
  */
 
-import { buildAuthenticatedClient, FHIR_JSON_CONTENT_TYPE } from "./common";
+import { buildAuthenticatedClient, FHIR_JSON_CONTENT_TYPE } from "./common.js";
 import { AxiosResponse } from "axios";
 
 export interface CheckImportJobStatusParams {

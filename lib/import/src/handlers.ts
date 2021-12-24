@@ -21,11 +21,11 @@ import {
   fhirExportConfigured,
   pathlingImportConfigured,
   transferToS3Configured,
-} from "./config";
-import { ImportResult } from "./import";
-import { CheckStatusResult } from "./checkStatus";
-import { ExportResult } from "./export";
-import { initializeSentry } from "./sentry";
+} from "./config.js";
+import { ImportResult } from "./import.js";
+import { CheckStatusResult } from "./checkStatus.js";
+import { ExportResult } from "./export.js";
+import { initializeSentry } from "./sentry.js";
 
 export interface ExportHandlerOutput {
   statusUrl: ExportResult;

@@ -20,8 +20,8 @@ import {
   pathlingImportConfigured,
   RetryConfigType,
   transferToS3Configured,
-} from "./config";
-import { initializeSentry } from "./sentry";
+} from "./config.js";
+import { initializeSentry } from "./sentry.js";
 
 let config: Config;
 const argument = process.argv[2],

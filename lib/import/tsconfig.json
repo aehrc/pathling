@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "es2020",
     "target": "es2019",
     "lib": [
       "es2020",
@@ -10,7 +10,9 @@
     "outDir": "./lib",
     "declaration": true,
     "sourceMap": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true
   },
   "include": [
     "src"
