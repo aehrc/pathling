@@ -93,7 +93,16 @@ these functions to keep a FHIR endpoint in sync with Pathling:
     "FHIR export": {
       "Type": "Task",
       "Resource": "[lambda arn]",
-      "Next": "Check export status"
+      "Next": "Check export status",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 5
+        }
+      ]
     },
     "Check export status": {
       "Type": "Task",
@@ -106,6 +115,13 @@ these functions to keep a FHIR endpoint in sync with Pathling:
           "IntervalSeconds": 900,
           "MaxAttempts": 24,
           "BackoffRate": 1
+        },
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 5
         }
       ],
       "Next": "Transfer to S3"
@@ -127,7 +143,16 @@ these functions to keep a FHIR endpoint in sync with Pathling:
     "Pathling import": {
       "Type": "Task",
       "Resource": "[lambda arn]",
-      "Next": "Check import result"
+      "Next": "Check import result",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 5
+        }
+      ]
     },
     "Check import result": {
       "Type": "Choice",
@@ -154,6 +179,13 @@ these functions to keep a FHIR endpoint in sync with Pathling:
           "IntervalSeconds": 300,
           "MaxAttempts": 12,
           "BackoffRate": 1
+        },
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 5
         }
       ],
       "End": true
