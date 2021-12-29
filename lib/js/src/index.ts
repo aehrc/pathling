@@ -10,6 +10,7 @@ import { ImportClient } from "./import";
 import { ExtractClient } from "./extract";
 import { CapabilitiesClient } from "./capabilities";
 import { JobClient } from "./job";
+import { SmartConfigurationClient } from "./smartConfiguration";
 
 /**
  * Configuration options for a Pathling client instance.
@@ -101,6 +102,7 @@ export interface QueryResult {
 export default class PathlingClient {
   readonly options: PathlingClientOptionsResolved;
   readonly capabilities: CapabilitiesClient;
+  readonly smartConfiguration: SmartConfigurationClient;
   readonly import: ImportClient;
   readonly aggregate: AggregateClient;
   readonly search: SearchClient;
@@ -114,6 +116,7 @@ export default class PathlingClient {
       maxGetQueryLength: 1500,
     };
     this.capabilities = new CapabilitiesClient(this.options);
+    this.smartConfiguration = new SmartConfigurationClient(this.options);
     this.import = new ImportClient(this.options);
     this.aggregate = new AggregateClient(this.options);
     this.search = new SearchClient(this.options);
