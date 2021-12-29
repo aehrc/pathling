@@ -48,7 +48,7 @@ import org.springframework.context.annotation.Profile;
 @WebServlet(urlPatterns = "/fhir/*")
 @Profile("server")
 @Slf4j
-@SuppressWarnings({"NonSerializableFieldInSerializableClass", "serial"})
+@SuppressWarnings({"NonSerializableFieldInSerializableClass"})
 public class FhirServer extends RestfulServer {
 
   private static final int DEFAULT_PAGE_SIZE = 100;
@@ -257,8 +257,9 @@ public class FhirServer extends RestfulServer {
 
   private void configureAuthorization() {
     if (configuration.getAuth().isEnabled()) {
+      final String issuer = checkPresent(configuration.getAuth().getIssuer());
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
-          new SmartConfigurationInterceptor(checkPresent(oidcConfiguration));
+          new SmartConfigurationInterceptor(issuer, checkPresent(oidcConfiguration));
       registerInterceptor(smartConfigurationInterceptor);
     }
   }

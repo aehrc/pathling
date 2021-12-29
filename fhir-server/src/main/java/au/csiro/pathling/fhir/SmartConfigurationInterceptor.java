@@ -34,7 +34,6 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @author John Grimes
  */
-// TODO: This could might be better done as in Spring or servlet.
 @Interceptor
 @Slf4j
 public class SmartConfigurationInterceptor {
@@ -46,18 +45,21 @@ public class SmartConfigurationInterceptor {
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
    */
-  public SmartConfigurationInterceptor(@Nonnull final OidcConfiguration oidcConfiguration) {
-    response = buildResponse(oidcConfiguration);
+  public SmartConfigurationInterceptor(@Nonnull final String issuer,
+      @Nonnull final OidcConfiguration oidcConfiguration) {
+    response = buildResponse(issuer, oidcConfiguration);
   }
 
   @Nonnull
-  private static String buildResponse(@Nonnull final OidcConfiguration oidcConfiguration) {
+  private static String buildResponse(@Nonnull final String issuer,
+      @Nonnull final OidcConfiguration oidcConfiguration) {
     final SmartConfiguration smartConfiguration = new SmartConfiguration();
 
     final Optional<String> authUrl = oidcConfiguration.get(AUTH_URL);
     final Optional<String> tokenUrl = oidcConfiguration.get(TOKEN_URL);
     final Optional<String> revokeUrl = oidcConfiguration.get(REVOKE_URL);
 
+    smartConfiguration.setIssuer(issuer);
     authUrl.ifPresent(smartConfiguration::setAuthorizationEndpoint);
     tokenUrl.ifPresent(smartConfiguration::setTokenEndpoint);
     revokeUrl.ifPresent(smartConfiguration::setRevocationEndpoint);
@@ -100,6 +102,8 @@ public class SmartConfigurationInterceptor {
   @Setter
   @SuppressWarnings("unused")
   private static class SmartConfiguration {
+
+    private String issuer;
 
     private String authorizationEndpoint;
 
