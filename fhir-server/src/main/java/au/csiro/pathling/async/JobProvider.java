@@ -93,9 +93,10 @@ public class JobProvider {
       throw new ResourceNotFoundError("Job ID not found");
     }
 
-    // Check for the required authority associated with the operation that initiated the job.
     if (configuration.getAuth().isEnabled()) {
+      // Check for the required authority associated with the operation that initiated the job.
       checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
+      // Check that the user requesting the job status is the same user that started the job.
       final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
       final Optional<String> currentUserId = getCurrentUserId(authentication);
       if (!job.getOwnerId().equals(currentUserId)) {
