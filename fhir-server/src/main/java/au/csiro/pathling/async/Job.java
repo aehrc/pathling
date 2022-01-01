@@ -14,7 +14,7 @@ import lombok.ToString;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 /**
- * Represents a background job that is in progress.
+ * Represents a background job that is in progress or complete.
  *
  * @author John Grimes
  */
@@ -27,7 +27,7 @@ public class Job {
 
   @Nonnull
   private final Future<IBaseResource> result;
-  
+
   @Nonnull
   private final Optional<String> ownerId;
 
