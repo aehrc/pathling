@@ -8,6 +8,7 @@ package au.csiro.pathling.io;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+import au.csiro.pathling.extract.Result;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -44,22 +45,22 @@ public class ResultReader {
   }
 
   /**
-   * @param resultUrl the URL of a result file
+   * @param result the URL of a result file
    * @return an {@link InputStream} containing the contents of the file
    */
-  public InputStream read(@Nonnull final String resultUrl) {
+  public InputStream read(@Nonnull final Result result) {
     // Initialise a Hadoop FileSystem instance centred on the result URL.
     @Nullable final Configuration hadoopConfiguration = spark.sparkContext().hadoopConfiguration();
     checkNotNull(hadoopConfiguration);
     @Nullable final FileSystem resultLocation;
     final URI resultUri;
     try {
-      resultUri = new URI(resultUrl);
+      resultUri = new URI(result.getUrl());
       resultLocation = FileSystem.get(resultUri, hadoopConfiguration);
     } catch (final IOException e) {
-      throw new RuntimeException("Problem accessing result: " + resultUrl, e);
+      throw new RuntimeException("Problem accessing result: " + result, e);
     } catch (final URISyntaxException e) {
-      throw new RuntimeException("Problem parsing result URL: " + resultUrl, e);
+      throw new RuntimeException("Problem parsing result URL: " + result, e);
     }
     checkNotNull(resultLocation);
 
@@ -68,9 +69,9 @@ public class ResultReader {
     final FSDataInputStream inputStream;
     try {
       inputStream = resultLocation.open(path);
-      log.info("Opened stream from: {}", resultUrl);
+      log.info("Opened stream from: {}", result);
     } catch (final IOException e) {
-      throw new RuntimeException("Problem reading result: " + resultUrl, e);
+      throw new RuntimeException("Problem reading result: " + result, e);
     }
     return inputStream;
   }

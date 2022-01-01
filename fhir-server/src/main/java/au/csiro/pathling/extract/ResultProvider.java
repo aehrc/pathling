@@ -9,9 +9,6 @@ package au.csiro.pathling.extract;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.async.Job;
-import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.io.ResultReader;
@@ -43,28 +40,17 @@ public class ResultProvider {
   private static final Pattern ID_PATTERN = Pattern.compile("^\\w{1,50}$");
 
   @Nonnull
-  private final Configuration configuration;
-
-  @Nonnull
-  private final JobRegistry jobRegistry;
-
-  @Nonnull
   private final ResultRegistry resultRegistry;
 
   @Nonnull
   private final ResultReader resultReader;
 
   /**
-   * @param configuration a {@link Configuration} for determining if authorization is enabled
-   * @param jobRegistry the {@link JobRegistry} used to look up the details of corresponding jobs
    * @param resultRegistry a {@link ResultRegistry} from which to retrieve result URLs
    * @param resultReader a {@link ResultReader} for reading in result files
    */
-  public ResultProvider(@Nonnull final Configuration configuration,
-      @Nonnull final JobRegistry jobRegistry, @Nonnull final ResultRegistry resultRegistry,
+  public ResultProvider(@Nonnull final ResultRegistry resultRegistry,
       @Nonnull final ResultReader resultReader) {
-    this.configuration = configuration;
-    this.jobRegistry = jobRegistry;
     this.resultRegistry = resultRegistry;
     this.resultReader = resultReader;
   }
@@ -88,26 +74,21 @@ public class ResultProvider {
     }
 
     log.info("Retrieving extract result: {}", id);
-    final String resultUrl = resultRegistry.get(id);
+    final Result result = resultRegistry.get(id);
     // Check that the result exists.
-    if (resultUrl == null) {
+    if (result == null) {
       throw new ResourceNotFoundError("Result ID not found");
     }
 
-    if (configuration.getAuth().isEnabled()) {
-      // Find the corresponding job.
-      @Nullable final Job job = jobRegistry.get(id);
-      checkNotNull(job);
-      // Check that the user requesting the result is the same user that started the job.
-      final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-      final Optional<String> currentUserId = getCurrentUserId(authentication);
-      if (!job.getOwnerId().equals(currentUserId)) {
-        throw new AccessDeniedError("The requested result is not owned by the current user");
-      }
+    // Check that the user requesting the result is the same user that started the job.
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    final Optional<String> currentUserId = getCurrentUserId(authentication);
+    if (!result.getOwnerId().equals(currentUserId)) {
+      throw new AccessDeniedError("The requested result is not owned by the current user");
     }
 
     // Open an input stream to read the result.
-    final InputStream inputStream = resultReader.read(resultUrl);
+    final InputStream inputStream = resultReader.read(result);
 
     // Set the appropriate response headers.
     response.setHeader("Content-Type", "text/csv");
@@ -116,7 +97,7 @@ public class ResultProvider {
     try {
       IOUtils.copyLarge(inputStream, response.getOutputStream());
     } catch (final IOException e) {
-      throw new RuntimeException("Problem writing result data to response: " + resultUrl, e);
+      throw new RuntimeException("Problem writing result data to response: " + result, e);
     }
   }
 
