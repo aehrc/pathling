@@ -8,12 +8,14 @@ package au.csiro.pathling.security;
 
 import au.csiro.pathling.errors.AccessDeniedError;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
@@ -21,6 +23,7 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
 
@@ -90,4 +93,17 @@ public class SecurityAspect {
           requiredAuthority.getAuthority());
     }
   }
+
+  @Nonnull
+  public static Optional<String> getCurrentUserId(@Nullable final Authentication authentication) {
+    String subject = null;
+    if (authentication != null) {
+      final Object principal = authentication.getPrincipal();
+      if (principal instanceof Jwt) {
+        subject = ((Jwt) principal).getSubject();
+      }
+    }
+    return Optional.ofNullable(subject);
+  }
+  
 }

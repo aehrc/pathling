@@ -6,12 +6,14 @@
 
 package au.csiro.pathling.async;
 
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -116,7 +118,8 @@ public class AsyncAspect {
         cleanUpAfterJob(spark, requestId);
       }
     });
-    jobRegistry.put(requestId, new Job(operation, result));
+    final Optional<String> ownerId = getCurrentUserId(authentication);
+    jobRegistry.put(requestId, new Job(operation, result, ownerId));
     response.setHeader("Content-Location",
         requestDetails.getFhirServerBase() + "/$job?id=" + requestId);
   }

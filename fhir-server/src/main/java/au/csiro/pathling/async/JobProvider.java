@@ -9,15 +9,18 @@ package au.csiro.pathling.async;
 import static au.csiro.pathling.caching.EntityTagInterceptor.makeRequestNonCacheable;
 import static au.csiro.pathling.caching.EntityTagInterceptor.requestIsCacheable;
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.fhir.ErrorHandlingInterceptor;
 import au.csiro.pathling.security.PathlingAuthority;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
@@ -33,6 +36,8 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -91,6 +96,11 @@ public class JobProvider {
     // Check for the required authority associated with the operation that initiated the job.
     if (configuration.getAuth().isEnabled()) {
       checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
+      final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+      final Optional<String> currentUserId = getCurrentUserId(authentication);
+      if (!job.getOwnerId().equals(currentUserId)) {
+        throw new AccessDeniedError("The requested job is not owned by the current user");
+      }
     }
 
     if (job.getResult().isDone()) {

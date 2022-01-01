@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.async;
 
+import java.util.Optional;
 import java.util.concurrent.Future;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -26,6 +27,9 @@ public class Job {
 
   @Nonnull
   private final Future<IBaseResource> result;
+  
+  @Nonnull
+  private final Optional<String> ownerId;
 
   private int totalStages;
 
@@ -34,10 +38,13 @@ public class Job {
   /**
    * @param operation the operation that initiated the job, used for enforcing authorization
    * @param result the {@link Future} result
+   * @param ownerId the identifier of the owner of the job, if authenticated
    */
-  public Job(@Nonnull final String operation, @Nonnull final Future<IBaseResource> result) {
+  public Job(@Nonnull final String operation, @Nonnull final Future<IBaseResource> result,
+      @Nonnull final Optional<String> ownerId) {
     this.operation = operation;
     this.result = result;
+    this.ownerId = ownerId;
   }
 
   /**
