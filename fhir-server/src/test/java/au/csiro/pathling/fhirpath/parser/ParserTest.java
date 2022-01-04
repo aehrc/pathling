@@ -7,7 +7,14 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_121503c8;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_2b36c1e2;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_7001ad9c;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_8ee183e2;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_9360820c;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_bbd33563;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_beff242e;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWithValue;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
@@ -580,6 +587,16 @@ public class ParserTest {
         .hasResourceType(ResourceType.PATIENT)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testCombineOperatorWithTwoUntypedResourcePaths.csv");
+  }
+
+  @Test
+  void testCombineOperatorWithCodingLiterals() {
+    assertThatResultOf(
+        "(http://snomed.info/sct|410429000||'Cardiac Arrest' combine "
+            + "http://snomed.info/sct|230690007||'Stroke').empty()")
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithCodingLiterals.csv");
   }
 
   @Test
