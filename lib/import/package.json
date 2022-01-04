@@ -1,8 +1,12 @@
 {
   "name": "pathling-import",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "A set of functions for performing bulk export from a FHIR server and importing to Pathling.",
-  "main": "lib/index.js",
+  "type": "module",
+  "exports": "./lib/index.js",
+  "engines": {
+    "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
+  },
   "types": "lib/index.d.ts",
   "bin": {
     "pathling-import": "lib/index.js"
@@ -10,13 +14,14 @@
   "dependencies": {
     "@ahryman40k/ts-fhir-types": "^4.0.36",
     "@aws-sdk/client-s3": "^3.37.0",
+    "@sentry/node": "^6.16.1",
     "@types/aws-lambda": "^8.10.84",
     "@types/node": "^16.11.2",
     "@types/uuid": "^8.3.1",
-    "axios": "^0.23.0",
+    "axios": "^0.24.0",
     "case": "^1.6.3",
     "client-oauth2": "^4.3.3",
-    "p-retry": "^4.6.1",
+    "p-retry": "^5.0.0",
     "temp-dir": "^2.0.0",
     "uuid": "^8.3.2"
   },

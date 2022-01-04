@@ -5,9 +5,10 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 package au.csiro.pathling.encoders;
@@ -15,6 +16,7 @@ package au.csiro.pathling.encoders;
 import static org.junit.Assert.assertEquals;
 
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
+import au.csiro.pathling.encoders1.SchemaConverter1;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import com.google.common.collect.ImmutableSet;
@@ -27,7 +29,7 @@ import org.junit.Test;
 public class ResourceEncodingTest {
 
   private final FhirContext fhirContext = FhirContext.forR4();
-  private final SchemaConverter converter = new SchemaConverter(fhirContext,
+  private final SchemaConverter1 converter = new SchemaConverter1(fhirContext,
       new R4DataTypeMappings(), 0);
 
   private final FhirEncoders fhirEncoders = FhirEncoders.forR4().getOrCreate();
@@ -58,8 +60,10 @@ public class ResourceEncodingTest {
           .getResourceDefinition(resourceType);
 
       if (!excludeResources.contains(rd.getName())) {
+
+        Class<? extends IBaseResource> implementingClass = rd.getImplementingClass();
         final StructType schema = converter
-            .resourceSchema(rd.getImplementingClass());
+            .resourceSchema(implementingClass);
         final ExpressionEncoder<? extends IBaseResource> encoder = fhirEncoders
             .of(rd.getImplementingClass());
         assertEquals(schema, encoder.schema());

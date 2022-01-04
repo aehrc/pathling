@@ -93,7 +93,16 @@ these functions to keep a FHIR endpoint in sync with Pathling:
     "FHIR export": {
       "Type": "Task",
       "Resource": "[lambda arn]",
-      "Next": "Check export status"
+      "Next": "Check export status",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 5
+        }
+      ]
     },
     "Check export status": {
       "Type": "Task",
@@ -106,6 +115,13 @@ these functions to keep a FHIR endpoint in sync with Pathling:
           "IntervalSeconds": 900,
           "MaxAttempts": 24,
           "BackoffRate": 1
+        },
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 5
         }
       ],
       "Next": "Transfer to S3"
@@ -127,7 +143,16 @@ these functions to keep a FHIR endpoint in sync with Pathling:
     "Pathling import": {
       "Type": "Task",
       "Resource": "[lambda arn]",
-      "Next": "Check import result"
+      "Next": "Check import result",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 5
+        }
+      ]
     },
     "Check import result": {
       "Type": "Choice",
@@ -154,6 +179,13 @@ these functions to keep a FHIR endpoint in sync with Pathling:
           "IntervalSeconds": 300,
           "MaxAttempts": 12,
           "BackoffRate": 1
+        },
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 5
         }
       ],
       "End": true
@@ -165,6 +197,12 @@ these functions to keep a FHIR endpoint in sync with Pathling:
 [CloudWatch Events](https://docs.aws.amazon.com/step-functions/latest/dg/tutorial-cloudwatch-events-target.html)
 can be used to schedule the running of the step function at a specified 
 frequency.
+
+### Sentry support
+
+This program can also report any errors to Sentry - just set the `SENTRY_DSN`, 
+`SENTRY_ENVIRONMENT` (optional) and `SENTRY_RELEASE` (optional) environment 
+variables.
 
 ## Use as a Node.js command-line program
 

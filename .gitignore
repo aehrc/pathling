@@ -10,3 +10,10 @@ tmp/
 # IDEA
 .idea
 *.iml
+
+
+#Others
+lib/import/node_modules/
+
+#Mac
+.DS_Store

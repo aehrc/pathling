@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -21,10 +21,11 @@ import {
   fhirExportConfigured,
   pathlingImportConfigured,
   transferToS3Configured,
-} from "./config";
-import { ImportResult } from "./import";
-import { CheckStatusResult } from "./checkStatus";
-import { ExportResult } from "./export";
+} from "./config.js";
+import { ImportResult } from "./import.js";
+import { CheckStatusResult } from "./checkStatus.js";
+import { ExportResult } from "./export.js";
+import { initializeSentry } from "./sentry.js";
 
 export interface ExportHandlerOutput {
   statusUrl: ExportResult;
@@ -43,6 +44,7 @@ export interface ImportHandlerOutput {
 }
 
 const config = new EnvironmentConfig();
+initializeSentry(config);
 
 /**
  * Lambda handler for bulk FHIR export.

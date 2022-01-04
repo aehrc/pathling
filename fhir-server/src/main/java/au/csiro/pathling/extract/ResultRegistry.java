@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -15,8 +15,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("core")
-public class ResultRegistry extends ConcurrentHashMap<String, String> {
+public class ResultRegistry extends ConcurrentHashMap<String, Result> {
 
-  private static final long serialVersionUID = 585940346788136462L;
+  private static final long serialVersionUID = -3960163244304628646L;
 
 }

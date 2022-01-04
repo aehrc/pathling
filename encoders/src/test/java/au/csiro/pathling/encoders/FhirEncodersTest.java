@@ -5,9 +5,10 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 package au.csiro.pathling.encoders;
@@ -27,10 +28,24 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.*;
-import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityComponent;
+import org.hl7.fhir.r4.model.Annotation;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.QuestionnaireResponse;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -41,13 +56,14 @@ import org.junit.Test;
  */
 public class FhirEncodersTest {
 
+  private static final int NESTING_LEVEL_3 = 3;
+
   private static final FhirEncoders ENCODERS_L0 =
       FhirEncoders.forR4().getOrCreate();
 
   private static final FhirEncoders ENCODERS_L3 =
-      FhirEncoders.forR4().withMaxNestingLevel(3).getOrCreate();
+      FhirEncoders.forR4().withMaxNestingLevel(NESTING_LEVEL_3).getOrCreate();
 
-  private static final int NESTING_LEVEL_3 = 3;
 
   private static SparkSession spark;
   private static final Patient patient = TestData.newPatient();
@@ -107,8 +123,9 @@ public class FhirEncodersTest {
         ENCODERS_L0.of(Observation.class));
     decodedObservation = observationsDataset.head();
 
+    // TODO: Uncomment with contained resources are supported
     medDataset = spark.createDataset(ImmutableList.of(medRequest),
-        ENCODERS_L0.of(MedicationRequest.class, Medication.class, Provenance.class));
+        ENCODERS_L0.of(MedicationRequest.class/*, Medication.class, Provenance.class*/));
     decodedMedRequest = medDataset.head();
 
     encounterDataset = spark
@@ -209,7 +226,7 @@ public class FhirEncodersTest {
     final Coding actualCoding = decodedCondition.getSeverity().getCodingFirstRep();
 
     // Codings are a nested array, so we explode them into a table of the coding
-    // fields so we can easily select and compare individual fields.
+    // fields, so we can easily select and compare individual fields.
     final Dataset<Row> severityCodings = conditionsDataset
         .select(functions.explode(conditionsDataset.col("severity.coding"))
             .alias("coding"))
@@ -266,7 +283,7 @@ public class FhirEncodersTest {
         .head()
         .getInt(0);
 
-    // we expect the values to be the same but they may differ in scale
+    // we expect the values to be the same, but they may differ in scale
     Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
     Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
 
@@ -302,7 +319,7 @@ public class FhirEncodersTest {
         .head()
         .getInt(0);
 
-    // we expect the values to be the same but they may differ in scale
+    // we expect the values to be the same, but they may differ in scale
     Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
     Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
 
@@ -377,42 +394,6 @@ public class FhirEncodersTest {
     Assert.assertEquals(original.getAuthorReference().getReference(),
         decoded.getAuthorReference().getReference());
 
-  }
-
-  @Test
-  public void contained() throws FHIRException {
-
-    // Contained resources should be put to the Contained list in order of the Encoder arguments
-    Assert.assertTrue(decodedMedRequest.getContained().get(0) instanceof Medication);
-
-    final Medication originalMedication = (Medication) medRequest.getContained().get(0);
-    final Medication decodedMedication = (Medication) decodedMedRequest.getContained().get(0);
-
-    Assert.assertEquals(originalMedication.getId(), decodedMedication.getId());
-    Assert.assertEquals(originalMedication.getIngredientFirstRep()
-            .getItemCodeableConcept()
-            .getCodingFirstRep()
-            .getCode(),
-        decodedMedication.getIngredientFirstRep()
-            .getItemCodeableConcept()
-            .getCodingFirstRep()
-            .getCode());
-
-    Assert.assertTrue(decodedMedRequest.getContained().get(1) instanceof Provenance);
-
-    final Provenance decodedProvenance = (Provenance) decodedMedRequest.getContained().get(1);
-    final Provenance originalProvenance = (Provenance) medRequest.getContained().get(1);
-
-    Assert.assertEquals(originalProvenance.getId(), decodedProvenance.getId());
-    Assert.assertEquals(originalProvenance.getTargetFirstRep().getReference(),
-        decodedProvenance.getTargetFirstRep().getReference());
-
-    final ProvenanceEntityComponent originalEntity = originalProvenance.getEntityFirstRep();
-    final ProvenanceEntityComponent decodedEntity = decodedProvenance.getEntityFirstRep();
-
-    Assert.assertEquals(originalEntity.getRole(), decodedEntity.getRole());
-    Assert.assertEquals(originalEntity.getWhat().getReference(),
-        decodedEntity.getWhat().getReference());
   }
 
   /**

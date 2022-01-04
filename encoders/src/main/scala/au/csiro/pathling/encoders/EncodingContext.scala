@@ -5,9 +5,10 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 package au.csiro.pathling.encoders
@@ -60,7 +61,7 @@ private[encoders] class EncodingContext {
  * }}}
  *
  */
-private[encoders] object EncodingContext {
+object EncodingContext {
   private val CONTEXT_STORAGE = new ThreadLocal[EncodingContext]()
 
   private def currentContext(): EncodingContext = {
@@ -91,7 +92,7 @@ private[encoders] object EncodingContext {
     try {
       CONTEXT_STORAGE.set(new EncodingContext())
       val result = body
-      // on successfull exit current should be empyt
+      // on successful exit current should be empty
       assert(CONTEXT_STORAGE.get().definitionCounters.isEmpty, "All nesting levels should be 0")
       result
     } finally

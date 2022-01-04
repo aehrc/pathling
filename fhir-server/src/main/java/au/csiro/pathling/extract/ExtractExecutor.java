@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -7,6 +7,7 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.Configuration;
@@ -20,7 +21,15 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResultWriter;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -31,6 +40,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -87,9 +98,14 @@ public class ExtractExecutor extends QueryExecutor {
     // Write the result and get the URL.
     final String resultUrl = resultWriter.write(result, requestId);
 
+    // Get the current user, if authenticated, and store alongside the result for later 
+    // authorization.
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    final Optional<String> currentUserId = getCurrentUserId(authentication);
+
     // Store a mapping between the request ID and the result URL, for later retrieval via the result
     // operation.
-    resultRegistry.put(requestId, resultUrl);
+    resultRegistry.put(requestId, new Result(resultUrl, currentUserId));
 
     return new ExtractResponse(serverBase + "/$result?id=" + requestId);
   }
@@ -126,7 +142,7 @@ public class ExtractExecutor extends QueryExecutor {
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
     final Column[] columnValues = columns.stream()
-        .map(path -> ((Materializable) path).getExtractableColumn())
+        .map(path -> ((Materializable<?>) path).getExtractableColumn())
         .toArray(Column[]::new);
     final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
         .filter(idColumn.isNotNull());

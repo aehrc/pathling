@@ -5,9 +5,10 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 package au.csiro.pathling.encoders.datatypes
@@ -67,14 +68,14 @@ trait DataTypeMappings {
    *
    * @param inputObject an expression referring to the composite object to encode
    * @param definition  the composite definition to encode
-   * @return an optional expression sequence if the composit is overridden.
+   * @return an optional expression sequence if the composite is overridden.
    */
   def overrideCompositeExpression(inputObject: Expression,
                                   definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[Expression]]
 
   /**
    * Returns true if the given field should be skipped during encoding and decoding, false otherwise.
-   * This allows the data type to explicitily short circuit a handful of recursive data model
+   * This allows the data type to explicitly short circuit a handful of recursive data model
    * definitions that cannot be encoded in Spark.
    */
   def skipField(compositeDefinition: BaseRuntimeElementCompositeDefinition[_],
@@ -95,8 +96,8 @@ trait DataTypeMappings {
   /**
    * Returns a specialized custom coder for this child definition.
    *
-   * @param elementDefinition
-   * @param elementName
+   * @param elementDefinition the element definition
+   * @param elementName the name of the element
    * @return a specialized custom coder
    */
 

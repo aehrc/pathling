@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -48,7 +48,7 @@ import org.springframework.context.annotation.Profile;
 @WebServlet(urlPatterns = "/fhir/*")
 @Profile("server")
 @Slf4j
-@SuppressWarnings({"NonSerializableFieldInSerializableClass", "serial"})
+@SuppressWarnings({"NonSerializableFieldInSerializableClass"})
 public class FhirServer extends RestfulServer {
 
   private static final int DEFAULT_PAGE_SIZE = 100;
@@ -257,8 +257,9 @@ public class FhirServer extends RestfulServer {
 
   private void configureAuthorization() {
     if (configuration.getAuth().isEnabled()) {
+      final String issuer = checkPresent(configuration.getAuth().getIssuer());
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
-          new SmartConfigurationInterceptor(checkPresent(oidcConfiguration));
+          new SmartConfigurationInterceptor(issuer, checkPresent(oidcConfiguration));
       registerInterceptor(smartConfigurationInterceptor);
     }
   }

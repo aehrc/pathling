@@ -5,27 +5,27 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
-package au.csiro.pathling.encoders
+package au.csiro.pathling.encoders1
 
 import java.util
 
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.encoders._
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
 import ca.uhn.fhir.context.{RuntimeChildPrimitiveDatatypeDefinition, _}
 import ca.uhn.fhir.model.api.IValueSetEnumBinder
 import org.apache.spark.sql.catalyst.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
+import org.apache.spark.sql.catalyst.expressions
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.codegen.Block._
-import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode}
 import org.apache.spark.sql.catalyst.expressions.objects._
-import org.apache.spark.sql.catalyst.{InternalRow, expressions}
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype}
@@ -39,7 +39,7 @@ import scala.reflect.ClassTag
 /**
  * Spark Encoder for FHIR data models.
  */
-private[encoders] object EncoderBuilder {
+object EncoderBuilder1 {
 
   /**
    * Returns an encoder for the FHIR resource implemented by the given class
@@ -52,13 +52,13 @@ private[encoders] object EncoderBuilder {
   def of(definition: BaseRuntimeElementCompositeDefinition[_],
          context: FhirContext,
          mappings: DataTypeMappings,
-         converter: SchemaConverter,
+         converter: SchemaConverter1,
          contained: mutable.Buffer[BaseRuntimeElementCompositeDefinition[_]] = mutable.Buffer.empty): ExpressionEncoder[_] = {
 
     val fhirClass = definition.getImplementingClass
     val inputObject = BoundReference(0, ObjectType(fhirClass), nullable = true)
 
-    val encoderBuilder = new EncoderBuilder(context,
+    val encoderBuilder = new EncoderBuilder1(context,
       mappings,
       converter)
 
@@ -80,29 +80,9 @@ private[encoders] object EncoderBuilder {
 /**
  * Spark encoder for FHIR resources.
  */
-private[encoders] class EncoderBuilder(fhirContext: FhirContext,
-                                       dataTypeMappings: DataTypeMappings,
-                                       schemaConverter: SchemaConverter) {
-
-  def enumerationToDeserializer(enumeration: RuntimeChildPrimitiveEnumerationDatatypeDefinition,
-                                path: Option[Expression]): Expression = {
-
-    def getPath: Expression = path.getOrElse(GetColumnByOrdinal(0, ObjectType(classOf[String])))
-
-    // Get the value and initialize the instance.
-    val utfToString = Invoke(getPath, "toString", ObjectType(classOf[String]), Nil)
-
-    val enumFactory = Class.forName(enumeration.getBoundEnumType.getName + "EnumFactory")
-
-    // Creates a new enum factory instance for each invocation, but this is cheap
-    // on modern JVMs and probably more efficient than attempting to pool the underlying
-    // FHIR enum factory ourselves.
-    val factoryInstance = NewInstance(enumFactory, Nil, false, ObjectType(enumFactory), None)
-
-    Invoke(factoryInstance, "fromCode",
-      ObjectType(enumeration.getBoundEnumType),
-      List(utfToString))
-  }
+private[encoders1] class EncoderBuilder1(fhirContext: FhirContext,
+                                        dataTypeMappings: DataTypeMappings,
+                                        schemaConverter: SchemaConverter1) extends Deserializer {
 
   /**
    * Converts a FHIR DataType to a UTF8 string usable by Spark.
@@ -376,7 +356,9 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
       }
 
       val struct = CreateNamedStruct(childFields ++ containedChildren)
-      If(IsNull(struct), Literal.create(null, struct.dataType), struct)
+      // TODO: This most likely should be as below
+      // If(IsNull(struct), Literal.create(null, struct.dataType), struct)
+      If(IsNull(inputObject), Literal.create(null, struct.dataType), struct)
     }
   }
 
@@ -683,44 +665,5 @@ private[encoders] class EncoderBuilder(fhirContext: FhirContext,
         result
       }
     }
-  }
-}
-
-/**
- * An Expression extracting an object having the given class definition from a List of FHIR
- * Resources.
- */
-case class GetClassFromContained(targetObject: Expression,
-                                 containedClass: Class[_])
-  extends Expression with NonSQLExpression {
-
-  override def nullable: Boolean = targetObject.nullable
-
-  override def children: Seq[Expression] = targetObject :: Nil
-
-  override def dataType: DataType = ObjectType(containedClass)
-
-  override def eval(input: InternalRow): Any =
-    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
-
-  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-
-    val javaType = containedClass.getName
-    val obj = targetObject.genCode(ctx)
-
-    ev.copy(code =
-      code"""
-            |${obj.code}
-            |$javaType ${ev.value} = null;
-            |boolean ${ev.isNull} = true;
-            |java.util.List<Object> contained = ${obj.value}.getContained();
-            |
-            |for (int containedIndex = 0; containedIndex < contained.size(); containedIndex++) {
-            |  if (contained.get(containedIndex) instanceof $javaType) {
-            |    ${ev.value} = ($javaType) contained.get(containedIndex);
-            |    ${ev.isNull} = false;
-            |  }
-            |}
-       """.stripMargin)
   }
 }

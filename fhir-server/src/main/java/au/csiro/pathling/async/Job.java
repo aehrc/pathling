@@ -1,11 +1,12 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
 
 package au.csiro.pathling.async;
 
+import java.util.Optional;
 import java.util.concurrent.Future;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -13,7 +14,7 @@ import lombok.ToString;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 /**
- * Represents a background job that is in progress.
+ * Represents a background job that is in progress or complete.
  *
  * @author John Grimes
  */
@@ -27,6 +28,9 @@ public class Job {
   @Nonnull
   private final Future<IBaseResource> result;
 
+  @Nonnull
+  private final Optional<String> ownerId;
+
   private int totalStages;
 
   private int completedStages;
@@ -34,10 +38,13 @@ public class Job {
   /**
    * @param operation the operation that initiated the job, used for enforcing authorization
    * @param result the {@link Future} result
+   * @param ownerId the identifier of the owner of the job, if authenticated
    */
-  public Job(@Nonnull final String operation, @Nonnull final Future<IBaseResource> result) {
+  public Job(@Nonnull final String operation, @Nonnull final Future<IBaseResource> result,
+      @Nonnull final Optional<String> ownerId) {
     this.operation = operation;
     this.result = result;
+    this.ownerId = ownerId;
   }
 
   /**

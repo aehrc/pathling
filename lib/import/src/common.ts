@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -9,7 +9,7 @@
  */
 
 import axios, { AxiosInstance, AxiosResponse } from "axios";
-import ClientOAuth2 = require("client-oauth2");
+import ClientOAuth2 from "client-oauth2";
 
 export const JSON_CONTENT_TYPE = "application/json";
 export const FHIR_JSON_CONTENT_TYPE = "application/fhir+json";

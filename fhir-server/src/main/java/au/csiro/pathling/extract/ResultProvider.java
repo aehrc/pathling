@@ -1,13 +1,15 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
 
 package au.csiro.pathling.extract;
 
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.io.ResultReader;
 import au.csiro.pathling.security.OperationAccess;
@@ -15,6 +17,7 @@ import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -22,6 +25,8 @@ import javax.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -69,14 +74,21 @@ public class ResultProvider {
     }
 
     log.info("Retrieving extract result: {}", id);
-    final String resultUrl = resultRegistry.get(id);
+    final Result result = resultRegistry.get(id);
     // Check that the result exists.
-    if (resultUrl == null) {
+    if (result == null) {
       throw new ResourceNotFoundError("Result ID not found");
     }
 
+    // Check that the user requesting the result is the same user that started the job.
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    final Optional<String> currentUserId = getCurrentUserId(authentication);
+    if (!result.getOwnerId().equals(currentUserId)) {
+      throw new AccessDeniedError("The requested result is not owned by the current user");
+    }
+
     // Open an input stream to read the result.
-    final InputStream inputStream = resultReader.read(resultUrl);
+    final InputStream inputStream = resultReader.read(result);
 
     // Set the appropriate response headers.
     response.setHeader("Content-Type", "text/csv");
@@ -85,7 +97,7 @@ public class ResultProvider {
     try {
       IOUtils.copyLarge(inputStream, response.getOutputStream());
     } catch (final IOException e) {
-      throw new RuntimeException("Problem writing result data to response: " + resultUrl, e);
+      throw new RuntimeException("Problem writing result data to response: " + result, e);
     }
   }
 

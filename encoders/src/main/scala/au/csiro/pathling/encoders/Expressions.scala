@@ -5,9 +5,10 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 /*
@@ -40,7 +41,7 @@ case class StaticField(staticObject: Class[_],
                        dataType: DataType,
                        fieldName: String) extends Expression with NonSQLExpression {
 
-  val objectName = staticObject.getName.stripSuffix("$")
+  val objectName: String = staticObject.getName.stripSuffix("$")
 
   override def nullable: Boolean = false
 
@@ -58,6 +59,11 @@ case class StaticField(staticObject: Class[_],
         """
     ev.copy(code = code, isNull = FalseLiteral)
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    StaticField(staticObject, dataType, fieldName)
+  }
+  
 }
 
 /**
@@ -90,6 +96,11 @@ case class InstanceOf(value: Expression,
 
     ev.copy(code = code, isNull = FalseLiteral)
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    InstanceOf(newChildren.head, checkedType)
+  }
+
 }
 
 /**
@@ -123,4 +134,54 @@ case class ObjectCast(value: Expression, resultType: DataType)
 
     ev.copy(code = code, isNull = obj.isNull)
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    ObjectCast(newChildren.head, resultType)
+  }
+  
+}
+
+
+/**
+ * An Expression extracting an object having the given class definition from a List of FHIR
+ * Resources.
+ */
+case class GetClassFromContained(targetObject: Expression,
+                                 containedClass: Class[_])
+  extends Expression with NonSQLExpression {
+
+  override def nullable: Boolean = targetObject.nullable
+
+  override def children: Seq[Expression] = targetObject :: Nil
+
+  override def dataType: DataType = ObjectType(containedClass)
+
+  override def eval(input: InternalRow): Any =
+    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+
+    val javaType = containedClass.getName
+    val obj = targetObject.genCode(ctx)
+
+    ev.copy(code =
+      code"""
+            |${obj.code}
+            |$javaType ${ev.value} = null;
+            |boolean ${ev.isNull} = true;
+            |java.util.List<Object> contained = ${obj.value}.getContained();
+            |
+            |for (int containedIndex = 0; containedIndex < contained.size(); containedIndex++) {
+            |  if (contained.get(containedIndex) instanceof $javaType) {
+            |    ${ev.value} = ($javaType) contained.get(containedIndex);
+            |    ${ev.isNull} = false;
+            |  }
+            |}
+       """.stripMargin)
+  }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    GetClassFromContained(newChildren.head, containedClass)
+  }
+  
 }

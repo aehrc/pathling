@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -18,10 +18,15 @@ import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.env.*;
+import org.springframework.core.env.AbstractEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.PropertyResolver;
 import org.springframework.stereotype.Component;
 
 /**
@@ -61,13 +66,23 @@ public class Spark {
         .register(CodingToLiteral.FUNCTION_NAME, new CodingToLiteral(), DataTypes.StringType);
 
     // Configure AWS driver and credentials.
+    configureAwsDriver(configuration, spark);
+
+    return spark;
+  }
+
+  private static void configureAwsDriver(@NotNull Configuration configuration, SparkSession spark) {
     final Aws awsConfig = configuration.getStorage().getAws();
     final org.apache.hadoop.conf.Configuration hadoopConfig = spark.sparkContext()
         .hadoopConfiguration();
+   
+    // We need to use the anonymous credentials provider if we are not using AWS credentials.
     if (awsConfig.isAnonymousAccess()) {
       hadoopConfig.set("fs.s3a.aws.credentials.provider",
           "org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider");
     }
+
+    // Set credentials if provided.
     awsConfig.getAccessKeyId()
         .ifPresent(accessKeyId -> hadoopConfig.set("fs.s3a.access.key", accessKeyId));
     awsConfig.getSecretAccessKey()
@@ -76,7 +91,13 @@ public class Spark {
     hadoopConfig.set("fs.s3a.committer.magic.enabled", "true");
     hadoopConfig.set("fs.s3a.committer.name", "magic");
 
-    return spark;
+    // Assume role if configured.
+    awsConfig.getAssumedRole()
+        .ifPresent(assumedRole -> {
+          hadoopConfig.set("fs.s3a.aws.credentials.provider",
+              "org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider");
+          hadoopConfig.set("fs.s3a.assumed.role.arn", assumedRole);
+        });
   }
 
   private static void resolveSparkConfiguration(@Nonnull final PropertyResolver resolver) {
