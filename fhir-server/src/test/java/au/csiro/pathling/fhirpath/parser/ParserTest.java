@@ -94,7 +94,7 @@ public class ParserTest {
   private TerminologyServiceFactory terminologyServiceFactory;
 
   private Parser parser;
-  private ResourceReader mockReader;
+  protected ResourceReader mockReader;
 
   @BeforeEach
   public void setUp() throws IOException {
@@ -115,7 +115,7 @@ public class ParserTest {
     parser = new Parser(parserContext);
   }
 
-  private void mockResourceReader(final ResourceType... resourceTypes)
+  protected void mockResourceReader(final ResourceType... resourceTypes)
       throws MalformedURLException {
     for (final ResourceType resourceType : resourceTypes) {
       final File parquetFile =
@@ -135,7 +135,7 @@ public class ParserTest {
 
   @SuppressWarnings("SameParameterValue")
   @Nonnull
-  private FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
+  protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
     final ResourcePath subjectResource = ResourcePath
         .build(fhirContext, mockReader, resourceType, resourceType.toCode(), true);

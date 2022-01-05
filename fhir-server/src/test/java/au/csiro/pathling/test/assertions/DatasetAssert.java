@@ -22,7 +22,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.file.SimplePathVisitor;
 import org.apache.spark.sql.Dataset;
@@ -41,8 +43,9 @@ public class DatasetAssert {
     return new DatasetAssert(dataset);
   }
 
+  @Getter
   @Nonnull
-  private final Dataset<Row> dataset;
+  private Dataset<Row> dataset;
 
   public DatasetAssert(@Nonnull final Dataset<Row> dataset) {
     this.dataset = dataset;
@@ -90,6 +93,12 @@ public class DatasetAssert {
   @SuppressWarnings("UnusedReturnValue")
   public DatasetAssert hasRowsUnordered(@Nonnull final Dataset<Row> expected) {
     return hasRowsUnordered(expected.collectAsList());
+  }
+
+  @Nonnull
+  public DatasetAssert apply(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    dataset = operator.apply(dataset);
+    return this;
   }
 
   @Nonnull
