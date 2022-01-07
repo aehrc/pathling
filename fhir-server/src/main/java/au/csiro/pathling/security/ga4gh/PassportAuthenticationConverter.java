@@ -152,9 +152,12 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
     @Nonnull
     private String getControlledAccessDatasetId(@Nonnull final ClaimAccessor visa) {
       final JSONObject visasClaim = visa.getClaim(VISAS_CLAIM_NAME);
+      if (visasClaim == null) {
+        throw new UnclassifiedServerFailureException(502, "Visa is wrong type");
+      }
       final String visaType = visasClaim.getAsString(VISA_TYPE_CLAIM);
       final String visaDatasetId = visasClaim.getAsString(VISA_DATASET_ID_CLAIM);
-      if (visasClaim == null || visaType == null || visaDatasetId == null) {
+      if (visaType == null || visaDatasetId == null) {
         throw new UnclassifiedServerFailureException(502,
             "Visa is wrong type, or is missing dataset ID");
       }

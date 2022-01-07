@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.Configuration;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.security.OidcConfiguration.ConfigItem;
 import com.google.gson.FieldNamingPolicy;
@@ -31,7 +30,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.test.context.TestPropertySource;
@@ -68,9 +71,6 @@ class AuthorizationConfigurationTest extends IntegrationTest {
   @SuppressWarnings("unused")
   private JwtAuthenticationConverter jwtAuthenticationConverter;
 
-
-  @Autowired
-  private Configuration configuration;
 
   @BeforeEach
   public void setUp() {
