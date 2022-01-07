@@ -5,10 +5,10 @@
  */
 
 import axios, { AxiosRequestConfig } from "axios";
-import { PathlingClientOptionsResolved, QueryOptions } from "./index";
-import { getStatusUrl, waitForAsyncResult } from "./async";
-import { buildResponseError } from "./OperationOutcome";
 import { performance } from "just-performance";
+import { getStatusUrl, waitForAsyncResult } from "./async";
+import { PathlingClientOptionsResolved, QueryOptions } from "./index";
+import { buildResponseError } from "./OperationOutcome";
 
 /**
  * The FHIR JSON content type.
@@ -29,7 +29,7 @@ export function requestConfig(
     headers: {
       Accept: FHIR_CONTENT_TYPE,
       ...(options?.token ? auth : {}),
-      ...(preferAsync ? preferAsync : {}),
+      ...(options?.preferAsync ? preferAsync : {}),
     },
   };
 }
