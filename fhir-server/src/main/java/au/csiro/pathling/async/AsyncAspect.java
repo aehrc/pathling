@@ -10,6 +10,8 @@ import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import io.sentry.ITransaction;
+import io.sentry.Sentry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
@@ -103,12 +105,14 @@ public class AsyncAspect {
     final RequestDetails requestDetails = getRequestDetails(args);
     final HttpServletResponse response = getResponse(args);
     final String requestId = requestDetails.getRequestId();
+    final ITransaction transaction = Sentry.startTransaction(requestId, "async");
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     checkNotNull(requestId);
     final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
     final Future<IBaseResource> result = executor.submit(() -> {
       try {
         MDC.put("requestId", requestId);
+        Sentry.startTransaction(requestId, "async");
         SecurityContextHolder.getContext().setAuthentication(authentication);
         spark.sparkContext().setJobGroup(requestId, requestId, true);
         return (IBaseResource) joinPoint.proceed(args);
@@ -116,6 +120,7 @@ public class AsyncAspect {
         throw new RuntimeException("Problem processing request asynchronously", e);
       } finally {
         cleanUpAfterJob(spark, requestId);
+        transaction.finish();
       }
     });
     final Optional<String> ownerId = getCurrentUserId(authentication);

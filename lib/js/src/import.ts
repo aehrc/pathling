@@ -4,9 +4,13 @@
  * Software Licence Agreement.
  */
 
-import { IOperationOutcome, IParameters } from "@ahryman40k/ts-fhir-types/lib/R4";
-import { PathlingClientOptionsResolved, QueryOptions, QueryResult } from "./index";
+import { OperationOutcome, Parameters } from "fhir/r4";
 import { makeRequest, postFhirConfig } from "./common";
+import {
+  PathlingClientOptionsResolved,
+  QueryOptions,
+  QueryResult,
+} from "./index";
 
 /**
  * The parameters that make up an import query.
@@ -51,7 +55,7 @@ export interface ImportResult extends QueryResult {
    *
    * @see https://www.hl7.org/fhir/r4/operationoutcome.html
    */
-  response: IOperationOutcome;
+  response: OperationOutcome;
 }
 
 /**
@@ -88,7 +92,7 @@ export class ImportClient {
    * @see https://www.hl7.org/fhir/R4/parameters.html
    */
   async requestWithParams(
-    params: IParameters,
+    params: Parameters,
     options?: ImportQueryOptions
   ): Promise<ImportResult> {
     return makeRequest(
@@ -101,11 +105,11 @@ export class ImportClient {
 
   /**
    * Convert an {@link ImportQuery} object into the corresponding
-   * {@link IParameters} resource.
+   * {@link Parameters} resource.
    *
    * @private
    */
-  private static parametersFromQuery(query: ImportQuery): IParameters {
+  private static parametersFromQuery(query: ImportQuery): Parameters {
     return {
       resourceType: "Parameters",
       parameter: query.source.map((s: ImportSource) => ({

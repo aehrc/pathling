@@ -8,10 +8,7 @@
  * @author John Grimes
  */
 
-import {
-  IOperationOutcome,
-  IParameters,
-} from "@ahryman40k/ts-fhir-types/lib/R4";
+import { OperationOutcome, Parameters } from "fhir/r4";
 import {
   buildAuthenticatedClient,
   FHIR_JSON_CONTENT_TYPE,
@@ -22,7 +19,7 @@ export interface ImportParams {
   endpoint: string;
   clientId: string;
   clientSecret: string;
-  parameters: IParameters;
+  parameters: Parameters;
 }
 
 export type ImportResult = string | null;
@@ -30,7 +27,7 @@ export type ImportResult = string | null;
 /**
  * Imports a set of files from S3 into Pathling.
  *
- * @return either a job status URL or the {@link IOperationOutcome} resulting from the operation,
+ * @return either a job status URL or the {@link OperationOutcome} resulting from the operation,
  *   depending on whether async processing is enabled on the Pathling instance
  * @see https://pathling.csiro.au/docs/import.html
  */
@@ -56,7 +53,7 @@ export async function importFromParameters({
   );
 
   console.info("Initiating import request: %j", parameters);
-  const response = await client.post<IOperationOutcome>("$import", parameters, {
+  const response = await client.post<OperationOutcome>("$import", parameters, {
     headers: {
       Accept: FHIR_JSON_CONTENT_TYPE,
       "Content-Type": FHIR_JSON_CONTENT_TYPE,

@@ -4,9 +4,13 @@
  * Software Licence Agreement.
  */
 
-import { IParameters } from "@ahryman40k/ts-fhir-types/lib/R4";
-import { PathlingClientOptionsResolved, QueryOptions, QueryResult } from "./index";
+import { Parameters } from "fhir/r4";
 import { getConfig, makeRequest, postFhirConfig } from "./common";
+import {
+  PathlingClientOptionsResolved,
+  QueryOptions,
+  QueryResult,
+} from "./index";
 
 /**
  * The parameters that make up an extract query.
@@ -54,7 +58,7 @@ export interface ExtractResult extends QueryResult {
    * @see https://pathling.csiro.au/docs/extract.html
    * @see https://www.hl7.org/fhir/R4/parameters.html
    */
-  response: IParameters;
+  response: Parameters;
 
   /**
    * A URL at which the result of the operation can be retrieved.
@@ -92,7 +96,7 @@ export class ExtractClient {
         ? postFhirConfig(url, ExtractClient.parametersFromQuery(query), options)
         : getConfig(url, params, options);
 
-    const result = await makeRequest<any, IParameters>(
+    const result = await makeRequest<any, Parameters>(
       config,
       "Checking status of extract job",
       this.options,
@@ -130,11 +134,11 @@ export class ExtractClient {
 
   /**
    * Convert an {@link ExtractQuery} object into the corresponding
-   * {@link IParameters} resource.
+   * {@link Parameters} resource.
    *
    * @private
    */
-  private static parametersFromQuery(query: ExtractQuery): IParameters {
+  private static parametersFromQuery(query: ExtractQuery): Parameters {
     return {
       resourceType: "Parameters",
       parameter: [

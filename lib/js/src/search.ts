@@ -4,9 +4,13 @@
  * Software Licence Agreement.
  */
 
-import { IBundle } from "@ahryman40k/ts-fhir-types/lib/R4";
-import { PathlingClientOptionsResolved, QueryOptions, QueryResult } from "./index";
+import { Bundle } from "fhir/r4";
 import { getConfig, makeRequest, postFormConfig } from "./common";
+import {
+  PathlingClientOptionsResolved,
+  QueryOptions,
+  QueryResult,
+} from "./index";
 
 /**
  * The parameters that make up a search query.
@@ -55,7 +59,7 @@ export interface SearchResult extends QueryResult {
    * @see https://pathling.csiro.au/docs/search.html
    * @see https://www.hl7.org/fhir/R4/bundle.html
    */
-  response: IBundle;
+  response: Bundle;
 }
 
 /**

@@ -13,7 +13,8 @@
  */
 
 import { Handler } from "aws-lambda";
-import { IParameters } from "@ahryman40k/ts-fhir-types/lib/R4";
+import { Parameters } from "fhir/r4";
+import { CheckStatusResult } from "./checkStatus.js";
 import {
   checkExportConfigured,
   checkImportStatusConfigured,
@@ -22,9 +23,8 @@ import {
   pathlingImportConfigured,
   transferToS3Configured,
 } from "./config.js";
-import { ImportResult } from "./import.js";
-import { CheckStatusResult } from "./checkStatus.js";
 import { ExportResult } from "./export.js";
+import { ImportResult } from "./import.js";
 import { initializeSentry } from "./sentry.js";
 
 export interface ExportHandlerOutput {
@@ -36,7 +36,7 @@ export interface CheckStatusHandlerOutput {
 }
 
 export interface ImportHandlerInput {
-  parameters: IParameters;
+  parameters: Parameters;
 }
 
 export interface ImportHandlerOutput {
@@ -76,10 +76,12 @@ export const transferToS3: Handler<
 /**
  * Lambda handler for import to Pathling.
  */
-export const pathlingImport: Handler<ImportHandlerInput, ImportHandlerOutput> =
-  async (event) => ({
-    statusUrl: await pathlingImportConfigured(config, event),
-  });
+export const pathlingImport: Handler<
+  ImportHandlerInput,
+  ImportHandlerOutput
+> = async (event) => ({
+  statusUrl: await pathlingImportConfigured(config, event),
+});
 
 /**
  * Lambda handler for checking Pathling import status.

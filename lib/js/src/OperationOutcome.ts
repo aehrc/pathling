@@ -4,8 +4,8 @@
  * Software Licence Agreement.
  */
 
-import { IOperationOutcome } from "@ahryman40k/ts-fhir-types/lib/R4";
 import { AxiosError, AxiosResponse } from "axios";
+import { OperationOutcome } from "fhir/r4";
 
 interface OpOutcomeSourceError extends AxiosError {
   response: AxiosResponse;
@@ -16,10 +16,10 @@ interface OpOutcomeSourceError extends AxiosError {
  * OperationOutcome resource.
  */
 export class OpOutcomeError extends Error {
-  resource: IOperationOutcome;
+  resource: OperationOutcome;
 
   constructor(error: OpOutcomeSourceError) {
-    const opOutcome: IOperationOutcome = error.response.data;
+    const opOutcome: OperationOutcome = error.response.data;
     const issue = opOutcome.issue[0],
       message =
         issue.code === "login"

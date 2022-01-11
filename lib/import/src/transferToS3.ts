@@ -8,14 +8,6 @@
  * @author John Grimes
  */
 
-import { IParameters } from "@ahryman40k/ts-fhir-types/lib/R4";
-import { FhirBulkOutput } from "./export.js";
-import { createHash } from "crypto";
-import {
-  buildAuthenticatedClient,
-  FHIR_NDJSON_CONTENT_TYPE,
-} from "./common.js";
-import { AxiosInstance, AxiosResponse } from "axios";
 import {
   AbortMultipartUploadCommand,
   CompletedPart,
@@ -26,13 +18,21 @@ import {
   S3Client,
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
-import { rm, stat } from "fs/promises";
-import { v4 as uuidv4 } from "uuid";
+import { AxiosInstance, AxiosResponse } from "axios";
+import { createHash } from "crypto";
+import { Parameters } from "fhir/r4";
 import { createReadStream, createWriteStream, Stats } from "fs";
-import { URL } from "url";
-import ReadableStream = NodeJS.ReadableStream;
-import tempDirectory from "temp-dir";
+import { rm, stat } from "fs/promises";
 import path from "node:path";
+import tempDirectory from "temp-dir";
+import { URL } from "url";
+import { v4 as uuidv4 } from "uuid";
+import {
+  buildAuthenticatedClient,
+  FHIR_NDJSON_CONTENT_TYPE,
+} from "./common.js";
+import { FhirBulkOutput } from "./export.js";
+import ReadableStream = NodeJS.ReadableStream;
 
 export interface TransferParams {
   endpoint: string;
@@ -43,7 +43,7 @@ export interface TransferParams {
   stagingUrl: string;
 }
 
-export type TransferResult = IParameters;
+export type TransferResult = Parameters;
 
 export interface FhirBulkResult {
   output: FhirBulkOutput[];
@@ -65,7 +65,7 @@ const MINIMUM_PART_SIZE = 5242880;
 /**
  * Downloads the files within a FHIR bulk export and transfers them to S3.
  *
- * @return a FHIR {@link IParameters} resource suitable for input to the Pathling import operation
+ * @return a FHIR {@link Parameters} resource suitable for input to the Pathling import operation
  */
 export async function transferExportToS3({
   endpoint,
@@ -384,7 +384,7 @@ async function uploadFile(
 
 function s3ResultLocationsToParameters(
   locations: S3ResultLocation[]
-): IParameters {
+): Parameters {
   return {
     resourceType: "Parameters",
     parameter: locations

@@ -4,13 +4,13 @@
  * Software Licence Agreement.
  */
 
-import { ICapabilityStatement } from "@ahryman40k/ts-fhir-types/lib/R4";
+import { CapabilityStatement } from "fhir/r4";
+import { getConfig, makeRequest } from "./common";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
   QueryResult,
 } from "./index";
-import { getConfig, makeRequest } from "./common";
 
 export type CapabilitiesQueryOptions = QueryOptions;
 
@@ -23,7 +23,7 @@ export interface CapabilitiesResult extends QueryResult {
    *
    * @see https://hl7.org/fhir/r4/capabilitystatement.html
    */
-  response: ICapabilityStatement;
+  response: CapabilityStatement;
 }
 
 /**

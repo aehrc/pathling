@@ -4,9 +4,13 @@
  * Software Licence Agreement.
  */
 
-import { IParameters } from "@ahryman40k/ts-fhir-types/lib/R4";
-import { PathlingClientOptionsResolved, QueryOptions, QueryResult } from "./index";
+import { Parameters } from "fhir/r4";
 import { getConfig, makeRequest, postFhirConfig } from "./common";
+import {
+  PathlingClientOptionsResolved,
+  QueryOptions,
+  QueryResult,
+} from "./index";
 
 /**
  * The parameters that make up an aggregate query.
@@ -66,7 +70,7 @@ export interface AggregateResult extends QueryResult {
    * @see https://pathling.csiro.au/docs/aggregate.html
    * @see https://www.hl7.org/fhir/R4/parameters.html
    */
-  response: IParameters;
+  response: Parameters;
 }
 
 /**
@@ -131,11 +135,11 @@ export class AggregateClient {
 
   /**
    * Convert an {@link AggregateQuery} object into the corresponding
-   * {@link IParameters} resource.
+   * {@link Parameters} resource.
    *
    * @private
    */
-  private static parametersFromQuery(query: AggregateQuery): IParameters {
+  private static parametersFromQuery(query: AggregateQuery): Parameters {
     return {
       resourceType: "Parameters",
       parameter: [
