@@ -36,6 +36,10 @@ supported by the Spring Boot framework (see
   participates in.
 - `pathling.spark.explainQueries` - (default: `false`) If set to true, Spark
   query plans will be written to the logs.
+- `pathling.spark.cacheDatasets` - (default: `true`) This controls whether the
+  built-in caching within Spark is used for resource datasets and search
+  results. It may be useful to turn this off for large datasets in
+  memory-constrained environments.
 - `JAVA_OPTS` - (default in Docker image: `-Xmx2g`) Allows for the configuration
   of arbitrary options on the Java VM that Pathling runs within.
 
