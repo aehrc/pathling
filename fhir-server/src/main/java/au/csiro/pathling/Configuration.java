@@ -128,6 +128,14 @@ public class Configuration {
     @NotNull
     private Boolean explainQueries;
 
+    /**
+     * This controls whether the built-in caching within Spark is used for resource datasets and
+     * search results. It may be useful to turn this off for large datasets in memory-constrained
+     * environments.
+     */
+    @NotNull
+    private Boolean cacheDatasets;
+
   }
 
   /**

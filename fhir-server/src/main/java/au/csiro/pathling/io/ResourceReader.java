@@ -47,6 +47,9 @@ import org.springframework.stereotype.Component;
 public class ResourceReader {
 
   @Nonnull
+  private final Configuration configuration;
+
+  @Nonnull
   protected final SparkSession spark;
 
   @Nonnull
@@ -65,6 +68,7 @@ public class ResourceReader {
    */
   public ResourceReader(@Nonnull final Configuration configuration,
       @Nonnull final SparkSession spark) {
+    this.configuration = configuration;
     this.spark = spark;
     this.warehouseUrl = convertS3ToS3aUrl(configuration.getStorage().getWarehouseUrl());
     this.databaseName = configuration.getStorage().getDatabaseName();
@@ -159,9 +163,11 @@ public class ResourceReader {
     @Nullable final Dataset<Row> resources = spark.read().parquet(tableUrl);
     checkNotNull(resources);
 
-    // Cache the raw resource data.
-    log.debug("Caching resource dataset: {}", resourceType.toCode());
-    resources.cache();
+    if (configuration.getSpark().getCacheDatasets()) {
+      // Cache the raw resource data.
+      log.debug("Caching resource dataset: {}", resourceType.toCode());
+      resources.cache();
+    }
 
     return resources;
   }

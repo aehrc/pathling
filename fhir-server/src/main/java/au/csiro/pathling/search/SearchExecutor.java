@@ -29,7 +29,11 @@ import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.StringOrListParam;
 import ca.uhn.fhir.rest.param.StringParam;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -178,9 +182,12 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           .join(filteredIds, subjectIdColumn.equalTo(col(filterIdAlias)), "left_semi");
     }
 
-    // We cache the dataset because we know it will be accessed for both the total and the record
-    // retrieval.
-    dataset.cache();
+    if (getConfiguration().getSpark().getCacheDatasets()) {
+      // We cache the dataset because we know it will be accessed for both the total and the record
+      // retrieval.
+      log.debug("Caching search dataset");
+      dataset.cache();
+    }
 
     return dataset;
   }
