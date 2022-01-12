@@ -530,6 +530,19 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  void queryWithLargeScaleDecimalResult() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("where(gender = 'female').count() / where(gender = 'male').count()")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithLargeScaleDecimalResult.Parameters.json", response);
+  }
+
+  @Test
   void throwsInvalidInputOnEmptyAggregation() {
     subjectResource = ResourceType.PATIENT;
 

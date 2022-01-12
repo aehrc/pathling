@@ -9,10 +9,15 @@ package au.csiro.pathling.fhirpath.element;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.*;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -29,6 +34,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
+@SuppressWarnings("NullableProblems")
 public class DecimalPath extends ElementPath implements Materializable<DecimalType>, Comparable,
     Numeric {
 
@@ -76,8 +82,8 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
             "Attempt to return a Decimal value with greater than supported precision");
       }
       if (decimal.scale() > getDecimalType().scale()) {
-        throw new InvalidUserInputError(
-            "Attempt to return a Decimal value with greater than supported scale");
+        return Optional.of(
+            new DecimalType(decimal.setScale(getDecimalType().scale(), RoundingMode.HALF_UP)));
       }
 
       return Optional.of(new DecimalType(decimal));
