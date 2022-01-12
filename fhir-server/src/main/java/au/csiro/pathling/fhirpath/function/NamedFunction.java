@@ -50,6 +50,7 @@ public interface NamedFunction {
       .put("anyFalse", new BooleansTestFunction(ANY_FALSE))
       .put("allTrue", new BooleansTestFunction(ALL_TRUE))
       .put("allFalse", new BooleansTestFunction(ALL_FALSE))
+      .put("extension", new ExtensionFunction())
       .build();
 
   /**

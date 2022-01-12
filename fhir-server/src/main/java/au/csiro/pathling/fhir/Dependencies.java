@@ -53,7 +53,7 @@ public class Dependencies {
   static FhirEncoders fhirEncoders(@Nonnull final Configuration configuration) {
     final int maxNestingLevel = configuration.getEncoding().getMaxNestingLevel();
     final boolean enableExtensions = configuration.getEncoding().isEnableExtensions();
-    log.debug("Creating R4 FHIR encoders (max nesting level of:{}, and extensions enabled: {})",
+    log.debug("Creating R4 FHIR encoders (max nesting level of: {}, and extensions enabled: {})",
         maxNestingLevel, enableExtensions);
     return FhirEncoders.forR4()
         .withMaxNestingLevel(maxNestingLevel)

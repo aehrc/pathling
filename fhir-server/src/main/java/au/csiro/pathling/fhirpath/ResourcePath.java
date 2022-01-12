@@ -24,6 +24,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -54,6 +55,7 @@ public class ResourcePath extends NonLiteralPath {
         thisColumn);
     this.definition = definition;
     this.elementsToColumns = elementsToColumns;
+    this.setForeignResource(this);
   }
 
   /**
@@ -135,6 +137,14 @@ public class ResourcePath extends NonLiteralPath {
   @Nonnull
   public Column getElementColumn(@Nonnull final String elementName) {
     return Objects.requireNonNull(elementsToColumns.get(elementName));
+  }
+
+  /**
+   * @return the {@link Column} within the dataset pertaining to this element
+   */
+  @Nullable
+  public Column getExtensionColumn() {
+    return elementsToColumns.get("_extension");
   }
 
   /**

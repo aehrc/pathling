@@ -7,14 +7,7 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_121503c8;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_2b36c1e2;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_7001ad9c;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_8ee183e2;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_9360820c;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_bbd33563;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_beff242e;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWithValue;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
@@ -26,10 +19,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.DatePath;
-import au.csiro.pathling.fhirpath.element.IntegerPath;
-import au.csiro.pathling.fhirpath.element.StringPath;
+import au.csiro.pathling.fhirpath.element.*;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
@@ -528,6 +518,76 @@ public class ParserTest extends AbstractParserTest {
     assertEquals(
         "Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'",
         error.getMessage());
+  }
+
+
+  @Test
+  void testExtensionsOnResources() {
+    assertThatResultOf(
+        "extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionsOnResources.csv");
+  }
+
+  @Test
+  void testExtensionFunction() {
+    // This should be the same as: "extension.where($this.url='http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString"
+    assertThatResultOf(
+        "extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionFunction.csv");
+  }
+
+  @Test
+  void testExtensionsOnElements() {
+    assertThatResultOf(
+        "address.extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionsOnElements.csv");
+  }
+
+  @Test
+  void testNestedExtensions() {
+    assertThatResultOf(
+        "extension.extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testNestedExtensions.csv");
+  }
+
+  @Test
+  void testExtensionsForeignResources() {
+    assertThatResultOf(ResourceType.CONDITION,
+        "subject.resolve().ofType(Patient).extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionsForeignResources.csv");
+    // .saveAllRowsToCsv(spark,
+    //     "/Users/szu004/dev/pathling/fhir-server/src/test/resources/responses/ParserTest",
+    //     "testExtensionsForeignResources");
+  }
+
+  @Test
+  void testComplexExtensionsOnComplexPath() {
+    assertThatResultOf(
+        "address.where($this.city = 'Boston')"
+            + ".extension('http://hl7.org/fhir/StructureDefinition/geolocation')"
+            + ".extension('latitude').valueDecimal")
+        .isElementPath(DecimalPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testComplexExtensionsOnComplexPath.csv");
+  }
+
+  @Test
+  void testExtensionFunctionInWhere() {
+    assertThatResultOf(
+        "address.where($this.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').valueDecimal contains 42.391383).city")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionFunctionInWhere.csv");
   }
 
 }

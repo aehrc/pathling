@@ -138,7 +138,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
         // This resource path will get preserved within paths derived from this, so that we can come
         // back to it for things like reverse reference resolution.
-        path.setForeignResource(path);
+        // path.setForeignResource(path);
 
         return path;
 
