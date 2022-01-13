@@ -58,7 +58,8 @@ public class ResourceWriter {
     resources.orderBy(asc("id"))
         .write()
         .mode(SaveMode.Overwrite)
-        .parquet(tableUrl);
+        .format("delta")
+        .save(tableUrl);
   }
 
 }

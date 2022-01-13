@@ -160,7 +160,7 @@ public class ResourceReader {
         .join("/", warehouseUrl, databaseName, fileNameForResource(resourceType));
 
     log.info("Loading resource {} from: {}", resourceType.toCode(), tableUrl);
-    @Nullable final Dataset<Row> resources = spark.read().parquet(tableUrl);
+    @Nullable final Dataset<Row> resources = spark.read().format("delta").load(tableUrl);
     checkNotNull(resources);
 
     if (configuration.getSpark().getCacheDatasets()) {

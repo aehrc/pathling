@@ -89,7 +89,8 @@ public class TestDataImporter implements CommandLineRunner {
       resourcesDataset.orderBy(asc("id"))
           .write()
           .mode(SaveMode.Overwrite)
-          .parquet(outputParquet);
+          .format("delta")
+          .save(outputParquet);
     }
   }
 
