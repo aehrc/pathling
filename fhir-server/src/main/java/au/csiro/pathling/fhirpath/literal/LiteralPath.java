@@ -16,7 +16,11 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -219,7 +223,7 @@ public abstract class LiteralPath implements FhirPath {
   public Dataset<Row> trimDataset(@Nonnull final ParserContext context) {
     final List<Column> columns = new ArrayList<>(
         Arrays.asList(getIdColumn(), getValueColumn()));
-    context.getGroupingColumns().ifPresent(columns::addAll);
+    columns.addAll(context.getGroupingColumns());
     return getDataset().select(columns.toArray(new Column[]{}));
   }
 

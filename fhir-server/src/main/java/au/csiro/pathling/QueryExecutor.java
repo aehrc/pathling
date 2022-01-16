@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -74,12 +75,8 @@ public abstract class QueryExecutor {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
-  protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext) {
-    return buildParserContext(inputContext, Optional.empty());
-  }
-
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
-      @Nonnull final Optional<List<Column>> groupingColumns) {
+      @Nonnull final List<Column> groupingColumns) {
     return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
         terminologyServiceFactory, groupingColumns, new HashMap<>());
   }
@@ -200,7 +197,8 @@ public abstract class QueryExecutor {
 
     for (final String filter : filters) {
       // Parse the filter expression.
-      final ParserContext parserContext = buildParserContext(currentContext);
+      final ParserContext parserContext = buildParserContext(currentContext,
+          Collections.singletonList(currentContext.getIdColumn()));
       final Parser parser = new Parser(parserContext);
       final FhirPath fhirPath = parser.parse(filter);
 

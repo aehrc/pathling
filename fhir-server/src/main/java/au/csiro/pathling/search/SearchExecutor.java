@@ -31,6 +31,7 @@ import ca.uhn.fhir.rest.param.StringOrListParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -134,7 +135,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         @Nullable Column orColumn = null;
 
         for (final StringParam param : orParam.getValuesAsQueryTokens()) {
-          final ParserContext parserContext = buildParserContext(currentContext);
+          final ParserContext parserContext = buildParserContext(currentContext,
+              Collections.singletonList(currentContext.getIdColumn()));
           final Parser parser = new Parser(parserContext);
           final String expression = param.getValue();
           checkUserInput(!expression.isBlank(), "Filter expression cannot be blank");

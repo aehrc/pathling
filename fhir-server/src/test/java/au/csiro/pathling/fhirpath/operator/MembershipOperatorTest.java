@@ -27,6 +27,7 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -93,7 +94,7 @@ public class MembershipOperatorTest {
         .build();
     final StringLiteralPath element = StringLiteralPath.fromString("'Samuel'", collection);
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);
@@ -128,7 +129,7 @@ public class MembershipOperatorTest {
         .expression("name.family.first()")
         .build();
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);
@@ -152,7 +153,7 @@ public class MembershipOperatorTest {
         .build();
     final StringLiteralPath element = StringLiteralPath.fromString("'Samuel'", collection);
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);
@@ -179,7 +180,7 @@ public class MembershipOperatorTest {
         .expression("name.family.first()")
         .build();
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);
@@ -227,7 +228,7 @@ public class MembershipOperatorTest {
     final CodingLiteralPath element = CodingLiteralPath
         .fromString("http://loinc.org|56459004", collection);
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);

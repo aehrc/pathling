@@ -56,7 +56,6 @@ public class EmptyFunctionTest {
     final Coding coding2 = new Coding(TestHelpers.SNOMED_URL, "248427009", "Fever symptoms");
     final CodeableConcept concept2 = new CodeableConcept(coding2);
 
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(codeableConceptStructType())
@@ -74,6 +73,9 @@ public class EmptyFunctionTest {
         .dataset(dataset)
         .idAndValueColumns()
         .expression("code")
+        .build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(input.getIdColumn()))
         .build();
 
     // Set up the function input.

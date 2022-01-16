@@ -69,11 +69,12 @@ public class ParserContext {
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   /**
-   * The context may contain zero or more grouping columns. If there are columns in this list, the
-   * data will be aggregated using them rather than the resource identity.
+   * The context may contain zero or more grouping columns. If the context of evaluation is a single
+   * resource, the resource identity column should be the one and only column in this list.
+   * Otherwise, columns that provide the relevant groupings should be in here.
    */
   @Nonnull
-  private final Optional<List<Column>> groupingColumns;
+  private final List<Column> groupingColumns;
 
   /**
    * When within the context of function arguments, this is the {@link FhirPath} that represents the
@@ -104,7 +105,7 @@ public class ParserContext {
   public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final ResourceReader resourceReader,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
-      @Nonnull final Optional<List<Column>> groupingColumns,
+      @Nonnull final List<Column> groupingColumns,
       @Nonnull final Map<String, Column> nodeIdColumns) {
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;

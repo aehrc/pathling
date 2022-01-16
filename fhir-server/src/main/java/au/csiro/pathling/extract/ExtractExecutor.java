@@ -24,6 +24,7 @@ import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -123,7 +124,9 @@ public class ExtractExecutor extends QueryExecutor {
     final ResourcePath inputContext = ResourcePath
         .build(getFhirContext(), getResourceReader(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
-    final ParserContext parserContext = buildParserContext(inputContext);
+    // The context of evaluation is a single resource.
+    final ParserContext parserContext = buildParserContext(inputContext,
+        Collections.singletonList(inputContext.getIdColumn()));
     final List<FhirPathAndContext> columnParseResult =
         parseMaterializableExpressions(parserContext, query.getColumns(), "Column");
     final List<FhirPath> columns = columnParseResult.stream()

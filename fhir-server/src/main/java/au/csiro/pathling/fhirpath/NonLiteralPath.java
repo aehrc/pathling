@@ -8,7 +8,12 @@ package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.posexplode_outer;
+import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -309,7 +314,7 @@ public abstract class NonLiteralPath implements FhirPath {
         columns.addAll(thisResource.getElementColumns());
       }
     });
-    context.getGroupingColumns().ifPresent(columns::addAll);
+    columns.addAll(context.getGroupingColumns());
     return columns;
   }
 

@@ -543,6 +543,21 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  void queryWithWhereAggregationAndCount() {
+    subjectResource = ResourceType.CONDITION;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation(
+            "where(code.coding contains http://snomed.info/sct|444814009||'Viral sinusitis (disorder)').count()")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithWhereAggregationAndCount.Parameters.json",
+        response);
+  }
+
+  @Test
   void throwsInvalidInputOnEmptyAggregation() {
     subjectResource = ResourceType.PATIENT;
 

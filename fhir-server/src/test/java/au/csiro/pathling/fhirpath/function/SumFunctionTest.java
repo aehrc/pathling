@@ -28,7 +28,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,11 +48,6 @@ class SumFunctionTest {
 
   private ParserContext parserContext;
 
-  @BeforeEach
-  void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
-  }
-
   @Test
   void returnsCorrectIntegerResult() {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
@@ -73,6 +67,9 @@ class SumFunctionTest {
         .idAndEidAndValueColumns()
         .expression("valueInteger")
         .singular(false)
+        .build();
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
         .build();
 
     final NamedFunctionInput sumInput = new NamedFunctionInput(parserContext, inputPath,
@@ -112,6 +109,9 @@ class SumFunctionTest {
         .idAndEidAndValueColumns()
         .expression("valueDecimal")
         .singular(false)
+        .build();
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
         .build();
 
     final NamedFunctionInput sumInput = new NamedFunctionInput(parserContext, inputPath,
