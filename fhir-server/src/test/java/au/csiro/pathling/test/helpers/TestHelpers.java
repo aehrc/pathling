@@ -19,6 +19,8 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
@@ -112,7 +114,8 @@ public abstract class TestHelpers {
       throw new RuntimeException("Problem getting dataset for resource type", e);
     }
     assertNotNull(parquetUrl);
-    @Nullable final Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
+    final String decodedUrl = URLDecoder.decode(parquetUrl.toString(), StandardCharsets.UTF_8);
+    @Nullable final Dataset<Row> dataset = spark.read().parquet(decodedUrl);
     assertNotNull(dataset);
     return dataset;
   }

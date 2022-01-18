@@ -18,6 +18,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -93,9 +95,10 @@ public abstract class Assertions {
   public static void assertDatasetAgainstCsv(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset) {
     final URL url = TestHelpers.getResourceAsUrl(expectedCsvPath);
+    final String decodedUrl = URLDecoder.decode(url.toString(), StandardCharsets.UTF_8);
     final Dataset<Row> expectedDataset = spark.read()
         .schema(actualDataset.schema())
-        .csv(url.toString());
+        .csv(decodedUrl);
     new DatasetAssert(actualDataset)
         .hasRowsUnordered(expectedDataset);
   }
