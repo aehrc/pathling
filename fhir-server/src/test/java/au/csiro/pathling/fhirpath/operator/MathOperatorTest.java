@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -31,7 +32,6 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -57,12 +57,6 @@ public class MathOperatorTest {
   private static final List<String> EXPRESSION_TYPES = Arrays
       .asList("Integer", "Decimal", "Integer (literal)", "Decimal (literal)");
   private static final String ID_ALIAS = "_abc123";
-  private ParserContext parserContext;
-
-  @BeforeEach
-  void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
-  }
 
   @Value
   private static class TestParameters {
@@ -75,6 +69,9 @@ public class MathOperatorTest {
 
     @Nonnull
     FhirPath right;
+
+    @Nonnull
+    ParserContext context;
 
     boolean leftOperandIsInteger;
 
@@ -101,9 +98,11 @@ public class MathOperatorTest {
             leftType.equals("Integer (literal)") || leftType.equals("Decimal (literal)");
         final boolean rightTypeIsLiteral =
             rightType.equals("Integer (literal)") || rightType.equals("Decimal (literal)");
+        final ParserContext context = new ParserContextBuilder(spark, fhirContext).groupingColumns(
+            Collections.singletonList(left.getIdColumn())).build();
         parameters.add(
-            new TestParameters(leftType + ", " + rightType, left, right, leftOperandIsInteger,
-                leftTypeIsLiteral, rightTypeIsLiteral));
+            new TestParameters(leftType + ", " + rightType, left, right, context,
+                leftOperandIsInteger, leftTypeIsLiteral, rightTypeIsLiteral));
       }
     }
     return parameters.stream();
@@ -188,7 +187,7 @@ public class MathOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void addition(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("+");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -215,7 +214,7 @@ public class MathOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void subtraction(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("-");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -242,7 +241,7 @@ public class MathOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void multiplication(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("*");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -269,7 +268,7 @@ public class MathOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void division(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("/");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -294,7 +293,7 @@ public class MathOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void modulus(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("mod");
     final FhirPath result = comparisonOperator.invoke(input);

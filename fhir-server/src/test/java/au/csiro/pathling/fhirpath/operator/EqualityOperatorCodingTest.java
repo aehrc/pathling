@@ -19,6 +19,7 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -44,15 +45,16 @@ public class EqualityOperatorCodingTest {
   @Autowired
   private FhirContext fhirContext;
 
+  private static final String ID_ALIAS = "_abc123";
+
   private FhirPath left;
   private FhirPath right;
   private FhirPath literalSnomedAll;
-  private FhirPath literalLoinSystemCode;
+  private FhirPath literalLoincSystemCode;
   private ParserContext parserContext;
 
   @BeforeEach
   public void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
     // all components
     final Coding coding1 = new Coding(SNOMED_URL, "56459004", null);
     coding1.setVersion("http://snomed.info/sct/32506021000036107/version/20191231");
@@ -82,7 +84,7 @@ public class EqualityOperatorCodingTest {
     coding1_other.setId("some-other-fake-id");
 
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withStructTypeColumns(codingStructType())
         .withRow("patient-1", rowFromCoding(coding1))
         .withRow("patient-2", rowFromCoding(coding2))
@@ -99,7 +101,7 @@ public class EqualityOperatorCodingTest {
         .idAndValueColumns()
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withStructTypeColumns(codingStructType())
         .withRow("patient-1", rowFromCoding(coding1_other))
         .withRow("patient-2", rowFromCoding(coding3))
@@ -118,10 +120,11 @@ public class EqualityOperatorCodingTest {
     literalSnomedAll = CodingLiteralPath.fromString(
         "http://snomed.info/sct|56459004|http://snomed.info/sct/32506021000036107/version/20191231|'Display name'|true",
         left);
+    literalLoincSystemCode = CodingLiteralPath.fromString("http://loinc.org|'222|33'", left);
 
-    literalLoinSystemCode = CodingLiteralPath.fromString(
-        "http://loinc.org|'222|33'",
-        left);
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(left.getIdColumn()))
+        .build();
   }
 
   @Test
@@ -160,7 +163,7 @@ public class EqualityOperatorCodingTest {
 
   @Test
   public void literalEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, literalLoinSystemCode, left);
+    final OperatorInput input = new OperatorInput(parserContext, literalLoincSystemCode, left);
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
 
@@ -194,7 +197,7 @@ public class EqualityOperatorCodingTest {
 
   @Test
   public void literalNotEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, literalLoinSystemCode, left);
+    final OperatorInput input = new OperatorInput(parserContext, literalLoincSystemCode, left);
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
 

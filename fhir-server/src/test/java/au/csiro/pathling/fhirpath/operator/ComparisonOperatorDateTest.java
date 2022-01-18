@@ -19,6 +19,7 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -43,6 +44,8 @@ class ComparisonOperatorDateTest {
   @Autowired
   private FhirContext fhirContext;
 
+  private static final String ID_ALIAS = "_abc123";
+
   @Test
   void comparesDates() {
     final Optional<ElementDefinition> optionalLeftDefinition = FhirHelpers
@@ -51,7 +54,7 @@ class ComparisonOperatorDateTest {
     final ElementDefinition leftDefinition = optionalLeftDefinition.get();
 
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "2013-06-10T15:33:22Z")
         .withRow("patient-2", "2014-09-25T22:04:19+10:00")
@@ -71,7 +74,7 @@ class ComparisonOperatorDateTest {
     final ElementDefinition rightDefinition = optionalRightDefinition.get();
 
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "2013-06-10T12:33:22Z")
         .withRow("patient-2", "2014-09-25T12:04:19Z")
@@ -85,7 +88,9 @@ class ComparisonOperatorDateTest {
         .definition(rightDefinition)
         .buildDefined();
 
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(leftPath.getIdColumn()))
+        .build();
     final OperatorInput comparisonInput = new OperatorInput(parserContext, leftPath,
         rightPath);
     final Operator lessThan = Operator.getInstance("<=");

@@ -513,6 +513,14 @@ public class ParserTest extends AbstractParserTest {
   }
 
   @Test
+  void testBooleanOperatorWithLeftLiteral() {
+    assertThatResultOf("@1970-11-22 = birthDate")
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testBooleanOperatorWithLeftLiteral.csv");
+  }
+
+  @Test
   void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
