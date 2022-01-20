@@ -9,11 +9,14 @@ package au.csiro.pathling.fhir;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateProvider;
+import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.extract.ExtractExecutor;
 import au.csiro.pathling.extract.ExtractProvider;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.ResourceWriter;
 import au.csiro.pathling.search.SearchProvider;
+import au.csiro.pathling.update.UpdateProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import java.util.Optional;
@@ -56,10 +59,16 @@ public class ResourceProviderFactory {
   private final ResourceReader resourceReader;
 
   @Nonnull
+  private final ResourceWriter resourceWriter;
+
+  @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   @Nonnull
   private final FhirEncoders fhirEncoders;
+
+  @Nonnull
+  private final CacheInvalidator cacheInvalidator;
 
   /**
    * @param applicationContext The Spring {@link ApplicationContext}
@@ -75,7 +84,6 @@ public class ResourceProviderFactory {
    * @param aggregateExecutor A {@link AggregateExecutor} for processing requests to the aggregate
    * operation
    * @param extractExecutor A {@link ExtractExecutor} for processing requests to the extract
-   * operation
    */
   public ResourceProviderFactory(
       @Nonnull final ApplicationContext applicationContext,
@@ -86,8 +94,9 @@ public class ResourceProviderFactory {
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final AggregateExecutor aggregateExecutor,
-      @Nonnull final ExtractExecutor extractExecutor
-  ) {
+      @Nonnull final ExtractExecutor extractExecutor,
+      @Nonnull final ResourceWriter resourceWriter,
+      @Nonnull final CacheInvalidator cacheInvalidator) {
     this.applicationContext = applicationContext;
     this.fhirContext = fhirContext;
     this.configuration = configuration;
@@ -97,6 +106,8 @@ public class ResourceProviderFactory {
     this.fhirEncoders = fhirEncoders;
     this.aggregateExecutor = aggregateExecutor;
     this.extractExecutor = extractExecutor;
+    this.resourceWriter = resourceWriter;
+    this.cacheInvalidator = cacheInvalidator;
   }
 
   /**
@@ -142,5 +153,14 @@ public class ResourceProviderFactory {
 
     return applicationContext.getBean(SearchProvider.class, configuration, fhirContext,
         sparkSession, resourceReader, terminologyServiceFactory, fhirEncoders, resourceTypeClass);
+  }
+
+  @Nonnull
+  public UpdateProvider createUpdateResourceProvider(@Nonnull final ResourceType resourceType) {
+    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
+        .getResourceDefinition(resourceType.name()).getImplementingClass();
+
+    return applicationContext.getBean(UpdateProvider.class, sparkSession, fhirEncoders,
+        resourceWriter, cacheInvalidator, resourceTypeClass);
   }
 }

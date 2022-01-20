@@ -19,6 +19,7 @@ import au.csiro.pathling.io.ResourceWriter;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -150,8 +151,12 @@ public class ImportExecutor {
         throw new InvalidUserInputError("Error reading from URL: " + url, e);
       }
       final Dataset<IBaseResource> resources = jsonStrings
-          .map((MapFunction<String, IBaseResource>) json -> localFhirContextFactory
-              .build().newJsonParser().parseResource(json), fhirEncoder);
+          .map((MapFunction<String, IBaseResource>) json -> {
+            final IBaseResource resource = localFhirContextFactory
+                .build().newJsonParser().parseResource(json);
+            resource.setId(UUID.randomUUID().toString());
+            return resource;
+          }, fhirEncoder);
 
       log.info("Saving resources: {}", resourceType.toCode());
       resourceWriter.write(resourceType, resources);

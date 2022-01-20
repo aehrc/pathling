@@ -157,6 +157,7 @@ public class FhirServer extends RestfulServer {
       providers.addAll(buildAggregateProviders());
       providers.addAll(buildExtractProviders());
       providers.addAll(buildSearchProviders());
+      providers.addAll(buildUpdateProviders());
       registerProviders(providers);
 
       // Register resource providers.
@@ -235,6 +236,18 @@ public class FhirServer extends RestfulServer {
       final IResourceProvider searchProvider =
           resourceProviderFactory.createSearchResourceProvider(resourceType);
       providers.add(searchProvider);
+    }
+    return providers;
+  }
+
+  @Nonnull
+  private List<IResourceProvider> buildUpdateProviders() {
+    final List<IResourceProvider> providers = new ArrayList<>();
+
+    for (final ResourceType resourceType : ResourceType.values()) {
+      final IResourceProvider updateProvider =
+          resourceProviderFactory.createUpdateResourceProvider(resourceType);
+      providers.add(updateProvider);
     }
     return providers;
   }

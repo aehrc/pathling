@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -52,14 +53,27 @@ public class ResourceWriter {
    */
   @ResourceAccess(AccessType.WRITE)
   public void write(@Nonnull final ResourceType resourceType, @Nonnull final Dataset resources) {
-    final String tableUrl =
-        warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
+    final String tableUrl = getTableUrl(resourceType);
     // We order the resources here to reduce the amount of sorting necessary at query time.
     resources.orderBy(asc("id"))
         .write()
         .mode(SaveMode.Overwrite)
         .format("delta")
         .save(tableUrl);
+  }
+
+  public void append(@Nonnull final ResourceType resourceType, @Nonnull final Dataset resources) {
+    final String tableUrl = getTableUrl(resourceType);
+    resources
+        .write()
+        .mode(SaveMode.Append)
+        .format("delta")
+        .save(tableUrl);
+  }
+
+  @Nonnull
+  private String getTableUrl(final @NotNull ResourceType resourceType) {
+    return warehouseUrl + "/" + databaseName + "/" + fileNameForResource(resourceType);
   }
 
 }
