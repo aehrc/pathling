@@ -56,6 +56,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -122,7 +124,8 @@ public class ParserTest {
           new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
       final URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
       assertNotNull(parquetUrl);
-      final Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
+      final String decodedUrl = URLDecoder.decode(parquetUrl.toString(), StandardCharsets.UTF_8);
+      final Dataset<Row> dataset = spark.read().parquet(decodedUrl);
       when(mockReader.read(resourceType)).thenReturn(dataset);
       when(mockReader.getAvailableResourceTypes())
           .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
