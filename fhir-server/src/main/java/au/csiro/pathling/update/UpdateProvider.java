@@ -63,14 +63,14 @@ public class UpdateProvider implements IResourceProvider {
   public UpdateProvider(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ResourceWriter resourceWriter,
-      @Nonnull final Class<? extends IBaseResource> resourceClass,
-      @Nonnull final CacheInvalidator cacheInvalidator) {
+      @Nonnull final CacheInvalidator cacheInvalidator,
+      @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.spark = spark;
     this.fhirEncoders = fhirEncoders;
     this.resourceWriter = resourceWriter;
     this.resourceClass = resourceClass;
-    resourceType = resourceTypeFromClass(resourceClass);
     this.cacheInvalidator = cacheInvalidator;
+    resourceType = resourceTypeFromClass(resourceClass);
   }
 
   @Override
