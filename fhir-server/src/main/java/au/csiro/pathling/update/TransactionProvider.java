@@ -14,7 +14,7 @@ import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Nonnull;
@@ -57,9 +57,12 @@ public class TransactionProvider {
     @OperationAccess("transaction")
     public Bundle transaction(@TransactionParam Bundle bundle) {
         for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-            System.out.println(entry.getResource().getId());
-            System.out.println(entry.getResource());
-
+            final String resourceTypeCode = entry.getResource().getResourceType().toString();
+            final ResourceType resourceType = ResourceType.fromCode(resourceTypeCode);
+            final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceTypeCode);
+            final Dataset<IBaseResource> dataset = spark.createDataset(List.of(entry.getResource()), encoder);
+            resourceWriter.append(resourceType, dataset);
+            System.out.println("Wrote " + entry.getResource() + " to " + resourceTypeCode + " dataset");
         }
         cacheInvalidator.invalidateAll();
 
