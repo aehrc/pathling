@@ -161,6 +161,6 @@ public class ResourceProviderFactory {
         .getResourceDefinition(resourceType.name()).getImplementingClass();
 
     return applicationContext.getBean(UpdateProvider.class, sparkSession, fhirEncoders,
-        resourceWriter, cacheInvalidator, resourceTypeClass);
+            resourceReader, resourceWriter, cacheInvalidator, resourceTypeClass);
   }
 }
