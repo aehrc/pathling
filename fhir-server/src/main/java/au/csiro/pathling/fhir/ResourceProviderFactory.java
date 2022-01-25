@@ -60,9 +60,6 @@ public class ResourceProviderFactory {
   private final ResourceReader resourceReader;
 
   @Nonnull
-  private final ResourceWriter resourceWriter;
-
-  @Nonnull
   private final UpdateHelpers updateHelpers;
 
   @Nonnull
@@ -99,7 +96,6 @@ public class ResourceProviderFactory {
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final AggregateExecutor aggregateExecutor,
       @Nonnull final ExtractExecutor extractExecutor,
-      @Nonnull final ResourceWriter resourceWriter,
       @Nonnull final UpdateHelpers updateHelpers,
       @Nonnull final CacheInvalidator cacheInvalidator) {
     this.applicationContext = applicationContext;
@@ -111,7 +107,6 @@ public class ResourceProviderFactory {
     this.fhirEncoders = fhirEncoders;
     this.aggregateExecutor = aggregateExecutor;
     this.extractExecutor = extractExecutor;
-    this.resourceWriter = resourceWriter;
     this.updateHelpers = updateHelpers;
     this.cacheInvalidator = cacheInvalidator;
   }
@@ -166,7 +161,6 @@ public class ResourceProviderFactory {
     final Class<? extends IBaseResource> resourceTypeClass = fhirContext
         .getResourceDefinition(resourceType.name()).getImplementingClass();
 
-    return applicationContext.getBean(UpdateProvider.class, sparkSession, fhirEncoders,
-            resourceReader, resourceWriter, updateHelpers, cacheInvalidator, resourceTypeClass);
+    return applicationContext.getBean(UpdateProvider.class, updateHelpers, cacheInvalidator, resourceTypeClass);
   }
 }

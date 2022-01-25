@@ -77,11 +77,11 @@ public class BatchProvider {
         resourceResponse.setStatus("200 OK")
                 .setLocation(resourceTypeCode + "/" + resource.getId())
                 .setEtag("1");
-        transactionResponse.addEntry().setResponse(resourceResponse);
 
       } else {
-        // Bad request
+        resourceResponse.setStatus("400 Bad Request");
       }
+      transactionResponse.addEntry().setResponse(resourceResponse);
     }
     cacheInvalidator.invalidateAll();
 
