@@ -16,6 +16,7 @@ import au.csiro.pathling.extract.ExtractProvider;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResourceWriter;
 import au.csiro.pathling.search.SearchProvider;
+import au.csiro.pathling.update.UpdateHelpers;
 import au.csiro.pathling.update.UpdateProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.IResourceProvider;
@@ -62,6 +63,9 @@ public class ResourceProviderFactory {
   private final ResourceWriter resourceWriter;
 
   @Nonnull
+  private final UpdateHelpers updateHelpers;
+
+  @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   @Nonnull
@@ -96,6 +100,7 @@ public class ResourceProviderFactory {
       @Nonnull final AggregateExecutor aggregateExecutor,
       @Nonnull final ExtractExecutor extractExecutor,
       @Nonnull final ResourceWriter resourceWriter,
+      @Nonnull final UpdateHelpers updateHelpers,
       @Nonnull final CacheInvalidator cacheInvalidator) {
     this.applicationContext = applicationContext;
     this.fhirContext = fhirContext;
@@ -107,6 +112,7 @@ public class ResourceProviderFactory {
     this.aggregateExecutor = aggregateExecutor;
     this.extractExecutor = extractExecutor;
     this.resourceWriter = resourceWriter;
+    this.updateHelpers = updateHelpers;
     this.cacheInvalidator = cacheInvalidator;
   }
 
@@ -161,6 +167,6 @@ public class ResourceProviderFactory {
         .getResourceDefinition(resourceType.name()).getImplementingClass();
 
     return applicationContext.getBean(UpdateProvider.class, sparkSession, fhirEncoders,
-            resourceReader, resourceWriter, cacheInvalidator, resourceTypeClass);
+            resourceReader, resourceWriter, updateHelpers, cacheInvalidator, resourceTypeClass);
   }
 }

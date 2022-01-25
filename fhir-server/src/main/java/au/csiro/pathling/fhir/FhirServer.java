@@ -13,8 +13,8 @@ import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
+import au.csiro.pathling.update.BatchProvider;
 import au.csiro.pathling.update.ImportProvider;
-import au.csiro.pathling.update.TransactionProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
@@ -90,7 +90,7 @@ public class FhirServer extends RestfulServer {
   private final ResourceProviderFactory resourceProviderFactory;
 
   @Nonnull
-  private final TransactionProvider transactionProvider;
+  private final BatchProvider batchProvider;
 
   /**
    * @param fhirContext a {@link FhirContext} for use in executing FHIR operations
@@ -124,7 +124,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
       @Nonnull final ResourceProviderFactory resourceProviderFactory,
-      @Nonnull final TransactionProvider transactionProvider) {
+      @Nonnull final BatchProvider batchProvider) {
     super(fhirContext);
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
@@ -137,7 +137,7 @@ public class FhirServer extends RestfulServer {
     this.entityTagInterceptor = entityTagInterceptor;
     this.conformanceProvider = conformanceProvider;
     this.resourceProviderFactory = resourceProviderFactory;
-    this.transactionProvider = transactionProvider;
+    this.batchProvider = batchProvider;
     log.debug("Starting FHIR server with configuration: {}", configuration);
   }
 
@@ -167,8 +167,8 @@ public class FhirServer extends RestfulServer {
       registerProviders(providers);
 
 
-      // Register transaction provider.
-      registerProvider(transactionProvider);
+      // Register batch provider.
+      registerProvider(batchProvider);
 
       // Register resource providers.
       registerProvider(operationDefinitionProvider);
