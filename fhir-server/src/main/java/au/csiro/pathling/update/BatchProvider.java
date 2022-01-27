@@ -75,8 +75,7 @@ public class BatchProvider {
         }
         // Hardcode response entry for now
         resourceResponse.setStatus("200 OK")
-                .setLocation(resourceTypeCode + "/" + resource.getId())
-                .setEtag("1");
+                .setLocation(resourceTypeCode + "/" + resource.getId());
 
       } else {
         resourceResponse.setStatus("400 Bad Request");
