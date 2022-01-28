@@ -69,12 +69,8 @@ private[encoders2] class SchemaConverterProcessor(override val fhirContext: Fhir
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[StructField] = {
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
-    customEncoder.map(_.schema2(if (isCollection(childDefinition)) Some(ArrayType(_)) else None)).getOrElse(
-      childDefinition match {
-        // case _: RuntimeChildExtension => Nil
-        case _ => super.buildValue(childDefinition, elementDefinition, elementName)
-      }
-    )
+    customEncoder.map(_.schema2(if (isCollection(childDefinition)) Some(ArrayType(_)) else None))
+      .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName))
   }
 }
 

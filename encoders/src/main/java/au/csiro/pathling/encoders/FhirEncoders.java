@@ -68,12 +68,10 @@ public class FhirEncoders {
    */
   private final int maxNestingLevel;
 
-
   /**
    * Indicates if FHIR extension should be enabled.
    */
   private final boolean enableExtensions;
-
 
   /**
    * The encoder version to use.
@@ -345,7 +343,12 @@ public class FhirEncoders {
       return this;
     }
 
-    @SuppressWarnings("unused")
+    /**
+     * Switches on/off the support for extensions in encoders.
+     *
+     * @param enable if extensions should be enabled.
+     * @return this builder
+     */
     public Builder enableExtensions(final boolean enable) {
       this.enableExtensions = enable;
       return this;
