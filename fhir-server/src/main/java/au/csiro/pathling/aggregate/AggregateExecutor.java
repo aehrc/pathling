@@ -6,10 +6,12 @@
 
 package au.csiro.pathling.aggregate;
 
+import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
@@ -17,12 +19,9 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.sql.PathlingFunctions;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -109,10 +108,16 @@ public class AggregateExecutor extends QueryExecutor {
     // Apply filters.
     groupingsAndFilters = applyFilters(groupingsAndFilters, filters);
 
-    // Create a new parser context for aggregation that includes the groupings.
-    final List<Column> groupingColumns = groupings.stream()
-        .map(FhirPath::getValueColumn)
-        .collect(Collectors.toList());
+    // Normalize grouping columns
+
+    final DatasetWithColumnMap datasetWithNormalizedGroupings = createColumns(
+        groupingsAndFilters, groupings.stream().map(FhirPath::getValueColumn)
+            .map(PathlingFunctions::normalize).toArray(Column[]::new));
+
+    groupingsAndFilters = datasetWithNormalizedGroupings.getDataset();
+
+    final List<Column> groupingColumns = new ArrayList<>(
+        datasetWithNormalizedGroupings.getColumnMap().values());
 
     // The input context will be identical to that used for the groupings and filters, except that
     // it will use the dataset that resulted from the parsing of the groupings and filters,
