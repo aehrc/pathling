@@ -66,52 +66,52 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] {
 
   def expandExtensions: Boolean
 
-  def proceedCompositeChildren(value: CompositeNode[DT, SF]): Seq[SF] = {
+  def proceedCompositeChildren(value: CompositeCtx[DT, SF]): Seq[SF] = {
     value.visitChildren(this)
   }
 
   def compositeBuilder(compositeDefinition: BaseRuntimeElementCompositeDefinition[_]): DT = {
-    CompositeNode(compositeDefinition).accept(this)
+    CompositeCtx(compositeDefinition).accept(this)
   }
 
-  override def visitComposite(value: CompositeNode[DT, SF]): DT = {
+  override def visitComposite(compositeCtx: CompositeCtx[DT, SF]): DT = {
     // TODO: Not sure if should be here on in the taversal itself
-    EncodingContext.withDefinition(value.definition) {
-      aggregateComposite(value, proceedCompositeChildren(value))
+    EncodingContext.withDefinition(compositeCtx.compositeDefinition) {
+      aggregateComposite(compositeCtx, proceedCompositeChildren(compositeCtx))
     }
   }
 
-  override def visitElementChild(value: ElementChildNode[DT, SF]): Seq[SF] = {
-    value.childDefinition match {
+  override def visitElementChild(elementChildCtx: ElementChildCtx[DT, SF]): Seq[SF] = {
+    elementChildCtx.elementChildDefinition match {
       case _: RuntimeChildExtension => if (expandExtensions) {
-        super.visitElementChild(value)
+        super.visitElementChild(elementChildCtx)
       } else {
         Nil
       }
-      case _ => super.visitElementChild(value)
+      case _ => super.visitElementChild(elementChildCtx)
     }
   }
 
-  override def visitElement(ctx: ElementNode[DT, SF]): Seq[SF] = {
-    if (EncodingContext.currentNestingLevel(ctx.elementDefinition) <= maxNestingLevel) {
-      buildValue(ctx.childDefinition, ctx.elementDefinition, ctx.elementName)
+  override def visitElement(elementCtx: ElementCtx[DT, SF]): Seq[SF] = {
+    if (EncodingContext.currentNestingLevel(elementCtx.elementDefinition) <= maxNestingLevel) {
+      buildValue(elementCtx.childDefinition, elementCtx.elementDefinition, elementCtx.elementName)
     } else {
       Nil
     }
   }
 
-  override def aggregateComposite(ctx: CompositeNode[DT, SF], sfs: Seq[SF]): DT = {
-    buildComposite(ctx.definition, sfs)
+  override def aggregateComposite(compositeCtx: CompositeCtx[DT, SF], sfs: Seq[SF]): DT = {
+    buildComposite(compositeCtx.compositeDefinition, sfs)
   }
 
-  override def combineChoiceElements(ctx: ChoiceChildNode[DT, SF], seq: Seq[Seq[SF]]): Seq[SF] = {
-    combineChoiceOptions(ctx.choiceDefinition, seq)
+  override def combineChoiceElements(ctx: ChoiceChildCtx[DT, SF], seq: Seq[Seq[SF]]): Seq[SF] = {
+    combineChoiceOptions(ctx.choiceChildDefinition, seq)
   }
 
-  override def visitChild(value: ChildNode[DT, SF]): Seq[SF] = {
+  override def visitChild(childCtx: ChildCtx[DT, SF]): Seq[SF] = {
     // Inject filtering
-    if (shouldExpandChild(value.compositeDefinition, value.childDefinition)) {
-      super.visitChild(value)
+    if (shouldExpandChild(childCtx.compositeDefinition, childCtx.childDefinition)) {
+      super.visitChild(childCtx)
     } else {
       Nil
     }

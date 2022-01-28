@@ -95,8 +95,8 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
       classOf[System], IntegerType, "identityHashCode", expression :: Nil)) :: maybeExtensionValueField
   }
 
-  override def proceedCompositeChildren(value: CompositeNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-    dataTypeMappings.overrideCompositeExpression2(expression, value.definition).getOrElse(super.proceedCompositeChildren(value))
+  override def proceedCompositeChildren(value: CompositeCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    dataTypeMappings.overrideCompositeExpression2(expression, value.compositeDefinition).getOrElse(super.proceedCompositeChildren(value))
   }
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
@@ -111,36 +111,36 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
     If(IsNull(expression), Literal.create(null, struct.dataType), struct)
   }
 
-  private def proceedElementChild(value: ElementChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+  private def proceedElementChild(value: ElementChildCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
     super.visitElementChild(value)
   }
 
-  override def visitElementChild(value: ElementChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-    withExpression(getChildExpression(expression, value.childDefinition)).proceedElementChild(value)
+  override def visitElementChild(elementChildCtx: ElementChildCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    withExpression(getChildExpression(expression, elementChildCtx.elementChildDefinition)).proceedElementChild(elementChildCtx)
   }
 
-  private def proceedChoiceChild(value: ChoiceChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+  private def proceedChoiceChild(value: ChoiceChildCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
     super.visitChoiceChild(value)
   }
 
-  override def visitChoiceChild(value: ChoiceChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-    withExpression(getChildExpression(expression, value.choiceDefinition, ObjectType(classOf[IBaseDatatype]))).proceedChoiceChild(value)
+  override def visitChoiceChild(choiceChildCtx: ChoiceChildCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    withExpression(getChildExpression(expression, choiceChildCtx.choiceChildDefinition, ObjectType(classOf[IBaseDatatype]))).proceedChoiceChild(choiceChildCtx)
   }
 
-  private def proceedElement(ctx: ElementNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+  private def proceedElement(ctx: ElementCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
     super.visitElement(ctx)
   }
 
-  override def visitElement(ctx: ElementNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-    ctx.childDefinition match {
-      case _: RuntimeChildExtension => super.visitElement(ctx)
+  override def visitElement(elementCtx: ElementCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    elementCtx.childDefinition match {
+      case _: RuntimeChildExtension => super.visitElement(elementCtx)
       case _: RuntimeChildChoiceDefinition =>
-        val implementingClass = ctx.elementDefinition.getImplementingClass
+        val implementingClass = elementCtx.elementDefinition.getImplementingClass
         val optionExpression = If(InstanceOf(expression, implementingClass),
           ObjectCast(expression, ObjectType(implementingClass)),
           Literal.create(null, ObjectType(implementingClass)))
-        withExpression(optionExpression).proceedElement(ctx)
-      case _ => super.visitElement(ctx)
+        withExpression(optionExpression).proceedElement(elementCtx)
+      case _ => super.visitElement(elementCtx)
     }
   }
 

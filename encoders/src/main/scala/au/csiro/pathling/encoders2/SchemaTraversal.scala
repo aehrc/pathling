@@ -16,7 +16,6 @@ import au.csiro.pathling.encoders.EncodingContext
 import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceChildNames
 import au.csiro.pathling.encoders2.SchemaVisitor.isSingular
 import ca.uhn.fhir.context._
-import org.hl7.fhir.r4.model.Patient
 
 import scala.collection.convert.ImplicitConversions._
 
@@ -29,30 +28,76 @@ import scala.collection.convert.ImplicitConversions._
  */
 trait SchemaVisitor[DT, SF] {
 
-  def visitElement(value: ElementNode[DT, SF]): Seq[SF]
 
-  def aggregateComposite(ctx: CompositeNode[DT, SF], sfs: Seq[SF]): DT
+  /**
+   * Transforms the SF representations of the composite elements to the DT representation of the composite.
+   *
+   * @param compositeCtx the composite context.
+   * @param sfs          the list of the SF representations of the composite elements.
+   * @return the DT representation of the composite.
+   */
+  def aggregateComposite(compositeCtx: CompositeCtx[DT, SF], sfs: Seq[SF]): DT
 
-  def combineChoiceElements(ctx: ChoiceChildNode[DT, SF], seq: Seq[Seq[SF]]): Seq[SF]
+  def combineChoiceElements(ctx: ChoiceChildCtx[DT, SF], seq: Seq[Seq[SF]]): Seq[SF]
 
-  def visitChoiceChild(value: ChoiceChildNode[DT, SF]): Seq[SF] = {
-    combineChoiceElements(value, value.visitChildren(this))
+  /**
+   * Visitor method for a HAPPY  Element definition
+   *
+   * @param elementCtx the element context.
+   * @return the list of the SF representations of the element.
+   */
+  def visitElement(elementCtx: ElementCtx[DT, SF]): Seq[SF]
+
+
+  /**
+   * Visitor method for HAPPY RuntimeChild definition of a choice.
+   *
+   * @param choiceChildCtx the choice child context.
+   * @return the list of the SF representations of the elements of the child definition.
+   */
+  def visitChoiceChild(choiceChildCtx: ChoiceChildCtx[DT, SF]): Seq[SF] = {
+    combineChoiceElements(choiceChildCtx, choiceChildCtx.visitChildren(this))
   }
 
-  def visitElementChild(value: ElementChildNode[DT, SF]): Seq[SF] = {
-    value.visitChildren(this)
+  /**
+   * Visitor method for HAPPY RuntimeChild definition with a single element.
+   *
+   * @param elementChildCtx child context.
+   * @return the list of the SF representations of the elements of the child definition.
+   */
+  def visitElementChild(elementChildCtx: ElementChildCtx[DT, SF]): Seq[SF] = {
+    elementChildCtx.visitChildren(this)
   }
 
-  def visitChild(value: ChildNode[DT, SF]): Seq[SF] = {
-    value.proceed(this)
+  /**
+   * Visitor method for HAPPY RuntimeChild definition.
+   *
+   * @param childCtx the child context.
+   * @return the list of the SF representations of the elements of the child definition.
+   */
+  def visitChild(childCtx: ChildCtx[DT, SF]): Seq[SF] = {
+    childCtx.proceed(this)
   }
 
-  def visitComposite(value: CompositeNode[DT, SF]): DT = {
-    aggregateComposite(value, value.visitChildren(this))
+
+  /**
+   * Visitor method for HAPPY ElementComposite definition.
+   *
+   * @param compositeCtx the composite element context.
+   * @return DT representation of the composite element.
+   */
+  def visitComposite(compositeCtx: CompositeCtx[DT, SF]): DT = {
+    aggregateComposite(compositeCtx, compositeCtx.visitChildren(this))
   }
 
-  def visitResource(resourceNode: ResourceNode[DT, SF]): DT = {
-    resourceNode.proceed(this)
+  /**
+   * Visitor method for HAPPY Resource definitions.
+   *
+   * @param resourceCtx the resource context.
+   * @return DT representation of the resource.
+   */
+  def visitResource(resourceCtx: ResourceCtx[DT, SF]): DT = {
+    resourceCtx.proceed(this)
   }
 }
 
@@ -61,12 +106,12 @@ object SchemaVisitor {
     // TODO: NOT SURE where is the best place to put it
     // Not if it will be needed anymore if I can do recursive contexts
     EncodingContext.runWithContext {
-      ResourceNode(resourceDefinition).accept(visitor)
+      ResourceCtx(resourceDefinition).accept(visitor)
     }
   }
 
   def traverseComposite[DT, SF](compositeDefinition: BaseRuntimeElementCompositeDefinition[_], visitor: SchemaVisitor[DT, SF]): DT = {
-    CompositeNode(compositeDefinition).accept(visitor)
+    CompositeCtx(compositeDefinition).accept(visitor)
   }
 
   /**
@@ -91,54 +136,100 @@ object SchemaVisitor {
 }
 
 
-trait FhirNode[DT, SF] {
-}
+/**
+ * Base trait for all visitor contexts.
+ *
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+trait VisitorCtx[DT, SF]
 
-trait TypeNode[DT, SF] extends FhirNode[DT, SF] {
+
+/**
+ * Base trait for visitor context that produce DT representations.
+ *
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+trait TypeVisitorCtx[DT, SF] extends VisitorCtx[DT, SF] {
+  /**
+   * Accept the visitor and dispatch the call to the appropriate 'visit' method.
+   *
+   * @param visitor the visitor to dispatch the call to.
+   * @return the DT representation of this context.
+   */
   def accept(visitor: SchemaVisitor[DT, SF]): DT
 }
 
-trait FieldNode[DT, SF] extends FhirNode[DT, SF] {
+/**
+ * Base trait for visitor context that produce ST representations.
+ *
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+trait FieldVisitorCtxCtx[DT, SF] extends VisitorCtx[DT, SF] {
+  /**
+   * Accept the visitor and dispatch the call to the appropriate 'visit' method.
+   *
+   * @param visitor the visitor to dispatch the call to.
+   * @return the ST representation of this context.
+   */
   def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF]
 }
 
 /**
+ * The visitor context representing a HAPPY Resource definition.
  *
- * @param resourceDefinition
- * @tparam DT
- * @tparam SF
+ * @param resourceDefinition the HAPPY resource definition.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
  */
-case class ResourceNode[DT, SF](resourceDefinition: RuntimeResourceDefinition) extends TypeNode[DT, SF] {
+case class ResourceCtx[DT, SF](resourceDefinition: RuntimeResourceDefinition) extends TypeVisitorCtx[DT, SF] {
   override def accept(visitor: SchemaVisitor[DT, SF]): DT = {
     visitor.visitResource(this)
   }
 
   def proceed(visitor: SchemaVisitor[DT, SF]): DT = {
-    toComposite.accept(visitor)
+    toCompositeCtx.accept(visitor)
   }
 
-  def toComposite: CompositeNode[DT, SF] = {
-    CompositeNode[DT, SF](resourceDefinition)
+  def toCompositeCtx: CompositeCtx[DT, SF] = {
+    CompositeCtx[DT, SF](resourceDefinition)
   }
 }
 
-case class CompositeNode[DT, SF](definition: BaseRuntimeElementCompositeDefinition[_]) extends TypeNode[DT, SF] {
+/**
+ * The visitor context representing a HAPPY Composite definition.
+ *
+ * @param compositeDefinition the HAPPY composite definition.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class CompositeCtx[DT, SF](compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends TypeVisitorCtx[DT, SF] {
   override def accept(visitor: SchemaVisitor[DT, SF]): DT = {
     visitor.visitComposite(this)
   }
 
   def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
-    definition
+    compositeDefinition
       .getChildren
-      .flatMap(toChild(_).accept(visitor))
+      .flatMap(toChildCtx(_).accept(visitor))
   }
 
-  def toChild(childDefinition: BaseRuntimeChildDefinition): ChildNode[DT, SF] = {
-    ChildNode[DT, SF](childDefinition, definition)
+  def toChildCtx(childDefinition: BaseRuntimeChildDefinition): ChildCtx[DT, SF] = {
+    ChildCtx[DT, SF](childDefinition, compositeDefinition)
   }
 }
 
-case class ChildNode[DT, SF](childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldNode[DT, SF] {
+/**
+ * The visitor context representing a HAPPY Child definition.
+ *
+ * @param childDefinition     the happy child definition.
+ * @param compositeDefinition the HAPPY composite definition for this child.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class ChildCtx[DT, SF](childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
   override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     visitor.visitChild(this)
   }
@@ -149,46 +240,73 @@ case class ChildNode[DT, SF](childDefinition: BaseRuntimeChildDefinition, compos
       // we need to handle extension before choice as it is of this type but requires
       // the same handling as element child
       case _: RuntimeChildExtension =>
-        ElementChildNode(childDefinition, compositeDefinition).accept(visitor)
+        ElementChildCtx(childDefinition, compositeDefinition).accept(visitor)
       case choiceDefinition: RuntimeChildChoiceDefinition =>
-        ChoiceChildNode(choiceDefinition, compositeDefinition).accept(visitor)
+        ChoiceChildCtx(choiceDefinition, compositeDefinition).accept(visitor)
       case _ =>
-        ElementChildNode(childDefinition, compositeDefinition).accept(visitor)
+        ElementChildCtx(childDefinition, compositeDefinition).accept(visitor)
     }
   }
 }
 
-case class ElementChildNode[DT, SF](childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldNode[DT, SF] {
+/**
+ * The visitor context representing a HAPPY Child definition with a single element.
+ *
+ * @param elementChildDefinition the happy child definition.
+ * @param compositeDefinition    the HAPPY composite definition for this child.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class ElementChildCtx[DT, SF](elementChildDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
+
   override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     visitor.visitElementChild(this)
   }
 
   def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
-    val elementName = childDefinition.getElementName
-    val definition = childDefinition.getChildByName(childDefinition.getElementName)
-    ElementNode(elementName, childDefinition, compositeDefinition).accept(visitor)
+    val elementName = elementChildDefinition.getElementName
+    ElementCtx(elementName, elementChildDefinition, compositeDefinition).accept(visitor)
   }
 }
 
-
-case class ChoiceChildNode[DT, SF](choiceDefinition: RuntimeChildChoiceDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldNode[DT, SF] {
+/**
+ * The visitor context representing a HAPPY Choice child definition.
+ *
+ * @param choiceChildDefinition the happy choice child definition.
+ * @param compositeDefinition   the HAPPY composite definition for this child.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class ChoiceChildCtx[DT, SF](choiceChildDefinition: RuntimeChildChoiceDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
   def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     visitor.visitChoiceChild(this)
   }
 
   def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[Seq[SF]] = {
 
-    assert(isSingular(choiceDefinition), "Collections of choice elements are not supported")
-    getOrderedListOfChoiceChildNames(choiceDefinition)
-      .map(childName => ElementNode(childName, choiceDefinition, compositeDefinition).accept(visitor))
+    assert(isSingular(choiceChildDefinition), "Collections of choice elements are not supported")
+    getOrderedListOfChoiceChildNames(choiceChildDefinition)
+      .map(childName => ElementCtx(childName, choiceChildDefinition, compositeDefinition).accept(visitor))
   }
 }
 
-case class ElementNode[DT, SF](elementName: String, childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldNode[DT, SF] {
+/**
+ * The visitor context representing a HAPPY element definition.
+ *
+ * @param elementName         the name of the element.
+ * @param childDefinition     the happy child definition.
+ * @param compositeDefinition the HAPPY composite definition for this child.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class ElementCtx[DT, SF](elementName: String, childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
 
+  /**
+   * The definition of the element.
+   */
   lazy val elementDefinition: BaseRuntimeElementDefinition[_] = childDefinition.getChildByName(elementName)
 
-  def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+  override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     visitor.visitElement(this)
   }
 }

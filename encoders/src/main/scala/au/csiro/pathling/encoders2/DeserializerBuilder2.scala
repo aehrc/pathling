@@ -99,24 +99,24 @@ private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Ex
       })
   }
 
-  private def proceedElement(ctx: ElementNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+  private def proceedElement(ctx: ElementCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
     super.visitElement(ctx)
   }
 
-  override def visitElement(ctx: ElementNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-    ctx.childDefinition match {
-      case _: RuntimeChildExtension => super.visitElement(ctx)
-      case _: RuntimeChildChoiceDefinition => expandWithName(ctx.elementName).proceedElement(ctx)
-      case _ => super.visitElement(ctx)
+  override def visitElement(elementCtx: ElementCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    elementCtx.childDefinition match {
+      case _: RuntimeChildExtension => super.visitElement(elementCtx)
+      case _: RuntimeChildChoiceDefinition => expandWithName(elementCtx.elementName).proceedElement(elementCtx)
+      case _ => super.visitElement(elementCtx)
     }
   }
 
-  private def proceedElementChild(value: ElementChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+  private def proceedElementChild(value: ElementChildCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
     super.visitElementChild(value)
   }
 
-  override def visitElementChild(value: ElementChildNode[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-    expandWithName(value.childDefinition.getElementName).proceedElementChild(value)
+  override def visitElementChild(elementChildCtx: ElementChildCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    expandWithName(elementChildCtx.elementChildDefinition.getElementName).proceedElementChild(elementChildCtx)
   }
 
   override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Expression = {

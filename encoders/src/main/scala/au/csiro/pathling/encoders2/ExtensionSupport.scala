@@ -11,10 +11,10 @@ object ExtensionSupport {
 
   val EXTENSION_ELEMENT_NAME: String = "extension"
 
-  def extension[DT, ST](fhirContext: FhirContext): ElementNode[DT, ST] = {
+  def extension[DT, ST](fhirContext: FhirContext): ElementCtx[DT, ST] = {
     val baseResourceDefinition = fhirContext.getResourceDefinition(classOf[Patient])
     val extensionChildDefinition = baseResourceDefinition.getChildByName(EXTENSION_ELEMENT_NAME)
     val extensionDefinition = extensionChildDefinition.getChildByName(EXTENSION_ELEMENT_NAME).asInstanceOf[BaseRuntimeElementCompositeDefinition[_]]
-    ElementNode(EXTENSION_ELEMENT_NAME, extensionChildDefinition, extensionDefinition)
+    ElementCtx(EXTENSION_ELEMENT_NAME, extensionChildDefinition, extensionDefinition)
   }
 }
