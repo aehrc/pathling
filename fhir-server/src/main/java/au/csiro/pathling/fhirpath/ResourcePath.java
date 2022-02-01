@@ -11,6 +11,7 @@ import static au.csiro.pathling.QueryHelpers.createColumns;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
+import au.csiro.pathling.encoders2.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.ResourceReader;
@@ -24,7 +25,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -140,11 +140,11 @@ public class ResourcePath extends NonLiteralPath {
   }
 
   /**
-   * @return the {@link Column} within the dataset pertaining to this element
+   * @return the {@link Optional<Column>} with the extension container if exits.
    */
-  @Nullable
-  public Column getExtensionColumn() {
-    return elementsToColumns.get("_extension");
+  @Nonnull
+  public Optional<Column> getExtensionColumn() {
+    return Optional.ofNullable(elementsToColumns.get(ExtensionSupport.EXTENSIONS_FIELD_NAME()));
   }
 
   /**

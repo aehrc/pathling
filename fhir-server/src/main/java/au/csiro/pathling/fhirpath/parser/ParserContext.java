@@ -8,11 +8,9 @@ package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.terminology.TerminologyService;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -92,10 +90,6 @@ public class ParserContext {
   @Nonnull
   private final Map<String, Column> nodeIdColumns;
 
-
-  @Nonnull
-  private final Map<FhirPath, Column> extensionContainerColumn;
-
   /**
    * @param inputContext the input context from which the FHIRPath is to be evaluated
    * @param fhirContext a {@link FhirContext} that can be used to do FHIR stuff
@@ -120,21 +114,9 @@ public class ParserContext {
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.groupingColumns = groupingColumns;
     this.nodeIdColumns = nodeIdColumns;
-    this.extensionContainerColumn = new HashMap<>();
   }
 
   public void setThisContext(@Nonnull final FhirPath thisContext) {
     this.thisContext = Optional.of(thisContext);
-  }
-
-  public Column getExtensionContainer(NonLiteralPath left) {
-    return extensionContainerColumn.get(left);
-  }
-
-  public void putExtensionContainer(NonLiteralPath left, Column extensionContainer) {
-    Column previousValue = extensionContainerColumn.putIfAbsent(left, extensionContainer);
-    if (previousValue != null) {
-      throw new IllegalStateException("Duplicate extension container");
-    }
   }
 }

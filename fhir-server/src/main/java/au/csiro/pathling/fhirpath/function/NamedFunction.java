@@ -103,19 +103,22 @@ public interface NamedFunction {
   @Nonnull
   static String expressionFromInput(@Nonnull final NamedFunctionInput input,
       @Nonnull final String functionName) {
-    final String inputExpression = input.getInput().getExpression();
-    final String argumentsExpression = input.getArguments().stream().map(FhirPath::getExpression)
-        .collect(
-            Collectors.joining(", "));
-    final String functionExpression = functionName + "(" + argumentsExpression + ")";
 
-    // If the input expression is the same as the input context, the child will be the start of the
-    // expression. This is to account for where we omit the expression that represents the input
-    // expression, e.g. "gender" instead of "Patient.gender".
-    final String inputContextExpression = input.getContext().getInputContext().getExpression();
-    return inputExpression.equals(inputContextExpression)
-           ? functionExpression
-           : inputExpression + "." + functionExpression;
+    return input.getOverrideExpression().orElseGet(() -> {
+
+      final String inputExpression = input.getInput().getExpression();
+      final String argumentsExpression = input.getArguments().stream().map(FhirPath::getExpression)
+          .collect(
+              Collectors.joining(", "));
+      final String functionExpression = functionName + "(" + argumentsExpression + ")";
+
+      // If the input expression is the same as the input context, the child will be the start of the
+      // expression. This is to account for where we omit the expression that represents the input
+      // expression, e.g. "gender" instead of "Patient.gender".
+      final String inputContextExpression = input.getContext().getInputContext().getExpression();
+      return inputExpression.equals(inputContextExpression)
+             ? functionExpression
+             : inputExpression + "." + functionExpression;
+    });
   }
-
 }

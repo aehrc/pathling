@@ -13,6 +13,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
+import au.csiro.pathling.encoders2.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -66,11 +67,14 @@ public class PathTraversalOperator {
     // extract it from a struct.
     final Column field;
 
-    if ("extension".equals(right)) {
+    if (ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(right)) {
       final ResourcePath rootResource = checkPresent(left.getForeignResource(),
           "Foreign resource missing in traversed path. This is a bug in foreign resource propagation");
 
-      final Column extensionColumn = rootResource.getExtensionColumn();
+      final Column extensionColumn = checkPresent(rootResource.getExtensionColumn(),
+          "Extension container column '_extension' not present in the resource."
+              + " Check if extension support was enabled when data were imported!");
+
       final Column extensionContainer = when(left.getValueColumn().isNull(), lit(null))
           .otherwise(extensionColumn);
       final Column fid;
