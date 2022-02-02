@@ -15,6 +15,7 @@ import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
@@ -62,11 +63,14 @@ public class ResourceWriter {
         .save(tableUrl);
   }
 
-  public void append(@Nonnull final ResourceType resourceType, @Nonnull final Dataset resources) {
+  public void append(@Nonnull final ResourceReader resourceReader,
+      @Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> resources) {
+    final Dataset<Row> original = resourceReader.read(resourceType);
+    final Dataset<Row> updated = original.union(resources);
     final String tableUrl = getTableUrl(resourceType);
-    resources
+    updated
         .write()
-        .mode(SaveMode.Append)
+        .mode(SaveMode.Overwrite)
         .format("delta")
         .save(tableUrl);
   }

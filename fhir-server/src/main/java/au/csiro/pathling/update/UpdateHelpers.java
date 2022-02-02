@@ -3,6 +3,8 @@ package au.csiro.pathling.update;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResourceWriter;
+import java.util.List;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Row;
@@ -10,9 +12,6 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.Nonnull;
-import java.util.List;
 
 /**
  * Common functionality for updating resource datasets with PUT operations
@@ -22,6 +21,7 @@ import java.util.List;
 
 @Component
 public class UpdateHelpers {
+
   @Nonnull
   private final SparkSession spark;
 
@@ -46,24 +46,24 @@ public class UpdateHelpers {
 
   public void updateDataset(final ResourceType resourceType, final IBaseResource resource) {
     final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
-    final Dataset<IBaseResource> dataset = spark.createDataset(List.of(resource), encoder);
+    final Dataset<Row> dataset = spark.createDataset(List.of(resource), encoder).toDF();
 
     final String resourceId = resource.getIdElement().toString();
     final Dataset<Row> resources = resourceReader.read(resourceType);
     final Dataset<Row> filtered = resources.filter(resources.col("id").equalTo(resourceId));
     if (filtered.isEmpty()) {
-      resourceWriter.append(resourceType, dataset);
+      resourceWriter.append(resourceReader, resourceType, dataset);
     } else {
       final Dataset<Row> remainingResources = resources.except(filtered);
       resourceWriter.write(resourceType, remainingResources);
-      resourceWriter.append(resourceType, dataset);
+      resourceWriter.append(resourceReader, resourceType, dataset);
     }
   }
 
   public void appendDataset(final ResourceType resourceType, final IBaseResource resource) {
     final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
-    final Dataset<IBaseResource> dataset = spark.createDataset(List.of(resource), encoder);
+    final Dataset<Row> dataset = spark.createDataset(List.of(resource), encoder).toDF();
 
-    resourceWriter.append(resourceType, dataset);
+    resourceWriter.append(resourceReader, resourceType, dataset);
   }
 }
