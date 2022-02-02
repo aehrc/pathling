@@ -7,6 +7,8 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -16,25 +18,28 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
+import au.csiro.pathling.test.helpers.FhirHelpers;
+import au.csiro.pathling.test.helpers.SparkHelpers;
+import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.ImmutableMap;
 import java.util.Arrays;
 import java.util.Collections;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,14 +55,34 @@ import org.springframework.boot.test.context.SpringBootTest;
 @Tag("UnitTest")
 class ExtensionFunctionTest {
 
-  private static final StructType SIMPLE_EXTENSION_TYPE = DataTypes
-      .createStructType(new StructField[]{
-          DataTypes.createStructField("id", DataTypes.StringType, false),
-          DataTypes.createStructField("url", DataTypes.StringType, true),
-          DataTypes.createStructField("valueString", DataTypes.StringType, true),
-          DataTypes.createStructField("_fid", DataTypes.IntegerType, false)
-      });
 
+  private static final Row MANY_EXT_ROW_1 = RowFactory
+      .create("ext3", "uuid:myExtension", "string3", 102);
+  private static final Row MANY_EXT_ROW_2 = RowFactory
+      .create("ext4", "uuid:myExtension", "string4", 103);
+
+  private static final List<Row> MANY_MY_EXTENSIONS = Arrays.asList(
+      RowFactory.create("ext1", "uuid:someExtension", "string1", 100),
+      RowFactory.create("ext2", "uuid:someExtension", "string2", 101),
+      MANY_EXT_ROW_1,
+      MANY_EXT_ROW_2
+  );
+
+  private static final Row ONE_EXT_ROW_1 = RowFactory
+      .create("ext2", "uuid:myExtension", "string2", 201);
+
+  private static final List<Row> ONE_MY_EXTENSION = Arrays.asList(
+      RowFactory.create("ext1", "uuid:otherExtension", "string1", 200),
+      ONE_EXT_ROW_1
+  );
+  private static final List<Row> NO_MY_EXTENSIONS = Arrays.asList(
+      RowFactory.create("ext1", "uuid:otherExtension", "string1", 300),
+      RowFactory.create("ext2", "uuid:someExtension", "string2", 301)
+  );
+
+  private static Map<Object, Object> oneEntryMap(int i, List<Row> manyMyExtensions) {
+    return ImmutableMap.builder().put(i, manyMyExtensions).build();
+  }
 
   @Autowired
   private SparkSession spark;
@@ -78,34 +103,12 @@ class ExtensionFunctionTest {
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withColumn("_fid", DataTypes.IntegerType)
-        .withColumn("_extension", DataTypes
-            .createMapType(DataTypes.IntegerType, DataTypes.createArrayType(SIMPLE_EXTENSION_TYPE)))
-        .withRow("patient-1", "female", true, 1, ImmutableMap.builder()
-            .put(1, Arrays.asList(
-                RowFactory.create("ext1", "uuid:someExtension", "string1", 100),
-                RowFactory.create("ext2", "uuid:someExtension", "string2", 101),
-                RowFactory.create("ext3", "uuid:myExtension", "string3", 102),
-                RowFactory.create("ext4", "uuid:myExtension", "string4", 103)
-            ))
-            .build())
-        .withRow("patient-2", "female", false, 1, ImmutableMap.builder()
-            .put(1, Arrays.asList(
-                RowFactory.create("ext1", "uuid:otherExtension", "string1", 200),
-                RowFactory.create("ext2", "uuid:myExtension", "string2", 201)
-            ))
-            .build())
-        .withRow("patient-3", "male", false, 1, ImmutableMap.builder()
-            .put(1, Arrays.asList(
-                RowFactory.create("ext1", "uuid:otherExtension", "string1", 300),
-                RowFactory.create("ext2", "uuid:someExtension", "string2", 301)
-            ))
-            .build())
-        .withRow("patient-4", "male", false, 1, ImmutableMap.builder()
-            .put(2, Collections.singletonList(
-                RowFactory.create("ext1", "uuid:myExtension", "string1", 400)
-            ))
-            .build())
+        .withFidColumn()
+        .withExtensionColumn()
+        .withRow("patient-1", "female", true, 1, oneEntryMap(1, MANY_MY_EXTENSIONS))
+        .withRow("patient-2", "female", false, 1, oneEntryMap(1, ONE_MY_EXTENSION))
+        .withRow("patient-3", "male", false, 1, oneEntryMap(1, NO_MY_EXTENSIONS))
+        .withRow("patient-4", "male", false, 1, oneEntryMap(2, ONE_MY_EXTENSION))
         .withRow("patient-5", "male", true, 1, null)
         .build();
     when(mockReader.read(ResourceType.PATIENT))
@@ -116,36 +119,29 @@ class ExtensionFunctionTest {
     final StringLiteralPath argumentExpression = StringLiteralPath
         .fromString("'" + "uuid:myExtension" + "'", inputPath);
 
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .idColumn(inputPath.getIdColumn())
-        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
-        .inputExpression("Patient")
-        .build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
 
-    final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
+    final NamedFunctionInput extensionInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentExpression));
 
-    final NamedFunction count = NamedFunction.getInstance("extension");
-    final FhirPath result = count.invoke(countInput);
+    final NamedFunction extension = NamedFunction.getInstance("extension");
+    final FhirPath result = extension.invoke(extensionInput);
 
     assertThat(result)
-        .hasExpression("extension('uuid:myExtension')")
+        .hasExpression("Patient.extension('uuid:myExtension')")
         .isNotSingular()
         .isElementPath(ElementPath.class)
         .hasFhirType(FHIRDefinedType.EXTENSION)
         .selectOrderedResult()
         .hasRows(
-            // Multiple extensions of requireds type present on the resource
+            // Multiple extensions of required type present on the resource
             RowFactory.create("patient-1", null),
             RowFactory.create("patient-1", null),
-            RowFactory
-                .create("patient-1", RowFactory.create("ext3", "uuid:myExtension", "string3", 102)),
-            RowFactory
-                .create("patient-1", RowFactory.create("ext4", "uuid:myExtension", "string4", 103)),
+            RowFactory.create("patient-1", MANY_EXT_ROW_1),
+            RowFactory.create("patient-1", MANY_EXT_ROW_2),
             // A single extension of the required type present on the resource
             RowFactory.create("patient-2", null),
-            RowFactory
-                .create("patient-2", RowFactory.create("ext2", "uuid:myExtension", "string2", 201)),
+            RowFactory.create("patient-2", ONE_EXT_ROW_1),
             // Not extensions of required type present
             RowFactory.create("patient-3", null),
             RowFactory.create("patient-3", null),
@@ -156,6 +152,100 @@ class ExtensionFunctionTest {
         );
   }
 
+  @Test
+  public void testExtensionOnElements() {
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final Dataset<Row> resourceLikeDataset = new ResourceDatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructColumn("name", DataTypes.StringType)
+        .withStructColumn("_fid", DataTypes.IntegerType)
+        .withStructValueColumn()
+        .withExtensionColumn()
+        .withRow("observation-1", makeEid(0), RowFactory.create("name1", 0),
+            oneEntryMap(0, MANY_MY_EXTENSIONS))
+        .withRow("observation-2", makeEid(0), RowFactory.create("name2", 1),
+            oneEntryMap(1, ONE_MY_EXTENSION))
+        .withRow("observation-3", makeEid(0), RowFactory.create("name3", 2),
+            oneEntryMap(2, NO_MY_EXTENSIONS))
+        .withRow("observation-4", makeEid(0), RowFactory.create("name4", 3),
+            oneEntryMap(3, ONE_MY_EXTENSION))
+        .withRow("observation-4", makeEid(1), RowFactory.create("name5", 4),
+            oneEntryMap(3, ONE_MY_EXTENSION))
+        .withRow("observation-5", makeEid(0), null, null)
+        .withRow("observation-5", makeEid(1), null, null)
+        .build();
+
+    when(mockReader.read(ResourceType.PATIENT))
+        .thenReturn(resourceLikeDataset);
+    final ResourcePath baseResourcePath = ResourcePath
+        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+
+    final ElementDefinition codeDefinition = checkPresent(FhirHelpers
+        .getChildOfResource(fhirContext, "Observation", "code"));
+
+    // Construct element dataset from the resource dataset so that the resource path
+    // can be used as a foreign resource for this element path.
+
+    final IdAndValueColumns idAndValueColumns = SparkHelpers
+        .getIdAndValueColumns(resourceLikeDataset, true);
+    final Dataset<Row> resourceDataset = baseResourcePath.getDataset();
+    final Column[] elementColumns = Stream.of(
+        idAndValueColumns.getId().named().name(),
+        checkPresent(idAndValueColumns.getEid()).named().name(),
+        idAndValueColumns.getValues().get(0).named().name(), "_extension")
+        .map(baseResourcePath::getElementColumn)
+        .toArray(Column[]::new);
+
+    final Dataset<Row> elementDataset = resourceDataset.select(elementColumns);
+
+    final ElementPath inputPath = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+        .definition(codeDefinition)
+        .dataset(elementDataset)
+        .idAndEidAndValueColumns()
+        .expression("code")
+        .singular(false)
+        .foreignResource(baseResourcePath)
+        .buildDefined();
+
+    final StringLiteralPath argumentExpression = StringLiteralPath
+        .fromString("'" + "uuid:myExtension" + "'", inputPath);
+
+    final NamedFunctionInput extensionInput = new NamedFunctionInput(parserContext, inputPath,
+        Collections.singletonList(argumentExpression));
+
+    final NamedFunction extension = NamedFunction.getInstance("extension");
+    final FhirPath result = extension.invoke(extensionInput);
+
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructTypeColumns(DatasetBuilder.SIMPLE_EXTENSION_TYPE)
+        .withRow("observation-1", makeEid(0, 0), null)
+        .withRow("observation-1", makeEid(0, 1), null)
+        .withRow("observation-1", makeEid(0, 2), MANY_EXT_ROW_1)
+        .withRow("observation-1", makeEid(0, 3), MANY_EXT_ROW_2)
+        .withRow("observation-2", makeEid(0, 0), null)
+        .withRow("observation-2", makeEid(0, 1), ONE_EXT_ROW_1)
+        .withRow("observation-3", makeEid(0, 0), null)
+        .withRow("observation-3", makeEid(0, 1), null)
+        .withRow("observation-4", makeEid(0, 0), null)
+        .withRow("observation-4", makeEid(0, 1), ONE_EXT_ROW_1)
+        .withRow("observation-4", makeEid(1, 0), null)
+        .withRow("observation-5", makeEid(0, 0), null)
+        .withRow("observation-5", makeEid(1, 0), null)
+        .buildWithStructValue();
+
+    assertThat(result)
+        .hasExpression("code.extension('uuid:myExtension')")
+        .isNotSingular()
+        .isElementPath(ElementPath.class)
+        .hasFhirType(FHIRDefinedType.EXTENSION)
+        .selectOrderedResultWithEid()
+        .hasRows(expectedResult);
+  }
 
   @Test
   public void throwsErrorIfArgumentIsNotString() {

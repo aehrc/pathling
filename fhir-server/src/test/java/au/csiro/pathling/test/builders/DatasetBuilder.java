@@ -32,6 +32,16 @@ import org.apache.spark.sql.types.*;
 @Slf4j
 public class DatasetBuilder {
 
+
+  public static final StructType SIMPLE_EXTENSION_TYPE = DataTypes
+      .createStructType(new StructField[]{
+          DataTypes.createStructField("id", DataTypes.StringType, false),
+          DataTypes.createStructField("url", DataTypes.StringType, true),
+          DataTypes.createStructField("valueString", DataTypes.StringType, true),
+          DataTypes.createStructField("_fid", DataTypes.IntegerType, false)
+      });
+
+
   @Nonnull
   private final SparkSession spark;
 
@@ -85,6 +95,17 @@ public class DatasetBuilder {
   @Nonnull
   public DatasetBuilder withTypeColumn() {
     return withColumn(DataTypes.StringType);
+  }
+
+  @Nonnull
+  public DatasetBuilder withFidColumn() {
+    return withColumn("_fid", DataTypes.IntegerType);
+  }
+
+  @Nonnull
+  public DatasetBuilder withExtensionColumn() {
+    return withColumn("_extension", DataTypes
+        .createMapType(DataTypes.IntegerType, DataTypes.createArrayType(SIMPLE_EXTENSION_TYPE)));
   }
 
   @Nonnull
@@ -186,6 +207,18 @@ public class DatasetBuilder {
         true,
         metadata));
     return getDataset(columns);
+  }
+
+
+  @Nonnull
+  public DatasetBuilder withStructValueColumn() {
+    datasetColumns.add(new StructField(
+        randomAlias(),
+        DataTypes.createStructType(structColumns),
+        true,
+        metadata));
+    structColumns.clear();
+    return this;
   }
 
   @Nonnull
