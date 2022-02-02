@@ -135,7 +135,7 @@
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>jwks-rsa</artifactId>
-      <version>0.19.0</version>
+      <version>0.20.2</version>
     </dependency>
 
     <!-- ANTLR -->
