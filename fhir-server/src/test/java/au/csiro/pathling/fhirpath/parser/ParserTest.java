@@ -37,6 +37,7 @@ import java.sql.Date;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -590,4 +591,32 @@ public class ParserTest extends AbstractParserTest {
         .hasRows(spark, "responses/ParserTest/testExtensionFunctionInWhere.csv");
   }
 
+
+  @Disabled
+  @Test
+  void testExtensionFunctionOnTranslateResult() {
+
+    // TODO: Enable when the hardcoded coding encoding is remediated.
+
+    // This is a special case as the codings here are created from the terminology server response
+    // using the hardcoded encoding core in CodingEncoding.
+
+    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
+        .toSystem("uuid:test-system")
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
+        .build();
+
+    // Create a mock terminology client.
+    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
+        .thenReturn(returnedConceptTranslator);
+
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').extension('uuid:any').url")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionFunctionOnTranslateResult.csv");
+    // .saveAllRowsToCsv(spark,
+    //     "/Users/szu004/dev/pathling/fhir-server/src/test/resources/responses/ParserTest",
+    //     "testExtensionFunctionOnTranslateResult");
+  }
 }
