@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.createColumns;
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
@@ -63,43 +62,13 @@ public class PathTraversalOperator {
 
     final Dataset<Row> leftDataset = left.getDataset();
 
-    // If the input path is a ResourcePath, we look for a bare column. Otherwise, we will need to
-    // extract it from a struct.
     final Column field;
-
     if (ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(right)) {
-      final ResourcePath rootResource = checkPresent(left.getForeignResource(),
-          "Foreign resource missing in traversed path. This is a bug in foreign resource propagation");
-
-      final Column extensionColumn = checkPresent(rootResource.getExtensionColumn(),
-          "Extension container column '_extension' not present in the resource."
-              + " Check if extension support was enabled when data were imported!");
-
-      final Column extensionContainer = when(left.getValueColumn().isNull(), lit(null))
-          .otherwise(extensionColumn);
-      final Column fid;
-      if (left instanceof ResourcePath) {
-        final ResourcePath resourcePath = (ResourcePath) left;
-        // When the value column of the ResourcePath is null, the path traversal results in null. This
-        // can happen when attempting to do a path traversal on the result of a function like when.
-        fid = when(resourcePath.getValueColumn().isNull(), lit(null))
-            .otherwise(resourcePath.getElementColumn("_fid"));
-      } else {
-        fid = left.getValueColumn().getField("_fid");
-      }
-
-      field = extensionContainer.apply(fid);
-
+      // lookup the extensions by _fid in the extension container
+      field = left.getExtensionContainerColumn()
+          .apply(getValueField(left, ExtensionSupport.FID_FIELD_NAME()));
     } else {
-      if (left instanceof ResourcePath) {
-        final ResourcePath resourcePath = (ResourcePath) left;
-        // When the value column of the ResourcePath is null, the path traversal results in null. This
-        // can happen when attempting to do a path traversal on the result of a function like when.
-        field = when(resourcePath.getValueColumn().isNull(), lit(null))
-            .otherwise(resourcePath.getElementColumn(right));
-      } else {
-        field = left.getValueColumn().getField(right);
-      }
+      field = getValueField(left, right);
     }
 
     // If the element has a max cardinality of more than one, it will need to be "exploded" out into
@@ -138,6 +107,25 @@ public class PathTraversalOperator {
     return ElementPath
         .build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,
             resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
+  }
+
+  @Nonnull
+  private static Column getValueField(@Nonnull final NonLiteralPath path,
+      @Nonnull final String fieldName) {
+
+    // If the input path is a ResourcePath, we look for a bare column. Otherwise, we will need to
+    // extract it from a struct.
+    final Column field;
+    if (path instanceof ResourcePath) {
+      final ResourcePath resourcePath = (ResourcePath) path;
+      // When the value column of the ResourcePath is null, the path traversal results in null. This
+      // can happen when attempting to do a path traversal on the result of a function like when.
+      field = when(resourcePath.getValueColumn().isNull(), lit(null))
+          .otherwise(resourcePath.getElementColumn(fieldName));
+    } else {
+      field = path.getValueColumn().getField(fieldName);
+    }
+    return field;
   }
 
 }

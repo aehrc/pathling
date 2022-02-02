@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.aliasAllColumns;
 import static au.csiro.pathling.QueryHelpers.createColumns;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
@@ -139,12 +140,15 @@ public class ResourcePath extends NonLiteralPath {
     return Objects.requireNonNull(elementsToColumns.get(elementName));
   }
 
-  /**
-   * @return the {@link Optional<Column>} with the extension container if exits.
-   */
+
   @Nonnull
-  public Optional<Column> getExtensionColumn() {
-    return Optional.ofNullable(elementsToColumns.get(ExtensionSupport.EXTENSIONS_FIELD_NAME()));
+  @Override
+  public Column getExtensionContainerColumn() {
+    final Optional<Column> maybeExtensionColumn = Optional
+        .ofNullable(elementsToColumns.get(ExtensionSupport.EXTENSIONS_FIELD_NAME()));
+    return checkPresent(maybeExtensionColumn,
+        "Extension container column '_extension' not present in the resource."
+            + " Check if extension support was enabled when data were imported!");
   }
 
   /**

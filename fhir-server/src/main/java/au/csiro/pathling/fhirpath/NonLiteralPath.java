@@ -8,12 +8,8 @@ package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.concat;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.posexplode_outer;
-import static org.apache.spark.sql.functions.struct;
-import static org.apache.spark.sql.functions.when;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static org.apache.spark.sql.functions.*;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -144,6 +140,19 @@ public abstract class NonLiteralPath implements FhirPath {
   @Nonnull
   public Column getExtractableColumn() {
     return getValueColumn();
+  }
+
+
+  /**
+   * Returns the column with the extension container (the _fid to extension values map).
+   *
+   * @return the column with the extension container.
+   */
+  @Nonnull
+  public Column getExtensionContainerColumn() {
+    final ResourcePath rootResource = checkPresent(getForeignResource(),
+        "Foreign resource missing in traversed path. This is a bug in foreign resource propagation");
+    return rootResource.getExtensionContainerColumn();
   }
 
   /**
@@ -286,9 +295,9 @@ public abstract class NonLiteralPath implements FhirPath {
       @Nonnull final Column arrayCol,
       @Nonnull final MutablePair<Column, Column> outValueAndEidCols) {
     final Column[] allColumns = Stream.concat(Arrays.stream(dataset.columns())
-            .map(dataset::col), Stream
-            .of(posexplode_outer(arrayCol)
-                .as(new String[]{"index", "value"})))
+        .map(dataset::col), Stream
+        .of(posexplode_outer(arrayCol)
+            .as(new String[]{"index", "value"})))
         .toArray(Column[]::new);
     final Dataset<Row> resultDataset = arrayDataset.select(allColumns);
     outValueAndEidCols.setLeft(resultDataset.col("value"));
