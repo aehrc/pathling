@@ -6,14 +6,9 @@
 
 package au.csiro.pathling.io;
 
-import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
-import static au.csiro.pathling.io.PersistenceScheme.fileNameForResource;
-import static org.apache.spark.sql.functions.asc;
-
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -21,6 +16,12 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.Nonnull;
+
+import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
+import static au.csiro.pathling.io.PersistenceScheme.fileNameForResource;
+import static org.apache.spark.sql.functions.asc;
 
 /**
  * This class knows how to persist a Dataset of resources within a specified database.
@@ -50,7 +51,7 @@ public class ResourceWriter {
    * Dataset}.
    *
    * @param resourceType The type of the resource to write.
-   * @param resources The {@link Dataset} containing the resource data.
+   * @param resources    The {@link Dataset} containing the resource data.
    */
   @ResourceAccess(AccessType.WRITE)
   public void write(@Nonnull final ResourceType resourceType, @Nonnull final Dataset resources) {
@@ -63,10 +64,19 @@ public class ResourceWriter {
         .save(tableUrl);
   }
 
-  public void append(@Nonnull final ResourceReader resourceReader,
-      @Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> resources) {
+  public void append(@Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> resources) {
+    final String tableUrl = getTableUrl(resourceType);
+    resources
+        .write()
+        .mode(SaveMode.Append)
+        .format("delta")
+        .save(tableUrl);
+  }
+
+  public void update(@Nonnull final ResourceReader resourceReader,
+                     @Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> resources) {
     final Dataset<Row> original = resourceReader.read(resourceType);
-    final Dataset<Row> updated = original.union(resources);
+    final Dataset<Row> updated = original.union(resources).distinct();
     final String tableUrl = getTableUrl(resourceType);
     updated
         .write()

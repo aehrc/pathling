@@ -48,22 +48,13 @@ public class UpdateHelpers {
     final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
     final Dataset<Row> dataset = spark.createDataset(List.of(resource), encoder).toDF();
 
-    final String resourceId = resource.getIdElement().toString();
-    final Dataset<Row> resources = resourceReader.read(resourceType);
-    final Dataset<Row> filtered = resources.filter(resources.col("id").equalTo(resourceId));
-    if (filtered.isEmpty()) {
-      resourceWriter.append(resourceReader, resourceType, dataset);
-    } else {
-      final Dataset<Row> remainingResources = resources.except(filtered);
-      resourceWriter.write(resourceType, remainingResources);
-      resourceWriter.append(resourceReader, resourceType, dataset);
-    }
+    resourceWriter.update(resourceReader, resourceType, dataset);
   }
 
   public void appendDataset(final ResourceType resourceType, final IBaseResource resource) {
     final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
     final Dataset<Row> dataset = spark.createDataset(List.of(resource), encoder).toDF();
 
-    resourceWriter.append(resourceReader, resourceType, dataset);
+    resourceWriter.append(resourceType, dataset);
   }
 }

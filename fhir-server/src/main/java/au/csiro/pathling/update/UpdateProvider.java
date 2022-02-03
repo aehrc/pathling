@@ -84,7 +84,6 @@ public class UpdateProvider implements IResourceProvider {
   @OperationAccess("update")
   public MethodOutcome update(@IdParam final IdType id, @ResourceParam final IBaseResource resource) {
     String resourceId = id.getIdPart();
-    String versionId = id.getVersionIdPart(); // this will contain the ETag, currently null
     resource.setId(resourceId);
 
     updateHelpers.updateDataset(resourceType, resource);
