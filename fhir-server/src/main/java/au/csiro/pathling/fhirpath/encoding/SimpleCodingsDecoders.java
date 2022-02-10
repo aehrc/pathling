@@ -37,7 +37,9 @@ public interface SimpleCodingsDecoders {
   static SimpleCoding decodeCoding(@Nullable final Object row) {
     final InternalRow ir = (InternalRow) row;
     return ir != null
-           ? new SimpleCoding(safeGetString(ir, 1), safeGetString(ir, 3), safeGetString(ir, 2))
+           ? new SimpleCoding(safeGetString(ir, CodingEncoding.SYSTEM_INDEX),
+        safeGetString(ir, CodingEncoding.CODE_INDEX),
+        safeGetString(ir, CodingEncoding.VERSION_INDEX))
            : null;
   }
 

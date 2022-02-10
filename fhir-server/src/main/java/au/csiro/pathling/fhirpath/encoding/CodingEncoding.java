@@ -33,13 +33,22 @@ public interface CodingEncoding {
     final StructField display = new StructField("display", DataTypes.StringType, true, metadata);
     final StructField userSelected = new StructField("userSelected", DataTypes.BooleanType, true,
         metadata);
-    return new StructType(new StructField[]{id, system, version, code, display, userSelected});
+    final StructField fid = new StructField("_fid", DataTypes.IntegerType, true,
+        metadata);
+    return new StructType(new StructField[]{id, system, version, code, display, userSelected, fid});
   }
 
   /**
    * A {@link StructType} for a Coding.
    */
   StructType DATA_TYPE = codingStructType();
+
+  int SYSTEM_INDEX = DATA_TYPE.fieldIndex("system");
+  int VERSION_INDEX = DATA_TYPE.fieldIndex("version");
+  int CODE_INDEX = DATA_TYPE.fieldIndex("code");
+  int DISPLAY_INDEX = DATA_TYPE.fieldIndex("display");
+  int USER_SELECTED_INDEX = DATA_TYPE.fieldIndex("userSelected");
+
 
   /**
    * Encodes a Coding to a Row (spark SQL compatible type)
@@ -53,9 +62,11 @@ public interface CodingEncoding {
            ? null
            : RowFactory
                .create(coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
-                   coding.getDisplay(), coding.hasUserSelected()
-                                        ? coding.getUserSelected()
-                                        : null);
+                   coding.getDisplay(),
+                   coding.hasUserSelected()
+                   ? coding.getUserSelected()
+                   : null,
+                   null); // _fid
 
   }
 
@@ -67,12 +78,12 @@ public interface CodingEncoding {
    */
   static Coding decode(@Nonnull final Row row) {
     final Coding coding = new Coding();
-    coding.setSystem(row.getString(1));
-    coding.setVersion(row.getString(2));
-    coding.setCode(row.getString(3));
-    coding.setDisplay(row.getString(4));
-    if (!row.isNullAt(5)) {
-      coding.setUserSelected(row.getBoolean(5));
+    coding.setSystem(row.getString(SYSTEM_INDEX));
+    coding.setVersion(row.getString(VERSION_INDEX));
+    coding.setCode(row.getString(CODE_INDEX));
+    coding.setDisplay(row.getString(DISPLAY_INDEX));
+    if (!row.isNullAt(USER_SELECTED_INDEX)) {
+      coding.setUserSelected(row.getBoolean(USER_SELECTED_INDEX));
     }
     return coding;
   }

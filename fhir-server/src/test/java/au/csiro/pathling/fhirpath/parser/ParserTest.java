@@ -37,7 +37,6 @@ import java.sql.Date;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -592,11 +591,8 @@ public class ParserTest extends AbstractParserTest {
   }
 
 
-  @Disabled
   @Test
   void testExtensionFunctionOnTranslateResult() {
-
-    // TODO: Enable when the hardcoded coding encoding is remediated.
 
     // This is a special case as the codings here are created from the terminology server response
     // using the hardcoded encoding core in CodingEncoding.

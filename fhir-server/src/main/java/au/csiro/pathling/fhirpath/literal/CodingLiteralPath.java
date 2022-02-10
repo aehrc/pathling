@@ -83,7 +83,10 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
         lit(value.getVersion()).as("version"),
         lit(value.getCode()).as("code"),
         lit(value.getDisplay()).as("display"),
-        lit(value.hasUserSelected() ? value.getUserSelected() : null).as("userSelected"));
+        lit(value.hasUserSelected()
+            ? value.getUserSelected()
+            : null).as("userSelected"),
+        lit(null).as("_fid"));
   }
 
   @Override
