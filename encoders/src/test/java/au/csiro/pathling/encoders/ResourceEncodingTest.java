@@ -30,7 +30,7 @@ public class ResourceEncodingTest {
 
   private final FhirContext fhirContext = FhirContext.forR4();
   private final SchemaConverter2 converter = new SchemaConverter2(fhirContext,
-      new R4DataTypeMappings(), 0, true);
+      new R4DataTypeMappings(), EncoderConfig.apply(0, true));
 
   private final FhirEncoders fhirEncoders = FhirEncoders.forR4()
       .enableExtensions(true).getOrCreate();

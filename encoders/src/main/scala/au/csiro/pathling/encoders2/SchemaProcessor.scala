@@ -24,7 +24,6 @@ import ca.uhn.fhir.context._
  */
 trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] {
 
-
   /**
    * Builds a representation for an child element with resolved name.
    *
@@ -62,9 +61,13 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] {
    */
   def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[SF]): DT
 
+  /**
+   * Gets the max nesting that recursive data types should be expanded to.
+   * Zero indicates that fields ot type T should not be expanded in the composite of type T.
+   *
+   * @return the max nesting that recursive data types should be expanded to
+   */
   def maxNestingLevel: Int
-
-  def expandExtensions: Boolean
 
   def proceedCompositeChildren(value: CompositeCtx[DT, SF]): Seq[SF] = {
     value.visitChildren(this)
@@ -75,7 +78,7 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] {
   }
 
   override def visitComposite(compositeCtx: CompositeCtx[DT, SF]): DT = {
-    // TODO: Not sure if should be here on in the taversal itself
+    // TODO: Not sure if should be here on in the traversal itself
     EncodingContext.withDefinition(compositeCtx.compositeDefinition) {
       aggregateComposite(compositeCtx, proceedCompositeChildren(compositeCtx))
     }
@@ -83,11 +86,7 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] {
 
   override def visitElementChild(elementChildCtx: ElementChildCtx[DT, SF]): Seq[SF] = {
     elementChildCtx.elementChildDefinition match {
-      case _: RuntimeChildExtension => if (expandExtensions) {
-        super.visitElementChild(elementChildCtx)
-      } else {
-        Nil
-      }
+      case _: RuntimeChildExtension => Nil
       case _ => super.visitElementChild(elementChildCtx)
     }
   }

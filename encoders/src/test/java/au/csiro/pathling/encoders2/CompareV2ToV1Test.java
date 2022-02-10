@@ -15,6 +15,7 @@ package au.csiro.pathling.encoders2;
 
 import static org.junit.Assert.assertEquals;
 
+import au.csiro.pathling.encoders.EncoderConfig;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import au.csiro.pathling.encoders1.EncoderBuilder1;
 import au.csiro.pathling.encoders1.SchemaConverter1;
@@ -26,14 +27,9 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Condition;
-import org.hl7.fhir.r4.model.Encounter;
-import org.hl7.fhir.r4.model.Observation;
-import org.hl7.fhir.r4.model.Patient;
-import org.hl7.fhir.r4.model.QuestionnaireResponse;
+import org.hl7.fhir.r4.model.*;
 import org.json4s.StringInput;
 import org.json4s.jackson.JsonMethods;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -100,7 +96,7 @@ public class CompareV2ToV1Test implements JsonMethods {
     final SchemaConverter1 converter = new SchemaConverter1(FhirContext.forR4(),
         dataTypeMappings, nestingLevel);
     final SchemaConverter2 schemaTraversal2 = new SchemaConverter2(FhirContext.forR4(),
-        dataTypeMappings, nestingLevel, false);
+        dataTypeMappings, EncoderConfig.apply(nestingLevel, false, false));
     final StructType schema = converter.resourceSchema(resourceClass);
     final StructType schema2 = schemaTraversal2.resourceSchema(resourceClass);
     assertEquals(schema.treeString(), schema2.treeString());
@@ -119,7 +115,7 @@ public class CompareV2ToV1Test implements JsonMethods {
 
     final SerializerBuilder2 serializerBuilder = new SerializerBuilder2(fhirContext,
         dataTypeMappings,
-        nestingLevel, false);
+        EncoderConfig.apply(nestingLevel, false, false));
 
     final Expression objSerializer_v2 = serializerBuilder.buildSerializer(resourceClass);
     // NOTE: Two serializers cannot be compared directly, because of global state used
@@ -142,7 +138,7 @@ public class CompareV2ToV1Test implements JsonMethods {
     final Expression objDeserializer_v1 = encoder.objDeserializer();
 
     final SchemaConverter2 schemaTraversal2 = new SchemaConverter2(FhirContext.forR4(),
-        dataTypeMappings, nestingLevel, false);
+        dataTypeMappings, EncoderConfig.apply(nestingLevel, false, false));
     final DeserializerBuilder2 deserializerBuilder = DeserializerBuilder2.apply(schemaTraversal2);
 
     final Expression objDeserializer_v2 = deserializerBuilder.buildDeserializer(resourceClass);

@@ -13,8 +13,8 @@
 
 package au.csiro.pathling.encoders2
 
-import au.csiro.pathling.encoders.UnsupportedResourceError
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.encoders.{EncoderConfig, UnsupportedResourceError}
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 
@@ -39,7 +39,6 @@ object EncoderBuilder2 {
    * @param enableExtensions   true is support for extensions should be enabled.
    * @return An ExpressionEncoder for the resource
    */
-
   def of(resourceDefinition: RuntimeResourceDefinition,
          fhirContext: FhirContext,
          mappings: DataTypeMappings,
@@ -52,7 +51,8 @@ object EncoderBuilder2 {
 
     val fhirClass = resourceDefinition
       .asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
-    val schemaConverter = new SchemaConverter2(fhirContext, mappings, maxNestingLevel, enableExtensions)
+    val schemaConverter = new SchemaConverter2(fhirContext, mappings,
+      EncoderConfig(maxNestingLevel, enableExtensions))
     val serializerBuilder = SerializerBuilder2(schemaConverter)
     val deserializerBuilder = DeserializerBuilder2(schemaConverter)
     new ExpressionEncoder(

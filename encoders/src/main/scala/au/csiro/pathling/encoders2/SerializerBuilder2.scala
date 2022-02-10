@@ -14,7 +14,7 @@
 package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders.{InstanceOf, ObjectCast, SchemaConfig}
+import au.csiro.pathling.encoders.{EncoderContext, EncoderSettings, InstanceOf, ObjectCast}
 import au.csiro.pathling.encoders2.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
 import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
 import au.csiro.pathling.encoders2.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
@@ -34,10 +34,13 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
  * The schema processor for building serializer expressions.
  *
  * @param expression       the starting (root) expression.
- * @param dataTypeMappings data type mappings to use.
+ * @param fhirContext      the FHIR context to use.
+ * @param dataTypeMappings the data type mappings to use.
+ * @param config           the EncoderSettings to use.
  */
-private[encoders2] class SerializerBuilderProcessor(expression: Expression, val dataTypeMappings: DataTypeMappings,
-                                                    override val maxNestingLevel: Int, override val expandExtensions: Boolean, override val fhirContext: FhirContext) extends
+private[encoders2] class SerializerBuilderProcessor(expression: Expression, override val fhirContext: FhirContext,
+                                                    override val dataTypeMappings: DataTypeMappings,
+                                                    override val config: EncoderSettings) extends
   SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] {
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[ExpressionWithName] = {
@@ -101,7 +104,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
 
-    val allFields = if (expandExtensions) {
+    val allFields = if (supportsExtensions) {
       fields ++ createExtensionsFields(definition)
     } else {
       fields
@@ -145,7 +148,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, val 
   }
 
   private def withExpression(expression: Expression): SerializerBuilderProcessor = {
-    new SerializerBuilderProcessor(expression, dataTypeMappings, maxNestingLevel, expandExtensions, fhirContext)
+    new SerializerBuilderProcessor(expression, fhirContext, dataTypeMappings, config)
   }
 }
 
@@ -269,11 +272,11 @@ private[encoders2] object SerializerBuilderProcessor {
 /**
  * The builder of serializer expressions for HAPI representation of FHIR resources.
  *
- * @param fhirContext     the FHIR context to use.
- * @param mappings        the data type mappings to use.
- * @param maxNestingLevel the max nesting level to use.
+ * @param fhirContext the FHIR context to use.
+ * @param mappings    the data type mappings to use.
+ * @param config      the EncoderSettings to use.
  */
-class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, maxNestingLevel: Int, supportsExtensions: Boolean) {
+class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, config: EncoderSettings) {
 
   /**
    * Creates the serializer expression for given resource definition.
@@ -285,7 +288,7 @@ class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, m
     val fhirClass = resourceDefinition.asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
     val inputObject = BoundReference(0, ObjectType(fhirClass), nullable = true)
 
-    SchemaVisitor.traverseResource(resourceDefinition, new SerializerBuilderProcessor(inputObject, mappings, maxNestingLevel, supportsExtensions, fhirContext))
+    SchemaVisitor.traverseResource(resourceDefinition, new SerializerBuilderProcessor(inputObject, fhirContext, mappings, config))
   }
 
   /**
@@ -305,12 +308,12 @@ class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, m
  */
 object SerializerBuilder2 {
   /**
-   * Constructs a serializer builder from a [[SchemaConfig]].
+   * Constructs a serializer builder from a [[EncoderContext]].
    *
-   * @param config the schema config to use.
+   * @param context the schema config to use.
    * @return the serializer builder.
    */
-  def apply(config: SchemaConfig): SerializerBuilder2 = {
-    new SerializerBuilder2(config.fhirContext, config.dataTypeMappings, config.maxNestingLevel, config.supportsExtensions)
+  def apply(context: EncoderContext): SerializerBuilder2 = {
+    new SerializerBuilder2(context.fhirContext, context.dataTypeMappings, context.config)
   }
 }

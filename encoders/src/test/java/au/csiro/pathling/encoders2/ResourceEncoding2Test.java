@@ -15,6 +15,7 @@ package au.csiro.pathling.encoders2;
 
 import static org.junit.Assert.assertTrue;
 
+import au.csiro.pathling.encoders.EncoderConfig;
 import au.csiro.pathling.encoders.EncoderUtils;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
@@ -78,7 +79,7 @@ public class ResourceEncoding2Test {
   public void testCanProduceSchema() {
     final SchemaConverter2 schemaConverter = new SchemaConverter2(fhirContext,
         new R4DataTypeMappings(),
-        0, true);
+        EncoderConfig.apply(0, true));
 
     final StructType schema = schemaConverter.resourceSchema(resourceClass);
   }

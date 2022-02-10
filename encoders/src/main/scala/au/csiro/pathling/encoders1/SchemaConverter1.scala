@@ -30,9 +30,7 @@ class SchemaConverter1(val fhirContext: FhirContext, val dataTypeMappings: DataT
   def this(fhirContext: FhirContext, dataTypeMappings: DataTypeMappings) {
     this(fhirContext, dataTypeMappings, 0)
   }
-
-  override def supportsExtensions: Boolean = false
-
+  
   override def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {
     EncodingContext.runWithContext {
       compositeToStructType(resourceDefinition)

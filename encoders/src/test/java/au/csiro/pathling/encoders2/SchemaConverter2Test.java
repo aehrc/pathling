@@ -17,6 +17,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import au.csiro.pathling.encoders.AbstractSchemaConverterTest;
+import au.csiro.pathling.encoders.EncoderConfig;
 import au.csiro.pathling.encoders.SchemaConverter;
 import java.util.Arrays;
 import java.util.function.Consumer;
@@ -50,7 +51,8 @@ public class SchemaConverter2Test extends AbstractSchemaConverterTest {
 
   @Override
   protected SchemaConverter createSchemaConverter(int maxNestingLevel) {
-    return new SchemaConverter2(FHIR_CONTEXT, DATA_TYPE_MAPPINGS, maxNestingLevel, true);
+    return new SchemaConverter2(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
+        EncoderConfig.apply(maxNestingLevel, true));
   }
 
   // TODO: [#414] This is to check if nested types work correctly in choices.

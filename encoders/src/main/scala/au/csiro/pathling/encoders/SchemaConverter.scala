@@ -13,7 +13,7 @@
 
 package au.csiro.pathling.encoders
 
-import ca.uhn.fhir.context.{RuntimeChildAny, RuntimeChildChoiceDefinition, RuntimeResourceDefinition}
+import ca.uhn.fhir.context.{FhirContext, RuntimeChildAny, RuntimeChildChoiceDefinition, RuntimeResourceDefinition}
 import org.apache.spark.sql.types.StructType
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
 
@@ -22,7 +22,10 @@ import scala.collection.convert.ImplicitConversions._
 /**
  * The converter from FHIR schemas to (spark) SQL schemas.
  */
-trait SchemaConverter extends SchemaConfig {
+trait SchemaConverter {
+
+  def fhirContext: FhirContext
+
   /**
    * Returns the spark (SQL) schema that represents the given FHIR resource class.
    *

@@ -13,6 +13,7 @@
 
 package au.csiro.pathling.encoders2
 
+import au.csiro.pathling.encoders.EncoderContext
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
@@ -24,12 +25,7 @@ import ca.uhn.fhir.context._
  * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
  * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
  */
-trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
-
-
-  def fhirContext: FhirContext
-
-  def dataTypeMappings: DataTypeMappings
+trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] with EncoderContext {
 
   override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
 
@@ -46,7 +42,6 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
     }
     Seq(buildElement(elementName, value, elementDefinition))
   }
-
 
   /**
    * Builds the representation of a singular element.
