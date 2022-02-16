@@ -13,9 +13,10 @@
 package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.EncodingContext
-import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceChildNames
-import au.csiro.pathling.encoders2.SchemaVisitor.isSingular
+import au.csiro.pathling.encoders2.SchemaVisitor.{getOrderedListOfChoiceChildNames, isSingular}
 import ca.uhn.fhir.context._
+import org.hl7.fhir.instance.model.api.IBase
+import org.hl7.fhir.r4.model.PrimitiveType
 
 import scala.collection.convert.ImplicitConversions._
 
@@ -132,6 +133,84 @@ object SchemaVisitor {
    */
   def isSingular(childDefinition: BaseRuntimeChildDefinition): Boolean = {
     childDefinition.getMax == 1
+  }
+
+  /**
+   * Non primitive datatypes that are allowed in open choices like value[*].
+   * As defined in:https://www.hl7.org/fhir/datatypes.html#open
+   */
+  val allowedOpenTypes: Set[Class[_]] = Set(
+    // DataTypes
+    classOf[org.hl7.fhir.r4.model.Address],
+    classOf[org.hl7.fhir.r4.model.Age],
+    classOf[org.hl7.fhir.r4.model.Annotation],
+    classOf[org.hl7.fhir.r4.model.Attachment],
+    classOf[org.hl7.fhir.r4.model.CodeableConcept],
+    classOf[org.hl7.fhir.r4.model.Coding],
+    classOf[org.hl7.fhir.r4.model.ContactPoint],
+    classOf[org.hl7.fhir.r4.model.Count],
+    classOf[org.hl7.fhir.r4.model.Distance],
+    classOf[org.hl7.fhir.r4.model.Duration],
+    classOf[org.hl7.fhir.r4.model.HumanName],
+    classOf[org.hl7.fhir.r4.model.Identifier],
+    classOf[org.hl7.fhir.r4.model.Money],
+    classOf[org.hl7.fhir.r4.model.Period],
+    classOf[org.hl7.fhir.r4.model.Quantity],
+    classOf[org.hl7.fhir.r4.model.Range],
+    classOf[org.hl7.fhir.r4.model.Ratio],
+    classOf[org.hl7.fhir.r4.model.Reference],
+    classOf[org.hl7.fhir.r4.model.SampledData],
+    classOf[org.hl7.fhir.r4.model.Signature],
+    classOf[org.hl7.fhir.r4.model.Timing],
+    // MetaDataTypes
+    classOf[org.hl7.fhir.r4.model.ContactDetail],
+    classOf[org.hl7.fhir.r4.model.Contributor],
+    classOf[org.hl7.fhir.r4.model.DataRequirement],
+    classOf[org.hl7.fhir.r4.model.Expression],
+    classOf[org.hl7.fhir.r4.model.ParameterDefinition],
+    classOf[org.hl7.fhir.r4.model.RelatedArtifact],
+    classOf[org.hl7.fhir.r4.model.TriggerDefinition],
+    classOf[org.hl7.fhir.r4.model.UsageContext],
+    // Special Types
+    classOf[org.hl7.fhir.r4.model.Dosage],
+    classOf[org.hl7.fhir.r4.model.Meta]
+  )
+
+
+  /**
+   * Checks if the given class is a valid type for open elements types as defined in: [[https://build.fhir.org/datatypes.html#open]].
+   * Note: this is needed because the HAPI implementation of open type element [[ca.uhn.fhir.context.RuntimeChildAny#getValidChildTypes]] returns
+   * types not included in the specification such as [[org.hl7.fhir.r4.model.ElementDefinition]].
+   *
+   * @param cls the class of the type to checks.
+   * @return true is given type is a valid open element type.
+   */
+  def isValidOpenElementType(cls: Class[_ <: IBase]): Boolean = {
+    classOf[PrimitiveType[_]].isAssignableFrom(cls) || allowedOpenTypes.contains(cls)
+  }
+
+  /**
+   * Returns a deterministically ordered list of child names of a choice.
+   *
+   * @param choice the choice child definition.
+   * @return ordered list of child names of the choice.
+   */
+  def getOrderedListOfChoiceChildNames(choice: RuntimeChildChoiceDefinition): Seq[String] = {
+    choice
+      .getValidChildTypes
+      .filter(cls => !choice.isInstanceOf[RuntimeChildAny] || isValidOpenElementType(cls))
+      .toList
+      .sortBy(_.getTypeName())
+      .map(choice.getChildNameByDatatype)
+      .distinct
+
+    // we need to use `distinct` as the list of allowed types may contain profiles of a type
+    // that resolve to same childName. e.g. [[org.hl7.fhir.r4.model.MoneyQuantity]] and
+    // [[org.hl7.fhir.r4.model.SimpleQuantity]] are both profiles of [[org.hl7.fhir.r4.model.Quantity]]
+    // and resolve to the child name of `valueQuantity`.
+    // They both and the [[org.hl7.fhir.r4.model.Quantity]] appear in the list of allowed types
+    // for RuntimeChildAny. This case should be actually addressed by filtering with [[#isValidOpenElementType]]
+    // but there might be other types of choices that have similar issue.
   }
 }
 
