@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.*;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,16 +30,13 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.SparkHelpers;
-import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import ca.uhn.fhir.context.FhirContext;
-import com.google.common.collect.ImmutableMap;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -54,35 +52,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 @Tag("UnitTest")
 class ExtensionFunctionTest {
-
-
-  private static final Row MANY_EXT_ROW_1 = RowFactory
-      .create("ext3", "uuid:myExtension", "string3", 102);
-  private static final Row MANY_EXT_ROW_2 = RowFactory
-      .create("ext4", "uuid:myExtension", "string4", 103);
-
-  private static final List<Row> MANY_MY_EXTENSIONS = Arrays.asList(
-      RowFactory.create("ext1", "uuid:someExtension", "string1", 100),
-      RowFactory.create("ext2", "uuid:someExtension", "string2", 101),
-      MANY_EXT_ROW_1,
-      MANY_EXT_ROW_2
-  );
-
-  private static final Row ONE_EXT_ROW_1 = RowFactory
-      .create("ext2", "uuid:myExtension", "string2", 201);
-
-  private static final List<Row> ONE_MY_EXTENSION = Arrays.asList(
-      RowFactory.create("ext1", "uuid:otherExtension", "string1", 200),
-      ONE_EXT_ROW_1
-  );
-  private static final List<Row> NO_MY_EXTENSIONS = Arrays.asList(
-      RowFactory.create("ext1", "uuid:otherExtension", "string1", 300),
-      RowFactory.create("ext2", "uuid:someExtension", "string2", 301)
-  );
-
-  private static Map<Object, Object> oneEntryMap(int i, List<Row> manyMyExtensions) {
-    return ImmutableMap.builder().put(i, manyMyExtensions).build();
-  }
 
   @Autowired
   private SparkSession spark;
@@ -156,6 +125,11 @@ class ExtensionFunctionTest {
   public void testExtensionOnElements() {
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+
+    // Construct element dataset from the resource dataset so that the resource path
+    // can be used as a foreign resource for this element path
+    // Note: this resource path is not singular as this will be a base for elements.
+
     final Dataset<Row> resourceLikeDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -177,28 +151,15 @@ class ExtensionFunctionTest {
         .withRow("observation-5", makeEid(1), null, null)
         .build();
 
-    when(mockReader.read(ResourceType.PATIENT))
+    when(mockReader.read(ResourceType.OBSERVATION))
         .thenReturn(resourceLikeDataset);
     final ResourcePath baseResourcePath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+        .build(fhirContext, mockReader, ResourceType.OBSERVATION, "Observation", false);
+
+    final Dataset<Row> elementDataset = toElementDataset(resourceLikeDataset, baseResourcePath);
 
     final ElementDefinition codeDefinition = checkPresent(FhirHelpers
         .getChildOfResource(fhirContext, "Observation", "code"));
-
-    // Construct element dataset from the resource dataset so that the resource path
-    // can be used as a foreign resource for this element path.
-
-    final IdAndValueColumns idAndValueColumns = SparkHelpers
-        .getIdAndValueColumns(resourceLikeDataset, true);
-    final Dataset<Row> resourceDataset = baseResourcePath.getDataset();
-    final Column[] elementColumns = Stream.of(
-        idAndValueColumns.getId().named().name(),
-        checkPresent(idAndValueColumns.getEid()).named().name(),
-        idAndValueColumns.getValues().get(0).named().name(), "_extension")
-        .map(baseResourcePath::getElementColumn)
-        .toArray(Column[]::new);
-
-    final Dataset<Row> elementDataset = resourceDataset.select(elementColumns);
 
     final ElementPath inputPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
