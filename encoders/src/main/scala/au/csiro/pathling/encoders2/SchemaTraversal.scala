@@ -13,10 +13,11 @@
 package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.EncodingContext
+import au.csiro.pathling.encoders2.ExtensionSupport.EXTENSION_ELEMENT_NAME
 import au.csiro.pathling.encoders2.SchemaVisitor.{getOrderedListOfChoiceChildNames, isSingular}
 import ca.uhn.fhir.context._
 import org.hl7.fhir.instance.model.api.IBase
-import org.hl7.fhir.r4.model.PrimitiveType
+import org.hl7.fhir.r4.model.{Patient, PrimitiveType}
 
 import scala.collection.convert.ImplicitConversions._
 
@@ -387,5 +388,26 @@ case class ElementCtx[DT, SF](elementName: String, childDefinition: BaseRuntimeC
 
   override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     visitor.visitElement(this)
+  }
+}
+
+/**
+ * Companion object for [[ElementCtx]]
+ */
+object ElementCtx {
+  /**
+   * Constructs the default [[ElementCtx]] for Extension element given FHIR context.
+   *
+   * @param fhirContext the FHIR contxt to use
+   * @tparam DT @see [[SchemaVisitor]]
+   * @tparam ST @see [[SchemaVisitor]]
+   * @return the default ElementCtx representation for FHIR extension element.
+   */
+  def forExtension[DT, ST](fhirContext: FhirContext): ElementCtx[DT, ST] = {
+    // Extract Extension definition from Patient resource.
+    val baseResourceDefinition = fhirContext.getResourceDefinition(classOf[Patient])
+    val extensionChildDefinition = baseResourceDefinition.getChildByName(EXTENSION_ELEMENT_NAME)
+    val extensionDefinition = extensionChildDefinition.getChildByName(EXTENSION_ELEMENT_NAME).asInstanceOf[BaseRuntimeElementCompositeDefinition[_]]
+    ElementCtx(EXTENSION_ELEMENT_NAME, extensionChildDefinition, extensionDefinition)
   }
 }

@@ -31,12 +31,12 @@ object EncoderBuilder2 {
   /**
    * Returns an encoder for the FHIR resource implemented by the given class
    *
-   * @param resourceDefinition The FHIR resource definition
+   * @param resourceDefinition the FHIR resource definition
    * @param fhirContext        the FHIR context to use
    * @param mappings           the data type mappings to use
    * @param maxNestingLevel    the max nesting level to use to expand recursive data types.
    *                           Zero means that fields of type T are skipped in a composite od type T.
-   * @param enableExtensions   true is support for extensions should be enabled.
+   * @param enableExtensions   true if support for extensions should be enabled.
    * @return An ExpressionEncoder for the resource
    */
   def of(resourceDefinition: RuntimeResourceDefinition,

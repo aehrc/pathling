@@ -161,7 +161,7 @@ private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Ex
   }
 
   private def deserializeExtensions(definition: BaseRuntimeElementCompositeDefinition[_], beanExpression: Expression): Expression = {
-    val beanWithFid = PutFid(beanExpression, addToPath(ExtensionSupport.FID_FIELD_NAME))
+    val beanWithFid = RegisterFid(beanExpression, addToPath(ExtensionSupport.FID_FIELD_NAME))
     definition match {
       case _: RuntimeResourceDefinition =>
         val deserializeExtension = UnresolvedCatalystToExternalMap(

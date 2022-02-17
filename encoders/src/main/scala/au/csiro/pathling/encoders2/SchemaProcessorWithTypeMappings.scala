@@ -115,8 +115,13 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] wi
   }
 
 
+  /**
+   * Builds the representation of Extension element.
+   *
+   * @return the representation of Extension element.
+   */
   def buildExtensionValue(): DT = {
-    val extensionNode = ExtensionSupport.extension(fhirContext)
+    val extensionNode = ElementCtx.forExtension(fhirContext)
     buildArrayValue(extensionNode.childDefinition, extensionNode.elementDefinition, extensionNode.elementName)
   }
 }

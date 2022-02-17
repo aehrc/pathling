@@ -88,7 +88,7 @@ public class SchemaVisitorTest {
 
   @Test
   public void testCorrectChoicesOnOpenElementType() {
-    ElementCtx<Object, Object> ex = ExtensionSupport.extension(fhirContext);
+    ElementCtx<Object, Object> ex = ElementCtx.forExtension(fhirContext);
     RuntimeChildExtension extension = (RuntimeChildExtension) ex.childDefinition();
     RuntimeCompositeDatatypeDefinition extensionChild = (RuntimeCompositeDatatypeDefinition) extension
         .getChildByName("extension");

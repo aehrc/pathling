@@ -188,11 +188,14 @@ case class GetClassFromContained(targetObject: Expression,
 
 
 /**
- * An Expression extracting an object having the given class definition from a List of FHIR
- * Resources.
+ * Registers the mapping of a deserialized object to its _fid value. The mapping is saved in '_fid_mapping' immutable state variable.
+ * Evaluates as identity.
+ *
+ * @param targetObject the expression, which value should be registered.
+ * @param fidValue     the fid value to use.
  */
-case class PutFid(targetObject: Expression,
-                  fidValue: Expression)
+case class RegisterFid(targetObject: Expression,
+                       fidValue: Expression)
   extends Expression with NonSQLExpression {
 
   override def nullable: Boolean = targetObject.nullable
@@ -227,10 +230,18 @@ case class PutFid(targetObject: Expression,
   }
 
   override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    PutFid(newChildren.head, newChildren.tail.head)
+    RegisterFid(newChildren.head, newChildren.tail.head)
   }
 }
 
+/**
+ * Attaches the Extensions from the provided fid->Extension map to objects
+ * registered in the `_fid_mapping` with [[RegisterFid]].
+ *
+ * @param targetObject       the container object that should be the result of evaluation.
+ * @param extensionMapObject the expression which evaluates to Map(Integer,Array(Extension))
+ *                           which maps fid to the list of Extensions for the object with this fid.
+ */
 case class AttachExtensions(targetObject: Expression,
                             extensionMapObject: Expression)
   extends Expression with NonSQLExpression {
