@@ -23,9 +23,9 @@ import java.util.Collections;
 import javax.annotation.Nonnull;
 
 /**
- * A function filters items in the input collection to only those that are of the given type.
+ * A function that returns the extensions of current element that match given url.
  *
- * @author John Grimes
+ * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#extension">extension</a>
  */
 public class ExtensionFunction implements NamedFunction {
@@ -48,7 +48,7 @@ public class ExtensionFunction implements NamedFunction {
         .invoke(new PathTraversalInput(input.getContext(), inputPath,
             ExtensionSupport.EXTENSION_ELEMENT_NAME()));
 
-    // now we need to create a correct argument context for the where call.
+    // now we need to create a correct argument context for the `where` call.
     final ParserContext argumentContext = input.getContext();
     final FhirPath extensionUrlPath = new PathTraversalOperator()
         .invoke(new PathTraversalInput(argumentContext, extensionPath.toThisPath(), "url"));

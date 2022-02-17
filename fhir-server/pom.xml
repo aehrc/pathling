@@ -254,7 +254,8 @@
               <groups>UnitTest</groups>
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
-                <logging.level.org.apache.spark>${pathling.spark.logLevel}</logging.level.org.apache.spark>
+                <logging.level.org.apache.spark>${pathling.spark.logLevel}
+                </logging.level.org.apache.spark>
                 <spark.logConf>true</spark.logConf>
               </systemPropertyVariables>
             </configuration>

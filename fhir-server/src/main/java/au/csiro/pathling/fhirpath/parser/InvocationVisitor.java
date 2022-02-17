@@ -18,12 +18,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.MemberInvocationContext;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListContext;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -132,15 +127,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
         // a foreign resource reference.
-        final ResourcePath path = ResourcePath
+        return ResourcePath
             .build(context.getFhirContext(), context.getResourceReader(), resourceType, fhirPath,
                 true);
-
-        // This resource path will get preserved within paths derived from this, so that we can come
-        // back to it for things like reverse reference resolution.
-        // path.setForeignResource(path);
-
-        return path;
 
       }
     }

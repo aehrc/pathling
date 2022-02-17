@@ -565,9 +565,6 @@ public class ParserTest extends AbstractParserTest {
         .isElementPath(StringPath.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testExtensionsForeignResources.csv");
-    // .saveAllRowsToCsv(spark,
-    //     "/Users/szu004/dev/pathling/fhir-server/src/test/resources/responses/ParserTest",
-    //     "testExtensionsForeignResources");
   }
 
   @Test
@@ -611,8 +608,5 @@ public class ParserTest extends AbstractParserTest {
         "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').extension('uuid:any').url")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testExtensionFunctionOnTranslateResult.csv");
-    // .saveAllRowsToCsv(spark,
-    //     "/Users/szu004/dev/pathling/fhir-server/src/test/resources/responses/ParserTest",
-    //     "testExtensionFunctionOnTranslateResult");
   }
 }
