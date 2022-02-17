@@ -168,6 +168,7 @@ public class ExtractExecutor extends QueryExecutor {
     FhirPathContextAndResult result = null;
     check(sortedColumnsAndContexts.size() > 0);
     for (final FhirPathAndContext current : sortedColumnsAndContexts) {
+      final FhirPath inputContext = current.getContext().getInputContext();
       if (result != null) {
         // Get the set of unique prefixes from the two parser contexts, and sort them in descending
         // order of prefix length.
@@ -187,6 +188,8 @@ public class ExtractExecutor extends QueryExecutor {
                 current.getFhirPath().getExpression().startsWith(p))
             .findFirst();
 
+        final Dataset<Row> currentDataset = trimTrailingNulls(inputContext,
+            inputContext.getIdColumn(), current.getFhirPath());
         if (commonPrefix.isPresent() &&
             resultNodeIds.containsKey(commonPrefix.get()) &&
             currentNodeIds.containsKey(commonPrefix.get())) {
@@ -200,21 +203,21 @@ public class ExtractExecutor extends QueryExecutor {
               .get(commonPrefix.get());
           final List<Column> currentJoinColumns = Arrays.asList(current.getFhirPath().getIdColumn(),
               currentNodeId);
-          final Dataset<Row> dataset = join(result.getResult(), previousJoinColumns,
-              current.getFhirPath().getDataset(), currentJoinColumns, JoinType.LEFT_OUTER);
+          final Dataset<Row> dataset = join(result.getResult(), previousJoinColumns, currentDataset,
+              currentJoinColumns, JoinType.LEFT_OUTER);
           result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
               dataset);
         } else {
           // If there is no common prefix, we join using only the resource ID.
           final Dataset<Row> dataset = join(result.getResult(), result.getFhirPath().getIdColumn(),
-              current.getFhirPath().getDataset(), current.getFhirPath().getIdColumn(),
-              JoinType.LEFT_OUTER);
+              currentDataset, current.getFhirPath().getIdColumn(), JoinType.LEFT_OUTER);
           result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
               dataset);
         }
       } else {
-        result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
-            current.getFhirPath().getDataset());
+        final Dataset<Row> dataset = trimTrailingNulls(inputContext, inputContext.getIdColumn(),
+            current.getFhirPath());
+        result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(), dataset);
       }
     }
 

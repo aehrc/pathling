@@ -121,14 +121,8 @@ public abstract class QueryExecutor {
       @Nonnull final Collection<FhirPath> expressions,
       @Nonnull final Collection<FhirPath> filters, @Nonnull final Column idColumn) {
     final List<Dataset<Row>> datasets = expressions.stream()
-        .map(expression -> {
-          // We need to remove any trailing null values from non-empty collections, so that
-          // aggregations do not count non-empty collections in the empty collection grouping. We do
-          // this by joining the distinct set of resource IDs to the dataset using an outer join,
-          // where the value is not null.
-          return join(expression.getDataset(), idColumn, inputContext.getDataset(),
-              idColumn, expression.getValueColumn().isNotNull(), JoinType.RIGHT_OUTER);
-        }).collect(Collectors.toList());
+        .map(expression -> trimTrailingNulls(inputContext, idColumn, expression))
+        .collect(Collectors.toList());
     datasets.addAll(filters.stream()
         .map(FhirPath::getDataset)
         .collect(Collectors.toList()));
@@ -136,6 +130,23 @@ public abstract class QueryExecutor {
     return datasets.stream()
         .reduce((a, b) -> join(a, idColumn, b, idColumn, JoinType.LEFT_OUTER))
         .orElseThrow();
+  }
+
+  /**
+   * We need to remove any trailing null values from non-empty collections, so that aggregations do
+   * not count non-empty collections in the empty collection grouping. We do this by joining the
+   * distinct set of resource IDs to the dataset using an outer join, where the value is not null.
+   */
+  @Nonnull
+  protected Dataset<Row> trimTrailingNulls(@Nonnull final FhirPath inputContext,
+      final @Nonnull Column idColumn, @Nonnull final FhirPath expression) {
+    if (expression.isSingular()) {
+      // It is not necessary to perform a join to remove trailing nulls for a singular expression.
+      return expression.getDataset();
+    } else {
+      return join(expression.getDataset(), idColumn, inputContext.getDataset(),
+          idColumn, expression.getValueColumn().isNotNull(), JoinType.RIGHT_OUTER);
+    }
   }
 
   /**

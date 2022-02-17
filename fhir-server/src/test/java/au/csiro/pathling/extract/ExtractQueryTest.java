@@ -227,6 +227,21 @@ class ExtractQueryTest {
   }
 
   @Test
+  void eliminatesTrailingNulls() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource, ResourceType.CONDITION);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("reverseResolve(Condition.subject).code.coding.code.where($this = '72892002')")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/eliminatesTrailingNulls.csv");
+  }
+
+  @Test
   void emptyColumn() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.PATIENT);
