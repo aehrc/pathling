@@ -66,7 +66,7 @@ public class EntityTagInterceptor {
         throw new NotModifiedException("Supplied entity tag matches");
       } else {
         response.setHeader("ETag", validator.tag());
-        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("Cache-Control", "public,no-cache");
       }
     }
   }
