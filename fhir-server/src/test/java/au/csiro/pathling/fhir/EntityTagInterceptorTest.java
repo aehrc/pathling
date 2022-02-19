@@ -126,7 +126,7 @@ class EntityTagInterceptorTest {
 
   private void verifyResponseHeaders() {
     verify(response).setHeader(eq("ETag"), eq(TAG));
-    verify(response).setHeader(eq("Cache-Control"), eq("public,no-cache"));
+    verify(response).setHeader(eq("Cache-Control"), eq("public,no-cache,max-age=0"));
   }
 
 }
