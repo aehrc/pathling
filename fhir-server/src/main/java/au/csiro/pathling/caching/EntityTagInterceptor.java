@@ -66,8 +66,7 @@ public class EntityTagInterceptor {
         throw new NotModifiedException("Supplied entity tag matches");
       } else {
         response.setHeader("ETag", validator.tag());
-        response.setHeader("Cache-Control", "must-revalidate");
-        response.addHeader("Cache-Control", "max-age=1");
+        response.setHeader("Cache-Control", "no-cache");
       }
     }
   }
@@ -84,10 +83,7 @@ public class EntityTagInterceptor {
     // We set the ETag to this value because we can't unset it, and this value won't match any valid
     // tag.
     response.setHeader("ETag", "W/\"0\"");
-    response.setHeader("Cache-Control", "no-cache");
     response.addHeader("Cache-Control", "no-store");
-    response.addHeader("Cache-Control", "max-age=0");
-    response.addHeader("Cache-Control", "must-revalidate");
   }
 
   /**
