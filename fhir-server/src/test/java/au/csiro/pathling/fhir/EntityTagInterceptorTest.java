@@ -33,9 +33,6 @@ import org.junit.jupiter.api.Test;
 class EntityTagInterceptorTest {
 
   private static final String TAG = "W/\"abc123\"";
-  private static final String NON_S3_RESULT_URL = "file:///tmp/results";
-  private static final String S3_RESULT_URL = "s3://somebucket/results";
-  private static final long SIGNED_URL_EXPIRY = 3600L;
 
   private EntityTagValidator validator;
   private HttpServletRequest request;
@@ -54,7 +51,7 @@ class EntityTagInterceptorTest {
 
   @Test
   void setsETagAndCacheControl() {
-    setupCacheableRequest("GET", null, S3_RESULT_URL, "$aggregate");
+    setupCacheableRequest("GET", null, "$aggregate");
     when(validator.matches(isNull())).thenReturn(false);
     when(validator.tag()).thenReturn(TAG);
 
@@ -65,7 +62,7 @@ class EntityTagInterceptorTest {
 
   @Test
   void returnsNotModified() {
-    setupCacheableRequest("GET", TAG, NON_S3_RESULT_URL, "$aggregate");
+    setupCacheableRequest("GET", TAG, "$aggregate");
     when(validator.matches(eq(TAG))).thenReturn(true);
 
     assertThrows(NotModifiedException.class,
@@ -76,7 +73,7 @@ class EntityTagInterceptorTest {
 
   @Test
   void setsETagForExtractRequest() {
-    setupCacheableRequest("GET", null, NON_S3_RESULT_URL, "$extract");
+    setupCacheableRequest("GET", null, "$extract");
     when(validator.matches(isNull())).thenReturn(false);
     when(validator.tag()).thenReturn(TAG);
 
@@ -87,7 +84,7 @@ class EntityTagInterceptorTest {
 
   @Test
   void setsETagForSearchRequest() {
-    setupCacheableRequest("GET", null, NON_S3_RESULT_URL, null);
+    setupCacheableRequest("GET", null, null);
     when(validator.matches(isNull())).thenReturn(false);
     when(validator.tag()).thenReturn(TAG);
 
@@ -98,7 +95,7 @@ class EntityTagInterceptorTest {
 
   @Test
   void setsETagForHead() {
-    setupCacheableRequest("HEAD", null, S3_RESULT_URL, "$aggregate");
+    setupCacheableRequest("HEAD", null, "$aggregate");
     when(validator.matches(isNull())).thenReturn(false);
     when(validator.tag()).thenReturn(TAG);
 
@@ -109,7 +106,7 @@ class EntityTagInterceptorTest {
 
   @Test
   void doesNothingWhenNotCacheable() {
-    setupCacheableRequest("POST", null, S3_RESULT_URL, "$aggregate");
+    setupCacheableRequest("POST", null, "$aggregate");
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
@@ -118,7 +115,7 @@ class EntityTagInterceptorTest {
   }
 
   private void setupCacheableRequest(@Nonnull final String method, @Nullable final String tag,
-      @Nonnull final String resultUrl, @Nullable final String operation) {
+      @Nullable final String operation) {
     when(request.getMethod()).thenReturn(method);
     when(request.getHeader(eq("If-None-Match"))).thenReturn(tag);
     when(requestDetails.getOperation()).thenReturn(operation);
