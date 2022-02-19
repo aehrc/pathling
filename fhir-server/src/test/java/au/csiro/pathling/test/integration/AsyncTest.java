@@ -135,7 +135,7 @@ public class AsyncTest extends IntegrationTest {
         encounteredInProgressResponse = true;
         Thread.sleep(POLL_FREQUENCY);
       } else {
-        assertTrue(cacheControl.contains("public,no-cache,max-age=0"));
+        assertTrue(cacheControl.contains("must-revalidate,max-age=0"));
       }
     } while (statusCode != expectedStatus);
 
