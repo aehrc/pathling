@@ -66,7 +66,8 @@ public class EntityTagInterceptor {
         throw new NotModifiedException("Supplied entity tag matches");
       } else {
         response.setHeader("ETag", validator.tag());
-        response.setHeader("Cache-Control", "must-revalidate,max-age=0");
+        response.setHeader("Cache-Control", "must-revalidate,max-age=1");
+        response.setHeader("Vary", "Accept,Accept-Encoding,Authorization");
       }
     }
   }
