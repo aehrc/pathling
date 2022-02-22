@@ -14,10 +14,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.Configuration;
+import au.csiro.pathling.Configuration.HttpCaching;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.caching.EntityTagValidator;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -46,7 +49,13 @@ class EntityTagInterceptorTest {
     request = mock(HttpServletRequest.class);
     requestDetails = mock(RequestDetails.class);
     response = mock(HttpServletResponse.class);
-    interceptor = new EntityTagInterceptor(validator);
+    final Configuration configuration = mock(Configuration.class);
+    final HttpCaching httpCaching = mock(HttpCaching.class);
+    when(httpCaching.getVary()).thenReturn(
+        List.of("Accept", "Accept-Encoding", "Prefer", "Authorization"));
+    when(httpCaching.getCacheableControl()).thenReturn(List.of("must-revalidate", "max-age=1"));
+    when(configuration.getHttpCaching()).thenReturn(httpCaching);
+    interceptor = new EntityTagInterceptor(validator, configuration);
   }
 
   @Test
@@ -57,7 +66,7 @@ class EntityTagInterceptorTest {
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
-    verifyResponseHeaders();
+    verifyMissResponseHeaders();
   }
 
   @Test
@@ -68,7 +77,7 @@ class EntityTagInterceptorTest {
     assertThrows(NotModifiedException.class,
         () -> interceptor.checkIncomingTag(request, requestDetails, response));
 
-    verifyNoInteractions(response);
+    verifyCacheableResponseHeaders();
   }
 
   @Test
@@ -79,7 +88,7 @@ class EntityTagInterceptorTest {
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
-    verifyResponseHeaders();
+    verifyMissResponseHeaders();
   }
 
   @Test
@@ -90,7 +99,7 @@ class EntityTagInterceptorTest {
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
-    verifyResponseHeaders();
+    verifyMissResponseHeaders();
   }
 
   @Test
@@ -101,7 +110,7 @@ class EntityTagInterceptorTest {
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
-    verifyResponseHeaders();
+    verifyMissResponseHeaders();
   }
 
   @Test
@@ -121,10 +130,14 @@ class EntityTagInterceptorTest {
     when(requestDetails.getOperation()).thenReturn(operation);
   }
 
-  private void verifyResponseHeaders() {
+  private void verifyMissResponseHeaders() {
+    verifyCacheableResponseHeaders();
     verify(response).setHeader(eq("ETag"), eq(TAG));
     verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
-    verify(response).setHeader(eq("Vary"), eq("Accept,Accept-Encoding,Authorization"));
+  }
+
+  private void verifyCacheableResponseHeaders() {
+    verify(response).addHeader(eq("Vary"), eq("Accept,Accept-Encoding,Prefer,Authorization"));
   }
 
 }

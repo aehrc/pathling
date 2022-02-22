@@ -138,7 +138,7 @@ public class AsyncTest extends IntegrationTest {
         final List<String> vary = statusResponse.getHeaders().get("Vary");
         assertNotNull(vary);
         assertTrue(cacheControl.contains("must-revalidate,max-age=1"));
-        assertTrue(vary.contains("Accept,Accept-Encoding,Authorization"));
+        assertTrue(vary.contains("Accept,Accept-Encoding,Prefer,Authorization"));
       }
     } while (statusCode != expectedStatus);
 
