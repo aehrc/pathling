@@ -135,6 +135,7 @@ class R4DataTypeMappings extends DataTypeMappings {
     // TODO: This is due to a bug in happi RuntimeChildExtension.getChildByName() implementation
     // which fails on assestion because the name of the child should be "modifierExtensionExtension"
     // not "extensionExtension"
+    // see: https://github.com/hapifhir/hapi-fhir/issues/3414
     val skipModifierExtension = child.getElementName.equals("modifierExtension")
 
     skipRecursiveReference || skipContains || skipModifierExtension

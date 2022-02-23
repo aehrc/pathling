@@ -105,8 +105,6 @@ trait SchemaVisitor[DT, SF] {
 
 object SchemaVisitor {
   def traverseResource[DT, SF](resourceDefinition: RuntimeResourceDefinition, visitor: SchemaVisitor[DT, SF]): DT = {
-    // TODO: NOT SURE where is the best place to put it
-    // Not if it will be needed anymore if I can do recursive contexts
     EncodingContext.runWithContext {
       ResourceCtx(resourceDefinition).accept(visitor)
     }

@@ -44,7 +44,7 @@ public class FhirEncoders2Test implements JsonMethods {
 
   private static final FhirContext fhirContext = FhirContext.forR4();
   private static final FhirEncoders fhirEncoders = FhirEncoders.forR4()
-      .enableExtensions(true).getOrCreate();
+      .withExtensionsEnabled(true).getOrCreate();
   private static final IParser jsonParser = fhirContext.newJsonParser().setPrettyPrint(true);
 
 

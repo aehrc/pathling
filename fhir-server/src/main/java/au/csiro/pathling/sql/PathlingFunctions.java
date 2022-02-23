@@ -17,7 +17,7 @@ public interface PathlingFunctions {
    */
 
   @Nonnull
-  static Column normalize(@Nonnull final Column col) {
-    return new Column(new Normalize(col.expr()));
+  static Column pruneSyntheticFields(@Nonnull final Column col) {
+    return new Column(new PruneSyntheticFields(col.expr()));
   }
 }

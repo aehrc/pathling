@@ -257,7 +257,6 @@ private[encoders2] object SerializerBuilderProcessor {
         .toList
 
       obj match {
-        // TODO: fix the type cast
         case hasExt: IBaseHasExtensions if hasExt.hasExtension =>
           (System.identityHashCode(obj), hasExt.getExtension.asInstanceOf[java.util.List[Extension]]) :: childrenExts
         case _ => childrenExts

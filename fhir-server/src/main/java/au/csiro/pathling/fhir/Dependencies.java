@@ -57,7 +57,7 @@ public class Dependencies {
         maxNestingLevel, enableExtensions);
     return FhirEncoders.forR4()
         .withMaxNestingLevel(maxNestingLevel)
-        .enableExtensions(enableExtensions)
+        .withExtensionsEnabled(enableExtensions)
         .getOrCreate();
   }
 

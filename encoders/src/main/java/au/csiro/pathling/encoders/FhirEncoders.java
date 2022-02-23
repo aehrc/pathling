@@ -301,8 +301,8 @@ public class FhirEncoders {
   }
 
   /**
-   * Encoder builder. Today only the FHIR version is specified, but future builders may allow
-   * customization of the profile used.
+   * Encoder builder. Allows to specify FHIR version and other parameters affecting encoders
+   * functionality such as max nesting level for recursive types with the fluent API.
    */
   public static class Builder {
 
@@ -349,7 +349,7 @@ public class FhirEncoders {
      * @param enable if extensions should be enabled.
      * @return this builder
      */
-    public Builder enableExtensions(final boolean enable) {
+    public Builder withExtensionsEnabled(final boolean enable) {
       this.enableExtensions = enable;
       return this;
     }

@@ -33,7 +33,7 @@ public class ResourceEncodingTest {
       new R4DataTypeMappings(), EncoderConfig.apply(0, true));
 
   private final FhirEncoders fhirEncoders = FhirEncoders.forR4()
-      .enableExtensions(true).getOrCreate();
+      .withExtensionsEnabled(true).getOrCreate();
 
   @Test
   public void testCanEncodeDecodeAllR4Resources() {

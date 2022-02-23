@@ -112,7 +112,7 @@ public class AggregateExecutor extends QueryExecutor {
 
     final DatasetWithColumnMap datasetWithNormalizedGroupings = createColumns(
         groupingsAndFilters, groupings.stream().map(FhirPath::getValueColumn)
-            .map(PathlingFunctions::normalize).toArray(Column[]::new));
+            .map(PathlingFunctions::pruneSyntheticFields).toArray(Column[]::new));
 
     groupingsAndFilters = datasetWithNormalizedGroupings.getDataset();
 

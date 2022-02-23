@@ -23,7 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 @Tag("UnitTest")
-public class NormalizeTest {
+public class PruneSyntheticFieldsTest {
 
   @Autowired
   private SparkSession spark;
@@ -53,7 +53,7 @@ public class NormalizeTest {
 
     // normalize all columns
     final Dataset<Row> normalizedDataset = dataset.select(
-        Stream.of(dataset.columns()).map(dataset::col).map(PathlingFunctions::normalize)
+        Stream.of(dataset.columns()).map(dataset::col).map(PathlingFunctions::pruneSyntheticFields)
             .toArray(Column[]::new));
 
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
@@ -90,7 +90,7 @@ public class NormalizeTest {
         .buildWithStructValue().repartition(1);
 
     Column valueColumn = dataset.col(dataset.columns()[dataset.columns().length - 1]);
-    final Dataset<Row> groupedResult = dataset.groupBy(PathlingFunctions.normalize(valueColumn))
+    final Dataset<Row> groupedResult = dataset.groupBy(PathlingFunctions.pruneSyntheticFields(valueColumn))
         .agg(functions.count(dataset.col("gender")));
 
     DatasetAssert.of(groupedResult)

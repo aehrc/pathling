@@ -165,11 +165,15 @@ private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Ex
     definition match {
       case _: RuntimeResourceDefinition =>
         val deserializeExtension = UnresolvedCatalystToExternalMap(
-          addToPath("_extension"),
+          addToPath(ExtensionSupport.EXTENSIONS_FIELD_NAME),
           identity,
-          /// TODO: Fix the encoding context creation
-          // This function somehow managed to be called ouside the scope of the current traversal
-          // Which may actually be OK, but s
+          // This function is called outside the scope of the current traversal
+          // We need to create a new context for it.
+          // This is OK extensions are never nested in this implementation.
+          // It also implies that if there were any recursive types allowed as extension values
+          // (which there are none ATM) they would be allowed to reach its max depth of nesting
+          // in each extension independently regardless of the nesting of the elements they
+          // extend (which is the desired behaviour).
           exp => EncodingContext.runWithContext {
             withPath(Some(exp)).buildExtensionValue()
           },
