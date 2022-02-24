@@ -33,8 +33,12 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.BaseResource;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.MolecularSequence;
 import org.hl7.fhir.r4.model.MolecularSequence.MolecularSequenceQualityRocComponent;
+import org.hl7.fhir.r4.model.PlanDefinition;
 import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.json4s.jackson.JsonMethods;
 import org.junit.Test;
@@ -47,9 +51,8 @@ public class FhirEncoders2Test implements JsonMethods {
       .withExtensionsEnabled(true).getOrCreate();
   private static final IParser jsonParser = fhirContext.newJsonParser().setPrettyPrint(true);
 
-
-  public static <T extends BaseResource> void assertSerDeIsIdentity(ExpressionEncoder<T> encoder,
-      T obj) {
+  public static <T extends BaseResource> void assertSerDeIsIdentity(
+      final ExpressionEncoder<T> encoder, final T obj) {
     final ExpressionEncoder<T> resolvedEncoder = EncoderUtils
         .defaultResolveAndBind(encoder);
     final InternalRow serializedRow = resolvedEncoder.createSerializer()
@@ -71,14 +74,12 @@ public class FhirEncoders2Test implements JsonMethods {
         actualExtensionRow.getString(actualExtensionRow.fieldIndex("valueString")));
   }
 
-
   public void assertIntExtension(final String expectedUrl, final int expectedValue,
       final Row actualExtensionRow) {
     assertEquals(expectedUrl, actualExtensionRow.getString(actualExtensionRow.fieldIndex("url")));
     assertEquals(expectedValue,
         actualExtensionRow.getInt(actualExtensionRow.fieldIndex("valueInteger")));
   }
-
 
   public void assertSingletNestedExtension(final String expectedUrl,
       final Row actualExtensionRow, final Map<Object, Object> extensionMap,
@@ -109,7 +110,6 @@ public class FhirEncoders2Test implements JsonMethods {
     rocComponent.addSensitivity(new BigDecimal("1.23").setScale(3, RoundingMode.UNNECESSARY));
     assertSerDeIsIdentity(encoder, molecularSequence);
   }
-
 
   @Test
   public void testIdCollection() {
@@ -154,7 +154,6 @@ public class FhirEncoders2Test implements JsonMethods {
     assertSerDeIsIdentity(encoder, conditionWithExtension);
   }
 
-
   @Test
   public void testEncodesExtensions() {
     final ExpressionEncoder<Condition> encoder = fhirEncoders
@@ -166,16 +165,16 @@ public class FhirEncoders2Test implements JsonMethods {
     final InternalRow serializedRow = resolvedEncoder.createSerializer()
         .apply(conditionWithExtension);
 
-    // Deserialize the InternalRow to a Row with explicit schema
+    // Deserialize the InternalRow to a Row with explicit schema.
     final ExpressionEncoder<Row> rowEncoder = EncoderUtils
         .defaultResolveAndBind(RowEncoder.apply(encoder.schema()));
     final Row conditionRow = rowEncoder.createDeserializer().apply(serializedRow);
 
-    // get the extensionContainer
+    // Get the extensionContainer.
     final Map<Object, Object> extensionMap = conditionRow
         .getJavaMap(conditionRow.fieldIndex("_extension"));
 
-    // get resource extensions
+    // Get resource extensions.
     final WrappedArray<?> resourceExtensions = (WrappedArray<?>) extensionMap
         .get(conditionRow.get(conditionRow.fieldIndex("_fid")));
 
@@ -184,8 +183,7 @@ public class FhirEncoders2Test implements JsonMethods {
     assertSingletNestedExtension("uuid:ext4", (Row) resourceExtensions.apply(2), extensionMap,
         ext -> assertStringExtension("uuid:nested", "nested", ext));
 
-    // get Identifier extensions
-
+    // Get Identifier extensions.
     final WrappedArray<?> identifiers = (WrappedArray<?>) conditionRow
         .get(conditionRow.fieldIndex("identifier"));
     final Row identifierRow = (Row) identifiers.apply(0);

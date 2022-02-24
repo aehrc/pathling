@@ -140,7 +140,6 @@ public class ResourcePath extends NonLiteralPath {
     return Objects.requireNonNull(elementsToColumns.get(elementName));
   }
 
-
   @Nonnull
   @Override
   public Column getExtensionContainerColumn() {

@@ -28,10 +28,25 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Annotation;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.QuestionnaireResponse;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -109,7 +124,7 @@ public class FhirEncodersTest {
         ENCODERS_L0.of(Observation.class));
     decodedObservation = observationsDataset.head();
 
-    // TODO: Uncomment with contained resources are supported
+    // TODO: Uncomment if/when contained resources are supported.
     medDataset = spark.createDataset(ImmutableList.of(medRequest),
         ENCODERS_L0.of(MedicationRequest.class/*, Medication.class, Provenance.class*/));
     decodedMedRequest = medDataset.head();

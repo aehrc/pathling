@@ -21,14 +21,16 @@ import au.csiro.pathling.encoders.EncoderConfig;
 import au.csiro.pathling.encoders.SchemaConverter;
 import java.util.Arrays;
 import java.util.function.Consumer;
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.MapType;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Condition;
 import org.junit.Ignore;
 import org.junit.Test;
 
-
 public class SchemaConverter2Test extends AbstractSchemaConverterTest {
-
 
   /**
    * Traverses a DataType recursively passing all encountered StructTypes to the provided consumer.
@@ -36,7 +38,7 @@ public class SchemaConverter2Test extends AbstractSchemaConverterTest {
    * @param type the DataType to traverse.
    * @param consumer the consumer that receives all StructTypes.
    */
-  protected void traverseSchema(DataType type, Consumer<StructType> consumer) {
+  protected void traverseSchema(final DataType type, final Consumer<StructType> consumer) {
     if (type instanceof StructType) {
       final StructType structType = (StructType) type;
       consumer.accept(structType);
@@ -50,17 +52,17 @@ public class SchemaConverter2Test extends AbstractSchemaConverterTest {
   }
 
   @Override
-  protected SchemaConverter createSchemaConverter(int maxNestingLevel) {
+  protected SchemaConverter createSchemaConverter(final int maxNestingLevel) {
     return new SchemaConverter2(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
         EncoderConfig.apply(maxNestingLevel, true));
   }
 
   // TODO: [#414] This is to check if nested types work correctly in choices.
-  // So far the only instances I could find are ElementDefinition values in value[*] choices
-  // But this may be HAPI artefact because according to FHIR spec ElementDefinition os not a valid
-  // type for value[*] but it is returned by HAPI getChildTypes().
-  // So that can either be tested when Extensions are implemented (as have value[*] field) or
-  // we may need to correct what is returned from HAPI as valid types for value[*].
+  //       So far the only instances I could find are ElementDefinition values in value[*] choices
+  //       But this may be HAPI artefact because according to FHIR spec ElementDefinition os not a 
+  //       valid type for value[*] but it is returned by HAPI getChildTypes().
+  //       So that can either be tested when Extensions are implemented (as have value[*] field) or
+  //       we may need to correct what is returned from HAPI as valid types for value[*].
   @Test
   @Ignore
   public void testNestedTypeInChoice() {
@@ -75,7 +77,7 @@ public class SchemaConverter2Test extends AbstractSchemaConverterTest {
     final StructType extensionSchema = converter_L2
         .resourceSchema(Condition.class);
 
-    // We need to test that
+    // We need to test that:
     // - That there is a global '_extension' of map type field
     // - There is not 'extension' field in any of the structure types
     // - That each struct type has a '_fid' field of INTEGER type

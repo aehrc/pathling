@@ -8,7 +8,12 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
-import static au.csiro.pathling.test.fixtures.ExtensionFixture.*;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.MANY_EXT_ROW_1;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.MANY_EXT_ROW_2;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.ONE_MY_EXTENSION;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.nullEntryMap;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.oneEntryMap;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.toElementDataset;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,7 +29,11 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.*;
+import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.builders.ElementPathBuilder;
+import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
+import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.ImmutableMap;
@@ -307,8 +316,8 @@ public class PathTraversalOperatorTest {
         .put(0, Collections.singletonList(MANY_EXT_ROW_1))
         .put(1, Collections.singletonList(MANY_EXT_ROW_2)).build();
 
-    // Construct element dataset from the resource dataset so that the resource path
-    // can be used as a foreign resource for this element path
+    // Construct element dataset from the resource dataset so that the resource path can be used as 
+    // a foreign resource for this element path.
     // Note: this resource path is not singular as this will be a base for elements.
 
     final Dataset<Row> resourceLikeDataset = new ResourceDatasetBuilder(spark)

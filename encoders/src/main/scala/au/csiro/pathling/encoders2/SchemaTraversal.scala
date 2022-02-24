@@ -23,7 +23,7 @@ import scala.collection.convert.ImplicitConversions._
 
 
 /**
- * A visitor for HAPPY Fhir schema traversal
+ * A visitor for HAPI Fhir schema traversal.
  *
  * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
  * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
@@ -32,7 +32,8 @@ trait SchemaVisitor[DT, SF] {
 
 
   /**
-   * Transforms the SF representations of the composite elements to the DT representation of the composite.
+   * Transforms the SF representations of the composite elements to the DT representation of the 
+   * composite.
    *
    * @param compositeCtx the composite context.
    * @param sfs          the list of the SF representations of the composite elements.
@@ -43,7 +44,7 @@ trait SchemaVisitor[DT, SF] {
   def combineChoiceElements(ctx: ChoiceChildCtx[DT, SF], seq: Seq[Seq[SF]]): Seq[SF]
 
   /**
-   * Visitor method for a HAPPY  Element definition
+   * Visitor method for a HAPI Element definition
    *
    * @param elementCtx the element context.
    * @return the list of the SF representations of the element.
@@ -52,7 +53,7 @@ trait SchemaVisitor[DT, SF] {
 
 
   /**
-   * Visitor method for HAPPY RuntimeChild definition of a choice.
+   * Visitor method for HAPI RuntimeChild definition of a choice.
    *
    * @param choiceChildCtx the choice child context.
    * @return the list of the SF representations of the elements of the child definition.
@@ -62,7 +63,7 @@ trait SchemaVisitor[DT, SF] {
   }
 
   /**
-   * Visitor method for HAPPY RuntimeChild definition with a single element.
+   * Visitor method for HAPI RuntimeChild definition with a single element.
    *
    * @param elementChildCtx child context.
    * @return the list of the SF representations of the elements of the child definition.
@@ -72,7 +73,7 @@ trait SchemaVisitor[DT, SF] {
   }
 
   /**
-   * Visitor method for HAPPY RuntimeChild definition.
+   * Visitor method for HAPI RuntimeChild definition.
    *
    * @param childCtx the child context.
    * @return the list of the SF representations of the elements of the child definition.
@@ -83,7 +84,7 @@ trait SchemaVisitor[DT, SF] {
 
 
   /**
-   * Visitor method for HAPPY ElementComposite definition.
+   * Visitor method for HAPI ElementComposite definition.
    *
    * @param compositeCtx the composite element context.
    * @return DT representation of the composite element.
@@ -93,7 +94,7 @@ trait SchemaVisitor[DT, SF] {
   }
 
   /**
-   * Visitor method for HAPPY Resource definitions.
+   * Visitor method for HAPI Resource definitions.
    *
    * @param resourceCtx the resource context.
    * @return DT representation of the resource.
@@ -177,9 +178,11 @@ object SchemaVisitor {
 
 
   /**
-   * Checks if the given class is a valid type for open elements types as defined in: [[https://build.fhir.org/datatypes.html#open]].
-   * Note: this is needed because the HAPI implementation of open type element [[ca.uhn.fhir.context.RuntimeChildAny#getValidChildTypes]] returns
-   * types not included in the specification such as [[org.hl7.fhir.r4.model.ElementDefinition]].
+   * Checks if the given class is a valid type for open elements types as defined in: 
+   * [[https://hl7.org/fhir/R4/datatypes.html#open]].
+   * Note: this is needed because the HAPI implementation of open type element 
+   * [[ca.uhn.fhir.context.RuntimeChildAny#getValidChildTypes]] returns types not included in the 
+   * specification such as [[org.hl7.fhir.r4.model.ElementDefinition]].
    *
    * @param cls the class of the type to checks.
    * @return true is given type is a valid open element type.
@@ -256,9 +259,9 @@ trait FieldVisitorCtxCtx[DT, SF] extends VisitorCtx[DT, SF] {
 }
 
 /**
- * The visitor context representing a HAPPY Resource definition.
+ * The visitor context representing a HAPI Resource definition.
  *
- * @param resourceDefinition the HAPPY resource definition.
+ * @param resourceDefinition the HAPI resource definition.
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
@@ -277,9 +280,9 @@ case class ResourceCtx[DT, SF](resourceDefinition: RuntimeResourceDefinition) ex
 }
 
 /**
- * The visitor context representing a HAPPY Composite definition.
+ * The visitor context representing a HAPI Composite definition.
  *
- * @param compositeDefinition the HAPPY composite definition.
+ * @param compositeDefinition the HAPI composite definition.
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
@@ -300,10 +303,10 @@ case class CompositeCtx[DT, SF](compositeDefinition: BaseRuntimeElementComposite
 }
 
 /**
- * The visitor context representing a HAPPY Child definition.
+ * The visitor context representing a HAPI Child definition.
  *
- * @param childDefinition     the happy child definition.
- * @param compositeDefinition the HAPPY composite definition for this child.
+ * @param childDefinition     the HAPI child definition.
+ * @param compositeDefinition the HAPI composite definition for this child.
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
@@ -328,10 +331,10 @@ case class ChildCtx[DT, SF](childDefinition: BaseRuntimeChildDefinition, composi
 }
 
 /**
- * The visitor context representing a HAPPY Child definition with a single element.
+ * The visitor context representing a HAPI Child definition with a single element.
  *
- * @param elementChildDefinition the happy child definition.
- * @param compositeDefinition    the HAPPY composite definition for this child.
+ * @param elementChildDefinition the HAPI child definition.
+ * @param compositeDefinition    the HAPI composite definition for this child.
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
@@ -348,10 +351,10 @@ case class ElementChildCtx[DT, SF](elementChildDefinition: BaseRuntimeChildDefin
 }
 
 /**
- * The visitor context representing a HAPPY Choice child definition.
+ * The visitor context representing a HAPI Choice child definition.
  *
- * @param choiceChildDefinition the happy choice child definition.
- * @param compositeDefinition   the HAPPY composite definition for this child.
+ * @param choiceChildDefinition the HAPI choice child definition.
+ * @param compositeDefinition   the HAPI composite definition for this child.
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
@@ -369,11 +372,11 @@ case class ChoiceChildCtx[DT, SF](choiceChildDefinition: RuntimeChildChoiceDefin
 }
 
 /**
- * The visitor context representing a HAPPY element definition.
+ * The visitor context representing a HAPI element definition.
  *
  * @param elementName         the name of the element.
- * @param childDefinition     the happy child definition.
- * @param compositeDefinition the HAPPY composite definition for this child.
+ * @param childDefinition     the HAPI child definition.
+ * @param compositeDefinition the HAPI composite definition for this child.
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
@@ -396,7 +399,7 @@ object ElementCtx {
   /**
    * Constructs the default [[ElementCtx]] for Extension element given FHIR context.
    *
-   * @param fhirContext the FHIR contxt to use
+   * @param fhirContext the FHIR context to use
    * @tparam DT @see [[SchemaVisitor]]
    * @tparam ST @see [[SchemaVisitor]]
    * @return the default ElementCtx representation for FHIR extension element.

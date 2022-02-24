@@ -23,7 +23,7 @@ import java.util.Collections;
 import javax.annotation.Nonnull;
 
 /**
- * A function that returns the extensions of current element that match given url.
+ * A function that returns the extensions of the current element that match a given url.
  *
  * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#extension">extension</a>
@@ -48,14 +48,14 @@ public class ExtensionFunction implements NamedFunction {
         .invoke(new PathTraversalInput(input.getContext(), inputPath,
             ExtensionSupport.EXTENSION_ELEMENT_NAME()));
 
-    // now we need to create a correct argument context for the `where` call.
+    // Now we need to create a correct argument context for the `where` call.
     final ParserContext argumentContext = input.getContext();
     final FhirPath extensionUrlPath = new PathTraversalOperator()
         .invoke(new PathTraversalInput(argumentContext, extensionPath.toThisPath(), "url"));
     final FhirPath extensionUrCondition = new ComparisonOperator(ComparisonOperation.EQUALS)
         .invoke(new OperatorInput(argumentContext, extensionUrlPath, urlArgument));
 
-    // override the expression in function input
+    // Override the expression in the function input.
     return new WhereFunction()
         .invoke(new NamedFunctionInput(input.getContext(), extensionPath,
             Collections.singletonList(extensionUrCondition), expression));

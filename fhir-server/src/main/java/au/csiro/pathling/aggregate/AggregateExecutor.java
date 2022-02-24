@@ -21,7 +21,11 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.sql.PathlingFunctions;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -108,8 +112,7 @@ public class AggregateExecutor extends QueryExecutor {
     // Apply filters.
     groupingsAndFilters = applyFilters(groupingsAndFilters, filters);
 
-    // Normalize grouping columns
-
+    // Remove synthetic fields from struct values (such as _fid) before grouping.
     final DatasetWithColumnMap datasetWithNormalizedGroupings = createColumns(
         groupingsAndFilters, groupings.stream().map(FhirPath::getValueColumn)
             .map(PathlingFunctions::pruneSyntheticFields).toArray(Column[]::new));

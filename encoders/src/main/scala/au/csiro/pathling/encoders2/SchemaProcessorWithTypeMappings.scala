@@ -29,7 +29,7 @@ trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] wi
 
   override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
 
-    // do not expand extensions as they require custom handling
+    // Do not expand extensions, as they require custom handling.
     val expandExtension = !childDefinition.isInstanceOf[RuntimeChildExtension]
     expandExtension && !dataTypeMappings.skipField(definition, childDefinition)
   }

@@ -11,7 +11,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.MetadataBuilder;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Coding;
 
 
@@ -58,16 +62,15 @@ public interface CodingEncoding {
    */
   @Nullable
   static Row encode(@Nullable final Coding coding) {
-    return coding == null
-           ? null
-           : RowFactory
-               .create(coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
-                   coding.getDisplay(),
-                   coding.hasUserSelected()
-                   ? coding.getUserSelected()
-                   : null,
-                   null); // _fid
-
+    if (coding == null) {
+      return null;
+    } else {
+      final Boolean userSelected = coding.hasUserSelected()
+                                   ? coding.getUserSelected()
+                                   : null;
+      return RowFactory.create(coding.getId(), coding.getSystem(), coding.getVersion(),
+          coding.getCode(), coding.getDisplay(), userSelected, null /* _fid */);
+    }
   }
 
   /**

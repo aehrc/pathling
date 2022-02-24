@@ -134,7 +134,7 @@ pathling:
   encoding:
     # Controls the maximum depth of nested element data that is encoded upon import.
     maxNestingLevel: 3
-    # Enables support for FHIR extensions
+    # Enables support for FHIR extensions.
     enableExtensions: true
 
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is

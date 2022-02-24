@@ -119,4 +119,5 @@ public class ParserContext {
   public void setThisContext(@Nonnull final FhirPath thisContext) {
     this.thisContext = Optional.of(thisContext);
   }
+
 }

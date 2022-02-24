@@ -18,7 +18,6 @@ import org.apache.spark.sql.RowFactory;
 
 public interface ExtensionFixture {
 
-
   Row MANY_EXT_ROW_1 = RowFactory
       .create("ext3", "uuid:myExtension", "string3", 102);
   Row MANY_EXT_ROW_2 = RowFactory
@@ -43,18 +42,18 @@ public interface ExtensionFixture {
       RowFactory.create("ext2", "uuid:someExtension", "string2", 301)
   );
 
-  static Map<Object, Object> oneEntryMap(int i, List<Row> manyMyExtensions) {
+  static Map<Object, Object> oneEntryMap(final int i, final List<Row> manyMyExtensions) {
     return ImmutableMap.builder().put(i, manyMyExtensions).build();
   }
 
-  static Map<Object, Object> nullEntryMap(int key) {
+  static Map<Object, Object> nullEntryMap(final int key) {
     final Map<Object, Object> nullEntryMap = new HashMap<>();
     nullEntryMap.put(key, null);
     return nullEntryMap;
   }
 
-  static Dataset<Row> toElementDataset(Dataset<Row> resourceLikeDataset,
-      ResourcePath baseResourcePath) {
+  static Dataset<Row> toElementDataset(final Dataset<Row> resourceLikeDataset,
+      final ResourcePath baseResourcePath) {
     // Construct element dataset from the resource dataset so that the resource path
     // can be used as a foreign resource for this element path.
 
@@ -62,9 +61,9 @@ public interface ExtensionFixture {
         .getIdAndValueColumns(resourceLikeDataset, true);
     final Dataset<Row> resourceDataset = baseResourcePath.getDataset();
     final Column[] elementColumns = Stream.of(
-        idAndValueColumns.getId().named().name(),
-        checkPresent(idAndValueColumns.getEid()).named().name(),
-        idAndValueColumns.getValues().get(0).named().name(), "_extension")
+            idAndValueColumns.getId().named().name(),
+            checkPresent(idAndValueColumns.getEid()).named().name(),
+            idAndValueColumns.getValues().get(0).named().name(), "_extension")
         .map(baseResourcePath::getElementColumn)
         .toArray(Column[]::new);
 

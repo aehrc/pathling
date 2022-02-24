@@ -43,7 +43,6 @@ public class NamedFunctionInput extends FunctionInput {
   @Nonnull
   private final Optional<String> overrideExpression;
 
-
   /**
    * @param context The {@link ParserContext} that the function should be executed within
    * @param input The {@link NonLiteralPath} representing the expression on the left hand side of

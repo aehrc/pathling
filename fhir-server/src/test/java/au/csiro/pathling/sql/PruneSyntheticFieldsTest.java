@@ -6,11 +6,15 @@
 
 package au.csiro.pathling.sql;
 
-
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.stream.Stream;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -19,7 +23,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-
 
 @SpringBootTest
 @Tag("UnitTest")
@@ -30,20 +33,18 @@ public class PruneSyntheticFieldsTest {
 
   private final Metadata metadata = Metadata.empty();
   private final StructType testStructType = DataTypes.createStructType(new StructField[]{
-      new StructField("id", DataTypes.StringType, true, metadata),
+      new StructField("id", DataTypes.IntegerType, true, metadata),
       new StructField("name", DataTypes.StringType, true, metadata),
-      new StructField("_fir", DataTypes.StringType, true, metadata)
+      new StructField("_fid", DataTypes.StringType, true, metadata)
   });
 
   @Test
-  public void testNormalize() {
+  public void testPruneSyntheticFields() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn("active", DataTypes.BooleanType)
         .withColumn("gender", DataTypes.createArrayType(DataTypes.StringType))
-        .withStructColumn("id", DataTypes.IntegerType)
-        .withStructColumn("name", DataTypes.StringType)
-        .withStructColumn("_fid", DataTypes.StringType)
+        .withStructTypeColumns(testStructType)
         .withRow("patient-1", true, new String[]{"array_value-00-00"},
             RowFactory.create(1, "Test-1", "fid_value-00"))
         .withRow("patient-2", false, new String[]{"array_value-01-00", "array_value-01-01"},
@@ -51,8 +52,8 @@ public class PruneSyntheticFieldsTest {
         .withRow("patient-3", null, null, null)
         .buildWithStructValue().repartition(1);
 
-    // normalize all columns
-    final Dataset<Row> normalizedDataset = dataset.select(
+    // Prune all columns.
+    final Dataset<Row> prunedDataset = dataset.select(
         Stream.of(dataset.columns()).map(dataset::col).map(PathlingFunctions::pruneSyntheticFields)
             .toArray(Column[]::new));
 
@@ -69,19 +70,16 @@ public class PruneSyntheticFieldsTest {
         .withRow("patient-3", null, null, null)
         .buildWithStructValue().repartition(1);
 
-    DatasetAssert.of(normalizedDataset)
-        .hasRows(expectedResult);
+    DatasetAssert.of(prunedDataset).hasRows(expectedResult);
   }
 
   @Test
-  public void testNormalizeInGroupBy() {
+  public void testPruneInGroupBy() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withColumn("active", DataTypes.BooleanType)
-        .withStructColumn("id", DataTypes.IntegerType)
-        .withStructColumn("name", DataTypes.StringType)
-        .withStructColumn("_fid", DataTypes.StringType)
+        .withStructTypeColumns(testStructType)
         .withRow("patient-1", "male", true, RowFactory.create(1, "Test-1", "fid-00"))
         .withRow("patient-2", "female", false, RowFactory.create(2, "Test-2", "fid-01"))
         .withRow("patient-3", "male", true, null)
@@ -89,8 +87,9 @@ public class PruneSyntheticFieldsTest {
         .withRow("patient-5", "female", false, RowFactory.create(2, "Test-2", "fid-02"))
         .buildWithStructValue().repartition(1);
 
-    Column valueColumn = dataset.col(dataset.columns()[dataset.columns().length - 1]);
-    final Dataset<Row> groupedResult = dataset.groupBy(PathlingFunctions.pruneSyntheticFields(valueColumn))
+    final Column valueColumn = dataset.col(dataset.columns()[dataset.columns().length - 1]);
+    final Dataset<Row> groupedResult = dataset.groupBy(
+            PathlingFunctions.pruneSyntheticFields(valueColumn))
         .agg(functions.count(dataset.col("gender")));
 
     DatasetAssert.of(groupedResult)

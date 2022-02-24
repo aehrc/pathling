@@ -13,8 +13,6 @@
 
 package au.csiro.pathling.encoders.datatypes
 
-import java.util.TimeZone
-
 import au.csiro.pathling.encoders.StaticField
 import au.csiro.pathling.encoders2.ExpressionWithName
 import ca.uhn.fhir.context._
@@ -25,6 +23,8 @@ import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model._
+
+import java.util.TimeZone
 
 /**
  * Data type mappings for FHIR STU3.
@@ -71,10 +71,8 @@ class R4DataTypeMappings extends DataTypeMappings {
 
     if (definition.getImplementingClass == classOf[Reference]) {
 
-      // Reference type, so return only supported fields.
-      // We also explicitly use the IIDType for the reference element,
-      // since that differs from the conventions used to infer
-      // other types.
+      // Reference type, so return only supported fields. We also explicitly use the IIDType for the 
+      // reference element, since that differs from the conventions used to infer other types.
       val reference = dataTypeToUtf8Expr(
         Invoke(inputObject,
           "getReferenceElement",
@@ -100,10 +98,8 @@ class R4DataTypeMappings extends DataTypeMappings {
                                             definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]] = {
 
     if (definition.getImplementingClass == classOf[Reference]) {
-      // Reference type, so return only supported fields.
-      // We also explicitly use the IIDType for the reference element,
-      // since that differs from the conventions used to infer
-      // other types.
+      // Reference type, so return only supported fields. We also explicitly use the IIDType for the 
+      // reference element, since that differs from the conventions used to infer other types.
       val reference = dataTypeToUtf8Expr(
         Invoke(inputObject,
           "getReferenceElement",
@@ -132,10 +128,10 @@ class R4DataTypeMappings extends DataTypeMappings {
     val skipContains = definition.getImplementingClass == classOf[ValueSet.ValueSetExpansionContainsComponent] &&
       child.getElementName == "contains"
 
-    // TODO: This is due to a bug in happi RuntimeChildExtension.getChildByName() implementation
-    // which fails on assestion because the name of the child should be "modifierExtensionExtension"
-    // not "extensionExtension"
-    // see: https://github.com/hapifhir/hapi-fhir/issues/3414
+    // TODO: This is due to a bug in HAPI RuntimeChildExtension.getChildByName() implementation,
+    //       which fails on assertion because the name of the child should be 
+    //       "modifierExtensionExtension", not "extensionExtension".
+    //       See: https://github.com/hapifhir/hapi-fhir/issues/3414
     val skipModifierExtension = child.getElementName.equals("modifierExtension")
 
     skipRecursiveReference || skipContains || skipModifierExtension

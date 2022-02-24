@@ -105,8 +105,7 @@ public abstract class QueryHelpers {
   private static DatasetWithColumnMap aliasColumns(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Iterable<Column> columns) {
 
-    // Use LinkedHashMap to preserve the original order of columns
-    // while iterating map entries.
+    // Use LinkedHashMap to preserve the original order of columns while iterating map entries.
     final Map<Column, Column> columnMap = new LinkedHashMap<>();
     final List<Column> selection = Stream.of(dataset.columns())
         // Don't preserve anything that is not already aliased.

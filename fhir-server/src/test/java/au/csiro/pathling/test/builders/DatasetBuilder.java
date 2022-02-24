@@ -22,7 +22,12 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.MetadataBuilder;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * Assists with the task of creating Datasets and lists of Rows for testing purposes.
@@ -32,7 +37,6 @@ import org.apache.spark.sql.types.*;
 @Slf4j
 public class DatasetBuilder {
 
-
   public static final StructType SIMPLE_EXTENSION_TYPE = DataTypes
       .createStructType(new StructField[]{
           DataTypes.createStructField("id", DataTypes.StringType, false),
@@ -40,7 +44,6 @@ public class DatasetBuilder {
           DataTypes.createStructField("valueString", DataTypes.StringType, true),
           DataTypes.createStructField("_fid", DataTypes.IntegerType, false)
       });
-
 
   @Nonnull
   private final SparkSession spark;
@@ -152,6 +155,7 @@ public class DatasetBuilder {
     return this;
   }
 
+  @SuppressWarnings("unused")
   @Nonnull
   public DatasetBuilder changeValues(@Nonnull final Object value,
       @Nonnull final Iterable<String> ids) {
@@ -208,7 +212,6 @@ public class DatasetBuilder {
         metadata));
     return getDataset(columns);
   }
-
 
   @Nonnull
   public DatasetBuilder withStructValueColumn() {

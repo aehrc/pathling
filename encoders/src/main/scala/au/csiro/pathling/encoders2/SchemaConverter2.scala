@@ -34,7 +34,7 @@ private[encoders2] class SchemaConverterProcessor(override val fhirContext: Fhir
   SchemaProcessorWithTypeMappings[DataType, StructField] {
 
   private def createExtensionField(definition: BaseRuntimeElementCompositeDefinition[_]): Seq[StructField] = {
-    //  for resources also add _extension
+    // For resources, also add _extension.
     definition match {
       case _: RuntimeResourceDefinition if supportsExtensions =>
         val extensionSchema = buildExtensionValue()
@@ -44,7 +44,7 @@ private[encoders2] class SchemaConverterProcessor(override val fhirContext: Fhir
   }
 
   private def createFidField(): Seq[StructField] = {
-    // for each composite add _fid and
+    // For each composite, add _fid.
     if (generateFid) {
       StructField(FID_FIELD_NAME, IntegerType) :: Nil
     } else {

@@ -64,7 +64,7 @@ public class PathTraversalOperator {
 
     final Column field;
     if (ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(right)) {
-      // lookup the extensions by _fid in the extension container
+      // Lookup the extensions by _fid in the extension container.
       field = left.getExtensionContainerColumn()
           .apply(getValueField(left, ExtensionSupport.FID_FIELD_NAME()));
     } else {
@@ -112,7 +112,6 @@ public class PathTraversalOperator {
   @Nonnull
   private static Column getValueField(@Nonnull final NonLiteralPath path,
       @Nonnull final String fieldName) {
-
     // If the input path is a ResourcePath, we look for a bare column. Otherwise, we will need to
     // extract it from a struct.
     final Column field;

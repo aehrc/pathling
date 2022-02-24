@@ -18,7 +18,12 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.MemberInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -130,7 +135,6 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         return ResourcePath
             .build(context.getFhirContext(), context.getResourceReader(), resourceType, fhirPath,
                 true);
-
       }
     }
   }
