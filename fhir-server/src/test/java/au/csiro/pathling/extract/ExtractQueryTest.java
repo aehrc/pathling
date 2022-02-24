@@ -242,6 +242,22 @@ class ExtractQueryTest {
   }
 
   @Test
+  void combineResultInSecondFilter() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withFilter("gender = 'male'")
+        .withFilter("(name.given combine name.family).empty().not()")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/combineResultInSecondFilter.csv");
+  }
+
+  @Test
   void emptyColumn() {
     subjectResource = ResourceType.PATIENT;
     mockResourceReader(ResourceType.PATIENT);

@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +35,7 @@ import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 
 /**
  * Common functionality for executing queries using Spark.
@@ -390,6 +392,21 @@ public abstract class QueryHelpers {
         .filter(column -> includes.contains(column) || !excludes.contains(column))
         .map(dataset::col)
         .toArray(Column[]::new));
+  }
+
+  @Nonnull
+  public static List<Column> getUnionableColumns(@Nonnull final FhirPath source,
+      @Nonnull final FhirPath target) {
+    // The columns will be those common to both datasets, plus the value column.
+    final Set<String> commonColumnNames = new HashSet<>(List.of(source.getDataset().columns()));
+    commonColumnNames.retainAll(List.of(target.getDataset().columns()));
+    final List<Column> selection = commonColumnNames.stream()
+        .map(functions::col)
+        // We sort the columns so that they line up when we execute the union.
+        .sorted(Comparator.comparing(Column::toString))
+        .collect(Collectors.toList());
+    selection.add(source.getValueColumn());
+    return selection;
   }
 
   /**

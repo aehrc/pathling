@@ -120,7 +120,7 @@ public class ExtractExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
-    // Build a new expression parser, and parse all of the column expressions within the query.
+    // Build a new expression parser, and parse all the column expressions within the query.
     final ResourcePath inputContext = ResourcePath
         .build(getFhirContext(), getResourceReader(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);

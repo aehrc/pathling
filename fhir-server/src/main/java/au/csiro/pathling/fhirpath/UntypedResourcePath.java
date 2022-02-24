@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.QueryHelpers.createColumns;
+import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
@@ -15,7 +16,6 @@ import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +24,7 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a path that is a collection of resources of more than one type.
@@ -131,10 +132,10 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
 
   @Nonnull
   @Override
-  protected List<Column> getTrimmedColumns(@Nonnull final ParserContext context) {
-    final List<Column> trimmedColumns = super.getTrimmedColumns(context);
-    trimmedColumns.add(getTypeColumn());
-    return trimmedColumns;
+  public Dataset<Row> getUnionableDataset(@NotNull final FhirPath target) {
+    final List<Column> selection = getUnionableColumns(this, target);
+    selection.add(getTypeColumn());
+    return getDataset().select(selection.toArray(new Column[]{}));
   }
 
 }

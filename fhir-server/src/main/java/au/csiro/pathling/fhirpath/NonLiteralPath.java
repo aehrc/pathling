@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
+import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.concat;
@@ -19,8 +20,6 @@ import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -302,26 +301,9 @@ public abstract class NonLiteralPath implements FhirPath {
   }
 
   @Nonnull
-  protected List<Column> getTrimmedColumns(@Nonnull final ParserContext context) {
-    final List<Column> columns = new ArrayList<>(
-        Arrays.asList(getIdColumn(), getValueColumn()));
-    // If there is a this column, we need to preserve it.
-    getThisColumn().ifPresent(columns::add);
-    // If the this context is a resource, we need to preserve all element columns.
-    context.getThisContext().ifPresent(thisContext -> {
-      if (thisContext instanceof ResourcePath) {
-        final ResourcePath thisResource = (ResourcePath) thisContext;
-        columns.addAll(thisResource.getElementColumns());
-      }
-    });
-    columns.addAll(context.getGroupingColumns());
-    return columns;
-  }
-
-  @Nonnull
   @Override
-  public Dataset<Row> trimDataset(@Nonnull final ParserContext context) {
-    return getDataset().select(getTrimmedColumns(context).toArray(new Column[]{}));
+  public Dataset<Row> getUnionableDataset(@Nonnull final FhirPath target) {
+    return getDataset().select(getUnionableColumns(this, target).toArray(new Column[]{}));
   }
 
 }

@@ -558,6 +558,22 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  void queryWithCombineResultInSecondFilter() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withFilter("gender = 'male'")
+        .withFilter("(name.given combine name.family).empty().not()")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithCombineResultInSecondFilter.Parameters.json",
+        response);
+  }
+
+  @Test
   void throwsInvalidInputOnEmptyAggregation() {
     subjectResource = ResourceType.PATIENT;
 
