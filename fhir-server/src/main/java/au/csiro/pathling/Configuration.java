@@ -75,7 +75,10 @@ public class Configuration {
   private Terminology terminology;
 
   @NotNull
-  private Configuration.Authorization auth;
+  private Authorization auth;
+
+  @NotNull
+  private HttpCaching httpCaching;
 
   @NotNull
   private Cors cors;
@@ -291,6 +294,29 @@ public class Configuration {
       private List<String> allowedVisaIssuers;
 
     }
+
+  }
+
+  @Data
+  public static class HttpCaching {
+
+    /**
+     * A list of values to return within the Vary header.
+     */
+    @NotNull
+    private List<String> vary;
+
+    /**
+     * A list of values to return within the Cache-Control header, for cacheable responses.
+     */
+    @NotNull
+    private List<String> cacheableControl;
+
+    /**
+     * A list of values to return within the Cache-Control header, for uncacheable responses.
+     */
+    @NotNull
+    private List<String> uncacheableControl;
 
   }
 

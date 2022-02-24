@@ -8,6 +8,7 @@ package au.csiro.pathling.caching;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+import au.csiro.pathling.Configuration;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
@@ -36,11 +37,17 @@ public class EntityTagInterceptor {
   @Nonnull
   private final EntityTagValidator validator;
 
+  @Nonnull
+  private final Configuration configuration;
+
   /**
    * @param validator an {@link EntityTagValidator} for validating the tags
+   * @param configuration configuration controlling the behaviour of the interceptor
    */
-  public EntityTagInterceptor(@Nonnull final EntityTagValidator validator) {
+  public EntityTagInterceptor(@Nonnull final EntityTagValidator validator,
+      @Nonnull final Configuration configuration) {
     this.validator = validator;
+    this.configuration = configuration;
   }
 
   /**
@@ -60,14 +67,23 @@ public class EntityTagInterceptor {
     checkNotNull(response);
     checkNotNull(requestDetails);
     if (requestIsCacheable(request)) {
+      // Set the Vary header to instruct HTTP caches on how to construct the cache key.
+      final String varyValues = String.join(",", configuration.getHttpCaching().getVary());
+      response.addHeader("Vary", varyValues);
+
+      // Check the incoming request for an If-None-Match header.
       final String tagHeader = request.getHeader("If-None-Match");
       if (validator.matches(tagHeader)) {
+        // If there is a matching condition, we can skip processing and return a 304 Not Modified.
         log.debug("Entity tag validation succeeded, processing not required");
         throw new NotModifiedException("Supplied entity tag matches");
       } else {
+        // If there is no matching condition, we add an ETag to the response, along with headers 
+        // indicating that the response is cacheable.
+        final String cacheControlValues = String.join(",",
+            configuration.getHttpCaching().getCacheableControl());
         response.setHeader("ETag", validator.tag());
-        response.setHeader("Cache-Control", "must-revalidate");
-        response.addHeader("Cache-Control", "max-age=1");
+        response.setHeader("Cache-Control", cacheControlValues);
       }
     }
   }
@@ -77,17 +93,19 @@ public class EntityTagInterceptor {
    *
    * @param response a {@link HttpServletResponse} upon which to set caching headers
    */
-  public static void makeRequestNonCacheable(@Nullable final HttpServletResponse response) {
+  public static void makeRequestNonCacheable(@Nullable final HttpServletResponse response,
+      @Nonnull final Configuration configuration) {
     if (response == null) {
       return;
     }
     // We set the ETag to this value because we can't unset it, and this value won't match any valid
     // tag.
     response.setHeader("ETag", "W/\"0\"");
-    response.setHeader("Cache-Control", "no-cache");
-    response.addHeader("Cache-Control", "no-store");
-    response.addHeader("Cache-Control", "max-age=0");
-    response.addHeader("Cache-Control", "must-revalidate");
+
+    // The Cache-Control header is set to indicate that the response should not be cached.
+    final String cacheControlValues = String.join(",",
+        configuration.getHttpCaching().getUncacheableControl());
+    response.addHeader("Cache-Control", cacheControlValues);
   }
 
   /**

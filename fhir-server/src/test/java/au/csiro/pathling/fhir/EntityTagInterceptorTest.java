@@ -14,10 +14,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.Configuration;
+import au.csiro.pathling.Configuration.HttpCaching;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.caching.EntityTagValidator;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -33,9 +36,6 @@ import org.junit.jupiter.api.Test;
 class EntityTagInterceptorTest {
 
   private static final String TAG = "W/\"abc123\"";
-  private static final String NON_S3_RESULT_URL = "file:///tmp/results";
-  private static final String S3_RESULT_URL = "s3://somebucket/results";
-  private static final long SIGNED_URL_EXPIRY = 3600L;
 
   private EntityTagValidator validator;
   private HttpServletRequest request;
@@ -49,67 +49,73 @@ class EntityTagInterceptorTest {
     request = mock(HttpServletRequest.class);
     requestDetails = mock(RequestDetails.class);
     response = mock(HttpServletResponse.class);
-    interceptor = new EntityTagInterceptor(validator);
+    final Configuration configuration = mock(Configuration.class);
+    final HttpCaching httpCaching = mock(HttpCaching.class);
+    when(httpCaching.getVary()).thenReturn(
+        List.of("Accept", "Accept-Encoding", "Prefer", "Authorization"));
+    when(httpCaching.getCacheableControl()).thenReturn(List.of("must-revalidate", "max-age=1"));
+    when(configuration.getHttpCaching()).thenReturn(httpCaching);
+    interceptor = new EntityTagInterceptor(validator, configuration);
   }
 
   @Test
   void setsETagAndCacheControl() {
-    setupCacheableRequest("GET", null, S3_RESULT_URL, "$aggregate");
+    setupCacheableRequest("GET", null, "$aggregate");
     when(validator.matches(isNull())).thenReturn(false);
     when(validator.tag()).thenReturn(TAG);
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
-    verifyResponseHeaders();
+    verifyMissResponseHeaders();
   }
 
   @Test
   void returnsNotModified() {
-    setupCacheableRequest("GET", TAG, NON_S3_RESULT_URL, "$aggregate");
+    setupCacheableRequest("GET", TAG, "$aggregate");
     when(validator.matches(eq(TAG))).thenReturn(true);
 
     assertThrows(NotModifiedException.class,
         () -> interceptor.checkIncomingTag(request, requestDetails, response));
 
-    verifyNoInteractions(response);
+    verifyCacheableResponseHeaders();
   }
 
   @Test
   void setsETagForExtractRequest() {
-    setupCacheableRequest("GET", null, NON_S3_RESULT_URL, "$extract");
+    setupCacheableRequest("GET", null, "$extract");
     when(validator.matches(isNull())).thenReturn(false);
     when(validator.tag()).thenReturn(TAG);
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
-    verifyResponseHeaders();
+    verifyMissResponseHeaders();
   }
 
   @Test
   void setsETagForSearchRequest() {
-    setupCacheableRequest("GET", null, NON_S3_RESULT_URL, null);
+    setupCacheableRequest("GET", null, null);
     when(validator.matches(isNull())).thenReturn(false);
     when(validator.tag()).thenReturn(TAG);
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
-    verifyResponseHeaders();
+    verifyMissResponseHeaders();
   }
 
   @Test
   void setsETagForHead() {
-    setupCacheableRequest("HEAD", null, S3_RESULT_URL, "$aggregate");
+    setupCacheableRequest("HEAD", null, "$aggregate");
     when(validator.matches(isNull())).thenReturn(false);
     when(validator.tag()).thenReturn(TAG);
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
-    verifyResponseHeaders();
+    verifyMissResponseHeaders();
   }
 
   @Test
   void doesNothingWhenNotCacheable() {
-    setupCacheableRequest("POST", null, S3_RESULT_URL, "$aggregate");
+    setupCacheableRequest("POST", null, "$aggregate");
 
     interceptor.checkIncomingTag(request, requestDetails, response);
 
@@ -118,16 +124,20 @@ class EntityTagInterceptorTest {
   }
 
   private void setupCacheableRequest(@Nonnull final String method, @Nullable final String tag,
-      @Nonnull final String resultUrl, @Nullable final String operation) {
+      @Nullable final String operation) {
     when(request.getMethod()).thenReturn(method);
     when(request.getHeader(eq("If-None-Match"))).thenReturn(tag);
     when(requestDetails.getOperation()).thenReturn(operation);
   }
 
-  private void verifyResponseHeaders() {
+  private void verifyMissResponseHeaders() {
+    verifyCacheableResponseHeaders();
     verify(response).setHeader(eq("ETag"), eq(TAG));
-    verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate"));
-    verify(response).addHeader(eq("Cache-Control"), eq("max-age=1"));
+    verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
+  }
+
+  private void verifyCacheableResponseHeaders() {
+    verify(response).addHeader(eq("Vary"), eq("Accept,Accept-Encoding,Prefer,Authorization"));
   }
 
 }

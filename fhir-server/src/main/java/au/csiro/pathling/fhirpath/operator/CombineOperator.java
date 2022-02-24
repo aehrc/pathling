@@ -13,7 +13,6 @@ import static org.apache.spark.sql.functions.monotonically_increasing_id;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Arrays;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -37,10 +36,9 @@ public class CombineOperator implements Operator {
     final String expression = Operator.buildExpression(input, NAME);
     final FhirPath left = input.getLeft();
     final FhirPath right = input.getRight();
-    final ParserContext context = input.getContext();
 
-    final Dataset<Row> leftTrimmed = left.trimDataset(context);
-    final Dataset<Row> rightTrimmed = right.trimDataset(context);
+    final Dataset<Row> leftTrimmed = left.getUnionableDataset(right);
+    final Dataset<Row> rightTrimmed = right.getUnionableDataset(left);
     final int valueColumnIndex = Arrays.asList(leftTrimmed.columns())
         .indexOf(left.getValueColumn().toString());
 

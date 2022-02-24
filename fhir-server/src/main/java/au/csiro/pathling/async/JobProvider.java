@@ -120,7 +120,7 @@ public class JobProvider {
       checkNotNull(response);
       // We need to set the caching headers such that the incomplete response is never cached.
       if (request != null && requestIsCacheable(request)) {
-        makeRequestNonCacheable(response);
+        makeRequestNonCacheable(response, configuration);
       }
       // Add progress information to the response.
       if (job.getTotalStages() > 0) {

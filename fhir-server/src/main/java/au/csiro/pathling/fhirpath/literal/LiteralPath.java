@@ -6,19 +6,16 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -220,11 +217,8 @@ public abstract class LiteralPath implements FhirPath {
 
   @Nonnull
   @Override
-  public Dataset<Row> trimDataset(@Nonnull final ParserContext context) {
-    final List<Column> columns = new ArrayList<>(
-        Arrays.asList(getIdColumn(), getValueColumn()));
-    columns.addAll(context.getGroupingColumns());
-    return getDataset().select(columns.toArray(new Column[]{}));
+  public Dataset<Row> getUnionableDataset(@Nonnull final FhirPath target) {
+    return getDataset().select(getUnionableColumns(this, target).toArray(new Column[]{}));
   }
 
 }
