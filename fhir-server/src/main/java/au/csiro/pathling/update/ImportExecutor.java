@@ -17,6 +17,9 @@ import au.csiro.pathling.io.PersistenceScheme;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResourceWriter;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
+
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -139,6 +143,7 @@ public class ImportExecutor {
       }
 
       String url = ((UrlType) urlParam.getValue()).getValueAsString();
+      url = URLDecoder.decode(url, StandardCharsets.UTF_8);
       url = PersistenceScheme.convertS3ToS3aUrl(url);
       final Dataset<String> jsonStrings;
       try {
