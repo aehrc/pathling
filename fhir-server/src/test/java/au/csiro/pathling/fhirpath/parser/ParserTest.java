@@ -7,19 +7,29 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_121503c8;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_2b36c1e2;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_7001ad9c;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_8ee183e2;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_9360820c;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_bbd33563;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_beff242e;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWithValue;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.element.*;
+import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.element.DatePath;
+import au.csiro.pathling.fhirpath.element.DecimalPath;
+import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
@@ -37,6 +47,7 @@ import java.sql.Date;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -50,6 +61,11 @@ public class ParserTest extends AbstractParserTest {
 
   private FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
+    return Assertions.assertThrows(errorType, () -> parser.parse(expression));
   }
 
   @Test
@@ -513,8 +529,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-        () -> parser.parse(
-            "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
+        "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'");
     assertEquals(
         "Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'",
         error.getMessage());
@@ -608,5 +623,13 @@ public class ParserTest extends AbstractParserTest {
         "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').extension('uuid:any').url")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testExtensionFunctionOnTranslateResult.csv");
+  }
+
+  @Test
+  void testTraversalIntoMissingOpenType() {
+    final String expression = "extension('http://hl7.org/fhir/R4/extension-patient-birthplace.html').valueAddress";
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        expression);
+    assertEquals("No such child: " + expression, error.getMessage());
   }
 }

@@ -20,6 +20,7 @@ import au.csiro.pathling.encoders.AbstractSchemaConverterTest;
 import au.csiro.pathling.encoders.EncoderConfig;
 import au.csiro.pathling.encoders.SchemaConverter;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
@@ -29,8 +30,29 @@ import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Condition;
 import org.junit.Ignore;
 import org.junit.Test;
+import scala.collection.JavaConverters;
 
 public class SchemaConverter2Test extends AbstractSchemaConverterTest {
+
+  public static final Set<String> OPEN_TYPES = Set.of(
+      "boolean",
+      "canonical",
+      "code",
+      "date",
+      "dateTime",
+      "decimal",
+      "instant",
+      "integer",
+      "oid",
+      "positiveInt",
+      "string",
+      "time",
+      "unsignedInt",
+      "uri",
+      "url",
+      "Coding",
+      "Identifier"
+  );
 
   /**
    * Traverses a DataType recursively passing all encountered StructTypes to the provided consumer.
@@ -54,7 +76,7 @@ public class SchemaConverter2Test extends AbstractSchemaConverterTest {
   @Override
   protected SchemaConverter createSchemaConverter(final int maxNestingLevel) {
     return new SchemaConverter2(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
-        EncoderConfig.apply(maxNestingLevel, true));
+        EncoderConfig.apply(maxNestingLevel, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
   }
 
   // TODO: [#414] This is to check if nested types work correctly in choices.

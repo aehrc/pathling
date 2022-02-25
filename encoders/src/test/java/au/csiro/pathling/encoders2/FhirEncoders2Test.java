@@ -14,6 +14,7 @@
 package au.csiro.pathling.encoders2;
 
 import static au.csiro.pathling.encoders2.ResourceEncoding2Test.EXCLUDED_RESOURCES;
+import static au.csiro.pathling.encoders2.SchemaConverter2Test.OPEN_TYPES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
@@ -48,7 +49,9 @@ public class FhirEncoders2Test implements JsonMethods {
 
   private static final FhirContext fhirContext = FhirContext.forR4();
   private static final FhirEncoders fhirEncoders = FhirEncoders.forR4()
-      .withExtensionsEnabled(true).getOrCreate();
+      .withOpenTypes(OPEN_TYPES)
+      .withExtensionsEnabled(true)
+      .getOrCreate();
   private static final IParser jsonParser = fhirContext.newJsonParser().setPrettyPrint(true);
 
   public static <T extends BaseResource> void assertSerDeIsIdentity(

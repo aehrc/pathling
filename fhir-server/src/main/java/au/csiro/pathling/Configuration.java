@@ -8,10 +8,19 @@ package au.csiro.pathling;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.*;
-import lombok.*;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.validator.constraints.URL;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -389,6 +398,11 @@ public class Configuration {
     @Min(0)
     private Integer maxNestingLevel;
 
+    /**
+     * The list of types that are encoded within open types, such as extensions.
+     */
+    @NotNull
+    private Set<String> openTypes;
 
     /**
      * Enables support for FHIR extensions.

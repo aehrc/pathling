@@ -31,6 +31,11 @@ trait EncoderSettings {
   def maxNestingLevel: Int
 
   /**
+   * The list of types that are encoded within open types, such as extensions.
+   */
+  def openTypes: Set[String]
+
+  /**
    * Indicates if support for FHIR extension should be enabled.
    *
    * @return if support for FHIR extension should be enabled.
@@ -60,6 +65,8 @@ trait EncoderContext extends EncoderSettings {
 
   override def maxNestingLevel: Int = config.maxNestingLevel
 
+  override def openTypes: Set[String] = config.openTypes
+
   override def supportsExtensions: Boolean = config.supportsExtensions
 
   override def generateFid: Boolean = config.generateFid
@@ -68,18 +75,20 @@ trait EncoderContext extends EncoderSettings {
 /**
  * Default implementation of [[EncoderSettings]].
  *
- * @param maxNestingLevel    @see  [[EncoderSettings.maxNestingLevel]]
- * @param supportsExtensions @see  [[EncoderSettings.supportsExtensions]]
+ * @param maxNestingLevel    @see [[EncoderSettings.maxNestingLevel]]
+ * @param openTypes          @see [[EncoderSettings.openTypes]]
+ * @param supportsExtensions @see [[EncoderSettings.supportsExtensions]]
  * @param generateFid        @see [[EncoderSettings.generateFid]]
  */
 case class EncoderConfig(override val maxNestingLevel: Int,
+                         override val openTypes: Set[String],
                          override val supportsExtensions: Boolean,
                          override val generateFid: Boolean) extends EncoderSettings {
   assert(generateFid || !supportsExtensions, "includeFid must be enabled to support extensions")
 }
 
 object EncoderConfig {
-  def apply(maxNestingLevel: Int, supportsExtensions: Boolean): EncoderConfig = EncoderConfig(maxNestingLevel, supportsExtensions, generateFid = true)
+  def apply(maxNestingLevel: Int, openTypes: Set[String], supportsExtensions: Boolean): EncoderConfig = EncoderConfig(maxNestingLevel, openTypes, supportsExtensions, generateFid = true)
 
-  def apply(maxNestingLevel: Int): EncoderConfig = EncoderConfig(maxNestingLevel, supportsExtensions = true, generateFid = true)
+  def apply(maxNestingLevel: Int, openTypes: Set[String]): EncoderConfig = EncoderConfig(maxNestingLevel, openTypes, supportsExtensions = true, generateFid = true)
 }

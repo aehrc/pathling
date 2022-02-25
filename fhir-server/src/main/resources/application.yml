@@ -134,8 +134,29 @@ pathling:
   encoding:
     # Controls the maximum depth of nested element data that is encoded upon import.
     maxNestingLevel: 3
+    
     # Enables support for FHIR extensions.
     enableExtensions: true
+    
+    # The list of types that are encoded within open types, such as extensions.
+    openTypes:
+      - boolean
+      - canonical
+      - code
+      - date
+      - dateTime
+      - decimal
+      - instant
+      - integer
+      - oid
+      - positiveInt
+      - string
+      - time
+      - unsignedInt
+      - uri
+      - url
+      - Coding
+      - Identifier
 
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.
