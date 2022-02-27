@@ -22,7 +22,11 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.*;
+import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.builders.ElementPathBuilder;
+import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
+import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import org.apache.spark.sql.Column;
@@ -74,7 +78,7 @@ public class FirstFunctionTest {
         .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputExpression("Patient")
+        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
         .build();
 
     final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, inputPath,
@@ -84,7 +88,7 @@ public class FirstFunctionTest {
 
     assertTrue(result instanceof ResourcePath);
     assertThat((ResourcePath) result)
-        .hasExpression("first()")
+        .hasExpression("Patient.first()")
         .isSingular()
         .hasResourceType(ResourceType.PATIENT);
 
@@ -126,7 +130,7 @@ public class FirstFunctionTest {
         .buildCustom();
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputExpression("Patient")
+        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
         .build();
 
     final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, inputPath,
@@ -178,11 +182,11 @@ public class FirstFunctionTest {
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
-        .expression("Patient.name")
+        .expression("name")
         .build();
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputExpression("Patient.name")
+        .groupingColumns(Collections.singletonList(input.getIdColumn()))
         .build();
 
     final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, input,
@@ -193,7 +197,7 @@ public class FirstFunctionTest {
 
     assertTrue(result instanceof StringPath);
     assertThat((ElementPath) result)
-        .hasExpression("first()")
+        .hasExpression("name.first()")
         .isSingular()
         .hasFhirType(FHIRDefinedType.STRING);
 

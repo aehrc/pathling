@@ -15,7 +15,11 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -110,10 +114,8 @@ public abstract class AggregateFunction {
     // Use an ID column from any of the inputs.
     final Column idColumn = inputs.stream().findFirst().get().getIdColumn();
 
-    // Determine the group by columns based on whether we are in the context of a grouping, or an
-    // individual resource.
-    final List<Column> groupByList = parserContext.getGroupingColumns()
-        .orElse(Collections.singletonList(idColumn));
+    // Get the grouping columns from the parser context.
+    final List<Column> groupByList = parserContext.getGroupingColumns();
 
     // Drop the requested grouping columns that are not present in the provided dataset.
     // This handles the situation where `%resource` is used in `where()`.
@@ -125,18 +127,12 @@ public abstract class AggregateFunction {
         .filter(c -> existingColumns.contains(c.toString()))
         .toArray(Column[]::new);
 
-    // The selection will be either:
-    // (1) the first function applied to each column except the resource ID, plus the value column
-    //     (in the case of individual resource context), or;
-    // (2) the first function applied to each column except the grouping columns, plus the value
-    //     column (in the case of a grouping context).
-    final Predicate<Column> resourceFilter = column -> !column.equals(idColumn);
+    // The selection will be the first function applied to each column except the grouping columns, 
+    // plus the value column.
     final Predicate<Column> groupingFilter = column -> !groupByList.contains(column);
     final List<Column> selection = Stream.of(dataset.columns())
         .map(functions::col)
-        .filter(parserContext.getGroupingColumns().isEmpty()
-                ? resourceFilter
-                : groupingFilter)
+        .filter(groupingFilter)
         .map(column -> first(column, true).alias(column.toString()))
         .collect(Collectors.toList());
     selection.add(valueColumn.alias("value"));

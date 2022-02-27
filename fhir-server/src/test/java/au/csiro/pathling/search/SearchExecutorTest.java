@@ -110,6 +110,20 @@ class SearchExecutorTest {
   }
 
   @Test
+  void combineResultInSecondFilter() {
+    final StringAndListParam params = new StringAndListParam();
+    params.addAnd(new StringParam("gender = 'male'"));
+    params.addAnd(new StringParam("(name.given combine name.family).empty().not()"));
+    final SearchExecutorBuilder builder = searchBuilder()
+        .withSubjectResource(ResourceType.PATIENT)
+        .withFilters(params);
+    mockResourceReader(builder.getResourceReader(), sparkSession, ResourceType.PATIENT);
+
+    final SearchExecutor executor = builder.build();
+    assertResponse("SearchExecutorTest/combineResultInSecondFilter.Bundle.json", executor);
+  }
+
+  @Test
   void throwsInvalidInputOnNonBooleanFilter() {
     final StringAndListParam params = new StringAndListParam();
     params.addAnd(new StringParam("category.coding"));

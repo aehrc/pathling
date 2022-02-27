@@ -10,7 +10,12 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.literal.*;
+import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
+import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
+import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
+import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
+import au.csiro.pathling.fhirpath.literal.LiteralPath;
+import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -18,6 +23,7 @@ import au.csiro.pathling.test.builders.ParserContextBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import java.math.BigDecimal;
 import java.text.ParseException;
+import java.util.Collections;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Value;
@@ -27,7 +33,6 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -50,14 +55,7 @@ public class ComparisonOperatorTest {
   @Autowired
   private FhirContext fhirContext;
 
-  private ParserContext parserContext;
-
   private static final String ID_ALIAS = "_abc123";
-
-  @BeforeEach
-  void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
-  }
 
   @Value
   static class TestParameters {
@@ -73,6 +71,9 @@ public class ComparisonOperatorTest {
 
     @Nonnull
     FhirPath literal;
+
+    @Nonnull
+    ParserContext context;
 
     @Override
     public String toString() {
@@ -160,7 +161,10 @@ public class ComparisonOperatorTest {
         .singular(true)
         .build();
     final StringLiteralPath literal = StringLiteralPath.fromString("'Evelyn'", left);
-    return new TestParameters(name, left, right, literal);
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(left.getIdColumn()))
+        .build();
+    return new TestParameters(name, left, right, literal, context);
   }
 
   private TestParameters buildIntegerExpressions(final String name) {
@@ -197,7 +201,9 @@ public class ComparisonOperatorTest {
         .singular(true)
         .build();
     final IntegerLiteralPath literal = IntegerLiteralPath.fromString("1", left);
-    return new TestParameters(name, left, right, literal);
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext).groupingColumns(
+        Collections.singletonList(left.getIdColumn())).build();
+    return new TestParameters(name, left, right, literal, context);
   }
 
   private TestParameters buildDecimalExpressions(final String name) {
@@ -234,7 +240,9 @@ public class ComparisonOperatorTest {
         .singular(true)
         .build();
     final DecimalLiteralPath literal = DecimalLiteralPath.fromString("1.0", left);
-    return new TestParameters(name, left, right, literal);
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext).groupingColumns(
+        Collections.singletonList(left.getIdColumn())).build();
+    return new TestParameters(name, left, right, literal, context);
   }
 
   private TestParameters buildDateTimeExpressions(final String name,
@@ -281,13 +289,15 @@ public class ComparisonOperatorTest {
     } catch (final ParseException e) {
       throw new RuntimeException("Error parsing literal date or date time");
     }
-    return new TestParameters(name, left, right, literal);
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext).groupingColumns(
+        Collections.singletonList(left.getIdColumn())).build();
+    return new TestParameters(name, left, right, literal, context);
   }
 
   @ParameterizedTest
   @MethodSource("parameters")
   public void lessThanOrEqualTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("<=");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -305,7 +315,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void lessThan(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("<");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -323,7 +333,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void greaterThanOrEqualTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance(">=");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -341,7 +351,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void greaterThan(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance(">");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -359,7 +369,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void literalLessThanOrEqualTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLiteral(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("<=");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -377,7 +387,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void literalLessThan(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLiteral(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("<");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -395,7 +405,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void literalGreaterThanOrEqualTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLiteral(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance(">=");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -413,7 +423,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void literalGreaterThan(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLiteral(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance(">");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -431,7 +441,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void lessThanOrEqualToLiteral(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getLiteral());
     final Operator comparisonOperator = Operator.getInstance("<=");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -449,7 +459,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void lessThanLiteral(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getLiteral());
     final Operator comparisonOperator = Operator.getInstance("<");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -467,7 +477,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void greaterThanOrEqualToLiteral(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getLiteral());
     final Operator comparisonOperator = Operator.getInstance(">=");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -485,7 +495,7 @@ public class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   public void greaterThanLiteral(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getLiteral());
     final Operator comparisonOperator = Operator.getInstance(">");
     final FhirPath result = comparisonOperator.invoke(input);

@@ -18,11 +18,14 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.MemberInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -182,17 +185,11 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       final NonLiteralPath thisPath = nonLiteral.toThisPath();
 
       // If the this context has an element ID, we need to add this to the grouping columns so that
-      // aggregations that occur within the arguments are in the context of an element, not the
-      // resource.
-      final Optional<List<Column>> argumentGroupings = thisPath.getEidColumn()
-          .map(column -> context.getGroupingColumns()
-              .map(groupings -> {
-                final List<Column> newGroupings = new ArrayList<>(groupings);
-                newGroupings.add(column);
-                return Optional.of(newGroupings);
-              })
-              .orElse(Optional.of(Arrays.asList(context.getInputContext().getIdColumn(), column))))
-          .orElse(context.getGroupingColumns());
+      // aggregations that occur within the arguments are in the context of an element. Otherwise,
+      // we add the resource ID column to the groupings.
+      final List<Column> argumentGroupings = new ArrayList<>(context.getGroupingColumns());
+      thisPath.getEidColumn().ifPresentOrElse(argumentGroupings::add,
+          () -> argumentGroupings.add(thisPath.getIdColumn()));
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this`
       // expression.

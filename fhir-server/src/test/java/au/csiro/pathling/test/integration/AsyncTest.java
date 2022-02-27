@@ -128,17 +128,17 @@ public class AsyncTest extends IntegrationTest {
       final List<String> cacheControl = statusResponse.getHeaders().get("Cache-Control");
       assertNotNull(eTag);
       assertNotNull(cacheControl);
-      assertTrue(cacheControl.contains("must-revalidate"));
       if (statusCode != expectedStatus) {
         assertEquals(HttpStatus.ACCEPTED_202, statusCode);
         assertTrue(eTag.contains("W/\"0\""));
-        assertTrue(cacheControl.contains("no-cache"));
         assertTrue(cacheControl.contains("no-store"));
-        assertTrue(cacheControl.contains("max-age=0"));
         encounteredInProgressResponse = true;
         Thread.sleep(POLL_FREQUENCY);
       } else {
-        assertTrue(cacheControl.contains("max-age=1"));
+        final List<String> vary = statusResponse.getHeaders().get("Vary");
+        assertNotNull(vary);
+        assertTrue(cacheControl.contains("must-revalidate,max-age=1"));
+        assertTrue(vary.contains("Accept,Accept-Encoding,Prefer,Authorization"));
       }
     } while (statusCode != expectedStatus);
 

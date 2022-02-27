@@ -20,6 +20,7 @@ import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -88,7 +89,8 @@ public class AggregateExecutor extends QueryExecutor {
     final ResourcePath inputContext = ResourcePath
         .build(getFhirContext(), getResourceReader(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
-    final ParserContext groupingAndFilterContext = buildParserContext(inputContext);
+    final ParserContext groupingAndFilterContext = buildParserContext(inputContext,
+        Collections.singletonList(inputContext.getIdColumn()));
     final Parser parser = new Parser(groupingAndFilterContext);
     final List<FhirPath> filters = parseFilters(parser, query.getFilters());
     final List<FhirPathAndContext> groupingParseResult = parseMaterializableExpressions(
@@ -122,7 +124,7 @@ public class AggregateExecutor extends QueryExecutor {
             inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
             Optional.empty());
     final ParserContext aggregationParserContext = buildParserContext(aggregationContext,
-        Optional.of(groupingColumns));
+        groupingColumns);
     final Parser aggregationParser = new Parser(aggregationParserContext);
 
     // Parse the aggregations, and grab the updated grouping columns. When aggregations are

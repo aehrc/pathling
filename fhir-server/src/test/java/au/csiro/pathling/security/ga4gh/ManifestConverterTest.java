@@ -14,9 +14,10 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Authorization;
 import au.csiro.pathling.Configuration.Authorization.Ga4ghPassports;
+import au.csiro.pathling.Configuration.Spark;
 import au.csiro.pathling.Configuration.Storage;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.parser.ParserTest;
+import au.csiro.pathling.fhirpath.parser.AbstractParserTest;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
@@ -29,21 +30,16 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
-class ManifestConverterTest extends ParserTest {
+class ManifestConverterTest extends AbstractParserTest {
 
   private static final String PATIENT_ID_1 = "0dc85075-4f59-4e4f-b75d-a2f601d0cf24";
   private static final String PATIENT_ID_2 = "1f276fc3-7e91-4fc9-a287-be19228e8807";
   private static final String PATIENT_ID_3 = "f34e77c9-df31-49c4-92e2-e871fa76026e";
   private static final String PATIENT_ID_4 = "2cc8ffdd-6233-4dd4-ba71-36eccb8204e2";
-
-  @Autowired
-  private SparkSession spark;
 
   @Test
   void convertsManifest() {
@@ -57,9 +53,12 @@ class ManifestConverterTest extends ParserTest {
 
     // Mock the configuration.
     final Configuration configuration = mock(Configuration.class);
+    final Spark sparkConfig = mock(Spark.class);
     final Authorization auth = mock(Authorization.class);
     final Storage storage = mock(Storage.class);
     final Ga4ghPassports ga4gh = mock(Ga4ghPassports.class);
+    when(configuration.getSpark()).thenReturn(sparkConfig);
+    when(sparkConfig.getCacheDatasets()).thenReturn(false);
     when(configuration.getAuth()).thenReturn(auth);
     when(auth.getGa4ghPassports()).thenReturn(ga4gh);
     when(configuration.getStorage()).thenReturn(storage);

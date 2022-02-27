@@ -543,6 +543,37 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  void queryWithWhereAggregationAndCount() {
+    subjectResource = ResourceType.CONDITION;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation(
+            "where(code.coding contains http://snomed.info/sct|444814009||'Viral sinusitis (disorder)').count()")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithWhereAggregationAndCount.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithCombineResultInSecondFilter() {
+    subjectResource = ResourceType.PATIENT;
+    mockResourceReader(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withFilter("gender = 'male'")
+        .withFilter("(name.given combine name.family).empty().not()")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithCombineResultInSecondFilter.Parameters.json",
+        response);
+  }
+
+  @Test
   void throwsInvalidInputOnEmptyAggregation() {
     subjectResource = ResourceType.PATIENT;
 

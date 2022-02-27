@@ -125,7 +125,6 @@ class BooleansTestFunctionTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void returnsCorrectResults(@Nonnull final TestParameters parameters) {
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
@@ -148,6 +147,9 @@ class BooleansTestFunctionTest {
         .dataset(dataset)
         .idAndValueColumns()
         .expression("valueBoolean")
+        .build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(input.getIdColumn()))
         .build();
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,

@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.ResourceReader;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -74,12 +75,8 @@ public abstract class QueryExecutor {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
-  protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext) {
-    return buildParserContext(inputContext, Optional.empty());
-  }
-
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
-      @Nonnull final Optional<List<Column>> groupingColumns) {
+      @Nonnull final List<Column> groupingColumns) {
     return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
         terminologyServiceFactory, groupingColumns, new HashMap<>());
   }
@@ -124,14 +121,8 @@ public abstract class QueryExecutor {
       @Nonnull final Collection<FhirPath> expressions,
       @Nonnull final Collection<FhirPath> filters, @Nonnull final Column idColumn) {
     final List<Dataset<Row>> datasets = expressions.stream()
-        .map(expression -> {
-          // We need to remove any trailing null values from non-empty collections, so that
-          // aggregations do not count non-empty collections in the empty collection grouping. We do
-          // this by joining the distinct set of resource IDs to the dataset using an outer join,
-          // where the value is not null.
-          return join(expression.getDataset(), idColumn, inputContext.getDataset(),
-              idColumn, expression.getValueColumn().isNotNull(), JoinType.RIGHT_OUTER);
-        }).collect(Collectors.toList());
+        .map(expression -> trimTrailingNulls(inputContext, idColumn, expression))
+        .collect(Collectors.toList());
     datasets.addAll(filters.stream()
         .map(FhirPath::getDataset)
         .collect(Collectors.toList()));
@@ -139,6 +130,23 @@ public abstract class QueryExecutor {
     return datasets.stream()
         .reduce((a, b) -> join(a, idColumn, b, idColumn, JoinType.LEFT_OUTER))
         .orElseThrow();
+  }
+
+  /**
+   * We need to remove any trailing null values from non-empty collections, so that aggregations do
+   * not count non-empty collections in the empty collection grouping. We do this by joining the
+   * distinct set of resource IDs to the dataset using an outer join, where the value is not null.
+   */
+  @Nonnull
+  protected Dataset<Row> trimTrailingNulls(@Nonnull final FhirPath inputContext,
+      final @Nonnull Column idColumn, @Nonnull final FhirPath expression) {
+    if (expression.isSingular()) {
+      // It is not necessary to perform a join to remove trailing nulls for a singular expression.
+      return expression.getDataset();
+    } else {
+      return join(expression.getDataset(), idColumn, inputContext.getDataset(),
+          idColumn, expression.getValueColumn().isNotNull(), JoinType.RIGHT_OUTER);
+    }
   }
 
   /**
@@ -200,7 +208,8 @@ public abstract class QueryExecutor {
 
     for (final String filter : filters) {
       // Parse the filter expression.
-      final ParserContext parserContext = buildParserContext(currentContext);
+      final ParserContext parserContext = buildParserContext(currentContext,
+          Collections.singletonList(currentContext.getIdColumn()));
       final Parser parser = new Parser(parserContext);
       final FhirPath fhirPath = parser.parse(filter);
 

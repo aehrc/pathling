@@ -19,17 +19,13 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
@@ -39,121 +35,35 @@ import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
-import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.test.SharedMocks;
-import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
-import ca.uhn.fhir.context.FhirContext;
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.sql.Date;
-import java.util.Arrays;
-import java.util.HashSet;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author Piotr Szul
  */
-@SpringBootTest
-@Tag("UnitTest")
-@ExtendWith(TimingExtension.class)
-public class ParserTest {
-
-  @Autowired
-  private SparkSession spark;
-
-  @Autowired
-  private FhirContext fhirContext;
+public class ParserTest extends AbstractParserTest {
 
   @Autowired
   private TerminologyService terminologyService;
-
-  @Autowired
-  private TerminologyServiceFactory terminologyServiceFactory;
-
-  private Parser parser;
-  protected ResourceReader mockReader;
-
-  @BeforeEach
-  public void setUp() throws IOException {
-    SharedMocks.resetAll();
-    mockReader = mock(ResourceReader.class);
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
-        ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
-        ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE);
-
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .resourceReader(mockReader)
-        .inputContext(subjectResource)
-        .build();
-    parser = new Parser(parserContext);
-  }
-
-  protected void mockResourceReader(final ResourceType... resourceTypes)
-      throws MalformedURLException {
-    for (final ResourceType resourceType : resourceTypes) {
-      final File parquetFile =
-          new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
-      final URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
-      assertNotNull(parquetUrl);
-      final String decodedUrl = URLDecoder.decode(parquetUrl.toString(), StandardCharsets.UTF_8);
-      final Dataset<Row> dataset = spark.read().parquet(decodedUrl);
-      when(mockReader.read(resourceType)).thenReturn(dataset);
-      when(mockReader.getAvailableResourceTypes())
-          .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
-    }
-  }
 
   private FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
   }
 
-  @SuppressWarnings("SameParameterValue")
-  @Nonnull
-  protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
-      @Nonnull final String expression) {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, resourceType, resourceType.toCode(), true);
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .resourceReader(mockReader)
-        .inputContext(subjectResource)
-        .build();
-    final Parser resourceParser = new Parser(parserContext);
-    return assertThat(resourceParser.parse(expression));
-  }
-
   @Test
-  public void testContainsOperator() {
+  void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
@@ -168,7 +78,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testInOperator() {
+  void testInOperator() {
     assertThatResultOf("'Wuckert783' in name.family")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
@@ -183,7 +93,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCodingOperations() {
+  void testCodingOperations() {
     // Check that membership operators for codings use strict equality rather than equivalence.
     // test unversioned
     assertThatResultOf(
@@ -201,7 +111,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testDateTimeLiterals() {
+  void testDateTimeLiterals() {
     // Full DateTime.
     assertThatResultOf("@2015-02-04T14:34:28Z")
         .isLiteralPath(DateTimeLiteralPath.class)
@@ -216,7 +126,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testTimeLiterals() {
+  void testTimeLiterals() {
     // Full Time.
     assertThatResultOf("@T14:34:28")
         .isLiteralPath(TimeLiteralPath.class)
@@ -231,7 +141,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCodingLiterals() {
+  void testCodingLiterals() {
     // Coding literal form [system]|[code]
     final Coding expectedCoding =
         new Coding("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "S", null);
@@ -251,7 +161,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCountWithReverseResolve() {
+  void testCountWithReverseResolve() {
     assertThatResultOf("reverseResolve(Condition.subject).code.coding.count()")
         .isElementPath(IntegerPath.class)
         .isSingular()
@@ -265,7 +175,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCount() {
+  void testCount() {
     final DatasetBuilder expectedCountResult =
         allPatientsWithValue(spark, 1L)
             .changeValue(PATIENT_ID_9360820c, 2L);
@@ -287,7 +197,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testSubsumesAndSubsumedBy() {
+  void testSubsumesAndSubsumedBy() {
     when(terminologyService.getSubsumesRelation(any())).thenReturn(Relation.equality());
 
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
@@ -328,7 +238,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testWhereWithAggregateFunction() {
+  void testWhereWithAggregateFunction() {
     assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, DataTypes.StringType, null)
@@ -340,7 +250,7 @@ public class ParserTest {
    * the "element" operand to the membership operator.
    */
   @Test
-  public void testWhereWithContainsOperator() {
+  void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Karina848').gender")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, (String) null)
@@ -348,7 +258,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testWhereWithSubsumes() {
+  void testWhereWithSubsumes() {
     // Not a real subsumption - just works for this use case.
     // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
     when(terminologyService.getSubsumesRelation(any()))
@@ -366,7 +276,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testWhereWithMemberOf() {
+  void testWhereWithMemberOf() {
     when(terminologyService.intersect(any(), any()))
         .thenReturn(setOfSimpleFrom(CD_SNOMED_403190006, CD_SNOMED_284551006));
 
@@ -384,7 +294,7 @@ public class ParserTest {
    * applied successfully following a nested where invocation.
    */
   @Test
-  public void testAggregationFollowingNestedWhere() {
+  void testAggregationFollowingNestedWhere() {
     assertThatResultOf(
         "where(name.where(use = 'official').first().given.first() in "
             + "name.where(use = 'maiden').first().given).gender")
@@ -393,7 +303,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testNestedWhereWithAggregationOnElement() {
+  void testNestedWhereWithAggregationOnElement() {
     assertThatResultOf(
         "name.where('Karina848' in where(use contains 'maiden').given).family")
         .selectOrderedResult()
@@ -401,13 +311,13 @@ public class ParserTest {
   }
 
   @Test
-  public void testBooleanOperatorWithTwoLiterals() {
+  void testBooleanOperatorWithTwoLiterals() {
     assertThatResultOf("true and false")
         .selectOrderedResult();
   }
 
   @Test
-  public void testQueryWithExternalConstantInWhere() {
+  void testQueryWithExternalConstantInWhere() {
     assertThatResultOf(
         "name.family.where($this = %resource.name.family.first())")
         .selectOrderedResult()
@@ -425,7 +335,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testExternalConstantHasCorrectExpression() {
+  void testExternalConstantHasCorrectExpression() {
     assertThatResultOf("%resource")
         .hasExpression("%resource");
 
@@ -434,7 +344,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testNotFunction() {
+  void testNotFunction() {
     assertThatResultOf(
         "(name.given contains 'Su690').not()")
         .selectOrderedResult()
@@ -515,13 +425,13 @@ public class ParserTest {
         .thenReturn(conceptTranslator2);
 
     assertThatResultOf(ResourceType.CONDITION,
-        "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=2).code")
+        "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=13).code")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.csv");
   }
 
   @Test
-  public void testWithCodingLiteral() {
+  void testWithCodingLiteral() {
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S")
         .selectOrderedResult()
@@ -529,7 +439,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCombineOperator() {
+  void testCombineOperator() {
     assertThatResultOf("name.family combine name.given")
         .isElementPath(StringPath.class)
         .selectResult()
@@ -603,7 +513,15 @@ public class ParserTest {
   }
 
   @Test
-  public void parserErrorThrows() {
+  void testBooleanOperatorWithLeftLiteral() {
+    assertThatResultOf("@1970-11-22 = birthDate")
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testBooleanOperatorWithLeftLiteral.csv");
+  }
+
+  @Test
+  void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> parser.parse(
             "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
