@@ -115,8 +115,7 @@ class ImportExecutorTest {
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.QUESTIONNAIRE));
     assertEquals(ImmutableSet.of(ResourceType.QUESTIONNAIRE),
         resourceReader.getAvailableResourceTypes());
-    final Dataset<Row> questionnaireDataset = resourceReader
-        .read(ResourceType.QUESTIONNAIRE);
+    final Dataset<Row> questionnaireDataset = resourceReader.read(ResourceType.QUESTIONNAIRE);
     assertEquals(1, questionnaireDataset.count());
 
     final Dataset<Row> expandedItemsDataset = questionnaireDataset
@@ -126,7 +125,7 @@ class ImportExecutorTest {
         .withColumn("item_l3", functions.explode_outer(functions.col("item_l2").getField("item")))
         .withColumn("item_l4", functions.explode_outer(functions.col("item_l3").getField("item")))
         .withColumn("item_l5", functions.explode_outer(functions.col("item_l4").getField("item")))
-        .select(functions.col("id"),
+        .select(
             functions.col("item_l0").getField("linkId"),
             functions.col("item_l1").getField("linkId"),
             functions.col("item_l2").getField("linkId"),
@@ -138,10 +137,10 @@ class ImportExecutorTest {
     // The actual data has maxNestingLevel = 5, but we import with maxNestingLevel == 5
     // So we expect level 5 items to be NULL
     final List<Row> expectedDataset = Arrays.asList(
-        RowFactory.create("3141", "1", "1.1", "1.1.1", "1.1.1.1", "1.1.1.1.1", null),
-        RowFactory.create("3141", "1", "1.1", "1.1.1", "1.1.1.1", "1.1.1.1.2", null),
-        RowFactory.create("3141", "1", "1.1", "1.1.1", "1.1.1.2", null, null),
-        RowFactory.create("3141", "2", "2.1", "2.1.2", null, null, null)
+        RowFactory.create("1", "1.1", "1.1.1", "1.1.1.1", "1.1.1.1.1", null),
+        RowFactory.create("1", "1.1", "1.1.1", "1.1.1.1", "1.1.1.1.2", null),
+        RowFactory.create("1", "1.1", "1.1.1", "1.1.1.2", null, null),
+        RowFactory.create("2", "2.1", "2.1.2", null, null, null)
     );
 
     DatasetAssert.of(expandedItemsDataset).hasRows(expectedDataset);
@@ -152,7 +151,7 @@ class ImportExecutorTest {
     final List<ResourceType> resourceTypes = Arrays.asList(ResourceType.PARAMETERS,
         ResourceType.TASK, ResourceType.STRUCTUREDEFINITION, ResourceType.STRUCTUREMAP,
         ResourceType.BUNDLE);
-    for (ResourceType resourceType : resourceTypes) {
+    for (final ResourceType resourceType : resourceTypes) {
       assertThrows(InvalidUserInputError.class, () -> importExecutor.execute(
           buildImportParameters(new URL("file://some/url"),
               resourceType)), "Unsupported resource type: " + resourceType.toCode());
