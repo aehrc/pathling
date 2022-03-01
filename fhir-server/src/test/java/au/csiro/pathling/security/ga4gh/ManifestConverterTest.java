@@ -19,11 +19,10 @@ import au.csiro.pathling.Configuration.Storage;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.parser.AbstractParserTest;
 import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import java.net.URL;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -48,8 +47,8 @@ class ManifestConverterTest extends AbstractParserTest {
     manifest.setPatientIds(Arrays.asList(PATIENT_ID_1, PATIENT_ID_2, PATIENT_ID_3, PATIENT_ID_4));
 
     // Find the test data warehouse URL.
-    final URL gitKeep = TestHelpers.getResourceAsUrl("test-data/parquet/.gitkeep");
-    final String warehouseUrl = gitKeep.toString().replace("/parquet/.gitkeep", "");
+    final File warehouseDirectory = new File("src/test/resources/test-data");
+    final String warehouseUrl = warehouseDirectory.toURI().toString();
 
     // Mock the configuration.
     final Configuration configuration = mock(Configuration.class);

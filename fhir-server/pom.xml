@@ -239,7 +239,7 @@
             <fileset>
               <directory>${project.basedir}/src/test/resources/test-data/parquet</directory>
               <includes>
-                <include>**/*.parquet</include>
+                <include>**/*</include>
               </includes>
             </fileset>
           </filesets>

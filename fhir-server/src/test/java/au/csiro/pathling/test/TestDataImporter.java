@@ -69,6 +69,10 @@ public class TestDataImporter implements CommandLineRunner {
     final FileFilter fileFilter = new WildcardFileFilter("*.ndjson");
     final File[] srcNdJsonFiles = srcNdJsonDir.listFiles(fileFilter);
 
+    log.info("Ensuring directory exists: " + targetPath);
+    //noinspection ResultOfMethodCallIgnored
+    new File(targetPath).mkdirs();
+
     for (final File srcFile : Objects.requireNonNull(srcNdJsonFiles)) {
       log.info("Loading source NDJSON file: " + srcFile);
       final String resourceName = FilenameUtils.getBaseName(srcFile.getName());
