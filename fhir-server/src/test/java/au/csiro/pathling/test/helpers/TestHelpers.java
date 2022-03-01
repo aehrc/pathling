@@ -23,6 +23,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -102,16 +103,36 @@ public abstract class TestHelpers {
     }
   }
 
+  public static void mockResourceReader(@Nonnull final ResourceReader mockReader,
+      @Nonnull final SparkSession spark, @Nonnull final ResourceType resourceType,
+      @Nonnull final String parquetPath) {
+    final Dataset<Row> dataset = getDatasetFromParquetFile(spark, parquetPath);
+    when(mockReader.read(resourceType)).thenReturn(dataset);
+    when(mockReader.getAvailableResourceTypes())
+        .thenReturn(new HashSet<>(List.of(resourceType)));
+  }
+
   @Nonnull
   private static Dataset<Row> getDatasetForResourceType(@Nonnull final SparkSession spark,
       @Nonnull final ResourceType resourceType) {
-    final File parquetFile =
-        new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
+    return getDatasetFromParquetFile(spark,
+        getParquetPathForResourceType(resourceType));
+  }
+
+  @Nonnull
+  public static String getParquetPathForResourceType(final @Nonnull ResourceType resourceType) {
+    return "src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet";
+  }
+
+  @Nonnull
+  public static Dataset<Row> getDatasetFromParquetFile(@Nonnull final SparkSession spark,
+      @Nonnull final String parquetPath) {
+    final File parquetFile = new File(parquetPath);
     @Nullable final URL parquetUrl;
     try {
       parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
     } catch (final MalformedURLException e) {
-      throw new RuntimeException("Problem getting dataset for resource type", e);
+      throw new RuntimeException("Problem getting dataset", e);
     }
     assertNotNull(parquetUrl);
     final String decodedUrl = URLDecoder.decode(parquetUrl.toString(), StandardCharsets.UTF_8);

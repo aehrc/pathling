@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.update;
 
+import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
+
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Create;
@@ -14,17 +16,14 @@ import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Update;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import java.util.UUID;
+import javax.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IdType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.Nonnull;
-import java.util.UUID;
-
-import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
 /**
  * HAPI resource provider that provides update-related operations, such as create, update and
@@ -36,6 +35,7 @@ import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 @Scope("prototype")
 @Profile("server")
 public class UpdateProvider implements IResourceProvider {
+
   @Nonnull
   private final UpdateHelpers updateHelpers;
 
@@ -82,7 +82,8 @@ public class UpdateProvider implements IResourceProvider {
 
   @Update
   @OperationAccess("update")
-  public MethodOutcome update(@IdParam final IdType id, @ResourceParam final IBaseResource resource) {
+  public MethodOutcome update(@IdParam final IdType id,
+      @ResourceParam final IBaseResource resource) {
     String resourceId = id.getIdPart();
     resource.setId(resourceId);
 

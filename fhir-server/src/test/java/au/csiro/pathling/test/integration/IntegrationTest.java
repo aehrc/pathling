@@ -22,6 +22,8 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 public class IntegrationTest {
 
+  public static final String INDIVIDUAL_TEST_WAREHOUSE = "src/test/resources/test-data/tests";
+
   @BeforeAll
   static void beforeAll() {
     // See: https://github.com/spring-projects/spring-boot/issues/21535#issuecomment-634088332
