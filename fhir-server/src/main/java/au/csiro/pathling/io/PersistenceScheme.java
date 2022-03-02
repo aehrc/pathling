@@ -16,6 +16,12 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public abstract class PersistenceScheme {
 
+  @Nonnull
+  public static String getTableUrl(@Nonnull final String warehouseUrl,
+      @Nonnull final String databaseName, @Nonnull final ResourceType resourceType) {
+    return String.join("/", warehouseUrl, databaseName, fileNameForResource(resourceType));
+  }
+
   /**
    * @param resourceType A HAPI {@link ResourceType} describing the type of resource
    * @return The filename that should be used

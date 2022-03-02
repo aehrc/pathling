@@ -7,13 +7,14 @@
 package au.csiro.pathling.io;
 
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
-import static au.csiro.pathling.io.PersistenceScheme.fileNameForResource;
+import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
+import io.delta.tables.DeltaTable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -151,22 +152,37 @@ public class ResourceReader {
   @ResourceAccess(AccessType.READ)
   @Nonnull
   public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
+    return loadAsDelta(resourceType).toDF();
+  }
+
+  /**
+   * Reads a set of resources of a particular type from the warehouse location.
+   *
+   * @param resourceType the desired {@link ResourceType}
+   * @return a {@link DeltaTable} containing the raw resource, i.e. NOT wrapped in a value column
+   */
+  @ResourceAccess(AccessType.READ)
+  @Nonnull
+  public DeltaTable readDelta(@Nonnull final ResourceType resourceType) {
+    return loadAsDelta(resourceType);
+  }
+
+  private DeltaTable loadAsDelta(@Nonnull final ResourceType resourceType) {
     if (!getAvailableResourceTypes().contains(resourceType)) {
       throw new ResourceNotFoundError(
           "Requested resource type not available within selected database: " + resourceType
               .toCode());
     }
-    final String tableUrl = String
-        .join("/", warehouseUrl, databaseName, fileNameForResource(resourceType));
+    final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
 
     log.info("Loading resource {} from: {}", resourceType.toCode(), tableUrl);
-    @Nullable final Dataset<Row> resources = spark.read().format("delta").load(tableUrl);
+    @Nullable final DeltaTable resources = DeltaTable.forPath(spark, tableUrl);
     checkNotNull(resources);
 
     if (configuration.getSpark().getCacheDatasets()) {
       // Cache the raw resource data.
       log.debug("Caching resource dataset: {}", resourceType.toCode());
-      resources.cache();
+      resources.toDF().cache();
     }
 
     return resources;
