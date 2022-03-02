@@ -8,6 +8,7 @@ package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstCsv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.Configuration;
@@ -93,6 +94,23 @@ public class DatasetAssert {
   @SuppressWarnings("UnusedReturnValue")
   public DatasetAssert hasRowsUnordered(@Nonnull final Dataset<Row> expected) {
     return hasRowsUnordered(expected.collectAsList());
+  }
+
+  @Nonnull
+  public DatasetAssert rowsAreAllNotEqual(@Nonnull final List<Row> expected) {
+    final List<Row> actualRows = dataset.collectAsList();
+    for (int i = 0; i < expected.size(); i++) {
+      final Row expectedRow = expected.get(i);
+      final Row actualRow = actualRows.get(i);
+      assertNotEquals(expectedRow, actualRow);
+    }
+    return this;
+  }
+
+  @SuppressWarnings("UnusedReturnValue")
+  @Nonnull
+  public DatasetAssert rowsAreAllNotEqual(@Nonnull final Dataset<Row> expected) {
+    return rowsAreAllNotEqual(expected.collectAsList());
   }
 
   @Nonnull

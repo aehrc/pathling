@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.update;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.UnsupportedResourceError;
@@ -31,6 +33,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -74,6 +77,8 @@ public class ImportExecutor {
   @Nonnull
   private final AccessRules accessRules;
 
+  public static final String GENERATE_IDS_PARAM = "generateIDs";
+
   /**
    * @param spark A {@link SparkSession} for resolving Spark queries
    * @param resourceReader A {@link ResourceReader} for retrieving resources
@@ -113,6 +118,11 @@ public class ImportExecutor {
     if (sourceParams.isEmpty()) {
       throw new InvalidUserInputError("Must provide at least one source parameter");
     }
+    // The generateIDs parameter defaults to false.
+    final boolean generateIds = inParams.getParameter().stream()
+        .anyMatch(param -> GENERATE_IDS_PARAM.equals(param.getName()) &&
+            param.getValue() instanceof BooleanType &&
+            ((BooleanType) param.getValue()).booleanValue());
     log.info("Received $import request");
 
     // For each input within the request, read the resources of the declared type and create
@@ -128,11 +138,10 @@ public class ImportExecutor {
           .findFirst()
           .orElseThrow(
               () -> new InvalidUserInputError("Must provide url for each source"));
-
       final String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
-      final FhirContextFactory localFhirContextFactory = this.fhirContextFactory;
 
+      // Get an encoder based on the declared resource type within the source parameter.
       final ExpressionEncoder<IBaseResource> fhirEncoder;
       try {
         fhirEncoder = fhirEncoders.of(resourceType.toCode());
@@ -140,26 +149,12 @@ public class ImportExecutor {
         throw new InvalidUserInputError("Unsupported resource type: " + resourceCode);
       }
 
-      String url = ((UrlType) urlParam.getValue()).getValueAsString();
-      url = URLDecoder.decode(url, StandardCharsets.UTF_8);
-      url = PersistenceScheme.convertS3ToS3aUrl(url);
-      final Dataset<String> jsonStrings;
-      try {
-        accessRules.checkCanImportFrom(url);
-        final FilterFunction<String> nonBlanks = s -> !s.isBlank();
-        jsonStrings = spark.read().textFile(url).filter(nonBlanks);
-      } catch (final SecurityError e) {
-        throw new InvalidUserInputError("Not allowed to import from URL: " + url, e);
-      } catch (final Exception e) {
-        throw new InvalidUserInputError("Error reading from URL: " + url, e);
-      }
+      // Check that the user is authorized to execute the operation.
+      final Dataset<String> jsonStrings = checkAuthorization(urlParam);
+
+      // Parse each line into a HAPI FHIR object, then encode to a Spark dataset.
       final Dataset<IBaseResource> resources = jsonStrings
-          .map((MapFunction<String, IBaseResource>) json -> {
-            final IBaseResource resource = localFhirContextFactory
-                .build().newJsonParser().parseResource(json);
-            resource.setId(UUID.randomUUID().toString());
-            return resource;
-          }, fhirEncoder);
+          .map(jsonToResourceConverter(generateIds), fhirEncoder);
 
       log.info("Saving resources: {}", resourceType.toCode());
       resourceWriter.write(resourceType, resources.toDF());
@@ -184,4 +179,44 @@ public class ImportExecutor {
     opOutcome.getIssue().add(issue);
     return opOutcome;
   }
+
+  @Nonnull
+  private Dataset<String> checkAuthorization(@Nonnull final ParametersParameterComponent urlParam) {
+    String url = ((UrlType) urlParam.getValue()).getValueAsString();
+    url = URLDecoder.decode(url, StandardCharsets.UTF_8);
+    url = PersistenceScheme.convertS3ToS3aUrl(url);
+    final Dataset<String> jsonStrings;
+    try {
+      accessRules.checkCanImportFrom(url);
+      final FilterFunction<String> nonBlanks = s -> !s.isBlank();
+      jsonStrings = spark.read().textFile(url).filter(nonBlanks);
+    } catch (final SecurityError e) {
+      throw new InvalidUserInputError("Not allowed to import from URL: " + url, e);
+    } catch (final Exception e) {
+      throw new InvalidUserInputError("Error reading from URL: " + url, e);
+    }
+    return jsonStrings;
+  }
+
+  @Nonnull
+  private MapFunction<String, IBaseResource> jsonToResourceConverter(final boolean generateIds) {
+    final FhirContextFactory localFhirContextFactory = this.fhirContextFactory;
+    return (json) -> {
+      final IBaseResource resource = localFhirContextFactory
+          .build().newJsonParser().parseResource(json);
+      if (generateIds) {
+        // If generateIDs is set to true, the ID of each resource will be overwritten with a 
+        // new random UUID.
+        resource.setId(UUID.randomUUID().toString());
+      } else {
+        // If generateIDs is not set (which is the default), we check that the ID has been set 
+        // on each resource. Query behaviour does not function correctly without an ID 
+        // present.
+        checkUserInput(resource.getIdElement() != null,
+            "All resources must have an ID unless the generateIDs parameter is set");
+      }
+      return resource;
+    };
+  }
+
 }

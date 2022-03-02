@@ -41,6 +41,13 @@
           "type": "url"
         }
       ]
+    },
+    {
+      "name": "generateIDs",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "If this parameter is set to true, the server will generate IDs for all resources that are imported. If this parameter is omitted or set to false, IDs must be supplied within all resources and these will be preserved within the imported data."
     }
   ]
 }
