@@ -12,13 +12,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.Test;
-import org.skyscreamer.jsonassert.Customization;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
-import org.skyscreamer.jsonassert.comparator.CustomComparator;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -26,43 +25,44 @@ import org.springframework.test.context.TestPropertySource;
 
 @TestPropertySource(properties = {
     "pathling.storage.warehouseUrl=" + IntegrationTest.INDIVIDUAL_TEST_WAREHOUSE,
-    "pathling.storage.databaseName=CreateTest"
+    "pathling.storage.databaseName=UpdateTest"
 })
-public class CreateTest extends ModificationTest {
+public class UpdateTest extends ModificationTest {
 
-  public static final CustomComparator ID_BLIND_COMPARATOR = new CustomComparator(
-      JSONCompareMode.LENIENT, new Customization("id", (o1, o2) -> true));
+  private static final String PATIENT_ID = "8ee183e2-b3c0-4151-be94-b945d6aa8c6d";
 
   @Override
   protected String getTestName() {
-    return "CreateTest";
+    return "UpdateTest";
   }
 
   @Test
-  void create() throws URISyntaxException {
+  void update() throws URISyntaxException {
     // Check the total Patient count.
     final int expectedCount = Math.toIntExact(resourceReader.read(ResourceType.PATIENT).count());
     assertPatientCount(expectedCount);
 
-    // Send a create request with a new Patient resource.
-    final String request = getResourceAsString("requests/CreateTest/create.Patient.json");
-    final String url = "http://localhost:" + port + "/fhir/Patient";
+    // Send an update request with a modified Patient resource.
+    final String request = getResourceAsString("requests/UpdateTest/update.Patient.json");
+    final String url = "http://localhost:" + port + "/fhir/Patient/" + PATIENT_ID;
     final ResponseEntity<String> response = restTemplate
-        .exchange(url, HttpMethod.POST, RequestEntity.post(new URI(url))
+        .exchange(url, HttpMethod.PUT, RequestEntity.put(new URI(url))
             .contentType(FHIR_MEDIA_TYPE)
             .accept(FHIR_MEDIA_TYPE)
             .body(request), String.class);
-    assertEquals(201, response.getStatusCode().value());
+    assertEquals(200, response.getStatusCode().value());
     assertNotNull(response.getBody());
-    JSONAssert.assertEquals(request, response.getBody(), ID_BLIND_COMPARATOR);
+    JSONAssert.assertEquals(request, response.getBody(), JSONCompareMode.LENIENT);
 
     // Get the new patient resource via search and verify its contents.
-    final Patient patient = (Patient) jsonParser.parseResource(response.getBody());
-    final String patientId = patient.getIdElement().getIdPart().replace("Patient/", "");
-    getPatientResult(patientId);
+    final BundleEntryComponent bundleEntryComponent = getPatientResult(PATIENT_ID);
 
-    // Check that the new Patient count is now one more than it was previously.
-    assertPatientCount(expectedCount + 1);
+    // Verify that the Patient resource has been updated.
+    final Patient searchResultPatient = (Patient) bundleEntryComponent.getResource();
+    assertEquals("female", searchResultPatient.getGender().toCode());
+
+    // Check that the new Patient count is the same as it was before the operation.
+    assertPatientCount(expectedCount);
   }
 
 }

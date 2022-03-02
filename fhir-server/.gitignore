@@ -1,6 +1,6 @@
 # Imported test data
 src/test/resources/test-data/parquet/*
-!src/test/resources/test-data/parquet/.gitkeep
+src/test/resources/test-data/tests/*
 
 # Test results location
 src/test/resources/test-data/results/*

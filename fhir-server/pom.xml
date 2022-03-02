@@ -99,7 +99,6 @@
     <dependency>
       <groupId>io.delta</groupId>
       <artifactId>delta-core_${pathling.sparkScalaVersion}</artifactId>
-      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -238,6 +237,12 @@
           <filesets>
             <fileset>
               <directory>${project.basedir}/src/test/resources/test-data/parquet</directory>
+              <includes>
+                <include>**/*</include>
+              </includes>
+            </fileset>
+            <fileset>
+              <directory>${project.basedir}/src/test/resources/test-data/tests</directory>
               <includes>
                 <include>**/*</include>
               </includes>
