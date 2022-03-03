@@ -25,14 +25,13 @@ import org.springframework.http.ResponseEntity;
 
 public class CreateTest extends ModificationTest {
 
-  public static final CustomComparator ID_BLIND_COMPARATOR = new CustomComparator(
+  static final CustomComparator ID_BLIND_COMPARATOR = new CustomComparator(
       JSONCompareMode.LENIENT, new Customization("id", (o1, o2) -> true));
 
   @Test
   void create() throws URISyntaxException {
     // Check the total Patient count.
-    final int expectedCount = Math.toIntExact(resourceReader.read(ResourceType.PATIENT).count());
-    assertResourceCount(ResourceType.PATIENT, expectedCount);
+    assertResourceCount(ResourceType.PATIENT, 9);
 
     // Send a create request with a new Patient resource.
     final String request = getResourceAsString("requests/CreateTest/create.Patient.json");
@@ -52,7 +51,7 @@ public class CreateTest extends ModificationTest {
     getResourceResult(ResourceType.PATIENT, patientId);
 
     // Check that the new Patient count is now one more than it was previously.
-    assertResourceCount(ResourceType.PATIENT, expectedCount + 1);
+    assertResourceCount(ResourceType.PATIENT, 10);
   }
 
 }

@@ -9,12 +9,12 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
-import static au.csiro.pathling.test.helpers.TestHelpers.mockAvailableResourceTypes;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -30,6 +30,7 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
+import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import java.util.Optional;
@@ -59,6 +60,9 @@ class ResolveFunctionTest {
 
   @Autowired
   private FhirContext fhirContext;
+
+  @Autowired
+  private FhirEncoders fhirEncoders;
 
   private ResourceReader mockReader;
 
@@ -170,8 +174,6 @@ class ResolveFunctionTest {
     when(mockReader.read(ResourceType.GROUP))
         .thenReturn(groupDataset);
 
-    mockAvailableResourceTypes(mockReader, ResourceType.PATIENT, ResourceType.GROUP);
-
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
     final FhirPath result = invokeResolve(resolveInput);
 
@@ -202,6 +204,7 @@ class ResolveFunctionTest {
         .flatMap(child -> child.getChildElement("detail"));
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
+    TestHelpers.mockAllEmptyResources(mockReader, spark, fhirEncoders);
 
     final Dataset<Row> referenceDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -235,9 +238,6 @@ class ResolveFunctionTest {
         .build();
     when(mockReader.read(ResourceType.CLINICALIMPRESSION))
         .thenReturn(clinicalImpressionDataset);
-
-    mockAvailableResourceTypes(mockReader, ResourceType.OBSERVATION,
-        ResourceType.CLINICALIMPRESSION);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
     final FhirPath result = invokeResolve(resolveInput);

@@ -7,6 +7,7 @@
 package au.csiro.pathling.update;
 
 import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.security.OperationAccess;
@@ -68,9 +69,9 @@ public class UpdateProvider implements IResourceProvider {
   @Create
   @OperationAccess("create")
   public MethodOutcome create(@ResourceParam final IBaseResource resource) {
-    resource.setId(UUID.randomUUID().toString());
+    final IBaseResource preparedResource = prepareResourceForCreate(resource);
 
-    updateHelpers.appendDataset(resourceType, resource);
+    updateHelpers.appendDataset(resourceType, preparedResource);
 
     cacheInvalidator.invalidateAll();
 
@@ -84,16 +85,30 @@ public class UpdateProvider implements IResourceProvider {
   @OperationAccess("update")
   public MethodOutcome update(@IdParam final IdType id,
       @ResourceParam final IBaseResource resource) {
-    String resourceId = id.getIdPart();
-    resource.setId(resourceId);
+    final String resourceId = id.getIdPart();
+    final IBaseResource preparedResource = prepareResourceForUpdate(resource, resourceId);
 
-    updateHelpers.updateDataset(resourceType, resource);
+    updateHelpers.updateDataset(resourceType, preparedResource);
 
     cacheInvalidator.invalidateAll();
 
     final MethodOutcome outcome = new MethodOutcome();
     outcome.setId(resource.getIdElement());
-    outcome.setResource(resource);
+    outcome.setResource(preparedResource);
     return outcome;
   }
+
+  public static IBaseResource prepareResourceForCreate(@Nonnull final IBaseResource resource) {
+    resource.setId(UUID.randomUUID().toString());
+    return resource;
+  }
+
+  public static IBaseResource prepareResourceForUpdate(@Nonnull final IBaseResource resource,
+      @Nonnull final String id) {
+    checkUserInput(resource.getIdElement().getIdPart().equals(id),
+        "Resource ID missing or does not match supplied ID");
+    resource.setId(id);
+    return resource;
+  }
+
 }

@@ -18,6 +18,7 @@ import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWith
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +26,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
@@ -57,6 +59,9 @@ public class ParserTest extends AbstractParserTest {
 
   @Autowired
   private TerminologyService terminologyService;
+
+  @Autowired
+  private FhirEncoders fhirEncoders;
 
   private FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
@@ -369,6 +374,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testIfFunctionWithUntypedResourceResult() {
+    mockEmptyResource(mockReader, spark, fhirEncoders, ResourceType.RELATEDPERSON);
     assertThatResultOf(
         "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
             + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender")
@@ -493,6 +499,8 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testCombineOperatorWithTwoUntypedResourcePaths() {
+    mockEmptyResource(mockReader, spark, fhirEncoders, ResourceType.GROUP,
+        ResourceType.DEVICE, ResourceType.LOCATION);
     assertThatResultOf(
         "(reverseResolve(Condition.subject).subject.resolve() combine "
             + "reverseResolve(DiagnosticReport.subject).subject.resolve()).ofType(Patient)")

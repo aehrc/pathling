@@ -12,6 +12,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.QueryHelpers;
+import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.io.ResourceReader;
 import java.io.File;
 import java.io.IOException;
@@ -21,9 +24,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -33,7 +33,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.mockito.stubbing.OngoingStubbing;
 
 /**
  * @author John Grimes
@@ -75,20 +74,11 @@ public abstract class TestHelpers {
     }
   }
 
-  @Nonnull
-  public static OngoingStubbing<Set<ResourceType>> mockAvailableResourceTypes(
-      @Nonnull final ResourceReader mockReader, @Nonnull final ResourceType... types) {
-    return when(mockReader.getAvailableResourceTypes())
-        .thenReturn(new HashSet<>(Arrays.asList(types)));
-  }
-
   public static void mockResourceReader(@Nonnull final ResourceReader mockReader,
       @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {
     for (final ResourceType resourceType : resourceTypes) {
       final Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType);
       when(mockReader.read(resourceType)).thenReturn(dataset);
-      when(mockReader.getAvailableResourceTypes())
-          .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
     }
   }
 
@@ -99,8 +89,6 @@ public abstract class TestHelpers {
       Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType);
       dataset = dataset.repartition(numPartitions);
       when(mockReader.read(resourceType)).thenReturn(dataset);
-      when(mockReader.getAvailableResourceTypes())
-          .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
     }
   }
 
@@ -109,8 +97,26 @@ public abstract class TestHelpers {
       @Nonnull final String parquetPath) {
     final Dataset<Row> dataset = getDatasetFromParquetFile(spark, parquetPath);
     when(mockReader.read(resourceType)).thenReturn(dataset);
-    when(mockReader.getAvailableResourceTypes())
-        .thenReturn(new HashSet<>(List.of(resourceType)));
+  }
+
+  public static void mockEmptyResource(@Nonnull final ResourceReader mockReader,
+      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final ResourceType... resourceTypes) {
+    for (final ResourceType resourceType : resourceTypes) {
+      final Dataset<Row> dataset = QueryHelpers.createEmptyDataset(spark, fhirEncoders,
+          resourceType);
+      when(mockReader.read(resourceType)).thenReturn(dataset);
+    }
+  }
+
+  public static void mockAllEmptyResources(@Nonnull final ResourceReader mockReader,
+      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
+    final Set<ResourceType> resourceTypes = FhirServer.supportedResourceTypes();
+    for (final ResourceType resourceType : resourceTypes) {
+      final Dataset<Row> dataset = QueryHelpers.createEmptyDataset(spark, fhirEncoders,
+          resourceType);
+      when(mockReader.read(resourceType)).thenReturn(dataset);
+    }
   }
 
   @Nonnull

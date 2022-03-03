@@ -146,6 +146,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   void queryWithPolymorphicResolve() {
     subjectResource = ResourceType.DIAGNOSTICREPORT;
     mockResourceReader(subjectResource, ResourceType.PATIENT);
+    mockEmptyResource(ResourceType.GROUP, ResourceType.DEVICE, ResourceType.LOCATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")

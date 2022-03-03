@@ -23,9 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -83,8 +81,6 @@ public class AbstractParserTest {
       assertNotNull(parquetUrl);
       final Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
       when(mockReader.read(resourceType)).thenReturn(dataset);
-      when(mockReader.getAvailableResourceTypes())
-          .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
     }
   }
 

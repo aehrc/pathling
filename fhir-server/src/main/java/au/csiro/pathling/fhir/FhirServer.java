@@ -11,6 +11,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
+import au.csiro.pathling.encoders2.EncoderBuilder2;
 import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.BatchProvider;
@@ -27,8 +28,11 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -40,6 +44,7 @@ import org.hl7.fhir.r4.model.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import scala.collection.JavaConverters;
 
 /**
  * A HAPI RestfulServer that provides the FHIR interface to the functionality within Pathling.
@@ -165,7 +170,6 @@ public class FhirServer extends RestfulServer {
       providers.addAll(buildSearchProviders());
       providers.addAll(buildUpdateProviders());
       registerProviders(providers);
-
 
       // Register batch provider.
       registerProvider(batchProvider);
@@ -309,6 +313,24 @@ public class FhirServer extends RestfulServer {
         | InvocationTargetException e) {
       throw new RuntimeException("Problem determining FHIR type from resource class", e);
     }
+  }
+
+  /**
+   * @return The set of resource types currently supported by this server.
+   */
+  @Nonnull
+  public static Set<Enumerations.ResourceType> supportedResourceTypes() {
+    final Set<Enumerations.ResourceType> availableResourceTypes = EnumSet.allOf(
+        Enumerations.ResourceType.class);
+    final Set<Enumerations.ResourceType> unsupportedResourceTypes =
+        JavaConverters.setAsJavaSet(EncoderBuilder2.UNSUPPORTED_RESOURCES()).stream()
+            .map(Enumerations.ResourceType::fromCode)
+            .collect(Collectors.toSet());
+    availableResourceTypes.removeAll(unsupportedResourceTypes);
+    availableResourceTypes.remove(Enumerations.ResourceType.RESOURCE);
+    availableResourceTypes.remove(Enumerations.ResourceType.DOMAINRESOURCE);
+    availableResourceTypes.remove(Enumerations.ResourceType.NULL);
+    return availableResourceTypes;
   }
 
 }

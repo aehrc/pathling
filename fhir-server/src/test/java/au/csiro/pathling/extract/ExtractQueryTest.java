@@ -7,11 +7,13 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.ResourceReader;
@@ -56,7 +58,10 @@ class ExtractQueryTest {
   private TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  protected IParser jsonParser;
+  private IParser jsonParser;
+
+  @Autowired
+  private FhirEncoders fhirEncoders;
 
   private ResourceType subjectResource;
 
@@ -130,6 +135,8 @@ class ExtractQueryTest {
   void multiplePolymorphicResolves() {
     subjectResource = ResourceType.DIAGNOSTICREPORT;
     mockResourceReader(ResourceType.DIAGNOSTICREPORT, ResourceType.PATIENT);
+    mockEmptyResource(resourceReader, spark, fhirEncoders, ResourceType.GROUP, ResourceType.DEVICE,
+        ResourceType.LOCATION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")

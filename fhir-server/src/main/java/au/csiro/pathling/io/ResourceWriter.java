@@ -11,6 +11,7 @@ import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
 import static org.apache.spark.sql.functions.asc;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
@@ -21,8 +22,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -90,7 +89,7 @@ public class ResourceWriter {
   public void append(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
     final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
-    log.debug("Appending to dataset: {}", resourceType);
+    log.debug("Appending to dataset: {}", resourceType.toCode());
     resources
         .write()
         .mode(SaveMode.Append)
@@ -101,7 +100,7 @@ public class ResourceWriter {
   public void update(@Nonnull final ResourceReader resourceReader,
       @Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> resources) {
     final DeltaTable original = resourceReader.readDelta(resourceType);
-    log.debug("Writing updates to dataset: {}", resourceType);
+    log.debug("Writing updates to dataset: {}", resourceType.toCode());
     original
         .as("original")
         .merge(resources.as("updates"), "original.id = updates.id")
@@ -113,15 +112,14 @@ public class ResourceWriter {
   @Nonnull
   public String writeEmpty(@Nonnull final ResourceType resourceType) {
     final Dataset<Row> dataset = createEmptyDataset(resourceType);
-    log.debug("Writing empty dataset: {}", resourceType);
+    log.debug("Writing empty dataset: {}", resourceType.toCode());
     write(resourceType, dataset);
     return getTableUrl(warehouseUrl, databaseName, resourceType);
   }
 
   @Nonnull
   public Dataset<Row> createEmptyDataset(final @Nonnull ResourceType resourceType) {
-    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
-    return spark.emptyDataset(encoder).toDF();
+    return QueryHelpers.createEmptyDataset(spark, fhirEncoders, resourceType);
   }
 
 }

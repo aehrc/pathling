@@ -46,17 +46,25 @@ public class UpdateHelpers {
     this.resourceWriter = resourceWriter;
   }
 
-  public void updateDataset(final ResourceType resourceType, final IBaseResource resource) {
-    final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
-    final Dataset<Row> dataset = spark.createDataset(List.of(resource), encoder).toDF();
-
-    resourceWriter.update(resourceReader, resourceType, dataset);
+  public void appendDataset(final ResourceType resourceType, final IBaseResource resource) {
+    appendDataset(resourceType, List.of(resource));
   }
 
-  public void appendDataset(final ResourceType resourceType, final IBaseResource resource) {
+  public void appendDataset(final ResourceType resourceType, final List<IBaseResource> resources) {
     final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
-    final Dataset<Row> dataset = spark.createDataset(List.of(resource), encoder).toDF();
+    final Dataset<Row> dataset = spark.createDataset(resources, encoder).toDF();
 
     resourceWriter.append(resourceType, dataset);
+  }
+
+  public void updateDataset(final ResourceType resourceType, final IBaseResource resource) {
+    updateDataset(resourceType, List.of(resource));
+  }
+
+  public void updateDataset(final ResourceType resourceType, final List<IBaseResource> resources) {
+    final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
+    final Dataset<Row> dataset = spark.createDataset(resources, encoder).toDF();
+
+    resourceWriter.update(resourceReader, resourceType, dataset);
   }
 }

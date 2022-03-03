@@ -24,13 +24,12 @@ import org.springframework.http.ResponseEntity;
 
 public class UpdateTest extends ModificationTest {
 
-  private static final String PATIENT_ID = "8ee183e2-b3c0-4151-be94-b945d6aa8c6d";
+  static final String PATIENT_ID = "8ee183e2-b3c0-4151-be94-b945d6aa8c6d";
 
   @Test
   void update() throws URISyntaxException {
     // Check the total Patient count.
-    final int expectedCount = Math.toIntExact(resourceReader.read(ResourceType.PATIENT).count());
-    assertResourceCount(ResourceType.PATIENT, expectedCount);
+    assertResourceCount(ResourceType.PATIENT, 9);
 
     // Send an update request with a modified Patient resource.
     final String request = getResourceAsString("requests/UpdateTest/update.Patient.json");
@@ -54,7 +53,7 @@ public class UpdateTest extends ModificationTest {
     assertEquals("female", searchResultPatient.getGender().toCode());
 
     // Check that the new Patient count is the same as it was before the operation.
-    assertResourceCount(ResourceType.PATIENT, expectedCount);
+    assertResourceCount(ResourceType.PATIENT, 9);
   }
 
 }

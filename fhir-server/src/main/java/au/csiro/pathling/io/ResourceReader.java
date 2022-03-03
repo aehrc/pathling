@@ -11,14 +11,10 @@ import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.encoders2.EncoderBuilder2;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
 import io.delta.tables.DeltaTable;
-import java.util.EnumSet;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +24,6 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-import scala.collection.JavaConverters;
 
 /**
  * This class knows how to retrieve a Dataset representing all resources of a particular type, from
@@ -68,21 +63,6 @@ public class ResourceReader {
     this.warehouseUrl = convertS3ToS3aUrl(configuration.getStorage().getWarehouseUrl());
     this.databaseName = configuration.getStorage().getDatabaseName();
     this.resourceWriter = resourceWriter;
-  }
-
-  /**
-   * @return The set of resource types currently available for reading.
-   */
-  @Nonnull
-  public Set<ResourceType> getAvailableResourceTypes() {
-    final Set<ResourceType> availableResourceTypes = EnumSet.allOf(ResourceType.class);
-    final Set<ResourceType> unsupportedResourceTypes =
-        JavaConverters.setAsJavaSet(EncoderBuilder2.UNSUPPORTED_RESOURCES()).stream()
-            .map(ResourceType::fromCode)
-            .collect(Collectors.toSet());
-    availableResourceTypes.removeAll(unsupportedResourceTypes);
-    availableResourceTypes.remove(ResourceType.NULL);
-    return availableResourceTypes;
   }
 
   /**

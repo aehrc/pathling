@@ -7,24 +7,21 @@
 package au.csiro.pathling.test.integration.modification;
 
 import static au.csiro.pathling.test.helpers.TestHelpers.PARQUET_PATH;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.Configuration;
+import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.test.integration.IntegrationTest;
 import ca.uhn.fhir.parser.IParser;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import org.apache.commons.io.FileUtils;
-import org.apache.spark.sql.SparkSession;
+import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -41,53 +38,61 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.util.FileSystemUtils;
 
-@TestPropertySource(properties = {"pathling.storage.databaseName=default"})
+@TestPropertySource(
+    properties = {"pathling.storage.databaseName=default"})
+@Slf4j
 public abstract class ModificationTest extends IntegrationTest {
 
   @LocalServerPort
   protected int port;
 
   @Autowired
-  protected TestRestTemplate restTemplate;
-
-  @Autowired
-  SparkSession spark;
+  TestRestTemplate restTemplate;
 
   @Autowired
   IParser jsonParser;
 
   @Autowired
-  ResourceReader resourceReader;
+  Configuration configuration;
+
+  @Autowired
+  CacheInvalidator cacheInvalidator;
 
   @TempDir
   static File tempDirectory;
 
-  protected static File databaseDirectory;
+  File databaseDirectory;
 
   public static final MediaType FHIR_MEDIA_TYPE = new MediaType("application", "fhir+json");
 
   @DynamicPropertySource
   @SuppressWarnings("unused")
   static void registerProperties(@Nonnull final DynamicPropertyRegistry registry) {
-    databaseDirectory = new File(tempDirectory, "default");
     registry.add("pathling.storage.warehouseUrl",
-        () -> tempDirectory.toURI().toString().replaceFirst("/$", ""));
+        () -> "file://" + tempDirectory.toString().replaceFirst("/$", ""));
   }
 
   @BeforeEach
   void setUp() throws IOException {
-    //noinspection ResultOfMethodCallIgnored
-    databaseDirectory.mkdir();
-    copyFolder(new File(PARQUET_PATH).toPath(), databaseDirectory.toPath());
+    databaseDirectory = new File(
+        configuration.getStorage().getWarehouseUrl().replaceFirst("file://", ""), "default");
+    final Path source = new File(PARQUET_PATH).getAbsoluteFile().toPath();
+    final Path destination = databaseDirectory.toPath();
+    log.debug("Copying test data from {} to {}", source, destination);
+    assertTrue(databaseDirectory.mkdirs());
+    FileSystemUtils.copyRecursively(source, destination);
   }
 
   @AfterEach
-  void tearDown() throws IOException {
-    FileUtils.cleanDirectory(databaseDirectory);
+  void tearDown() throws Exception {
+    log.debug("Deleting directory: {}", databaseDirectory);
+    assertTrue(FileSystemUtils.deleteRecursively(databaseDirectory.toPath()));
+    cacheInvalidator.invalidateAll();
   }
 
-  protected void assertResourceCount(@Nonnull final ResourceType resourceType,
+  void assertResourceCount(@Nonnull final ResourceType resourceType,
       final int expectedCount) throws URISyntaxException {
     final String uri =
         "http://localhost:" + port + "/fhir/" + resourceType.toCode() + "?_summary=count";
@@ -99,7 +104,7 @@ public abstract class ModificationTest extends IntegrationTest {
   }
 
   @Nonnull
-  protected BundleEntryComponent getResourceResult(@Nonnull final ResourceType resourceType,
+  BundleEntryComponent getResourceResult(@Nonnull final ResourceType resourceType,
       @Nonnull final String id) throws URISyntaxException {
     final String searchUrl = "http://localhost:" + port + "/fhir/" + resourceType.toCode()
         + "?_query=fhirPath&filter=id+=+'" + id + "'";
@@ -115,21 +120,6 @@ public abstract class ModificationTest extends IntegrationTest {
     final BundleEntryComponent bundleEntryComponent = searchBundle.getEntry().get(0);
     assertEquals(id, bundleEntryComponent.getResource().getIdElement().getIdPart());
     return bundleEntryComponent;
-  }
-
-  protected static void copyFolder(@Nonnull final Path src, @Nonnull final Path dest)
-      throws IOException {
-    try (final Stream<Path> stream = Files.walk(src)) {
-      stream.forEach(source -> copy(source, dest.resolve(src.relativize(source))));
-    }
-  }
-
-  protected static void copy(@Nonnull final Path source, @Nonnull final Path dest) {
-    try {
-      Files.copy(source, dest, REPLACE_EXISTING);
-    } catch (final Exception e) {
-      throw new RuntimeException(e.getMessage(), e);
-    }
   }
 
 }

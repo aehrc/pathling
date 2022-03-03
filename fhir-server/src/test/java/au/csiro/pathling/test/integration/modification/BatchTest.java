@@ -26,17 +26,22 @@ import org.springframework.http.ResponseEntity;
 
 public class BatchTest extends ModificationTest {
 
-  private static final List<ResourceType> RESOURCE_TYPES = List.of(ResourceType.PATIENT,
+  static final List<ResourceType> RESOURCE_TYPES = List.of(ResourceType.PATIENT,
       ResourceType.PRACTITIONER, ResourceType.ORGANIZATION);
+
+  static final Map<ResourceType, Integer> expectedCounts = new HashMap<>();
+
+  static {
+    expectedCounts.put(ResourceType.PATIENT, 9);
+    expectedCounts.put(ResourceType.PRACTITIONER, 29);
+    expectedCounts.put(ResourceType.ORGANIZATION, 23);
+  }
 
   @Test
   void batch() throws URISyntaxException {
     // Check the counts for each resource type.
-    final Map<ResourceType, Integer> expectedCounts = new HashMap<>();
     for (final ResourceType resourceType : RESOURCE_TYPES) {
-      final int expectedCount = Math.toIntExact(resourceReader.read(resourceType).count());
-      assertResourceCount(resourceType, expectedCount);
-      expectedCounts.put(resourceType, expectedCount);
+      assertResourceCount(resourceType, expectedCounts.get(resourceType));
     }
 
     // Send a batch request with a new Patient, Practitioner and Organization resource.

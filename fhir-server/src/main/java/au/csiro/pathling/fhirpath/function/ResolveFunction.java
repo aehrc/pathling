@@ -17,6 +17,7 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
+import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
@@ -62,7 +63,7 @@ public class ResolveFunction implements NamedFunction {
     Set<ResourceType> referenceTypes = inputPath.getResourceTypes();
     // If the type is Resource, all resource types need to be looked at.
     if (referenceTypes.contains(ResourceType.RESOURCE)) {
-      referenceTypes = resourceReader.getAvailableResourceTypes();
+      referenceTypes = FhirServer.supportedResourceTypes();
     }
     check(referenceTypes.size() > 0);
     final boolean isPolymorphic = referenceTypes.size() > 1;
@@ -89,7 +90,7 @@ public class ResolveFunction implements NamedFunction {
     // themselves, only a type and identifier for later resolution.
     final Collection<Dataset<Row>> typeDatasets = new ArrayList<>();
     for (final ResourceType referenceType : referenceTypes) {
-      if (resourceReader.getAvailableResourceTypes().contains(referenceType)) {
+      if (FhirServer.supportedResourceTypes().contains(referenceType)) {
         // We can't include the full content of the resource, as you can't union two datasets with
         // different schema. The content of the resource is added later, when ofType is invoked.
         final Dataset<Row> typeDatasetWithColumns = resourceReader.read(referenceType);

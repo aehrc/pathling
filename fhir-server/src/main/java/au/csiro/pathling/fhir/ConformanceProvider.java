@@ -14,7 +14,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.PathlingVersion;
-import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -48,9 +47,9 @@ import org.hl7.fhir.r4.model.CapabilityStatement.TypeRestfulInteraction;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
@@ -84,9 +83,6 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private final Configuration configuration;
 
   @Nonnull
-  private final ResourceReader resourceReader;
-
-  @Nonnull
   private final Optional<OidcConfiguration> oidcConfiguration;
 
   @Nonnull
@@ -100,17 +96,13 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * statement
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
-   * @param resourceReader a {@link ResourceReader} to use in checking which resources are
-   * available
    * @param version a {@link PathlingVersion} object containing version information for the server
    */
   public ConformanceProvider(@Nonnull final Configuration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
-      @Nonnull final ResourceReader resourceReader,
       @Nonnull final PathlingVersion version) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
-    this.resourceReader = resourceReader;
     this.version = version;
     restfulServer = Optional.empty();
   }
@@ -195,14 +187,12 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Nonnull
   private List<CapabilityStatementRestResourceComponent> buildResources() {
     final List<CapabilityStatementRestResourceComponent> resources = new ArrayList<>();
-    final Set<Enumerations.ResourceType> availableToRead = resourceReader
-        .getAvailableResourceTypes();
-    final Set<Enumerations.ResourceType> availableResourceTypes =
-        availableToRead.isEmpty()
-        ? EnumSet.noneOf(Enumerations.ResourceType.class)
-        : EnumSet.copyOf(availableToRead);
+    final Set<ResourceType> supported = FhirServer.supportedResourceTypes();
+    final Set<ResourceType> supportedResourceTypes = supported.isEmpty()
+                                                     ? EnumSet.noneOf(ResourceType.class)
+                                                     : EnumSet.copyOf(supported);
 
-    for (final Enumerations.ResourceType resourceType : availableResourceTypes) {
+    for (final ResourceType resourceType : supportedResourceTypes) {
       final CapabilityStatementRestResourceComponent resource =
           new CapabilityStatementRestResourceComponent(new CodeType(resourceType.toCode()));
       resource.setProfile(FHIR_RESOURCE_BASE + resourceType.toCode());
@@ -237,7 +227,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     }
 
     // Add the read operation to the OperationDefinition resource.
-    final String opDefCode = Enumerations.ResourceType.OPERATIONDEFINITION.toCode();
+    final String opDefCode = ResourceType.OPERATIONDEFINITION.toCode();
     final CapabilityStatementRestResourceComponent opDefResource =
         new CapabilityStatementRestResourceComponent(new CodeType(opDefCode));
     opDefResource.setProfile(FHIR_RESOURCE_BASE + opDefCode);

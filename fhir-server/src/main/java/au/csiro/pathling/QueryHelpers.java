@@ -11,6 +11,7 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
@@ -35,7 +36,11 @@ import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.functions;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Common functionality for executing queries using Spark.
@@ -407,6 +412,13 @@ public abstract class QueryHelpers {
         .collect(Collectors.toList());
     selection.add(source.getValueColumn());
     return selection;
+  }
+
+  @Nonnull
+  public static Dataset<Row> createEmptyDataset(@Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType resourceType) {
+    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
+    return spark.emptyDataset(encoder).toDF();
   }
 
   /**

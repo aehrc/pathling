@@ -1052,31 +1052,6 @@
           ]
         },
         {
-          "type": "DomainResource",
-          "profile": "http://hl7.org/fhir/StructureDefinition/DomainResource",
-          "interaction": [
-            {
-              "code": "search-type"
-            },
-            {
-              "code": "create"
-            },
-            {
-              "code": "update"
-            }
-          ],
-          "operation": [
-            {
-              "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-5"
-            },
-            {
-              "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-5"
-            }
-          ]
-        },
-        {
           "type": "EffectEvidenceSynthesis",
           "profile": "http://hl7.org/fhir/StructureDefinition/EffectEvidenceSynthesis",
           "interaction": [
@@ -2954,31 +2929,6 @@
         {
           "type": "ResearchSubject",
           "profile": "http://hl7.org/fhir/StructureDefinition/ResearchSubject",
-          "interaction": [
-            {
-              "code": "search-type"
-            },
-            {
-              "code": "create"
-            },
-            {
-              "code": "update"
-            }
-          ],
-          "operation": [
-            {
-              "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-5"
-            },
-            {
-              "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-5"
-            }
-          ]
-        },
-        {
-          "type": "Resource",
-          "profile": "http://hl7.org/fhir/StructureDefinition/Resource",
           "interaction": [
             {
               "code": "search-type"

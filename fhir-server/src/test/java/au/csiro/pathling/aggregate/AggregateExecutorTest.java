@@ -116,4 +116,8 @@ public abstract class AggregateExecutorTest {
     TestHelpers.mockResourceReader(resourceReader, spark, resourceTypes);
   }
 
+  protected void mockEmptyResource(final ResourceType... resourceType) {
+    TestHelpers.mockEmptyResource(resourceReader, spark, fhirEncoders, resourceType);
+  }
+
 }
