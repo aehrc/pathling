@@ -39,7 +39,7 @@ stages:
               jdkVersionOption: '1.11'
               jdkArchitectureOption: 'x64'
               goals: 'verify'
-            timeoutInMinutes: 30
+            timeoutInMinutes: 45
           - task: Docker@2
             condition: succeeded()
             displayName: Tag image
