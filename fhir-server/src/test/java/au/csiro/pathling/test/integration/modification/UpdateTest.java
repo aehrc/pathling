@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.test.integration;
+package au.csiro.pathling.test.integration.modification;
 
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,20 +21,10 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(properties = {
-    "pathling.storage.warehouseUrl=" + IntegrationTest.INDIVIDUAL_TEST_WAREHOUSE,
-    "pathling.storage.databaseName=UpdateTest"
-})
 public class UpdateTest extends ModificationTest {
 
   private static final String PATIENT_ID = "8ee183e2-b3c0-4151-be94-b945d6aa8c6d";
-
-  @Override
-  protected String getTestName() {
-    return "UpdateTest";
-  }
 
   @Test
   void update() throws URISyntaxException {

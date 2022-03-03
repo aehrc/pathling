@@ -4,15 +4,16 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.test.integration;
+package au.csiro.pathling.test.integration.modification;
 
-import static au.csiro.pathling.test.helpers.TestHelpers.getParquetPathForResourceType;
+import static au.csiro.pathling.test.helpers.TestHelpers.PARQUET_PATH;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.test.integration.IntegrationTest;
 import ca.uhn.fhir.parser.IParser;
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +30,7 @@ import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
@@ -36,7 +38,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 
+@TestPropertySource(properties = {"pathling.storage.databaseName=default"})
 public abstract class ModificationTest extends IntegrationTest {
 
   @LocalServerPort
@@ -54,25 +60,31 @@ public abstract class ModificationTest extends IntegrationTest {
   @Autowired
   ResourceReader resourceReader;
 
+  @TempDir
+  static File tempDirectory;
+
+  protected static File databaseDirectory;
+
   public static final MediaType FHIR_MEDIA_TYPE = new MediaType("application", "fhir+json");
 
-  protected abstract String getTestName();
-
-  protected String getTestDatabase() {
-    return INDIVIDUAL_TEST_WAREHOUSE + "/" + getTestName();
-  }
-
-  protected String getParquetPath() {
-    return getTestDatabase() + "/Patient.parquet";
+  @DynamicPropertySource
+  @SuppressWarnings("unused")
+  static void registerProperties(@Nonnull final DynamicPropertyRegistry registry) {
+    databaseDirectory = new File(tempDirectory, "default");
+    registry.add("pathling.storage.warehouseUrl",
+        () -> tempDirectory.toURI().toString().replaceFirst("/$", ""));
   }
 
   @BeforeEach
   void setUp() throws IOException {
     //noinspection ResultOfMethodCallIgnored
-    new File(getTestDatabase()).mkdirs();
-    ModificationTest.copyFolder(
-        new File(getParquetPathForResourceType(ResourceType.PATIENT)).toPath(),
-        new File(getParquetPath()).toPath());
+    databaseDirectory.mkdir();
+    copyFolder(new File(PARQUET_PATH).toPath(), databaseDirectory.toPath());
+  }
+
+  @AfterEach
+  void tearDown() throws IOException {
+    FileUtils.cleanDirectory(databaseDirectory);
   }
 
   protected void assertResourceCount(@Nonnull final ResourceType resourceType,
@@ -105,19 +117,14 @@ public abstract class ModificationTest extends IntegrationTest {
     return bundleEntryComponent;
   }
 
-  @AfterEach
-  void tearDown() throws IOException {
-    FileUtils.cleanDirectory(new File(getTestDatabase()));
-  }
-
-  private static void copyFolder(@Nonnull final Path src, @Nonnull final Path dest)
+  protected static void copyFolder(@Nonnull final Path src, @Nonnull final Path dest)
       throws IOException {
     try (final Stream<Path> stream = Files.walk(src)) {
-      stream.forEach(source -> ModificationTest.copy(source, dest.resolve(src.relativize(source))));
+      stream.forEach(source -> copy(source, dest.resolve(src.relativize(source))));
     }
   }
 
-  private static void copy(@Nonnull final Path source, @Nonnull final Path dest) {
+  protected static void copy(@Nonnull final Path source, @Nonnull final Path dest) {
     try {
       Files.copy(source, dest, REPLACE_EXISTING);
     } catch (final Exception e) {

@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.test.integration;
+package au.csiro.pathling.test.integration.modification;
 
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,21 +22,11 @@ import org.skyscreamer.jsonassert.comparator.CustomComparator;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(properties = {
-    "pathling.storage.warehouseUrl=" + IntegrationTest.INDIVIDUAL_TEST_WAREHOUSE,
-    "pathling.storage.databaseName=CreateTest"
-})
 public class CreateTest extends ModificationTest {
 
   public static final CustomComparator ID_BLIND_COMPARATOR = new CustomComparator(
       JSONCompareMode.LENIENT, new Customization("id", (o1, o2) -> true));
-
-  @Override
-  protected String getTestName() {
-    return "CreateTest";
-  }
 
   @Test
   void create() throws URISyntaxException {

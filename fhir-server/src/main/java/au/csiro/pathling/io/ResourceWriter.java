@@ -77,6 +77,11 @@ public class ResourceWriter {
     // We order the resources here to reduce the amount of sorting necessary at query time.
     resources.orderBy(asc("id"))
         .write()
+        // By default, Delta throws an error if the incoming schema is different to the existing 
+        // one. For the purposes of this method, we want to be able to rewrite the schema in cases 
+        // where it has changed, e.g. a version upgrade or a configuration change.
+        // See: https://docs.delta.io/latest/delta-batch.html#replace-table-schema
+        .option("overwriteSchema", "true")
         .mode(SaveMode.Overwrite)
         .format("delta")
         .save(tableUrl);

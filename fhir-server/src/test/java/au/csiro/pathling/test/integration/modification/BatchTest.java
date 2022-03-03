@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.test.integration;
+package au.csiro.pathling.test.integration.modification;
 
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,18 +23,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(properties = {
-    "pathling.storage.warehouseUrl=" + IntegrationTest.INDIVIDUAL_TEST_WAREHOUSE,
-    "pathling.storage.databaseName=BatchTest"
-})
 public class BatchTest extends ModificationTest {
-
-  @Override
-  protected String getTestName() {
-    return "BatchTest";
-  }
 
   private static final List<ResourceType> RESOURCE_TYPES = List.of(ResourceType.PATIENT,
       ResourceType.PRACTITIONER, ResourceType.ORGANIZATION);

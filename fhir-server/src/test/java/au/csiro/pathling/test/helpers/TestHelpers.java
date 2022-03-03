@@ -42,6 +42,7 @@ public abstract class TestHelpers {
 
   public static final String LOINC_URL = "http://loinc.org";
   public static final String SNOMED_URL = "http://snomed.info/sct";
+  public static final String PARQUET_PATH = "src/test/resources/test-data/parquet";
 
   @Nonnull
   private static ClassLoader getClassLoader() {
@@ -121,7 +122,7 @@ public abstract class TestHelpers {
 
   @Nonnull
   public static String getParquetPathForResourceType(final @Nonnull ResourceType resourceType) {
-    return "src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet";
+    return PARQUET_PATH + "/" + resourceType.toCode() + ".parquet";
   }
 
   @Nonnull

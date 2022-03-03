@@ -8,14 +8,13 @@ package au.csiro.pathling.update;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
-import java.io.File;
+import au.csiro.pathling.test.integration.modification.ModificationTest;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
@@ -31,49 +30,20 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.UrlType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.util.FileSystemUtils;
 
 /**
  * @author John Grimes
  */
-@SpringBootTest
-@Tag("IntegrationTest")
 @TestPropertySource(
     properties = {
-        "pathling.import.allowableSources=file:/",
         "pathling.storage.databaseName=default",
+        "pathling.import.allowableSources=file:/",
         "pathling.encoding.maxNestingLevel=5"
     })
-class ImportExecutorTest {
-
-  @TempDir
-  static File testRootDir;
-
-  private static File warehouseDir;
-
-  @DynamicPropertySource
-  @SuppressWarnings("unused")
-  static void registerProperties(@Nonnull final DynamicPropertyRegistry registry) {
-    warehouseDir = new File(testRootDir, "default");
-    assertTrue(warehouseDir.mkdir());
-    registry.add("pathling.storage.warehouseUrl",
-        () -> testRootDir.toURI());
-  }
-
-  @BeforeEach
-  void setUp() {
-    FileSystemUtils.deleteRecursively(warehouseDir);
-    assertTrue(warehouseDir.mkdir());
-  }
+class ImportExecutorTest extends ModificationTest {
 
   @Autowired
   private SparkSession spark;
