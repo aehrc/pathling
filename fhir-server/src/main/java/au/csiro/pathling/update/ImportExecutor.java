@@ -16,7 +16,6 @@ import au.csiro.pathling.errors.SecurityError;
 import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.io.AccessRules;
 import au.csiro.pathling.io.PersistenceScheme;
-import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResourceWriter;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import java.net.URLDecoder;
@@ -60,9 +59,6 @@ public class ImportExecutor {
   private final SparkSession spark;
 
   @Nonnull
-  private final ResourceReader resourceReader;
-
-  @Nonnull
   private final ResourceWriter resourceWriter;
 
   @Nonnull
@@ -81,7 +77,6 @@ public class ImportExecutor {
 
   /**
    * @param spark A {@link SparkSession} for resolving Spark queries
-   * @param resourceReader A {@link ResourceReader} for retrieving resources
    * @param resourceWriter A {@link ResourceWriter} for saving resources
    * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
    * @param fhirContextFactory A {@link FhirContextFactory} for constructing FhirContext objects in
@@ -90,13 +85,12 @@ public class ImportExecutor {
    * @param accessRules A {@link AccessRules} for validating access to URLs
    */
   public ImportExecutor(@Nonnull final SparkSession spark,
-      @Nonnull final ResourceReader resourceReader, @Nonnull final ResourceWriter resourceWriter,
+      @Nonnull final ResourceWriter resourceWriter,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final FhirContextFactory fhirContextFactory,
       @Nonnull final Optional<CacheInvalidator> cacheInvalidator,
       @Nonnull final AccessRules accessRules) {
     this.spark = spark;
-    this.resourceReader = resourceReader;
     this.resourceWriter = resourceWriter;
     this.fhirEncoders = fhirEncoders;
     this.fhirContextFactory = fhirContextFactory;
@@ -159,10 +153,6 @@ public class ImportExecutor {
       log.info("Saving resources: {}", resourceType.toCode());
       resourceWriter.write(resourceType, resources.toDF());
     }
-
-    // Update the list of available resources within the resource reader.
-    log.info("Updating available resource types");
-    resourceReader.updateAvailableResourceTypes();
 
     // We return 200, as this operation is currently synchronous.
     log.info("Import complete");

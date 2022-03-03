@@ -15,11 +15,9 @@ import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
-import com.google.common.collect.ImmutableSet;
 import java.io.File;
 import java.net.URL;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
@@ -75,8 +73,6 @@ class ImportExecutorTest {
   void setUp() {
     FileSystemUtils.deleteRecursively(warehouseDir);
     assertTrue(warehouseDir.mkdir());
-    resourceReader.updateAvailableResourceTypes();
-    assertEquals(Collections.emptySet(), resourceReader.getAvailableResourceTypes());
   }
 
   @Autowired
@@ -115,7 +111,6 @@ class ImportExecutorTest {
   public void importJsonFile() {
     final URL jsonURL = TestHelpers.getResourceAsUrl("import/Patient.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
-    assertEquals(ImmutableSet.of(ResourceType.PATIENT), resourceReader.getAvailableResourceTypes());
 
     final Dataset<Row> result = resourceReader.read(ResourceType.PATIENT);
     final Dataset<Row> expected = new DatasetBuilder(spark)
@@ -138,7 +133,6 @@ class ImportExecutorTest {
   public void importJsonFileWithGeneratedIds() {
     final URL jsonURL = TestHelpers.getResourceAsUrl("import/Patient.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, true));
-    assertEquals(ImmutableSet.of(ResourceType.PATIENT), resourceReader.getAvailableResourceTypes());
 
     final Dataset<Row> result = resourceReader.read(ResourceType.PATIENT);
     final Dataset<Row> expected = new DatasetBuilder(spark)
@@ -161,7 +155,6 @@ class ImportExecutorTest {
   public void importJsonFileWithBlankLines() {
     final URL jsonURL = TestHelpers.getResourceAsUrl("import/Patient_with_eol.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
-    assertEquals(ImmutableSet.of(ResourceType.PATIENT), resourceReader.getAvailableResourceTypes());
     assertEquals(9, resourceReader.read(ResourceType.PATIENT).count());
   }
 
@@ -169,8 +162,6 @@ class ImportExecutorTest {
   public void importJsonFileWithRecursiveDatatype() {
     final URL jsonURL = TestHelpers.getResourceAsUrl("import/Questionnaire.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.QUESTIONNAIRE));
-    assertEquals(ImmutableSet.of(ResourceType.QUESTIONNAIRE),
-        resourceReader.getAvailableResourceTypes());
     final Dataset<Row> questionnaireDataset = resourceReader.read(ResourceType.QUESTIONNAIRE);
     assertEquals(1, questionnaireDataset.count());
 

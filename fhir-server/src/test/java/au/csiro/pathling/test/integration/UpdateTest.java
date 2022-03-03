@@ -40,7 +40,7 @@ public class UpdateTest extends ModificationTest {
   void update() throws URISyntaxException {
     // Check the total Patient count.
     final int expectedCount = Math.toIntExact(resourceReader.read(ResourceType.PATIENT).count());
-    assertPatientCount(expectedCount);
+    assertResourceCount(ResourceType.PATIENT, expectedCount);
 
     // Send an update request with a modified Patient resource.
     final String request = getResourceAsString("requests/UpdateTest/update.Patient.json");
@@ -55,14 +55,16 @@ public class UpdateTest extends ModificationTest {
     JSONAssert.assertEquals(request, response.getBody(), JSONCompareMode.LENIENT);
 
     // Get the new patient resource via search and verify its contents.
-    final BundleEntryComponent bundleEntryComponent = getPatientResult(PATIENT_ID);
+    final BundleEntryComponent bundleEntryComponent = getResourceResult(ResourceType.PATIENT,
+        PATIENT_ID
+    );
 
     // Verify that the Patient resource has been updated.
     final Patient searchResultPatient = (Patient) bundleEntryComponent.getResource();
     assertEquals("female", searchResultPatient.getGender().toCode());
 
     // Check that the new Patient count is the same as it was before the operation.
-    assertPatientCount(expectedCount);
+    assertResourceCount(ResourceType.PATIENT, expectedCount);
   }
 
 }

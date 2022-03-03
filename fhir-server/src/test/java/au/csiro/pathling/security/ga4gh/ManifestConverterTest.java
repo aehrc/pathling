@@ -19,11 +19,11 @@ import au.csiro.pathling.Configuration.Storage;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.parser.AbstractParserTest;
 import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.ResourceWriter;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -31,14 +31,36 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 class ManifestConverterTest extends AbstractParserTest {
+
+  @Autowired
+  private ResourceWriter resourceWriter;
 
   private static final String PATIENT_ID_1 = "0dc85075-4f59-4e4f-b75d-a2f601d0cf24";
   private static final String PATIENT_ID_2 = "1f276fc3-7e91-4fc9-a287-be19228e8807";
   private static final String PATIENT_ID_3 = "f34e77c9-df31-49c4-92e2-e871fa76026e";
   private static final String PATIENT_ID_4 = "2cc8ffdd-6233-4dd4-ba71-36eccb8204e2";
+  public static final List<ResourceType> AVAILABLE_RESOURCE_TYPES = List.of(
+      ResourceType.ALLERGYINTOLERANCE,
+      ResourceType.CAREPLAN,
+      ResourceType.CLAIM,
+      ResourceType.CONDITION,
+      ResourceType.DIAGNOSTICREPORT,
+      ResourceType.ENCOUNTER,
+      ResourceType.EXPLANATIONOFBENEFIT,
+      ResourceType.GOAL,
+      ResourceType.IMAGINGSTUDY,
+      ResourceType.IMMUNIZATION,
+      ResourceType.MEDICATIONREQUEST,
+      ResourceType.OBSERVATION,
+      ResourceType.ORGANIZATION,
+      ResourceType.PATIENT,
+      ResourceType.PRACTITIONER,
+      ResourceType.PROCEDURE
+  );
 
   @Test
   void convertsManifest() {
@@ -48,7 +70,7 @@ class ManifestConverterTest extends AbstractParserTest {
 
     // Find the test data warehouse URL.
     final File warehouseDirectory = new File("src/test/resources/test-data");
-    final String warehouseUrl = warehouseDirectory.toURI().toString();
+    final String warehouseUrl = warehouseDirectory.toURI().toString().replaceFirst("/$", "");
 
     // Mock the configuration.
     final Configuration configuration = mock(Configuration.class);
@@ -66,12 +88,7 @@ class ManifestConverterTest extends AbstractParserTest {
     when(ga4gh.getPatientIdSystem()).thenReturn("https://github.com/synthetichealth/synthea");
 
     // Set up a resource reader pointing to the test data.
-    mockReader = new ResourceReader(configuration, spark);
-    final List<ResourceType> availableResourceTypes = new ArrayList<>(
-        mockReader.getAvailableResourceTypes());
-    // Questionnaire and QuestionnaireResponse do not reference a subject patient.
-    availableResourceTypes.removeAll(
-        Arrays.asList(ResourceType.QUESTIONNAIRE, ResourceType.QUESTIONNAIRERESPONSE));
+    mockReader = new ResourceReader(configuration, spark, resourceWriter);
 
     final FhirContext fhirContext = FhirContext.forR4();
     final ManifestConverter manifestConverter = new ManifestConverter(configuration, fhirContext);
@@ -87,7 +104,7 @@ class ManifestConverterTest extends AbstractParserTest {
     // that resource type. There should be at least one resource of each type linked back to one of 
     // our test patients.
     for (final ResourceType resourceType : passportScope.keySet()) {
-      if (availableResourceTypes.contains(resourceType)) {
+      if (AVAILABLE_RESOURCE_TYPES.contains(resourceType)) {
         boolean found = false;
         for (final String filter : passportScope.get(resourceType)) {
           final Dataset<Row> dataset = assertThatResultOf(resourceType, filter)

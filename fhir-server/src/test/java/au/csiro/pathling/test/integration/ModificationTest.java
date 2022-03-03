@@ -73,24 +73,24 @@ public abstract class ModificationTest extends IntegrationTest {
     ModificationTest.copyFolder(
         new File(getParquetPathForResourceType(ResourceType.PATIENT)).toPath(),
         new File(getParquetPath()).toPath());
-    resourceReader.updateAvailableResourceTypes();
   }
 
-  protected void assertPatientCount(final int expectedCount) throws URISyntaxException {
-    final String uri = "http://localhost:" + port + "/fhir/Patient?_summary=count";
-    final ResponseEntity<String> countResponse1 = restTemplate
+  protected void assertResourceCount(@Nonnull final ResourceType resourceType,
+      final int expectedCount) throws URISyntaxException {
+    final String uri =
+        "http://localhost:" + port + "/fhir/" + resourceType.toCode() + "?_summary=count";
+    final ResponseEntity<String> countResponse = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri))
             .accept(FHIR_MEDIA_TYPE).build(), String.class);
-    final Bundle countBundle1 = (Bundle) jsonParser.parseResource(countResponse1.getBody());
-    assertEquals(expectedCount, countBundle1.getTotal());
+    final Bundle countBundle = (Bundle) jsonParser.parseResource(countResponse.getBody());
+    assertEquals(expectedCount, countBundle.getTotal());
   }
 
   @Nonnull
-  protected BundleEntryComponent getPatientResult(@Nonnull final String id)
-      throws URISyntaxException {
-    final String searchUrl =
-        "http://localhost:" + port + "/fhir/Patient?_query=fhirPath&filter=id+=+'"
-            + id + "'";
+  protected BundleEntryComponent getResourceResult(@Nonnull final ResourceType resourceType,
+      @Nonnull final String id) throws URISyntaxException {
+    final String searchUrl = "http://localhost:" + port + "/fhir/" + resourceType.toCode()
+        + "?_query=fhirPath&filter=id+=+'" + id + "'";
     final ResponseEntity<String> searchResponse = restTemplate
         .exchange(searchUrl, HttpMethod.GET, RequestEntity.get(new URI(searchUrl))
             .accept(FHIR_MEDIA_TYPE)

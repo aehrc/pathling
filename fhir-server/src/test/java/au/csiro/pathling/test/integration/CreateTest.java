@@ -42,7 +42,7 @@ public class CreateTest extends ModificationTest {
   void create() throws URISyntaxException {
     // Check the total Patient count.
     final int expectedCount = Math.toIntExact(resourceReader.read(ResourceType.PATIENT).count());
-    assertPatientCount(expectedCount);
+    assertResourceCount(ResourceType.PATIENT, expectedCount);
 
     // Send a create request with a new Patient resource.
     final String request = getResourceAsString("requests/CreateTest/create.Patient.json");
@@ -59,10 +59,10 @@ public class CreateTest extends ModificationTest {
     // Get the new patient resource via search and verify its contents.
     final Patient patient = (Patient) jsonParser.parseResource(response.getBody());
     final String patientId = patient.getIdElement().getIdPart().replace("Patient/", "");
-    getPatientResult(patientId);
+    getResourceResult(ResourceType.PATIENT, patientId);
 
     // Check that the new Patient count is now one more than it was previously.
-    assertPatientCount(expectedCount + 1);
+    assertResourceCount(ResourceType.PATIENT, expectedCount + 1);
   }
 
 }
