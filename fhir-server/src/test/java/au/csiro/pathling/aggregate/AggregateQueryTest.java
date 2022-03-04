@@ -30,7 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(TimingExtension.class)
 class AggregateQueryTest extends AggregateExecutorTest {
 
-  public AggregateQueryTest() {
+  AggregateQueryTest() {
     super();
   }
 

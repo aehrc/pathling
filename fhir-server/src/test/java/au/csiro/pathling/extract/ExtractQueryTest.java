@@ -46,28 +46,28 @@ import org.springframework.boot.test.context.SpringBootTest;
 class ExtractQueryTest {
 
   @Autowired
-  private Configuration configuration;
+  Configuration configuration;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private TerminologyServiceFactory terminologyServiceFactory;
+  TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  private IParser jsonParser;
+  IParser jsonParser;
 
   @Autowired
-  private FhirEncoders fhirEncoders;
+  FhirEncoders fhirEncoders;
 
-  private ResourceType subjectResource;
+  ResourceType subjectResource;
 
-  private ResourceReader resourceReader;
+  ResourceReader resourceReader;
 
-  private ExtractExecutor executor;
+  ExtractExecutor executor;
 
   @BeforeEach
   void setUp() {
@@ -321,7 +321,7 @@ class ExtractQueryTest {
     }
   }
 
-  private void mockResourceReader(final ResourceType... resourceTypes) {
+  void mockResourceReader(final ResourceType... resourceTypes) {
     TestHelpers.mockResourceReader(resourceReader, spark, resourceTypes);
   }
 

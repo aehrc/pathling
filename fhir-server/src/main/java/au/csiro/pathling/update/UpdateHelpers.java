@@ -15,11 +15,10 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * Common functionality for updating resource datasets with PUT operations
+ * Common functionality for updating resource datasets.
  *
  * @author Sean Fong
  */
-
 @Component
 @Profile("server")
 public class UpdateHelpers {
@@ -46,22 +45,38 @@ public class UpdateHelpers {
     this.resourceWriter = resourceWriter;
   }
 
-  public void appendDataset(final ResourceType resourceType, final IBaseResource resource) {
+  /**
+   * Append a new resource of a specified type.
+   */
+  public void appendDataset(@Nonnull final ResourceType resourceType,
+      @Nonnull final IBaseResource resource) {
     appendDataset(resourceType, List.of(resource));
   }
 
-  public void appendDataset(final ResourceType resourceType, final List<IBaseResource> resources) {
+  /**
+   * Append a set of new resources of a specified type.
+   */
+  public void appendDataset(@Nonnull final ResourceType resourceType,
+      @Nonnull final List<IBaseResource> resources) {
     final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
     final Dataset<Row> dataset = spark.createDataset(resources, encoder).toDF();
 
     resourceWriter.append(resourceType, dataset);
   }
 
-  public void updateDataset(final ResourceType resourceType, final IBaseResource resource) {
+  /**
+   * Create or update a resource of a specified type.
+   */
+  public void updateDataset(@Nonnull final ResourceType resourceType,
+      @Nonnull final IBaseResource resource) {
     updateDataset(resourceType, List.of(resource));
   }
 
-  public void updateDataset(final ResourceType resourceType, final List<IBaseResource> resources) {
+  /**
+   * Create or update a set of resources of a specified type.
+   */
+  public void updateDataset(@Nonnull final ResourceType resourceType,
+      @Nonnull final List<IBaseResource> resources) {
     final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
     final Dataset<Row> dataset = spark.createDataset(resources, encoder).toDF();
 

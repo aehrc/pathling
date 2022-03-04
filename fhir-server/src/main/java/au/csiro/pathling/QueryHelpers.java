@@ -414,6 +414,9 @@ public abstract class QueryHelpers {
     return selection;
   }
 
+  /**
+   * Creates an empty dataset with the schema of the supplied resource type.
+   */
   @Nonnull
   public static Dataset<Row> createEmptyDataset(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType resourceType) {

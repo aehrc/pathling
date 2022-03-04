@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -50,8 +51,8 @@ public class BatchTest extends ModificationTest {
     final String url = "http://localhost:" + port + "/fhir";
     final ResponseEntity<String> response = restTemplate
         .exchange(url, HttpMethod.POST, RequestEntity.put(new URI(url))
-            .contentType(FHIR_MEDIA_TYPE)
-            .accept(FHIR_MEDIA_TYPE)
+            .contentType(TestHelpers.FHIR_MEDIA_TYPE)
+            .accept(TestHelpers.FHIR_MEDIA_TYPE)
             .body(request), String.class);
     assertEquals(200, response.getStatusCode().value());
     assertNotNull(response.getBody());

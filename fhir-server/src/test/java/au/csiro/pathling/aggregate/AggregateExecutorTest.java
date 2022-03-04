@@ -42,33 +42,33 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public abstract class AggregateExecutorTest {
+abstract class AggregateExecutorTest {
 
   @Autowired
-  protected SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  protected TerminologyService terminologyService;
+  TerminologyService terminologyService;
 
   @Autowired
-  protected TerminologyServiceFactory terminologyServiceFactory;
+  TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  protected Configuration configuration;
+  Configuration configuration;
 
   @Autowired
-  protected FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Autowired
-  protected IParser jsonParser;
+  IParser jsonParser;
 
   @Autowired
-  protected FhirEncoders fhirEncoders;
+  FhirEncoders fhirEncoders;
 
-  protected AggregateExecutor executor;
-  protected ResourceType subjectResource;
-  protected ResourceReader resourceReader;
-  protected AggregateResponse response = null;
+  AggregateExecutor executor;
+  ResourceType subjectResource;
+  ResourceReader resourceReader;
+  AggregateResponse response = null;
 
   @BeforeEach
   void setUp() {
@@ -83,7 +83,7 @@ public abstract class AggregateExecutorTest {
    * successfully executed using the FHIRPath search.
    */
   @AfterEach
-  public void runFirstGroupingThroughSearch() {
+  void runFirstGroupingThroughSearch() {
     if (response != null) {
       final Optional<Grouping> firstGroupingOptional = response.getGroupings()
           .stream()
@@ -105,18 +105,18 @@ public abstract class AggregateExecutorTest {
     }
   }
 
-  protected void assertResponse(@Nonnull final String expectedPath,
+  void assertResponse(@Nonnull final String expectedPath,
       @Nonnull final AggregateResponse response) {
     final Parameters parameters = response.toParameters();
     final String actualJson = jsonParser.encodeResourceToString(parameters);
     assertJson("responses/" + expectedPath, actualJson);
   }
 
-  protected void mockResourceReader(final ResourceType... resourceTypes) {
+  void mockResourceReader(final ResourceType... resourceTypes) {
     TestHelpers.mockResourceReader(resourceReader, spark, resourceTypes);
   }
 
-  protected void mockEmptyResource(final ResourceType... resourceType) {
+  void mockEmptyResource(final ResourceType... resourceType) {
     TestHelpers.mockEmptyResource(resourceReader, spark, fhirEncoders, resourceType);
   }
 

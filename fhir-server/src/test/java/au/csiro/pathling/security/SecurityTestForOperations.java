@@ -32,7 +32,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles({"core", "server", "unit-test"})
-public abstract class SecurityTestForOperations extends SecurityTest {
+abstract class SecurityTestForOperations extends SecurityTest {
 
   @Autowired
   ImportProvider importProvider;

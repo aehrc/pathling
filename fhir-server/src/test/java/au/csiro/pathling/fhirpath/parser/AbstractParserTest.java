@@ -44,16 +44,16 @@ public class AbstractParserTest {
   protected SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Autowired
-  private TerminologyServiceFactory terminologyServiceFactory;
+  TerminologyServiceFactory terminologyServiceFactory;
 
-  protected Parser parser;
+  Parser parser;
   protected ResourceReader mockReader;
 
   @BeforeEach
-  public void setUp() throws IOException {
+  void setUp() throws IOException {
     SharedMocks.resetAll();
     mockReader = mock(ResourceReader.class);
     mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
@@ -72,7 +72,7 @@ public class AbstractParserTest {
     parser = new Parser(parserContext);
   }
 
-  private void mockResourceReader(final ResourceType... resourceTypes)
+  void mockResourceReader(final ResourceType... resourceTypes)
       throws MalformedURLException {
     for (final ResourceType resourceType : resourceTypes) {
       final File parquetFile =

@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.update;
+package au.csiro.pathling.test.integration.modification;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,7 +14,7 @@ import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
-import au.csiro.pathling.test.integration.modification.ModificationTest;
+import au.csiro.pathling.update.ImportExecutor;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
@@ -43,7 +43,7 @@ import org.springframework.test.context.TestPropertySource;
         "pathling.import.allowableSources=file:/",
         "pathling.encoding.maxNestingLevel=5"
     })
-class ImportExecutorTest extends ModificationTest {
+class ImportTest extends ModificationTest {
 
   @Autowired
   private SparkSession spark;

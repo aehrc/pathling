@@ -26,8 +26,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * This class knows how to retrieve a Dataset representing all resources of a particular type, from
- * a specified database.
+ * Used for reading resource data from persistent storage.
  *
  * @author John Grimes
  */

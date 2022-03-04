@@ -23,7 +23,7 @@ import org.springframework.test.context.TestPropertySource;
 @MockBean(OidcConfiguration.class)
 @MockBean(JwtDecoder.class)
 @MockBean(JwtAuthenticationConverter.class)
-public class SecurityEnabledOperationsTest extends SecurityTestForOperations {
+class SecurityEnabledOperationsTest extends SecurityTestForOperations {
 
   @Test
   @WithMockUser(username = "admin")

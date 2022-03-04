@@ -92,6 +92,7 @@ public class TestDataImporter implements CommandLineRunner {
       log.info("Writing: " + outputParquet);
       resourcesDataset.orderBy(asc("id"))
           .write()
+          .option("overwriteSchema", "true")
           .mode(SaveMode.Overwrite)
           .format("delta")
           .save(outputParquet);

@@ -58,12 +58,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class ParserTest extends AbstractParserTest {
 
   @Autowired
-  private TerminologyService terminologyService;
+  TerminologyService terminologyService;
 
   @Autowired
-  private FhirEncoders fhirEncoders;
+  FhirEncoders fhirEncoders;
 
-  private FhirPathAssertion assertThatResultOf(final String expression) {
+  FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
   }
 

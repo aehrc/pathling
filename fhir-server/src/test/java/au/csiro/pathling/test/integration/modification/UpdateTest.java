@@ -10,6 +10,7 @@ import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
@@ -22,7 +23,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
-public class UpdateTest extends ModificationTest {
+class UpdateTest extends ModificationTest {
 
   static final String PATIENT_ID = "8ee183e2-b3c0-4151-be94-b945d6aa8c6d";
 
@@ -36,8 +37,8 @@ public class UpdateTest extends ModificationTest {
     final String url = "http://localhost:" + port + "/fhir/Patient/" + PATIENT_ID;
     final ResponseEntity<String> response = restTemplate
         .exchange(url, HttpMethod.PUT, RequestEntity.put(new URI(url))
-            .contentType(FHIR_MEDIA_TYPE)
-            .accept(FHIR_MEDIA_TYPE)
+            .contentType(TestHelpers.FHIR_MEDIA_TYPE)
+            .accept(TestHelpers.FHIR_MEDIA_TYPE)
             .body(request), String.class);
     assertEquals(200, response.getStatusCode().value());
     assertNotNull(response.getBody());

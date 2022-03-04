@@ -56,15 +56,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 class ResolveFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Autowired
-  private FhirEncoders fhirEncoders;
+  FhirEncoders fhirEncoders;
 
-  private ResourceReader mockReader;
+  ResourceReader mockReader;
 
   @BeforeEach
   void setUp() {
@@ -72,7 +72,7 @@ class ResolveFunctionTest {
   }
 
   @Test
-  public void simpleResolve() {
+  void simpleResolve() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "episodeOfCare");
     assertTrue(optionalDefinition.isPresent());
@@ -131,7 +131,7 @@ class ResolveFunctionTest {
   }
 
   @Test
-  public void polymorphicResolve() {
+  void polymorphicResolve() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "subject");
     assertTrue(optionalDefinition.isPresent());
@@ -198,7 +198,7 @@ class ResolveFunctionTest {
   }
 
   @Test
-  public void polymorphicResolveAnyType() {
+  void polymorphicResolveAnyType() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Condition", "evidence")
         .flatMap(child -> child.getChildElement("detail"));
@@ -263,7 +263,7 @@ class ResolveFunctionTest {
 
 
   @Test
-  public void throwExceptionWhenInputNotReference() {
+  void throwExceptionWhenInputNotReference() {
     final Dataset<Row> patientDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
@@ -283,7 +283,7 @@ class ResolveFunctionTest {
   }
 
   @Test
-  public void throwExceptionWhenArgumentSupplied() {
+  void throwExceptionWhenArgumentSupplied() {
     final ElementPath referencePath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
@@ -300,7 +300,7 @@ class ResolveFunctionTest {
   }
 
   @Nonnull
-  private NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
+  NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
         .resourceReader(mockReader)
@@ -309,7 +309,7 @@ class ResolveFunctionTest {
   }
 
   @Nonnull
-  private FhirPath invokeResolve(@Nonnull final NamedFunctionInput resolveInput) {
+  FhirPath invokeResolve(@Nonnull final NamedFunctionInput resolveInput) {
     final NamedFunction resolve = NamedFunction.getInstance("resolve");
     return resolve.invoke(resolveInput);
   }

@@ -241,12 +241,6 @@
                 <include>**/*</include>
               </includes>
             </fileset>
-            <fileset>
-              <directory>${project.basedir}/src/test/resources/test-data/tests</directory>
-              <includes>
-                <include>**/*</include>
-              </includes>
-            </fileset>
           </filesets>
         </configuration>
       </plugin>

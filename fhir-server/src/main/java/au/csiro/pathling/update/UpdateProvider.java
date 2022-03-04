@@ -28,10 +28,10 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 /**
- * HAPI resource provider that provides update-related operations, such as create, update and
- * transaction.
+ * HAPI resource provider that provides update-related operations, such as create and update.
  *
  * @author John Grimes
+ * @author Sean Fong
  */
 @Component
 @Scope("prototype")
@@ -50,9 +50,6 @@ public class UpdateProvider implements IResourceProvider {
   @Nonnull
   private final CacheInvalidator cacheInvalidator;
 
-  /**
-   * @param resourceClass the resource class that this provider will receive requests for
-   */
   public UpdateProvider(@Nonnull final UpdateHelpers updateHelpers,
       @Nonnull final CacheInvalidator cacheInvalidator,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
@@ -67,15 +64,20 @@ public class UpdateProvider implements IResourceProvider {
     return resourceClass;
   }
 
+  /**
+   * Implements the create operation.
+   *
+   * @param resource the new resource to be created
+   * @return a {@link MethodOutcome} describing the result of the operation
+   * @see <a href="https://hl7.org/fhir/R4/http.html#create">create</a>
+   */
   @Create
   @OperationAccess("create")
   public MethodOutcome create(@Nullable @ResourceParam final IBaseResource resource) {
     checkUserInput(resource != null, "Resource must be supplied");
 
     final IBaseResource preparedResource = prepareResourceForCreate(resource);
-
     updateHelpers.appendDataset(resourceType, preparedResource);
-
     cacheInvalidator.invalidateAll();
 
     final MethodOutcome outcome = new MethodOutcome();
@@ -84,6 +86,14 @@ public class UpdateProvider implements IResourceProvider {
     return outcome;
   }
 
+  /**
+   * Implements the update operation.
+   *
+   * @param id the id of the resource to be updated
+   * @param resource the resource to be updated
+   * @return a {@link MethodOutcome} describing the result of the operation
+   * @see <a href="https://hl7.org/fhir/R4/http.html#update">update</a>
+   */
   @Update
   @OperationAccess("update")
   public MethodOutcome update(@Nullable @IdParam final IdType id,
@@ -93,9 +103,7 @@ public class UpdateProvider implements IResourceProvider {
 
     final String resourceId = id.getIdPart();
     final IBaseResource preparedResource = prepareResourceForUpdate(resource, resourceId);
-
     updateHelpers.updateDataset(resourceType, preparedResource);
-
     cacheInvalidator.invalidateAll();
 
     final MethodOutcome outcome = new MethodOutcome();
@@ -104,16 +112,30 @@ public class UpdateProvider implements IResourceProvider {
     return outcome;
   }
 
+  /**
+   * Adds a new ID to the resource.
+   *
+   * @param resource the resource to be updated
+   * @return the updated resource
+   */
+  @Nonnull
   public static IBaseResource prepareResourceForCreate(@Nonnull final IBaseResource resource) {
     resource.setId(UUID.randomUUID().toString());
     return resource;
   }
 
+  /**
+   * Checks that the resource has an ID that matches the supplied ID.
+   *
+   * @param resource the resource to be checked
+   * @param id the ID supplied by the client
+   * @return the resource
+   */
+  @Nonnull
   public static IBaseResource prepareResourceForUpdate(@Nonnull final IBaseResource resource,
       @Nonnull final String id) {
     checkUserInput(resource.getIdElement().getIdPart().equals(id),
         "Resource ID missing or does not match supplied ID");
-    resource.setId(id);
     return resource;
   }
 

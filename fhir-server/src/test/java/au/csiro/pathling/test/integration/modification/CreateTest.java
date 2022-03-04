@@ -10,6 +10,7 @@ import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -23,7 +24,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
-public class CreateTest extends ModificationTest {
+class CreateTest extends ModificationTest {
 
   static final CustomComparator ID_BLIND_COMPARATOR = new CustomComparator(
       JSONCompareMode.LENIENT, new Customization("id", (o1, o2) -> true));
@@ -38,8 +39,8 @@ public class CreateTest extends ModificationTest {
     final String url = "http://localhost:" + port + "/fhir/Patient";
     final ResponseEntity<String> response = restTemplate
         .exchange(url, HttpMethod.POST, RequestEntity.post(new URI(url))
-            .contentType(FHIR_MEDIA_TYPE)
-            .accept(FHIR_MEDIA_TYPE)
+            .contentType(TestHelpers.FHIR_MEDIA_TYPE)
+            .accept(TestHelpers.FHIR_MEDIA_TYPE)
             .body(request), String.class);
     assertEquals(201, response.getStatusCode().value());
     assertNotNull(response.getBody());

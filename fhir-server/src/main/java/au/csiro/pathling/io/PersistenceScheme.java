@@ -16,6 +16,12 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public abstract class PersistenceScheme {
 
+  /**
+   * @param warehouseUrl the URL of the warehouse location
+   * @param databaseName the name of the database within the warehouse
+   * @param resourceType the resource type to be read or written to
+   * @return the URL of the resource within the warehouse
+   */
   @Nonnull
   public static String getTableUrl(@Nonnull final String warehouseUrl,
       @Nonnull final String databaseName, @Nonnull final ResourceType resourceType) {

@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * This class knows how to persist a Dataset of resources within a specified database.
+ * Used for writing and updating resource data within persistent storage.
  *
  * @author John Grimes
  */
@@ -74,6 +74,13 @@ public class ResourceWriter {
     write(resourceType, resources, SaveMode.Overwrite);
   }
 
+  /**
+   * Appends the resources within the supplied dataset to the existing resources for the specified
+   * resource type.
+   *
+   * @param resourceType the type of resource to write
+   * @param resources the {@link Dataset} containing the new resource data
+   */
   @ResourceAccess(AccessType.WRITE)
   public void append(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
@@ -86,6 +93,13 @@ public class ResourceWriter {
         .save(tableUrl);
   }
 
+  /**
+   * Creates or updates resources of the specified type by matching on ID.
+   *
+   * @param resourceType the type of resource to write
+   * @param resourceReader a {@link ResourceReader} object for reading the existing resource data
+   * @param resources the {@link Dataset} containing the new or updated resource data
+   */
   @ResourceAccess(AccessType.WRITE)
   public void update(@Nonnull final ResourceType resourceType,
       @Nonnull final ResourceReader resourceReader, @Nonnull final Dataset<Row> resources) {
@@ -99,14 +113,6 @@ public class ResourceWriter {
         .execute();
   }
 
-  /**
-   * Overwrites the resources for a particular type with the contents of the supplied {@link
-   * Dataset}.
-   *
-   * @param resourceType the type of the resource to write
-   * @param resources the {@link Dataset} containing the resource data
-   * @param saveMode the {@link SaveMode} to use when writing the data
-   */
   void write(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources, @Nonnull final SaveMode saveMode) {
     final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);

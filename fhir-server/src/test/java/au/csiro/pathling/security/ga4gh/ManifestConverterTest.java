@@ -37,13 +37,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 class ManifestConverterTest extends AbstractParserTest {
 
   @Autowired
-  private ResourceWriter resourceWriter;
+  ResourceWriter resourceWriter;
 
-  private static final String PATIENT_ID_1 = "0dc85075-4f59-4e4f-b75d-a2f601d0cf24";
-  private static final String PATIENT_ID_2 = "1f276fc3-7e91-4fc9-a287-be19228e8807";
-  private static final String PATIENT_ID_3 = "f34e77c9-df31-49c4-92e2-e871fa76026e";
-  private static final String PATIENT_ID_4 = "2cc8ffdd-6233-4dd4-ba71-36eccb8204e2";
-  public static final List<ResourceType> AVAILABLE_RESOURCE_TYPES = List.of(
+  static final String PATIENT_ID_1 = "0dc85075-4f59-4e4f-b75d-a2f601d0cf24";
+  static final String PATIENT_ID_2 = "1f276fc3-7e91-4fc9-a287-be19228e8807";
+  static final String PATIENT_ID_3 = "f34e77c9-df31-49c4-92e2-e871fa76026e";
+  static final String PATIENT_ID_4 = "2cc8ffdd-6233-4dd4-ba71-36eccb8204e2";
+  static final List<ResourceType> AVAILABLE_RESOURCE_TYPES = List.of(
       ResourceType.ALLERGYINTOLERANCE,
       ResourceType.CAREPLAN,
       ResourceType.CLAIM,

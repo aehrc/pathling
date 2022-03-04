@@ -33,10 +33,11 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * HAPI plain provider that provides update operations with a system-wide batch submission as a
- * bundle.
+ * HAPI plain provider that implements the batch operation for create and update operations.
  *
  * @author Sean Fong
+ * @author John Grimes
+ * @see <a href="https://hl7.org/fhir/R4/http.html#transaction">batch/transaction</a>
  */
 @Component
 @Profile("server")

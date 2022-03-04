@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.caching.CacheInvalidator;
+import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.test.integration.IntegrationTest;
 import ca.uhn.fhir.parser.IParser;
 import java.io.File;
@@ -32,7 +33,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -43,7 +43,7 @@ import org.springframework.util.FileSystemUtils;
 @TestPropertySource(
     properties = {"pathling.storage.databaseName=default"})
 @Slf4j
-public abstract class ModificationTest extends IntegrationTest {
+abstract class ModificationTest extends IntegrationTest {
 
   @LocalServerPort
   protected int port;
@@ -64,8 +64,6 @@ public abstract class ModificationTest extends IntegrationTest {
   static File tempDirectory;
 
   File databaseDirectory;
-
-  public static final MediaType FHIR_MEDIA_TYPE = new MediaType("application", "fhir+json");
 
   @DynamicPropertySource
   @SuppressWarnings("unused")
@@ -98,7 +96,7 @@ public abstract class ModificationTest extends IntegrationTest {
         "http://localhost:" + port + "/fhir/" + resourceType.toCode() + "?_summary=count";
     final ResponseEntity<String> countResponse = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri))
-            .accept(FHIR_MEDIA_TYPE).build(), String.class);
+            .accept(TestHelpers.FHIR_MEDIA_TYPE).build(), String.class);
     final Bundle countBundle = (Bundle) jsonParser.parseResource(countResponse.getBody());
     assertEquals(expectedCount, countBundle.getTotal());
   }
@@ -110,7 +108,7 @@ public abstract class ModificationTest extends IntegrationTest {
         + "?_query=fhirPath&filter=id+=+'" + id + "'";
     final ResponseEntity<String> searchResponse = restTemplate
         .exchange(searchUrl, HttpMethod.GET, RequestEntity.get(new URI(searchUrl))
-            .accept(FHIR_MEDIA_TYPE)
+            .accept(TestHelpers.FHIR_MEDIA_TYPE)
             .build(), String.class);
     assertTrue(searchResponse.getStatusCode().is2xxSuccessful());
     assertNotNull(searchResponse.getBody());

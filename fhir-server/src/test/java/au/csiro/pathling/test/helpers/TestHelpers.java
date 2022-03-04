@@ -33,6 +33,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.http.MediaType;
 
 /**
  * @author John Grimes
@@ -42,6 +43,7 @@ public abstract class TestHelpers {
   public static final String LOINC_URL = "http://loinc.org";
   public static final String SNOMED_URL = "http://snomed.info/sct";
   public static final String PARQUET_PATH = "src/test/resources/test-data/parquet";
+  public static final MediaType FHIR_MEDIA_TYPE = new MediaType("application", "fhir+json");
 
   @Nonnull
   private static ClassLoader getClassLoader() {

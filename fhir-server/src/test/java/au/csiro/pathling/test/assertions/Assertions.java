@@ -71,7 +71,6 @@ public abstract class Assertions {
     }
   }
 
-
   public static void assertJson(@Nonnull final String expectedPath,
       @Nonnull final String actualJson, @Nonnull final JSONCompareMode compareMode) {
     final String expectedJson;
