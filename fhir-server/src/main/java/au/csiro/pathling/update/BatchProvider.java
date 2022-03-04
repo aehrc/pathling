@@ -15,7 +15,9 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
@@ -43,6 +45,11 @@ public class BatchProvider {
   @Nonnull
   private final CacheInvalidator cacheInvalidator;
 
+  private static final Pattern CREATE_URL = Pattern.compile("^[A-Za-z]+$");
+  @SuppressWarnings("RegExpRedundantEscape")
+  private static final Pattern UPDATE_URL = Pattern.compile(
+      "^[A-Za-z]+/[A-Za-z0-9\\-\\.&&[^\\$]][A-Za-z0-9\\-\\.]{0,63}$");
+
   public BatchProvider(@Nonnull final UpdateHelpers updateHelpers,
       @Nonnull final CacheInvalidator cacheInvalidator) {
     this.updateHelpers = updateHelpers;
@@ -51,7 +58,9 @@ public class BatchProvider {
 
   @Transaction
   @OperationAccess("batch")
-  public Bundle batch(@TransactionParam final Bundle bundle) {
+  public Bundle batch(@Nullable @TransactionParam final Bundle bundle) {
+    checkUserInput(bundle != null, "Bundle must be provided");
+
     final Map<ResourceType, List<IBaseResource>> resourcesForCreation = new EnumMap<>(
         ResourceType.class);
     final Map<ResourceType, List<IBaseResource>> resourcesForUpdate = new EnumMap<>(
@@ -67,29 +76,34 @@ public class BatchProvider {
       final BundleEntryRequestComponent request = entry.getRequest();
       checkUserInput(resource != null,
           "Each batch entry must have a resource element");
-      checkUserInput(request != null,
+      checkUserInput(request != null && !request.isEmpty(),
           "Each batch entry must have a request element");
-      final boolean postRequest = request.getMethod().toString().equals("POST");
-      final boolean putRequest = request.getMethod().toString().equals("PUT");
+      final boolean postRequest = checkRequestType(request, "POST", CREATE_URL);
+      final boolean putRequest = checkRequestType(request, "PUT", UPDATE_URL);
       if (postRequest) {
         final String urlErrorMessage =
             "The URL for a create request must be equal to the code of a "
-                + "supported resource type.";
-        final ResourceType resourceType = validateResourceType(request.getUrl(), urlErrorMessage);
+                + "supported resource type";
+        final ResourceType resourceType = validateResourceType(entry, request.getUrl(),
+            urlErrorMessage);
         final IBaseResource preparedResource = prepareResourceForCreate(resource);
         addToResourceMap(resourcesForCreation, resourceType, preparedResource);
         addResponse(response, preparedResource);
       } else if (putRequest) {
         final String urlErrorMessage = "The URL for an update request must refer to the code of a "
-            + "supported resource type, and must look like this: [resource type]/[id].";
+            + "supported resource type, and must look like this: [resource type]/[id]";
         final List<String> urlComponents = List.of(request.getUrl().split("/"));
         checkUserInput(urlComponents.size() == 2, urlErrorMessage);
         final String resourceTypeCode = urlComponents.get(0);
         final String urlId = urlComponents.get(1);
-        final ResourceType resourceType = validateResourceType(resourceTypeCode, urlErrorMessage);
+        final ResourceType resourceType = validateResourceType(entry, resourceTypeCode,
+            urlErrorMessage);
         final IBaseResource preparedResource = prepareResourceForUpdate(resource, urlId);
         addToResourceMap(resourcesForUpdate, resourceType, preparedResource);
         addResponse(response, preparedResource);
+      } else {
+        throw new InvalidUserInputError(
+            "Only create and update operations are supported via batch");
       }
     }
 
@@ -107,9 +121,15 @@ public class BatchProvider {
     return response;
   }
 
+  private boolean checkRequestType(@Nonnull final BundleEntryRequestComponent request,
+      @Nonnull final String method, @Nonnull final Pattern urlPattern) {
+    return request.getMethod().toString().equals(method) &&
+        urlPattern.matcher(request.getUrl()).matches();
+  }
+
   @Nonnull
-  private ResourceType validateResourceType(final String resourceTypeCode,
-      final String urlErrorMessage) {
+  private ResourceType validateResourceType(final BundleEntryComponent entry,
+      final String resourceTypeCode, final String urlErrorMessage) {
     final ResourceType resourceType;
     try {
       resourceType = ResourceType.fromCode(resourceTypeCode);
@@ -118,6 +138,9 @@ public class BatchProvider {
     }
     checkUserInput(FhirServer.supportedResourceTypes().contains(resourceType),
         urlErrorMessage);
+    final String resourceEmbeddedType = entry.getResource().fhirType();
+    checkUserInput(resourceTypeCode.equals(resourceEmbeddedType),
+        "Resource in URL does not match resource type");
     return resourceType;
   }
 
