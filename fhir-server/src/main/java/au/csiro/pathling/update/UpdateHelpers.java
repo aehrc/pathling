@@ -65,6 +65,6 @@ public class UpdateHelpers {
     final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
     final Dataset<Row> dataset = spark.createDataset(resources, encoder).toDF();
 
-    resourceWriter.update(resourceReader, resourceType, dataset);
+    resourceWriter.update(resourceType, resourceReader, dataset);
   }
 }

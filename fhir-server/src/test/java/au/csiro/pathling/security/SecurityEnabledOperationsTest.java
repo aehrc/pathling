@@ -62,4 +62,28 @@ public class SecurityEnabledOperationsTest extends SecurityTestForOperations {
     assertSearchSuccess();
   }
 
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:create"})
+  public void testPassIfCreateWithAuthority() {
+    assertCreateSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:update"})
+  public void testPassIfUpdateWithAuthority() {
+    assertUpdateSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin")
+  public void testForbiddenIfCreateWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertCreateSuccess, "pathling:create");
+  }
+
+  @Test
+  @WithMockUser(username = "admin")
+  public void testForbiddenIfUpdateWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertUpdateSuccess, "pathling:update");
+  }
+
 }

@@ -19,6 +19,7 @@ import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IdType;
@@ -68,7 +69,9 @@ public class UpdateProvider implements IResourceProvider {
 
   @Create
   @OperationAccess("create")
-  public MethodOutcome create(@ResourceParam final IBaseResource resource) {
+  public MethodOutcome create(@Nullable @ResourceParam final IBaseResource resource) {
+    checkUserInput(resource != null, "Resource must be supplied");
+
     final IBaseResource preparedResource = prepareResourceForCreate(resource);
 
     updateHelpers.appendDataset(resourceType, preparedResource);
@@ -83,8 +86,11 @@ public class UpdateProvider implements IResourceProvider {
 
   @Update
   @OperationAccess("update")
-  public MethodOutcome update(@IdParam final IdType id,
-      @ResourceParam final IBaseResource resource) {
+  public MethodOutcome update(@Nullable @IdParam final IdType id,
+      @Nullable @ResourceParam final IBaseResource resource) {
+    checkUserInput(id != null && !id.isEmpty(), "ID must be supplied");
+    checkUserInput(resource != null, "Resource must be supplied");
+
     final String resourceId = id.getIdPart();
     final IBaseResource preparedResource = prepareResourceForUpdate(resource, resourceId);
 

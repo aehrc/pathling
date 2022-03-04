@@ -16,6 +16,7 @@ import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.search.SearchProvider;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.update.ImportProvider;
+import au.csiro.pathling.update.UpdateProvider;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.ResourceType;
@@ -73,6 +74,26 @@ public abstract class SecurityTestForOperations extends SecurityTest {
     final SearchProvider searchProvider = resourceProviderFactory
         .createSearchResourceProvider(ResourceType.Patient);
     searchProvider.search(null);
+  }
+
+  public void assertCreateSuccess() {
+    final UpdateProvider updateProvider = resourceProviderFactory.createUpdateResourceProvider(
+        ResourceType.Patient);
+    try {
+      updateProvider.create(null);
+    } catch (final InvalidUserInputError e) {
+      // pass
+    }
+  }
+
+  public void assertUpdateSuccess() {
+    final UpdateProvider updateProvider = resourceProviderFactory.createUpdateResourceProvider(
+        ResourceType.Patient);
+    try {
+      updateProvider.update(null, null);
+    } catch (final InvalidUserInputError e) {
+      // pass
+    }
   }
 
 }

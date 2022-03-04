@@ -33,6 +33,42 @@ public class SecurityEnabledResourcesTest extends SecurityTestForResources {
 
   @Test
   @WithMockUser(username = "admin")
+  public void testForbiddenOnResourceAppendWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertAppendSuccess, "pathling:write:Account");
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:write:Account"})
+  public void testPassIfResourceAppendWithSpecificAuthority() {
+    assertAppendSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:write"})
+  public void testPassIfResourceAppendWithWildcardAuthority() {
+    assertAppendSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin")
+  public void testForbiddenOnResourceUpdateWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertUpdateSuccess, "pathling:write:Account");
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:write:Account"})
+  public void testPassIfResourceUpdateWithSpecificAuthority() {
+    assertUpdateSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:write"})
+  public void testPassIfResourceUpdateWithWildcardAuthority() {
+    assertUpdateSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin")
   public void testForbiddenOnResourceReadWithoutAuthority() {
     assertThrowsAccessDenied(this::assertReadSuccess, "pathling:read:Account");
   }
@@ -48,5 +84,5 @@ public class SecurityEnabledResourcesTest extends SecurityTestForResources {
   public void testPassIfResourceReadWithWildcardAuthority() {
     assertReadSuccess();
   }
-  
+
 }

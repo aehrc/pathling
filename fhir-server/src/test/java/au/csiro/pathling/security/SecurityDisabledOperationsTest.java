@@ -34,5 +34,15 @@ public class SecurityDisabledOperationsTest extends SecurityTestForOperations {
     assertSearchSuccess();
     assertSearchWithFilterSuccess();
   }
- 
+
+  @Test
+  public void testPassIfCreateWithNoAuth() {
+    assertCreateSuccess();
+  }
+
+  @Test
+  public void testPassIfUpdateWithNoAuth() {
+    assertUpdateSuccess();
+  }
+
 }

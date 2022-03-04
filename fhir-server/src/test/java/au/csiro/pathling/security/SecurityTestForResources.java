@@ -8,12 +8,13 @@ package au.csiro.pathling.security;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.io.ResourceWriter;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import java.io.File;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
@@ -42,7 +43,7 @@ public abstract class SecurityTestForResources extends SecurityTest {
     final File warehouseDir = new File(testRootDir, "default");
     assertTrue(warehouseDir.mkdir());
     registry.add("pathling.storage.warehouseUrl",
-        () -> testRootDir.toURI());
+        () -> testRootDir.toURI().toString().replaceFirst("/$", ""));
   }
 
   @Autowired
@@ -52,20 +53,28 @@ public abstract class SecurityTestForResources extends SecurityTest {
   private ResourceWriter resourceWriter;
 
   @Autowired
-  private SparkSession sparkSession;
+  private SparkSession spark;
+
+  @Autowired
+  private FhirEncoders fhirEncoders;
 
 
   public void assertWriteSuccess() {
-    resourceWriter.write(org.hl7.fhir.r4.model.Enumerations.ResourceType.ACCOUNT,
-        new ResourceDatasetBuilder(sparkSession).withIdColumn().build());
+    resourceWriter.write(ResourceType.ACCOUNT,
+        new ResourceDatasetBuilder(spark).withIdColumn().build());
+  }
+
+  public void assertAppendSuccess() {
+    resourceWriter.append(ResourceType.ACCOUNT,
+        new ResourceDatasetBuilder(spark).withIdColumn().build());
+  }
+
+  public void assertUpdateSuccess() {
+    resourceWriter.update(ResourceType.ACCOUNT, resourceReader,
+        spark.emptyDataset(fhirEncoders.of(ResourceType.ACCOUNT.toCode())).toDF());
   }
 
   public void assertReadSuccess() {
-
-    try {
-      resourceReader.read(org.hl7.fhir.r4.model.Enumerations.ResourceType.ACCOUNT);
-    } catch (final ResourceNotFoundError ex) {
-      // expected
-    }
+    resourceReader.read(ResourceType.ACCOUNT);
   }
 }

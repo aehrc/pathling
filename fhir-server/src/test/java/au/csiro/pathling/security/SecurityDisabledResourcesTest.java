@@ -18,8 +18,18 @@ public class SecurityDisabledResourcesTest extends SecurityTestForResources {
   }
 
   @Test
+  public void testPassIfResourceAppendWithNoAuth() {
+    assertAppendSuccess();
+  }
+
+  @Test
+  public void testPassIfResourceUpdateWithNoAuth() {
+    assertUpdateSuccess();
+  }
+
+  @Test
   public void testPassIfResourceReadWithNoAuth() {
     assertReadSuccess();
   }
-  
+
 }

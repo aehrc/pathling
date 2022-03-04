@@ -86,9 +86,8 @@ public class ResourceReader {
    * @param resourceType the desired {@link ResourceType}
    * @return a {@link DeltaTable} containing the raw resource, i.e. NOT wrapped in a value column
    */
-  @ResourceAccess(AccessType.READ)
   @Nonnull
-  public DeltaTable readDelta(@Nonnull final ResourceType resourceType) {
+  DeltaTable readDelta(@Nonnull final ResourceType resourceType) {
     return attemptDeltaLoad(resourceType).orElseGet(() -> {
       // If a Delta access is attempted upon a resource which does not yet exist, we create an empty 
       // table. This is because Delta operations cannot be done in absence of a persisted table.

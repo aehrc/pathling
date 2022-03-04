@@ -48,7 +48,10 @@ public class PathlingAuthorityTest {
     PathlingAuthority.fromAuthority("pathling:write");
     PathlingAuthority.fromAuthority("pathling:aggregate");
     PathlingAuthority.fromAuthority("pathling:search");
+    PathlingAuthority.fromAuthority("pathling:extract");
     PathlingAuthority.fromAuthority("pathling:import");
+    PathlingAuthority.fromAuthority("pathling:create");
+    PathlingAuthority.fromAuthority("pathling:update");
     for (final ResourceType resourceType : ResourceType.values()) {
       PathlingAuthority.fromAuthority("pathling:read:" + resourceType.toCode());
       PathlingAuthority.fromAuthority("pathling:write:" + resourceType.toCode());

@@ -65,27 +65,16 @@ public class ResourceWriter {
    * Overwrites the resources for a particular type with the contents of the supplied {@link
    * Dataset}.
    *
-   * @param resourceType The type of the resource to write.
-   * @param resources The {@link Dataset} containing the resource data.
+   * @param resourceType the type of the resource to write
+   * @param resources the {@link Dataset} containing the resource data
    */
   @ResourceAccess(AccessType.WRITE)
   public void write(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
-    final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
-    log.debug("Writing resources to: {}", tableUrl);
-    // We order the resources here to reduce the amount of sorting necessary at query time.
-    resources.orderBy(asc("id"))
-        .write()
-        // By default, Delta throws an error if the incoming schema is different to the existing 
-        // one. For the purposes of this method, we want to be able to rewrite the schema in cases 
-        // where it has changed, e.g. a version upgrade or a configuration change.
-        // See: https://docs.delta.io/latest/delta-batch.html#replace-table-schema
-        .option("overwriteSchema", "true")
-        .mode(SaveMode.Overwrite)
-        .format("delta")
-        .save(tableUrl);
+    write(resourceType, resources, SaveMode.Overwrite);
   }
 
+  @ResourceAccess(AccessType.WRITE)
   public void append(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
     final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
@@ -97,8 +86,9 @@ public class ResourceWriter {
         .save(tableUrl);
   }
 
-  public void update(@Nonnull final ResourceReader resourceReader,
-      @Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> resources) {
+  @ResourceAccess(AccessType.WRITE)
+  public void update(@Nonnull final ResourceType resourceType,
+      @Nonnull final ResourceReader resourceReader, @Nonnull final Dataset<Row> resources) {
     final DeltaTable original = resourceReader.readDelta(resourceType);
     log.debug("Writing updates to dataset: {}", resourceType.toCode());
     original
@@ -109,16 +99,41 @@ public class ResourceWriter {
         .execute();
   }
 
+  /**
+   * Overwrites the resources for a particular type with the contents of the supplied {@link
+   * Dataset}.
+   *
+   * @param resourceType the type of the resource to write
+   * @param resources the {@link Dataset} containing the resource data
+   * @param saveMode the {@link SaveMode} to use when writing the data
+   */
+  void write(@Nonnull final ResourceType resourceType,
+      @Nonnull final Dataset<Row> resources, @Nonnull final SaveMode saveMode) {
+    final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
+    log.debug("Writing resources to: {}", tableUrl);
+    // We order the resources here to reduce the amount of sorting necessary at query time.
+    resources.orderBy(asc("id"))
+        .write()
+        // By default, Delta throws an error if the incoming schema is different to the existing 
+        // one. For the purposes of this method, we want to be able to rewrite the schema in cases 
+        // where it has changed, e.g. a version upgrade or a configuration change.
+        // See: https://docs.delta.io/latest/delta-batch.html#replace-table-schema
+        .option("overwriteSchema", "true")
+        .mode(saveMode)
+        .format("delta")
+        .save(tableUrl);
+  }
+
   @Nonnull
-  public String writeEmpty(@Nonnull final ResourceType resourceType) {
+  String writeEmpty(@Nonnull final ResourceType resourceType) {
     final Dataset<Row> dataset = createEmptyDataset(resourceType);
     log.debug("Writing empty dataset: {}", resourceType.toCode());
-    write(resourceType, dataset);
+    write(resourceType, dataset, SaveMode.ErrorIfExists);
     return getTableUrl(warehouseUrl, databaseName, resourceType);
   }
 
   @Nonnull
-  public Dataset<Row> createEmptyDataset(final @Nonnull ResourceType resourceType) {
+  Dataset<Row> createEmptyDataset(final @Nonnull ResourceType resourceType) {
     return QueryHelpers.createEmptyDataset(spark, fhirEncoders, resourceType);
   }
 
