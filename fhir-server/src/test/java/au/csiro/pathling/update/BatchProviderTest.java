@@ -13,6 +13,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import au.csiro.pathling.Configuration;
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.helpers.TestHelpers;
@@ -36,6 +37,9 @@ class BatchProviderTest {
   @Autowired
   IParser jsonParser;
 
+  @Autowired
+  Configuration configuration;
+
   BatchProvider batchProvider;
   UpdateHelpers updateHelpers;
   CacheInvalidator cacheInvalidator;
@@ -44,7 +48,7 @@ class BatchProviderTest {
   void setUp() {
     updateHelpers = mock(UpdateHelpers.class);
     cacheInvalidator = mock(CacheInvalidator.class);
-    batchProvider = new BatchProvider(updateHelpers, cacheInvalidator);
+    batchProvider = new BatchProvider(updateHelpers, cacheInvalidator, configuration);
   }
 
   @Test
@@ -59,6 +63,7 @@ class BatchProviderTest {
     verify(updateHelpers)
         .appendDataset(eq(ResourceType.ORGANIZATION),
             argThat(resourceListMatcher(ResourceType.ORGANIZATION, 1)));
+    verify(cacheInvalidator).invalidateAll();
   }
 
   @Test

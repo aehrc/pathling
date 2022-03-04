@@ -45,4 +45,9 @@ public class SecurityDisabledOperationsTest extends SecurityTestForOperations {
     assertUpdateSuccess();
   }
 
+  @Test
+  public void testPassIfBatchWithNoAuth() {
+    assertBatchSuccess();
+  }
+
 }

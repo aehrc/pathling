@@ -1,14 +1,17 @@
 package au.csiro.pathling.update;
 
+import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.update.UpdateProvider.prepareResourceForCreate;
 import static au.csiro.pathling.update.UpdateProvider.prepareResourceForUpdate;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.hl7.fhir.r4.model.Bundle.BundleType.BATCHRESPONSE;
 
+import au.csiro.pathling.Configuration;
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.security.OperationAccess;
+import au.csiro.pathling.security.PathlingAuthority;
 import ca.uhn.fhir.rest.annotation.Transaction;
 import ca.uhn.fhir.rest.annotation.TransactionParam;
 import java.util.ArrayList;
@@ -45,15 +48,20 @@ public class BatchProvider {
   @Nonnull
   private final CacheInvalidator cacheInvalidator;
 
+  @Nonnull
+  private final Configuration configuration;
+
   private static final Pattern CREATE_URL = Pattern.compile("^[A-Za-z]+$");
   @SuppressWarnings("RegExpRedundantEscape")
   private static final Pattern UPDATE_URL = Pattern.compile(
       "^[A-Za-z]+/[A-Za-z0-9\\-\\.&&[^\\$]][A-Za-z0-9\\-\\.]{0,63}$");
 
   public BatchProvider(@Nonnull final UpdateHelpers updateHelpers,
-      @Nonnull final CacheInvalidator cacheInvalidator) {
+      @Nonnull final CacheInvalidator cacheInvalidator,
+      @Nonnull final Configuration configuration) {
     this.updateHelpers = updateHelpers;
     this.cacheInvalidator = cacheInvalidator;
+    this.configuration = configuration;
   }
 
   @Transaction
@@ -108,17 +116,31 @@ public class BatchProvider {
     }
 
     // Append any newly created resources to their respective tables.
-    for (final ResourceType resourceType : resourcesForCreation.keySet()) {
-      updateHelpers.appendDataset(resourceType, resourcesForCreation.get(resourceType));
-    }
+    create(resourcesForCreation);
 
     // Merge in any updated resources into their respective tables.
-    for (final ResourceType resourceType : resourcesForUpdate.keySet()) {
-      updateHelpers.updateDataset(resourceType, resourcesForUpdate.get(resourceType));
-    }
+    update(resourcesForUpdate);
 
     cacheInvalidator.invalidateAll();
     return response;
+  }
+
+  private void create(@Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForCreation) {
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(PathlingAuthority.operationAccess("create"));
+    }
+    for (final ResourceType resourceType : resourcesForCreation.keySet()) {
+      updateHelpers.appendDataset(resourceType, resourcesForCreation.get(resourceType));
+    }
+  }
+
+  private void update(@Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate) {
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(PathlingAuthority.operationAccess("update"));
+    }
+    for (final ResourceType resourceType : resourcesForUpdate.keySet()) {
+      updateHelpers.updateDataset(resourceType, resourcesForUpdate.get(resourceType));
+    }
   }
 
   private boolean checkRequestType(@Nonnull final BundleEntryRequestComponent request,
