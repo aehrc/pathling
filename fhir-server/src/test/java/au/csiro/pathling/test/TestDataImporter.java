@@ -69,12 +69,12 @@ public class TestDataImporter implements CommandLineRunner {
     final FileFilter fileFilter = new WildcardFileFilter("*.ndjson");
     final File[] srcNdJsonFiles = srcNdJsonDir.listFiles(fileFilter);
 
-    log.info("Ensuring directory exists: " + targetPath);
+    log.info("Ensuring directory exists: {}", targetPath);
     //noinspection ResultOfMethodCallIgnored
     new File(targetPath).mkdirs();
 
     for (final File srcFile : Objects.requireNonNull(srcNdJsonFiles)) {
-      log.info("Loading source NDJSON file: " + srcFile);
+      log.info("Loading source NDJSON file: {}", srcFile);
       final String resourceName = FilenameUtils.getBaseName(srcFile.getName());
       final Enumerations.ResourceType subjectResource = Enumerations.ResourceType
           .valueOf(resourceName.toUpperCase());
@@ -89,7 +89,7 @@ public class TestDataImporter implements CommandLineRunner {
       final String outputParquet =
           targetPath + "/" + subjectResource.toCode() + ".parquet";
 
-      log.info("Writing: " + outputParquet);
+      log.info("Writing: {}", outputParquet);
       resourcesDataset.orderBy(asc("id"))
           .write()
           .option("overwriteSchema", "true")
