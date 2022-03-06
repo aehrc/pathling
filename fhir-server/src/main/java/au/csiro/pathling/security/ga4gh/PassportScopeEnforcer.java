@@ -10,7 +10,7 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
 import java.util.Optional;
@@ -38,7 +38,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
    * @param configuration a {@link Configuration} object to control the behaviour of the executor
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param sparkSession a {@link SparkSession} for resolving Spark queries
-   * @param resourceReader a {@link ResourceReader} for retrieving resources
+   * @param database a {@link Database} for retrieving resources
    * @param terminologyServiceFactory a {@link TerminologyServiceFactory} for resolving terminology
    * queries
    * @param passportScope a request-scoped {@link PassportScope} that provides the filters that need
@@ -48,10 +48,10 @@ public class PassportScopeEnforcer extends QueryExecutor {
       @Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession,
-      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final PassportScope passportScope) {
-    super(configuration, fhirContext, sparkSession, resourceReader, terminologyServiceFactory);
+    super(configuration, fhirContext, sparkSession, database, terminologyServiceFactory);
     this.passportScope = passportScope;
   }
 
@@ -71,7 +71,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
 
       // Build a new expression parser, and parse all of the column expressions within the query.
       final ResourcePath inputContext = ResourcePath
-          .build(getFhirContext(), getResourceReader(), subjectResource,
+          .build(getFhirContext(), getDatabase(), subjectResource,
               subjectResource.toCode(), true);
 
       return filterDataset(inputContext, filters, dataset, dataset.col("id"), Column::or);

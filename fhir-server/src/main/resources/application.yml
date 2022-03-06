@@ -145,5 +145,13 @@ spark:
       enabled: true
       coalescePartitions:
         enabled: true
+    extensions: io.delta.sql.DeltaSparkSessionExtension
+    catalog:
+      spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+  databricks:
+    delta:
+      schema:
+        autoMerge:
+          enabled: true
   scheduler:
     mode: FAIR

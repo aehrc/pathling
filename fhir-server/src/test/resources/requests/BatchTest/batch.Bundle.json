@@ -4,16 +4,14 @@
   "entry": [
     {
       "request": {
-        "method": "POST",
-        "url": "Patient"
+        "method": "PUT",
+        "url": "Patient/example0"
       },
       "resource": {
         "resourceType": "Patient",
         "id": "example0",
         "meta": {
-          "profile": [
-            "http://hl7.org.au/fhir/StructureDefinition/au-patient"
-          ]
+          "profile": ["http://hl7.org.au/fhir/StructureDefinition/au-patient"]
         },
         "text": {
           "status": "generated",
@@ -97,9 +95,7 @@
         "name": [
           {
             "family": "Franklin",
-            "given": [
-              "Stella"
-            ]
+            "given": ["Stella"]
           }
         ],
         "telecom": [
@@ -114,9 +110,7 @@
         "address": [
           {
             "use": "home",
-            "line": [
-              "31 Pacquola Street"
-            ],
+            "line": ["31 Pacquola Street"],
             "city": "Blacktown",
             "state": "NSW",
             "postalCode": "2148",
@@ -127,8 +121,8 @@
     },
     {
       "request": {
-        "method": "POST",
-        "url": "Practitioner"
+        "method": "PUT",
+        "url": "Practitioner/example0"
       },
       "resource": {
         "resourceType": "Practitioner",
@@ -204,12 +198,8 @@
         "name": [
           {
             "family": "Mayo",
-            "given": [
-              "Helen"
-            ],
-            "prefix": [
-              "Dr"
-            ]
+            "given": ["Helen"],
+            "prefix": ["Dr"]
           }
         ],
         "telecom": [
@@ -222,9 +212,7 @@
         "address": [
           {
             "use": "work",
-            "line": [
-              "3 McGregor Street"
-            ],
+            "line": ["3 McGregor Street"],
             "city": "Blacktown",
             "state": "NSW",
             "postalCode": "2148",
@@ -246,8 +234,8 @@
     },
     {
       "request": {
-        "method": "POST",
-        "url": "Organization"
+        "method": "PUT",
+        "url": "Organization/example0"
       },
       "resource": {
         "resourceType": "Organization",
@@ -289,9 +277,7 @@
         "address": [
           {
             "use": "work",
-            "line": [
-              "3 McGregor Street"
-            ],
+            "line": ["3 McGregor Street"],
             "city": "Blacktown",
             "state": "NSW",
             "postalCode": "2148",

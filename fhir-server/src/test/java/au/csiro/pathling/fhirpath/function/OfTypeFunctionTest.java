@@ -21,8 +21,12 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.*;
+import au.csiro.pathling.io.Database;
+import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
+import au.csiro.pathling.test.builders.ResourcePathBuilder;
+import au.csiro.pathling.test.builders.UntypedResourcePathBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,16 +50,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 class OfTypeFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ResourceReader mockReader;
+  Database database;
 
   @BeforeEach
   void setUp() {
-    mockReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
@@ -96,10 +100,10 @@ class OfTypeFunctionTest {
         .withRow("patient-2", "female", false)
         .withRow("patient-3", "male", true)
         .build();
-    when(mockReader.read(ResourceType.PATIENT))
+    when(database.read(ResourceType.PATIENT))
         .thenReturn(argumentDataset);
     final ResourcePath argumentPath = new ResourcePathBuilder(spark)
-        .resourceReader(mockReader)
+        .resourceReader(database)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();
@@ -137,7 +141,7 @@ class OfTypeFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfInputNotPolymorphic() {
+  void throwsErrorIfInputNotPolymorphic() {
     final ResourcePath input = new ResourcePathBuilder(spark)
         .expression("Patient")
         .build();
@@ -157,7 +161,7 @@ class OfTypeFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfMoreThanOneArgument() {
+  void throwsErrorIfMoreThanOneArgument() {
     final UntypedResourcePath input = new UntypedResourcePathBuilder(spark)
         .expression("subject")
         .build();
@@ -182,7 +186,7 @@ class OfTypeFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfArgumentNotResource() {
+  void throwsErrorIfArgumentNotResource() {
     final UntypedResourcePath input = new UntypedResourcePathBuilder(spark)
         .expression("subject")
         .build();

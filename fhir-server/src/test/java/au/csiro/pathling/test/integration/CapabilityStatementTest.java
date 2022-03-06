@@ -8,7 +8,6 @@ package au.csiro.pathling.test.integration;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 
-import au.csiro.pathling.Configuration;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONCompareMode;
@@ -26,10 +25,10 @@ import org.springframework.http.ResponseEntity;
 class CapabilityStatementTest extends IntegrationTest {
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @Test
   void capabilityStatement() throws JSONException {
@@ -42,18 +41,17 @@ class CapabilityStatementTest extends IntegrationTest {
 
   @Test
   void cors() throws JSONException {
-    HttpHeaders corsHeaders  = new HttpHeaders();
+    final HttpHeaders corsHeaders = new HttpHeaders();
     corsHeaders.setOrigin("http://foo.bar");
     corsHeaders.setAccessControlRequestMethod(HttpMethod.GET);
 
-    ResponseEntity<String> response = restTemplate
+    final ResponseEntity<String> response = restTemplate
         .exchange("http://localhost:" + port + "/fhir/metadata", HttpMethod.OPTIONS,
             new HttpEntity<String>(corsHeaders),
             String.class);
 
     System.out.println(response);
   }
-
 
 
 }

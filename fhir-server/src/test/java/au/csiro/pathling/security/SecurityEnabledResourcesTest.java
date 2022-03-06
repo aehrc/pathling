@@ -11,77 +11,59 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 
 @TestPropertySource(properties = {"pathling.auth.enabled=true"})
-public class SecurityEnabledResourcesTest extends SecurityTestForResources {
+class SecurityEnabledResourcesTest extends SecurityTestForResources {
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenOnResourceWriteWithoutAuthority() {
+  void testForbiddenOnResourceWriteWithoutAuthority() {
     assertThrowsAccessDenied(this::assertWriteSuccess, "pathling:write:Account");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:write:Account"})
-  public void testPassIfResourceWriteWithSpecificAuthority() {
+  void testPassIfResourceWriteWithSpecificAuthority() {
     assertWriteSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:write"})
-  public void testPassIfResourceWriteWithWildcardAuthority() {
+  void testPassIfResourceWriteWithWildcardAuthority() {
     assertWriteSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenOnResourceAppendWithoutAuthority() {
-    assertThrowsAccessDenied(this::assertAppendSuccess, "pathling:write:Account");
-  }
-
-  @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:write:Account"})
-  public void testPassIfResourceAppendWithSpecificAuthority() {
-    assertAppendSuccess();
-  }
-
-  @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:write"})
-  public void testPassIfResourceAppendWithWildcardAuthority() {
-    assertAppendSuccess();
-  }
-
-  @Test
-  @WithMockUser(username = "admin")
-  public void testForbiddenOnResourceUpdateWithoutAuthority() {
+  void testForbiddenOnResourceUpdateWithoutAuthority() {
     assertThrowsAccessDenied(this::assertUpdateSuccess, "pathling:write:Account");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:write:Account"})
-  public void testPassIfResourceUpdateWithSpecificAuthority() {
+  void testPassIfResourceUpdateWithSpecificAuthority() {
     assertUpdateSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:write"})
-  public void testPassIfResourceUpdateWithWildcardAuthority() {
+  void testPassIfResourceUpdateWithWildcardAuthority() {
     assertUpdateSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenOnResourceReadWithoutAuthority() {
+  void testForbiddenOnResourceReadWithoutAuthority() {
     assertThrowsAccessDenied(this::assertReadSuccess, "pathling:read:Account");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:read:Account"})
-  public void testPassIfResourceReadWithSpecificAuthority() {
+  void testPassIfResourceReadWithSpecificAuthority() {
     assertReadSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:read"})
-  public void testPassIfResourceReadWithWildcardAuthority() {
+  void testPassIfResourceReadWithWildcardAuthority() {
     assertReadSuccess();
   }
 

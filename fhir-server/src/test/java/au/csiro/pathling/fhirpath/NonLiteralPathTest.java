@@ -16,7 +16,11 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import java.util.Arrays;
 import java.util.Collections;
 import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Tag;
@@ -31,13 +35,13 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class NonLiteralPathTest {
+class NonLiteralPathTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Test
-  public void testSingularNonLiteralEidExpansion() {
+  void testSingularNonLiteralEidExpansion() {
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -64,7 +68,7 @@ public class NonLiteralPathTest {
   }
 
   @Test
-  public void testNonSingularNonLiteralEidExpansion() {
+  void testNonSingularNonLiteralEidExpansion() {
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -109,7 +113,7 @@ public class NonLiteralPathTest {
 
 
   @Test
-  public void testArrayExplode() {
+  void testArrayExplode() {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()

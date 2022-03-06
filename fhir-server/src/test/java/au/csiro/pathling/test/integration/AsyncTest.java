@@ -6,12 +6,11 @@
 
 package au.csiro.pathling.test.integration;
 
-import static au.csiro.pathling.test.helpers.TestHelpers.mockResourceReader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -39,26 +38,26 @@ import org.springframework.test.context.TestPropertySource;
  */
 @TestPropertySource(properties = {"pathling.async.enabled=true"})
 @Slf4j
-public class AsyncTest extends IntegrationTest {
+class AsyncTest extends IntegrationTest {
 
-  private static final int TIMEOUT = 10000;
-  private static final int POLL_FREQUENCY = 1000;
+  static final int TIMEOUT = 10000;
+  static final int POLL_FREQUENCY = 1000;
 
   @Autowired
   SparkSession spark;
 
   @MockBean
-  ResourceReader resourceReader;
+  Database database;
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @Test
   void asyncExtract() throws URISyntaxException, MalformedURLException, InterruptedException {
-    mockResourceReader(resourceReader, spark, ResourceType.OBSERVATION);
+    TestHelpers.mockResource(database, spark, ResourceType.OBSERVATION);
     final String uri = "http://localhost:" + port + "/fhir/Observation/$extract?column=id&"
         + "column=code.coding&column=valueQuantity.value&column=valueQuantity.unit";
     final RequestEntity<Void> request = RequestEntity.get(new URI(uri))
@@ -73,7 +72,7 @@ public class AsyncTest extends IntegrationTest {
 
   @Test
   void enabledNotRequested() throws URISyntaxException {
-    TestHelpers.mockResourceReader(resourceReader, spark, ResourceType.PATIENT);
+    TestHelpers.mockResource(database, spark, ResourceType.PATIENT);
     final String uri = "http://localhost:" + port + "/fhir/Patient/$aggregate?aggregation=count()";
     final ResponseEntity<String> response = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);
@@ -82,7 +81,7 @@ public class AsyncTest extends IntegrationTest {
 
   @Test
   void error() throws URISyntaxException, MalformedURLException, InterruptedException {
-    TestHelpers.mockResourceReader(resourceReader, spark, ResourceType.PATIENT);
+    TestHelpers.mockResource(database, spark, ResourceType.PATIENT);
     final String uri = "http://localhost:" + port + "/fhir/Patient/$aggregate";
     final RequestEntity<Void> request = RequestEntity.get(new URI(uri))
         .header("Prefer", "respond-async")
@@ -102,7 +101,7 @@ public class AsyncTest extends IntegrationTest {
     assertEquals(HttpStatus.NOT_FOUND_404, response.getStatusCode().value());
   }
 
-  private void assertAsyncResponse(@Nonnull final ResponseEntity<String> response,
+  void assertAsyncResponse(@Nonnull final ResponseEntity<String> response,
       final int expectedStatus, final boolean inProgressRequired)
       throws MalformedURLException, URISyntaxException, InterruptedException {
     int statusCode;

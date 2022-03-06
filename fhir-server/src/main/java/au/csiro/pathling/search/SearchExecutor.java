@@ -22,7 +22,7 @@ import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IQueryParameterAnd;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -77,7 +77,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    * @param configuration A {@link Configuration} object to control the behaviour of the executor
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
-   * @param resourceReader A {@link ResourceReader} for retrieving resources
+   * @param database A {@link Database} for retrieving resources
    * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
    * queries within parallel processing
    * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
@@ -87,11 +87,11 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    */
   public SearchExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<StringAndListParam> filters) {
-    super(configuration, fhirContext, sparkSession, resourceReader, terminologyServiceFactory);
+    super(configuration, fhirContext, sparkSession, database, terminologyServiceFactory);
     this.fhirEncoders = fhirEncoders;
     this.subjectResource = subjectResource;
     this.filters = filters;
@@ -108,7 +108,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Nonnull
   private Dataset<Row> initializeDataset() {
     final ResourcePath resourcePath = ResourcePath
-        .build(getFhirContext(), getResourceReader(), subjectResource, subjectResource.toCode(),
+        .build(getFhirContext(), getDatabase(), subjectResource, subjectResource.toCode(),
             true, true);
     final Dataset<Row> subjectDataset = resourcePath.getDataset();
     final Column subjectIdColumn = resourcePath.getIdColumn();
@@ -125,7 +125,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       @Nullable Column filterColumn = null;
 
       ResourcePath currentContext = ResourcePath
-          .build(getFhirContext(), getResourceReader(), subjectResource, subjectResource.toCode(),
+          .build(getFhirContext(), getDatabase(), subjectResource, subjectResource.toCode(),
               true);
 
       // Parse each of the supplied filter expressions, building up a filter column. This captures 

@@ -10,25 +10,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.context.TestPropertySource;
 
 @TestPropertySource(properties = {"pathling.auth.enabled=false"})
-public class SecurityDisabledResourcesTest extends SecurityTestForResources {
+class SecurityDisabledResourcesTest extends SecurityTestForResources {
 
   @Test
-  public void testPassIfResourceWriteWithNoAuth() {
+  void testPassIfResourceWriteWithNoAuth() {
     assertWriteSuccess();
   }
 
   @Test
-  public void testPassIfResourceAppendWithNoAuth() {
-    assertAppendSuccess();
-  }
-
-  @Test
-  public void testPassIfResourceUpdateWithNoAuth() {
+  void testPassIfResourceUpdateWithNoAuth() {
     assertUpdateSuccess();
   }
 
   @Test
-  public void testPassIfResourceReadWithNoAuth() {
+  void testPassIfResourceReadWithNoAuth() {
     assertReadSuccess();
   }
 

@@ -63,21 +63,9 @@ class SecurityEnabledOperationsTest extends SecurityTestForOperations {
   }
 
   @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:create"})
-  void testPassIfCreateWithAuthority() {
-    assertCreateSuccess();
-  }
-
-  @Test
   @WithMockUser(username = "admin", authorities = {"pathling:update"})
   void testPassIfUpdateWithAuthority() {
     assertUpdateSuccess();
-  }
-
-  @Test
-  @WithMockUser(username = "admin")
-  void testForbiddenIfCreateWithoutAuthority() {
-    assertThrowsAccessDenied(this::assertCreateSuccess, "pathling:create");
   }
 
   @Test
@@ -88,25 +76,19 @@ class SecurityEnabledOperationsTest extends SecurityTestForOperations {
 
   @Test
   @WithMockUser(username = "admin",
-      authorities = {"pathling:batch", "pathling:create", "pathling:update"})
+      authorities = {"pathling:batch", "pathling:update"})
   void testPassIfBatchWithAuthority() {
     assertBatchSuccess();
   }
 
   @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:create", "pathling:update"})
+  @WithMockUser(username = "admin", authorities = {"pathling:update"})
   void testForbiddenIfBatchWithoutBatch() {
     assertThrowsAccessDenied(this::assertBatchSuccess, "pathling:batch");
   }
 
   @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:batch", "pathling:update"})
-  void testForbiddenIfBatchWithoutCreate() {
-    assertThrowsAccessDenied(this::assertBatchSuccess, "pathling:create");
-  }
-
-  @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:batch", "pathling:create"})
+  @WithMockUser(username = "admin", authorities = {"pathling:batch"})
   void testForbiddenIfBatchWithoutUpdate() {
     assertThrowsAccessDenied(this::assertBatchSuccess, "pathling:update");
   }

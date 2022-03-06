@@ -22,32 +22,32 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag("UnitTest")
-public class ClosureMappingTest {
+class ClosureMappingTest {
 
-  private static final Coding CODING_1_1_1 = newVersionedCoding("system1", "code1", "version1",
+  static final Coding CODING_1_1_1 = newVersionedCoding("system1", "code1", "version1",
       "");
-  private static final Coding CODING_1_2_1 = newVersionedCoding("system1", "code2", "version1",
+  static final Coding CODING_1_2_1 = newVersionedCoding("system1", "code2", "version1",
       "");
-  private static final Coding CODING_1_3_1 = newVersionedCoding("system1", "code3", "version1",
-      "");
-
-  private static final Coding CODING_2_1_1 = newVersionedCoding("system2", "code2", "version1",
-      "");
-  private static final Coding CODING_3_1_1 = newVersionedCoding("system3", "code2", "version1",
+  static final Coding CODING_1_3_1 = newVersionedCoding("system1", "code3", "version1",
       "");
 
+  static final Coding CODING_2_1_1 = newVersionedCoding("system2", "code2", "version1",
+      "");
+  static final Coding CODING_3_1_1 = newVersionedCoding("system3", "code2", "version1",
+      "");
 
-  private final static Relation EMPTY_RELATION = RelationBuilder.empty().build();
+
+  final static Relation EMPTY_RELATION = RelationBuilder.empty().build();
 
   @Test
-  public void toRelationFromEmptyMap() {
+  void toRelationFromEmptyMap() {
     final Relation emptyRelation = ClosureMapping
         .relationFromConceptMap(ConceptMapBuilder.empty().build());
     assertEquals(EMPTY_RELATION, emptyRelation);
   }
 
   @Test
-  public void toRelationFromComplexMap() {
+  void toRelationFromComplexMap() {
     // system1|code2 -- subsumes --> system1|code1
     // system1|code3 -- subsumes --> system1|code1
     // system1|code3 -- isSubsumedBy --> system1|code2 (equiv: system1|code2 -- subsumes --> system1|code3)
@@ -71,7 +71,7 @@ public class ClosureMappingTest {
   }
 
   @Test
-  public void toRelationIgnoresUnknownEquivalenceTypes() {
+  void toRelationIgnoresUnknownEquivalenceTypes() {
     final Collection<ConceptMapEquivalence> validRelations = new HashSet<>(Arrays.asList(
         ConceptMapEquivalence.SPECIALIZES, ConceptMapEquivalence.SUBSUMES,
         ConceptMapEquivalence.EQUAL, ConceptMapEquivalence.UNMATCHED));

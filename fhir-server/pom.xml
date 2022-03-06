@@ -388,7 +388,7 @@
               <systemProperties>
                 <property>
                   <key>spring.profiles.active</key>
-                  <value>spark,fhir,cli</value>
+                  <value>spark,fhir,import,cli</value>
                 </property>
                 <property>
                   <key>pathling.version</key>
@@ -399,13 +399,20 @@
                   <value>false</value>
                 </property>
                 <property>
+                  <key>pathling.storage.warehouseUrl</key>
+                  <value>file://${project.basedir}/src/test/resources/test-data</value>
+                </property>
+                <property>
+                  <key>pathling.storage.databaseName</key>
+                  <value>parquet</value>
+                </property>
+                <property>
                   <key>spark.master</key>
                   <value>local[1]</value>
                 </property>
               </systemProperties>
               <arguments>
                 <argument>${project.basedir}/src/test/resources/test-data/fhir</argument>
-                <argument>${project.basedir}/src/test/resources/test-data/parquet</argument>
               </arguments>
               <classpathScope>test</classpathScope>
               <cleanupDaemonThreads>false</cleanupDaemonThreads>

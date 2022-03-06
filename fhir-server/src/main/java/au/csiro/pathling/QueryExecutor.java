@@ -23,7 +23,7 @@ import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
 import java.util.Collections;
@@ -59,25 +59,25 @@ public abstract class QueryExecutor {
   private final SparkSession sparkSession;
 
   @Nonnull
-  private final ResourceReader resourceReader;
+  private final Database database;
 
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   protected QueryExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.resourceReader = resourceReader;
+    this.database = database;
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
       @Nonnull final List<Column> groupingColumns) {
-    return new ParserContext(inputContext, fhirContext, sparkSession, resourceReader,
+    return new ParserContext(inputContext, fhirContext, sparkSession, database,
         terminologyServiceFactory, groupingColumns, new HashMap<>());
   }
 
@@ -89,7 +89,7 @@ public abstract class QueryExecutor {
         .map(expression -> {
           final ParserContext currentContext = new ParserContext(parserContext.getInputContext(),
               parserContext.getFhirContext(), parserContext.getSparkSession(),
-              parserContext.getResourceReader(), parserContext.getTerminologyServiceFactory(),
+              parserContext.getDatabase(), parserContext.getTerminologyServiceFactory(),
               parserContext.getGroupingColumns(), new HashMap<>());
           final Parser parser = new Parser(currentContext);
           final FhirPath result = parser.parse(expression);

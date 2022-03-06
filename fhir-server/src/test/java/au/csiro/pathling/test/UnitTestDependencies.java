@@ -11,7 +11,6 @@ import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.io.ResourceWriter;
 import au.csiro.pathling.spark.Spark;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
@@ -61,14 +60,6 @@ class UnitTestDependencies {
   @Nonnull
   static FhirEncoders fhirEncoders() {
     return FhirEncoders.forR4().getOrCreate();
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
-  @Nonnull
-  static ResourceWriter resourceWriter(@Nonnull final Configuration configuration,
-      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
-    return new ResourceWriter(configuration, spark, fhirEncoders);
   }
 
   @Bean

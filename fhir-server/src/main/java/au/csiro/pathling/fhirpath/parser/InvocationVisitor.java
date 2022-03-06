@@ -133,7 +133,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
         // a foreign resource reference.
         final ResourcePath path = ResourcePath
-            .build(context.getFhirContext(), context.getResourceReader(), resourceType, fhirPath,
+            .build(context.getFhirContext(), context.getDatabase(), resourceType, fhirPath,
                 true);
 
         // This resource path will get preserved within paths derived from this, so that we can come
@@ -194,7 +194,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // Create a new ParserContext, which includes information about how to evaluate the `$this`
       // expression.
       final ParserContext argumentContext = new ParserContext(context.getInputContext(),
-          context.getFhirContext(), context.getSparkSession(), context.getResourceReader(),
+          context.getFhirContext(), context.getSparkSession(), context.getDatabase(),
           context.getTerminologyServiceFactory(), argumentGroupings, context.getNodeIdColumns());
       argumentContext.setThisContext(thisPath);
 

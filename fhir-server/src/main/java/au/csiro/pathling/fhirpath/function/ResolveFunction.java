@@ -22,7 +22,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,7 +56,7 @@ public class ResolveFunction implements NamedFunction {
         "Input to " + NAME + " function must be a Reference: " + input.getInput().getExpression());
     checkNoArguments(NAME, input);
     final ReferencePath inputPath = (ReferencePath) input.getInput();
-    final ResourceReader resourceReader = input.getContext().getResourceReader();
+    final Database database = input.getContext().getDatabase();
 
     // Get the allowed types for the input reference. This gives us the set of possible resource
     // types that this reference could resolve to.
@@ -71,17 +71,17 @@ public class ResolveFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     if (isPolymorphic) {
-      return resolvePolymorphicReference(input, resourceReader, referenceTypes, expression);
+      return resolvePolymorphicReference(input, database, referenceTypes, expression);
     } else {
       final FhirContext fhirContext = input.getContext().getFhirContext();
-      return resolveMonomorphicReference(input, resourceReader, fhirContext, referenceTypes,
+      return resolveMonomorphicReference(input, database, fhirContext, referenceTypes,
           expression);
     }
   }
 
   @Nonnull
   private static FhirPath resolvePolymorphicReference(@Nonnull final NamedFunctionInput input,
-      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final Database database,
       @Nonnull final Iterable<ResourceType> referenceTypes, final String expression) {
     final ReferencePath referencePath = (ReferencePath) input.getInput();
 
@@ -93,7 +93,7 @@ public class ResolveFunction implements NamedFunction {
       if (FhirServer.supportedResourceTypes().contains(referenceType)) {
         // We can't include the full content of the resource, as you can't union two datasets with
         // different schema. The content of the resource is added later, when ofType is invoked.
-        final Dataset<Row> typeDatasetWithColumns = resourceReader.read(referenceType);
+        final Dataset<Row> typeDatasetWithColumns = database.read(referenceType);
         final Column idColumn = typeDatasetWithColumns.col("id");
         Dataset<Row> typeDataset = typeDatasetWithColumns
             .withColumn("type", lit(referenceType.toCode()));
@@ -130,7 +130,7 @@ public class ResolveFunction implements NamedFunction {
 
   @Nonnull
   private FhirPath resolveMonomorphicReference(@Nonnull final NamedFunctionInput input,
-      @Nonnull final ResourceReader resourceReader, @Nonnull final FhirContext fhirContext,
+      @Nonnull final Database database, @Nonnull final FhirContext fhirContext,
       @Nonnull final Collection<ResourceType> referenceTypes, final String expression) {
     final ReferencePath referencePath = (ReferencePath) input.getInput();
 
@@ -138,7 +138,7 @@ public class ResolveFunction implements NamedFunction {
     // create a dataset with the full resources.
     final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
     final ResourcePath resourcePath = ResourcePath
-        .build(fhirContext, resourceReader, resourceType, expression, referencePath.isSingular());
+        .build(fhirContext, database, resourceType, expression, referencePath.isSingular());
 
     // Join the resource dataset to the reference dataset.
     final Column joinCondition = referencePath.getResourceEquality(resourcePath);

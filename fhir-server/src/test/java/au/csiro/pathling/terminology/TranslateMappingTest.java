@@ -28,34 +28,34 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Tag("UnitTest")
-public class TranslateMappingTest extends MappingTest {
+class TranslateMappingTest extends MappingTest {
 
   @Autowired
-  protected FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private static final String CONCEPT_MAP_URL_1 = "http://snomed.info/sct?fhir_cm=1";
-  private static final String CONCEPT_MAP_URL_2 = "http://snomed.info/sct?fhir_cm=2";
+  static final String CONCEPT_MAP_URL_1 = "http://snomed.info/sct?fhir_cm=1";
+  static final String CONCEPT_MAP_URL_2 = "http://snomed.info/sct?fhir_cm=2";
 
-  private static final SimpleCoding SIMPLE_CODING_1 = new SimpleCoding("uuid:system1", "code1");
-  private static final SimpleCoding SIMPLE_CODING_2 = new SimpleCoding("uuid:system2", "code2",
+  static final SimpleCoding SIMPLE_CODING_1 = new SimpleCoding("uuid:system1", "code1");
+  static final SimpleCoding SIMPLE_CODING_2 = new SimpleCoding("uuid:system2", "code2",
       "12");
-  private static final SimpleCoding SIMPLE_CODING_3 = new SimpleCoding("uuid:system3", "code3");
+  static final SimpleCoding SIMPLE_CODING_3 = new SimpleCoding("uuid:system3", "code3");
 
 
-  private static final Coding CODING_1_WIDER = new Coding("http://snomed.info/sct",
+  static final Coding CODING_1_WIDER = new Coding("http://snomed.info/sct",
       "wider-1",
       "Wider 1");
 
-  private static final Coding CODING_1_EQUIVALENT = new Coding("http://snomed.info/sct",
+  static final Coding CODING_1_EQUIVALENT = new Coding("http://snomed.info/sct",
       "equivalent-1",
       "Equivalent 1");
 
-  private static final Coding CODING_2_EQUIVALENT = new Coding("http://snomed.info/sct",
+  static final Coding CODING_2_EQUIVALENT = new Coding("http://snomed.info/sct",
       "equivalent-2",
       "Equivalent 2");
 
   @Test
-  public void testToBundleEmpty() {
+  void testToBundleEmpty() {
     final Bundle requestBundle = TranslateMapping
         .toRequestBundle(Collections.emptyList(), CONCEPT_MAP_URL_1,
             false);
@@ -63,7 +63,7 @@ public class TranslateMappingTest extends MappingTest {
   }
 
   @Test
-  public void testToBundleForward() {
+  void testToBundleForward() {
     final Bundle requestBundle = TranslateMapping
         .toRequestBundle(Arrays.asList(SIMPLE_CODING_1, SIMPLE_CODING_2), CONCEPT_MAP_URL_1,
             false);
@@ -71,7 +71,7 @@ public class TranslateMappingTest extends MappingTest {
   }
 
   @Test
-  public void testToBundleReverse() {
+  void testToBundleReverse() {
     final Bundle requestBundle = TranslateMapping
         .toRequestBundle(
             Arrays.asList(SIMPLE_CODING_2, SIMPLE_CODING_1), CONCEPT_MAP_URL_2,
@@ -80,7 +80,7 @@ public class TranslateMappingTest extends MappingTest {
   }
 
   @Test
-  public void testFromBundleWhenResponseHasMappings() {
+  void testFromBundleWhenResponseHasMappings() {
     final Bundle responseBundle = (Bundle) jsonParser.parseResource(
         getResourceAsStream("txResponses/TranslateMappingTest/responseWithMappings3.Bundle.json"));
 
@@ -120,7 +120,7 @@ public class TranslateMappingTest extends MappingTest {
   }
 
   @Test
-  public void testFromBundleWhenResponseWithNoMappings() {
+  void testFromBundleWhenResponseWithNoMappings() {
     final Bundle responseBundle = (Bundle) jsonParser.parseResource(
         getResourceAsStream("txResponses/TranslateMappingTest/noMappingsResponse2.Bundle.json"));
 
@@ -135,7 +135,7 @@ public class TranslateMappingTest extends MappingTest {
   }
 
   @Test
-  public void throwsErrorIfResponseBundleSizeWrong() {
+  void throwsErrorIfResponseBundleSizeWrong() {
 
     final Bundle responseBundle = (Bundle) jsonParser.parseResource(
         getResourceAsStream("txResponses/TranslateMappingTest/responseWithMappings3.Bundle.json"));
@@ -152,7 +152,7 @@ public class TranslateMappingTest extends MappingTest {
   }
 
   @Test
-  public void throwsErrorIfAnyEntryHasError() {
+  void throwsErrorIfAnyEntryHasError() {
 
     final Bundle responseBundle = (Bundle) jsonParser.parseResource(
         getResourceAsStream("txResponses/TranslateMappingTest/responseWith404.Bundle.json"));
@@ -170,7 +170,7 @@ public class TranslateMappingTest extends MappingTest {
 
 
   @Test
-  public void throwsErrorIfWrongBundleType() {
+  void throwsErrorIfWrongBundleType() {
 
     final Bundle responseBundle = (Bundle) jsonParser.parseResource(
         getResourceAsStream("txResponses/TranslateMappingTest/noMappingsResponse2.Bundle.json"));

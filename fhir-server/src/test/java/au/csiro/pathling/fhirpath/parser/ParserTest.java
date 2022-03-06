@@ -374,7 +374,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testIfFunctionWithUntypedResourceResult() {
-    mockEmptyResource(mockReader, spark, fhirEncoders, ResourceType.RELATEDPERSON);
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.RELATEDPERSON);
     assertThatResultOf(
         "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
             + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender")
@@ -499,7 +499,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testCombineOperatorWithTwoUntypedResourcePaths() {
-    mockEmptyResource(mockReader, spark, fhirEncoders, ResourceType.GROUP,
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP,
         ResourceType.DEVICE, ResourceType.LOCATION);
     assertThatResultOf(
         "(reverseResolve(Condition.subject).subject.resolve() combine "

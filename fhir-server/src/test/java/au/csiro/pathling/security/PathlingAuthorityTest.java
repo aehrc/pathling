@@ -21,21 +21,21 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag("UnitTest")
-public class PathlingAuthorityTest {
+class PathlingAuthorityTest {
 
   @Nonnull
-  private static PathlingAuthority auth(@Nonnull final String authority) {
+  static PathlingAuthority auth(@Nonnull final String authority) {
     return PathlingAuthority.fromAuthority(authority);
   }
 
   @SuppressWarnings("SameParameterValue")
-  private static void assertFailsValidation(@Nonnull final String authority,
+  static void assertFailsValidation(@Nonnull final String authority,
       @Nonnull final String message) {
     assertThrows(IllegalArgumentException.class, () -> PathlingAuthority.fromAuthority(authority),
         message);
   }
 
-  private static void assertFailsValidation(@Nonnull final String authority) {
+  static void assertFailsValidation(@Nonnull final String authority) {
     assertThrows(IllegalArgumentException.class, () -> PathlingAuthority.fromAuthority(authority),
         "Authority is not recognized: " + authority);
   }
@@ -72,7 +72,7 @@ public class PathlingAuthorityTest {
   }
 
   @Test
-  public void testResourceAccessSubsumedBy() {
+  void testResourceAccessSubsumedBy() {
     final PathlingAuthority patientRead = PathlingAuthority.fromAuthority("pathling:read:Patient");
     final PathlingAuthority conditionWrite = PathlingAuthority
         .fromAuthority("pathling:write:Condition");
@@ -94,7 +94,7 @@ public class PathlingAuthorityTest {
   }
 
   @Test
-  public void testOperationAccessSubsumedBy() {
+  void testOperationAccessSubsumedBy() {
     final PathlingAuthority search = PathlingAuthority.fromAuthority("pathling:search");
 
     // positive cases
@@ -108,7 +108,7 @@ public class PathlingAuthorityTest {
   }
 
   @Test
-  public void testSubsumedByAny() {
+  void testSubsumedByAny() {
     final PathlingAuthority search = PathlingAuthority.fromAuthority("pathling:search");
 
     // Negative cases

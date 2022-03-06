@@ -39,15 +39,16 @@
           "max": "1",
           "documentation": "A URL that can be used to retrieve this source file.",
           "type": "url"
+        },
+        {
+          "name": "mode",
+          "use": "in",
+          "min": 0,
+          "max": "1",
+          "documentation": "A value of 'overwrite' will cause all existing resources of the specified type to be deleted and replaced with the contents of the source file. A value of 'merge' will match existing resources with updated resources in the source file based on their ID, and either update the existing resources or add new resources as appropriate. The default value is 'overwrite'.",
+          "type": "code"
         }
       ]
-    },
-    {
-      "name": "generateIDs",
-      "use": "in",
-      "min": 0,
-      "max": "1",
-      "documentation": "If this parameter is set to true, the server will generate IDs for all resources that are imported. If this parameter is omitted or set to false, IDs must be supplied within all resources and these will be preserved within the imported data."
     }
   ]
 }

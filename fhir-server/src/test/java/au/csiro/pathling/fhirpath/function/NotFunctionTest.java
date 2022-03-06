@@ -40,10 +40,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 class NotFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Test
   void returnsCorrectResults() {
@@ -93,7 +93,7 @@ class NotFunctionTest {
   }
 
   @Test
-  public void inputMustNotContainArguments() {
+  void inputMustNotContainArguments() {
     final ElementPath input = new ElementPathBuilder(spark).build();
     final StringLiteralPath argument = StringLiteralPath
         .fromString("'some argument'", input);
@@ -112,7 +112,7 @@ class NotFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfInputNotBoolean() {
+  void throwsErrorIfInputNotBoolean() {
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .expression("valueInteger")

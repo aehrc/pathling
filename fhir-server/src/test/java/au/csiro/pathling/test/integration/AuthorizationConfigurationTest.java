@@ -55,25 +55,25 @@ import org.springframework.test.context.TestPropertySource;
 class AuthorizationConfigurationTest extends IntegrationTest {
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @MockBean
-  private OidcConfiguration oidcConfiguration;
-
-  @MockBean
-  @SuppressWarnings("unused")
-  private JwtDecoder jwtDecoder;
+  OidcConfiguration oidcConfiguration;
 
   @MockBean
   @SuppressWarnings("unused")
-  private JwtAuthenticationConverter jwtAuthenticationConverter;
+  JwtDecoder jwtDecoder;
+
+  @MockBean
+  @SuppressWarnings("unused")
+  JwtAuthenticationConverter jwtAuthenticationConverter;
 
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     when(oidcConfiguration.get(ConfigItem.AUTH_URL)).thenReturn(
         Optional
             .of("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth"));
@@ -153,15 +153,15 @@ class AuthorizationConfigurationTest extends IntegrationTest {
 
   @Getter
   @SuppressWarnings("unused")
-  private static class SmartConfiguration {
+  static class SmartConfiguration {
 
-    private String authorizationEndpoint;
+    String authorizationEndpoint;
 
-    private String tokenEndpoint;
+    String tokenEndpoint;
 
-    private String revocationEndpoint;
+    String revocationEndpoint;
 
-    private List<String> capabilities;
+    List<String> capabilities;
 
   }
 

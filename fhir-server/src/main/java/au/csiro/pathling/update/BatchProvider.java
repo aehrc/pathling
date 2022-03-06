@@ -1,8 +1,7 @@
 package au.csiro.pathling.update;
 
+import static au.csiro.pathling.io.Database.prepareResourceForUpdate;
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
-import static au.csiro.pathling.update.UpdateProvider.prepareResourceForCreate;
-import static au.csiro.pathling.update.UpdateProvider.prepareResourceForUpdate;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.hl7.fhir.r4.model.Bundle.BundleType.BATCHRESPONSE;
 
@@ -10,6 +9,7 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.FhirServer;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.security.OperationAccess;
 import au.csiro.pathling.security.PathlingAuthority;
 import ca.uhn.fhir.rest.annotation.Transaction;
@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * HAPI plain provider that implements the batch operation for create and update operations.
+ * HAPI plain provider that implements the batch operation for update operations.
  *
  * @author Sean Fong
  * @author John Grimes
@@ -44,7 +44,7 @@ import org.springframework.stereotype.Component;
 public class BatchProvider {
 
   @Nonnull
-  private final UpdateHelpers updateHelpers;
+  private final Database database;
 
   @Nonnull
   private final CacheInvalidator cacheInvalidator;
@@ -52,15 +52,14 @@ public class BatchProvider {
   @Nonnull
   private final Configuration configuration;
 
-  private static final Pattern CREATE_URL = Pattern.compile("^[A-Za-z]+$");
   @SuppressWarnings("RegExpRedundantEscape")
   private static final Pattern UPDATE_URL = Pattern.compile(
       "^[A-Za-z]+/[A-Za-z0-9\\-\\.&&[^\\$]][A-Za-z0-9\\-\\.]{0,63}$");
 
-  public BatchProvider(@Nonnull final UpdateHelpers updateHelpers,
+  public BatchProvider(@Nonnull final Database database,
       @Nonnull final CacheInvalidator cacheInvalidator,
       @Nonnull final Configuration configuration) {
-    this.updateHelpers = updateHelpers;
+    this.database = database;
     this.cacheInvalidator = cacheInvalidator;
     this.configuration = configuration;
   }
@@ -70,69 +69,49 @@ public class BatchProvider {
   public Bundle batch(@Nullable @TransactionParam final Bundle bundle) {
     checkUserInput(bundle != null, "Bundle must be provided");
 
-    final Map<ResourceType, List<IBaseResource>> resourcesForCreation = new EnumMap<>(
-        ResourceType.class);
-    final Map<ResourceType, List<IBaseResource>> resourcesForUpdate = new EnumMap<>(
-        ResourceType.class);
+    final Map<ResourceType, List<IBaseResource>> resourcesForUpdate =
+        new EnumMap<>(ResourceType.class);
     final Bundle response = new Bundle();
     response.setType(BATCHRESPONSE);
 
-    // Gather all the resources within the request bundle, categorised by their type and whether it 
-    // is an update or a create operation. Also, prepare the responses should these operations be 
-    // successful.
+    // Gather all the resources within the request bundle, categorised by their type. Also, prepare 
+    // the responses should these operations be successful.
     for (final Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-      final Resource resource = entry.getResource();
-      final BundleEntryRequestComponent request = entry.getRequest();
-      checkUserInput(resource != null,
-          "Each batch entry must have a resource element");
-      checkUserInput(request != null && !request.isEmpty(),
-          "Each batch entry must have a request element");
-      final boolean postRequest = checkRequestType(request, "POST", CREATE_URL);
-      final boolean putRequest = checkRequestType(request, "PUT", UPDATE_URL);
-      if (postRequest) {
-        final String urlErrorMessage =
-            "The URL for a create request must be equal to the code of a "
-                + "supported resource type";
-        final ResourceType resourceType = validateResourceType(entry, request.getUrl(),
-            urlErrorMessage);
-        final IBaseResource preparedResource = prepareResourceForCreate(resource);
-        addToResourceMap(resourcesForCreation, resourceType, preparedResource);
-        addResponse(response, preparedResource);
-      } else if (putRequest) {
-        final String urlErrorMessage = "The URL for an update request must refer to the code of a "
-            + "supported resource type, and must look like this: [resource type]/[id]";
-        final List<String> urlComponents = List.of(request.getUrl().split("/"));
-        checkUserInput(urlComponents.size() == 2, urlErrorMessage);
-        final String resourceTypeCode = urlComponents.get(0);
-        final String urlId = urlComponents.get(1);
-        final ResourceType resourceType = validateResourceType(entry, resourceTypeCode,
-            urlErrorMessage);
-        final IBaseResource preparedResource = prepareResourceForUpdate(resource, urlId);
-        addToResourceMap(resourcesForUpdate, resourceType, preparedResource);
-        addResponse(response, preparedResource);
-      } else {
-        throw new InvalidUserInputError(
-            "Only create and update operations are supported via batch");
-      }
+      processEntry(resourcesForUpdate, response, entry);
     }
 
-    // Append any newly created resources to their respective tables.
-    create(resourcesForCreation);
+    if (!resourcesForUpdate.isEmpty()) {
+      // Merge in any updated resources into their respective tables.
+      update(resourcesForUpdate);
 
-    // Merge in any updated resources into their respective tables.
-    update(resourcesForUpdate);
+      // Invalidate the cache.
+      cacheInvalidator.invalidateAll();
+    }
 
-    cacheInvalidator.invalidateAll();
     return response;
   }
 
-  private void create(@Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForCreation) {
-    if (configuration.getAuth().isEnabled()) {
-      checkHasAuthority(PathlingAuthority.operationAccess("create"));
+  private void processEntry(final Map<ResourceType, List<IBaseResource>> resourcesForUpdate,
+      final Bundle response, final BundleEntryComponent entry) {
+    final Resource resource = entry.getResource();
+    final BundleEntryRequestComponent request = entry.getRequest();
+    if (resource == null || request == null || request.isEmpty()) {
+      return;
     }
-    for (final ResourceType resourceType : resourcesForCreation.keySet()) {
-      updateHelpers.appendDataset(resourceType, resourcesForCreation.get(resourceType));
-    }
+    checkUserInput(request.getMethod().toString().equals("PUT"),
+        "Only update requests are supported for use within the batch operation");
+    final String urlErrorMessage = "The URL for an update request must refer to the code of a "
+        + "supported resource type, and must look like this: [resource type]/[id]";
+    checkUserInput(UPDATE_URL.matcher(request.getUrl()).matches(), urlErrorMessage);
+    final List<String> urlComponents = List.of(request.getUrl().split("/"));
+    checkUserInput(urlComponents.size() == 2, urlErrorMessage);
+    final String resourceTypeCode = urlComponents.get(0);
+    final String urlId = urlComponents.get(1);
+    final ResourceType resourceType = validateResourceType(entry, resourceTypeCode,
+        urlErrorMessage);
+    final IBaseResource preparedResource = prepareResourceForUpdate(resource, urlId);
+    addToResourceMap(resourcesForUpdate, resourceType, preparedResource);
+    addResponse(response, preparedResource);
   }
 
   private void update(@Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate) {
@@ -140,16 +119,11 @@ public class BatchProvider {
       checkHasAuthority(PathlingAuthority.operationAccess("update"));
     }
     for (final ResourceType resourceType : resourcesForUpdate.keySet()) {
-      updateHelpers.updateDataset(resourceType, resourcesForUpdate.get(resourceType));
+      database.merge(resourceType, resourcesForUpdate.get(resourceType));
     }
   }
 
-  private boolean checkRequestType(@Nonnull final BundleEntryRequestComponent request,
-      @Nonnull final String method, @Nonnull final Pattern urlPattern) {
-    return request.getMethod().toString().equals(method) &&
-        urlPattern.matcher(request.getUrl()).matches();
-  }
-
+  @SuppressWarnings("SameParameterValue")
   @Nonnull
   private ResourceType validateResourceType(final BundleEntryComponent entry,
       final String resourceTypeCode, final String urlErrorMessage) {

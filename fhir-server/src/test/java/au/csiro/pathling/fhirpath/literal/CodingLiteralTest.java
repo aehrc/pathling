@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 @Tag("UnitTest")
 class CodingLiteralTest {
 
-  private static ImmutableCoding parseLiteral(String s) {
+  static ImmutableCoding parseLiteral(final String s) {
     return ImmutableCoding.of(CodingLiteral.fromString(s));
   }
 

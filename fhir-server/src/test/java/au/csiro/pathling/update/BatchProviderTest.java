@@ -10,12 +10,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.parser.IParser;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 @SpringBootTest
 @Tag("UnitTest")
@@ -40,78 +42,53 @@ class BatchProviderTest {
   @Autowired
   Configuration configuration;
 
-  BatchProvider batchProvider;
-  UpdateHelpers updateHelpers;
+  @MockBean
+  Database database;
+
+  @MockBean
   CacheInvalidator cacheInvalidator;
+
+  BatchProvider batchProvider;
 
   @BeforeEach
   void setUp() {
-    updateHelpers = mock(UpdateHelpers.class);
-    cacheInvalidator = mock(CacheInvalidator.class);
-    batchProvider = new BatchProvider(updateHelpers, cacheInvalidator, configuration);
+    batchProvider = new BatchProvider(database, cacheInvalidator, configuration);
   }
 
   @Test
-  void mixedCreateUpdateResourceType() {
-    batchProvider.batch(getBundle("mixedCreateUpdateResourceType"));
-    verify(updateHelpers)
-        .appendDataset(eq(ResourceType.PATIENT),
+  void mixedResourceTypes() {
+    batchProvider.batch(getBundle("mixedResourceTypes"));
+    verify(database)
+        .merge(eq(ResourceType.PATIENT),
             argThat(resourceListMatcher(ResourceType.PATIENT, 2)));
-    verify(updateHelpers)
-        .updateDataset(eq(ResourceType.PRACTITIONER),
+    verify(database)
+        .merge(eq(ResourceType.PRACTITIONER),
             argThat(resourceListMatcher(ResourceType.PRACTITIONER, 1)));
-    verify(updateHelpers)
-        .appendDataset(eq(ResourceType.ORGANIZATION),
+    verify(database)
+        .merge(eq(ResourceType.ORGANIZATION),
             argThat(resourceListMatcher(ResourceType.ORGANIZATION, 1)));
     verify(cacheInvalidator).invalidateAll();
   }
 
   @Test
-  void entryWithNoResource() {
-    final InvalidUserInputError exception = assertThrows(InvalidUserInputError.class,
-        () -> batchProvider.batch(getBundle("entryWithNoResource")));
-    assertEquals("Each batch entry must have a resource element", exception.getMessage());
+  void entryWithNoRequest() {
+    batchProvider.batch(getBundle("entryWithNoRequest"));
+    verifyNoInteractions(database);
+    verifyNoInteractions(cacheInvalidator);
   }
 
   @Test
-  void entryWithNoRequest() {
-    final InvalidUserInputError exception = assertThrows(InvalidUserInputError.class,
-        () -> batchProvider.batch(getBundle("entryWithNoRequest")));
-    assertEquals("Each batch entry must have a request element", exception.getMessage());
+  void entryWithNoResource() {
+    batchProvider.batch(getBundle("entryWithNoResource"));
+    verifyNoInteractions(database);
+    verifyNoInteractions(cacheInvalidator);
   }
 
   @Test
   void unsupportedOperation() {
     final InvalidUserInputError exception = assertThrows(InvalidUserInputError.class,
         () -> batchProvider.batch(getBundle("unsupportedOperation")));
-    assertEquals("Only create and update operations are supported via batch",
-        exception.getMessage());
-  }
-
-  @Test
-  void createWithUnsupportedResource() {
-    final InvalidUserInputError exception = assertThrows(InvalidUserInputError.class,
-        () -> batchProvider.batch(getBundle("createWithUnsupportedResource")));
-    assertEquals(
-        "The URL for a create request must be equal to the code of a supported resource type",
-        exception.getMessage());
-  }
-
-  @Test
-  void createWithUnknownResource() {
-    final InvalidUserInputError exception = assertThrows(InvalidUserInputError.class,
-        () -> batchProvider.batch(getBundle("createWithUnknownResource")));
-    assertEquals(
-        "The URL for a create request must be equal to the code of a supported resource type",
-        exception.getMessage());
-  }
-
-  @Test
-  void createWithMismatchingResource() {
-    final InvalidUserInputError exception = assertThrows(InvalidUserInputError.class,
-        () -> batchProvider.batch(getBundle("createWithMismatchingResource")));
-    assertEquals(
-        "Resource in URL does not match resource type",
+    assertEquals("Only update requests are supported for use within the batch operation",
         exception.getMessage());
   }
 

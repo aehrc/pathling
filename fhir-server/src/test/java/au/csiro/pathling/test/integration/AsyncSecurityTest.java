@@ -29,16 +29,16 @@ import org.springframework.test.context.TestPropertySource;
  */
 @TestPropertySource(properties = {"pathling.async.enabled=true"})
 @Slf4j
-public class AsyncSecurityTest extends IntegrationTest {
+class AsyncSecurityTest extends IntegrationTest {
 
   @MockBean
   JobRegistry jobRegistry;
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @Test
   void illegalJobId() throws URISyntaxException {

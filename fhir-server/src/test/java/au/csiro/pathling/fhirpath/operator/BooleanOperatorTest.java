@@ -15,15 +15,16 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -32,22 +33,24 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class BooleanOperatorTest {
+class BooleanOperatorTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private FhirPath left;
-  private FhirPath right;
-  private ParserContext parserContext;
+  static final String ID_ALIAS = "_abc123";
 
-  @Before
-  public void setUp() {
+  FhirPath left;
+  FhirPath right;
+  ParserContext parserContext;
+
+  @BeforeEach
+  void setUp() {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.BooleanType)
         .withRow("patient-1", true)
         .withRow("patient-2", true)
@@ -67,7 +70,7 @@ public class BooleanOperatorTest {
         .build();
 
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.BooleanType)
         .withRow("patient-1", false)
         .withRow("patient-2", null)
@@ -86,11 +89,13 @@ public class BooleanOperatorTest {
         .expression("deceasedBoolean")
         .build();
 
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(left.getIdColumn()))
+        .build();
   }
 
   @Test
-  public void and() {
+  void and() {
     final OperatorInput input = new OperatorInput(parserContext, left, right);
 
     final Operator booleanOperator = Operator.getInstance("and");
@@ -109,7 +114,7 @@ public class BooleanOperatorTest {
   }
 
   @Test
-  public void or() {
+  void or() {
     final OperatorInput input = new OperatorInput(parserContext, left, right);
 
     final Operator booleanOperator = Operator.getInstance("or");
@@ -128,7 +133,7 @@ public class BooleanOperatorTest {
   }
 
   @Test
-  public void xor() {
+  void xor() {
     final OperatorInput input = new OperatorInput(parserContext, left, right);
 
     final Operator booleanOperator = Operator.getInstance("xor");
@@ -147,7 +152,7 @@ public class BooleanOperatorTest {
   }
 
   @Test
-  public void implies() {
+  void implies() {
     final OperatorInput input = new OperatorInput(parserContext, left, right);
 
     final Operator booleanOperator = Operator.getInstance("implies");
@@ -166,7 +171,7 @@ public class BooleanOperatorTest {
   }
 
   @Test
-  public void leftIsLiteral() {
+  void leftIsLiteral() {
     final FhirPath literalLeft = BooleanLiteralPath.fromString("true", left);
     final OperatorInput input = new OperatorInput(parserContext, literalLeft, right);
 
@@ -186,7 +191,7 @@ public class BooleanOperatorTest {
   }
 
   @Test
-  public void rightIsLiteral() {
+  void rightIsLiteral() {
     final FhirPath literalRight = BooleanLiteralPath.fromString("true", right);
     final OperatorInput input = new OperatorInput(parserContext, left, literalRight);
 

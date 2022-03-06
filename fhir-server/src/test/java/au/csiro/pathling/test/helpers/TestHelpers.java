@@ -15,7 +15,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.FhirServer;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,48 +76,48 @@ public abstract class TestHelpers {
     }
   }
 
-  public static void mockResourceReader(@Nonnull final ResourceReader mockReader,
+  public static void mockResource(@Nonnull final Database database,
       @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {
     for (final ResourceType resourceType : resourceTypes) {
       final Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType);
-      when(mockReader.read(resourceType)).thenReturn(dataset);
+      when(database.read(resourceType)).thenReturn(dataset);
     }
   }
 
-  public static void mockResourceReader(@Nonnull final ResourceReader mockReader,
+  public static void mockResource(@Nonnull final Database database,
       @Nonnull final SparkSession spark, final int numPartitions,
       @Nonnull final ResourceType... resourceTypes) {
     for (final ResourceType resourceType : resourceTypes) {
       Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType);
       dataset = dataset.repartition(numPartitions);
-      when(mockReader.read(resourceType)).thenReturn(dataset);
+      when(database.read(resourceType)).thenReturn(dataset);
     }
   }
 
-  public static void mockResourceReader(@Nonnull final ResourceReader mockReader,
+  public static void mockResource(@Nonnull final Database database,
       @Nonnull final SparkSession spark, @Nonnull final ResourceType resourceType,
       @Nonnull final String parquetPath) {
     final Dataset<Row> dataset = getDatasetFromParquetFile(spark, parquetPath);
-    when(mockReader.read(resourceType)).thenReturn(dataset);
+    when(database.read(resourceType)).thenReturn(dataset);
   }
 
-  public static void mockEmptyResource(@Nonnull final ResourceReader mockReader,
+  public static void mockEmptyResource(@Nonnull final Database database,
       @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ResourceType... resourceTypes) {
     for (final ResourceType resourceType : resourceTypes) {
       final Dataset<Row> dataset = QueryHelpers.createEmptyDataset(spark, fhirEncoders,
           resourceType);
-      when(mockReader.read(resourceType)).thenReturn(dataset);
+      when(database.read(resourceType)).thenReturn(dataset);
     }
   }
 
-  public static void mockAllEmptyResources(@Nonnull final ResourceReader mockReader,
+  public static void mockAllEmptyResources(@Nonnull final Database database,
       @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
     final Set<ResourceType> resourceTypes = FhirServer.supportedResourceTypes();
     for (final ResourceType resourceType : resourceTypes) {
       final Dataset<Row> dataset = QueryHelpers.createEmptyDataset(spark, fhirEncoders,
           resourceType);
-      when(mockReader.read(resourceType)).thenReturn(dataset);
+      when(database.read(resourceType)).thenReturn(dataset);
     }
   }
 

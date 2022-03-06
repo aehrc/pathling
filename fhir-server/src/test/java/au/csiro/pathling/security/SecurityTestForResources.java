@@ -8,11 +8,10 @@ package au.csiro.pathling.security;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.io.ResourceWriter;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import java.io.File;
+import java.util.Collections;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,7 +28,13 @@ import org.springframework.test.context.DynamicPropertySource;
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
 @ActiveProfiles({"core", "unit-test"})
-public abstract class SecurityTestForResources extends SecurityTest {
+abstract class SecurityTestForResources extends SecurityTest {
+
+  @Autowired
+  Database database;
+
+  @Autowired
+  SparkSession spark;
 
   @TempDir
   @SuppressWarnings({"unused", "WeakerAccess"})
@@ -46,35 +51,16 @@ public abstract class SecurityTestForResources extends SecurityTest {
         () -> testRootDir.toURI().toString().replaceFirst("/$", ""));
   }
 
-  @Autowired
-  private ResourceReader resourceReader;
-
-  @Autowired
-  private ResourceWriter resourceWriter;
-
-  @Autowired
-  private SparkSession spark;
-
-  @Autowired
-  private FhirEncoders fhirEncoders;
-
-
-  public void assertWriteSuccess() {
-    resourceWriter.write(ResourceType.ACCOUNT,
+  void assertWriteSuccess() {
+    database.overwrite(ResourceType.ACCOUNT,
         new ResourceDatasetBuilder(spark).withIdColumn().build());
   }
 
-  public void assertAppendSuccess() {
-    resourceWriter.append(ResourceType.ACCOUNT,
-        new ResourceDatasetBuilder(spark).withIdColumn().build());
+  void assertUpdateSuccess() {
+    database.merge(ResourceType.ACCOUNT, Collections.emptyList());
   }
 
-  public void assertUpdateSuccess() {
-    resourceWriter.update(ResourceType.ACCOUNT, resourceReader,
-        spark.emptyDataset(fhirEncoders.of(ResourceType.ACCOUNT.toCode())).toDF());
-  }
-
-  public void assertReadSuccess() {
-    resourceReader.read(ResourceType.ACCOUNT);
+  void assertReadSuccess() {
+    database.read(ResourceType.ACCOUNT);
   }
 }

@@ -24,7 +24,7 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -64,11 +64,11 @@ class ResolveFunctionTest {
   @Autowired
   FhirEncoders fhirEncoders;
 
-  ResourceReader mockReader;
+  Database database;
 
   @BeforeEach
   void setUp() {
-    mockReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
@@ -106,7 +106,7 @@ class ResolveFunctionTest {
         .withRow("episodeofcare-2", "waitlist")
         .withRow("episodeofcare-3", "active")
         .build();
-    when(mockReader.read(ResourceType.EPISODEOFCARE)).thenReturn(episodeOfCareDataset);
+    when(database.read(ResourceType.EPISODEOFCARE)).thenReturn(episodeOfCareDataset);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
     final FhirPath result = invokeResolve(resolveInput);
@@ -162,7 +162,7 @@ class ResolveFunctionTest {
         .withRow("patient-2", "female", false)
         .withRow("patient-3", "male", true)
         .build();
-    when(mockReader.read(ResourceType.PATIENT))
+    when(database.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
 
     final Dataset<Row> groupDataset = new ResourceDatasetBuilder(spark)
@@ -171,7 +171,7 @@ class ResolveFunctionTest {
         .withColumn(DataTypes.BooleanType)
         .withRow("group-1", "Some group", true)
         .build();
-    when(mockReader.read(ResourceType.GROUP))
+    when(database.read(ResourceType.GROUP))
         .thenReturn(groupDataset);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
@@ -204,7 +204,7 @@ class ResolveFunctionTest {
         .flatMap(child -> child.getChildElement("detail"));
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
-    TestHelpers.mockAllEmptyResources(mockReader, spark, fhirEncoders);
+    TestHelpers.mockAllEmptyResources(database, spark, fhirEncoders);
 
     final Dataset<Row> referenceDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -228,7 +228,7 @@ class ResolveFunctionTest {
         .withColumn(DataTypes.StringType)
         .withRow("observation-1", "registered")
         .build();
-    when(mockReader.read(ResourceType.OBSERVATION))
+    when(database.read(ResourceType.OBSERVATION))
         .thenReturn(observationDataset);
 
     final Dataset<Row> clinicalImpressionDataset = new ResourceDatasetBuilder(spark)
@@ -236,7 +236,7 @@ class ResolveFunctionTest {
         .withColumn(DataTypes.StringType)
         .withRow("clinicalimpression-1", "in-progress")
         .build();
-    when(mockReader.read(ResourceType.CLINICALIMPRESSION))
+    when(database.read(ResourceType.CLINICALIMPRESSION))
         .thenReturn(clinicalImpressionDataset);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
@@ -303,7 +303,7 @@ class ResolveFunctionTest {
   NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
-        .resourceReader(mockReader)
+        .resourceReader(database)
         .build();
     return new NamedFunctionInput(parserContext, inputPath, Collections.emptyList());
   }

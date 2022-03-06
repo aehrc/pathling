@@ -24,7 +24,7 @@ import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -54,20 +54,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 class IifFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private static final String ID_ALIAS = "_abc123";
+  static final String ID_ALIAS = "_abc123";
 
-  private ParserContext parserContext;
-  private ResourceReader resourceReader;
+  ParserContext parserContext;
+  Database database;
 
   @BeforeEach
   void setUp() {
     parserContext = new ParserContextBuilder(spark, fhirContext).build();
-    resourceReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
@@ -80,11 +80,11 @@ class IifFunctionTest {
         .withRow("observation-4")
         .withRow("observation-5")
         .build();
-    when(resourceReader.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
+    when(database.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
     final ResourcePath inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
-        .resourceReader(resourceReader)
+        .resourceReader(database)
         .singular(true)
         .build();
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
@@ -235,11 +235,11 @@ class IifFunctionTest {
         .withRow("observation-4")
         .withRow("observation-5")
         .build();
-    when(resourceReader.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
+    when(database.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
     final ResourcePath inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
-        .resourceReader(resourceReader)
+        .resourceReader(database)
         .singular(true)
         .build();
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)

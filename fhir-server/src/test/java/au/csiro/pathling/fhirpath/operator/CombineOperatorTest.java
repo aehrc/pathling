@@ -49,13 +49,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 class CombineOperatorTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
-  private String idColumnName;
+  ParserContext parserContext;
+  String idColumnName;
 
   @BeforeEach
   void setUp() {

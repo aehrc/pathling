@@ -36,11 +36,6 @@ class SecurityDisabledOperationsTest extends SecurityTestForOperations {
   }
 
   @Test
-  void testPassIfCreateWithNoAuth() {
-    assertCreateSuccess();
-  }
-
-  @Test
   void testPassIfUpdateWithNoAuth() {
     assertUpdateSuccess();
   }

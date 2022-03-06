@@ -26,7 +26,7 @@ import org.springframework.http.ResponseEntity;
 /**
  * @author John Grimes
  */
-public class ExtractSecurityTest extends IntegrationTest {
+class ExtractSecurityTest extends IntegrationTest {
 
   @MockBean
   ResultRegistry resultRegistry;
@@ -35,10 +35,10 @@ public class ExtractSecurityTest extends IntegrationTest {
   ResultReader resultReader;
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @Test
   void illegalResultId() throws URISyntaxException {

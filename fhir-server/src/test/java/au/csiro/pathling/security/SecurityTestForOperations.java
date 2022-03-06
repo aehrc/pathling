@@ -13,13 +13,12 @@ import au.csiro.pathling.aggregate.AggregateProvider;
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.ResourceProviderFactory;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchProvider;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.update.BatchProvider;
 import au.csiro.pathling.update.ImportProvider;
-import au.csiro.pathling.update.UpdateHelpers;
 import au.csiro.pathling.update.UpdateProvider;
 import ca.uhn.fhir.parser.IParser;
 import org.apache.spark.sql.SparkSession;
@@ -44,10 +43,7 @@ abstract class SecurityTestForOperations extends SecurityTest {
   BatchProvider batchProvider;
 
   @MockBean
-  ResourceReader resourceReader;
-
-  @MockBean
-  UpdateHelpers updateHelpers;
+  Database database;
 
   @MockBean
   CacheInvalidator cacheInvalidator;
@@ -60,7 +56,7 @@ abstract class SecurityTestForOperations extends SecurityTest {
 
   @BeforeEach
   void setUp() {
-    when(resourceReader.read(any()))
+    when(database.read(any()))
         .thenReturn(new ResourceDatasetBuilder(sparkSession).withIdColumn().build());
   }
 
@@ -94,16 +90,6 @@ abstract class SecurityTestForOperations extends SecurityTest {
     searchProvider.search(null);
   }
 
-  void assertCreateSuccess() {
-    final UpdateProvider updateProvider = resourceProviderFactory.createUpdateResourceProvider(
-        ResourceType.Patient);
-    try {
-      updateProvider.create(null);
-    } catch (final InvalidUserInputError e) {
-      // pass
-    }
-  }
-
   void assertUpdateSuccess() {
     final UpdateProvider updateProvider = resourceProviderFactory.createUpdateResourceProvider(
         ResourceType.Patient);
@@ -116,7 +102,7 @@ abstract class SecurityTestForOperations extends SecurityTest {
 
   void assertBatchSuccess() {
     final String json = TestHelpers.getResourceAsString(
-        "requests/BatchProviderTest/mixedCreateUpdateResourceType.Bundle.json");
+        "requests/BatchProviderTest/mixedResourceTypes.Bundle.json");
     final Bundle bundle = (Bundle) jsonParser.parseResource(json);
     batchProvider.batch(bundle);
   }

@@ -16,7 +16,7 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ResultWriter;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.TimingExtension;
@@ -65,17 +65,17 @@ class ExtractQueryTest {
 
   ResourceType subjectResource;
 
-  ResourceReader resourceReader;
+  Database database;
 
   ExtractExecutor executor;
 
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
-    resourceReader = mock(ResourceReader.class);
+    database = mock(Database.class);
     final ResultWriter resultWriter = mock(ResultWriter.class);
     final ResultRegistry resultRegistry = mock(ResultRegistry.class);
-    executor = new ExtractExecutor(configuration, fhirContext, spark, resourceReader,
+    executor = new ExtractExecutor(configuration, fhirContext, spark, database,
         Optional.ofNullable(terminologyServiceFactory), resultWriter, resultRegistry);
   }
 
@@ -135,7 +135,7 @@ class ExtractQueryTest {
   void multiplePolymorphicResolves() {
     subjectResource = ResourceType.DIAGNOSTICREPORT;
     mockResourceReader(ResourceType.DIAGNOSTICREPORT, ResourceType.PATIENT);
-    mockEmptyResource(resourceReader, spark, fhirEncoders, ResourceType.GROUP, ResourceType.DEVICE,
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP, ResourceType.DEVICE,
         ResourceType.LOCATION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
@@ -322,7 +322,7 @@ class ExtractQueryTest {
   }
 
   void mockResourceReader(final ResourceType... resourceTypes) {
-    TestHelpers.mockResourceReader(resourceReader, spark, resourceTypes);
+    TestHelpers.mockResource(database, spark, resourceTypes);
   }
 
 }

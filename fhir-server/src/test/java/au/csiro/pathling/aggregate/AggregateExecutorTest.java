@@ -14,7 +14,7 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
@@ -67,14 +67,14 @@ abstract class AggregateExecutorTest {
 
   AggregateExecutor executor;
   ResourceType subjectResource;
-  ResourceReader resourceReader;
+  Database database;
   AggregateResponse response = null;
 
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
-    resourceReader = mock(ResourceReader.class);
-    executor = new AggregateExecutor(configuration, fhirContext, spark, resourceReader,
+    database = mock(Database.class);
+    executor = new AggregateExecutor(configuration, fhirContext, spark, database,
         Optional.of(terminologyServiceFactory));
   }
 
@@ -97,7 +97,7 @@ abstract class AggregateExecutorTest {
         final StringAndListParam filters = new StringAndListParam();
         filters.addAnd(new StringParam(drillDown));
         final IBundleProvider searchExecutor = new SearchExecutor(configuration, fhirContext, spark,
-            resourceReader, Optional.of(terminologyServiceFactory),
+            database, Optional.of(terminologyServiceFactory),
             fhirEncoders, subjectResource, Optional.of(filters));
         final List<IBaseResource> resources = searchExecutor.getResources(0, 100);
         assertTrue(resources.size() > 0);
@@ -113,11 +113,11 @@ abstract class AggregateExecutorTest {
   }
 
   void mockResourceReader(final ResourceType... resourceTypes) {
-    TestHelpers.mockResourceReader(resourceReader, spark, resourceTypes);
+    TestHelpers.mockResource(database, spark, resourceTypes);
   }
 
   void mockEmptyResource(final ResourceType... resourceType) {
-    TestHelpers.mockEmptyResource(resourceReader, spark, fhirEncoders, resourceType);
+    TestHelpers.mockEmptyResource(database, spark, fhirEncoders, resourceType);
   }
 
 }

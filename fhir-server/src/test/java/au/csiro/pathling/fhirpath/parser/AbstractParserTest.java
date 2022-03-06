@@ -8,12 +8,11 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
@@ -34,6 +33,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 @SpringBootTest
 @Tag("UnitTest")
@@ -49,30 +49,31 @@ public class AbstractParserTest {
   @Autowired
   TerminologyServiceFactory terminologyServiceFactory;
 
+  @MockBean
+  protected Database database;
+
   Parser parser;
-  protected ResourceReader mockReader;
 
   @BeforeEach
   void setUp() throws IOException {
     SharedMocks.resetAll();
-    mockReader = mock(ResourceReader.class);
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
+    mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
         ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
         ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE);
 
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
+        .build(fhirContext, database, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
-        .resourceReader(mockReader)
+        .resourceReader(database)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
     parser = new Parser(parserContext);
   }
 
-  void mockResourceReader(final ResourceType... resourceTypes)
+  void mockResource(final ResourceType... resourceTypes)
       throws MalformedURLException {
     for (final ResourceType resourceType : resourceTypes) {
       final File parquetFile =
@@ -80,7 +81,7 @@ public class AbstractParserTest {
       final URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
       assertNotNull(parquetUrl);
       final Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-      when(mockReader.read(resourceType)).thenReturn(dataset);
+      when(database.read(resourceType)).thenReturn(dataset);
     }
   }
 
@@ -89,11 +90,11 @@ public class AbstractParserTest {
   protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, resourceType, resourceType.toCode(), true);
+        .build(fhirContext, database, resourceType, resourceType.toCode(), true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
-        .resourceReader(mockReader)
+        .resourceReader(database)
         .inputContext(subjectResource)
         .build();
     final Parser resourceParser = new Parser(parserContext);
