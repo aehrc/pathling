@@ -33,6 +33,7 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.context.annotation.Profile;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.FileSystemUtils;
 
@@ -61,18 +62,24 @@ public class Database {
   @Nonnull
   protected final FhirEncoders fhirEncoders;
 
+  @Nonnull
+  protected final ThreadPoolTaskExecutor executor;
+
   /**
    * @param configuration a {@link Configuration} object which controls the behaviour of the reader
    * @param spark a {@link SparkSession} for interacting with Spark
    * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
+   * @param executor a {@link ThreadPoolTaskExecutor} for executing asynchronous tasks
    */
   public Database(@Nonnull final Configuration configuration,
-      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
+      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final ThreadPoolTaskExecutor executor) {
     this.configuration = configuration;
     this.spark = spark;
     this.warehouseUrl = convertS3ToS3aUrl(configuration.getStorage().getWarehouseUrl());
     this.databaseName = configuration.getStorage().getDatabaseName();
     this.fhirEncoders = fhirEncoders;
+    this.executor = executor;
   }
 
   /**
@@ -149,6 +156,8 @@ public class Database {
         .whenNotMatched()
         .insertAll()
         .execute();
+
+    compact(resourceType, original);
   }
 
   /**
@@ -261,6 +270,39 @@ public class Database {
     // issues on requests that call this method.
     write(resourceType, dataset, SaveMode.ErrorIfExists);
     return getTableUrl(warehouseUrl, databaseName, resourceType);
+  }
+
+  /**
+   * Compacts the table if it has a number of partitions that exceed the configured threshold.
+   *
+   * @param resourceType the resource type of the table to compact
+   * @param table the Delta table for which to check the number of partitions
+   * @see <a href="https://docs.delta.io/latest/best-practices.html#compact-files">Delta Lake
+   * Documentation - Compact files</a>
+   */
+  private void compact(final @Nonnull ResourceType resourceType, final DeltaTable table) {
+    final int threshold = configuration.getSpark().getCompactionThreshold();
+    final int numPartitions = table.toDF().rdd().getNumPartitions();
+    if (numPartitions > threshold) {
+      final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
+      log.debug("Scheduling table compaction (number of partitions: {}, threshold: {}): {}",
+          numPartitions,
+          threshold, tableUrl);
+      executor.submit(() -> {
+        log.debug("Commencing compaction: {}", tableUrl);
+        read(resourceType)
+            .repartition()
+            .write()
+            .option("dataChange", "false")
+            .format("delta")
+            .mode(SaveMode.Overwrite)
+            .save(tableUrl);
+        log.debug("Compaction complete: {}", tableUrl);
+      });
+    } else {
+      log.debug("Compaction not needed (number of partitions: {}, threshold: {})", numPartitions,
+          threshold);
+    }
   }
 
 }

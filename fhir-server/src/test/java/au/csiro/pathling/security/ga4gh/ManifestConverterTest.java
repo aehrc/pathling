@@ -27,6 +27,8 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
@@ -45,6 +47,9 @@ class ManifestConverterTest extends AbstractParserTest {
 
   @Autowired
   FhirEncoders fhirEncoders;
+
+  @MockBean
+  ThreadPoolTaskExecutor executor;
 
   static final String PATIENT_ID_1 = "0dc85075-4f59-4e4f-b75d-a2f601d0cf24";
   static final String PATIENT_ID_2 = "1f276fc3-7e91-4fc9-a287-be19228e8807";
@@ -80,7 +85,7 @@ class ManifestConverterTest extends AbstractParserTest {
 
   @Test
   void convertsManifest() {
-    database = new Database(configuration, spark, fhirEncoders);
+    database = new Database(configuration, spark, fhirEncoders, executor);
 
     final PassportScope passportScope = new PassportScope();
     final VisaManifest manifest = new VisaManifest();

@@ -140,6 +140,15 @@ public class Configuration {
     @NotNull
     private Boolean cacheDatasets;
 
+    /**
+     * When a table is updated, the number of partitions is checked. If the number exceeds this
+     * threshold, the table will be repartitioned back to the default number of partitions. This
+     * prevents large numbers of small updates causing poor subsequent query performance.
+     */
+    @NotNull
+    @Min(1)
+    private int compactionThreshold;
+
   }
 
   /**
