@@ -52,7 +52,7 @@ class GroupingLiteralTest extends AggregateExecutorTest {
   @MethodSource("parameters")
   void queryWithLiteralGroupingExpression(final TestParameters parameters) {
     subjectResource = ResourceType.MEDICATIONREQUEST;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")

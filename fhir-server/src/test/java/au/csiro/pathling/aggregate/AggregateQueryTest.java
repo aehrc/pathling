@@ -37,7 +37,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void simpleQuery() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -51,7 +51,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void multipleGroupingsAndAggregations() {
     subjectResource = ResourceType.ENCOUNTER;
-    mockResourceReader(subjectResource, ResourceType.ORGANIZATION);
+    mockResource(subjectResource, ResourceType.ORGANIZATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -71,7 +71,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithIntegerGroupings() {
     subjectResource = ResourceType.CLAIM;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -86,7 +86,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithMathExpression() {
     subjectResource = ResourceType.CLAIM;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -101,7 +101,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithChoiceElement() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -116,7 +116,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithDateComparison() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -131,7 +131,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithResolve() {
     subjectResource = ResourceType.ALLERGYINTOLERANCE;
-    mockResourceReader(subjectResource, ResourceType.PATIENT);
+    mockResource(subjectResource, ResourceType.PATIENT);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -145,7 +145,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithPolymorphicResolve() {
     subjectResource = ResourceType.DIAGNOSTICREPORT;
-    mockResourceReader(subjectResource, ResourceType.PATIENT);
+    mockResource(subjectResource, ResourceType.PATIENT);
     mockEmptyResource(ResourceType.GROUP, ResourceType.DEVICE, ResourceType.LOCATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
@@ -161,7 +161,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithReverseResolve() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.CONDITION, subjectResource);
+    mockResource(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -176,7 +176,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithReverseResolveAndCounts() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.CONDITION, subjectResource);
+    mockResource(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -192,7 +192,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryMultipleGroupingCounts() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.CONDITION, subjectResource);
+    mockResource(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -208,7 +208,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryMultipleCountAggregations() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.CONDITION, subjectResource);
+    mockResource(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("name.given.count()")
@@ -224,7 +224,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithWhere() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.CONDITION, subjectResource);
+    mockResource(ResourceType.CONDITION, subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -239,7 +239,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithMemberOf() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.CONDITION, subjectResource);
+    mockResource(ResourceType.CONDITION, subjectResource);
 
     final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
         getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
@@ -259,7 +259,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithDateTimeGrouping() {
     subjectResource = ResourceType.MEDICATIONREQUEST;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -274,7 +274,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithWhereAsComparisonOperand() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource, ResourceType.MEDICATIONREQUEST);
+    mockResource(subjectResource, ResourceType.MEDICATIONREQUEST);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -293,7 +293,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithAmbiguousSelfJoin() {
     subjectResource = ResourceType.MEDICATIONREQUEST;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -309,7 +309,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithWhereAndMembership() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource, ResourceType.OBSERVATION);
+    mockResource(subjectResource, ResourceType.OBSERVATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -325,7 +325,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithWhereAndBoolean() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource, ResourceType.OBSERVATION);
+    mockResource(subjectResource, ResourceType.OBSERVATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -341,7 +341,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithWhereInAggregation() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource, ResourceType.OBSERVATION);
+    mockResource(subjectResource, ResourceType.OBSERVATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("where($this.gender = 'female').count()")
@@ -357,7 +357,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithNestedAggregation() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("name.given.count() + name.family.count()")
@@ -372,7 +372,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithNestedAggregationAndNoGroupings() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("name.given.count() + name.family.count()")
@@ -386,7 +386,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithUriValueInGrouping() {
     subjectResource = ResourceType.ENCOUNTER;
-    mockResourceReader(subjectResource, ResourceType.CONDITION);
+    mockResource(subjectResource, ResourceType.CONDITION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -404,7 +404,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithComparisonInAggregation() {
     subjectResource = ResourceType.CAREPLAN;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count() = 12")
@@ -422,7 +422,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithLiteralAggregation() {
     subjectResource = ResourceType.CAREPLAN;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("true")
@@ -437,7 +437,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithWhereAndGroupedData() {
     subjectResource = ResourceType.CAREPLAN;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count().where($this >= 12 and $this <= 13)")
@@ -452,7 +452,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithMultipleGroupingsAndMembership() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -468,7 +468,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithNonSingularWhereFollowedByCount() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("name.where($this.given contains 'Karina848').count()")
@@ -484,7 +484,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithNonsingularBooleanGrouping() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.CONDITION, subjectResource);
+    mockResource(ResourceType.CONDITION, subjectResource);
     // Not a real subsumption - just works for this use case.
     // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
     when(terminologyService.getSubsumesRelation(any()))
@@ -505,7 +505,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithBracketing() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -519,7 +519,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithCanonicalGrouping() {
     subjectResource = ResourceType.QUESTIONNAIRERESPONSE;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -533,7 +533,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithLargeScaleDecimalResult() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("where(gender = 'female').count() / where(gender = 'male').count()")
@@ -546,7 +546,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithWhereAggregationAndCount() {
     subjectResource = ResourceType.CONDITION;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation(
@@ -561,7 +561,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithCombineResultInSecondFilter() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")

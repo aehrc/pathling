@@ -112,7 +112,7 @@ class CountFunctionTest {
         .build();
     when(database.read(ResourceType.PATIENT)).thenReturn(inputDataset);
     final ResourcePath inputPath = new ResourcePathBuilder(spark)
-        .resourceReader(database)
+        .database(database)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();

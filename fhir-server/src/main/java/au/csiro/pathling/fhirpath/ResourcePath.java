@@ -18,7 +18,6 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -148,14 +147,6 @@ public class ResourcePath extends NonLiteralPath {
     return checkPresent(maybeExtensionColumn,
         "Extension container column '_extension' not present in the resource."
             + " Check if extension support was enabled when data were imported!");
-  }
-
-  /**
-   * @return the {@link Column} objects that represent the elements within this resource
-   */
-  @Nonnull
-  public Collection<Column> getElementColumns() {
-    return Objects.requireNonNull(elementsToColumns.values());
   }
 
   public ResourceType getResourceType() {

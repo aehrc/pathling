@@ -88,7 +88,7 @@ class PathTraversalOperatorTest {
     final ResourcePath left = new ResourcePathBuilder(spark)
         .fhirContext(fhirContext)
         .resourceType(ResourceType.PATIENT)
-        .resourceReader(database)
+        .database(database)
         .singular(true)
         .build();
 
@@ -123,7 +123,7 @@ class PathTraversalOperatorTest {
     final ResourcePath left = new ResourcePathBuilder(spark)
         .fhirContext(fhirContext)
         .resourceType(ResourceType.PATIENT)
-        .resourceReader(database)
+        .database(database)
         .singular(true)
         .build();
 

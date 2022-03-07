@@ -84,7 +84,7 @@ public class ParserContextBuilder {
   }
 
   @Nonnull
-  public ParserContextBuilder resourceReader(@Nonnull final Database database) {
+  public ParserContextBuilder database(@Nonnull final Database database) {
     this.database = database;
     return this;
   }

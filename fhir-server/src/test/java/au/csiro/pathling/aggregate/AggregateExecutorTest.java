@@ -112,7 +112,7 @@ abstract class AggregateExecutorTest {
     assertJson("responses/" + expectedPath, actualJson);
   }
 
-  void mockResourceReader(final ResourceType... resourceTypes) {
+  void mockResource(final ResourceType... resourceTypes) {
     TestHelpers.mockResource(database, spark, resourceTypes);
   }
 

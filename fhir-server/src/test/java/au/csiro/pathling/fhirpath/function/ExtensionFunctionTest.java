@@ -8,7 +8,14 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
-import static au.csiro.pathling.test.fixtures.ExtensionFixture.*;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.MANY_EXT_ROW_1;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.MANY_EXT_ROW_2;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.MANY_MY_EXTENSIONS;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.NO_MY_EXTENSIONS;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.ONE_EXT_ROW_1;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.ONE_MY_EXTENSION;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.oneEntryMap;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.toElementDataset;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,7 +31,7 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -58,11 +65,11 @@ class ExtensionFunctionTest {
 
   @Autowired
   private FhirContext fhirContext;
-  private ResourceReader mockReader;
+  private Database database;
 
   @BeforeEach
   void setUp() {
-    mockReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
@@ -80,10 +87,10 @@ class ExtensionFunctionTest {
         .withRow("patient-4", "male", false, 1, oneEntryMap(2, ONE_MY_EXTENSION))
         .withRow("patient-5", "male", true, 1, null)
         .build();
-    when(mockReader.read(ResourceType.PATIENT))
+    when(database.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+        .build(fhirContext, database, ResourceType.PATIENT, "Patient", false);
 
     final StringLiteralPath argumentExpression = StringLiteralPath
         .fromString("'" + "uuid:myExtension" + "'", inputPath);
@@ -151,10 +158,10 @@ class ExtensionFunctionTest {
         .withRow("observation-5", makeEid(1), null, null)
         .build();
 
-    when(mockReader.read(ResourceType.OBSERVATION))
+    when(database.read(ResourceType.OBSERVATION))
         .thenReturn(resourceLikeDataset);
     final ResourcePath baseResourcePath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.OBSERVATION, "Observation", false);
+        .build(fhirContext, database, ResourceType.OBSERVATION, "Observation", false);
 
     final Dataset<Row> elementDataset = toElementDataset(resourceLikeDataset, baseResourcePath);
 

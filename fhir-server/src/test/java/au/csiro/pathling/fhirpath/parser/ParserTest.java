@@ -583,6 +583,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testExtensionsForeignResources() {
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
     assertThatResultOf(ResourceType.CONDITION,
         "subject.resolve().ofType(Patient).extension.url")
         .isElementPath(StringPath.class)

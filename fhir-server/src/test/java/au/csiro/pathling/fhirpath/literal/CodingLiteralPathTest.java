@@ -54,7 +54,7 @@ class CodingLiteralPathTest {
     inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
-        .resourceReader(database)
+        .database(database)
         .singular(true)
         .build();
   }

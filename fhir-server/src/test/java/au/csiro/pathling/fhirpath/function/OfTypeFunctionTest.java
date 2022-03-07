@@ -103,7 +103,7 @@ class OfTypeFunctionTest {
     when(database.read(ResourceType.PATIENT))
         .thenReturn(argumentDataset);
     final ResourcePath argumentPath = new ResourcePathBuilder(spark)
-        .resourceReader(database)
+        .database(database)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();

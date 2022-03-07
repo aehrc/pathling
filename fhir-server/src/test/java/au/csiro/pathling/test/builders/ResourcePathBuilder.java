@@ -101,7 +101,7 @@ public class ResourcePathBuilder {
   }
 
   @Nonnull
-  public ResourcePathBuilder resourceReader(final Database database) {
+  public ResourcePathBuilder database(final Database database) {
     this.database = database;
     return this;
   }

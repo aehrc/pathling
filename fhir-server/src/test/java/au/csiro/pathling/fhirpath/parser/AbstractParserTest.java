@@ -66,7 +66,7 @@ public class AbstractParserTest {
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
-        .resourceReader(database)
+        .database(database)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
@@ -94,7 +94,7 @@ public class AbstractParserTest {
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
-        .resourceReader(database)
+        .database(database)
         .inputContext(subjectResource)
         .build();
     final Parser resourceParser = new Parser(parserContext);

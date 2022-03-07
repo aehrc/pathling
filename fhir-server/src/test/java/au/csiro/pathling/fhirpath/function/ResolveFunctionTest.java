@@ -303,7 +303,7 @@ class ResolveFunctionTest {
   NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
-        .resourceReader(database)
+        .database(database)
         .build();
     return new NamedFunctionInput(parserContext, inputPath, Collections.emptyList());
   }

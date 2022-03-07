@@ -82,7 +82,7 @@ class ExtractQueryTest {
   @Test
   void simpleQuery() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
+    mockResource(ResourceType.PATIENT, ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -100,7 +100,7 @@ class ExtractQueryTest {
   @Test
   void multipleResolves() {
     subjectResource = ResourceType.ENCOUNTER;
-    mockResourceReader(ResourceType.ENCOUNTER, ResourceType.ORGANIZATION);
+    mockResource(ResourceType.ENCOUNTER, ResourceType.ORGANIZATION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -117,7 +117,7 @@ class ExtractQueryTest {
   @Test
   void multipleReverseResolves() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
+    mockResource(ResourceType.PATIENT, ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -134,7 +134,7 @@ class ExtractQueryTest {
   @Test
   void multiplePolymorphicResolves() {
     subjectResource = ResourceType.DIAGNOSTICREPORT;
-    mockResourceReader(ResourceType.DIAGNOSTICREPORT, ResourceType.PATIENT);
+    mockResource(ResourceType.DIAGNOSTICREPORT, ResourceType.PATIENT);
     mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP, ResourceType.DEVICE,
         ResourceType.LOCATION);
 
@@ -154,7 +154,7 @@ class ExtractQueryTest {
   @Test
   void literalColumn() {
     subjectResource = ResourceType.CONDITION;
-    mockResourceReader(ResourceType.CONDITION);
+    mockResource(ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -169,7 +169,7 @@ class ExtractQueryTest {
   @Test
   void codingColumn() {
     subjectResource = ResourceType.CONDITION;
-    mockResourceReader(ResourceType.CONDITION);
+    mockResource(ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -184,7 +184,7 @@ class ExtractQueryTest {
   @Test
   void codingLiteralColumn() {
     subjectResource = ResourceType.CONDITION;
-    mockResourceReader(ResourceType.CONDITION);
+    mockResource(ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -200,7 +200,7 @@ class ExtractQueryTest {
   @Test
   void multipleFilters() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
+    mockResource(ResourceType.PATIENT, ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -219,7 +219,7 @@ class ExtractQueryTest {
   @Test
   void limit() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION);
+    mockResource(ResourceType.PATIENT, ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -236,7 +236,7 @@ class ExtractQueryTest {
   @Test
   void eliminatesTrailingNulls() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource, ResourceType.CONDITION);
+    mockResource(subjectResource, ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -251,7 +251,7 @@ class ExtractQueryTest {
   @Test
   void combineResultInSecondFilter() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
@@ -267,7 +267,7 @@ class ExtractQueryTest {
   @Test
   void emptyColumn() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.PATIENT);
+    mockResource(ResourceType.PATIENT);
 
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new ExtractRequestBuilder(subjectResource)
@@ -281,7 +281,7 @@ class ExtractQueryTest {
   @Test
   void emptyFilter() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.PATIENT);
+    mockResource(ResourceType.PATIENT);
 
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new ExtractRequestBuilder(subjectResource)
@@ -294,7 +294,7 @@ class ExtractQueryTest {
   @Test
   void noColumns() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.PATIENT);
+    mockResource(ResourceType.PATIENT);
 
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
@@ -307,7 +307,7 @@ class ExtractQueryTest {
   @Test
   void nonPositiveLimit() {
     subjectResource = ResourceType.PATIENT;
-    mockResourceReader(ResourceType.PATIENT);
+    mockResource(ResourceType.PATIENT);
     final List<Integer> limits = Arrays.asList(0, -1);
 
     for (final Integer limit : limits) {
@@ -321,7 +321,7 @@ class ExtractQueryTest {
     }
   }
 
-  void mockResourceReader(final ResourceType... resourceTypes) {
+  void mockResource(final ResourceType... resourceTypes) {
     TestHelpers.mockResource(database, spark, resourceTypes);
   }
 

@@ -131,7 +131,7 @@ class ReverseResolveFunctionTest {
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
-        .resourceReader(database)
+        .database(database)
         .inputExpression("Patient")
         .build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, inputPath,

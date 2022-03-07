@@ -84,7 +84,7 @@ class IifFunctionTest {
     final ResourcePath inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
-        .resourceReader(database)
+        .database(database)
         .singular(true)
         .build();
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
@@ -239,7 +239,7 @@ class IifFunctionTest {
     final ResourcePath inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
-        .resourceReader(database)
+        .database(database)
         .singular(true)
         .build();
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
