@@ -12,7 +12,7 @@
  */
 package au.csiro.pathling.encoders2
 
-import au.csiro.pathling.encoders.{EncoderContext, EncodingContext}
+import au.csiro.pathling.encoders.EncodingContext
 import au.csiro.pathling.encoders2.ExtensionSupport.EXTENSION_ELEMENT_NAME
 import au.csiro.pathling.encoders2.SchemaVisitor.isSingular
 import ca.uhn.fhir.context._
@@ -28,7 +28,7 @@ import scala.collection.convert.ImplicitConversions._
  * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
  * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
  */
-trait SchemaVisitor[DT, SF] extends EncoderContext {
+trait SchemaVisitor[DT, SF] {
   /**
    * Transforms the SF representations of the composite elements to the DT representation of the 
    * composite.
@@ -101,18 +101,12 @@ trait SchemaVisitor[DT, SF] extends EncoderContext {
   }
 
   /**
-   * Checks if the given class is a valid type for open elements types as defined in: 
-   * [[https://hl7.org/fhir/R4/datatypes.html#open]].
-   * Note: this is needed because the HAPI implementation of open type element 
-   * [[ca.uhn.fhir.context.RuntimeChildAny#getValidChildTypes]] returns types not included in the 
-   * specification such as [[org.hl7.fhir.r4.model.ElementDefinition]].
+   * Returns the list of valid child types of given choice.
    *
-   * @param cls the class of the type to checks.
-   * @return true is given type is a valid open element type.
+   * @param choice the choice child definition.
+   * @return list of valid types for this
    */
-  def isValidOpenElementType(cls: Class[_ <: IBase]): Boolean = {
-    config.openTypes.contains(cls.getConstructor().newInstance().fhirType())
-  }
+  def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]]
 
   /**
    * Returns a deterministically ordered list of child names of a choice.
@@ -121,9 +115,7 @@ trait SchemaVisitor[DT, SF] extends EncoderContext {
    * @return ordered list of child names of the choice.
    */
   def getOrderedListOfChoiceChildNames(choice: RuntimeChildChoiceDefinition): Seq[String] = {
-    choice
-      .getValidChildTypes
-      .filter(cls => !choice.isInstanceOf[RuntimeChildAny] || isValidOpenElementType(cls))
+    getValidChoiceTypes(choice)
       .toList
       .sortBy(_.getTypeName())
       .map(choice.getChildNameByDatatype)

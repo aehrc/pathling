@@ -12,7 +12,7 @@
  */
 package au.csiro.pathling.encoders2
 
-import au.csiro.pathling.encoders.EncodingContext
+import au.csiro.pathling.encoders.{EncoderSettings, EncodingContext}
 import ca.uhn.fhir.context._
 
 
@@ -22,7 +22,7 @@ import ca.uhn.fhir.context._
  * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
  * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
  */
-trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] {
+trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] with EncoderSettings {
 
   /**
    * Builds a representation for an child element with resolved name.
@@ -60,14 +60,6 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] {
    * @return the representation of the composite.
    */
   def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[SF]): DT
-
-  /**
-   * Gets the max nesting that recursive data types should be expanded to.
-   * Zero indicates that fields ot type T should not be expanded in the composite of type T.
-   *
-   * @return the max nesting that recursive data types should be expanded to
-   */
-  def maxNestingLevel: Int
 
   def proceedCompositeChildren(value: CompositeCtx[DT, SF]): Seq[SF] = {
     value.visitChildren(this)

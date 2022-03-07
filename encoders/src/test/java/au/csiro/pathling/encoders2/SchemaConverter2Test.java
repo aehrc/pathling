@@ -22,11 +22,9 @@ import au.csiro.pathling.encoders.SchemaConverter;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Consumer;
-import org.apache.spark.sql.types.ArrayType;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.MapType;
-import org.apache.spark.sql.types.StructType;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.Condition;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -113,5 +111,29 @@ public class SchemaConverter2Test extends AbstractSchemaConverterTest {
       assertEquals(DataTypes.IntegerType, t.fields()[t.fieldIndex("_fid")].dataType());
       assertFieldNotPresent("extension", t);
     });
+  }
+
+
+  @Test
+  public void testRestrictsOpenTypesCorrectly() {
+
+    final Set<String> limitedOpenTypes = Set.of(
+        "boolean",
+        "integer",
+        "Coding",
+        "ElementDefinition" // this is not a valid R4 open type so it should not be returned
+    );
+
+    final SchemaConverter2 schemaConverter = new SchemaConverter2(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
+        EncoderConfig.apply(0, JavaConverters.asScalaSet(limitedOpenTypes).toSet(), true));
+
+    StructType conditionSchema = schemaConverter.resourceSchema(Condition.class);
+    final MapType extensionsContainerType = (MapType) getField(conditionSchema, true,
+        "_extension");
+    StructType extensionStruct = (StructType) ((ArrayType) extensionsContainerType.valueType())
+        .elementType();
+    Set<String> actualOpenTypeFieldNames = Stream.of(extensionStruct.fieldNames())
+        .filter(fn -> fn.startsWith("value")).collect(Collectors.toUnmodifiableSet());
+    assertEquals(Set.of("valueBoolean", "valueInteger", "valueCoding"), actualOpenTypeFieldNames);
   }
 }

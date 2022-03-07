@@ -13,9 +13,11 @@
 
 package au.csiro.pathling.encoders2
 
+import au.csiro.pathling.encoders.EncoderContext
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
+import org.hl7.fhir.instance.model.api.IBase
 
 
 /**
@@ -24,7 +26,20 @@ import ca.uhn.fhir.context._
  * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
  * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
  */
-trait SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] {
+abstract class SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] with EncoderContext {
+
+
+  private def isAllowedOpenElementType(cls: Class[_ <: IBase]): Boolean = {
+    config.openTypes.contains(cls.getConstructor().newInstance().fhirType())
+  }
+
+  override def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]] = {
+    // delegate to type mappings and filter additionally restrict with config for RuntimeChildAny
+    choice match {
+      case _: RuntimeChildAny => dataTypeMappings.getValidChoiceTypes(choice).filter(isAllowedOpenElementType)
+      case _ => dataTypeMappings.getValidChoiceTypes(choice)
+    }
+  }
 
   override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
 

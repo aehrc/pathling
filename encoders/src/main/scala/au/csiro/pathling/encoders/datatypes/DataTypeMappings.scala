@@ -14,12 +14,12 @@
 package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders2.ExpressionWithName
-import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementCompositeDefinition, BaseRuntimeElementDefinition, RuntimePrimitiveDatatypeDefinition}
+import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.apache.spark.unsafe.types.UTF8String
-import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
+import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 
 /**
  * Interface for mapping FHIR datatypes to Spark datatypes.
@@ -120,4 +120,13 @@ trait DataTypeMappings {
    */
 
   def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Option[CustomCoder] = None
+
+
+  /**
+   * Returns the list of valid child types of given choice.
+   *
+   * @param choice the choice child definition.
+   * @return list of valid types for this
+   */
+  def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]]
 }
