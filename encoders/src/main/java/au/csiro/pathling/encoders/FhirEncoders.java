@@ -23,7 +23,8 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Set;
+import lombok.Value;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import scala.collection.JavaConverters;
@@ -69,6 +70,16 @@ public class FhirEncoders {
   private final int maxNestingLevel;
 
   /**
+   * The list of types that are encoded within open types, such as extensions.
+   */
+  private final Set<String> openTypes;
+
+  /**
+   * Indicates whether FHIR extension support should be enabled.
+   */
+  private final boolean enableExtensions;
+
+  /**
    * The encoder version to use.
    */
   private final int encoderVersion;
@@ -80,11 +91,13 @@ public class FhirEncoders {
    * @param context the FHIR context to use.
    * @param mappings mappings between Spark and FHIR data types.
    * @param maxNestingLevel maximum nesting level for expansion of recursive data types.
+   * @param openTypes the list of types that are encoded within open types, such as extensions.
+   * @param enableExtensions true if FHIR extension should be enabled.
    * @param encoderVersion the encoder version to use.
    */
   public FhirEncoders(final FhirContext context, final DataTypeMappings mappings,
-      final int maxNestingLevel, int encoderVersion) {
-
+      final int maxNestingLevel, final Set<String> openTypes, final boolean enableExtensions,
+      final int encoderVersion) {
     if (encoderVersion != 1 && encoderVersion != 2) {
       throw new IllegalArgumentException(
           "Unsupported encoder version: " + encoderVersion + ". Valid version are 1 or 2");
@@ -92,6 +105,8 @@ public class FhirEncoders {
     this.context = context;
     this.mappings = mappings;
     this.maxNestingLevel = maxNestingLevel;
+    this.openTypes = openTypes;
+    this.enableExtensions = enableExtensions;
     this.encoderVersion = encoderVersion;
   }
 
@@ -223,7 +238,9 @@ public class FhirEncoders {
               EncoderBuilder2.of(definition,
                   context,
                   mappings,
-                  maxNestingLevel);
+                  maxNestingLevel,
+                  JavaConverters.asScalaSet(openTypes).toSet(),
+                  enableExtensions);
         } else if (encoderVersion == 1) {
           //noinspection unchecked
           encoder = (ExpressionEncoder<T>)
@@ -256,53 +273,37 @@ public class FhirEncoders {
   /**
    * Immutable key to look up a matching encoders instance by configuration.
    */
+  @Value
   private static class EncodersKey {
 
-    final FhirVersionEnum fhirVersion;
-    final int maxNestingLevel;
-    final int encoderVersion;
+    FhirVersionEnum fhirVersion;
+    int maxNestingLevel;
+    Set<String> openTypes;
+    boolean enableExtensions;
+    int encoderVersion;
 
-    EncodersKey(final FhirVersionEnum fhirVersion, int maxNestingLevel, int encoderVersion) {
-      this.fhirVersion = fhirVersion;
-      this.maxNestingLevel = maxNestingLevel;
-      this.encoderVersion = encoderVersion;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      EncodersKey that = (EncodersKey) o;
-      return maxNestingLevel == that.maxNestingLevel &&
-          encoderVersion == that.encoderVersion &&
-          fhirVersion == that.fhirVersion;
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(fhirVersion, maxNestingLevel, encoderVersion);
-    }
   }
 
   /**
-   * Encoder builder. Today only the FHIR version is specified, but future builders may allow
-   * customization of the profile used.
+   * Encoder builder. Specifies FHIR version and other parameters affecting encoder functionality,
+   * such as max nesting level for recursive types with the fluent API.
    */
   public static class Builder {
 
     private final static int DEFAULT_ENCODER_VERSION = 2;
-    final FhirVersionEnum fhirVersion;
-    int maxNestingLevel;
-    int encoderVersion;
+    private static final boolean DEFAULT_ENABLE_EXTENSIONS = false;
+    private final FhirVersionEnum fhirVersion;
+    private int maxNestingLevel;
+    private Set<String> openTypes;
+    private int encoderVersion;
+    private boolean enableExtensions;
 
     Builder(final FhirVersionEnum fhirVersion) {
       this.fhirVersion = fhirVersion;
       this.maxNestingLevel = 0;
+      this.openTypes = Collections.emptySet();
       this.encoderVersion = DEFAULT_ENCODER_VERSION;
+      this.enableExtensions = DEFAULT_ENABLE_EXTENSIONS;
     }
 
     /**
@@ -312,8 +313,19 @@ public class FhirEncoders {
      * @param maxNestingLevel the maximum nesting level
      * @return this builder
      */
-    public Builder withMaxNestingLevel(int maxNestingLevel) {
+    public Builder withMaxNestingLevel(final int maxNestingLevel) {
       this.maxNestingLevel = maxNestingLevel;
+      return this;
+    }
+
+    /**
+     * Sets the list of types that are encoded within open types, such as extensions.
+     *
+     * @param openTypes the list of types
+     * @return this builder
+     */
+    public Builder withOpenTypes(final Set<String> openTypes) {
+      this.openTypes = openTypes;
       return this;
     }
 
@@ -329,13 +341,25 @@ public class FhirEncoders {
     }
 
     /**
+     * Switches on/off the support for extensions in encoders.
+     *
+     * @param enable if extensions should be enabled.
+     * @return this builder
+     */
+    public Builder withExtensionsEnabled(final boolean enable) {
+      this.enableExtensions = enable;
+      return this;
+    }
+
+    /**
      * Get or create an {@link FhirEncoders} instance that matches the builder's configuration.
      *
      * @return an Encoders instance.
      */
     public FhirEncoders getOrCreate() {
 
-      final EncodersKey key = new EncodersKey(fhirVersion, maxNestingLevel, encoderVersion);
+      final EncodersKey key = new EncodersKey(fhirVersion, maxNestingLevel,
+          openTypes, enableExtensions, encoderVersion);
 
       synchronized (ENCODERS) {
 
@@ -347,7 +371,8 @@ public class FhirEncoders {
 
           final FhirContext context = contextFor(fhirVersion);
           final DataTypeMappings mappings = mappingsFor(fhirVersion);
-          encoders = new FhirEncoders(context, mappings, maxNestingLevel, encoderVersion);
+          encoders = new FhirEncoders(context, mappings, maxNestingLevel, openTypes,
+              enableExtensions, encoderVersion);
           ENCODERS.put(key, encoders);
         }
         return encoders;

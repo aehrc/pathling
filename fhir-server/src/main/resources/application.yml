@@ -26,7 +26,7 @@ pathling:
     # Setting this option to true will enable additional logging relating to the query plan used to
     # execute queries.
     explainQueries: false
-    
+
     # This controls whether the built-in caching within Spark is used for resource datasets and
     # search results. It may be useful to turn this off for large datasets in memory-constrained
     # environments.
@@ -45,11 +45,11 @@ pathling:
     aws:
       # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
       anonymousAccess: true
-      
+
       # Authentication details for connecting to protected Amazon S3 locations.
       # accessKeyId: [AWS access key ID]
       # secretAccessKey: [AWS secret access key]
-      
+
       # The ARN of an IAM role to be assumed using STS.
       # assumedRole: [ARN of IAM role]
 
@@ -60,7 +60,7 @@ pathling:
     # The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology 
     # queries. The server listed here is suitable for low volume testing purposes only.
     serverUrl: https://r4.ontoserver.csiro.au/fhir
-    
+
     # The maximum period (in milliseconds) that the server should wait for incoming data from the
     # terminology service.
     socketTimeout: 60000
@@ -134,6 +134,29 @@ pathling:
   encoding:
     # Controls the maximum depth of nested element data that is encoded upon import.
     maxNestingLevel: 3
+    
+    # Enables support for FHIR extensions.
+    enableExtensions: true
+    
+    # The list of types that are encoded within open types, such as extensions.
+    openTypes:
+      - boolean
+      - canonical
+      - code
+      - date
+      - dateTime
+      - decimal
+      - instant
+      - integer
+      - oid
+      - positiveInt
+      - string
+      - time
+      - unsignedInt
+      - uri
+      - url
+      - Coding
+      - Identifier
 
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.

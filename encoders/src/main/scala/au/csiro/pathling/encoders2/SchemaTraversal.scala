@@ -10,171 +10,138 @@
  * under the CSIRO Open Source Software Licence Agreement.
  *
  */
-
 package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.EncodingContext
-import au.csiro.pathling.encoders.SchemaConverter.getOrderedListOfChoiceTypes
-import au.csiro.pathling.encoders2.SchemaTraversal.isSingular
+import au.csiro.pathling.encoders2.ExtensionSupport.EXTENSION_ELEMENT_NAME
+import au.csiro.pathling.encoders2.SchemaVisitor.isSingular
 import ca.uhn.fhir.context._
+import org.hl7.fhir.instance.model.api.IBase
+import org.hl7.fhir.r4.model.Patient
 
 import scala.collection.convert.ImplicitConversions._
 
+
 /**
- * A strategy to traverse a Fhir schema with [[SchemaTraversal]].
+ * A visitor for HAPI Fhir schema traversal.
  *
  * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
  * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
  */
-trait SchemaProcessor[DT, SF] {
+trait SchemaVisitor[DT, SF] {
+  /**
+   * Transforms the SF representations of the composite elements to the DT representation of the 
+   * composite.
+   *
+   * @param compositeCtx the composite context.
+   * @param sfs          the list of the SF representations of the composite elements.
+   * @return the DT representation of the composite.
+   */
+  def aggregateComposite(compositeCtx: CompositeCtx[DT, SF], sfs: Seq[SF]): DT
+
+  def combineChoiceElements(ctx: ChoiceChildCtx[DT, SF], seq: Seq[Seq[SF]]): Seq[SF]
 
   /**
-   * Builds a representation for an child element with resolved name.
+   * Visitor method for a HAPI Element definition
    *
-   * @param childDefinition   the HAPI child definition.
-   * @param elementDefinition the HAPI element definition.
-   * @param elementName       the element name.
-   * @param compositeBuilder  the callback to build the representation of a composite.
-   * @return the representation of of the named child element.
+   * @param elementCtx the element context.
+   * @return the list of the SF representations of the element.
    */
-  def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String,
-                 compositeBuilder: (SchemaProcessor[DT, SF], BaseRuntimeElementCompositeDefinition[_]) => DT): Seq[SF]
+  def visitElement(elementCtx: ElementCtx[DT, SF]): Seq[SF]
 
   /**
-   * Determines if the representation of a child should be included in the representation of its composite.
+   * Visitor method for HAPI RuntimeChild definition of a choice.
    *
-   * @param definition      the HAPI definition of a composite.
-   * @param childDefinition the HAPI definition of the composite child.
-   * @return true if the child representation should be included.
+   * @param choiceChildCtx the choice child context.
+   * @return the list of the SF representations of the elements of the child definition.
    */
-  def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean
+  def visitChoiceChild(choiceChildCtx: ChoiceChildCtx[DT, SF]): Seq[SF] = {
+    combineChoiceElements(choiceChildCtx, choiceChildCtx.visitChildren(this))
+  }
 
   /**
-   * Combines the representations of the choice options to the representation of the choice.
+   * Visitor method for HAPI RuntimeChild definition with a single element.
    *
-   * @param choiceDefinition the HAPI choice child definition.
-   * @param optionValues     the list of representations of choice options.
-   * @return the representation of the choice element.
+   * @param elementChildCtx child context.
+   * @return the list of the SF representations of the elements of the child definition.
    */
-  def combineChoiceOptions(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[SF]]): Seq[SF] = optionValues.flatten
+  def visitElementChild(elementChildCtx: ElementChildCtx[DT, SF]): Seq[SF] = {
+    elementChildCtx.visitChildren(this)
+  }
 
   /**
-   * Builds the representation of the composite from the representations of its elements.
+   * Visitor method for HAPI RuntimeChild definition.
    *
-   * @param definition the HAPI definition of a composite
-   * @param fields     the list of representations of the composite elements.
-   * @return the representation of the composite.
+   * @param childCtx the child context.
+   * @return the list of the SF representations of the elements of the child definition.
    */
-  def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[SF]): DT
+  def visitChild(childCtx: ChildCtx[DT, SF]): Seq[SF] = {
+    childCtx.proceed(this)
+  }
 
-
-  // explicit control of context switching
 
   /**
-   * Called before the traversal enters a child. Allows to substitute the processor used to travers the child.
+   * Visitor method for HAPI ElementComposite definition.
    *
-   * @param childDefinition the HAPI child definition.
-   * @return the processor to be used to traverse the child.
+   * @param compositeCtx the composite element context.
+   * @return DT representation of the composite element.
    */
-  def beforeEnterChild(childDefinition: BaseRuntimeChildDefinition): SchemaProcessor[DT, SF] = this
+  def visitComposite(compositeCtx: CompositeCtx[DT, SF]): DT = {
+    aggregateComposite(compositeCtx, compositeCtx.visitChildren(this))
+  }
 
   /**
-   * Called before the traversal enters a choice option. Allows to substitute the processor used to travers the option.
+   * Visitor method for HAPI Resource definitions.
    *
-   * @param choiceDefinition the HAPI choice child definition.
-   * @param optionName       the full name of the option element.
-   * @return the processor to be used to traverse the option element.
+   * @param resourceCtx the resource context.
+   * @return DT representation of the resource.
    */
-  def beforeEnterChoiceOption(choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): SchemaProcessor[DT, SF] = this
+  def visitResource(resourceCtx: ResourceCtx[DT, SF]): DT = {
+    resourceCtx.proceed(this)
+  }
+
+  /**
+   * Returns the list of valid child types of given choice.
+   *
+   * @param choice the choice child definition.
+   * @return list of valid types for this
+   */
+  def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]]
+
+  /**
+   * Returns a deterministically ordered list of child names of a choice.
+   *
+   * @param choice the choice child definition.
+   * @return ordered list of child names of the choice.
+   */
+  def getOrderedListOfChoiceChildNames(choice: RuntimeChildChoiceDefinition): Seq[String] = {
+    getValidChoiceTypes(choice)
+      .toList
+      .sortBy(_.getTypeName())
+      .map(choice.getChildNameByDatatype)
+      .distinct
+
+    // we need to use `distinct` as the list of allowed types may contain profiles of a type
+    // that resolve to same childName. e.g. [[org.hl7.fhir.r4.model.MoneyQuantity]] and
+    // [[org.hl7.fhir.r4.model.SimpleQuantity]] are both profiles of [[org.hl7.fhir.r4.model.Quantity]]
+    // and resolve to the child name of `valueQuantity`.
+    // They both and the [[org.hl7.fhir.r4.model.Quantity]] appear in the list of allowed types
+    // for RuntimeChildAny. This case should be actually addressed by filtering with [[#isValidOpenElementType]]
+    // but there might be other types of choices that have similar issue.
+  }
 }
 
-/**
- * Encapsulates the traversal a Fhir schema defined in HAPI.
- *
- * @param maxNestingLevel the maximum nesting levels to traverse.
- * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
- * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
- */
-sealed class SchemaTraversal[DT, SF](maxNestingLevel: Int) {
-
-  /**
-   * Creates the representation of given resource.
-   *
-   * @param proc               the processor to use to create the  representation.
-   * @param resourceDefinition the HAPI definition of the resource
-   * @return the representation of the resource.
-   */
-  def processResource(proc: SchemaProcessor[DT, SF], resourceDefinition: RuntimeResourceDefinition): DT = {
+object SchemaVisitor {
+  def traverseResource[DT, SF](resourceDefinition: RuntimeResourceDefinition, visitor: SchemaVisitor[DT, SF]): DT = {
     EncodingContext.runWithContext {
-      processComposite(proc, resourceDefinition)
+      ResourceCtx(resourceDefinition).accept(visitor)
     }
   }
 
-  /**
-   * Creates the representation of given composite.
-   *
-   * @param proc       the processor to use to create the the processor to use to create the resource representation. representation.
-   * @param definition the HAPI definition of the composite.
-   * @return the representation of the composite.
-   */
-  def processComposite(proc: SchemaProcessor[DT, SF], definition: BaseRuntimeElementCompositeDefinition[_]): DT = {
-    EncodingContext.withDefinition(definition) {
-      val fields: Seq[SF] = definition
-        .getChildren
-        .filter(proc.shouldExpandChild(definition, _))
-        .flatMap(enterChild(proc, _))
-      proc.buildComposite(definition, fields)
-    }
+  def traverseComposite[DT, SF](compositeDefinition: BaseRuntimeElementCompositeDefinition[_], visitor: SchemaVisitor[DT, SF]): DT = {
+    CompositeCtx(compositeDefinition).accept(visitor)
   }
 
-
-  private def enterChild(proc: SchemaProcessor[DT, SF], childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
-    childDefinition match {
-      case _: RuntimeChildContainedResources | _: RuntimeChildExtension => Nil
-      case choiceDefinition: RuntimeChildChoiceDefinition =>
-        enterChoiceChild(proc.beforeEnterChild(choiceDefinition), choiceDefinition)
-      case _ =>
-        enterElementChild(proc.beforeEnterChild(childDefinition), childDefinition)
-    }
-  }
-
-  private def enterChoiceChild(proc: SchemaProcessor[DT, SF], choiceDefinition: RuntimeChildChoiceDefinition): Seq[SF] = {
-    assert(isSingular(choiceDefinition), "Collections of choice elements are not supported")
-    val childValues = getOrderedListOfChoiceTypes(choiceDefinition)
-      .map(choiceDefinition.getChildNameByDatatype)
-      .map(childName => enterChoiceChildOption(proc.beforeEnterChoiceOption(choiceDefinition, childName), choiceDefinition, childName))
-    proc.combineChoiceOptions(choiceDefinition, childValues)
-  }
-
-  private def enterChoiceChildOption(proc: SchemaProcessor[DT, SF], choiceDefinition: RuntimeChildChoiceDefinition, optionName: String): Seq[SF] = {
-    val definition = choiceDefinition.getChildByName(optionName)
-    enterElement(proc, choiceDefinition, definition, optionName)
-  }
-
-  private def enterElementChild(proc: SchemaProcessor[DT, SF], childDefinition: BaseRuntimeChildDefinition): Seq[SF] = {
-    val elementName = childDefinition.getElementName
-    val definition = childDefinition.getChildByName(childDefinition.getElementName)
-    enterElement(proc, childDefinition, definition, elementName)
-  }
-
-  private def enterElement(proc: SchemaProcessor[DT, SF], childDefinition: BaseRuntimeChildDefinition,
-                           elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[SF] = {
-    if (shouldExpand(elementDefinition)) {
-      proc.buildValue(childDefinition, elementDefinition, elementName, processComposite)
-    } else {
-      Nil
-    }
-  }
-
-  private def shouldExpand(definition: BaseRuntimeElementDefinition[_]): Boolean = {
-    EncodingContext.currentNestingLevel(definition) <= maxNestingLevel
-  }
-}
-
-/**
- * Companion object for [[SchemaTraversal]]
- */
-object SchemaTraversal {
   /**
    * Checks if the child definition represents a collection
    *
@@ -193,5 +160,202 @@ object SchemaTraversal {
    */
   def isSingular(childDefinition: BaseRuntimeChildDefinition): Boolean = {
     childDefinition.getMax == 1
+  }
+}
+
+
+/**
+ * Base trait for all visitor contexts.
+ *
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+trait VisitorCtx[DT, SF]
+
+
+/**
+ * Base trait for visitor context that produce DT representations.
+ *
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+trait TypeVisitorCtx[DT, SF] extends VisitorCtx[DT, SF] {
+  /**
+   * Accept the visitor and dispatch the call to the appropriate 'visit' method.
+   *
+   * @param visitor the visitor to dispatch the call to.
+   * @return the DT representation of this context.
+   */
+  def accept(visitor: SchemaVisitor[DT, SF]): DT
+}
+
+/**
+ * Base trait for visitor context that produce ST representations.
+ *
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+trait FieldVisitorCtxCtx[DT, SF] extends VisitorCtx[DT, SF] {
+  /**
+   * Accept the visitor and dispatch the call to the appropriate 'visit' method.
+   *
+   * @param visitor the visitor to dispatch the call to.
+   * @return the ST representation of this context.
+   */
+  def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF]
+}
+
+/**
+ * The visitor context representing a HAPI Resource definition.
+ *
+ * @param resourceDefinition the HAPI resource definition.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class ResourceCtx[DT, SF](resourceDefinition: RuntimeResourceDefinition) extends TypeVisitorCtx[DT, SF] {
+  override def accept(visitor: SchemaVisitor[DT, SF]): DT = {
+    visitor.visitResource(this)
+  }
+
+  def proceed(visitor: SchemaVisitor[DT, SF]): DT = {
+    toCompositeCtx.accept(visitor)
+  }
+
+  def toCompositeCtx: CompositeCtx[DT, SF] = {
+    CompositeCtx[DT, SF](resourceDefinition)
+  }
+}
+
+/**
+ * The visitor context representing a HAPI Composite definition.
+ *
+ * @param compositeDefinition the HAPI composite definition.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class CompositeCtx[DT, SF](compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends TypeVisitorCtx[DT, SF] {
+  override def accept(visitor: SchemaVisitor[DT, SF]): DT = {
+    visitor.visitComposite(this)
+  }
+
+  def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    compositeDefinition
+      .getChildren
+      .flatMap(toChildCtx(_).accept(visitor))
+  }
+
+  def toChildCtx(childDefinition: BaseRuntimeChildDefinition): ChildCtx[DT, SF] = {
+    ChildCtx[DT, SF](childDefinition, compositeDefinition)
+  }
+}
+
+/**
+ * The visitor context representing a HAPI Child definition.
+ *
+ * @param childDefinition     the HAPI child definition.
+ * @param compositeDefinition the HAPI composite definition for this child.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class ChildCtx[DT, SF](childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
+  override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    visitor.visitChild(this)
+  }
+
+  def proceed(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    childDefinition match {
+      case _: RuntimeChildContainedResources => Nil
+      // we need to handle extension before choice as it is of this type but requires
+      // the same handling as element child
+      case _: RuntimeChildExtension =>
+        ElementChildCtx(childDefinition, compositeDefinition).accept(visitor)
+      case choiceDefinition: RuntimeChildChoiceDefinition =>
+        ChoiceChildCtx(choiceDefinition, compositeDefinition).accept(visitor)
+      case _ =>
+        ElementChildCtx(childDefinition, compositeDefinition).accept(visitor)
+    }
+  }
+}
+
+/**
+ * The visitor context representing a HAPI Child definition with a single element.
+ *
+ * @param elementChildDefinition the HAPI child definition.
+ * @param compositeDefinition    the HAPI composite definition for this child.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class ElementChildCtx[DT, SF](elementChildDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
+
+  override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    visitor.visitElementChild(this)
+  }
+
+  def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    val elementName = elementChildDefinition.getElementName
+    ElementCtx(elementName, elementChildDefinition, compositeDefinition).accept(visitor)
+  }
+}
+
+/**
+ * The visitor context representing a HAPI Choice child definition.
+ *
+ * @param choiceChildDefinition the HAPI choice child definition.
+ * @param compositeDefinition   the HAPI composite definition for this child.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class ChoiceChildCtx[DT, SF](choiceChildDefinition: RuntimeChildChoiceDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
+  def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    visitor.visitChoiceChild(this)
+  }
+
+  def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[Seq[SF]] = {
+
+    assert(isSingular(choiceChildDefinition), "Collections of choice elements are not supported")
+    visitor.getOrderedListOfChoiceChildNames(choiceChildDefinition)
+      .map(childName => ElementCtx(childName, choiceChildDefinition, compositeDefinition).accept(visitor))
+  }
+}
+
+/**
+ * The visitor context representing a HAPI element definition.
+ *
+ * @param elementName         the name of the element.
+ * @param childDefinition     the HAPI child definition.
+ * @param compositeDefinition the HAPI composite definition for this child.
+ * @tparam DT @see [[SchemaVisitor]]
+ * @tparam SF @see [[SchemaVisitor]]
+ */
+case class ElementCtx[DT, SF](elementName: String, childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
+
+  /**
+   * The definition of the element.
+   */
+  lazy val elementDefinition: BaseRuntimeElementDefinition[_] = childDefinition.getChildByName(elementName)
+
+  override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
+    visitor.visitElement(this)
+  }
+}
+
+/**
+ * Companion object for [[ElementCtx]]
+ */
+object ElementCtx {
+  /**
+   * Constructs the default [[ElementCtx]] for Extension element given FHIR context.
+   *
+   * @param fhirContext the FHIR context to use
+   * @tparam DT @see [[SchemaVisitor]]
+   * @tparam ST @see [[SchemaVisitor]]
+   * @return the default ElementCtx representation for FHIR extension element.
+   */
+  def forExtension[DT, ST](fhirContext: FhirContext): ElementCtx[DT, ST] = {
+    // Extract Extension definition from Patient resource.
+    val baseResourceDefinition = fhirContext.getResourceDefinition(classOf[Patient])
+    val extensionChildDefinition = baseResourceDefinition.getChildByName(EXTENSION_ELEMENT_NAME)
+    val extensionDefinition = extensionChildDefinition.getChildByName(EXTENSION_ELEMENT_NAME).asInstanceOf[BaseRuntimeElementCompositeDefinition[_]]
+    ElementCtx(EXTENSION_ELEMENT_NAME, extensionChildDefinition, extensionDefinition)
   }
 }

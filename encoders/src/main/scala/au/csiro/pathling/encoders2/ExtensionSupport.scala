@@ -11,19 +11,16 @@
  *
  */
 
-package au.csiro.pathling.encoders
+package au.csiro.pathling.encoders2
 
-import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import ca.uhn.fhir.context.FhirContext
 
 /**
- * Access to common objects required by schema processing operations.
+ * Helper class with constants related to FHIR extension support.
  */
-trait SchemaConfig {
+object ExtensionSupport {
 
-  def fhirContext: FhirContext
+  val FID_FIELD_NAME: String = "_fid"
+  val EXTENSIONS_FIELD_NAME: String = "_extension"
 
-  def dataTypeMappings: DataTypeMappings
-
-  def maxNestingLevel: Int
+  val EXTENSION_ELEMENT_NAME: String = "extension"
 }

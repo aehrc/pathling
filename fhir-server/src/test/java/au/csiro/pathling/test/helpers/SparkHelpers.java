@@ -60,7 +60,9 @@ public abstract class SparkHelpers {
     final StructField display = new StructField("display", DataTypes.StringType, true, metadata);
     final StructField userSelected = new StructField("userSelected", DataTypes.BooleanType, true,
         metadata);
-    return new StructType(new StructField[]{id, system, version, code, display, userSelected});
+    final StructField fid = new StructField("_fid", DataTypes.IntegerType, true,
+        metadata);
+    return new StructType(new StructField[]{id, system, version, code, display, userSelected, fid});
   }
 
   @Nonnull
@@ -98,7 +100,8 @@ public abstract class SparkHelpers {
         new Object[]{coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
             coding.getDisplay(), coding.hasUserSelected()
                                  ? coding.getUserSelected()
-                                 : null}, codingStructType());
+                                 : null,
+            null}, codingStructType());
   }
 
   @Nonnull

@@ -13,8 +13,8 @@
 
 package au.csiro.pathling.encoders2
 
-import au.csiro.pathling.encoders.UnsupportedResourceError
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.encoders.{EncoderConfig, UnsupportedResourceError}
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 
@@ -31,18 +31,21 @@ object EncoderBuilder2 {
   /**
    * Returns an encoder for the FHIR resource implemented by the given class
    *
-   * @param resourceDefinition The FHIR resource definition
+   * @param resourceDefinition the FHIR resource definition
    * @param fhirContext        the FHIR context to use
    * @param mappings           the data type mappings to use
    * @param maxNestingLevel    the max nesting level to use to expand recursive data types.
    *                           Zero means that fields of type T are skipped in a composite od type T.
-   * @return An ExpressionEncoder for the resource
+   * @param enableExtensions   true if support for extensions should be enabled.
+   * @param openTypes          the list of types that are encoded within open types, such as extensions.
+   * @return an ExpressionEncoder for the resource
    */
-
   def of(resourceDefinition: RuntimeResourceDefinition,
          fhirContext: FhirContext,
          mappings: DataTypeMappings,
-         maxNestingLevel: Int): ExpressionEncoder[_] = {
+         maxNestingLevel: Int,
+         openTypes: Set[String],
+         enableExtensions: Boolean): ExpressionEncoder[_] = {
 
     if (UNSUPPORTED_RESOURCES.contains(resourceDefinition.getName)) {
       throw new UnsupportedResourceError(s"Encoding is not supported for resource: ${resourceDefinition.getName}")
@@ -50,7 +53,8 @@ object EncoderBuilder2 {
 
     val fhirClass = resourceDefinition
       .asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
-    val schemaConverter = new SchemaConverter2(fhirContext, mappings, maxNestingLevel)
+    val schemaConverter = new SchemaConverter2(fhirContext, mappings,
+      EncoderConfig(maxNestingLevel, openTypes, enableExtensions))
     val serializerBuilder = SerializerBuilder2(schemaConverter)
     val deserializerBuilder = DeserializerBuilder2(schemaConverter)
     new ExpressionEncoder(

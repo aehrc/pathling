@@ -22,8 +22,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -110,7 +110,8 @@ public abstract class QueryHelpers {
   private static DatasetWithColumnMap aliasColumns(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Iterable<Column> columns) {
 
-    final Map<Column, Column> columnMap = new HashMap<>();
+    // Use LinkedHashMap to preserve the original order of columns while iterating map entries.
+    final Map<Column, Column> columnMap = new LinkedHashMap<>();
     final List<Column> selection = Stream.of(dataset.columns())
         // Don't preserve anything that is not already aliased.
         .filter(Strings::looksLikeAlias)
