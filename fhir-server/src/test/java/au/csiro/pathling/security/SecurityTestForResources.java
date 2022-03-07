@@ -48,7 +48,7 @@ abstract class SecurityTestForResources extends SecurityTest {
     final File warehouseDir = new File(testRootDir, "default");
     assertTrue(warehouseDir.mkdir());
     registry.add("pathling.storage.warehouseUrl",
-        () -> testRootDir.toURI().toString().replaceFirst("/$", ""));
+        () -> "file://" + testRootDir.toPath().toString().replaceFirst("/$", ""));
   }
 
   void assertWriteSuccess() {

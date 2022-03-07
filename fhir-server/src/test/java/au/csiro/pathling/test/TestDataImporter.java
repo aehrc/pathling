@@ -81,8 +81,9 @@ public class TestDataImporter implements CommandLineRunner {
           source.addPart(resourceType);
           final ParametersParameterComponent url = new ParametersParameterComponent();
           url.setName("url");
-          url.setValue(new UrlType(file.toURI()));
+          url.setValue(new UrlType("file://" + file.toPath()));
           source.addPart(url);
+          log.info("url: {}", url.getValue());
           return source;
         })
         .collect(Collectors.toList());

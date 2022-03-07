@@ -74,7 +74,8 @@ class ManifestConverterTest extends AbstractParserTest {
   static void registerProperties(@Nonnull final DynamicPropertyRegistry registry) {
     final File warehouseDirectory = new File("src/test/resources/test-data");
     registry.add("pathling.storage.warehouseUrl",
-        () -> warehouseDirectory.toURI().toString().replaceFirst("/$", ""));
+        () -> "file://" + warehouseDirectory.getAbsoluteFile().toPath().toString()
+            .replaceFirst("/$", ""));
   }
 
   @Test

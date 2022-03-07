@@ -78,7 +78,7 @@ public class AbstractParserTest {
     for (final ResourceType resourceType : resourceTypes) {
       final File parquetFile =
           new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
-      final URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
+      final URL parquetUrl = new URL("file://" + parquetFile.getAbsoluteFile().toPath());
       assertNotNull(parquetUrl);
       final Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
       when(database.read(resourceType)).thenReturn(dataset);

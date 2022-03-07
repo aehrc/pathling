@@ -139,7 +139,7 @@ public abstract class TestHelpers {
     final File parquetFile = new File(parquetPath);
     @Nullable final URL parquetUrl;
     try {
-      parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
+      parquetUrl = new URL("file://" + parquetFile.getAbsoluteFile().toPath());
     } catch (final MalformedURLException e) {
       throw new RuntimeException("Problem getting dataset", e);
     }
