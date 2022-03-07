@@ -13,8 +13,10 @@
 
 package au.csiro.pathling.encoders2;
 
+import static au.csiro.pathling.encoders2.SchemaConverter2Test.OPEN_TYPES;
 import static org.junit.Assert.assertTrue;
 
+import au.csiro.pathling.encoders.EncoderConfig;
 import au.csiro.pathling.encoders.EncoderUtils;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
@@ -34,6 +36,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import scala.collection.JavaConverters;
 
 @RunWith(Parameterized.class)
 public class ResourceEncoding2Test {
@@ -58,7 +61,7 @@ public class ResourceEncoding2Test {
 
   private final Class<? extends IBaseResource> resourceClass;
 
-  public ResourceEncoding2Test(Class<? extends IBaseResource> resourceClass) {
+  public ResourceEncoding2Test(final Class<? extends IBaseResource> resourceClass) {
     this.resourceClass = resourceClass;
   }
 
@@ -78,10 +81,9 @@ public class ResourceEncoding2Test {
   public void testCanProduceSchema() {
     final SchemaConverter2 schemaConverter = new SchemaConverter2(fhirContext,
         new R4DataTypeMappings(),
-        0);
+        EncoderConfig.apply(0, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
 
     final StructType schema = schemaConverter.resourceSchema(resourceClass);
-    schema.printTreeString();
   }
 
 
@@ -96,7 +98,7 @@ public class ResourceEncoding2Test {
     final IBaseResource resourceInstance = resourceClass.getDeclaredConstructor().newInstance();
     resourceInstance.setId("someId");
 
-    Serializer<? extends IBaseResource> serializer = resolvedEncoder
+    final Serializer<? extends IBaseResource> serializer = resolvedEncoder
         .createSerializer();
 
     //noinspection unchecked

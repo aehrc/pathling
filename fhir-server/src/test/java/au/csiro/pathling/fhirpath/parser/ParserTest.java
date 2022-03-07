@@ -19,7 +19,6 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -28,6 +27,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
+import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
@@ -47,6 +47,7 @@ import java.sql.Date;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -60,6 +61,11 @@ public class ParserTest extends AbstractParserTest {
 
   private FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
+    return Assertions.assertThrows(errorType, () -> parser.parse(expression));
   }
 
   @Test
@@ -523,11 +529,107 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-        () -> parser.parse(
-            "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
+        "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'");
     assertEquals(
         "Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'",
         error.getMessage());
   }
 
+
+  @Test
+  void testExtensionsOnResources() {
+    assertThatResultOf(
+        "extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionsOnResources.csv");
+  }
+
+  @Test
+  void testExtensionFunction() {
+    // This should be the same as: "extension.where($this.url='http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString"
+    assertThatResultOf(
+        "extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionFunction.csv");
+  }
+
+  @Test
+  void testExtensionsOnElements() {
+    assertThatResultOf(
+        "address.extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionsOnElements.csv");
+  }
+
+  @Test
+  void testNestedExtensions() {
+    assertThatResultOf(
+        "extension.extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testNestedExtensions.csv");
+  }
+
+  @Test
+  void testExtensionsForeignResources() {
+    assertThatResultOf(ResourceType.CONDITION,
+        "subject.resolve().ofType(Patient).extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionsForeignResources.csv");
+  }
+
+  @Test
+  void testComplexExtensionsOnComplexPath() {
+    assertThatResultOf(
+        "address.where($this.city = 'Boston')"
+            + ".extension('http://hl7.org/fhir/StructureDefinition/geolocation')"
+            + ".extension('latitude').valueDecimal")
+        .isElementPath(DecimalPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testComplexExtensionsOnComplexPath.csv");
+  }
+
+  @Test
+  void testExtensionFunctionInWhere() {
+    assertThatResultOf(
+        "address.where($this.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').valueDecimal contains 42.391383).city")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionFunctionInWhere.csv");
+  }
+
+
+  @Test
+  void testExtensionFunctionOnTranslateResult() {
+
+    // This is a special case as the codings here are created from the terminology server response
+    // using the hardcoded encoding core in CodingEncoding.
+
+    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
+        .toSystem("uuid:test-system")
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
+        .build();
+
+    // Create a mock terminology client.
+    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
+        .thenReturn(returnedConceptTranslator);
+
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').extension('uuid:any').url")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionFunctionOnTranslateResult.csv");
+  }
+
+  @Test
+  void testTraversalIntoMissingOpenType() {
+    final String expression = "extension('http://hl7.org/fhir/R4/extension-patient-birthplace.html').valueAddress";
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        expression);
+    assertEquals("No such child: " + expression, error.getMessage());
+  }
 }

@@ -8,6 +8,7 @@ package au.csiro.pathling;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
@@ -396,6 +397,18 @@ public class Configuration {
     @NotNull
     @Min(0)
     private Integer maxNestingLevel;
+
+    /**
+     * The list of types that are encoded within open types, such as extensions.
+     */
+    @NotNull
+    private Set<String> openTypes;
+
+    /**
+     * Enables support for FHIR extensions.
+     */
+    @NotNull
+    private boolean enableExtensions;
 
   }
 

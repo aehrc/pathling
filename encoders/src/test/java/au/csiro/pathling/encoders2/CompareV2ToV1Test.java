@@ -13,8 +13,10 @@
 
 package au.csiro.pathling.encoders2;
 
+import static au.csiro.pathling.encoders2.SchemaConverter2Test.OPEN_TYPES;
 import static org.junit.Assert.assertEquals;
 
+import au.csiro.pathling.encoders.EncoderConfig;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import au.csiro.pathling.encoders1.EncoderBuilder1;
 import au.csiro.pathling.encoders1.SchemaConverter1;
@@ -48,7 +50,6 @@ public class CompareV2ToV1Test implements JsonMethods {
   private final Class<? extends IBaseResource> resourceClass;
   private final int nestingLevel;
 
-
   @Parameters(name = "{index}: class = {0}, level = {1}")
   public static Collection<?> input() {
     return Arrays.asList(new Object[][]{
@@ -65,12 +66,13 @@ public class CompareV2ToV1Test implements JsonMethods {
     });
   }
 
-  public CompareV2ToV1Test(Class<? extends IBaseResource> resourceClass, int nestingLevel) {
+  public CompareV2ToV1Test(final Class<? extends IBaseResource> resourceClass,
+      final int nestingLevel) {
     this.resourceClass = resourceClass;
     this.nestingLevel = nestingLevel;
   }
 
-  String toPrettyJson(String json) {
+  String toPrettyJson(final String json) {
     return pretty(parse(new StringInput(json), false, false));
   }
 
@@ -99,7 +101,9 @@ public class CompareV2ToV1Test implements JsonMethods {
     final SchemaConverter1 converter = new SchemaConverter1(FhirContext.forR4(),
         dataTypeMappings, nestingLevel);
     final SchemaConverter2 schemaTraversal2 = new SchemaConverter2(FhirContext.forR4(),
-        dataTypeMappings, nestingLevel);
+        dataTypeMappings,
+        EncoderConfig.apply(nestingLevel, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), false,
+            false));
     final StructType schema = converter.resourceSchema(resourceClass);
     final StructType schema2 = schemaTraversal2.resourceSchema(resourceClass);
     assertEquals(schema.treeString(), schema2.treeString());
@@ -118,7 +122,8 @@ public class CompareV2ToV1Test implements JsonMethods {
 
     final SerializerBuilder2 serializerBuilder = new SerializerBuilder2(fhirContext,
         dataTypeMappings,
-        nestingLevel);
+        EncoderConfig.apply(nestingLevel, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), false,
+            false));
 
     final Expression objSerializer_v2 = serializerBuilder.buildSerializer(resourceClass);
     // NOTE: Two serializers cannot be compared directly, because of global state used
@@ -141,11 +146,10 @@ public class CompareV2ToV1Test implements JsonMethods {
     final Expression objDeserializer_v1 = encoder.objDeserializer();
 
     final SchemaConverter2 schemaTraversal2 = new SchemaConverter2(FhirContext.forR4(),
-        dataTypeMappings, nestingLevel);
-    final DeserializerBuilder2 deserializerBuilder = new DeserializerBuilder2(fhirContext,
         dataTypeMappings,
-        nestingLevel
-        , schemaTraversal2);
+        EncoderConfig.apply(nestingLevel, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), false,
+            false));
+    final DeserializerBuilder2 deserializerBuilder = DeserializerBuilder2.apply(schemaTraversal2);
 
     final Expression objDeserializer_v2 = deserializerBuilder.buildDeserializer(resourceClass);
     // NOTE: Two serializers cannot be compared directly, because of global state used

@@ -13,12 +13,13 @@
 
 package au.csiro.pathling.encoders.datatypes
 
-import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementCompositeDefinition, BaseRuntimeElementDefinition, RuntimePrimitiveDatatypeDefinition}
+import au.csiro.pathling.encoders2.ExpressionWithName
+import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.apache.spark.unsafe.types.UTF8String
-import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
+import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 
 /**
  * Interface for mapping FHIR datatypes to Spark datatypes.
@@ -70,8 +71,25 @@ trait DataTypeMappings {
    * @param definition  the composite definition to encode
    * @return an optional expression sequence if the composite is overridden.
    */
+  @deprecated
   def overrideCompositeExpression(inputObject: Expression,
                                   definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[Expression]]
+
+  /**
+   * Allows custom expressions to be used when encoding composite objects. This supports
+   * special cases where FHIR objects don't follow conventions expected by reusable
+   * encoding logic, allowing custom expressions to be used just for that case.
+   *
+   * For most expressions this method should simply return None, indicate that no override
+   * is necessary.
+   *
+   * @param inputObject an expression referring to the composite object to encode
+   * @param definition  the composite definition to encode
+   * @return an optional sequence of named expressions if the composite is overridden.
+   */
+  def overrideCompositeExpression2(inputObject: Expression,
+                                   definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]]
+
 
   /**
    * Returns true if the given field should be skipped during encoding and decoding, false otherwise.
@@ -97,9 +115,18 @@ trait DataTypeMappings {
    * Returns a specialized custom coder for this child definition.
    *
    * @param elementDefinition the element definition
-   * @param elementName the name of the element
+   * @param elementName       the name of the element
    * @return a specialized custom coder
    */
 
   def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Option[CustomCoder] = None
+
+
+  /**
+   * Returns the list of valid child types of given choice.
+   *
+   * @param choice the choice child definition.
+   * @return list of valid types for this
+   */
+  def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]]
 }

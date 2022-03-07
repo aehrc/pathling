@@ -23,21 +23,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.BooleanType;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.IntegerType;
 import org.apache.spark.sql.types.StringType;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
-import org.apache.spark.sql.types.TimestampType;
-import org.hl7.fhir.r4.model.Condition;
-import org.hl7.fhir.r4.model.MedicationRequest;
-import org.hl7.fhir.r4.model.Observation;
-import org.hl7.fhir.r4.model.Questionnaire;
-import org.hl7.fhir.r4.model.QuestionnaireResponse;
+import org.apache.spark.sql.types.*;
+import org.hl7.fhir.r4.model.*;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,9 +38,10 @@ public abstract class AbstractSchemaConverterTest {
   protected static final FhirContext FHIR_CONTEXT = FhirContext.forR4();
   protected static final DataTypeMappings DATA_TYPE_MAPPINGS = new R4DataTypeMappings();
 
-  private SchemaConverter converter_L0;
-  private SchemaConverter converter_L1;
-  private SchemaConverter converter_L2;
+  protected SchemaConverter converter_L0;
+  protected SchemaConverter converter_L1;
+  protected SchemaConverter converter_L2;
+
   private StructType conditionSchema;
   private StructType observationSchema;
   private StructType medRequestSchema;

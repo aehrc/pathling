@@ -32,6 +32,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Annotation;
@@ -123,7 +124,7 @@ public class FhirEncodersTest {
         ENCODERS_L0.of(Observation.class));
     decodedObservation = observationsDataset.head();
 
-    // TODO: Uncomment with contained resources are supported
+    // TODO: Uncomment if/when contained resources are supported.
     medDataset = spark.createDataset(ImmutableList.of(medRequest),
         ENCODERS_L0.of(MedicationRequest.class/*, Medication.class, Provenance.class*/));
     decodedMedRequest = medDataset.head();
@@ -181,17 +182,21 @@ public class FhirEncodersTest {
 
   @Test
   public void boundCode() {
-    final Row coding = (Row) conditionsDataset.select("verificationStatus")
+
+    final GenericRowWithSchema verificationStatus = (GenericRowWithSchema) conditionsDataset
+        .select("verificationStatus")
         .head()
-        .getStruct(0)
-        .getList(1)
+        .getStruct(0);
+
+    final GenericRowWithSchema coding = (GenericRowWithSchema) verificationStatus
+        .getList(verificationStatus.fieldIndex("coding"))
         .get(0);
 
     Assert.assertEquals(condition.getVerificationStatus().getCoding().size(), 1);
     Assert.assertEquals(condition.getVerificationStatus().getCodingFirstRep().getSystem(),
-        coding.getString(1));
+        coding.getString(coding.fieldIndex("system")));
     Assert.assertEquals(condition.getVerificationStatus().getCodingFirstRep().getCode(),
-        coding.getString(3));
+        coding.getString(coding.fieldIndex("code")));
   }
 
   @Test

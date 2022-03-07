@@ -16,43 +16,23 @@ package au.csiro.pathling.encoders.datatypes
 import java.util.TimeZone
 
 import au.csiro.pathling.encoders.StaticField
+import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings.{fhirPrimitiveToSparkTypes, isValidOpenElementType}
+import au.csiro.pathling.encoders2.ExpressionWithName
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
 import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
-import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
+import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model._
+
+import scala.collection.convert.ImplicitConversions.`iterable AsScalaIterable`
 
 /**
  * Data type mappings for FHIR STU3.
  */
 class R4DataTypeMappings extends DataTypeMappings {
-  /**
-   * Map associating FHIR primitive datatypes with the Spark types used to encode them.
-   */
-  private val fhirPrimitiveToSparkTypes: Map[Class[_ <: IPrimitiveType[_]], DataType] =
-    Map(
-      classOf[MarkdownType] -> DataTypes.StringType,
-      classOf[Enumeration[_]] -> DataTypes.StringType,
-      classOf[DateTimeType] -> DataTypes.StringType,
-      classOf[TimeType] -> DataTypes.StringType,
-      classOf[DateType] -> DataTypes.StringType,
-      classOf[CodeType] -> DataTypes.StringType,
-      classOf[StringType] -> DataTypes.StringType,
-      classOf[UriType] -> DataTypes.StringType,
-      classOf[UrlType] -> DataTypes.StringType,
-      classOf[CanonicalType] -> DataTypes.StringType,
-      classOf[IntegerType] -> DataTypes.IntegerType,
-      classOf[UnsignedIntType] -> DataTypes.IntegerType,
-      classOf[PositiveIntType] -> DataTypes.IntegerType,
-      classOf[BooleanType] -> DataTypes.BooleanType,
-      classOf[InstantType] -> DataTypes.TimestampType,
-      classOf[Base64BinaryType] -> DataTypes.BinaryType,
-      classOf[OidType] -> DataTypes.StringType,
-      classOf[UuidType] -> DataTypes.StringType
-    )
 
   override def primitiveToDataType(definition: RuntimePrimitiveDatatypeDefinition): DataType = {
 
@@ -70,10 +50,8 @@ class R4DataTypeMappings extends DataTypeMappings {
 
     if (definition.getImplementingClass == classOf[Reference]) {
 
-      // Reference type, so return only supported fields.
-      // We also explicitly use the IIDType for the reference element,
-      // since that differs from the conventions used to infer
-      // other types.
+      // Reference type, so return only supported fields. We also explicitly use the IIDType for the 
+      // reference element, since that differs from the conventions used to infer other types.
       val reference = dataTypeToUtf8Expr(
         Invoke(inputObject,
           "getReferenceElement",
@@ -94,6 +72,29 @@ class R4DataTypeMappings extends DataTypeMappings {
     }
   }
 
+
+  override def overrideCompositeExpression2(inputObject: Expression,
+                                            definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]] = {
+
+    if (definition.getImplementingClass == classOf[Reference]) {
+      // Reference type, so return only supported fields. We also explicitly use the IIDType for the 
+      // reference element, since that differs from the conventions used to infer other types.
+      val reference = dataTypeToUtf8Expr(
+        Invoke(inputObject,
+          "getReferenceElement",
+          ObjectType(classOf[IdType])))
+
+      val display = dataTypeToUtf8Expr(
+        Invoke(inputObject,
+          "getDisplayElement",
+          ObjectType(classOf[org.hl7.fhir.r4.model.StringType])))
+
+      Some(List(("reference", reference), ("display", display)))
+    } else {
+      None
+    }
+  }
+
   override def skipField(definition: BaseRuntimeElementCompositeDefinition[_],
                          child: BaseRuntimeChildDefinition): Boolean = {
 
@@ -106,7 +107,13 @@ class R4DataTypeMappings extends DataTypeMappings {
     val skipContains = definition.getImplementingClass == classOf[ValueSet.ValueSetExpansionContainsComponent] &&
       child.getElementName == "contains"
 
-    skipRecursiveReference || skipContains
+    // TODO: This is due to a bug in HAPI RuntimeChildExtension.getChildByName() implementation,
+    //       which fails on assertion because the name of the child should be 
+    //       "modifierExtensionExtension", not "extensionExtension".
+    //       See: https://github.com/hapifhir/hapi-fhir/issues/3414
+    val skipModifierExtension = child.getElementName.equals("modifierExtension")
+
+    skipRecursiveReference || skipContains || skipModifierExtension
   }
 
   override def primitiveEncoderExpression(inputObject: Expression,
@@ -210,5 +217,97 @@ class R4DataTypeMappings extends DataTypeMappings {
       case _ => super.customEncoder(elementDefinition, elementName)
     }
   }
+
+
+  override def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]] = {
+    choice
+      .getValidChildTypes
+      .filter(cls => !choice.isInstanceOf[RuntimeChildAny] || isValidOpenElementType(cls))
+      .toList
+  }
 }
 
+/**
+ * Companion object for R4DataTypeMappings
+ */
+object R4DataTypeMappings {
+  /**
+   * Map associating FHIR primitive datatypes with the Spark types used to encode them.
+   */
+  private val fhirPrimitiveToSparkTypes: Map[Class[_ <: IPrimitiveType[_]], DataType] =
+    Map(
+      classOf[MarkdownType] -> DataTypes.StringType,
+      classOf[Enumeration[_]] -> DataTypes.StringType,
+      classOf[DateTimeType] -> DataTypes.StringType,
+      classOf[TimeType] -> DataTypes.StringType,
+      classOf[DateType] -> DataTypes.StringType,
+      classOf[CodeType] -> DataTypes.StringType,
+      classOf[StringType] -> DataTypes.StringType,
+      classOf[UriType] -> DataTypes.StringType,
+      classOf[UrlType] -> DataTypes.StringType,
+      classOf[CanonicalType] -> DataTypes.StringType,
+      classOf[IntegerType] -> DataTypes.IntegerType,
+      classOf[UnsignedIntType] -> DataTypes.IntegerType,
+      classOf[PositiveIntType] -> DataTypes.IntegerType,
+      classOf[BooleanType] -> DataTypes.BooleanType,
+      classOf[InstantType] -> DataTypes.TimestampType,
+      classOf[Base64BinaryType] -> DataTypes.BinaryType,
+      classOf[OidType] -> DataTypes.StringType,
+      classOf[UuidType] -> DataTypes.StringType
+    )
+
+
+  /**
+   * Non primitive datatypes that are allowed in open choices like value[*].
+   * As defined in:https://www.hl7.org/fhir/datatypes.html#open
+   */
+  private val allowedOpenTypes: Set[Class[_]] = Set(
+    // DataTypes
+    classOf[org.hl7.fhir.r4.model.Address],
+    classOf[org.hl7.fhir.r4.model.Age],
+    classOf[org.hl7.fhir.r4.model.Annotation],
+    classOf[org.hl7.fhir.r4.model.Attachment],
+    classOf[org.hl7.fhir.r4.model.CodeableConcept],
+    classOf[org.hl7.fhir.r4.model.Coding],
+    classOf[org.hl7.fhir.r4.model.ContactPoint],
+    classOf[org.hl7.fhir.r4.model.Count],
+    classOf[org.hl7.fhir.r4.model.Distance],
+    classOf[org.hl7.fhir.r4.model.Duration],
+    classOf[org.hl7.fhir.r4.model.HumanName],
+    classOf[org.hl7.fhir.r4.model.Identifier],
+    classOf[org.hl7.fhir.r4.model.Money],
+    classOf[org.hl7.fhir.r4.model.Period],
+    classOf[org.hl7.fhir.r4.model.Quantity],
+    classOf[org.hl7.fhir.r4.model.Range],
+    classOf[org.hl7.fhir.r4.model.Ratio],
+    classOf[org.hl7.fhir.r4.model.Reference],
+    classOf[org.hl7.fhir.r4.model.SampledData],
+    classOf[org.hl7.fhir.r4.model.Signature],
+    classOf[org.hl7.fhir.r4.model.Timing],
+    // MetaDataTypes
+    classOf[org.hl7.fhir.r4.model.ContactDetail],
+    classOf[org.hl7.fhir.r4.model.Contributor],
+    classOf[org.hl7.fhir.r4.model.DataRequirement],
+    classOf[org.hl7.fhir.r4.model.Expression],
+    classOf[org.hl7.fhir.r4.model.ParameterDefinition],
+    classOf[org.hl7.fhir.r4.model.RelatedArtifact],
+    classOf[org.hl7.fhir.r4.model.TriggerDefinition],
+    classOf[org.hl7.fhir.r4.model.UsageContext],
+    // Special Types
+    classOf[org.hl7.fhir.r4.model.Dosage],
+    classOf[org.hl7.fhir.r4.model.Meta]
+  )
+
+
+  /**
+   * Checks if the given class is a valid type for open elements types as defined in: [[https://build.fhir.org/datatypes.html#open]].
+   * Note: this is needed because the HAPI implementation of open type element [[ca.uhn.fhir.context.RuntimeChildAny#getValidChildTypes]] returns
+   * types not included in the specification such as [[org.hl7.fhir.r4.model.ElementDefinition]].
+   *
+   * @param cls the class of the type to checks.
+   * @return true is given type is a valid open element type.
+   */
+  def isValidOpenElementType(cls: Class[_ <: IBase]): Boolean = {
+    classOf[PrimitiveType[_]].isAssignableFrom(cls) || allowedOpenTypes.contains(cls)
+  }
+}

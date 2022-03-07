@@ -132,16 +132,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
         // a foreign resource reference.
-        final ResourcePath path = ResourcePath
+        return ResourcePath
             .build(context.getFhirContext(), context.getResourceReader(), resourceType, fhirPath,
                 true);
-
-        // This resource path will get preserved within paths derived from this, so that we can come
-        // back to it for things like reverse reference resolution.
-        path.setForeignResource(path);
-
-        return path;
-
       }
     }
   }

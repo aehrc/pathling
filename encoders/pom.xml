@@ -113,6 +113,12 @@
       <groupId>org.skyscreamer</groupId>
       <artifactId>jsonassert</artifactId>
     </dependency>
+
+    <!-- Lombok -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
