@@ -75,7 +75,7 @@
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.deltaVersion>1.1.0</pathling.deltaVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
-    <pathling.hadoopVersion>3.3.1</pathling.hadoopVersion>
+    <pathling.hadoopVersion>3.3.2</pathling.hadoopVersion>
     <pathling.hadoopMirror>https://downloads.apache.org/hadoop/common</pathling.hadoopMirror>
     <pathling.awsSdkVersion>1.12.47</pathling.awsSdkVersion>
   </properties>
