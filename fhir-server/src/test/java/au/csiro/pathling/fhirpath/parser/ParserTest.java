@@ -636,7 +636,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testTraversalIntoMissingOpenType() {
-    final String expression = "extension('http://hl7.org/fhir/R4/extension-patient-birthplace.html').valueAddress";
+    final String expression = "extension('http://hl7.org/fhir/R4/extension-patient-birthplace.html').valueOid";
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         expression);
     assertEquals("No such child: " + expression, error.getMessage());
