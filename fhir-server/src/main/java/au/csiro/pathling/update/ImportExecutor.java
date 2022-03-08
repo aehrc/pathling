@@ -151,7 +151,7 @@ public class ImportExecutor {
       final Dataset<IBaseResource> resources = jsonStrings.map(jsonToResourceConverter(),
           fhirEncoder);
 
-      log.info("Importing {} resources ({})", resourceType.toCode(), importMode.getCode());
+      log.info("Importing {} resources (mode: {})", resourceType.toCode(), importMode.getCode());
       if (importMode == ImportMode.OVERWRITE) {
         database.overwrite(resourceType, resources.toDF());
       } else {

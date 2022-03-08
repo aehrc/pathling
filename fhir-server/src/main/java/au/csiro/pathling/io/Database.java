@@ -104,7 +104,7 @@ public class Database {
   @ResourceAccess(AccessType.WRITE)
   public void overwrite(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
-    write(resourceType, resources, SaveMode.Overwrite);
+    write(resourceType, resources);
   }
 
   /**
@@ -219,26 +219,13 @@ public class Database {
   }
 
   void write(@Nonnull final ResourceType resourceType,
-      @Nonnull final Dataset<Row> resources, @Nonnull final SaveMode saveMode) {
+      @Nonnull final Dataset<Row> resources) {
     final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
 
-    if (DeltaTable.isDeltaTable(spark, tableUrl)) {
-      if (saveMode.equals(SaveMode.ErrorIfExists)) {
-        throw new RuntimeException("Table existed when not expected: " + tableUrl);
-      }
-    } else {
-      log.debug("Table does not exist, creating: {}", tableUrl);
-      // We use the DeltaTableBuilder API to create the table with the required schema. This ensures 
-      // that the table is created with an initial snapshot.
-      DeltaTable.create()
-          .addColumns(fhirEncoders.of(resourceType.toCode()).schema())
-          .location(tableUrl)
-          .execute();
-    }
-
-    // We order the resources here to reduce the amount of sorting necessary at query time.
     log.debug("Overwriting: {}", tableUrl);
-    resources.orderBy(asc("id"))
+    resources
+        // We order the resources here to reduce the amount of sorting necessary at query time.
+        .orderBy(asc("id"))
         .write()
         .format("delta")
         .mode(SaveMode.Overwrite)
@@ -256,7 +243,7 @@ public class Database {
     log.debug("Writing empty dataset: {}", resourceType.toCode());
     // We need to throw an error if the table already exists, otherwise we could get contention 
     // issues on requests that call this method.
-    write(resourceType, dataset, SaveMode.ErrorIfExists);
+    write(resourceType, dataset);
     return getTableUrl(warehouseUrl, databaseName, resourceType);
   }
 
