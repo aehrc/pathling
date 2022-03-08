@@ -87,7 +87,7 @@ jobs:
           -pl fhir-server -am \
           -Pdocker,skip-encoders-tests \
           -DskipITs
-        timeout-minutes: 30
+        timeout-minutes: 45
       - name: Run the verify goal with Maven
         if: ${{ github.actor != 'dependabot[bot]' }}
         run: |
@@ -96,7 +96,7 @@ jobs:
           -Pdocker,skip-encoders-tests \
           -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }} \
           -Dmaven.test.failure.ignore=true
-        timeout-minutes: 30
+        timeout-minutes: 45
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
