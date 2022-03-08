@@ -77,7 +77,7 @@
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.2</pathling.hadoopVersion>
     <pathling.hadoopMirror>https://downloads.apache.org/hadoop/common</pathling.hadoopMirror>
-    <pathling.awsSdkVersion>1.12.47</pathling.awsSdkVersion>
+    <pathling.awsSdkVersion>1.12.172</pathling.awsSdkVersion>
   </properties>
 
   <modules>
