@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
@@ -17,11 +16,8 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collections;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
@@ -55,7 +51,7 @@ public class AbstractParserTest {
   Parser parser;
 
   @BeforeEach
-  void setUp() throws IOException {
+  void setUp() {
     SharedMocks.resetAll();
     mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
         ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
@@ -73,14 +69,9 @@ public class AbstractParserTest {
     parser = new Parser(parserContext);
   }
 
-  void mockResource(final ResourceType... resourceTypes)
-      throws MalformedURLException {
+  void mockResource(final ResourceType... resourceTypes) {
     for (final ResourceType resourceType : resourceTypes) {
-      final File parquetFile =
-          new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
-      final URL parquetUrl = new URL("file://" + parquetFile.getAbsoluteFile().toPath());
-      assertNotNull(parquetUrl);
-      final Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
+      final Dataset<Row> dataset = TestHelpers.getDatasetForResourceType(spark, resourceType);
       when(database.read(resourceType)).thenReturn(dataset);
     }
   }

@@ -18,8 +18,6 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
 import io.delta.tables.DeltaTable;
-import io.delta.tables.DeltaTableBuilder;
-import java.io.File;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -35,7 +33,6 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
-import org.springframework.util.FileSystemUtils;
 
 /**
  * Used for reading and writing resource data in persistent storage.
@@ -147,7 +144,7 @@ public class Database {
       @Nonnull final Dataset<Row> updates) {
     final DeltaTable original = readDelta(resourceType);
 
-    log.debug("Writing updates to dataset: {}", resourceType.toCode());
+    log.debug("Writing updates: {}", resourceType.toCode());
     original
         .as("original")
         .merge(updates.as("updates"), "original.id = updates.id")
@@ -225,31 +222,22 @@ public class Database {
       @Nonnull final Dataset<Row> resources, @Nonnull final SaveMode saveMode) {
     final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
 
-    // If the save mode is ErrorIfExists, we create the table in such a way that it will throw an
-    // error if there is already a table at the specified path.
-    // If the save mode is Overwrite, the table will be removed and replaced.
-    final DeltaTableBuilder tableBuilder = saveMode.equals(SaveMode.ErrorIfExists)
-                                           ? DeltaTable.create()
-                                           : DeltaTable.createOrReplace(spark);
-
-    // This step seems to be required to ensure that we don't get duplicated table contents when the 
-    // server has been restarted between imports, or when used through the test data importer.
-    // TODO: Work out why overwrite doesn't work as expected.
-    if (saveMode.equals(SaveMode.Overwrite)) {
-      log.debug("Deleting: {}", tableUrl);
-      FileSystemUtils.deleteRecursively(new File(tableUrl.replaceFirst("file://", "")));
+    if (DeltaTable.isDeltaTable(spark, tableUrl)) {
+      if (saveMode.equals(SaveMode.ErrorIfExists)) {
+        throw new RuntimeException("Table existed when not expected: " + tableUrl);
+      }
+    } else {
+      log.debug("Table does not exist, creating: {}", tableUrl);
+      // We use the DeltaTableBuilder API to create the table with the required schema. This ensures 
+      // that the table is created with an initial snapshot.
+      DeltaTable.create()
+          .addColumns(fhirEncoders.of(resourceType.toCode()).schema())
+          .location(tableUrl)
+          .execute();
     }
 
-    // We use the DeltaTableBuilder API to create the table with the required schema. This ensures 
-    // that the table is created with an initial snapshot.
-    log.debug("Creating table: {}", tableUrl);
-    tableBuilder
-        .addColumns(fhirEncoders.of(resourceType.toCode()).schema())
-        .location(tableUrl)
-        .execute();
-
     // We order the resources here to reduce the amount of sorting necessary at query time.
-    log.debug("Writing resources to: {}", tableUrl);
+    log.debug("Overwriting: {}", tableUrl);
     resources.orderBy(asc("id"))
         .write()
         .format("delta")

@@ -16,6 +16,7 @@ import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.io.Database;
+import io.delta.tables.DeltaTable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -122,7 +123,7 @@ public abstract class TestHelpers {
   }
 
   @Nonnull
-  private static Dataset<Row> getDatasetForResourceType(@Nonnull final SparkSession spark,
+  public static Dataset<Row> getDatasetForResourceType(@Nonnull final SparkSession spark,
       @Nonnull final ResourceType resourceType) {
     return getDatasetFromParquetFile(spark,
         getParquetPathForResourceType(resourceType));
@@ -145,7 +146,7 @@ public abstract class TestHelpers {
     }
     assertNotNull(parquetUrl);
     final String decodedUrl = URLDecoder.decode(parquetUrl.toString(), StandardCharsets.UTF_8);
-    @Nullable final Dataset<Row> dataset = spark.read().parquet(decodedUrl);
+    @Nullable final Dataset<Row> dataset = DeltaTable.forPath(spark, decodedUrl).toDF();
     assertNotNull(dataset);
     return dataset;
   }
