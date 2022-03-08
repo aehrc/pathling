@@ -71,7 +71,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <pathling.hapiFhirVersion>5.7.0</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>3.2.0</pathling.sparkVersion>
+    <pathling.sparkVersion>3.2.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.deltaVersion>1.1.0</pathling.deltaVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
