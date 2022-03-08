@@ -143,25 +143,23 @@ pathling:
     # Enables support for FHIR extensions.
     enableExtensions: true
     
-    # The list of types that are encoded within open types, such as extensions.
+    # The list of types that are encoded within open types, such as extensions. This default list 
+    # was taken from the data types that are common to extensions found in widely-used IGs, 
+    # such as the US and AU base profiles. In general, you will get the best query performance by 
+    # encoding your data with the shortest possible list.
     openTypes:
       - boolean
-      - canonical
       - code
       - date
       - dateTime
       - decimal
-      - instant
       - integer
-      - oid
-      - positiveInt
       - string
-      - time
-      - unsignedInt
-      - uri
-      - url
       - Coding
+      - CodeableConcept
+      - Address
       - Identifier
+      - Reference
 
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.
