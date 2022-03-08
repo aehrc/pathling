@@ -18,7 +18,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ResultWriter;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
@@ -64,7 +64,7 @@ public class ExtractExecutor extends QueryExecutor {
    * @param configuration a {@link Configuration} object to control the behaviour of the executor
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param sparkSession a {@link SparkSession} for resolving Spark queries
-   * @param resourceReader a {@link ResourceReader} for retrieving resources
+   * @param database a {@link Database} for retrieving resources
    * @param terminologyClientFactory a {@link TerminologyServiceFactory} for resolving terminology
    * @param resultWriter a {@link ResultWriter} for writing results for later retrieval
    * @param resultRegistry a {@link ResultRegistry} for storing the mapping between request ID and
@@ -72,11 +72,11 @@ public class ExtractExecutor extends QueryExecutor {
    */
   public ExtractExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory,
       @Nonnull final ResultWriter resultWriter,
       @Nonnull final ResultRegistry resultRegistry) {
-    super(configuration, fhirContext, sparkSession, resourceReader,
+    super(configuration, fhirContext, sparkSession, database,
         terminologyClientFactory);
     this.resultWriter = resultWriter;
     this.resultRegistry = resultRegistry;
@@ -122,7 +122,7 @@ public class ExtractExecutor extends QueryExecutor {
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
     // Build a new expression parser, and parse all the column expressions within the query.
     final ResourcePath inputContext = ResourcePath
-        .build(getFhirContext(), getResourceReader(), query.getSubjectResource(),
+        .build(getFhirContext(), getDatabase(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
     // The context of evaluation is a single resource.
     final ParserContext parserContext = buildParserContext(inputContext,

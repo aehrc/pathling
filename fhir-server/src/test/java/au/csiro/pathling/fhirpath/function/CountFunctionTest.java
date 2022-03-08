@@ -18,7 +18,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -47,19 +47,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 class CountFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
-  private ResourceReader mockReader;
+  FhirContext fhirContext;
+  Database database;
 
   @BeforeEach
   void setUp() {
-    mockReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
-  public void countsByResourceIdentity() {
+  void countsByResourceIdentity() {
     final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
@@ -68,10 +68,10 @@ class CountFunctionTest {
         .withRow("patient-2", "female", false)
         .withRow("patient-3", "male", true)
         .build();
-    when(mockReader.read(ResourceType.PATIENT))
+    when(database.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+        .build(fhirContext, database, ResourceType.PATIENT, "Patient", false);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
@@ -101,7 +101,7 @@ class CountFunctionTest {
   }
 
   @Test
-  public void countsByGrouping() {
+  void countsByGrouping() {
     final Dataset<Row> inputDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
@@ -110,9 +110,9 @@ class CountFunctionTest {
         .withRow("patient-2", "female", false)
         .withRow("patient-2", "male", true)
         .build();
-    when(mockReader.read(ResourceType.PATIENT)).thenReturn(inputDataset);
+    when(database.read(ResourceType.PATIENT)).thenReturn(inputDataset);
     final ResourcePath inputPath = new ResourcePathBuilder(spark)
-        .resourceReader(mockReader)
+        .database(database)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();
@@ -145,7 +145,7 @@ class CountFunctionTest {
   }
 
   @Test
-  public void doesNotCountNullElements() {
+  void doesNotCountNullElements() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
@@ -185,7 +185,7 @@ class CountFunctionTest {
   }
 
   @Test
-  public void inputMustNotContainArguments() {
+  void inputMustNotContainArguments() {
     final ElementPath inputPath = new ElementPathBuilder(spark).build();
     final ElementPath argumentPath = new ElementPathBuilder(spark).build();
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();

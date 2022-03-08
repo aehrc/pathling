@@ -28,15 +28,15 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class ComparisonOperatorValidationTest {
+class ComparisonOperatorValidationTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
+  ParserContext parserContext;
 
   @BeforeEach
   void setUp() {
@@ -44,7 +44,7 @@ public class ComparisonOperatorValidationTest {
   }
 
   @Test
-  public void operandsAreNotComparable() {
+  void operandsAreNotComparable() {
     final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(true)

@@ -7,8 +7,9 @@
 package au.csiro.pathling.security.ga4gh;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -18,18 +19,19 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.context.annotation.Profile;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 /**
- * A special type of {@link ResourceReader} that is capable of limiting the scope of resources based
- * upon the passport scopes that have been applied to this request.
+ * A special type of {@link Database} that is capable of limiting the scope of resources based upon
+ * the passport scopes that have been applied to this request.
  *
  * @author John Grimes
  */
 @Component
 @Profile("core & ga4gh")
 @Slf4j
-public class ScopeAwareResourceReader extends ResourceReader {
+public class ScopeAwareDatabase extends Database {
 
   @Nonnull
   private final Configuration configuration;
@@ -47,17 +49,20 @@ public class ScopeAwareResourceReader extends ResourceReader {
    * @param configuration a {@link Configuration} object to control the behaviour of the executor
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param spark a {@link SparkSession} for interacting with Spark
+   * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
    * @param terminologyServiceFactory a {@link TerminologyServiceFactory} for resolving terminology
    * queries
    * @param passportScope a {@link PassportScope} that can be used to limit the scope of resources,
    */
   @SuppressWarnings("WeakerAccess")
-  public ScopeAwareResourceReader(@Nonnull final Configuration configuration,
+  public ScopeAwareDatabase(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
-      @Nonnull final Optional<PassportScope> passportScope) {
-    super(configuration, spark);
+      @Nonnull final Optional<PassportScope> passportScope,
+      @Nonnull final ThreadPoolTaskExecutor executor) {
+    super(configuration, spark, fhirEncoders, executor);
     log.debug("Initializing passport scope-aware resource reader");
 
     this.configuration = configuration;
@@ -78,9 +83,9 @@ public class ScopeAwareResourceReader extends ResourceReader {
         .map(scope -> {
           // We need to create a non-scope-aware reader here for the parsing of the filters, so that
           // we don't have recursive application of the filters.
-          final ResourceReader resourceReader = new ResourceReader(configuration, spark);
+          final Database database = new Database(configuration, spark, fhirEncoders, executor);
           final PassportScopeEnforcer scopeEnforcer = new PassportScopeEnforcer(configuration,
-              fhirContext, spark, resourceReader, terminologyServiceFactory, scope);
+              fhirContext, spark, database, terminologyServiceFactory, scope);
           return scopeEnforcer.enforce(resourceType, resources);
         })
         .orElse(resources);

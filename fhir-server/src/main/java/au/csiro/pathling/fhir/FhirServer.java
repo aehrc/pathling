@@ -11,8 +11,10 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
+import au.csiro.pathling.encoders2.EncoderBuilder2;
 import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
+import au.csiro.pathling.update.BatchProvider;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -26,8 +28,11 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -39,6 +44,7 @@ import org.hl7.fhir.r4.model.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import scala.collection.JavaConverters;
 
 /**
  * A HAPI RestfulServer that provides the FHIR interface to the functionality within Pathling.
@@ -88,6 +94,9 @@ public class FhirServer extends RestfulServer {
   @Nonnull
   private final ResourceProviderFactory resourceProviderFactory;
 
+  @Nonnull
+  private final BatchProvider batchProvider;
+
   /**
    * @param fhirContext a {@link FhirContext} for use in executing FHIR operations
    * @param configuration a {@link Configuration} instance which controls the behaviour of the
@@ -119,7 +128,8 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
-      @Nonnull final ResourceProviderFactory resourceProviderFactory) {
+      @Nonnull final ResourceProviderFactory resourceProviderFactory,
+      @Nonnull final BatchProvider batchProvider) {
     super(fhirContext);
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
@@ -132,6 +142,7 @@ public class FhirServer extends RestfulServer {
     this.entityTagInterceptor = entityTagInterceptor;
     this.conformanceProvider = conformanceProvider;
     this.resourceProviderFactory = resourceProviderFactory;
+    this.batchProvider = batchProvider;
     log.debug("Starting FHIR server with configuration: {}", configuration);
   }
 
@@ -157,7 +168,11 @@ public class FhirServer extends RestfulServer {
       providers.addAll(buildAggregateProviders());
       providers.addAll(buildExtractProviders());
       providers.addAll(buildSearchProviders());
+      providers.addAll(buildUpdateProviders());
       registerProviders(providers);
+
+      // Register batch provider.
+      registerProvider(batchProvider);
 
       // Register resource providers.
       registerProvider(operationDefinitionProvider);
@@ -239,6 +254,18 @@ public class FhirServer extends RestfulServer {
     return providers;
   }
 
+  @Nonnull
+  private List<IResourceProvider> buildUpdateProviders() {
+    final List<IResourceProvider> providers = new ArrayList<>();
+
+    for (final ResourceType resourceType : ResourceType.values()) {
+      final IResourceProvider updateProvider =
+          resourceProviderFactory.createUpdateResourceProvider(resourceType);
+      providers.add(updateProvider);
+    }
+    return providers;
+  }
+
   private void configureRequestLogging() {
     // Add the request ID to the logging context before each request.
     registerInterceptor(requestIdInterceptor);
@@ -286,6 +313,24 @@ public class FhirServer extends RestfulServer {
         | InvocationTargetException e) {
       throw new RuntimeException("Problem determining FHIR type from resource class", e);
     }
+  }
+
+  /**
+   * @return The set of resource types currently supported by this server.
+   */
+  @Nonnull
+  public static Set<Enumerations.ResourceType> supportedResourceTypes() {
+    final Set<Enumerations.ResourceType> availableResourceTypes = EnumSet.allOf(
+        Enumerations.ResourceType.class);
+    final Set<Enumerations.ResourceType> unsupportedResourceTypes =
+        JavaConverters.setAsJavaSet(EncoderBuilder2.UNSUPPORTED_RESOURCES()).stream()
+            .map(Enumerations.ResourceType::fromCode)
+            .collect(Collectors.toSet());
+    availableResourceTypes.removeAll(unsupportedResourceTypes);
+    availableResourceTypes.remove(Enumerations.ResourceType.RESOURCE);
+    availableResourceTypes.remove(Enumerations.ResourceType.DOMAINRESOURCE);
+    availableResourceTypes.remove(Enumerations.ResourceType.NULL);
+    return availableResourceTypes;
   }
 
 }

@@ -7,12 +7,12 @@
 package au.csiro.pathling.test.integration;
 
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
-import static au.csiro.pathling.test.helpers.TestHelpers.mockResourceReader;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
+import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +38,7 @@ import org.springframework.http.ResponseEntity;
 /**
  * @author John Grimes
  */
-public class ExtractTest extends IntegrationTest {
+class ExtractTest extends IntegrationTest {
 
   @Autowired
   SparkSession spark;
@@ -47,17 +47,17 @@ public class ExtractTest extends IntegrationTest {
   IParser jsonParser;
 
   @MockBean
-  ResourceReader resourceReader;
+  Database database;
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @Test
   void extract() throws URISyntaxException, MalformedURLException {
-    mockResourceReader(resourceReader, spark, ResourceType.DIAGNOSTICREPORT);
+    TestHelpers.mockResource(database, spark, ResourceType.DIAGNOSTICREPORT);
     final String uri = "http://localhost:" + port + "/fhir/DiagnosticReport/$extract?column=id";
     final ResponseEntity<String> response = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);

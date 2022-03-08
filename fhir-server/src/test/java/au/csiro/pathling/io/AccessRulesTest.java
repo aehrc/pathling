@@ -21,11 +21,11 @@ import org.junit.jupiter.api.Test;
  * @author Piotr Szul
  */
 @Tag("UnitTest")
-public class AccessRulesTest {
+class AccessRulesTest {
 
-  private final AccessRules accessRules;
+  final AccessRules accessRules;
 
-  public AccessRulesTest() {
+  AccessRulesTest() {
     final Configuration configuration = new Configuration();
     final Import importConf = new Import();
     configuration.setImport(importConf);
@@ -34,19 +34,19 @@ public class AccessRulesTest {
   }
 
   @Test
-  public void allowsConfiguredSources() {
+  void allowsConfiguredSources() {
     accessRules.checkCanImportFrom("file:///usr/share/import");
     accessRules.checkCanImportFrom("file:///usr/share/import/somefile.json");
   }
 
   @Test
-  public void prohibitsAccessToUnlistedSources() {
+  void prohibitsAccessToUnlistedSources() {
     assertThrows(SecurityError.class,
         () -> accessRules.checkCanImportFrom("file:///usr/share/other"));
   }
 
   @Test
-  public void operatesOnPhysicalUrls() {
+  void operatesOnPhysicalUrls() {
     accessRules.checkCanImportFrom("s3a://data/file.json");
     assertThrows(SecurityError.class, () -> accessRules.checkCanImportFrom("s3://data/file.json"));
   }

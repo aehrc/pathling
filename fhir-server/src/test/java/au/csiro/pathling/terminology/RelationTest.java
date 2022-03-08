@@ -12,37 +12,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.terminology.Relation.CodingSet;
 import au.csiro.pathling.terminology.Relation.Entry;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag("UnitTest")
-public class RelationTest {
+class RelationTest {
 
-  private static final SimpleCoding CODING1_UNVERSIONED = new SimpleCoding("uuid:system1", "code");
-  private static final SimpleCoding CODING1_VERSION1 =
+  static final SimpleCoding CODING1_UNVERSIONED = new SimpleCoding("uuid:system1", "code");
+  static final SimpleCoding CODING1_VERSION1 =
       new SimpleCoding("uuid:system1", "code", "version1");
-  private static final SimpleCoding CODING1_VERSION2 =
+  static final SimpleCoding CODING1_VERSION2 =
       new SimpleCoding("uuid:system1", "code", "version2");
 
-  private static final SimpleCoding CODING2_UNVERSIONED = new SimpleCoding("uuid:system2", "code");
-  private static final SimpleCoding CODING2_VERSION1 =
+  static final SimpleCoding CODING2_UNVERSIONED = new SimpleCoding("uuid:system2", "code");
+  static final SimpleCoding CODING2_VERSION1 =
       new SimpleCoding("uuid:system2", "code", "version1");
-  private static final SimpleCoding CODING2_VERSION2 =
+  static final SimpleCoding CODING2_VERSION2 =
       new SimpleCoding("uuid:system2", "code", "version2");
 
-  private static final SimpleCoding CODING3_UNVERSIONED = new SimpleCoding("uuid:system1", "code1");
-  private static final SimpleCoding CODING3_VERSION1 =
+  static final SimpleCoding CODING3_UNVERSIONED = new SimpleCoding("uuid:system1", "code1");
+  static final SimpleCoding CODING3_VERSION1 =
       new SimpleCoding("uuid:system1", "code1", "version1");
 
   @Nonnull
-  private static Set<SimpleCoding> setOf(@Nonnull final SimpleCoding... codings) {
+  static Set<SimpleCoding> setOf(@Nonnull final SimpleCoding... codings) {
     return new HashSet<>(Arrays.asList(codings));
   }
 
   @Test
-  public void testVersionedCodingSet() {
+  void testVersionedCodingSet() {
     final CodingSet versionedCodingSet = new CodingSet(setOf(CODING1_VERSION1));
     assertTrue(versionedCodingSet.contains(CODING1_UNVERSIONED));
     assertTrue(versionedCodingSet.contains(CODING1_VERSION1));
@@ -51,7 +55,7 @@ public class RelationTest {
   }
 
   @Test
-  public void testUnversionedCodingSet() {
+  void testUnversionedCodingSet() {
     final CodingSet unversionedCodingSet = new CodingSet(setOf(CODING1_UNVERSIONED));
     assertTrue(unversionedCodingSet.contains(CODING1_UNVERSIONED));
     assertTrue(unversionedCodingSet.contains(CODING1_VERSION1));
@@ -60,15 +64,16 @@ public class RelationTest {
   }
 
   @Test
-  public void testEmptyClosure() {
+  void testEmptyClosure() {
     final Relation emptyRelation = Relation.fromMappings(Collections.emptyList());
     checkBasicEqualities(emptyRelation);
   }
 
-  private void checkBasicEqualities(final Relation relation) {
+  void checkBasicEqualities(final Relation relation) {
     assertFalse(relation.anyRelates(Collections.emptyList(), Collections.emptyList()));
     assertFalse(
-        relation.anyRelates(Collections.singletonList(CODING1_UNVERSIONED), Collections.emptyList()))
+        relation.anyRelates(Collections.singletonList(CODING1_UNVERSIONED),
+            Collections.emptyList()))
     ;
     assertFalse(relation.anyRelates(Collections.emptyList(),
         Collections.singletonList(CODING1_UNVERSIONED)))
@@ -104,7 +109,7 @@ public class RelationTest {
   }
 
   @Test
-  public void testUnversionedClosure() {
+  void testUnversionedClosure() {
     final Relation versionedRelation =
         Relation.fromMappings(
             Collections.singletonList(Entry.of(CODING1_UNVERSIONED, CODING2_UNVERSIONED)));
@@ -130,7 +135,7 @@ public class RelationTest {
   }
 
   @Test
-  public void testVersionedClosure() {
+  void testVersionedClosure() {
 
     final List<Entry> entries = Collections
         .singletonList(Entry.of(CODING1_VERSION1, CODING2_VERSION1));

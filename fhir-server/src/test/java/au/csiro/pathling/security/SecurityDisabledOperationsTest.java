@@ -17,22 +17,32 @@ import org.springframework.test.context.TestPropertySource;
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
 @TestPropertySource(properties = {"pathling.auth.enabled=false"})
-public class SecurityDisabledOperationsTest extends SecurityTestForOperations {
+class SecurityDisabledOperationsTest extends SecurityTestForOperations {
 
   @Test
-  public void testPassIfImportWithNoAuth() {
+  void testPassIfImportWithNoAuth() {
     assertImportSuccess();
   }
 
   @Test
-  public void testPassIfAggregateWithNoAuth() {
+  void testPassIfAggregateWithNoAuth() {
     assertAggregateSuccess();
   }
 
   @Test
-  public void testPassIfSearchWithNoAuth() {
+  void testPassIfSearchWithNoAuth() {
     assertSearchSuccess();
     assertSearchWithFilterSuccess();
   }
- 
+
+  @Test
+  void testPassIfUpdateWithNoAuth() {
+    assertUpdateSuccess();
+  }
+
+  @Test
+  void testPassIfBatchWithNoAuth() {
+    assertBatchSuccess();
+  }
+
 }

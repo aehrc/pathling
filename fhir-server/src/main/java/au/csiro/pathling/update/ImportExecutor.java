@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.update;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.UnsupportedResourceError;
@@ -13,14 +15,17 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.SecurityError;
 import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.io.AccessRules;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.PersistenceScheme;
-import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.io.ResourceWriter;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
@@ -44,9 +49,10 @@ import org.springframework.stereotype.Component;
  * Encapsulates the execution of an import operation.
  *
  * @author John Grimes
+ * @see <a href="https://pathling.csiro.au/docs/import.html">Import</a>
  */
 @Component
-@Profile("core")
+@Profile({"core", "import"})
 @Slf4j
 public class ImportExecutor {
 
@@ -54,10 +60,7 @@ public class ImportExecutor {
   private final SparkSession spark;
 
   @Nonnull
-  private final ResourceReader resourceReader;
-
-  @Nonnull
-  private final ResourceWriter resourceWriter;
+  private final Database database;
 
   @Nonnull
   private final FhirEncoders fhirEncoders;
@@ -69,27 +72,25 @@ public class ImportExecutor {
   private final Optional<CacheInvalidator> cacheInvalidator;
 
   @Nonnull
-  private final AccessRules accessRules;
+  private final Optional<AccessRules> accessRules;
 
   /**
-   * @param spark A {@link SparkSession} for resolving Spark queries
-   * @param resourceReader A {@link ResourceReader} for retrieving resources
-   * @param resourceWriter A {@link ResourceWriter} for saving resources
-   * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
-   * @param fhirContextFactory A {@link FhirContextFactory} for constructing FhirContext objects in
+   * @param spark a {@link SparkSession} for resolving Spark queries
+   * @param database a {@link Database} for writing resources
+   * @param fhirEncoders a {@link FhirEncoders} object for converting data back into HAPI FHIR
+   * @param fhirContextFactory a {@link FhirContextFactory} for constructing FhirContext objects in
    * the context of parallel processing
-   * @param cacheInvalidator A {@link CacheInvalidator} for invalidating caches upon import
-   * @param accessRules A {@link AccessRules} for validating access to URLs
+   * @param cacheInvalidator a {@link CacheInvalidator} for invalidating caches upon import
+   * @param accessRules a {@link AccessRules} for validating access to URLs
    */
   public ImportExecutor(@Nonnull final SparkSession spark,
-      @Nonnull final ResourceReader resourceReader, @Nonnull final ResourceWriter resourceWriter,
+      @Nonnull final Database database,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final FhirContextFactory fhirContextFactory,
       @Nonnull final Optional<CacheInvalidator> cacheInvalidator,
-      @Nonnull final AccessRules accessRules) {
+      @Nonnull final Optional<AccessRules> accessRules) {
     this.spark = spark;
-    this.resourceReader = resourceReader;
-    this.resourceWriter = resourceWriter;
+    this.database = database;
     this.fhirEncoders = fhirEncoders;
     this.fhirContextFactory = fhirContextFactory;
     this.cacheInvalidator = cacheInvalidator;
@@ -125,11 +126,17 @@ public class ImportExecutor {
           .findFirst()
           .orElseThrow(
               () -> new InvalidUserInputError("Must provide url for each source"));
-
+      // The mode parameter defaults to 'overwrite'.
+      final ImportMode importMode = sourceParam.getPart().stream()
+          .filter(param -> "mode".equals(param.getName()) &&
+              param.getValue() instanceof CodeType)
+          .findFirst()
+          .map(param -> ImportMode.fromCode(((CodeType) param.getValue()).asStringValue()))
+          .orElse(ImportMode.OVERWRITE);
       final String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
-      final FhirContextFactory localFhirContextFactory = this.fhirContextFactory;
 
+      // Get an encoder based on the declared resource type within the source parameter.
       final ExpressionEncoder<IBaseResource> fhirEncoder;
       try {
         fhirEncoder = fhirEncoders.of(resourceType.toCode());
@@ -137,29 +144,20 @@ public class ImportExecutor {
         throw new InvalidUserInputError("Unsupported resource type: " + resourceCode);
       }
 
-      String url = ((UrlType) urlParam.getValue()).getValueAsString();
-      url = PersistenceScheme.convertS3ToS3aUrl(url);
-      final Dataset<String> jsonStrings;
-      try {
-        accessRules.checkCanImportFrom(url);
-        final FilterFunction<String> nonBlanks = s -> !s.isBlank();
-        jsonStrings = spark.read().textFile(url).filter(nonBlanks);
-      } catch (final SecurityError e) {
-        throw new InvalidUserInputError("Not allowed to import from URL: " + url, e);
-      } catch (final Exception e) {
-        throw new InvalidUserInputError("Error reading from URL: " + url, e);
+      // Check that the user is authorized to execute the operation.
+      final Dataset<String> jsonStrings = checkAuthorization(urlParam);
+
+      // Parse each line into a HAPI FHIR object, then encode to a Spark dataset.
+      final Dataset<IBaseResource> resources = jsonStrings.map(jsonToResourceConverter(),
+          fhirEncoder);
+
+      log.info("Importing {} resources (mode: {})", resourceType.toCode(), importMode.getCode());
+      if (importMode == ImportMode.OVERWRITE) {
+        database.overwrite(resourceType, resources.toDF());
+      } else {
+        database.merge(resourceType, resources.toDF());
       }
-      final Dataset<IBaseResource> resources = jsonStrings
-          .map((MapFunction<String, IBaseResource>) json -> localFhirContextFactory
-              .build().newJsonParser().parseResource(json), fhirEncoder);
-
-      log.info("Saving resources: {}", resourceType.toCode());
-      resourceWriter.write(resourceType, resources);
     }
-
-    // Update the list of available resources within the resource reader.
-    log.info("Updating available resource types");
-    resourceReader.updateAvailableResourceTypes();
 
     // We return 200, as this operation is currently synchronous.
     log.info("Import complete");
@@ -176,4 +174,68 @@ public class ImportExecutor {
     opOutcome.getIssue().add(issue);
     return opOutcome;
   }
+
+  @Nonnull
+  private Dataset<String> checkAuthorization(@Nonnull final ParametersParameterComponent urlParam) {
+    final String url = ((UrlType) urlParam.getValue()).getValueAsString();
+    final String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
+    final String convertedUrl = PersistenceScheme.convertS3ToS3aUrl(decodedUrl);
+    final Dataset<String> jsonStrings;
+    try {
+      accessRules.ifPresent(ar -> ar.checkCanImportFrom(convertedUrl));
+      final FilterFunction<String> nonBlanks = s -> !s.isBlank();
+      jsonStrings = spark.read().textFile(convertedUrl).filter(nonBlanks);
+    } catch (final SecurityError e) {
+      throw new InvalidUserInputError("Not allowed to import from URL: " + convertedUrl, e);
+    } catch (final Exception e) {
+      throw new InvalidUserInputError("Error reading from URL: " + convertedUrl, e);
+    }
+    return jsonStrings;
+  }
+
+  @Nonnull
+  private MapFunction<String, IBaseResource> jsonToResourceConverter() {
+    final FhirContextFactory localFhirContextFactory = this.fhirContextFactory;
+    return (json) -> {
+      final IBaseResource resource = localFhirContextFactory.build().newJsonParser()
+          .parseResource(json);
+      // All imported resources must have an ID set.
+      checkUserInput(!resource.getIdElement().isEmpty(), "Encountered a resource with no ID");
+      return resource;
+    };
+  }
+
+  public enum ImportMode {
+    /**
+     * Results in all existing resources of the specified type to be deleted and replaced with the
+     * contents of the source file.
+     */
+    OVERWRITE("overwrite"),
+
+    /**
+     * Matches existing resources with updated resources in the source file based on their ID, and
+     * either update the existing resources or add new resources as appropriate.
+     */
+    MERGE("merge");
+
+    @Nonnull
+    @Getter
+    private final String code;
+
+    ImportMode(@Nonnull final String code) {
+      this.code = code;
+    }
+
+    @Nullable
+    public static ImportMode fromCode(@Nonnull final String code) {
+      for (final ImportMode mode : values()) {
+        if (mode.code.equals(code)) {
+          return mode;
+        }
+      }
+      return null;
+    }
+
+  }
+
 }

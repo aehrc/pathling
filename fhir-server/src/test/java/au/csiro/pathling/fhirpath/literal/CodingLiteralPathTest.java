@@ -13,7 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import org.apache.spark.sql.Dataset;
@@ -35,13 +35,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 class CodingLiteralPathTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
-  private ResourcePath inputContext;
+  ResourcePath inputContext;
 
   @BeforeEach
   void setUp() {
-    final ResourceReader resourceReader = mock(ResourceReader.class);
+    final Database database = mock(Database.class);
     final Dataset<Row> inputContextDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withRow("observation-1")
@@ -50,11 +50,11 @@ class CodingLiteralPathTest {
         .withRow("observation-4")
         .withRow("observation-5")
         .build();
-    when(resourceReader.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
+    when(database.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
     inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
-        .resourceReader(resourceReader)
+        .database(database)
         .singular(true)
         .build();
   }

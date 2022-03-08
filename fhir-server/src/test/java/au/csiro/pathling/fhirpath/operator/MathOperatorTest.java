@@ -46,20 +46,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 @TestInstance(Lifecycle.PER_CLASS)
 @Tag("UnitTest")
-public class MathOperatorTest {
+class MathOperatorTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private static final List<String> EXPRESSION_TYPES = Arrays
+  static final List<String> EXPRESSION_TYPES = Arrays
       .asList("Integer", "Decimal", "Integer (literal)", "Decimal (literal)");
-  private static final String ID_ALIAS = "_abc123";
+  static final String ID_ALIAS = "_abc123";
 
   @Value
-  private static class TestParameters {
+  static class TestParameters {
 
     @Nonnull
     String name;
@@ -86,7 +86,7 @@ public class MathOperatorTest {
 
   }
 
-  public Stream<TestParameters> parameters() {
+  Stream<TestParameters> parameters() {
     final Collection<TestParameters> parameters = new ArrayList<>();
     for (final String leftType : EXPRESSION_TYPES) {
       for (final String rightType : EXPRESSION_TYPES) {
@@ -108,7 +108,7 @@ public class MathOperatorTest {
     return parameters.stream();
   }
 
-  private FhirPath getExpressionForType(final String expressionType,
+  FhirPath getExpressionForType(final String expressionType,
       final boolean leftOperand) {
     final Dataset<Row> literalContextDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
@@ -138,7 +138,7 @@ public class MathOperatorTest {
     }
   }
 
-  private FhirPath buildIntegerExpression(final boolean leftOperand) {
+  FhirPath buildIntegerExpression(final boolean leftOperand) {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.IntegerType)
@@ -161,7 +161,7 @@ public class MathOperatorTest {
         .build();
   }
 
-  private FhirPath buildDecimalExpression(final boolean leftOperand) {
+  FhirPath buildDecimalExpression(final boolean leftOperand) {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.createDecimalType())
@@ -186,7 +186,7 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void addition(final TestParameters parameters) {
+  void addition(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("+");
@@ -213,7 +213,7 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void subtraction(final TestParameters parameters) {
+  void subtraction(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("-");
@@ -240,7 +240,7 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void multiplication(final TestParameters parameters) {
+  void multiplication(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("*");
@@ -267,7 +267,7 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void division(final TestParameters parameters) {
+  void division(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("/");
@@ -292,7 +292,7 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void modulus(final TestParameters parameters) {
+  void modulus(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("mod");

@@ -47,15 +47,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 @TestInstance(Lifecycle.PER_CLASS)
 @Tag("UnitTest")
-public class ComparisonOperatorTest {
+class ComparisonOperatorTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private static final String ID_ALIAS = "_abc123";
+  static final String ID_ALIAS = "_abc123";
 
   @Value
   static class TestParameters {
@@ -82,7 +82,7 @@ public class ComparisonOperatorTest {
 
   }
 
-  public Stream<TestParameters> parameters() {
+  Stream<TestParameters> parameters() {
     return Stream.of(
         "String",
         "Integer",
@@ -94,7 +94,7 @@ public class ComparisonOperatorTest {
     ).map(this::buildTestParameters);
   }
 
-  private TestParameters buildTestParameters(@Nonnull final String name) {
+  TestParameters buildTestParameters(@Nonnull final String name) {
     switch (name) {
       case "String":
         return buildStringExpressions(name);
@@ -127,7 +127,7 @@ public class ComparisonOperatorTest {
     }
   }
 
-  private TestParameters buildStringExpressions(final String name) {
+  TestParameters buildStringExpressions(final String name) {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
@@ -167,7 +167,7 @@ public class ComparisonOperatorTest {
     return new TestParameters(name, left, right, literal, context);
   }
 
-  private TestParameters buildIntegerExpressions(final String name) {
+  TestParameters buildIntegerExpressions(final String name) {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.IntegerType)
@@ -206,7 +206,7 @@ public class ComparisonOperatorTest {
     return new TestParameters(name, left, right, literal, context);
   }
 
-  private TestParameters buildDecimalExpressions(final String name) {
+  TestParameters buildDecimalExpressions(final String name) {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.createDecimalType())
@@ -245,7 +245,7 @@ public class ComparisonOperatorTest {
     return new TestParameters(name, left, right, literal, context);
   }
 
-  private TestParameters buildDateTimeExpressions(final String name,
+  TestParameters buildDateTimeExpressions(final String name,
       final String lesserDate,
       final String greaterDate,
       final FHIRDefinedType fhirType) {
@@ -289,14 +289,15 @@ public class ComparisonOperatorTest {
     } catch (final ParseException e) {
       throw new RuntimeException("Error parsing literal date or date time");
     }
-    final ParserContext context = new ParserContextBuilder(spark, fhirContext).groupingColumns(
-        Collections.singletonList(left.getIdColumn())).build();
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(left.getIdColumn()))
+        .build();
     return new TestParameters(name, left, right, literal, context);
   }
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void lessThanOrEqualTo(final TestParameters parameters) {
+  void lessThanOrEqualTo(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("<=");
@@ -314,7 +315,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void lessThan(final TestParameters parameters) {
+  void lessThan(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("<");
@@ -332,7 +333,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void greaterThanOrEqualTo(final TestParameters parameters) {
+  void greaterThanOrEqualTo(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance(">=");
@@ -350,7 +351,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void greaterThan(final TestParameters parameters) {
+  void greaterThan(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance(">");
@@ -368,7 +369,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void literalLessThanOrEqualTo(final TestParameters parameters) {
+  void literalLessThanOrEqualTo(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("<=");
@@ -386,7 +387,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void literalLessThan(final TestParameters parameters) {
+  void literalLessThan(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("<");
@@ -404,7 +405,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void literalGreaterThanOrEqualTo(final TestParameters parameters) {
+  void literalGreaterThanOrEqualTo(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance(">=");
@@ -422,7 +423,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void literalGreaterThan(final TestParameters parameters) {
+  void literalGreaterThan(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance(">");
@@ -440,7 +441,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void lessThanOrEqualToLiteral(final TestParameters parameters) {
+  void lessThanOrEqualToLiteral(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getLiteral());
     final Operator comparisonOperator = Operator.getInstance("<=");
@@ -458,7 +459,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void lessThanLiteral(final TestParameters parameters) {
+  void lessThanLiteral(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getLiteral());
     final Operator comparisonOperator = Operator.getInstance("<");
@@ -476,7 +477,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void greaterThanOrEqualToLiteral(final TestParameters parameters) {
+  void greaterThanOrEqualToLiteral(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getLiteral());
     final Operator comparisonOperator = Operator.getInstance(">=");
@@ -494,7 +495,7 @@ public class ComparisonOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void greaterThanLiteral(final TestParameters parameters) {
+  void greaterThanLiteral(final TestParameters parameters) {
     final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getLiteral());
     final Operator comparisonOperator = Operator.getInstance(">");

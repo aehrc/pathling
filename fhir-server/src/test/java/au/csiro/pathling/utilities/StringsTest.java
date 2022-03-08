@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag("UnitTest")
-public class StringsTest {
+class StringsTest {
 
   @Test
-  public void testParseCsvList() {
+  void testParseCsvList() {
     assertEquals(Collections.emptyList(), Strings.parseCsvList("", Integer::parseInt));
     assertEquals(Collections.emptyList(), Strings.parseCsvList(", ,, ", Integer::parseInt));
     assertEquals(Arrays.asList(1, 2, 4), Strings.parseCsvList(", 1, 2, , 4 , ", Integer::parseInt));

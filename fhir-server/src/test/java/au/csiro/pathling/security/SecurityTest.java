@@ -17,14 +17,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @Tag("UnitTest")
 @SpringBootTest
-public abstract class SecurityTest {
+abstract class SecurityTest {
 
-  public static void assertThrowsAccessDenied(@Nonnull final Executable executable,
+  static void assertThrowsAccessDenied(@Nonnull final Executable executable,
       @Nonnull final String message) {
     assertThrows(AccessDeniedError.class, executable, message);
   }
 
-  public static void assertThrowsAccessDenied(@Nonnull final Executable executable,
+  static void assertThrowsAccessDenied(@Nonnull final Executable executable,
       @Nonnull final String message, @Nonnull final String expectedMissingAuthority) {
     final AccessDeniedError ex = assertThrows(AccessDeniedError.class, executable, message);
     assertEquals(expectedMissingAuthority, ex.getMissingAuthority());

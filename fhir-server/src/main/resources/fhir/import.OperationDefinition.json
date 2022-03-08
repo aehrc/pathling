@@ -39,6 +39,14 @@
           "max": "1",
           "documentation": "A URL that can be used to retrieve this source file.",
           "type": "url"
+        },
+        {
+          "name": "mode",
+          "use": "in",
+          "min": 0,
+          "max": "1",
+          "documentation": "A value of 'overwrite' will cause all existing resources of the specified type to be deleted and replaced with the contents of the source file. A value of 'merge' will match existing resources with updated resources in the source file based on their ID, and either update the existing resources or add new resources as appropriate. The default value is 'overwrite'.",
+          "type": "code"
         }
       ]
     }

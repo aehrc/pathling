@@ -16,12 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author John Grimes
  */
 @Slf4j
-public class WireMockTest extends IntegrationTest {
+class WireMockTest extends IntegrationTest {
 
   @Autowired
-  protected WireMockServer wireMockServer;
+  WireMockServer wireMockServer;
 
-  protected static boolean isRecordMode() {
+  static boolean isRecordMode() {
     return Boolean.parseBoolean(System.getProperty("pathling.test.recording.enabled", "false"));
   }
 

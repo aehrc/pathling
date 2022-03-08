@@ -39,12 +39,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 class ComparisonOperatorDateTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private static final String ID_ALIAS = "_abc123";
+  static final String ID_ALIAS = "_abc123";
 
   @Test
   void comparesDates() {

@@ -18,7 +18,6 @@ import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
@@ -71,11 +70,12 @@ public class Spark {
     return spark;
   }
 
-  private static void configureAwsDriver(@NotNull Configuration configuration, SparkSession spark) {
+  private static void configureAwsDriver(@Nonnull final Configuration configuration,
+      @Nonnull final SparkSession spark) {
     final Aws awsConfig = configuration.getStorage().getAws();
     final org.apache.hadoop.conf.Configuration hadoopConfig = spark.sparkContext()
         .hadoopConfiguration();
-   
+
     // We need to use the anonymous credentials provider if we are not using AWS credentials.
     if (awsConfig.isAnonymousAccess()) {
       hadoopConfig.set("fs.s3a.aws.credentials.provider",

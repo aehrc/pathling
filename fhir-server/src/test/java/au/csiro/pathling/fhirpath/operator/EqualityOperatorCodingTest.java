@@ -37,24 +37,24 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class EqualityOperatorCodingTest {
+class EqualityOperatorCodingTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private static final String ID_ALIAS = "_abc123";
+  static final String ID_ALIAS = "_abc123";
 
-  private FhirPath left;
-  private FhirPath right;
-  private FhirPath literalSnomedAll;
-  private FhirPath literalLoincSystemCode;
-  private ParserContext parserContext;
+  FhirPath left;
+  FhirPath right;
+  FhirPath literalSnomedAll;
+  FhirPath literalLoincSystemCode;
+  ParserContext parserContext;
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     // all components
     final Coding coding1 = new Coding(SNOMED_URL, "56459004", null);
     coding1.setVersion("http://snomed.info/sct/32506021000036107/version/20191231");
@@ -128,7 +128,7 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void equals() {
+  void equals() {
     final OperatorInput input = new OperatorInput(parserContext, left, right);
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
@@ -145,7 +145,7 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void notEquals() {
+  void notEquals() {
     final OperatorInput input = new OperatorInput(parserContext, left, right);
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
@@ -162,7 +162,7 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void literalEquals() {
+  void literalEquals() {
     final OperatorInput input = new OperatorInput(parserContext, literalLoincSystemCode, left);
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
@@ -179,7 +179,7 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void equalsLiteral() {
+  void equalsLiteral() {
     final OperatorInput input = new OperatorInput(parserContext, left, literalSnomedAll);
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
@@ -196,7 +196,7 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void literalNotEquals() {
+  void literalNotEquals() {
     final OperatorInput input = new OperatorInput(parserContext, literalLoincSystemCode, left);
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
@@ -213,7 +213,7 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void notEqualsLiteral() {
+  void notEqualsLiteral() {
     final OperatorInput input = new OperatorInput(parserContext, left, literalSnomedAll);
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);

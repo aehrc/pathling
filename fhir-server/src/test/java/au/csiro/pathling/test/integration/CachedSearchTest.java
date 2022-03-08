@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -29,23 +29,23 @@ import org.springframework.http.ResponseEntity;
 /**
  * @author John Grimes
  */
-public class CachedSearchTest extends IntegrationTest {
+class CachedSearchTest extends IntegrationTest {
 
   @Autowired
   SparkSession spark;
 
   @MockBean
-  ResourceReader resourceReader;
+  Database database;
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @Test
   void searchWithNoFilter() throws URISyntaxException {
-    TestHelpers.mockResourceReader(resourceReader, spark, ResourceType.PATIENT);
+    TestHelpers.mockResource(database, spark, ResourceType.PATIENT);
     final String uri = "http://localhost:" + port + "/fhir/Patient?_summary=false";
     final ResponseEntity<String> response = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);

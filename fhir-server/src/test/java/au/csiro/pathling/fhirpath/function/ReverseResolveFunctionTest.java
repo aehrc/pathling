@@ -23,8 +23,12 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.*;
+import au.csiro.pathling.io.Database;
+import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.builders.ElementPathBuilder;
+import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
+import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
@@ -32,7 +36,11 @@ import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -50,20 +58,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 class ReverseResolveFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ResourceReader mockReader;
+  Database database;
 
   @BeforeEach
   void setUp() {
-    mockReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
-  public void reverseResolve() {
+  void reverseResolve() {
     final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
@@ -73,10 +81,10 @@ class ReverseResolveFunctionTest {
         .withRow("patient-3", "male", true)
         .withRow("patient-4", "male", true)
         .build();
-    when(mockReader.read(ResourceType.PATIENT))
+    when(database.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", true);
+        .build(fhirContext, database, ResourceType.PATIENT, "Patient", true);
 
     final DatasetBuilder encounterDatasetBuilder = new ResourceDatasetBuilder(spark)
         .withIdColumn()
@@ -87,9 +95,9 @@ class ReverseResolveFunctionTest {
         .withRow("encounter-4", "in-progress")
         .withRow("encounter-5", "onleave");
     final Dataset<Row> encounterDataset = encounterDatasetBuilder.build();
-    when(mockReader.read(ResourceType.ENCOUNTER)).thenReturn(encounterDataset);
+    when(database.read(ResourceType.ENCOUNTER)).thenReturn(encounterDataset);
     final ResourcePath originPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.ENCOUNTER, "Encounter", false);
+        .build(fhirContext, database, ResourceType.ENCOUNTER, "Encounter", false);
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "subject");
@@ -123,7 +131,7 @@ class ReverseResolveFunctionTest {
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
-        .resourceReader(mockReader)
+        .database(database)
         .inputExpression("Patient")
         .build();
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, inputPath,
@@ -152,7 +160,7 @@ class ReverseResolveFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfInputNotResource() {
+  void throwsErrorIfInputNotResource() {
     final ElementPath input = new ElementPathBuilder(spark)
         .expression("gender")
         .fhirType(FHIRDefinedType.CODE)
@@ -175,7 +183,7 @@ class ReverseResolveFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfArgumentIsNotReference() {
+  void throwsErrorIfArgumentIsNotReference() {
     final ResourcePath input = new ResourcePathBuilder(spark).build();
     final ElementPath argument = new ElementPathBuilder(spark)
         .expression("gender")
@@ -196,7 +204,7 @@ class ReverseResolveFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfMoreThanOneArgument() {
+  void throwsErrorIfMoreThanOneArgument() {
     final ResourcePath input = new ResourcePathBuilder(spark)
         .expression("Patient")
         .build();
@@ -225,7 +233,7 @@ class ReverseResolveFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfArgumentTypeDoesNotMatchInput() {
+  void throwsErrorIfArgumentTypeDoesNotMatchInput() {
     final ResourcePath input = new ResourcePathBuilder(spark)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")

@@ -13,7 +13,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.DefaultAnswer;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
@@ -42,7 +42,7 @@ public class ParserContextBuilder {
   private final SparkSession spark;
 
   @Nonnull
-  private ResourceReader resourceReader;
+  private Database database;
 
   @Nullable
   private TerminologyServiceFactory terminologyServiceFactory;
@@ -60,7 +60,7 @@ public class ParserContextBuilder {
     inputContext = mock(FhirPath.class);
     when(inputContext.getIdColumn()).thenReturn(lit(null));
     when(inputContext.getDataset()).thenReturn(spark.emptyDataFrame());
-    resourceReader = Mockito.mock(ResourceReader.class, new DefaultAnswer());
+    database = Mockito.mock(Database.class, new DefaultAnswer());
     groupingColumns = Collections.emptyList();
     nodeIdColumns = new HashMap<>();
   }
@@ -84,8 +84,8 @@ public class ParserContextBuilder {
   }
 
   @Nonnull
-  public ParserContextBuilder resourceReader(@Nonnull final ResourceReader resourceReader) {
-    this.resourceReader = resourceReader;
+  public ParserContextBuilder database(@Nonnull final Database database) {
+    this.database = database;
     return this;
   }
 
@@ -104,7 +104,7 @@ public class ParserContextBuilder {
 
   @Nonnull
   public ParserContext build() {
-    return new ParserContext(inputContext, fhirContext, spark, resourceReader,
+    return new ParserContext(inputContext, fhirContext, spark, database,
         Optional.ofNullable(terminologyServiceFactory), groupingColumns, nodeIdColumns);
   }
 

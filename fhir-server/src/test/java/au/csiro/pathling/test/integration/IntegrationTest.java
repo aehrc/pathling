@@ -20,7 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
-public class IntegrationTest {
+public abstract class IntegrationTest {
 
   @BeforeAll
   static void beforeAll() {

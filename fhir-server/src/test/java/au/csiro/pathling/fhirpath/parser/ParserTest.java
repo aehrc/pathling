@@ -18,12 +18,14 @@ import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWith
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
@@ -57,9 +59,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class ParserTest extends AbstractParserTest {
 
   @Autowired
-  private TerminologyService terminologyService;
+  TerminologyService terminologyService;
 
-  private FhirPathAssertion assertThatResultOf(final String expression) {
+  @Autowired
+  FhirEncoders fhirEncoders;
+
+  FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
   }
 
@@ -375,6 +380,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testIfFunctionWithUntypedResourceResult() {
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.RELATEDPERSON);
     assertThatResultOf(
         "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
             + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender")
@@ -499,6 +505,8 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testCombineOperatorWithTwoUntypedResourcePaths() {
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP,
+        ResourceType.DEVICE, ResourceType.LOCATION);
     assertThatResultOf(
         "(reverseResolve(Condition.subject).subject.resolve() combine "
             + "reverseResolve(DiagnosticReport.subject).subject.resolve()).ofType(Patient)")
@@ -575,6 +583,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testExtensionsForeignResources() {
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
     assertThatResultOf(ResourceType.CONDITION,
         "subject.resolve().ofType(Patient).extension.url")
         .isElementPath(StringPath.class)
@@ -627,7 +636,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testTraversalIntoMissingOpenType() {
-    final String expression = "extension('http://hl7.org/fhir/R4/extension-patient-birthplace.html').valueAddress";
+    final String expression = "extension('http://hl7.org/fhir/R4/extension-patient-birthplace.html').valueOid";
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         expression);
     assertEquals("No such child: " + expression, error.getMessage());

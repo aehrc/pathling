@@ -31,13 +31,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 @Tag("UnitTest")
-public class SqlExtensionsTest {
+class SqlExtensionsTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Nullable
-  private static String stringDecoder(@Nullable final Object value) {
+  static String stringDecoder(@Nullable final Object value) {
     return value != null
            ? ((UTF8String) value).toString()
            : null;
@@ -50,7 +50,7 @@ public class SqlExtensionsTest {
   static class TestMapperWithPreview implements
       MapperWithPreview<String, Integer, List<String>> {
 
-    private static final long serialVersionUID = -4978210449641957885L;
+    static final long serialVersionUID = -4978210449641957885L;
 
     @Override
     @Nonnull
@@ -70,7 +70,7 @@ public class SqlExtensionsTest {
   }
 
   @Test
-  public void testMapWithPartitionPreview() {
+  void testMapWithPartitionPreview() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)

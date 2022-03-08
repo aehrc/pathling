@@ -52,13 +52,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 class BooleansTestFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Value
-  private static class TestParameters {
+  static class TestParameters {
 
     @Nonnull
     String functionName;
@@ -73,7 +73,7 @@ class BooleansTestFunctionTest {
 
   }
 
-  public Stream<TestParameters> parameters() {
+  Stream<TestParameters> parameters() {
     return Stream.of(
         new TestParameters("anyTrue", new DatasetBuilder(spark)
             .withIdColumn()
@@ -167,7 +167,7 @@ class BooleansTestFunctionTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void inputMustNotContainArguments(@Nonnull final TestParameters parameters) {
+  void inputMustNotContainArguments(@Nonnull final TestParameters parameters) {
     final ElementPath input = new ElementPathBuilder(spark).build();
     final StringLiteralPath argument = StringLiteralPath
         .fromString("'some argument'", input);
@@ -186,7 +186,7 @@ class BooleansTestFunctionTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void inputMustBeBoolean(@Nonnull final TestParameters parameters) {
+  void inputMustBeBoolean(@Nonnull final TestParameters parameters) {
     final ElementPath input = new ElementPathBuilder(spark)
         .expression("valueString")
         .fhirType(FHIRDefinedType.STRING)

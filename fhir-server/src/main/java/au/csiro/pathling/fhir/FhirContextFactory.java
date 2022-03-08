@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("core")
+@Profile({"core", "fhir"})
 public class FhirContextFactory implements Serializable {
 
   private static final long serialVersionUID = 3704272891614244206L;

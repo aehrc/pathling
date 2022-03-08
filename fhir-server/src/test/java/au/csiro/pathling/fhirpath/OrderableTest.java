@@ -34,13 +34,13 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class OrderableTest {
+class OrderableTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Test
-  public void testLiteralHasOrder() {
+  void testLiteralHasOrder() {
 
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
@@ -65,7 +65,7 @@ public class OrderableTest {
   }
 
   @Test
-  public void testSingularNonLiteralHasOrder() {
+  void testSingularNonLiteralHasOrder() {
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -98,13 +98,13 @@ public class OrderableTest {
         .hasRows(expectedDataset);
   }
 
-  private static void assertFailsOrderCheck(final Executable e) {
+  static void assertFailsOrderCheck(final Executable e) {
     final IllegalStateException error = assertThrows(IllegalStateException.class, e);
     assertEquals("Orderable path expected", error.getMessage());
   }
 
   @Test
-  public void testNonSingularNonLiteralWithEidHasOrder() {
+  void testNonSingularNonLiteralWithEidHasOrder() {
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -143,7 +143,7 @@ public class OrderableTest {
   }
 
   @Test
-  public void testNonSingularNonLiteralWithoutEidHasNoOrder() {
+  void testNonSingularNonLiteralWithoutEidHasNoOrder() {
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()

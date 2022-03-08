@@ -18,9 +18,9 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @author John Grimes
  */
 @Slf4j
-public class GroupingLiteralTest extends AggregateExecutorTest {
+class GroupingLiteralTest extends AggregateExecutorTest {
 
-  public static Stream<TestParameters> parameters() {
+  static Stream<TestParameters> parameters() {
     return Stream
         .of(new TestParameters("BooleanLiteral", "true"),
             new TestParameters("StringLiteral", "'foo'"),
@@ -33,7 +33,7 @@ public class GroupingLiteralTest extends AggregateExecutorTest {
   }
 
   @Value
-  private static class TestParameters {
+  static class TestParameters {
 
     @Nonnull
     String name;
@@ -52,7 +52,7 @@ public class GroupingLiteralTest extends AggregateExecutorTest {
   @MethodSource("parameters")
   void queryWithLiteralGroupingExpression(final TestParameters parameters) {
     subjectResource = ResourceType.MEDICATIONREQUEST;
-    mockResourceReader(subjectResource);
+    mockResource(subjectResource);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")

@@ -41,12 +41,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 class SumFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
+  ParserContext parserContext;
 
   @Test
   void returnsCorrectIntegerResult() {

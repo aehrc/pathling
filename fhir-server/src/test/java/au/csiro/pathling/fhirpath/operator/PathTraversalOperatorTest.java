@@ -28,7 +28,7 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -59,38 +59,36 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class PathTraversalOperatorTest {
+class PathTraversalOperatorTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
-  private ResourceReader resourceReader;
-  private ResourceReader mockReader;
+  ParserContext parserContext;
+  Database database;
 
   @BeforeEach
   void setUp() {
     parserContext = new ParserContextBuilder(spark, fhirContext).build();
-    resourceReader = mock(ResourceReader.class);
-    mockReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
-  public void singularTraversalFromSingular() {
+  void singularTraversalFromSingular() {
     final Dataset<Row> leftDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withRow("patient-1", "female")
         .withRow("patient-2", null)
         .build();
-    when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
+    when(database.read(ResourceType.PATIENT)).thenReturn(leftDataset);
     final ResourcePath left = new ResourcePathBuilder(spark)
         .fhirContext(fhirContext)
         .resourceType(ResourceType.PATIENT)
-        .resourceReader(resourceReader)
+        .database(database)
         .singular(true)
         .build();
 
@@ -112,7 +110,7 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void manyTraversalFromSingular() {
+  void manyTraversalFromSingular() {
     final Dataset<Row> leftDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("name", DataTypes.createArrayType(DataTypes.StringType))
@@ -121,11 +119,11 @@ public class PathTraversalOperatorTest {
         .withRow("patient-2", Collections.emptyList(), true)
         .withRow("patient-3", null, true)
         .build();
-    when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
+    when(database.read(ResourceType.PATIENT)).thenReturn(leftDataset);
     final ResourcePath left = new ResourcePathBuilder(spark)
         .fhirContext(fhirContext)
         .resourceType(ResourceType.PATIENT)
-        .resourceReader(resourceReader)
+        .database(database)
         .singular(true)
         .build();
 
@@ -153,7 +151,7 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void manyTraversalFromNonSingular() {
+  void manyTraversalFromNonSingular() {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -207,7 +205,7 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void singularTraversalFromNonSingular() {
+  void singularTraversalFromNonSingular() {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -258,8 +256,7 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void testExtensionTraversalOnResources() {
-
+  void testExtensionTraversalOnResources() {
     final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
@@ -275,10 +272,10 @@ public class PathTraversalOperatorTest {
         .withRow("patient-4", "male", false, 1, nullEntryMap(1))
         .withRow("patient-5", "male", true, 1, null)
         .build();
-    when(mockReader.read(ResourceType.PATIENT))
+    when(database.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath left = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", false);
+        .build(fhirContext, database, ResourceType.PATIENT, "Patient", false);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final PathTraversalInput input = new PathTraversalInput(parserContext, left, "extension");
@@ -307,8 +304,7 @@ public class PathTraversalOperatorTest {
 
 
   @Test
-  public void testExtensionTraversalOnElements() {
-
+  void testExtensionTraversalOnElements() {
     final Map<Object, Object> manyToFidZeroMap = ImmutableMap.builder()
         .put(0, Arrays.asList(MANY_EXT_ROW_1, MANY_EXT_ROW_2)).build();
 
@@ -338,10 +334,10 @@ public class PathTraversalOperatorTest {
         .withRow("observation-5", makeEid(0), RowFactory.create("name5", 0), null)
         .build();
 
-    when(mockReader.read(ResourceType.OBSERVATION))
+    when(database.read(ResourceType.OBSERVATION))
         .thenReturn(resourceLikeDataset);
     final ResourcePath baseResourcePath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.OBSERVATION, "Observation", false);
+        .build(fhirContext, database, ResourceType.OBSERVATION, "Observation", false);
 
     final Dataset<Row> elementDataset = toElementDataset(resourceLikeDataset, baseResourcePath);
 
@@ -386,7 +382,7 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void throwsErrorOnNonExistentChild() {
+  void throwsErrorOnNonExistentChild() {
     final ResourcePath left = new ResourcePathBuilder(spark)
         .fhirContext(fhirContext)
         .resourceType(ResourceType.ENCOUNTER)

@@ -13,7 +13,12 @@ import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.fhir.ErrorHandlingInterceptor;
 import ca.uhn.fhir.parser.DataFormatException;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
-import ca.uhn.fhir.rest.server.exceptions.*;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import ca.uhn.fhir.rest.server.exceptions.ForbiddenOperationException;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
+import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.lang.reflect.InvocationTargetException;
@@ -33,35 +38,35 @@ import org.junit.jupiter.api.Test;
  * @author Piotr Szul
  */
 @Tag("UnitTest")
-public class ErrorHandlingInterceptorTest {
+class ErrorHandlingInterceptorTest {
 
-  private final static BaseServerResponseException SERVER_RESPONSE_EX1 = new NotModifiedException(
+  final static BaseServerResponseException SERVER_RESPONSE_EX1 = new NotModifiedException(
       "NotModifiedException");
-  private final static BaseServerResponseException SERVER_RESPONSE_EX2 = new ForbiddenOperationException(
+  final static BaseServerResponseException SERVER_RESPONSE_EX2 = new ForbiddenOperationException(
       "ForbiddenOperationException");
 
   @Nonnull
-  private final ErrorHandlingInterceptor errorHandlingInterceptor = new ErrorHandlingInterceptor();
+  final ErrorHandlingInterceptor errorHandlingInterceptor = new ErrorHandlingInterceptor();
 
   @Nonnull
-  private BaseServerResponseException callInterceptor(final Throwable error) {
+  BaseServerResponseException callInterceptor(final Throwable error) {
     return errorHandlingInterceptor.handleOutgoingException(null, null, error, null, null);
   }
 
   @Test
-  public void passesThruBaseServerResponseExceptions() {
+  void passesThruBaseServerResponseExceptions() {
     assertEquals(SERVER_RESPONSE_EX1, callInterceptor(SERVER_RESPONSE_EX1));
     assertEquals(SERVER_RESPONSE_EX2, callInterceptor(SERVER_RESPONSE_EX2));
   }
 
   @Test
-  public void passesThruRootInternalErrorException() {
+  void passesThruRootInternalErrorException() {
     final Exception rootException = new InternalErrorException("RootException");
     assertEquals(rootException, callInterceptor(rootException));
   }
 
   @Test
-  public void recursiveUnwrappingOfException() {
+  void recursiveUnwrappingOfException() {
     final Exception wrappedException = new UndeclaredThrowableException(
         new InternalErrorException(new InvocationTargetException(
             new SparkException("Spark Error",
@@ -70,7 +75,7 @@ public class ErrorHandlingInterceptorTest {
   }
 
   @Test
-  public void wrapsUnknownExceptions() {
+  void wrapsUnknownExceptions() {
     final BaseServerResponseException actualException = callInterceptor(
         new RuntimeException("RuntimeException"));
     assertTrue(actualException instanceof InternalErrorException);
@@ -79,7 +84,7 @@ public class ErrorHandlingInterceptorTest {
   @Test
   @SuppressWarnings({"SerializableNonStaticInnerClassWithoutSerialVersionUID",
       "SerializableInnerClassWithNonSerializableOuterClass"})
-  public void wrapsBaseServerResponseExceptionsWithZeroStatus() {
+  void wrapsBaseServerResponseExceptionsWithZeroStatus() {
     final BaseServerResponseException actualException = callInterceptor(
         new BaseServerResponseException(0, "IllegalStatus") {
         });
@@ -87,7 +92,7 @@ public class ErrorHandlingInterceptorTest {
   }
 
   @Test
-  public void convertsFhirClientException() {
+  void convertsFhirClientException() {
     final BaseServerResponseException actualException = callInterceptor(
         new FhirClientConnectionException("FhirClientConnectionException message")
     );
@@ -97,7 +102,7 @@ public class ErrorHandlingInterceptorTest {
   }
 
   @Test
-  public void convertsDataFormatExceptionsWithJsonError() {
+  void convertsDataFormatExceptionsWithJsonError() {
     final BaseServerResponseException actualException = callInterceptor(
         new DataFormatException(new JsonParseException(null,
             "Unexpected character ('{' (code 123)): was expecting double-quote to"
@@ -110,7 +115,7 @@ public class ErrorHandlingInterceptorTest {
   }
 
   @Test
-  public void convertsDataFormatExceptionsWithFhirError() {
+  void convertsDataFormatExceptionsWithFhirError() {
     final BaseServerResponseException actualException = callInterceptor(
         new DataFormatException(
             "Invalid JSON content detected, missing required element: 'resourceType'"));
@@ -121,7 +126,7 @@ public class ErrorHandlingInterceptorTest {
   }
 
   @Test
-  public void convertsDataFormatExceptionsWithUnknownError() {
+  void convertsDataFormatExceptionsWithUnknownError() {
     final BaseServerResponseException actualException = callInterceptor(
         new DataFormatException(new RuntimeException("Some Error")));
     assertTrue(actualException instanceof InvalidRequestException);
@@ -131,7 +136,7 @@ public class ErrorHandlingInterceptorTest {
   }
 
   @Test
-  public void convertsAccessDeniedError() {
+  void convertsAccessDeniedError() {
     final BaseServerResponseException actualException = callInterceptor(
         new AccessDeniedError("Access denied", "operation:import")
     );

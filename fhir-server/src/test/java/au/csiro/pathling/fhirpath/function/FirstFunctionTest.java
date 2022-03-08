@@ -21,7 +21,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -47,22 +47,22 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class FirstFunctionTest {
+class FirstFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
-  private ResourceReader mockReader;
+  FhirContext fhirContext;
+  Database database;
 
   @BeforeEach
   void setUp() {
-    mockReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
-  public void firstOfRootResources() {
+  void firstOfRootResources() {
 
     final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
@@ -72,10 +72,10 @@ public class FirstFunctionTest {
         .withRow("patient-2", "female", false)
         .withRow("patient-3", "male", true)
         .build();
-    when(mockReader.read(ResourceType.PATIENT))
+    when(database.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
     final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, "Patient", true);
+        .build(fhirContext, database, ResourceType.PATIENT, "Patient", true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
@@ -106,7 +106,7 @@ public class FirstFunctionTest {
   }
 
   @Test
-  public void firstOfUngroupedSubResources() {
+  void firstOfUngroupedSubResources() {
 
     final String subresourceId = randomAlias();
     final String statusColumn = randomAlias();
@@ -157,7 +157,7 @@ public class FirstFunctionTest {
   }
 
   @Test
-  public void firstOfUngroupedElements() {
+  void firstOfUngroupedElements() {
 
     // Check the result.
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
@@ -220,7 +220,7 @@ public class FirstFunctionTest {
   }
 
   @Test
-  public void illegalToCallFirstOnGrouping() {
+  void illegalToCallFirstOnGrouping() {
     final Dataset<Row> inputDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
@@ -229,9 +229,9 @@ public class FirstFunctionTest {
         .withRow("patient-2", "female", false)
         .withRow("patient-2", "male", true)
         .build();
-    when(mockReader.read(ResourceType.PATIENT)).thenReturn(inputDataset);
+    when(database.read(ResourceType.PATIENT)).thenReturn(inputDataset);
     final ResourcePath inputPath = new ResourcePathBuilder(spark)
-        .resourceReader(mockReader)
+        .database(database)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();
@@ -255,7 +255,7 @@ public class FirstFunctionTest {
   }
 
   @Test
-  public void inputMustNotContainArguments() {
+  void inputMustNotContainArguments() {
     final ElementPath inputPath = new ElementPathBuilder(spark).build();
     final ElementPath argumentPath = new ElementPathBuilder(spark).build();
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();

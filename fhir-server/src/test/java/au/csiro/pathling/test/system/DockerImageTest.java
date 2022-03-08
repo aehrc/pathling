@@ -79,42 +79,42 @@ import org.junit.jupiter.api.Test;
  */
 @Tag("SystemTest")
 @Slf4j
-public class DockerImageTest {
+class DockerImageTest {
 
-  private static final String FHIR_SERVER_CONTAINER_NAME = "pathling-test-fhir-server";
-  private static final String FHIR_SERVER_STAGING_PATH = "/usr/share/staging";
+  static final String FHIR_SERVER_CONTAINER_NAME = "pathling-test-fhir-server";
+  static final String FHIR_SERVER_STAGING_PATH = "/usr/share/staging";
 
   // These system properties need to be set.
-  private static final String VERSION = System.getProperty("pathling.systemTest.version");
-  private static final String ISSUER = System.getProperty("pathling.systemTest.auth.issuer");
-  private static final String CLIENT_ID = System.getProperty("pathling.systemTest.auth.clientId");
-  private static final String CLIENT_SECRET = System
+  static final String VERSION = System.getProperty("pathling.systemTest.version");
+  static final String ISSUER = System.getProperty("pathling.systemTest.auth.issuer");
+  static final String CLIENT_ID = System.getProperty("pathling.systemTest.auth.clientId");
+  static final String CLIENT_SECRET = System
       .getProperty("pathling.systemTest.auth.clientSecret");
-  private static final String REQUESTED_SCOPE = System
+  static final String REQUESTED_SCOPE = System
       .getProperty("pathling.systemTest.auth.requestedScope");
-  private static final String TERMINOLOGY_SERVICE_URL = System
+  static final String TERMINOLOGY_SERVICE_URL = System
       .getProperty("pathling.systemTest.terminology.serverUrl");
-  private static final String DOCKER_REPOSITORY = System
+  static final String DOCKER_REPOSITORY = System
       .getProperty("pathling.systemTest.dockerRepository");
-  public static final int HEALTHY_MAX_WAIT_SECONDS = 90;
-  public static final int HEALTHY_WAIT_DELAY_SECONDS = 5;
+  static final int HEALTHY_MAX_WAIT_SECONDS = 90;
+  static final int HEALTHY_WAIT_DELAY_SECONDS = 5;
 
   @Nonnull
-  private final DockerClient dockerClient;
+  final DockerClient dockerClient;
 
   @Nonnull
-  private final HttpClient httpClient;
+  final HttpClient httpClient;
 
   @Nonnull
-  private final IParser jsonParser;
+  final IParser jsonParser;
 
   @Nullable
-  private String fhirServerContainerId;
+  String fhirServerContainerId;
 
   @Nullable
-  private StopContainer shutdownHook;
+  StopContainer shutdownHook;
 
-  public DockerImageTest() {
+  DockerImageTest() {
     final DockerClientConfig dockerClientConfig = DefaultDockerClientConfig
         .createDefaultConfigBuilder()
         .build();
@@ -134,7 +134,7 @@ public class DockerImageTest {
   }
 
   @Nonnull
-  private static File[] getResourceFolderFiles(
+  static File[] getResourceFolderFiles(
       @SuppressWarnings("SameParameterValue") @Nonnull final String folder) {
     final ClassLoader loader = Thread.currentThread().getContextClassLoader();
     final URL url = loader.getResource(folder);
@@ -145,7 +145,7 @@ public class DockerImageTest {
     return files;
   }
 
-  private static void stopContainer(@Nonnull final DockerClient dockerClient,
+  static void stopContainer(@Nonnull final DockerClient dockerClient,
       @Nullable final String containerId) {
     if (containerId != null) {
       log.info("Stopping container");
@@ -156,7 +156,7 @@ public class DockerImageTest {
   }
 
   @BeforeEach
-  public void setUp() throws Exception {
+  void setUp() {
     try {
       // Create the FHIR server container.
       final ExposedPort fhirServerPort = ExposedPort.tcp(8080);
@@ -196,7 +196,7 @@ public class DockerImageTest {
             try {
               getCapabilityStatement();
               return true;
-            } catch (Exception e) {
+            } catch (final Exception e) {
               log.debug("Health check failed: {}", e.getMessage());
               return false;
             }
@@ -227,7 +227,7 @@ public class DockerImageTest {
   }
 
   @Test
-  public void importDataAndQuery() throws JSONException {
+  void importDataAndQuery() throws JSONException {
     try {
       // Get the token endpoint from the CapabilityStatement.
       final CapabilityStatement capabilities = getCapabilityStatement();
@@ -353,7 +353,7 @@ public class DockerImageTest {
         }
       }
 
-    } catch (Exception e) {
+    } catch (final Exception e) {
       captureLogs();
     } finally {
       stopContainer(dockerClient, fhirServerContainerId);
@@ -362,7 +362,7 @@ public class DockerImageTest {
     }
   }
 
-  private void captureLogs() {
+  void captureLogs() {
     if (fhirServerContainerId != null) {
       final LogCallback callback = new LogCallback();
       dockerClient.logContainerCmd(fhirServerContainerId)
@@ -374,13 +374,13 @@ public class DockerImageTest {
   }
 
   @AfterEach
-  public void tearDown() {
+  void tearDown() {
     stopContainer(dockerClient, fhirServerContainerId);
     fhirServerContainerId = null;
     getRuntime().removeShutdownHook(shutdownHook);
   }
 
-  private CapabilityStatement getCapabilityStatement() throws IOException {
+  CapabilityStatement getCapabilityStatement() throws IOException {
     final HttpUriRequest capabilitiesRequest = new HttpGet("http://localhost:8091/fhir/metadata");
     capabilitiesRequest.addHeader("Accept", "application/fhir+json");
 
@@ -399,14 +399,15 @@ public class DockerImageTest {
 
   static class StopContainer extends Thread {
 
-    private final DockerClient dockerClient;
-    private final String containerId;
+    final DockerClient dockerClient;
+    final String containerId;
 
-    private StopContainer(final DockerClient dockerClient, final String containerId) {
+    StopContainer(final DockerClient dockerClient, final String containerId) {
       this.dockerClient = dockerClient;
       this.containerId = containerId;
     }
 
+    @Override
     public void run() {
       stopContainer(dockerClient, containerId);
     }

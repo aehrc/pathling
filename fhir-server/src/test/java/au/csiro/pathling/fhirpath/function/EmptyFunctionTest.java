@@ -41,16 +41,16 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class EmptyFunctionTest {
+class EmptyFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Test
-  public void returnsCorrectResults() {
+  void returnsCorrectResults() {
     final Coding coding1 = new Coding(TestHelpers.SNOMED_URL, "840546002", "Exposure to COVID-19");
     final CodeableConcept concept1 = new CodeableConcept(coding1);
     final Coding coding2 = new Coding(TestHelpers.SNOMED_URL, "248427009", "Fever symptoms");
@@ -105,7 +105,7 @@ public class EmptyFunctionTest {
   }
 
   @Test
-  public void inputMustNotContainArguments() {
+  void inputMustNotContainArguments() {
     final ElementPath input = new ElementPathBuilder(spark).build();
     final StringLiteralPath argument = StringLiteralPath
         .fromString("'some argument'", input);

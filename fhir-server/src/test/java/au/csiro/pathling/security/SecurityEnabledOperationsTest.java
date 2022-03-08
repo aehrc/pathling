@@ -23,43 +23,74 @@ import org.springframework.test.context.TestPropertySource;
 @MockBean(OidcConfiguration.class)
 @MockBean(JwtDecoder.class)
 @MockBean(JwtAuthenticationConverter.class)
-public class SecurityEnabledOperationsTest extends SecurityTestForOperations {
+class SecurityEnabledOperationsTest extends SecurityTestForOperations {
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenIfImportWithoutAuthority() {
+  void testForbiddenIfImportWithoutAuthority() {
     assertThrowsAccessDenied(this::assertImportSuccess, "pathling:import");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:import"})
-  public void testPassIfImportWithAuthority() {
+  void testPassIfImportWithAuthority() {
     assertImportSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenIfAggregateWithoutAuthority() {
+  void testForbiddenIfAggregateWithoutAuthority() {
     assertThrowsAccessDenied(this::assertAggregateSuccess, "pathling:aggregate");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:aggregate"})
-  public void testPassIfAggregateWithAuthority() {
+  void testPassIfAggregateWithAuthority() {
     assertAggregateSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenIfSearchWithoutAuthority() {
+  void testForbiddenIfSearchWithoutAuthority() {
     assertThrowsAccessDenied(this::assertSearchSuccess, "pathling:search");
     assertThrowsAccessDenied(this::assertSearchWithFilterSuccess, "pathling:search");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:search"})
-  public void testPassIfSearchWithAuthority() {
+  void testPassIfSearchWithAuthority() {
     assertSearchSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:update"})
+  void testPassIfUpdateWithAuthority() {
+    assertUpdateSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin")
+  void testForbiddenIfUpdateWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertUpdateSuccess, "pathling:update");
+  }
+
+  @Test
+  @WithMockUser(username = "admin",
+      authorities = {"pathling:batch", "pathling:update"})
+  void testPassIfBatchWithAuthority() {
+    assertBatchSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:update"})
+  void testForbiddenIfBatchWithoutBatch() {
+    assertThrowsAccessDenied(this::assertBatchSuccess, "pathling:batch");
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:batch"})
+  void testForbiddenIfBatchWithoutUpdate() {
+    assertThrowsAccessDenied(this::assertBatchSuccess, "pathling:update");
   }
 
 }

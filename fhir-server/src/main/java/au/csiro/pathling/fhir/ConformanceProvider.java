@@ -14,22 +14,45 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.PathlingVersion;
-import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IServerConformanceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.*;
-import org.hl7.fhir.r4.model.CapabilityStatement.*;
+import org.hl7.fhir.r4.model.CanonicalType;
+import org.hl7.fhir.r4.model.CapabilityStatement;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementImplementationComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementKind;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceOperationComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestSecurityComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementSoftwareComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.ResourceInteractionComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.RestfulCapabilityMode;
+import org.hl7.fhir.r4.model.CapabilityStatement.SystemInteractionComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.SystemRestfulInteraction;
+import org.hl7.fhir.r4.model.CapabilityStatement.TypeRestfulInteraction;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -38,6 +61,7 @@ import org.springframework.stereotype.Component;
  * analytics server.
  *
  * @author John Grimes
+ * @see <a href="https://hl7.org/fhir/R4/capabilitystatement.html">CapabilityStatement</a>
  */
 @Component
 @Profile("server")
@@ -59,9 +83,6 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private final Configuration configuration;
 
   @Nonnull
-  private final ResourceReader resourceReader;
-
-  @Nonnull
   private final Optional<OidcConfiguration> oidcConfiguration;
 
   @Nonnull
@@ -75,17 +96,13 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * statement
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
-   * @param resourceReader a {@link ResourceReader} to use in checking which resources are
-   * available
    * @param version a {@link PathlingVersion} object containing version information for the server
    */
   public ConformanceProvider(@Nonnull final Configuration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
-      @Nonnull final ResourceReader resourceReader,
       @Nonnull final PathlingVersion version) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
-    this.resourceReader = resourceReader;
     this.version = version;
     restfulServer = Optional.empty();
   }
@@ -136,6 +153,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     server.setSecurity(buildSecurity());
     server.setResource(buildResources());
     server.setOperation(buildOperations());
+    server.setInteraction(buildSystemLevelInteractions());
     rest.add(server);
     return rest;
   }
@@ -169,20 +187,28 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Nonnull
   private List<CapabilityStatementRestResourceComponent> buildResources() {
     final List<CapabilityStatementRestResourceComponent> resources = new ArrayList<>();
-    final Set<Enumerations.ResourceType> availableToRead = resourceReader
-        .getAvailableResourceTypes();
-    final Set<Enumerations.ResourceType> availableResourceTypes =
-        availableToRead.isEmpty()
-        ? EnumSet.noneOf(Enumerations.ResourceType.class)
-        : EnumSet.copyOf(availableToRead);
+    final Set<ResourceType> supported = FhirServer.supportedResourceTypes();
+    final Set<ResourceType> supportedResourceTypes = supported.isEmpty()
+                                                     ? EnumSet.noneOf(ResourceType.class)
+                                                     : EnumSet.copyOf(supported);
 
-    for (final Enumerations.ResourceType resourceType : availableResourceTypes) {
+    for (final ResourceType resourceType : supportedResourceTypes) {
       final CapabilityStatementRestResourceComponent resource =
           new CapabilityStatementRestResourceComponent(new CodeType(resourceType.toCode()));
       resource.setProfile(FHIR_RESOURCE_BASE + resourceType.toCode());
-      final ResourceInteractionComponent interaction = new ResourceInteractionComponent();
-      interaction.setCode(TypeRestfulInteraction.SEARCHTYPE);
-      resource.getInteraction().add(interaction);
+
+      // Add the search operation to all resources.
+      final ResourceInteractionComponent search = new ResourceInteractionComponent();
+      search.setCode(TypeRestfulInteraction.SEARCHTYPE);
+      resource.getInteraction().add(search);
+
+      // Add the create and update operations to all resources.
+      final ResourceInteractionComponent create = new ResourceInteractionComponent();
+      final ResourceInteractionComponent update = new ResourceInteractionComponent();
+      create.setCode(TypeRestfulInteraction.CREATE);
+      update.setCode(TypeRestfulInteraction.UPDATE);
+      resource.getInteraction().add(create);
+      resource.getInteraction().add(update);
 
       // Add the `aggregate` operation to all resources.
       final CanonicalType aggregateOperationUri = new CanonicalType(getOperationUri("aggregate"));
@@ -201,7 +227,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     }
 
     // Add the read operation to the OperationDefinition resource.
-    final String opDefCode = Enumerations.ResourceType.OPERATIONDEFINITION.toCode();
+    final String opDefCode = ResourceType.OPERATIONDEFINITION.toCode();
     final CapabilityStatementRestResourceComponent opDefResource =
         new CapabilityStatementRestResourceComponent(new CodeType(opDefCode));
     opDefResource.setProfile(FHIR_RESOURCE_BASE + opDefCode);
@@ -226,6 +252,15 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     }
 
     return operations;
+  }
+
+  @Nonnull
+  private List<SystemInteractionComponent> buildSystemLevelInteractions() {
+    final List<SystemInteractionComponent> interactions = new ArrayList<>();
+    final SystemInteractionComponent interaction = new SystemInteractionComponent();
+    interaction.setCode(SystemRestfulInteraction.BATCH);
+    interactions.add(interaction);
+    return interactions;
   }
 
   @Nonnull

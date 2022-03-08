@@ -18,7 +18,7 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.sql.PathlingFunctions;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
@@ -54,14 +54,14 @@ public class AggregateExecutor extends QueryExecutor {
    * @param configuration A {@link Configuration} object to control the behaviour of the executor
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
-   * @param resourceReader A {@link ResourceReader} for retrieving resources
+   * @param database A {@link Database} for retrieving resources
    * @param terminologyClientFactory A {@link TerminologyServiceFactory} for resolving terminology
    */
   public AggregateExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory) {
-    super(configuration, fhirContext, sparkSession, resourceReader,
+    super(configuration, fhirContext, sparkSession, database,
         terminologyClientFactory);
   }
 
@@ -90,7 +90,7 @@ public class AggregateExecutor extends QueryExecutor {
     // Build a new expression parser, and parse all of the filter and grouping expressions within
     // the query.
     final ResourcePath inputContext = ResourcePath
-        .build(getFhirContext(), getResourceReader(), query.getSubjectResource(),
+        .build(getFhirContext(), getDatabase(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
     final ParserContext groupingAndFilterContext = buildParserContext(inputContext,
         Collections.singletonList(inputContext.getIdColumn()));

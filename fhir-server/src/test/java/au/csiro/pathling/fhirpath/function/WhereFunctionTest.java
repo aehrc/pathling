@@ -9,9 +9,9 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -46,18 +46,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 @TestInstance(Lifecycle.PER_METHOD)
 @Tag("UnitTest")
-public class WhereFunctionTest {
+class WhereFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   // This test simulates the execution of the where function on the path
   // `Patient.reverseResolve(Encounter.subject).where($this.status = 'in-progress')`.
   @Test
-  public void whereOnResource() {
+  void whereOnResource() {
     final String statusColumn = randomAlias();
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -132,7 +132,7 @@ public class WhereFunctionTest {
   }
 
   @Test
-  public void whereOnElement() {
+  void whereOnElement() {
     // Build an expression which represents the input to the function.
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -202,7 +202,7 @@ public class WhereFunctionTest {
   }
 
   @Test
-  public void nullValuesAreNull() {
+  void nullValuesAreNull() {
     // Build an expression which represents the input to the function.
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -267,7 +267,7 @@ public class WhereFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfMoreThanOneArgument() {
+  void throwsErrorIfMoreThanOneArgument() {
     final ResourcePath input = new ResourcePathBuilder(spark).build();
     final ElementPath argument1 = new ElementPathBuilder(spark)
         .expression("$this.gender = 'female'")
@@ -290,7 +290,7 @@ public class WhereFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfArgumentNotBoolean() {
+  void throwsErrorIfArgumentNotBoolean() {
     final ResourcePath input = new ResourcePathBuilder(spark).build();
     final ElementPath argument = new ElementPathBuilder(spark)
         .expression("$this.gender")
@@ -311,7 +311,7 @@ public class WhereFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfArgumentNotSingular() {
+  void throwsErrorIfArgumentNotSingular() {
     final ResourcePath input = new ResourcePathBuilder(spark).build();
     final ElementPath argument = new ElementPathBuilder(spark)
         .expression("$this.communication.preferred")
@@ -333,7 +333,7 @@ public class WhereFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfArgumentIsLiteral() {
+  void throwsErrorIfArgumentIsLiteral() {
     final ResourcePath input = new ResourcePathBuilder(spark).build();
     final BooleanLiteralPath argument = BooleanLiteralPath
         .fromString("true", input);

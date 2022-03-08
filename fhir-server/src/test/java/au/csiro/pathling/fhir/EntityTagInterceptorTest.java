@@ -35,13 +35,13 @@ import org.junit.jupiter.api.Test;
 @Tag("UnitTest")
 class EntityTagInterceptorTest {
 
-  private static final String TAG = "W/\"abc123\"";
+  static final String TAG = "W/\"abc123\"";
 
-  private EntityTagValidator validator;
-  private HttpServletRequest request;
-  private RequestDetails requestDetails;
-  private HttpServletResponse response;
-  private EntityTagInterceptor interceptor;
+  EntityTagValidator validator;
+  HttpServletRequest request;
+  RequestDetails requestDetails;
+  HttpServletResponse response;
+  EntityTagInterceptor interceptor;
 
   @BeforeEach
   void setUp() {
@@ -123,20 +123,20 @@ class EntityTagInterceptorTest {
     verifyNoInteractions(response);
   }
 
-  private void setupCacheableRequest(@Nonnull final String method, @Nullable final String tag,
+  void setupCacheableRequest(@Nonnull final String method, @Nullable final String tag,
       @Nullable final String operation) {
     when(request.getMethod()).thenReturn(method);
     when(request.getHeader(eq("If-None-Match"))).thenReturn(tag);
     when(requestDetails.getOperation()).thenReturn(operation);
   }
 
-  private void verifyMissResponseHeaders() {
+  void verifyMissResponseHeaders() {
     verifyCacheableResponseHeaders();
     verify(response).setHeader(eq("ETag"), eq(TAG));
     verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
   }
 
-  private void verifyCacheableResponseHeaders() {
+  void verifyCacheableResponseHeaders() {
     verify(response).addHeader(eq("Vary"), eq("Accept,Accept-Encoding,Prefer,Authorization"));
   }
 
