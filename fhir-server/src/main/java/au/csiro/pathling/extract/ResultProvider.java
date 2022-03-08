@@ -15,6 +15,7 @@ import au.csiro.pathling.io.ResultReader;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
@@ -65,8 +66,9 @@ public class ResultProvider {
   @OperationAccess("extract")
   @Operation(name = "$result", idempotent = true, manualResponse = true)
   public void result(@Nullable @OperationParam(name = "id") final String id,
-      @Nullable final HttpServletResponse response) {
+      @Nullable final HttpServletResponse response, @Nullable final RequestDetails requestDetails) {
     checkNotNull(response);
+    checkNotNull(requestDetails);
 
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {
@@ -92,6 +94,9 @@ public class ResultProvider {
 
     // Set the appropriate response headers.
     response.setHeader("Content-Type", "text/csv");
+
+    // Opt out of processing the request using the ResponseHighlighterInterceptor.
+    requestDetails.setAttribute("ResponseHighlighterInterceptorHandled", Boolean.TRUE);
 
     // Copy all data from the result to the HTTP response.
     try {
