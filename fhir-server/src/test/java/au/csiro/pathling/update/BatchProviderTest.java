@@ -14,7 +14,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.helpers.TestHelpers;
@@ -45,14 +44,11 @@ class BatchProviderTest {
   @MockBean
   Database database;
 
-  @MockBean
-  CacheInvalidator cacheInvalidator;
-
   BatchProvider batchProvider;
 
   @BeforeEach
   void setUp() {
-    batchProvider = new BatchProvider(database, cacheInvalidator, configuration);
+    batchProvider = new BatchProvider(database, configuration);
   }
 
   @Test
@@ -67,21 +63,18 @@ class BatchProviderTest {
     verify(database)
         .merge(eq(ResourceType.ORGANIZATION),
             argThat(resourceListMatcher(ResourceType.ORGANIZATION, 1)));
-    verify(cacheInvalidator).invalidateAll();
   }
 
   @Test
   void entryWithNoRequest() {
     batchProvider.batch(getBundle("entryWithNoRequest"));
     verifyNoInteractions(database);
-    verifyNoInteractions(cacheInvalidator);
   }
 
   @Test
   void entryWithNoResource() {
     batchProvider.batch(getBundle("entryWithNoResource"));
     verifyNoInteractions(database);
-    verifyNoInteractions(cacheInvalidator);
   }
 
   @Test

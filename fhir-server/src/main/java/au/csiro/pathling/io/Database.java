@@ -12,17 +12,29 @@ import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.asc;
+import static org.apache.spark.sql.functions.desc;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
 import io.delta.tables.DeltaTable;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Row;
@@ -42,7 +54,11 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("(core | import) & !ga4gh")
 @Slf4j
-public class Database {
+public class Database implements Cacheable {
+
+  @Nonnull
+  @Getter
+  private Optional<String> cacheKey;
 
   @Nonnull
   private final String warehouseUrl;
@@ -77,6 +93,7 @@ public class Database {
     this.databaseName = configuration.getStorage().getDatabaseName();
     this.fhirEncoders = fhirEncoders;
     this.executor = executor;
+    cacheKey = buildCacheKeyFromDatabase();
   }
 
   /**
@@ -154,6 +171,8 @@ public class Database {
         .insertAll()
         .execute();
 
+    final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
+    invalidateCache(tableUrl);
     compact(resourceType, original);
   }
 
@@ -170,6 +189,11 @@ public class Database {
     checkUserInput(resource.getIdElement().getIdPart().equals(id),
         "Resource ID missing or does not match supplied ID");
     return resource;
+  }
+
+  @Override
+  public boolean cacheKeyMatches(@Nonnull final String otherKey) {
+    return cacheKey.map(key -> key.equals(otherKey)).orElse(false);
   }
 
   /**
@@ -235,6 +259,8 @@ public class Database {
         // See: https://docs.delta.io/latest/delta-batch.html#replace-table-schema
         .option("overwriteSchema", "true")
         .save(tableUrl);
+
+    invalidateCache(tableUrl);
   }
 
   @Nonnull
@@ -278,6 +304,106 @@ public class Database {
       log.debug("Compaction not needed (number of partitions: {}, threshold: {})", numPartitions,
           threshold);
     }
+  }
+
+  private void invalidateCache(final String tableUrl) {
+    executor.execute(() -> {
+      cacheKey = buildCacheKeyFromTable(tableUrl);
+      spark.sqlContext().clearCache();
+    });
+  }
+
+  private Optional<String> buildCacheKeyFromDatabase() {
+    return latestUpdateToDatabase().map(this::cacheKeyFromTimestamp);
+  }
+
+  /**
+   * Checks the warehouse location and gets the latest snapshot timestamp found within all the
+   * tables.
+   */
+  private Optional<Long> latestUpdateToDatabase() {
+    final String databasePath = warehouseUrl + "/" + databaseName;
+    log.info("Querying latest snapshot from database: {}", databasePath);
+
+    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
+        .hadoopConfiguration();
+    checkNotNull(hadoopConfiguration);
+    @Nullable final FileSystem warehouse;
+    try {
+      warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
+    } catch (final IOException e) {
+      throw new RuntimeException("Problem accessing warehouse location: " + warehouseUrl, e);
+    } catch (final URISyntaxException e) {
+      throw new RuntimeException("Problem parsing warehouse URL: " + warehouseUrl, e);
+    }
+    checkNotNull(warehouse);
+
+    // Check that the database path exists.
+    try {
+      warehouse.exists(new Path(databasePath));
+    } catch (final IOException e) {
+      throw new RuntimeException(
+          "Problem accessing database path within warehouse location: " + databaseName, e);
+    }
+
+    // Find all the Parquet files within the warehouse and use them to create a set of resource
+    // types.
+    @Nullable final FileStatus[] fileStatuses;
+    try {
+      fileStatuses = warehouse.listStatus(new Path(databasePath));
+    } catch (final IOException e) {
+      throw new RuntimeException(
+          "Problem listing file status at database path: " + databasePath, e);
+    }
+    checkNotNull(fileStatuses);
+
+    final List<Long> timestamps = Arrays.stream(fileStatuses)
+        // Get the filename of each item in the directory listing.
+        .map(fileStatus -> {
+          @Nullable final Path path = fileStatus.getPath();
+          checkNotNull(path);
+          return path.toString();
+        })
+        // Filter out any file names that don't match the pattern.
+        .filter(path -> path.matches("^[^.]+\\.parquet$"))
+        // Filter out anything that is not a Delta table.
+        .filter(path -> DeltaTable.isDeltaTable(spark, path))
+        // Get the latest history entry for each Delta table.
+        .map(this::latestUpdateToTable)
+        // Filter out any tables which don't have history rows.
+        .filter(Optional::isPresent)
+        // Get the timestamp from the history row.
+        .map(Optional::get)
+        .collect(Collectors.toList());
+
+    return timestamps.isEmpty()
+           ? Optional.empty()
+           : Optional.ofNullable(Collections.max(timestamps));
+  }
+
+  @Nonnull
+  private Optional<String> buildCacheKeyFromTable(@Nonnull final String path) {
+    return latestUpdateToTable(path).map(this::cacheKeyFromTimestamp);
+  }
+
+  @Nonnull
+  private Optional<Long> latestUpdateToTable(@Nonnull final String path) {
+    log.debug("Querying latest snapshot for table: {}", path);
+    final DeltaTable deltaTable = DeltaTable.forPath(spark, path);
+    @SuppressWarnings("RedundantCast") final Row[] head = (Row[]) deltaTable.history()
+        .orderBy(desc("version"))
+        .select("timestamp")
+        .head(1);
+    if (head.length != 1) {
+      return Optional.empty();
+    } else {
+      return Optional.of(head[0].getTimestamp(0).getTime());
+    }
+  }
+
+  @Nonnull
+  private String cacheKeyFromTimestamp(@Nonnull final Long timestamp) {
+    return Long.toString(timestamp, Character.MAX_RADIX);
   }
 
 }

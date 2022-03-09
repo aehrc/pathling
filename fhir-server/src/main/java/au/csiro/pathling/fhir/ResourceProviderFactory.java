@@ -9,7 +9,6 @@ package au.csiro.pathling.fhir;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateProvider;
-import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.extract.ExtractExecutor;
 import au.csiro.pathling.extract.ExtractProvider;
@@ -63,9 +62,6 @@ public class ResourceProviderFactory {
   @Nonnull
   private final FhirEncoders fhirEncoders;
 
-  @Nonnull
-  private final CacheInvalidator cacheInvalidator;
-
   /**
    * @param applicationContext the Spring {@link ApplicationContext}
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
@@ -90,8 +86,7 @@ public class ResourceProviderFactory {
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final AggregateExecutor aggregateExecutor,
-      @Nonnull final ExtractExecutor extractExecutor,
-      @Nonnull final CacheInvalidator cacheInvalidator) {
+      @Nonnull final ExtractExecutor extractExecutor) {
     this.applicationContext = applicationContext;
     this.fhirContext = fhirContext;
     this.configuration = configuration;
@@ -101,7 +96,6 @@ public class ResourceProviderFactory {
     this.fhirEncoders = fhirEncoders;
     this.aggregateExecutor = aggregateExecutor;
     this.extractExecutor = extractExecutor;
-    this.cacheInvalidator = cacheInvalidator;
   }
 
   /**
@@ -154,7 +148,6 @@ public class ResourceProviderFactory {
     final Class<? extends IBaseResource> resourceTypeClass = fhirContext
         .getResourceDefinition(resourceType.name()).getImplementingClass();
 
-    return applicationContext.getBean(UpdateProvider.class, database, cacheInvalidator,
-        resourceTypeClass);
+    return applicationContext.getBean(UpdateProvider.class, database, resourceTypeClass);
   }
 }

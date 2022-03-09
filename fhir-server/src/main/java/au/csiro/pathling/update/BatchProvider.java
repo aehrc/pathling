@@ -6,7 +6,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.hl7.fhir.r4.model.Bundle.BundleType.BATCHRESPONSE;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.io.Database;
@@ -47,9 +46,6 @@ public class BatchProvider {
   private final Database database;
 
   @Nonnull
-  private final CacheInvalidator cacheInvalidator;
-
-  @Nonnull
   private final Configuration configuration;
 
   @SuppressWarnings("RegExpRedundantEscape")
@@ -57,10 +53,8 @@ public class BatchProvider {
       "^[A-Za-z]+/[A-Za-z0-9\\-\\.&&[^\\$]][A-Za-z0-9\\-\\.]{0,63}$");
 
   public BatchProvider(@Nonnull final Database database,
-      @Nonnull final CacheInvalidator cacheInvalidator,
       @Nonnull final Configuration configuration) {
     this.database = database;
-    this.cacheInvalidator = cacheInvalidator;
     this.configuration = configuration;
   }
 
@@ -83,9 +77,6 @@ public class BatchProvider {
     if (!resourcesForUpdate.isEmpty()) {
       // Merge in any updated resources into their respective tables.
       update(resourcesForUpdate);
-
-      // Invalidate the cache.
-      cacheInvalidator.invalidateAll();
     }
 
     return response;

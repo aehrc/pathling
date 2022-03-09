@@ -14,6 +14,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.PathlingVersion;
+import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -66,7 +67,8 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("server")
 @Slf4j
-public class ConformanceProvider implements IServerConformanceProvider<CapabilityStatement> {
+public class ConformanceProvider implements IServerConformanceProvider<CapabilityStatement>,
+    Cacheable {
 
   /**
    * The base URI for canonical URIs.
@@ -293,6 +295,16 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       return Optional.ofNullable(restfulServer.get().getServerAddressStrategy()
           .determineServerBase(servletContext, httpServletRequest.get()));
     }
+  }
+
+  @Override
+  public Optional<String> getCacheKey() {
+    return version.getDescriptiveVersion();
+  }
+
+  @Override
+  public boolean cacheKeyMatches(final String otherKey) {
+    return version.getDescriptiveVersion().map(key -> key.equals(otherKey)).orElse(false);
   }
 
 }

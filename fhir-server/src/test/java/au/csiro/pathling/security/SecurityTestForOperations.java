@@ -10,7 +10,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.aggregate.AggregateProvider;
-import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.ResourceProviderFactory;
 import au.csiro.pathling.io.Database;
@@ -44,9 +43,6 @@ abstract class SecurityTestForOperations extends SecurityTest {
 
   @MockBean
   Database database;
-
-  @MockBean
-  CacheInvalidator cacheInvalidator;
 
   @Autowired
   SparkSession sparkSession;

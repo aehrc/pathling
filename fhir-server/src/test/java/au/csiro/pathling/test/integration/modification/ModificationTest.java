@@ -12,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.Configuration;
-import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.test.integration.IntegrationTest;
 import ca.uhn.fhir.parser.IParser;
@@ -57,9 +56,6 @@ abstract class ModificationTest extends IntegrationTest {
   @Autowired
   Configuration configuration;
 
-  @Autowired
-  CacheInvalidator cacheInvalidator;
-
   @TempDir
   static File tempDirectory;
 
@@ -87,7 +83,6 @@ abstract class ModificationTest extends IntegrationTest {
   void tearDown() throws Exception {
     log.debug("Deleting directory: {}", databaseDirectory);
     assertTrue(FileSystemUtils.deleteRecursively(databaseDirectory.toPath()));
-    cacheInvalidator.invalidateAll();
   }
 
   void assertResourceCount(@Nonnull final ResourceType resourceType,

@@ -10,7 +10,6 @@ import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 import static au.csiro.pathling.io.Database.prepareResourceForUpdate;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.IdParam;
@@ -47,15 +46,10 @@ public class UpdateProvider implements IResourceProvider {
   @Nonnull
   private final ResourceType resourceType;
 
-  @Nonnull
-  private final CacheInvalidator cacheInvalidator;
-
   public UpdateProvider(@Nonnull final Database database,
-      @Nonnull final CacheInvalidator cacheInvalidator,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.database = database;
     this.resourceClass = resourceClass;
-    this.cacheInvalidator = cacheInvalidator;
     resourceType = resourceTypeFromClass(resourceClass);
   }
 
@@ -83,7 +77,6 @@ public class UpdateProvider implements IResourceProvider {
     final IBaseResource preparedResource = prepareResourceForUpdate(resource,
         resourceId);
     database.merge(resourceType, preparedResource);
-    cacheInvalidator.invalidateAll();
 
     final MethodOutcome outcome = new MethodOutcome();
     outcome.setId(resource.getIdElement());

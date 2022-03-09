@@ -8,7 +8,6 @@ package au.csiro.pathling.update;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.caching.CacheInvalidator;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.UnsupportedResourceError;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -69,9 +68,6 @@ public class ImportExecutor {
   private final FhirContextFactory fhirContextFactory;
 
   @Nonnull
-  private final Optional<CacheInvalidator> cacheInvalidator;
-
-  @Nonnull
   private final Optional<AccessRules> accessRules;
 
   /**
@@ -80,20 +76,17 @@ public class ImportExecutor {
    * @param fhirEncoders a {@link FhirEncoders} object for converting data back into HAPI FHIR
    * @param fhirContextFactory a {@link FhirContextFactory} for constructing FhirContext objects in
    * the context of parallel processing
-   * @param cacheInvalidator a {@link CacheInvalidator} for invalidating caches upon import
    * @param accessRules a {@link AccessRules} for validating access to URLs
    */
   public ImportExecutor(@Nonnull final SparkSession spark,
       @Nonnull final Database database,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final FhirContextFactory fhirContextFactory,
-      @Nonnull final Optional<CacheInvalidator> cacheInvalidator,
       @Nonnull final Optional<AccessRules> accessRules) {
     this.spark = spark;
     this.database = database;
     this.fhirEncoders = fhirEncoders;
     this.fhirContextFactory = fhirContextFactory;
-    this.cacheInvalidator = cacheInvalidator;
     this.accessRules = accessRules;
   }
 
@@ -161,9 +154,6 @@ public class ImportExecutor {
 
     // We return 200, as this operation is currently synchronous.
     log.info("Import complete");
-
-    // Invalidate all caches following the import.
-    cacheInvalidator.ifPresent(CacheInvalidator::invalidateAll);
 
     // Construct a response.
     final OperationOutcome opOutcome = new OperationOutcome();
