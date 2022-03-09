@@ -10,16 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.Database;
-import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpMethod;
@@ -34,9 +30,6 @@ class CachedSearchTest extends IntegrationTest {
   @Autowired
   SparkSession spark;
 
-  @MockBean
-  Database database;
-
   @LocalServerPort
   int port;
 
@@ -45,7 +38,6 @@ class CachedSearchTest extends IntegrationTest {
 
   @Test
   void searchWithNoFilter() throws URISyntaxException {
-    TestHelpers.mockResource(database, spark, ResourceType.PATIENT);
     final String uri = "http://localhost:" + port + "/fhir/Patient?_summary=false";
     final ResponseEntity<String> response = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);

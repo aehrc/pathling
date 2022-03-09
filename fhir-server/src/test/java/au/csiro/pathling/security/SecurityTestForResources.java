@@ -14,6 +14,7 @@ import java.io.File;
 import java.util.Collections;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
@@ -49,6 +50,11 @@ abstract class SecurityTestForResources extends SecurityTest {
     assertTrue(warehouseDir.mkdir());
     registry.add("pathling.storage.warehouseUrl",
         () -> "file://" + testRootDir.toPath().toString().replaceFirst("/$", ""));
+  }
+
+  @AfterEach
+  void tearDown() {
+    spark.sqlContext().clearCache();
   }
 
   void assertWriteSuccess() {

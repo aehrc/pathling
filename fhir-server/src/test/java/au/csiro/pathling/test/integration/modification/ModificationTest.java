@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -56,6 +57,9 @@ abstract class ModificationTest extends IntegrationTest {
   @Autowired
   Configuration configuration;
 
+  @Autowired
+  SparkSession spark;
+
   @TempDir
   static File tempDirectory;
 
@@ -83,6 +87,7 @@ abstract class ModificationTest extends IntegrationTest {
   void tearDown() throws Exception {
     log.debug("Deleting directory: {}", databaseDirectory);
     assertTrue(FileSystemUtils.deleteRecursively(databaseDirectory.toPath()));
+    spark.sqlContext().clearCache();
   }
 
   void assertResourceCount(@Nonnull final ResourceType resourceType,

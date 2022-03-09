@@ -331,10 +331,10 @@ public class Database implements Cacheable {
     @Nullable final FileSystem warehouse;
     try {
       warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
-    } catch (final IOException e) {
-      throw new RuntimeException("Problem accessing warehouse location: " + warehouseUrl, e);
-    } catch (final URISyntaxException e) {
-      throw new RuntimeException("Problem parsing warehouse URL: " + warehouseUrl, e);
+    } catch (final IOException | URISyntaxException e) {
+      log.debug("Unable to access warehouse location, returning empty snapshot time: {}",
+          warehouseUrl);
+      return Optional.empty();
     }
     checkNotNull(warehouse);
 
@@ -342,8 +342,9 @@ public class Database implements Cacheable {
     try {
       warehouse.exists(new Path(databasePath));
     } catch (final IOException e) {
-      throw new RuntimeException(
-          "Problem accessing database path within warehouse location: " + databaseName, e);
+      log.debug("Unable to access database location, returning empty snapshot time: {}",
+          databasePath);
+      return Optional.empty();
     }
 
     // Find all the Parquet files within the warehouse and use them to create a set of resource
@@ -352,8 +353,9 @@ public class Database implements Cacheable {
     try {
       fileStatuses = warehouse.listStatus(new Path(databasePath));
     } catch (final IOException e) {
-      throw new RuntimeException(
-          "Problem listing file status at database path: " + databasePath, e);
+      log.debug("Unable to access database location, returning empty snapshot time: {}",
+          databasePath);
+      return Optional.empty();
     }
     checkNotNull(fileStatuses);
 
