@@ -63,8 +63,8 @@ pathling:
     enabled: true
 
     # The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology 
-    # queries. The server listed here is suitable for low volume testing purposes only.
-    serverUrl: https://r4.ontoserver.csiro.au/fhir
+    # queries. The server listed here is suitable for testing purposes only.
+    serverUrl: https://tx.ontoserver.csiro.au/fhir
 
     # The maximum period (in milliseconds) that the server should wait for incoming data from the
     # terminology service.
