@@ -333,14 +333,11 @@
               </tags>
             </to>
             <container>
-              <jvmFlags>
-                <jvmFlag>-Xmx2g</jvmFlag>
-                <jvmFlag>-XX:MaxMetaspaceSize=400m</jvmFlag>
-                <jvmFlag>-XX:ReservedCodeCacheSize=240m</jvmFlag>
-                <jvmFlag>-Xss1m</jvmFlag>
-              </jvmFlags>
               <environment>
                 <PATHLING_VERSION>${project.version}</PATHLING_VERSION>
+                <JAVA_TOOL_OPTIONS>
+                  -Xmx2g -XX:MaxMetaspaceSize=400m -XX:ReservedCodeCacheSize=240m -Xss1m
+                </JAVA_TOOL_OPTIONS>
               </environment>
               <labels>
                 <copyright>Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
