@@ -5,11 +5,11 @@
  */
 
 import { AggregateClient } from "./aggregate";
-import { SearchClient } from "./search";
-import { ImportClient } from "./import";
-import { ExtractClient } from "./extract";
 import { CapabilitiesClient } from "./capabilities";
+import { ExtractClient } from "./extract";
+import { ImportClient } from "./import";
 import { JobClient } from "./job";
+import { SearchClient } from "./search";
 import { SmartConfigurationClient } from "./smartConfiguration";
 
 /**
@@ -111,9 +111,9 @@ export default class PathlingClient {
 
   constructor(options: PathlingClientOptions) {
     this.options = {
-      ...options,
       asyncRetry: options.asyncRetry || { times: 60, wait: 1, backOff: 1.0 },
       maxGetQueryLength: 1500,
+      ...options,
     };
     this.capabilities = new CapabilitiesClient(this.options);
     this.smartConfiguration = new SmartConfigurationClient(this.options);
