@@ -22,6 +22,13 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>${project.basedir}</directory>
+      <outputDirectory>/</outputDirectory>
+      <includes>
+        <include>package.json</include>
+      </includes>
+    </fileSet>
+    <fileSet>
       <directory>${project.basedir}/node_modules</directory>
     </fileSet>
   </fileSets>
