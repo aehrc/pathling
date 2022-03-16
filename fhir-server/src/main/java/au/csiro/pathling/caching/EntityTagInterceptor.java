@@ -71,7 +71,7 @@ public class EntityTagInterceptor {
    * @param requestDetails the details about the request inferred by HAPI
    * @param response the servlet response object
    */
-  @Hook(Pointcut.SERVER_INCOMING_REQUEST_POST_PROCESSED)
+  @Hook(value = Pointcut.SERVER_INCOMING_REQUEST_POST_PROCESSED, order = 2)
   @SuppressWarnings("unused")
   public void checkIncomingTag(@Nullable final HttpServletRequest request,
       @Nullable final RequestDetails requestDetails,

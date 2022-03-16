@@ -33,7 +33,7 @@ public class RequestIdInterceptor {
    *
    * @param requestDetails the details of the request
    */
-  @Hook(Pointcut.SERVER_INCOMING_REQUEST_PRE_HANDLED)
+  @Hook(value = Pointcut.SERVER_INCOMING_REQUEST_POST_PROCESSED, order = 1)
   @SuppressWarnings("unused")
   public void addRequestIdToLoggingContext(@Nullable final RequestDetails requestDetails) {
     if (requestDetails != null) {
