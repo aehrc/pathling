@@ -73,8 +73,10 @@ Kicks off a Pathling import operation.
 **Configuration:**
 
 - `TARGET_ENDPOINT`: The base URL of the target Pathling server.
-- `TARGET_CLIENT_ID`, `TARGET_CLIENT_SECRET`: Client credentials for the target 
+- `TARGET_CLIENT_ID`, `TARGET_CLIENT_SECRET`: Client credentials for the target
   token grant.
+- `TARGET_SCOPES`: (optional, defaults to `user/*.write`) Scopes to request as
+  part of the target token grant.
 
 ### AWS Step Functions
 
