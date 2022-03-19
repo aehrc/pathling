@@ -93,6 +93,7 @@ export const checkImportStatusConfigured = (
     endpoint: config.getStringValue("TARGET_ENDPOINT"),
     clientId: config.getStringValue("TARGET_CLIENT_ID"),
     clientSecret: config.getStringValue("TARGET_CLIENT_SECRET"),
+    scopes: config.getStringValue("TARGET_SCOPES", true),
     statusUrl: event.statusUrl,
   });
 

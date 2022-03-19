@@ -8,13 +8,14 @@
  * @author John Grimes
  */
 
-import { buildAuthenticatedClient, FHIR_JSON_CONTENT_TYPE } from "./common.js";
 import { AxiosResponse } from "axios";
+import { buildAuthenticatedClient, FHIR_JSON_CONTENT_TYPE } from "./common.js";
 
 export interface CheckImportJobStatusParams {
   endpoint: string;
   clientId: string;
   clientSecret: string;
+  scopes?: string;
   statusUrl: string;
 }
 
@@ -73,7 +74,10 @@ export async function checkExportJobStatus({
 export async function checkImportJobStatus(
   params: CheckImportJobStatusParams
 ): Promise<object> {
-  return checkExportJobStatus({ ...params, scopes: "user/*.write" });
+  return checkExportJobStatus({
+    ...params,
+    scopes: params.scopes ?? "user/*.write",
+  });
 }
 
 class JobInProgressError extends Error {
