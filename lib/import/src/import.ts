@@ -19,6 +19,7 @@ export interface ImportParams {
   endpoint: string;
   clientId: string;
   clientSecret: string;
+  scopes?: string;
   parameters: Parameters;
 }
 
@@ -35,6 +36,7 @@ export async function importFromParameters({
   endpoint,
   clientId,
   clientSecret,
+  scopes,
   parameters,
 }: ImportParams): Promise<ImportResult> {
   if (
@@ -49,7 +51,7 @@ export async function importFromParameters({
     endpoint,
     clientId,
     clientSecret,
-    "user/*.write"
+    scopes ?? "user/*.write"
   );
 
   console.info("Initiating import request: %j", parameters);
