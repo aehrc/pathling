@@ -74,7 +74,7 @@ public class Dependencies {
     return TerminologyClient.build(fhirContext,
         terminology.getServerUrl(),
         terminology.getSocketTimeout(),
-        configuration.getVerboseRequestLogging(),
+        terminology.isVerboseLogging(),
         log);
   }
 
@@ -89,7 +89,7 @@ public class Dependencies {
     return new DefaultTerminologyServiceFactory(fhirContext,
         terminology.getServerUrl(),
         terminology.getSocketTimeout(),
-        configuration.getVerboseRequestLogging());
+        terminology.isVerboseLogging());
   }
 
 }

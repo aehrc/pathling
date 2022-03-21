@@ -45,13 +45,6 @@ public class Configuration {
   private String implementationDescription;
 
   /**
-   * Setting this option to {@code true} will enable additional logging of the details of requests
-   * to the server, and between the server and the terminology service.
-   */
-  @NotNull
-  private Boolean verboseRequestLogging;
-
-  /**
    * If this variable is set, all errors will be reported to a Sentry service, e.g.
    * `https://abc123@sentry.io/123456`.
    */
@@ -253,6 +246,13 @@ public class Configuration {
     @NotNull
     @Min(0)
     private Integer socketTimeout;
+
+    /**
+     * Setting this option to {@code true} will enable additional logging of the details of requests
+     * between the server and the terminology service.
+     */
+    @NotNull
+    private boolean verboseLogging;
 
   }
 

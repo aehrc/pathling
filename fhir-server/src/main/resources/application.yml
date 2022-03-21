@@ -8,10 +8,6 @@ pathling:
   # Controls the description of this server as displayed within the FHIR CapabilityStatement.
   implementationDescription: Yet Another Pathling Server
 
-  # Setting this option to true will enable additional logging of the details of requests to the 
-  # server, and between the server and the terminology service.
-  verboseRequestLogging: false
-
   # If this variable is set, all errors will be reported to a Sentry service, e.g.
   # `https://abc123@sentry.io/123456`.
   # sentryDsn: [Sentry DSN]
@@ -69,6 +65,10 @@ pathling:
     # The maximum period (in milliseconds) that the server should wait for incoming data from the
     # terminology service.
     socketTimeout: 60000
+    
+    # Setting this option to true will enable additional logging of the details of requests between 
+    # the server and the terminology service.
+    verboseLogging: false
 
   auth:
     # Enables authorization.
@@ -92,7 +92,12 @@ pathling:
     # revokeUrl: [token revocation URL]
 
     ga4ghPassports:
+      # When GA4GH passport authentication is enabled, this option configures the identifier system 
+      # that is used to identify and control access to patient data.
       patientIdSystem: http://www.australiangenomics.org.au/id/study-number
+      
+      # When GA4GH passport authentication is enabled, this option configures the list of endpoints 
+      # that are allowed to issue visas.
       allowedVisaIssuers: [ ]
   
   # This section configures HTTP caching response headers.
