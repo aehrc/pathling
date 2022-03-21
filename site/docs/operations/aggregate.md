@@ -87,7 +87,7 @@ following parameters:
 Check out example `aggregate` requests in the Postman collection:
 
 <a class="postman-link"
-href="https://documenter.getpostman.com/view/634774/UVsQs48s#d4afec33-89d8-411c-8e4d-9169b9af42e0">
+href="https://documenter.getpostman.com/view/634774/UVsQs48s#83ef69d8-0cb7-43c2-9f43-f55ffb3ed940">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Next: [Extract](./extract.html)

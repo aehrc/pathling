@@ -22,7 +22,7 @@ configuration documentation for details.
 Check out example `update` and `batch` requests in the Postman collection:
 
 <a class="postman-link"
-href="https://documenter.getpostman.com/view/634774/UVsQs48s#d4afec33-89d8-411c-8e4d-9169b9af42e0">
+href="https://documenter.getpostman.com/view/634774/UVsQs48s#54f391df-c993-445b-aa2e-f476efcfe4f9">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Next: [FHIRPath](../fhirpath)

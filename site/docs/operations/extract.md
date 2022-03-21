@@ -69,7 +69,7 @@ following parameters:
 Check out example `extract` requests in the Postman collection:
 
 <a class="postman-link"
-href="https://documenter.getpostman.com/view/634774/UVsQs48s#d4afec33-89d8-411c-8e4d-9169b9af42e0">
+href="https://documenter.getpostman.com/view/634774/UVsQs48s#1aa5cb8f-6931-417c-be20-d295a05af8ed">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Next: [Update and batch](./update.html)

@@ -76,7 +76,7 @@ which will indicate success or a description of any errors that occurred.
 Check out example `import` requests in the Postman collection:
 
 <a class="postman-link"
-href="https://documenter.getpostman.com/view/634774/UVsQs48s#d5f260da-7eca-4a19-83b2-a944491ba5a6">
+href="https://documenter.getpostman.com/view/634774/UVsQs48s#72ee4a60-e701-4d1a-af58-85a762301b6c">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Next: [Search](./search.html)

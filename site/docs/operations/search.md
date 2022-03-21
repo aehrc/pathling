@@ -70,7 +70,7 @@ more details.
 Check out example search requests in the Postman collection:
 
 <a class="postman-link"
-href="https://documenter.getpostman.com/view/634774/UVsQs48s#f3490537-b116-4a2e-8428-45fdb6e7d137">
+href="https://documenter.getpostman.com/view/634774/UVsQs48s#9d1a62bd-53e7-42f9-b71f-2dc780c46c9d">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Next: [Aggregate](./aggregate.html)
