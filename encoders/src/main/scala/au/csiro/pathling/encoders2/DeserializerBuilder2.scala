@@ -90,7 +90,7 @@ private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Ex
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     // NOTE: We need to pass the parent's addToPath to custom encoder, so that it can
     // access multiple elements of the parent composite
-    customEncoder.map(_.customDeserializer2(parent.get.addToPath, isCollection(childDefinition)))
+    customEncoder.map(_.customDeserializer(parent.get.addToPath, isCollection(childDefinition)))
       .getOrElse(childDefinition match {
         case _: RuntimeChildExtension => Nil
         case _ => super.buildValue(childDefinition, elementDefinition, elementName)

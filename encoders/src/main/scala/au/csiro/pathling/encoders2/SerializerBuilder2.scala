@@ -53,7 +53,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, over
     } else {
       encoder => encoder(expression)
     }
-    customEncoder.map(_.customSerializer2(evaluator))
+    customEncoder.map(_.customSerializer(evaluator))
       .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName))
   }
 
@@ -99,7 +99,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, over
   }
 
   override def proceedCompositeChildren(value: CompositeCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-    dataTypeMappings.overrideCompositeExpression2(expression, value.compositeDefinition).getOrElse(super.proceedCompositeChildren(value))
+    dataTypeMappings.overrideCompositeExpression(expression, value.compositeDefinition).getOrElse(super.proceedCompositeChildren(value))
   }
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {

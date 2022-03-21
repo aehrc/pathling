@@ -69,26 +69,10 @@ trait DataTypeMappings {
    *
    * @param inputObject an expression referring to the composite object to encode
    * @param definition  the composite definition to encode
-   * @return an optional expression sequence if the composite is overridden.
-   */
-  @deprecated
-  def overrideCompositeExpression(inputObject: Expression,
-                                  definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[Expression]]
-
-  /**
-   * Allows custom expressions to be used when encoding composite objects. This supports
-   * special cases where FHIR objects don't follow conventions expected by reusable
-   * encoding logic, allowing custom expressions to be used just for that case.
-   *
-   * For most expressions this method should simply return None, indicate that no override
-   * is necessary.
-   *
-   * @param inputObject an expression referring to the composite object to encode
-   * @param definition  the composite definition to encode
    * @return an optional sequence of named expressions if the composite is overridden.
    */
-  def overrideCompositeExpression2(inputObject: Expression,
-                                   definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]]
+  def overrideCompositeExpression(inputObject: Expression,
+                                  definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]]
 
 
   /**

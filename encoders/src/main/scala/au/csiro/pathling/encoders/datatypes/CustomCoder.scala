@@ -18,19 +18,10 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.types.{DataType, StructField}
 
 trait CustomCoder {
-  @deprecated
-  def schema: Seq[StructField]
+  def schema(arrayEncoder: Option[DataType => DataType]): Seq[StructField]
 
-  @deprecated
-  def customDecoderExpression(addToPath: String => Expression): Expression
+  def customSerializer(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName]
 
-  @deprecated
-  def customSerializer(inputObject: Expression): List[Expression]
-
-  def schema2(arrayEncoder: Option[DataType => DataType]): Seq[StructField]
-
-  def customSerializer2(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName]
-
-  def customDeserializer2(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName]
+  def customDeserializer(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName]
 
 }
