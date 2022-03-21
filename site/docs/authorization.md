@@ -1,5 +1,8 @@
 ---
-layout: page title: Authorization nav_order: 4 parent: Documentation
+layout: page 
+title: Authorization 
+nav_order: 4 
+parent: Documentation
 ---
 
 # Authorization

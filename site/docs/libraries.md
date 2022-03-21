@@ -1,5 +1,8 @@
 ---
-layout: page title: Libraries nav_order: 7 parent: Documentation
+layout: page 
+title: Libraries 
+nav_order: 7 
+parent: Documentation
 ---
 
 # Libraries

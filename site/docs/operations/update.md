@@ -1,5 +1,8 @@
 ---
-layout: page title: Update and batch nav_order: 5 parent: Operations
+layout: page 
+title: Update and batch 
+nav_order: 5 
+parent: Operations
 grand_parent: Documentation
 ---
 

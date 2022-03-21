@@ -1,5 +1,8 @@
 ---
-layout: page title: Caching nav_order: 6 parent: Documentation
+layout: page 
+title: Caching 
+nav_order: 6 
+parent: Documentation
 ---
 
 # Caching
