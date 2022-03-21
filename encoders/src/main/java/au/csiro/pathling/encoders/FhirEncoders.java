@@ -14,8 +14,6 @@
 package au.csiro.pathling.encoders;
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
-import au.csiro.pathling.encoders1.EncoderBuilder1;
-import au.csiro.pathling.encoders1.SchemaConverter1;
 import au.csiro.pathling.encoders2.EncoderBuilder2;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -241,17 +239,9 @@ public class FhirEncoders {
                   maxNestingLevel,
                   JavaConverters.asScalaSet(openTypes).toSet(),
                   enableExtensions);
-        } else if (encoderVersion == 1) {
-          //noinspection unchecked
-          encoder = (ExpressionEncoder<T>)
-              EncoderBuilder1.of(definition,
-                  context,
-                  mappings,
-                  new SchemaConverter1(context, mappings, maxNestingLevel),
-                  JavaConverters.asScalaBuffer(Collections.emptyList()));
         } else {
           throw new IllegalArgumentException(
-              "Unsupported encoderVersion: " + encoderVersion + ". Only 1 and 2 are supported.");
+              "Unsupported encoderVersion: " + encoderVersion + ". Only 2 is supported.");
         }
         encoderCache.put(key, encoder);
       }
