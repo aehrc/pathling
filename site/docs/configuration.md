@@ -1,8 +1,5 @@
 ---
-layout: page 
-title: Configuration 
-nav_order: 6 
-parent: Documentation
+layout: page title: Configuration nav_order: 3 parent: Documentation
 ---
 
 # Configuration
@@ -10,10 +7,11 @@ parent: Documentation
 Pathling is distributed in two forms: as a JAR file, and a Docker image. The
 easiest way to configure Pathling is through environment variables.
 
-If for whatever reason environment variables are problematic for your
-deployment, Pathling can be also configured in a variety of other ways as
-supported by the Spring Boot framework (see
+If environment variables are problematic for your deployment, Pathling can be
+also configured in a variety of other ways as supported by the Spring Boot
+framework (see
 [Spring Boot Reference Documentation: Externalized Configuration](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config))
+.
 
 ## Configuration variables
 
@@ -21,27 +19,14 @@ supported by the Spring Boot framework (see
 
 - `server.port` - (default: `8080`) The port which the server should bind to and
   listen for HTTP connections.
-
 - `server.servlet.context-path` - A prefix to add to the API endpoint, e.g. a
   value of `/foo` would cause the FHIR endpoint to be changed to `/foo/fhir`.
-- `pathling.verboseRequestLogging` - (default: `false`) Setting this option to
-  `true` will enable additional logging of the details of requests to the
-  server, and between the server and the terminology service.
 - `pathling.implementationDescription` - (default:
   `Yet Another Pathling Server`) Controls the content of the
   `implementation.description` element within the server's
   [CapabilityStatement](https://hl7.org/fhir/R4/http.html#capabilities).
-- `pathling.spark.appName` - (default: `pathling`) Controls the application name
-  that Pathling will be identified as within any Spark cluster that it
-  participates in.
-- `pathling.spark.explainQueries` - (default: `false`) If set to true, Spark
-  query plans will be written to the logs.
-- `pathling.spark.cacheDatasets` - (default: `true`) This controls whether the
-  built-in caching within Spark is used for resource datasets and search
-  results. It may be useful to turn this off for large datasets in
-  memory-constrained environments.
-- `JAVA_OPTS` - (default in Docker image: `-Xmx2g`) Allows for the configuration
-  of arbitrary options on the Java VM that Pathling runs within.
+- `JAVA_TOOL_OPTIONS` - (default in Docker image: `-Xmx2g`) Allows for the
+  configuration of arbitrary options on the Java VM that Pathling runs within.
 
 Additionally, you can set any variable supported by Spring Boot, see
 [Spring Boot Reference Documentation: Common Application properties](https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#common-application-properties)
@@ -67,12 +52,21 @@ Additionally, you can set any variable supported by Spring Boot, see
   elements within FHIR resources that contain recursive references, e.g.
   [QuestionnaireResponse.item](https://hl7.org/fhir/R4/questionnaireresponse.html)
   .
+- `pathling.encoding.enableExtensions` - (default: `true`) Enables support for
+  FHIR extensions.
+- `pathling.encoding.openTypes` - (default: `boolean`,`code`,`date`,`dateTime`,
+  `decimal`,`integer`,`string`,`Coding`,`CodeableConcept`,`Address`,`Identifier`
+  ,`Reference`) The list of types that are encoded within open types`,`
+  such as extensions. This default list was taken from the data types that are
+  common to extensions found in widely-used IGs, such as the US and AU base
+  profiles. In general, you will get the best query performance by encoding your
+  data with the shortest possible list.
 
 ### Storage
 
 - `pathling.storage.warehouseUrl` - (default: `file:///usr/share/warehouse`) The
   base URL at which Pathling will look for data files, and where it will save
-  data received within [import](./import.html) requests. Can be an
+  data received within [import](./operations/import.html) requests. Can be an
   [Amazon S3](https://aws.amazon.com/s3/) (`s3://`),
   [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`) or
   filesystem (`file://`) URL.
@@ -85,9 +79,26 @@ Additionally, you can set any variable supported by Spring Boot, see
 - `pathling.storage.aws.secretAccessKey` - Authentication details for connecting
   to a protected Amazon S3 bucket.
 - `pathling.storage.aws.assumedRole` - The ARN of an IAM role to be assumed
-  using STS. See [Temporary security credentials in IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html).
+  using STS.
+  See [Temporary security credentials in IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html)
+  .
 
 ### Apache Spark
+
+- `pathling.spark.appName` - (default: `pathling`) Controls the application name
+  that Pathling will be identified as within any Spark cluster that it
+  participates in.
+- `pathling.spark.explainQueries` - (default: `false`) If set to true, Spark
+  query plans will be written to the logs.
+- `pathling.spark.cacheDatasets` - (default: `true`) This controls whether the
+  built-in caching within Spark is used for resource datasets and search
+  results. It may be useful to turn this off for large datasets in
+  memory-constrained environments.
+- `pathling.spark.compactionThreshold` - (default: `10`) When a table is
+  updated, the number of partitions is checked. If the number exceeds this
+  threshold, the table will be repartitioned back to the default number of
+  partitions. This prevents large numbers of small updates causing poor
+  subsequent query performance.
 
 Any Spark configuration variable can be set within Pathling directly. See
 [Spark Configuration](https://spark.apache.org/docs/latest/configuration.html)
@@ -107,17 +118,42 @@ Here are a few that you might be particularly interested in:
   can be tuned to higher numbers for larger data sets. It also controls the
   granularity of requests made to the configured terminology service.
 
+This is the default Spark configuration:
+
+```yaml
+spark:
+  master: local[*]
+  sql:
+    adaptive:
+      enabled: true
+      coalescePartitions:
+        enabled: true
+    extensions: io.delta.sql.DeltaSparkSessionExtension
+    catalog:
+      spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+  databricks:
+    delta:
+      schema:
+        autoMerge:
+          enabled: true
+  scheduler:
+    mode: FAIR
+```
+
 ### Terminology service
 
 - `pathling.terminology.enabled` - (default: `true`) Enables use of terminology
   functions within queries.
 - `pathling.terminology.serverUrl` - (default:
-  `https://r4.ontoserver.csiro.au/fhir`) The endpoint of the
+  `https://tx.ontoserver.csiro.au/fhir`) The endpoint of the
   [FHIR terminology service](https://hl7.org/fhir/R4/terminology-service.html)
   (R4) that the server can use to resolve terminology queries.
 - `pathling.terminology.socketTimeout` - (default: `60000`) The maximum period
   (in milliseconds) that the server should wait for incoming data from the
   terminology service.
+- `pathling.terminology.verboseLogging` - (default: `false`) Setting this option
+  to `true` will enable additional logging of the details of requests between
+  the server and the terminology service.
 
 ### Authorization
 
@@ -133,6 +169,24 @@ Here are a few that you might be particularly interested in:
   `https://pathling.csiro.au/fhir`. Must match the contents of the
   [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3)
   within bearer tokens.
+- `pathling.auth.ga4ghPassports.patientIdSystem` - (default:
+  `http://www.australiangenomics.org.au/id/study-number`) When GA4GH passport
+  authentication is enabled, this option configures the
+  [identifier](https://hl7.org/fhir/R4/datatypes.html#identifier) system that is
+  used to identify and control access to patient data.
+- `pathling.auth.ga4ghPassports.allowedVisaIssuers` - (default: `[]`) When GA4GH
+  passport authentication is enabled, this option configures the list of
+  endpoints that are allowed to issue visas.
+
+### HTTP Caching
+
+- `pathling.httpCaching.vary` - (default: `Accept`, `Accept-Encoding`, `Prefer`,
+  `Authorization`) A list of values to return within the `Vary` header.
+- `pathling.httpCaching.cacheableControl` - (default: `must-revalidate`,
+  `max-age=1`) A list of values to return within the `Cache-Control` header, for
+  cacheable responses.
+- `pathling.httpCaching.uncacheableControl` - (default: `no-store`) A list of
+  values to return within the `Cache-Control` header, for uncacheable responses.
 
 ### Cross-Origin Resource Sharing (CORS)
 
@@ -158,6 +212,9 @@ that are controlled by this configuration.
 - `pathling.cors.allowedHeaders` - (default: `Content-Type,Authorization`) This
   is a comma-delimited list of HTTP headers permitted via the
   `Access-Control-Allow-Headers` header.
+- `pathling.cors.exposedHeaders` - (default: `Content-Location,X-Progress`) This
+  is a comma-delimited list of HTTP headers that are permitted to be exposed via
+  the `Access-Control-Expose-Headers` header.
 - `pathling.cors.maxAge` - (default: `600`) Controls how long the results of a
   preflight request can be cached via the `Access-Control-Max-Age` header.
 
@@ -184,62 +241,6 @@ account for this, Pathling also supports the use of the
 and `X-Forwarded-Port` headers to override the protocol, hostname and port
 within URLs sent back by the API.
 
-## Authorization
-
-Pathling can perform the role of a resource server within the
-[OpenID Connect framework](https://openid.net/connect/).
-
-When authorization is enabled through configuration, Pathling will refuse any
-requests which are not accompanied by a valid
-[bearer token](https://tools.ietf.org/html/rfc6750). The following requirements
-must be met:
-
-- Token is a [JSON Web Token](https://tools.ietf.org/html/rfc7519)
-- Token contains an
-  [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3) that
-  matches the configured value
-- Token contains
-  an [issuer claim](https://tools.ietf.org/html/rfc7519#section-4.1.1)
-  that matches the configured value
-- Issuer provides
-  an [OpenID Connect Discovery endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html)
-  that provides information about how to validate the token, including a link to
-  a
-  [JSON Web Key Set](https://tools.ietf.org/html/rfc7517) containing the signing
-  key. This endpoint needs to be accessible to the Pathling server.
-
-### Authorities
-
-Pathling supports a set of authorities that control access to resources and
-operations. Authorities must be provided within the `authorities` claim within
-the JWT bearer token provided with each request.
-
-<img src="/images/authorities.png"
-srcset="/images/authorities@2x.png 2x, /images/authorities.png 1x"
-alt="Authorities" />
-
-| Authority                        | Description                                                                     |
-|----------------------------------|---------------------------------------------------------------------------------|
-| `pathling`                       | Provides access to all operations and resources, implies all other authorities. |
-| `pathling:read`                  | Provides read access to all resource types.                                     |
-| `pathling:read:[resource type]`  | Provides read access to only a specified resource type.                         |
-| `pathling:write`                 | Provides write access to all resource types.                                    |
-| `pathling:write:[resource type]` | Provides write access to only a specified resource type.                        |
-| `pathling:import`                | Provides access to the import operation.                                        |
-| `pathling:aggregate`             | Provides access to the aggregate operation.                                     |
-| `pathling:search`                | Provides access to the search operation.                                        |
-
-In order to enable access to an operation, an operation authority (e.g.
-`pathling:search`) must be provided along with a `read` or `write` authority
-(e.g. `pathling:read:Patient`).
-
-Where expressions within a request reference multiple different resource types
-(e.g. through resource references), authority for read access to all those
-resources must be present within the token.
-
-The import operation requires `write` authority for all resource types that are
-referenced within the request.
-
 ## Apache Spark
 
 Pathling can also be run directly within an Apache Spark cluster as a persistent
@@ -248,4 +249,4 @@ application.
 For compatibility, Pathling runs Spark 3.1.2 (Scala 2.12), with Hadoop version
 3.2.2.
 
-Next: [Deployment](./deployment)
+Next: [Authorization](./authorization.html)

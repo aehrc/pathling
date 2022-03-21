@@ -8,20 +8,20 @@ has_children: true
 
 Pathling is a server based on the
 [HL7&reg; FHIR&reg; standard](https://hl7.org/fhir/R4/), implementing special
-functionality designed to ease the delivery of analytics-enabled apps and
-augment tasks related to health data analytics.
+functionality designed to ease the delivery of apps and augment tasks related to
+health data analytics.
 
 You can find some examples of how to interact with Pathling in our
 [Postman](https://www.getpostman.com/) collection:
 
 <a class="postman-link"
-href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest">
+href="https://documenter.getpostman.com/view/634774/UVsQs48s">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
-Pathling is licensed under the 
-[CSIRO Open Source Software Licence Agreement](https://github.com/aehrc/pathling/blob/master/LICENSE.md). 
-This means that you are free to use, modify and redistribute the software as you 
-wish, even for commercial purposes.
+Pathling is licensed under the
+[CSIRO Open Source Software Licence Agreement](https://github.com/aehrc/pathling/blob/master/LICENSE.md)
+. This means that you are free to use, modify and redistribute the software as
+you wish, even for commercial purposes.
 
 **Pathling is experimental software, use it at your own risk!** You can get a
 full description of the current set of known issues over on our
@@ -63,18 +63,21 @@ functionality is designed to service the following use cases:
   
 The operations available within Pathling are:
 
-1. [import](./operations/import.html) - An operation for importing FHIR data in bulk into
-   the server, making it available for query using the other operations.
-2. [search](./operations/search.html) - A way of retrieving a set of individual FHIR
+1. [import](./operations/import.html) - Import FHIR data in bulk into the
+   server, making it available for query using the other operations.
+2. [search](./operations/search.html) - Retrieve a set of individual FHIR
    resources that match a set of criteria, described using expressions.
-3. [aggregate](./operations/aggregate.html) - A "pivot table as an API", able to take in a
-   set of expressions that describe aggregations, groupings and filters and
-   return grouped aggregate data.
-4. [extract](./operations/extract.html) - An operation that allows a 
-   client to describe a custom tabular extract of FHIR data, and retrieve it in 
-   bulk.
+3. [aggregate](./operations/aggregate.html) - A "pivot table as an API", able to
+   take in a set of expressions that describe aggregations, groupings and
+   filters and return grouped aggregate data.
+4. [extract](./operations/extract.html) - Describe a custom tabular extract of
+   FHIR data, and retrieve it in bulk.
+5. [update](./operations/update.html) - Create or update an individual resource
+   within the server.
+5. [batch](./operations/update.html) - Create or update a collection of
+   resources within the server.
 
-See [Operations](./operations) for more detailed information about how to 
+See [Operations](./operations.html) for more detailed information about how to
 interact with the operations.
 
 See the [Roadmap](./roadmap.html) for more information about the features that
@@ -83,23 +86,24 @@ are currently under development.
 ## FHIRPath
 
 Pathling uses a language called
-[FHIRPath](https://hl7.org/fhirpath/) to facilitate the
-description of expressions within requests to these operations. FHIRPath is a
-language that is capable of navigating and extracting data from within the graph
-of resources and data types that FHIR uses as its data model. It provides a
-convenient way for us to abstract away the complexity of navigating FHIR data
-structures that we encounter when using more general query languages such as 
-SQL.
+[FHIRPath](https://hl7.org/fhirpath/) to facilitate the description of
+expressions within requests to these operations. FHIRPath is a language that is
+capable of navigating and extracting data from within the graph of resources and
+data types that FHIR uses as its data model. It provides a convenient way for us
+to abstract away the complexity of navigating FHIR data structures that we
+encounter when using more general query languages such as SQL.
 
 You can get further information about supported syntax and functions within
-FHIRPath [here](./fhirpath).
+FHIRPath [here](./fhirpath.html).
 
 ## Cluster execution
 
-Pathling uses [Apache Spark](https://spark.apache.org/), which is capable of 
-executing queries and other operations with the help of a distributed computing 
-cluster. This is useful when the volume of data is large enough to warrant the 
+Pathling uses [Apache Spark](https://spark.apache.org/), which is capable of
+executing queries and other operations with the help of a distributed computing
+cluster. This is useful when the volume of data is large enough to warrant the
 use of compute and memory resources from more than a single server.
 
 You can get further information about how to configure this functionality
 [here](./configuration.html#apache-spark).
+
+Next: [Getting started](./getting-started.html)

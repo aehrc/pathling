@@ -32,11 +32,11 @@ The following comparison operators are supported:
 - `>` - Greater than
 - `>=` - Greater than or equal to
 
-Both operands must be must be singular, the table below shows the valid types 
-and their combinations.
+Both operands must be singular, the table below shows the valid types and their
+combinations.
 
 |          | Boolean | String | Integer | Decimal | Date  | DateTime | Time  |
-| -------- | ------- | ------ | ------- | ------- | ----- | -------- | ----- | 
+|----------|---------|--------|---------|---------|-------|----------|-------| 
 | Boolean  | true    | false  | false   | false   | false | false    | false |
 | String   | false   | true   | false   | false   | false | false    | false |
 | Integer  | false   | false  | true    | true    | false | false    | false |
@@ -122,7 +122,7 @@ If the element operand is a collection with a single item, the operator
 returns `true` if the item is in the collection using [equality](#equality)
 semantics.
 
-If the element is empty, the result is empty. If the collection is empty, the 
+If the element is empty, the result is empty. If the collection is empty, the
 result is `false`. If the element has multiple items, an error is returned.
 
 See also:
@@ -130,10 +130,13 @@ See also:
 
 ## combine
 
-The `combine` operator merges the left and right operands into a single 
+The `combine` operator merges the left and right operands into a single
 collection, preserving duplicates. The result is not ordered.
 
-This reflects the semantics of the [combine function](https://hl7.org/fhirpath/#combineother-collection-collection) 
-within the FHIRPath specification, but implemented as an operator.
+The two operands provided to the `combine` operator must share the same type.
+
+This implementation has the same semantics as
+the [combine function](https://hl7.org/fhirpath/#combineother-collection-collection)
+within the FHIRPath specification, but is implemented as an operator.
 
 Next: [Functions](./functions.html)

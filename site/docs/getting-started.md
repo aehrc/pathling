@@ -56,11 +56,11 @@ several configuration parameters using environment variables.
 version: "3"
 services:
   pathling:
-    image: aehrc/pathling:4
+    image: aehrc/pathling:5
     ports:
       - 8080:8080
     environment:
-      spark.executor.memory: 6g
+      pathling.terminology.serverUrl: https://tx.somecompany.com/fhir
       pathling.cors.allowedOrigins: http://localhost:3000
     volumes:
       - pathling:/usr/share/warehouse
@@ -77,29 +77,33 @@ directory. Then the following command can be issued to run the Pathling server:
 docker-compose up
 ```
 
-In this example, the `image` key is being used to refer to the latest `4.x` 
+In this example, the `image` key is being used to refer to the latest `5.x`
 version of the Pathling image on Docker Hub.
 
-We are setting the `spark.executor.memory` configuration variable to 6GB, to
-give us a bit more memory with which to process our data. The
-`pathling.cors.allowedOrigins` variable is set to `http://localhost:3000`,
-which will configure the CORS support in Pathling to allow a browser-based
-frontend application to integrate with the Pathling API.
+We are setting the `pathling.terminology.serverUrl` configuration variable to
+point to a
+particular [FHIR terminology service](https://hl7.org/fhir/R4/terminology-service.html)
+endpoint.
+
+The `pathling.cors.allowedOrigins` variable is set to
+`http://localhost:3000`, which will configure the CORS support in Pathling to
+allow a browser-based frontend application to integrate with the Pathling API.
 
 For a full list of all available configuration variables, see
 [Configuration](./configuration.html).
 
 In the `volumes` section, we set up two volumes: one for storing the warehouse
 data files, and one for importing data. The first volume, named `pathling`, is
-persistent but managed by Docker. The second volume is a "bind mount ", where we
+persistent but managed by Docker. The second volume is a "bind mount", where we
 are mounting an existing directory on our host operating system into the Docker
 container. This might be where we have our FHIR data stored. For more
 information, read
-[Choose the right type of mount](https://docs.docker.com/storage/#choose-the-right-type-of-mount).
+[Choose the right type of mount](https://docs.docker.com/storage/#choose-the-right-type-of-mount)
+.
 
-Now when we invoke the [import operation](./import.html), we can point Pathling
-to a filesystem URL, e.g. `file:///usr/share/staging/Patient.ndjson`. Pathling
-will persist this data within files that it stores in the `pathling` managed
-volume.
+Now when we invoke the [import operation](./operations/import.html), we can
+point Pathling to a filesystem URL,
+e.g. `file:///usr/share/staging/Patient.ndjson`. Pathling will persist this data
+within files that it stores in the `pathling` managed volume.
 
-Next: [Operations](./operations)
+Next: [Operations](./operations.html)

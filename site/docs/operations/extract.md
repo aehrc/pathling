@@ -20,17 +20,12 @@ The extract operation is useful for preparing data for use within other tools,
 and helps to alleviate some of the burden of dealing with FHIR data in its raw 
 form.
 
-The URL that is returned by the operation is determined by the 
-`pathling.storage.resultUrl` [configuration](../configuration.html#storage) 
-parameter. If you are using Amazon S3 for storing of results, the 
-`pathling.storage.aws.signedUrlExpiry` will also be relevant.
-
 <div class="callout info">
    If you request a column with the <code>Coding</code> type, it will be expressed within the resulting extract using the <a href="../fhirpath/data-types.html#coding">Coding literal format</a>. 
 </div>
 
 <div class="callout info">
-    The <code>extract</code> operation supports the <a href="https://hl7.org/fhir/r4/async.html">Asynchronous Request Pattern</a>, which allows you to kick off a long-running request and check on its progress using a status endpoint.
+    The <code>extract</code> operation supports the <a href="../async.html">Asynchronous Request Pattern</a>, which allows you to kick off a long-running request and check on its progress using a status endpoint.
 </div>
 
 ```
@@ -74,7 +69,7 @@ following parameters:
 Check out example `extract` requests in the Postman collection:
 
 <a class="postman-link"
-   href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#d4afec33-89d8-411c-8e4d-9169b9af42e0">
+href="https://documenter.getpostman.com/view/634774/UVsQs48s#d4afec33-89d8-411c-8e4d-9169b9af42e0">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
-Next: [FHIRPath](../fhirpath)
+Next: [Update and batch](./update.html)

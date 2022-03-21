@@ -11,19 +11,19 @@ grand_parent: Documentation
 [FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-5)
 
 This operation extends the search capabilities of FHIR using a
-[search profile](https://hl7.org/fhir/R4/search.html#query) called `fhirPath`, 
+[search profile](https://hl7.org/fhir/R4/search.html#query) called `fhirPath`,
 for use with all resource types.
 
 This search profile allows the user to retrieve a set of FHIR resources from the
-server filtered by one or more [FHIRPath](./fhirpath) expressions. Each
+server filtered by one or more [FHIRPath](../fhirpath) expressions. Each
 expression is evaluated against each resource, returning a Boolean value which
 determines whether the resource will be included in the search result.
 
 As per the [FHIR search](https://hl7.org/fhir/R4/search.html#combining)
 specification, multiple instances of the search parameter are combined using
 Boolean AND logic, and multiple expressions can be provided within a single
-search parameter and delimited by commas to achieve OR logic. In addition to 
-this, [FHIRPath boolean operators](./fhirpath/operators.html#boolean-logic) can 
+search parameter and delimited by commas to achieve OR logic. In addition to
+this, [FHIRPath boolean operators](./fhirpath/operators.html#boolean-logic) can
 be used within expressions.
 
 Composite search parameters (using the `$` notation) are not currently 
@@ -70,7 +70,7 @@ more details.
 Check out example search requests in the Postman collection:
 
 <a class="postman-link"
-   href="https://documenter.getpostman.com/view/634774/S17rx9Af?version=latest#f3490537-b116-4a2e-8428-45fdb6e7d137">
+href="https://documenter.getpostman.com/view/634774/UVsQs48s#f3490537-b116-4a2e-8428-45fdb6e7d137">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Next: [Aggregate](./aggregate.html)
