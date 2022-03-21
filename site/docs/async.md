@@ -29,4 +29,12 @@ the completion of the job, the initiation request will need to be resent.
 If you're using JavaScript, you can use the [pathling-client]() NPM package
 which features support for calling Pathling operations using the async pattern.
 
+## Examples
+
+Check out example async requests in the Postman collection:
+
+<a class="postman-link"
+href="https://documenter.getpostman.com/view/634774/UVsQs48s#dd55e70a-c67c-4132-9a80-ab5f69e8c2ff">
+<img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
+
 Next: [Caching](./caching.html)

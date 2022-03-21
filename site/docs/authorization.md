@@ -109,4 +109,4 @@ authorities within Pathling: `pathling:aggregate`, `pathling:search`,
 `pathling:extract` (plus read access to all resources within the Patient
 compartment).
 
-Next: [Async](./async)
+Next: [Async](./async.html)

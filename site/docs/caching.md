@@ -28,7 +28,7 @@ done over the entire database, not scoped to individual resource types. This
 means that updates to any resource will invalidate the cache for the entire
 database.
 
-Caching does persist over restarts of the server, as it is derived from state
+Cache keys persist across restarts of the server, as they are derived from state
 that is persisted along with the data.
 
 Next: [Libraries](./libraries.html)
