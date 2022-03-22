@@ -13,8 +13,8 @@
 
 package au.csiro.pathling.encoders2;
 
-import static au.csiro.pathling.encoders2.ResourceEncoding2Test.EXCLUDED_RESOURCES;
-import static au.csiro.pathling.encoders2.SchemaConverter2Test.OPEN_TYPES;
+import static au.csiro.pathling.encoders2.AllResourcesEncodingTest.EXCLUDED_RESOURCES;
+import static au.csiro.pathling.encoders2.SchemaConverterTest.OPEN_TYPES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
@@ -45,7 +45,7 @@ import org.json4s.jackson.JsonMethods;
 import org.junit.Test;
 import scala.collection.mutable.WrappedArray;
 
-public class FhirEncoders2Test implements JsonMethods {
+public class LightweightFhirEncodersTest implements JsonMethods {
 
   private static final FhirContext fhirContext = FhirContext.forR4();
   private static final FhirEncoders fhirEncoders = FhirEncoders.forR4()

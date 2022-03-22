@@ -17,7 +17,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import au.csiro.pathling.encoders.EncoderConfig;
-import au.csiro.pathling.encoders.SchemaConverter;
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
@@ -38,7 +37,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import scala.collection.JavaConverters;
 
-public class SchemaConverter2Test {
+public class SchemaConverterTest {
 
   public static final Set<String> OPEN_TYPES = Set.of(
       "boolean",
@@ -94,7 +93,7 @@ public class SchemaConverter2Test {
   }
 
   private SchemaConverter createSchemaConverter(final int maxNestingLevel) {
-    return new SchemaConverter2(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
+    return new SchemaConverter(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
         EncoderConfig.apply(maxNestingLevel, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
   }
 
@@ -388,7 +387,7 @@ public class SchemaConverter2Test {
         "ElementDefinition" // this is not a valid R4 open type so it should not be returned
     );
 
-    final SchemaConverter2 schemaConverter = new SchemaConverter2(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
+    final SchemaConverter schemaConverter = new SchemaConverter(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
         EncoderConfig.apply(0, JavaConverters.asScalaSet(limitedOpenTypes).toSet(), true));
 
     StructType conditionSchema = schemaConverter.resourceSchema(Condition.class);

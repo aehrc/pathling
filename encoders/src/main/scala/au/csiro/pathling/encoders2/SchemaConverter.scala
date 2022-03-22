@@ -14,12 +14,12 @@
 package au.csiro.pathling.encoders2
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders.{EncoderConfig, EncoderContext, SchemaConverter}
+import au.csiro.pathling.encoders.{EncoderConfig, EncoderContext}
 import au.csiro.pathling.encoders2.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
 import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.types._
-import org.hl7.fhir.instance.model.api.IBase
+import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
 
 /**
  * The schema processor for converting FHIR schemas to SQL schemas.
@@ -84,13 +84,29 @@ private[encoders2] class SchemaConverterProcessor(override val fhirContext: Fhir
  * @param dataTypeMappings the data type mappings to use.
  * @param config           encoder configuration to use.
  */
-class SchemaConverter2(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings, val config: EncoderConfig) extends SchemaConverter with EncoderContext {
+class SchemaConverter(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings, val config: EncoderConfig) extends EncoderContext {
 
   private[encoders2] def compositeSchema(compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_ <: IBase]): DataType = {
     SchemaVisitor.traverseComposite(compositeElementDefinition, new SchemaConverterProcessor(fhirContext, dataTypeMappings, config))
   }
 
-  override def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {
+  /**
+   * Returns the (spark) SQL schema that represents the given FHIR resource definition.
+   *
+   * @param resourceDefinition the FHIR resource definition.
+   * @return the schema as a Spark StructType
+   */
+  def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {
     SchemaVisitor.traverseResource(resourceDefinition, new SchemaConverterProcessor(fhirContext, dataTypeMappings, config)).asInstanceOf[StructType]
+  }
+
+  /**
+   * Returns the spark (SQL) schema that represents the given FHIR resource class.
+   *
+   * @param resourceClass The class implementing the FHIR resource.
+   * @return The schema as a Spark StructType
+   */
+  def resourceSchema[T <: IBaseResource](resourceClass: Class[T]): StructType = {
+    resourceSchema(fhirContext.getResourceDefinition(resourceClass))
   }
 }

@@ -275,7 +275,7 @@ private[encoders2] object SerializerBuilderProcessor {
  * @param mappings    the data type mappings to use.
  * @param config      the EncoderSettings to use.
  */
-class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, config: EncoderSettings) {
+class SerializerBuilder(fhirContext: FhirContext, mappings: DataTypeMappings, config: EncoderSettings) {
 
   /**
    * Creates the serializer expression for given resource definition.
@@ -303,16 +303,16 @@ class SerializerBuilder2(fhirContext: FhirContext, mappings: DataTypeMappings, c
 }
 
 /**
- * Companion object for [[SerializerBuilder2]]
+ * Companion object for [[SerializerBuilder]]
  */
-object SerializerBuilder2 {
+object SerializerBuilder {
   /**
    * Constructs a serializer builder from a [[EncoderContext]].
    *
    * @param context the schema config to use.
    * @return the serializer builder.
    */
-  def apply(context: EncoderContext): SerializerBuilder2 = {
-    new SerializerBuilder2(context.fhirContext, context.dataTypeMappings, context.config)
+  def apply(context: EncoderContext): SerializerBuilder = {
+    new SerializerBuilder(context.fhirContext, context.dataTypeMappings, context.config)
   }
 }

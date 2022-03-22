@@ -14,7 +14,7 @@
 package au.csiro.pathling.encoders;
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
-import au.csiro.pathling.encoders2.EncoderBuilder2;
+import au.csiro.pathling.encoders2.EncoderBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -215,7 +215,7 @@ public class FhirEncoders {
     synchronized (encoderCache) {
       //noinspection unchecked
       return (ExpressionEncoder<T>) encoderCache.computeIfAbsent(key, k ->
-          EncoderBuilder2.of(definition,
+          EncoderBuilder.of(definition,
               context,
               mappings,
               maxNestingLevel,

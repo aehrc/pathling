@@ -13,7 +13,8 @@
 
 package au.csiro.pathling.encoders2;
 
-import static au.csiro.pathling.encoders2.SchemaConverter2Test.OPEN_TYPES;
+import static au.csiro.pathling.encoders2.SchemaConverterTest.OPEN_TYPES;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import au.csiro.pathling.encoders.EncoderConfig;
@@ -39,10 +40,19 @@ import org.junit.runners.Parameterized.Parameters;
 import scala.collection.JavaConverters;
 
 @RunWith(Parameterized.class)
-public class ResourceEncoding2Test {
+public class AllResourcesEncodingTest {
 
-  private final static FhirContext fhirContext = FhirContext.forR4();
-  private final static FhirEncoders fhirEncoders = FhirEncoders.forR4().getOrCreate();
+  private final static FhirContext FHIR_CONTEXT = FhirContext.forR4();
+  private final static FhirEncoders FHIR_ENCODERS = FhirEncoders.forR4()
+      .withMaxNestingLevel(2)
+      .withOpenTypes(OPEN_TYPES)
+      .withExtensionsEnabled(true)
+      .getOrCreate();
+
+
+  private final static SchemaConverter SCHEMA_CONVERTER_L2 = new SchemaConverter(FHIR_CONTEXT,
+      new R4DataTypeMappings(),
+      EncoderConfig.apply(2, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
 
 
   // TODO: Remove when the corresponding issues are fixed (#375)
@@ -61,16 +71,16 @@ public class ResourceEncoding2Test {
 
   private final Class<? extends IBaseResource> resourceClass;
 
-  public ResourceEncoding2Test(final Class<? extends IBaseResource> resourceClass) {
+  public AllResourcesEncodingTest(final Class<? extends IBaseResource> resourceClass) {
     this.resourceClass = resourceClass;
   }
 
 
   @Parameters(name = "{index}: class = {0}")
   public static Collection<?> input() {
-    return fhirContext.getResourceTypes().stream()
+    return FHIR_CONTEXT.getResourceTypes().stream()
         .filter(rn -> !EXCLUDED_RESOURCES.contains(rn))
-        .map(fhirContext::getResourceDefinition)
+        .map(FHIR_CONTEXT::getResourceDefinition)
         .map(RuntimeResourceDefinition::getImplementingClass)
         .map(cls -> new Object[]{cls})
         .collect(Collectors.toList());
@@ -78,23 +88,21 @@ public class ResourceEncoding2Test {
 
 
   @Test
-  public void testCanProduceSchema() {
-    final SchemaConverter2 schemaConverter = new SchemaConverter2(fhirContext,
-        new R4DataTypeMappings(),
-        EncoderConfig.apply(0, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
-
-    final StructType schema = schemaConverter.resourceSchema(resourceClass);
+  public void testConverterSchemaMatchesEncoder() {
+    final StructType schema = SCHEMA_CONVERTER_L2.resourceSchema(resourceClass);
+    final ExpressionEncoder<? extends IBaseResource> encoder = FHIR_ENCODERS
+        .of(resourceClass);
+    assertEquals(schema.treeString(), encoder.schema().treeString());
   }
-
 
   @Test
   public void testCanEncodeDecodeResource() throws Exception {
 
-    final ExpressionEncoder<? extends IBaseResource> encoder = fhirEncoders
+    final ExpressionEncoder<? extends IBaseResource> encoder = FHIR_ENCODERS
         .of(resourceClass);
+
     final ExpressionEncoder<? extends IBaseResource> resolvedEncoder = EncoderUtils
         .defaultResolveAndBind(encoder);
-
     final IBaseResource resourceInstance = resourceClass.getDeclaredConstructor().newInstance();
     resourceInstance.setId("someId");
 
@@ -107,6 +115,7 @@ public class ResourceEncoding2Test {
 
     final IBaseResource deserializedResource = resolvedEncoder.createDeserializer()
         .apply(serializedRow);
+
     assertTrue(((Base) resourceInstance).equalsDeep((Base) deserializedResource));
   }
 

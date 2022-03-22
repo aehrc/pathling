@@ -11,7 +11,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
-import au.csiro.pathling.encoders2.EncoderBuilder2;
+import au.csiro.pathling.encoders2.EncoderBuilder;
 import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.BatchProvider;
@@ -323,7 +323,7 @@ public class FhirServer extends RestfulServer {
     final Set<Enumerations.ResourceType> availableResourceTypes = EnumSet.allOf(
         Enumerations.ResourceType.class);
     final Set<Enumerations.ResourceType> unsupportedResourceTypes =
-        JavaConverters.setAsJavaSet(EncoderBuilder2.UNSUPPORTED_RESOURCES()).stream()
+        JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
             .map(Enumerations.ResourceType::fromCode)
             .collect(Collectors.toSet());
     availableResourceTypes.removeAll(unsupportedResourceTypes);

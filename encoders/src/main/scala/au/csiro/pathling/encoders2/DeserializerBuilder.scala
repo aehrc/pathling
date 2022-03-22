@@ -36,7 +36,7 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
  * @param schemaConverter the schema converter to use.
  * @param parent          the processor for the parent composite.
  */
-private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Expression], schemaConverter: SchemaConverter2,
+private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Expression], schemaConverter: SchemaConverter,
                                                              parent: Option[DeserializerBuilderProcessor] = None)
   extends SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] with Deserializer {
 
@@ -266,7 +266,7 @@ private[encoders2] object DeserializerBuilderProcessor extends Deserializer {
  *
  * @param schemaConverter the schema converter to use.
  */
-class DeserializerBuilder2(schemaConverter: SchemaConverter2) {
+class DeserializerBuilder(schemaConverter: SchemaConverter) {
   /**
    * Creates the deserializer expression for given resource class.
    *
@@ -290,16 +290,16 @@ class DeserializerBuilder2(schemaConverter: SchemaConverter2) {
 }
 
 /**
- * Companion object for [[DeserializerBuilder2]]
+ * Companion object for [[DeserializerBuilder]]
  */
-object DeserializerBuilder2 {
+object DeserializerBuilder {
   /**
-   * Constructs the deserializer builder from a [[SchemaConverter2]].
+   * Constructs the deserializer builder from a [[SchemaConverter]].
    *
    * @param schemaConverter the schema converter to use.
    * @return the deserializer builder.
    */
-  def apply(schemaConverter: SchemaConverter2): DeserializerBuilder2 = {
-    new DeserializerBuilder2(schemaConverter)
+  def apply(schemaConverter: SchemaConverter): DeserializerBuilder = {
+    new DeserializerBuilder(schemaConverter)
   }
 }
