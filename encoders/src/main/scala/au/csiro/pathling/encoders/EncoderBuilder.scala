@@ -11,10 +11,9 @@
  *
  */
 
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders.{EncoderConfig, UnsupportedResourceError}
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 

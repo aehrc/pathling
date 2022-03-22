@@ -11,12 +11,12 @@
  *
  */
 
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.encoders
 
+import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders.{EncoderConfig, EncoderContext}
-import au.csiro.pathling.encoders2.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
-import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
+import au.csiro.pathling.schema.SchemaVisitor
+import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.types._
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
@@ -28,9 +28,9 @@ import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
  * @param dataTypeMappings data type mappings to use.
  * @param config           encoder configuration to use.
  */
-private[encoders2] class SchemaConverterProcessor(override val fhirContext: FhirContext,
-                                                  override val dataTypeMappings: DataTypeMappings,
-                                                  override val config: EncoderConfig) extends
+private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirContext,
+                                                 override val dataTypeMappings: DataTypeMappings,
+                                                 override val config: EncoderConfig) extends
   SchemaProcessorWithTypeMappings[DataType, StructField] {
 
   private def createExtensionField(definition: BaseRuntimeElementCompositeDefinition[_]): Seq[StructField] = {
@@ -86,7 +86,7 @@ private[encoders2] class SchemaConverterProcessor(override val fhirContext: Fhir
  */
 class SchemaConverter(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings, val config: EncoderConfig) extends EncoderContext {
 
-  private[encoders2] def compositeSchema(compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_ <: IBase]): DataType = {
+  private[encoders] def compositeSchema(compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_ <: IBase]): DataType = {
     SchemaVisitor.traverseComposite(compositeElementDefinition, new SchemaConverterProcessor(fhirContext, dataTypeMappings, config))
   }
 

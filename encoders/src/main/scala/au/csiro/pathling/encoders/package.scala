@@ -15,7 +15,7 @@ package au.csiro.pathling
 
 import org.apache.spark.sql.catalyst.expressions.Expression
 
-package object encoders2 {
+package object encoders {
 
   type Serializer = Expression => Expression
 

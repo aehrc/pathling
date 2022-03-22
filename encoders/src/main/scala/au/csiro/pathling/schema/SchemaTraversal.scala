@@ -10,11 +10,11 @@
  * under the CSIRO Open Source Software Licence Agreement.
  *
  */
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.schema
 
 import au.csiro.pathling.encoders.EncodingContext
-import au.csiro.pathling.encoders2.ExtensionSupport.EXTENSION_ELEMENT_NAME
-import au.csiro.pathling.encoders2.SchemaVisitor.isSingular
+import au.csiro.pathling.encoders.ExtensionSupport.EXTENSION_ELEMENT_NAME
+import au.csiro.pathling.schema.SchemaVisitor.isSingular
 import ca.uhn.fhir.context._
 import org.hl7.fhir.instance.model.api.IBase
 import org.hl7.fhir.r4.model.Patient

@@ -11,19 +11,15 @@
  *
  */
 
-package au.csiro.pathling.encoders2;
+package au.csiro.pathling.encoders;
 
-import static au.csiro.pathling.encoders2.AllResourcesEncodingTest.EXCLUDED_RESOURCES;
-import static au.csiro.pathling.encoders2.SchemaConverterTest.OPEN_TYPES;
+import static au.csiro.pathling.encoders.AllResourcesEncodingTest.EXCLUDED_RESOURCES;
+import static au.csiro.pathling.encoders.SchemaConverterTest.OPEN_TYPES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-import au.csiro.pathling.encoders.EncoderUtils;
-import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.encoders.TestData;
-import au.csiro.pathling.encoders.UnsupportedResourceError;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.math.BigDecimal;
@@ -34,12 +30,8 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
-import org.hl7.fhir.r4.model.BaseResource;
-import org.hl7.fhir.r4.model.Condition;
-import org.hl7.fhir.r4.model.IdType;
-import org.hl7.fhir.r4.model.MolecularSequence;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.MolecularSequence.MolecularSequenceQualityRocComponent;
-import org.hl7.fhir.r4.model.PlanDefinition;
 import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.json4s.jackson.JsonMethods;
 import org.junit.Test;

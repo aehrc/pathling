@@ -15,9 +15,8 @@ package au.csiro.pathling.encoders.datatypes
 
 import java.util.TimeZone
 
-import au.csiro.pathling.encoders.StaticField
+import au.csiro.pathling.encoders.{ExpressionWithName, StaticField}
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings.{fhirPrimitiveToSparkTypes, isValidOpenElementType}
-import au.csiro.pathling.encoders2.ExpressionWithName
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal

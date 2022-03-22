@@ -11,13 +11,13 @@
  *
  */
 
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.encoders
 
+import au.csiro.pathling.encoders.DeserializerBuilderProcessor.setterFor
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
-import au.csiro.pathling.encoders._
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders2.DeserializerBuilderProcessor.setterFor
-import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
+import au.csiro.pathling.schema.SchemaVisitor.isCollection
+import au.csiro.pathling.schema.{ElementChildCtx, ElementCtx, SchemaVisitor}
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
 import org.apache.spark.sql.catalyst.expressions
@@ -36,8 +36,8 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
  * @param schemaConverter the schema converter to use.
  * @param parent          the processor for the parent composite.
  */
-private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Expression], schemaConverter: SchemaConverter,
-                                                             parent: Option[DeserializerBuilderProcessor] = None)
+private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Expression], schemaConverter: SchemaConverter,
+                                                            parent: Option[DeserializerBuilderProcessor] = None)
   extends SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] with Deserializer {
 
   override def fhirContext: FhirContext = schemaConverter.fhirContext
@@ -236,7 +236,7 @@ private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Ex
 
 }
 
-private[encoders2] object DeserializerBuilderProcessor extends Deserializer {
+private[encoders] object DeserializerBuilderProcessor extends Deserializer {
 
   /**
    * Returns the setter for the given field name.

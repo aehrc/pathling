@@ -14,7 +14,6 @@
 package au.csiro.pathling.encoders;
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
-import au.csiro.pathling.encoders2.EncoderBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -253,6 +252,8 @@ public class FhirEncoders {
   public static class Builder {
 
     private static final boolean DEFAULT_ENABLE_EXTENSIONS = false;
+    private static final int DEFAULT_MAX_NESTING_LEVEL = 0;
+
     private final FhirVersionEnum fhirVersion;
     private int maxNestingLevel;
     private Set<String> openTypes;
@@ -260,7 +261,7 @@ public class FhirEncoders {
 
     Builder(final FhirVersionEnum fhirVersion) {
       this.fhirVersion = fhirVersion;
-      this.maxNestingLevel = 0;
+      this.maxNestingLevel = DEFAULT_MAX_NESTING_LEVEL;
       this.openTypes = Collections.emptySet();
       this.enableExtensions = DEFAULT_ENABLE_EXTENSIONS;
     }

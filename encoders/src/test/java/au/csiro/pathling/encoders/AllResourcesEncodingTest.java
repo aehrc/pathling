@@ -11,15 +11,12 @@
  *
  */
 
-package au.csiro.pathling.encoders2;
+package au.csiro.pathling.encoders;
 
-import static au.csiro.pathling.encoders2.SchemaConverterTest.OPEN_TYPES;
+import static au.csiro.pathling.encoders.SchemaConverterTest.OPEN_TYPES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import au.csiro.pathling.encoders.EncoderConfig;
-import au.csiro.pathling.encoders.EncoderUtils;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;

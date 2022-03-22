@@ -11,8 +11,7 @@
  *
  */
 
-package au.csiro.pathling.encoders2
-
+package au.csiro.pathling.encoders
 
 /**
  * Helper class with constants related to FHIR extension support.

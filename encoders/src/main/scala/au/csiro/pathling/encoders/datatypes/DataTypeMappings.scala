@@ -13,7 +13,7 @@
 
 package au.csiro.pathling.encoders.datatypes
 
-import au.csiro.pathling.encoders2.ExpressionWithName
+import au.csiro.pathling.encoders.ExpressionWithName
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}

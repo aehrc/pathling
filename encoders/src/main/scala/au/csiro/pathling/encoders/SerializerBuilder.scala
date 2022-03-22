@@ -11,13 +11,13 @@
  *
  */
 
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.encoders
 
+import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
+import au.csiro.pathling.encoders.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders.{EncoderContext, EncoderSettings, InstanceOf, ObjectCast}
-import au.csiro.pathling.encoders2.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
-import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
-import au.csiro.pathling.encoders2.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
+import au.csiro.pathling.schema.SchemaVisitor.isCollection
+import au.csiro.pathling.schema._
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.expressions.objects.{ExternalMapToCatalyst, Invoke, MapObjects, StaticInvoke}
@@ -25,7 +25,7 @@ import org.apache.spark.sql.catalyst.expressions.{BoundReference, CreateNamedStr
 import org.apache.spark.sql.types.{DataType, DataTypes, IntegerType, ObjectType}
 import org.apache.spark.unsafe.types.UTF8String
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBaseResource}
-import org.hl7.fhir.r4.model.{Base, DomainResource, Extension}
+import org.hl7.fhir.r4.model.{Base, Extension}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -38,9 +38,9 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
  * @param dataTypeMappings the data type mappings to use.
  * @param config           the EncoderSettings to use.
  */
-private[encoders2] class SerializerBuilderProcessor(expression: Expression, override val fhirContext: FhirContext,
-                                                    override val dataTypeMappings: DataTypeMappings,
-                                                    override val config: EncoderSettings) extends
+private[encoders] class SerializerBuilderProcessor(expression: Expression, override val fhirContext: FhirContext,
+                                                   override val dataTypeMappings: DataTypeMappings,
+                                                   override val config: EncoderSettings) extends
   SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] {
 
   override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[ExpressionWithName] = {
@@ -152,7 +152,7 @@ private[encoders2] class SerializerBuilderProcessor(expression: Expression, over
   }
 }
 
-private[encoders2] object SerializerBuilderProcessor {
+private[encoders] object SerializerBuilderProcessor {
 
   private def getChildExpression(parentObject: Expression,
                                  childDefinition: BaseRuntimeChildDefinition, dataType: DataType): Expression = {
@@ -247,10 +247,11 @@ private[encoders2] object SerializerBuilderProcessor {
   }
 
 
-  def flattenExtensions(resource: DomainResource): Map[Int, java.util.List[Extension]] = {
+  def flattenExtensions(composite: Base): Map[Int, java.util.List[Extension]] = {
+
     def flattenBase(obj: Base): List[(Int, java.util.List[Extension])] = {
 
-      val childrenExts = resource.children()
+      val childrenExts = obj.children()
         .map(p => obj.getProperty(p.getName.hashCode, p.getName, false))
         .filter(_ != null)
         .flatMap(_.flatMap(flattenBase))
@@ -263,7 +264,7 @@ private[encoders2] object SerializerBuilderProcessor {
       }
     }
 
-    flattenBase(resource).toMap
+    flattenBase(composite).toMap
   }
 
 }

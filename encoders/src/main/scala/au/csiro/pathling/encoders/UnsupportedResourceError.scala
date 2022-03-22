@@ -15,7 +15,7 @@ package au.csiro.pathling.encoders
 
 /**
  * Thrown when encoding is requested for an unsupported resource type.
- * 
+ *
  * @param message a descriptive message to give back to the user
  */
 class UnsupportedResourceError(message: String) extends RuntimeException(message) {}

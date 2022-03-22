@@ -10,9 +10,9 @@
  * under the CSIRO Open Source Software Licence Agreement.
  *
  */
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.encoders
 
-import au.csiro.pathling.encoders.{EncoderSettings, EncodingContext}
+import au.csiro.pathling.schema._
 import ca.uhn.fhir.context._
 
 

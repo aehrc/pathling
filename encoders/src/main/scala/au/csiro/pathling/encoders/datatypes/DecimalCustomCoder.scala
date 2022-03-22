@@ -14,8 +14,8 @@
 package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
+import au.csiro.pathling.encoders.ExpressionWithName
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.decimalType
-import au.csiro.pathling.encoders2.ExpressionWithName
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
 import org.apache.spark.sql.catalyst.util.ArrayData
