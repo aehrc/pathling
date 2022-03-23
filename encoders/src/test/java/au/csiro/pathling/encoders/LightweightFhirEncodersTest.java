@@ -173,6 +173,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final WrappedArray<?> resourceExtensions = (WrappedArray<?>) extensionMap
         .get(conditionRow.get(conditionRow.fieldIndex("_fid")));
 
+    assertNotNull(resourceExtensions);
     assertStringExtension("uuid:ext1", "ext1", (Row) resourceExtensions.apply(0));
     assertIntExtension("uuid:ext2", 2, (Row) resourceExtensions.apply(1));
     assertSingletNestedExtension("uuid:ext4", (Row) resourceExtensions.apply(2), extensionMap,
@@ -185,7 +186,19 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final WrappedArray<?> identifierExtensions = (WrappedArray<?>) extensionMap
         .get(identifierRow.get(identifierRow.fieldIndex("_fid")));
 
+    assertNotNull(identifierExtensions);
     assertStringExtension("uuid:ext10", "ext10", (Row) identifierExtensions.apply(0));
     assertIntExtension("uuid:ext11", 11, (Row) identifierExtensions.apply(1));
+
+    // Get Stage/Type extensions.
+    final WrappedArray<?> stages = (WrappedArray<?>) conditionRow
+        .get(conditionRow.fieldIndex("stage"));
+    final Row stageRow = (Row) stages.apply(0);
+    final Row stageTypeRow = (Row) stageRow.get(stageRow.fieldIndex("type"));
+
+    final WrappedArray<?> stageTypeExtensions = (WrappedArray<?>) extensionMap
+        .get(stageTypeRow.get(stageTypeRow.fieldIndex("_fid")));
+    assertNotNull(stageTypeExtensions);
+    assertStringExtension("uuid:ext12", "ext12", (Row) stageTypeExtensions.apply(0));
   }
 }

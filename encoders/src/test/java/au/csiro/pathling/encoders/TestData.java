@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Condition.ConditionStageComponent;
 import org.hl7.fhir.r4.model.Medication.MedicationIngredientComponent;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
@@ -380,6 +381,11 @@ public class TestData {
     //     - extension:
     //        - url: uuid:ext11
     //        - value: 11
+    // - stage
+    //     - type
+    //       - extension
+    //          - url: uuid:ext12
+    //          - value: ext12
 
     final Condition conditionWithExtension = new Condition();
     conditionWithExtension.setId("someId");
@@ -408,6 +414,12 @@ public class TestData {
         new Extension("uuid:ext11", new IntegerType(11))
         )
     );
+
+    final ConditionStageComponent stage = conditionWithExtension.getStageFirstRep();
+    stage.getType().setExtension(
+        Collections.singletonList(new Extension("uuid:ext12", new StringType("ext12")))
+    );
+
     return conditionWithExtension;
   }
 

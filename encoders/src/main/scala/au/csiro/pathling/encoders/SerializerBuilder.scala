@@ -263,7 +263,6 @@ private[encoders] object SerializerBuilderProcessor {
         case _ => childrenExts
       }
     }
-
     flattenBase(composite).toMap
   }
 
