@@ -134,7 +134,7 @@ class ExtensionFunctionTest {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
 
     // Construct element dataset from the resource dataset so that the resource path
-    // can be used as a foreign resource for this element path
+    // can be used as the current resource for this element path
     // Note: this resource path is not singular as this will be a base for elements.
 
     final Dataset<Row> resourceLikeDataset = new ResourceDatasetBuilder(spark)
@@ -175,7 +175,7 @@ class ExtensionFunctionTest {
         .idAndEidAndValueColumns()
         .expression("code")
         .singular(false)
-        .foreignResource(baseResourcePath)
+        .currentResource(baseResourcePath)
         .buildDefined();
 
     final StringLiteralPath argumentExpression = StringLiteralPath

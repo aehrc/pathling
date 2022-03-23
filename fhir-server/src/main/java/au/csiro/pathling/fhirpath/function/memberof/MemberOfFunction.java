@@ -103,7 +103,7 @@ public class MemberOfFunction implements NamedFunction {
 
     return ElementPath
         .build(expression, resultDataset, idColumn, inputPath.getEidColumn(), resultColumn,
-            inputPath.isSingular(), inputPath.getForeignResource(), inputPath.getThisColumn(),
+            inputPath.isSingular(), inputPath.getCurrentResource(), inputPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }
 

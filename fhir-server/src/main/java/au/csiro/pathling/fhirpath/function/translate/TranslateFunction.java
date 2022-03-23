@@ -186,7 +186,7 @@ public class TranslateFunction implements NamedFunction {
     return ElementPath
         .build(expression, resultDataset, idColumn, Optional.of(valueAndEidColumns.getRight()),
             valueAndEidColumns.getLeft(),
-            false, inputPath.getForeignResource(), inputPath.getThisColumn(),
+            false, inputPath.getCurrentResource(), inputPath.getThisColumn(),
             resultDefinition);
   }
 

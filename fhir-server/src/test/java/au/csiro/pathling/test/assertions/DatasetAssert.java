@@ -143,7 +143,7 @@ public class DatasetAssert {
   @Nonnull
   @SuppressWarnings({"unused", "UnusedReturnValue"})
   public DatasetAssert saveAllRowsToCsv(@Nonnull final SparkSession spark,
-      @Nonnull final String location, @Nonnull final String name) throws IOException {
+      @Nonnull final String location, @Nonnull final String name) {
     final Path path = Path.of(location, name + ".csv");
 
     try {
@@ -159,7 +159,11 @@ public class DatasetAssert {
     final ResultWriter resultWriter = new ResultWriter(configuration, spark);
     resultWriter.write(dataset, name, SaveMode.Overwrite);
     final Path tempPath = Path.of(location, "results", name + ".csv");
-    Files.copy(tempPath, path);
+    try {
+      Files.copy(tempPath, path);
+    } catch (final IOException e) {
+      throw new RuntimeException("Problem copying file", e);
+    }
 
     try {
       Files.walkFileTree(Path.of(location, "results"), new DeleteDirectoryVisitor());

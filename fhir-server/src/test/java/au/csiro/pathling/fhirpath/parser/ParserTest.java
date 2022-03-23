@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
@@ -42,10 +43,12 @@ import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import java.sql.Date;
+import java.util.Collections;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -582,13 +585,13 @@ public class ParserTest extends AbstractParserTest {
   }
 
   @Test
-  void testExtensionsForeignResources() {
+  void testExtensionsCurrentResource() {
     mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
     assertThatResultOf(ResourceType.CONDITION,
         "subject.resolve().ofType(Patient).extension.url")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testExtensionsForeignResources.csv");
+        .hasRows(spark, "responses/ParserTest/testExtensionsCurrentResource.csv");
   }
 
   @Test
@@ -641,4 +644,59 @@ public class ParserTest extends AbstractParserTest {
         expression);
     assertEquals("No such child: " + expression, error.getMessage());
   }
+
+  @Test
+  void testReverseResolveFollowingMonomorphicResolve() {
+    final ResourcePath subjectResource = ResourcePath
+        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
+            true);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .terminologyClientFactory(terminologyServiceFactory)
+        .database(database)
+        .inputContext(subjectResource)
+        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
+        .build();
+    parser = new Parser(parserContext);
+
+    assertThatResultOf(
+        "serviceProvider.resolve().reverseResolve(Encounter.serviceProvider).id")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingMonomorphicResolve.csv");
+  }
+
+  @Test
+  void testReverseResolveFollowingPolymorphicResolve() {
+    final ResourcePath subjectResource = ResourcePath
+        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
+            true);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .terminologyClientFactory(terminologyServiceFactory)
+        .database(database)
+        .inputContext(subjectResource)
+        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
+        .build();
+    parser = new Parser(parserContext);
+
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
+
+    assertThatResultOf(
+        "subject.resolve().ofType(Patient).reverseResolve(Encounter.subject).id "
+            + "contains '2aff9edd-def2-487a-b435-a162e11a303c'")
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingPolymorphicResolve.csv");
+  }
+
+  @Test
+  void testReverseResolveFollowingReverseResolve() {
+    assertThatResultOf(
+        "reverseResolve(Encounter.subject).reverseResolve(CarePlan.encounter).id")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingReverseResolve.csv");
+  }
+
 }

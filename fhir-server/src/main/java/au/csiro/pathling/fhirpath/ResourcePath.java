@@ -55,7 +55,7 @@ public class ResourcePath extends NonLiteralPath {
         thisColumn);
     this.definition = definition;
     this.elementsToColumns = elementsToColumns;
-    this.setForeignResource(this);
+    this.setCurrentResource(this);
   }
 
   /**
@@ -126,8 +126,7 @@ public class ResourcePath extends NonLiteralPath {
 
     // We use the ID column as the value column for a ResourcePath.
     return new ResourcePath(expression, finalDataset, finalIdColumn, Optional.empty(),
-        finalIdColumn, singular,
-        Optional.empty(), definition, elementsToColumns);
+        finalIdColumn, singular, Optional.empty(), definition, elementsToColumns);
   }
 
   /**
@@ -159,8 +158,8 @@ public class ResourcePath extends NonLiteralPath {
     return definition.getChildElement(name);
   }
 
-  public void setForeignResource(@Nonnull final ResourcePath foreignResource) {
-    this.foreignResource = Optional.of(foreignResource);
+  public void setCurrentResource(@Nonnull final ResourcePath currentResource) {
+    this.currentResource = Optional.of(currentResource);
   }
 
   @Nonnull

@@ -50,7 +50,7 @@ public class ElementPathBuilder {
   private FHIRDefinedType fhirType;
 
   @Nullable
-  private ResourcePath foreignResource;
+  private ResourcePath currentResource;
 
   @Nullable
   private Column thisColumn;
@@ -126,8 +126,8 @@ public class ElementPathBuilder {
   }
 
   @Nonnull
-  public ElementPathBuilder foreignResource(@Nonnull final ResourcePath foreignResource) {
-    this.foreignResource = foreignResource;
+  public ElementPathBuilder currentResource(@Nonnull final ResourcePath currentResource) {
+    this.currentResource = currentResource;
     return this;
   }
 
@@ -147,7 +147,7 @@ public class ElementPathBuilder {
   public ElementPath build() {
     return ElementPath
         .build(expression, dataset, idColumn, eidColumn,
-            valueColumn, singular, Optional.ofNullable(foreignResource),
+            valueColumn, singular, Optional.ofNullable(currentResource),
             Optional.ofNullable(thisColumn), fhirType);
   }
 
@@ -155,7 +155,7 @@ public class ElementPathBuilder {
   public ElementPath buildDefined() {
     return ElementPath
         .build(expression, dataset, idColumn, eidColumn,
-            valueColumn, singular, Optional.ofNullable(foreignResource),
+            valueColumn, singular, Optional.ofNullable(currentResource),
             Optional.ofNullable(thisColumn), definition);
   }
 }

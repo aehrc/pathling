@@ -44,9 +44,9 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
   protected DecimalPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 
@@ -162,5 +162,5 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof DecimalLiteralPath;
   }
- 
+
 }

@@ -106,7 +106,7 @@ public class PathTraversalOperator {
 
     return ElementPath
         .build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,
-            resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
+            resultSingular, left.getCurrentResource(), left.getThisColumn(), childDefinition);
   }
 
   @Nonnull

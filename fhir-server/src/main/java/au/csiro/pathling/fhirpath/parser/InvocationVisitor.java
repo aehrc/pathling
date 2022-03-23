@@ -116,7 +116,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         // If we're in the context of a function's arguments, there are two valid things this
         // could be:
         // (1) a path traversal from the input context;
-        // (2) a reference to a (potentially foreign) resource type.
+        // (2) a reference to a resource type.
 
         // Check if the expression is a reference to a known resource type.
         final ResourceType resourceType;
@@ -131,7 +131,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         }
 
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
-        // a foreign resource reference.
+        // the current resource reference.
         return ResourcePath
             .build(context.getFhirContext(), context.getDatabase(), resourceType, fhirPath, true);
       }

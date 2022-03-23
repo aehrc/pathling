@@ -8,7 +8,11 @@ package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.*;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -42,9 +46,9 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
   protected IntegerPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 

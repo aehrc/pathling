@@ -28,9 +28,9 @@ public class ReferencePath extends ElementPath implements Referrer {
   protected ReferencePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 
@@ -58,5 +58,5 @@ public class ReferencePath extends ElementPath implements Referrer {
       @Nonnull final Column targetCode) {
     return Referrer.resourceEqualityFor(this, targetCode, targetId);
   }
- 
+
 }

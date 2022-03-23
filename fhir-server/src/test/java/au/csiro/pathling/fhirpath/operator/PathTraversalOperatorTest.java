@@ -313,7 +313,7 @@ class PathTraversalOperatorTest {
         .put(1, Collections.singletonList(MANY_EXT_ROW_2)).build();
 
     // Construct element dataset from the resource dataset so that the resource path can be used as 
-    // a foreign resource for this element path.
+    // the current resource for this element path.
     // Note: this resource path is not singular as this will be a base for elements.
 
     final Dataset<Row> resourceLikeDataset = new ResourceDatasetBuilder(spark)
@@ -351,7 +351,7 @@ class PathTraversalOperatorTest {
         .idAndEidAndValueColumns()
         .expression("code")
         .singular(false)
-        .foreignResource(baseResourcePath)
+        .currentResource(baseResourcePath)
         .buildDefined();
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();

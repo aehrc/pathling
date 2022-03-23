@@ -33,10 +33,10 @@ public class ExtensionPath extends ElementPath {
   protected ExtensionPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn,
       @Nonnull final Enumerations.FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 

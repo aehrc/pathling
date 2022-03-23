@@ -153,8 +153,10 @@ public class ResolveFunction implements NamedFunction {
     input.getContext().getNodeIdColumns()
         .putIfAbsent(expression, resourcePath.getElementColumn("id"));
 
-    return resourcePath.copy(expression, dataset, inputId, inputEid, resourcePath.getValueColumn(),
-        referencePath.isSingular(), referencePath.getThisColumn());
+    final ResourcePath result = resourcePath.copy(expression, dataset, inputId, inputEid,
+        resourcePath.getValueColumn(), referencePath.isSingular(), referencePath.getThisColumn());
+    result.setCurrentResource(resourcePath);
+    return result;
   }
 
 }

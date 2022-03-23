@@ -10,7 +10,12 @@ import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodingOrCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.collect_set;
+import static org.apache.spark.sql.functions.explode_outer;
+import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -117,7 +122,7 @@ public class SubsumesFunction implements NamedFunction {
     return ElementPath
         .build(expression, resultDataset, inputFhirPath.getIdColumn(),
             inputFhirPath.getEidColumn(), resultColumn, inputFhirPath.isSingular(),
-            inputFhirPath.getForeignResource(), inputFhirPath.getThisColumn(),
+            inputFhirPath.getCurrentResource(), inputFhirPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }
 

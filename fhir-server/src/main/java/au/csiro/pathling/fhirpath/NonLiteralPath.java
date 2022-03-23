@@ -10,7 +10,12 @@ import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.posexplode_outer;
+import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -59,12 +64,12 @@ public abstract class NonLiteralPath implements FhirPath {
   protected final boolean singular;
 
   /**
-   * Returns an expression representing a resource (other than the subject resource) that this path
-   * originated from. This is used in {@code reverseResolve} for joining between the subject
-   * resource and a reference within a foreign resource.
+   * Returns an expression representing the most current resource that has been navigated to within
+   * this path. This is used in {@code reverseResolve} for joining between the subject resource and
+   * a reference.
    */
   @Nonnull
-  protected Optional<ResourcePath> foreignResource;
+  protected Optional<ResourcePath> currentResource;
 
   /**
    * For paths that traverse from the {@code $this} keyword, this column refers to the values in the
@@ -78,7 +83,7 @@ public abstract class NonLiteralPath implements FhirPath {
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn) {
 
     final List<String> datasetColumns = Arrays.asList(dataset.columns());
@@ -97,7 +102,7 @@ public abstract class NonLiteralPath implements FhirPath {
     this.eidColumn = eidColumn;
     this.valueColumn = valueColumn;
     this.singular = singular;
-    this.foreignResource = foreignResource;
+    this.currentResource = currentResource;
     this.thisColumn = thisColumn;
   }
 
@@ -149,8 +154,8 @@ public abstract class NonLiteralPath implements FhirPath {
    */
   @Nonnull
   public Column getExtensionContainerColumn() {
-    final ResourcePath rootResource = checkPresent(getForeignResource(),
-        "Foreign resource missing in traversed path. This is a bug in foreign resource propagation");
+    final ResourcePath rootResource = checkPresent(getCurrentResource(),
+        "Current resource missing in traversed path. This is a bug in current resource propagation");
     return rootResource.getExtensionContainerColumn();
   }
 
@@ -294,9 +299,9 @@ public abstract class NonLiteralPath implements FhirPath {
       @Nonnull final Column arrayCol,
       @Nonnull final MutablePair<Column, Column> outValueAndEidCols) {
     final Column[] allColumns = Stream.concat(Arrays.stream(dataset.columns())
-        .map(dataset::col), Stream
-        .of(posexplode_outer(arrayCol)
-            .as(new String[]{"index", "value"})))
+            .map(dataset::col), Stream
+            .of(posexplode_outer(arrayCol)
+                .as(new String[]{"index", "value"})))
         .toArray(Column[]::new);
     final Dataset<Row> resultDataset = arrayDataset.select(allColumns);
     outValueAndEidCols.setLeft(resultDataset.col("value"));

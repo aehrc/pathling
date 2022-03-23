@@ -61,7 +61,7 @@ public interface ExtensionFixture {
   static Dataset<Row> toElementDataset(final Dataset<Row> resourceLikeDataset,
       final ResourcePath baseResourcePath) {
     // Construct element dataset from the resource dataset so that the resource path
-    // can be used as a foreign resource for this element path.
+    // can be used as the current resource for this element path.
 
     final IdAndValueColumns idAndValueColumns = SparkHelpers
         .getIdAndValueColumns(resourceLikeDataset, true);
