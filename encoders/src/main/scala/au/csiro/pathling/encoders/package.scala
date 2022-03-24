@@ -11,15 +11,14 @@
  *
  */
 
-package au.csiro.pathling.encoders1;
+package au.csiro.pathling
 
-import au.csiro.pathling.encoders.AbstractSchemaConverterTest;
-import au.csiro.pathling.encoders.SchemaConverter;
+import org.apache.spark.sql.catalyst.expressions.Expression
 
-public class SchemaConverter1Test extends AbstractSchemaConverterTest {
+package object encoders {
 
-  @Override
-  protected SchemaConverter createSchemaConverter(int maxNestingLevel) {
-    return new SchemaConverter1(FHIR_CONTEXT, DATA_TYPE_MAPPINGS, maxNestingLevel);
-  }
+  type Serializer = Expression => Expression
+
+  type ExpressionWithName = (String, Expression)
+
 }

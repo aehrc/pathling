@@ -11,14 +11,15 @@
  *
  */
 
-package au.csiro.pathling
+package au.csiro.pathling.encoders
 
-import org.apache.spark.sql.catalyst.expressions.Expression
+/**
+ * Helper class with constants related to FHIR extension support.
+ */
+object ExtensionSupport {
 
-package object encoders2 {
+  val FID_FIELD_NAME: String = "_fid"
+  val EXTENSIONS_FIELD_NAME: String = "_extension"
 
-  type Serializer = Expression => Expression
-
-  type ExpressionWithName = (String, Expression)
-
+  val EXTENSION_ELEMENT_NAME: String = "extension"
 }

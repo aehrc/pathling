@@ -16,7 +16,7 @@ package au.csiro.pathling.encoders.datatypes;
 import static org.junit.Assert.assertEquals;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.encoders2.ElementCtx;
+import au.csiro.pathling.schema.ElementCtx;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.context.RuntimeChildExtension;

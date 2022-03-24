@@ -11,13 +11,13 @@
  *
  */
 
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.encoders
 
+import au.csiro.pathling.encoders.DeserializerBuilderProcessor.setterFor
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
-import au.csiro.pathling.encoders._
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders2.DeserializerBuilderProcessor.setterFor
-import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
+import au.csiro.pathling.schema.SchemaVisitor.isCollection
+import au.csiro.pathling.schema.{ElementChildCtx, ElementCtx, SchemaVisitor}
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
 import org.apache.spark.sql.catalyst.expressions
@@ -36,8 +36,8 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
  * @param schemaConverter the schema converter to use.
  * @param parent          the processor for the parent composite.
  */
-private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Expression], schemaConverter: SchemaConverter2,
-                                                             parent: Option[DeserializerBuilderProcessor] = None)
+private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Expression], schemaConverter: SchemaConverter,
+                                                            parent: Option[DeserializerBuilderProcessor] = None)
   extends SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] with Deserializer {
 
   override def fhirContext: FhirContext = schemaConverter.fhirContext
@@ -90,7 +90,7 @@ private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Ex
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     // NOTE: We need to pass the parent's addToPath to custom encoder, so that it can
     // access multiple elements of the parent composite
-    customEncoder.map(_.customDeserializer2(parent.get.addToPath, isCollection(childDefinition)))
+    customEncoder.map(_.customDeserializer(parent.get.addToPath, isCollection(childDefinition)))
       .getOrElse(childDefinition match {
         case _: RuntimeChildExtension => Nil
         case _ => super.buildValue(childDefinition, elementDefinition, elementName)
@@ -236,7 +236,7 @@ private[encoders2] sealed class DeserializerBuilderProcessor(val path: Option[Ex
 
 }
 
-private[encoders2] object DeserializerBuilderProcessor extends Deserializer {
+private[encoders] object DeserializerBuilderProcessor extends Deserializer {
 
   /**
    * Returns the setter for the given field name.
@@ -266,7 +266,7 @@ private[encoders2] object DeserializerBuilderProcessor extends Deserializer {
  *
  * @param schemaConverter the schema converter to use.
  */
-class DeserializerBuilder2(schemaConverter: SchemaConverter2) {
+class DeserializerBuilder(schemaConverter: SchemaConverter) {
   /**
    * Creates the deserializer expression for given resource class.
    *
@@ -290,16 +290,16 @@ class DeserializerBuilder2(schemaConverter: SchemaConverter2) {
 }
 
 /**
- * Companion object for [[DeserializerBuilder2]]
+ * Companion object for [[DeserializerBuilder]]
  */
-object DeserializerBuilder2 {
+object DeserializerBuilder {
   /**
-   * Constructs the deserializer builder from a [[SchemaConverter2]].
+   * Constructs the deserializer builder from a [[SchemaConverter]].
    *
    * @param schemaConverter the schema converter to use.
    * @return the deserializer builder.
    */
-  def apply(schemaConverter: SchemaConverter2): DeserializerBuilder2 = {
-    new DeserializerBuilder2(schemaConverter)
+  def apply(schemaConverter: SchemaConverter): DeserializerBuilder = {
+    new DeserializerBuilder(schemaConverter)
   }
 }

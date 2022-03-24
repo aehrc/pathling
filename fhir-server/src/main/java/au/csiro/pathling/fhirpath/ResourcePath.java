@@ -12,7 +12,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
-import au.csiro.pathling.encoders2.ExtensionSupport;
+import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.Database;

@@ -14,8 +14,8 @@
 package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
+import au.csiro.pathling.encoders.ExpressionWithName
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.decimalType
-import au.csiro.pathling.encoders2.ExpressionWithName
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
 import org.apache.spark.sql.catalyst.util.ArrayData
@@ -37,14 +37,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
   val scaleFieldName: String = elementName + "_scale"
 
-  override val schema: Seq[StructField] = Seq(StructField(elementName, decimalType), StructField(scaleFieldName, IntegerType))
-
-  //noinspection ScalaDeprecation
-  override def customDecoderExpression(addToPath: String => Expression): Expression = {
-    decimalExpression(addToPath)
-  }
-
-  override def customDeserializer2(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName] = {
+  override def customDeserializer(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName] = {
 
     val deserializer = if (!isCollection) {
       decimalExpression(addToPath)
@@ -61,17 +54,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
     Seq((elementName, deserializer))
   }
 
-  //noinspection ScalaDeprecation
-  override def customSerializer(inputObject: Expression): List[Expression] = {
-    val valueExpression = StaticInvoke(classOf[Decimal],
-      decimalType,
-      "apply",
-      Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil)
-    val scale = scaleExpression(inputObject)
-    List(Literal(elementName), valueExpression, Literal(scaleFieldName), scale)
-  }
-
-  override def customSerializer2(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName] = {
+  override def customSerializer(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName] = {
     val valueExpression = evaluator(exp => StaticInvoke(classOf[Decimal],
       decimalType,
       "apply",
@@ -80,7 +63,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
     Seq((elementName, valueExpression), (scaleFieldName, scale))
   }
 
-  override def schema2(arrayEncoder: Option[DataType => DataType]): Seq[StructField] = {
+  override def schema(arrayEncoder: Option[DataType => DataType]): Seq[StructField] = {
     def encode(v: DataType): DataType = {
       arrayEncoder.map(_ (v)).getOrElse(v)
     }

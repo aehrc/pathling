@@ -11,10 +11,9 @@
  *
  */
 
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders.{EncoderConfig, UnsupportedResourceError}
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 
@@ -23,7 +22,7 @@ import scala.reflect.ClassTag
 /**
  * Spark Encoder for FHIR data models.
  */
-object EncoderBuilder2 {
+object EncoderBuilder {
 
   val UNSUPPORTED_RESOURCES: Set[String] = Set("Parameters",
     "Task", "StructureDefinition", "StructureMap", "Bundle")
@@ -53,10 +52,10 @@ object EncoderBuilder2 {
 
     val fhirClass = resourceDefinition
       .asInstanceOf[BaseRuntimeElementDefinition[_]].getImplementingClass
-    val schemaConverter = new SchemaConverter2(fhirContext, mappings,
+    val schemaConverter = new SchemaConverter(fhirContext, mappings,
       EncoderConfig(maxNestingLevel, openTypes, enableExtensions))
-    val serializerBuilder = SerializerBuilder2(schemaConverter)
-    val deserializerBuilder = DeserializerBuilder2(schemaConverter)
+    val serializerBuilder = SerializerBuilder(schemaConverter)
+    val deserializerBuilder = DeserializerBuilder(schemaConverter)
     new ExpressionEncoder(
       serializerBuilder.buildSerializer(resourceDefinition),
       deserializerBuilder.buildDeserializer(resourceDefinition),

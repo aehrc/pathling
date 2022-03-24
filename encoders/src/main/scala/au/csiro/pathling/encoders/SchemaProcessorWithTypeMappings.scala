@@ -11,11 +11,11 @@
  *
  */
 
-package au.csiro.pathling.encoders2
+package au.csiro.pathling.encoders
 
-import au.csiro.pathling.encoders.EncoderContext
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
-import au.csiro.pathling.encoders2.SchemaVisitor.isCollection
+import au.csiro.pathling.schema.ElementCtx
+import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
 import org.hl7.fhir.instance.model.api.IBase
 

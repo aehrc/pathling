@@ -13,18 +13,92 @@
 
 package au.csiro.pathling.encoders
 
-import ca.uhn.fhir.context.{FhirContext, RuntimeChildChoiceDefinition, RuntimeResourceDefinition}
-import org.apache.spark.sql.types.StructType
+import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
+import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.schema.SchemaVisitor
+import au.csiro.pathling.schema.SchemaVisitor.isCollection
+import ca.uhn.fhir.context._
+import org.apache.spark.sql.types._
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
 
-import scala.collection.convert.ImplicitConversions._
+/**
+ * The schema processor for converting FHIR schemas to SQL schemas.
+ *
+ * @param fhirContext      the FHIR context to use.
+ * @param dataTypeMappings data type mappings to use.
+ * @param config           encoder configuration to use.
+ */
+private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirContext,
+                                                 override val dataTypeMappings: DataTypeMappings,
+                                                 override val config: EncoderConfig) extends
+  SchemaProcessorWithTypeMappings[DataType, StructField] {
+
+  private def createExtensionField(definition: BaseRuntimeElementCompositeDefinition[_]): Seq[StructField] = {
+    // For resources, also add _extension.
+    definition match {
+      case _: RuntimeResourceDefinition if supportsExtensions =>
+        val extensionSchema = buildExtensionValue()
+        StructField(EXTENSIONS_FIELD_NAME, MapType(IntegerType, extensionSchema, valueContainsNull = false)) :: Nil
+      case _ => Nil
+    }
+  }
+
+  private def createFidField(): Seq[StructField] = {
+    // For each composite, add _fid.
+    if (generateFid) {
+      StructField(FID_FIELD_NAME, IntegerType) :: Nil
+    } else {
+      Nil
+    }
+  }
+
+  override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[StructField]): DataType = {
+    StructType(fields ++ createFidField() ++ createExtensionField(definition))
+  }
+
+  override def buildElement(elementName: String, elementValue: DataType, elementDefinition: BaseRuntimeElementDefinition[_]): StructField = {
+    StructField(elementName, elementValue)
+  }
+
+  override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): DataType = {
+    ArrayType(buildSimpleValue(childDefinition, elementDefinition, elementName))
+  }
+
+  override def buildPrimitiveDatatype(primitive: RuntimePrimitiveDatatypeDefinition): DataType = {
+    dataTypeMappings.primitiveToDataType(primitive)
+  }
+
+  override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DataType = DataTypes.StringType
+
+  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[StructField] = {
+    val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
+    customEncoder.map(_.schema(if (isCollection(childDefinition)) Some(ArrayType(_)) else None))
+      .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName))
+  }
+}
 
 /**
- * The converter from FHIR schemas to (spark) SQL schemas.
+ * The converter from FHIR schemas to SQL schemas.
+ *
+ * @param fhirContext      the FHIR context to use.
+ * @param dataTypeMappings the data type mappings to use.
+ * @param config           encoder configuration to use.
  */
-trait SchemaConverter {
+class SchemaConverter(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings, val config: EncoderConfig) extends EncoderContext {
 
-  def fhirContext: FhirContext
+  private[encoders] def compositeSchema(compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_ <: IBase]): DataType = {
+    SchemaVisitor.traverseComposite(compositeElementDefinition, new SchemaConverterProcessor(fhirContext, dataTypeMappings, config))
+  }
+
+  /**
+   * Returns the (spark) SQL schema that represents the given FHIR resource definition.
+   *
+   * @param resourceDefinition the FHIR resource definition.
+   * @return the schema as a Spark StructType
+   */
+  def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {
+    SchemaVisitor.traverseResource(resourceDefinition, new SchemaConverterProcessor(fhirContext, dataTypeMappings, config)).asInstanceOf[StructType]
+  }
 
   /**
    * Returns the spark (SQL) schema that represents the given FHIR resource class.
@@ -34,29 +108,5 @@ trait SchemaConverter {
    */
   def resourceSchema[T <: IBaseResource](resourceClass: Class[T]): StructType = {
     resourceSchema(fhirContext.getResourceDefinition(resourceClass))
-  }
-
-  /**
-   * Returns the (spark) SQL schema that represents the given FHIR resource definition.
-   *
-   * @param resourceDefinition the FHIR resource definition.
-   * @return the schema as a Spark StructType
-   */
-  def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType
-}
-
-
-/**
- * Companion object for [[SchemaConverter]]
- */
-object SchemaConverter {
-  /**
-   * Returns a deterministically ordered list of child types of choice.
-   *
-   * @param choice the choice child definition.
-   * @return ordered list of child types of choice.
-   */
-  def getOrderedListOfChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]] = {
-    choice.getValidChildTypes.toList.sortBy(_.getTypeName())
   }
 }
