@@ -148,6 +148,13 @@
       <version>${pathling.antlrVersion}</version>
     </dependency>
 
+    <!-- UCUM -->
+    <dependency>
+      <groupId>org.fhir</groupId>
+      <artifactId>ucum</artifactId>
+      <version>1.0.3</version>
+    </dependency>
+
     <!-- AWS SDK -->
     <dependency>
       <groupId>com.amazonaws</groupId>

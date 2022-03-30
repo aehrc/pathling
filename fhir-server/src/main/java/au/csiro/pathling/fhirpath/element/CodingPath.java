@@ -16,7 +16,7 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.sql.CodingToLiteral;
+import au.csiro.pathling.terminology.CodingToLiteral;
 import com.google.common.collect.ImmutableSet;
 import java.util.Arrays;
 import java.util.List;
@@ -104,11 +104,9 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
       @Nonnull final ComparisonOperation operation) {
     if (ComparisonOperation.EQUALS.equals(operation)) {
-      return Comparable
-          .buildComparison(source, codingEqual());
+      return Comparable.buildComparison(source, codingEqual());
     } else if (ComparisonOperation.NOT_EQUALS.equals(operation)) {
-      return Comparable
-          .buildComparison(source, codingNotEqual());
+      return Comparable.buildComparison(source, codingNotEqual());
     } else {
       throw new InvalidUserInputError(
           "Coding type does not support comparison operator: " + operation);

@@ -13,12 +13,16 @@ import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.ucum.QuantityEquality;
+import au.csiro.pathling.terminology.ucum.Ucum;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
+import org.fhir.ucum.UcumException;
+import org.fhir.ucum.UcumService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
@@ -37,8 +41,9 @@ class UnitTestDependencies {
   @Nonnull
   static SparkSession sparkSession(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
-      @Nonnull final Optional<SparkListener> sparkListener) {
-    return Spark.build(configuration, environment, sparkListener);
+      @Nonnull final Optional<SparkListener> sparkListener,
+      @Nonnull final QuantityEquality quantityEquality) {
+    return Spark.build(configuration, environment, sparkListener, quantityEquality);
   }
 
   @Bean
@@ -81,6 +86,13 @@ class UnitTestDependencies {
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory() {
     return new TestTerminologyServiceFactory();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  static UcumService ucumService() throws UcumException {
+    return Ucum.ucumEssenceService();
   }
 
 }

@@ -55,6 +55,7 @@ public class ElementDefinition {
           .put(FHIRDefinedType.TIME, TimePath.class)
           .put(FHIRDefinedType.CODING, CodingPath.class)
           .put(FHIRDefinedType.QUANTITY, QuantityPath.class)
+          .put(FHIRDefinedType.SIMPLEQUANTITY, QuantityPath.class)
           .put(FHIRDefinedType.REFERENCE, ReferencePath.class)
           .put(FHIRDefinedType.EXTENSION, ExtensionPath.class)
           .build();
