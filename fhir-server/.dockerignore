@@ -1,6 +1,0 @@
-*
-!Dockerfile
-!target/*.jar
-!run.sh
-target/*.jar.original
-target/*-docker-info.jar
