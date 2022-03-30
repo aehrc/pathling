@@ -16,9 +16,15 @@ You can learn more about how to use Pathling by reading the
 **Pathling is experimental software, use it at your own risk!** Take a look at the
 full description of the current set of [known issues](https://github.com/aehrc/pathling/issues).
 
-This repository is automatically built via [GitHub Actions](https://github.com/aehrc/pathling/actions), and Docker images can be found at [aehrc/pathling](https://hub.docker.com/r/aehrc/pathling) on Docker Hub.
+This repository is automatically built
+via [GitHub Actions](https://github.com/aehrc/pathling/actions), and Docker
+images can be found at [aehrc/pathling](https://hub.docker.com/r/aehrc/pathling)
+on Docker Hub.
 
-Pathling is copyright © 2018-2021, Commonwealth Scientific and Industrial Research Organisation
-(CSIRO) ABN 41 687 119 230. Licensed under the [CSIRO Open Source Software Licence Agreement](./LICENSE.md).
+Pathling is copyright © 2018-2022, Commonwealth Scientific and Industrial
+Research Organisation
+(CSIRO) ABN 41 687 119 230. Licensed under
+the [CSIRO Open Source Software Licence Agreement](./LICENSE.md).
 
-If you use this software in your research, please consider citing it using the "Cite this repository" link on the right.
+If you use this software in your research, please consider citing it using the "
+Cite this repository" link on the right.
