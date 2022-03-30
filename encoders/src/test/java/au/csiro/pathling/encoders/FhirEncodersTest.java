@@ -109,9 +109,8 @@ public class FhirEncodersTest {
         ENCODERS_L0.of(Observation.class));
     decodedObservation = observationsDataset.head();
 
-    // TODO: Uncomment if/when contained resources are supported.
     medDataset = spark.createDataset(ImmutableList.of(medRequest),
-        ENCODERS_L0.of(MedicationRequest.class/*, Medication.class, Provenance.class*/));
+        ENCODERS_L0.of(MedicationRequest.class));
     decodedMedRequest = medDataset.head();
 
     encounterDataset = spark

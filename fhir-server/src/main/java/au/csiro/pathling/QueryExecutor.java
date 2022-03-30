@@ -25,11 +25,7 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -120,17 +116,24 @@ public abstract class QueryExecutor {
   protected Dataset<Row> joinExpressionsAndFilters(final FhirPath inputContext,
       @Nonnull final Collection<FhirPath> expressions,
       @Nonnull final Collection<FhirPath> filters, @Nonnull final Column idColumn) {
-    final List<Dataset<Row>> datasets = expressions.stream()
-        .map(expression -> trimTrailingNulls(inputContext, idColumn, expression))
-        .collect(Collectors.toList());
-    datasets.addAll(filters.stream()
-        .map(FhirPath::getDataset)
-        .collect(Collectors.toList()));
 
-    return datasets.stream()
-        .reduce((a, b) -> join(a, idColumn, b, idColumn, JoinType.LEFT_OUTER))
-        .orElseThrow();
+    // We need to remove any trailing null values from non-empty collections, so that aggregations do
+    // not count non-empty collections in the empty collection grouping.
+    // We start from the inputContext's dataset and then outer join subsequent expressions datasets
+    // where the value is not null.
+    final Dataset<Row> combinedGroupings = expressions.stream()
+        .map(expr -> expr.getDataset().filter(expr.getValueColumn().isNotNull()))
+        // the use of RIGHT_OUTER join seems to be necessary to preserve the original
+        // id column in the result
+        .reduce(inputContext.getDataset(),
+            ((result, element) -> join(element, idColumn, result, idColumn, JoinType.RIGHT_OUTER)));
+
+    return filters.stream()
+        .map(FhirPath::getDataset)
+        .reduce(combinedGroupings,
+            ((result, element) -> join(element, idColumn, result, idColumn, JoinType.RIGHT_OUTER)));
   }
+
 
   /**
    * We need to remove any trailing null values from non-empty collections, so that aggregations do
