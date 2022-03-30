@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -7,24 +7,30 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.fixtures.PatientListBuilder.*;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_121503c8;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_2b36c1e2;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_7001ad9c;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_8ee183e2;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_9360820c;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_bbd33563;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_beff242e;
+import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWithValue;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
+import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
@@ -32,119 +38,46 @@ import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
-import au.csiro.pathling.io.ResourceReader;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.test.SharedMocks;
-import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
-import ca.uhn.fhir.context.FhirContext;
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.sql.Date;
-import java.util.Arrays;
-import java.util.HashSet;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import java.util.Collections;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author Piotr Szul
  */
-@SpringBootTest
-@Tag("UnitTest")
-@ExtendWith(TimingExtension.class)
-public class ParserTest {
+public class ParserTest extends AbstractParserTest {
 
   @Autowired
-  private SparkSession spark;
+  TerminologyService terminologyService;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirEncoders fhirEncoders;
 
-  @Autowired
-  private TerminologyService terminologyService;
-
-  @Autowired
-  private TerminologyServiceFactory terminologyServiceFactory;
-
-  private Parser parser;
-  private ResourceReader mockReader;
-
-  @BeforeEach
-  public void setUp() throws IOException {
-    SharedMocks.resetAll();
-    mockReader = mock(ResourceReader.class);
-    mockResourceReader(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
-        ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
-        ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION);
-
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .resourceReader(mockReader)
-        .inputContext(subjectResource)
-        .build();
-    parser = new Parser(parserContext);
-  }
-
-  private void mockResourceReader(final ResourceType... resourceTypes)
-      throws MalformedURLException {
-    for (final ResourceType resourceType : resourceTypes) {
-      final File parquetFile =
-          new File("src/test/resources/test-data/parquet/" + resourceType.toCode() + ".parquet");
-      final URL parquetUrl = parquetFile.getAbsoluteFile().toURI().toURL();
-      assertNotNull(parquetUrl);
-      final Dataset<Row> dataset = spark.read().parquet(parquetUrl.toString());
-      when(mockReader.read(resourceType)).thenReturn(dataset);
-      when(mockReader.getAvailableResourceTypes())
-          .thenReturn(new HashSet<>(Arrays.asList(resourceTypes)));
-    }
-  }
-
-  @SuppressWarnings("rawtypes")
-  private FhirPathAssertion assertThatResultOf(final String expression) {
+  FhirPathAssertion assertThatResultOf(final String expression) {
     return assertThat(parser.parse(expression));
   }
 
-  @SuppressWarnings({"rawtypes", "SameParameterValue"})
-  @Nonnull
-  private FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
-      @Nonnull final String expression) {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, mockReader, resourceType, resourceType.toCode(), true);
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .resourceReader(mockReader)
-        .inputContext(subjectResource)
-        .build();
-    final Parser resourceParser = new Parser(parserContext);
-    return assertThat(resourceParser.parse(expression));
+  @SuppressWarnings("SameParameterValue")
+  private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
+    return Assertions.assertThrows(errorType, () -> parser.parse(expression));
   }
 
   @Test
-  public void testContainsOperator() {
+  void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
@@ -159,7 +92,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testInOperator() {
+  void testInOperator() {
     assertThatResultOf("'Wuckert783' in name.family")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
@@ -174,7 +107,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCodingOperations() {
+  void testCodingOperations() {
     // Check that membership operators for codings use strict equality rather than equivalence.
     // test unversioned
     assertThatResultOf(
@@ -192,7 +125,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testDateTimeLiterals() {
+  void testDateTimeLiterals() {
     // Full DateTime.
     assertThatResultOf("@2015-02-04T14:34:28Z")
         .isLiteralPath(DateTimeLiteralPath.class)
@@ -207,7 +140,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testTimeLiterals() {
+  void testTimeLiterals() {
     // Full Time.
     assertThatResultOf("@T14:34:28")
         .isLiteralPath(TimeLiteralPath.class)
@@ -222,7 +155,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCodingLiterals() {
+  void testCodingLiterals() {
     // Coding literal form [system]|[code]
     final Coding expectedCoding =
         new Coding("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "S", null);
@@ -242,7 +175,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCountWithReverseResolve() {
+  void testCountWithReverseResolve() {
     assertThatResultOf("reverseResolve(Condition.subject).code.coding.count()")
         .isElementPath(IntegerPath.class)
         .isSingular()
@@ -256,7 +189,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCount() {
+  void testCount() {
     final DatasetBuilder expectedCountResult =
         allPatientsWithValue(spark, 1L)
             .changeValue(PATIENT_ID_9360820c, 2L);
@@ -278,7 +211,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testSubsumesAndSubsumedBy() {
+  void testSubsumesAndSubsumedBy() {
     when(terminologyService.getSubsumesRelation(any())).thenReturn(Relation.equality());
 
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
@@ -319,7 +252,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testWhereWithAggregateFunction() {
+  void testWhereWithAggregateFunction() {
     assertThatResultOf("where($this.name.given.first() = 'Karina848').gender")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, DataTypes.StringType, null)
@@ -331,7 +264,7 @@ public class ParserTest {
    * the "element" operand to the membership operator.
    */
   @Test
-  public void testWhereWithContainsOperator() {
+  void testWhereWithContainsOperator() {
     assertThatResultOf("where($this.name.given contains 'Karina848').gender")
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, (String) null)
@@ -339,7 +272,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testWhereWithSubsumes() {
+  void testWhereWithSubsumes() {
     // Not a real subsumption - just works for this use case.
     // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
     when(terminologyService.getSubsumesRelation(any()))
@@ -357,7 +290,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testWhereWithMemberOf() {
+  void testWhereWithMemberOf() {
     when(terminologyService.intersect(any(), any()))
         .thenReturn(setOfSimpleFrom(CD_SNOMED_403190006, CD_SNOMED_284551006));
 
@@ -375,7 +308,7 @@ public class ParserTest {
    * applied successfully following a nested where invocation.
    */
   @Test
-  public void testAggregationFollowingNestedWhere() {
+  void testAggregationFollowingNestedWhere() {
     assertThatResultOf(
         "where(name.where(use = 'official').first().given.first() in "
             + "name.where(use = 'maiden').first().given).gender")
@@ -384,7 +317,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testNestedWhereWithAggregationOnElement() {
+  void testNestedWhereWithAggregationOnElement() {
     assertThatResultOf(
         "name.where('Karina848' in where(use contains 'maiden').given).family")
         .selectOrderedResult()
@@ -392,13 +325,13 @@ public class ParserTest {
   }
 
   @Test
-  public void testBooleanOperatorWithTwoLiterals() {
+  void testBooleanOperatorWithTwoLiterals() {
     assertThatResultOf("true and false")
         .selectOrderedResult();
   }
 
   @Test
-  public void testQueryWithExternalConstantInWhere() {
+  void testQueryWithExternalConstantInWhere() {
     assertThatResultOf(
         "name.family.where($this = %resource.name.family.first())")
         .selectOrderedResult()
@@ -416,7 +349,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testExternalConstantHasCorrectExpression() {
+  void testExternalConstantHasCorrectExpression() {
     assertThatResultOf("%resource")
         .hasExpression("%resource");
 
@@ -425,7 +358,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testNotFunction() {
+  void testNotFunction() {
     assertThatResultOf(
         "(name.given contains 'Su690').not()")
         .selectOrderedResult()
@@ -450,6 +383,7 @@ public class ParserTest {
 
   @Test
   void testIfFunctionWithUntypedResourceResult() {
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.RELATEDPERSON);
     assertThatResultOf(
         "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
             + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender")
@@ -506,13 +440,13 @@ public class ParserTest {
         .thenReturn(conceptTranslator2);
 
     assertThatResultOf(ResourceType.CONDITION,
-        "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=2).code")
+        "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=13).code")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.csv");
   }
 
   @Test
-  public void testWithCodingLiteral() {
+  void testWithCodingLiteral() {
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S")
         .selectOrderedResult()
@@ -520,7 +454,7 @@ public class ParserTest {
   }
 
   @Test
-  public void testCombineOperator() {
+  void testCombineOperator() {
     assertThatResultOf("name.family combine name.given")
         .isElementPath(StringPath.class)
         .selectResult()
@@ -574,6 +508,8 @@ public class ParserTest {
 
   @Test
   void testCombineOperatorWithTwoUntypedResourcePaths() {
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP,
+        ResourceType.DEVICE, ResourceType.LOCATION);
     assertThatResultOf(
         "(reverseResolve(Condition.subject).subject.resolve() combine "
             + "reverseResolve(DiagnosticReport.subject).subject.resolve()).ofType(Patient)")
@@ -584,13 +520,183 @@ public class ParserTest {
   }
 
   @Test
-  public void parserErrorThrows() {
+  void testCombineOperatorWithCodingLiterals() {
+    assertThatResultOf(
+        "(http://snomed.info/sct|410429000||'Cardiac Arrest' combine "
+            + "http://snomed.info/sct|230690007||'Stroke').empty()")
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithCodingLiterals.csv");
+  }
+
+  @Test
+  void testBooleanOperatorWithLeftLiteral() {
+    assertThatResultOf("@1970-11-22 = birthDate")
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testBooleanOperatorWithLeftLiteral.csv");
+  }
+
+  @Test
+  void parserErrorThrows() {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-        () -> parser.parse(
-            "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'"));
+        "(reasonCode.coding.display contains 'Viral pneumonia') and (class.code = 'AMB'");
     assertEquals(
         "Error parsing FHIRPath expression (line: 1, position: 78): missing ')' at '<EOF>'",
         error.getMessage());
+  }
+
+
+  @Test
+  void testExtensionsOnResources() {
+    assertThatResultOf(
+        "extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionsOnResources.csv");
+  }
+
+  @Test
+  void testExtensionFunction() {
+    // This should be the same as: "extension.where($this.url='http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString"
+    assertThatResultOf(
+        "extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionFunction.csv");
+  }
+
+  @Test
+  void testExtensionsOnElements() {
+    assertThatResultOf(
+        "address.extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionsOnElements.csv");
+  }
+
+  @Test
+  void testNestedExtensions() {
+    assertThatResultOf(
+        "extension.extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testNestedExtensions.csv");
+  }
+
+  @Test
+  void testExtensionsCurrentResource() {
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
+    assertThatResultOf(ResourceType.CONDITION,
+        "subject.resolve().ofType(Patient).extension.url")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionsCurrentResource.csv");
+  }
+
+  @Test
+  void testComplexExtensionsOnComplexPath() {
+    assertThatResultOf(
+        "address.where($this.city = 'Boston')"
+            + ".extension('http://hl7.org/fhir/StructureDefinition/geolocation')"
+            + ".extension('latitude').valueDecimal")
+        .isElementPath(DecimalPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testComplexExtensionsOnComplexPath.csv");
+  }
+
+  @Test
+  void testExtensionFunctionInWhere() {
+    assertThatResultOf(
+        "address.where($this.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').valueDecimal contains 42.391383).city")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionFunctionInWhere.csv");
+  }
+
+
+  @Test
+  void testExtensionFunctionOnTranslateResult() {
+
+    // This is a special case as the codings here are created from the terminology server response
+    // using the hardcoded encoding core in CodingEncoding.
+
+    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
+        .toSystem("uuid:test-system")
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
+        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
+        .build();
+
+    // Create a mock terminology client.
+    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
+        .thenReturn(returnedConceptTranslator);
+
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').extension('uuid:any').url")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testExtensionFunctionOnTranslateResult.csv");
+  }
+
+  @Test
+  void testTraversalIntoMissingOpenType() {
+    final String expression = "extension('http://hl7.org/fhir/R4/extension-patient-birthplace.html').valueOid";
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        expression);
+    assertEquals("No such child: " + expression, error.getMessage());
+  }
+
+  @Test
+  void testReverseResolveFollowingMonomorphicResolve() {
+    final ResourcePath subjectResource = ResourcePath
+        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
+            true);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .terminologyClientFactory(terminologyServiceFactory)
+        .database(database)
+        .inputContext(subjectResource)
+        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
+        .build();
+    parser = new Parser(parserContext);
+
+    assertThatResultOf(
+        "serviceProvider.resolve().reverseResolve(Encounter.serviceProvider).id")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingMonomorphicResolve.csv");
+  }
+
+  @Test
+  void testReverseResolveFollowingPolymorphicResolve() {
+    final ResourcePath subjectResource = ResourcePath
+        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
+            true);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .terminologyClientFactory(terminologyServiceFactory)
+        .database(database)
+        .inputContext(subjectResource)
+        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
+        .build();
+    parser = new Parser(parserContext);
+
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
+
+    assertThatResultOf(
+        "subject.resolve().ofType(Patient).reverseResolve(Encounter.subject).id "
+            + "contains '2aff9edd-def2-487a-b435-a162e11a303c'")
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingPolymorphicResolve.csv");
+  }
+
+  @Test
+  void testReverseResolveFollowingReverseResolve() {
+    assertThatResultOf(
+        "reverseResolve(Encounter.subject).reverseResolve(CarePlan.encounter).id")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingReverseResolve.csv");
   }
 
 }

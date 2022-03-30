@@ -5,19 +5,21 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 package au.csiro.pathling.encoders.datatypes
 
-import ca.uhn.fhir.context.{BaseRuntimeChildDefinition, BaseRuntimeElementCompositeDefinition, BaseRuntimeElementDefinition, RuntimePrimitiveDatatypeDefinition}
+import au.csiro.pathling.encoders.ExpressionWithName
+import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.apache.spark.unsafe.types.UTF8String
-import org.hl7.fhir.instance.model.api.{IBaseDatatype, IPrimitiveType}
+import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 
 /**
  * Interface for mapping FHIR datatypes to Spark datatypes.
@@ -67,14 +69,15 @@ trait DataTypeMappings {
    *
    * @param inputObject an expression referring to the composite object to encode
    * @param definition  the composite definition to encode
-   * @return an optional expression sequence if the composit is overridden.
+   * @return an optional sequence of named expressions if the composite is overridden.
    */
   def overrideCompositeExpression(inputObject: Expression,
-                                  definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[Expression]]
+                                  definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]]
+
 
   /**
    * Returns true if the given field should be skipped during encoding and decoding, false otherwise.
-   * This allows the data type to explicitily short circuit a handful of recursive data model
+   * This allows the data type to explicitly short circuit a handful of recursive data model
    * definitions that cannot be encoded in Spark.
    */
   def skipField(compositeDefinition: BaseRuntimeElementCompositeDefinition[_],
@@ -95,10 +98,19 @@ trait DataTypeMappings {
   /**
    * Returns a specialized custom coder for this child definition.
    *
-   * @param elementDefinition
-   * @param elementName
+   * @param elementDefinition the element definition
+   * @param elementName       the name of the element
    * @return a specialized custom coder
    */
 
   def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Option[CustomCoder] = None
+
+
+  /**
+   * Returns the list of valid child types of given choice.
+   *
+   * @param choice the choice child definition.
+   * @return list of valid types for this
+   */
+  def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]]
 }

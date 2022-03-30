@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -110,10 +110,8 @@ public abstract class AggregateFunction {
     // Use an ID column from any of the inputs.
     final Column idColumn = inputs.stream().findFirst().get().getIdColumn();
 
-    // Determine the group by columns based on whether we are in the context of a grouping, or an
-    // individual resource.
-    final List<Column> groupByList = parserContext.getGroupingColumns()
-        .orElse(Collections.singletonList(idColumn));
+    // Get the grouping columns from the parser context.
+    final List<Column> groupByList = parserContext.getGroupingColumns();
 
     // Drop the requested grouping columns that are not present in the provided dataset.
     // This handles the situation where `%resource` is used in `where()`.
@@ -125,18 +123,12 @@ public abstract class AggregateFunction {
         .filter(c -> existingColumns.contains(c.toString()))
         .toArray(Column[]::new);
 
-    // The selection will be either:
-    // (1) the first function applied to each column except the resource ID, plus the value column
-    //     (in the case of individual resource context), or;
-    // (2) the first function applied to each column except the grouping columns, plus the value
-    //     column (in the case of a grouping context).
-    final Predicate<Column> resourceFilter = column -> !column.equals(idColumn);
+    // The selection will be the first function applied to each column except the grouping columns, 
+    // plus the value column.
     final Predicate<Column> groupingFilter = column -> !groupByList.contains(column);
     final List<Column> selection = Stream.of(dataset.columns())
         .map(functions::col)
-        .filter(parserContext.getGroupingColumns().isEmpty()
-                ? resourceFilter
-                : groupingFilter)
+        .filter(groupingFilter)
         .map(column -> first(column, true).alias(column.toString()))
         .collect(Collectors.toList());
     selection.add(valueColumn.alias("value"));
@@ -155,6 +147,9 @@ public abstract class AggregateFunction {
         .groupBy(groupBy)
         .agg(firstSelection, remainingSelection);
     final Column finalValueColumn = col("value");
+
+    // Clear out the node ID columns in the parser context - as they are no longer valid for joining.
+    parserContext.getNodeIdColumns().clear();
 
     // empty eid column as the result is singular
     return resultPathFactory

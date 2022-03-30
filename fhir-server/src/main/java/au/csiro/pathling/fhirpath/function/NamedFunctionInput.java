@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -11,6 +11,7 @@ import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 
@@ -23,7 +24,7 @@ import lombok.Getter;
 public class NamedFunctionInput extends FunctionInput {
 
   /**
-   * An expression representing the input to the function, i.e. the expression on the left hand side
+   * An expression representing the input to the function, i.e. the expression on the left-hand side
    * of the dot preceding the function invocation.
    */
   @Nonnull
@@ -37,8 +38,31 @@ public class NamedFunctionInput extends FunctionInput {
   private final List<FhirPath> arguments;
 
   /**
+   * Override expression to use instead of the default one.
+   */
+  @Nonnull
+  private final Optional<String> overrideExpression;
+
+  /**
    * @param context The {@link ParserContext} that the function should be executed within
-   * @param input The {@link NonLiteralPath} representing the expression on the left hand side of
+   * @param input The {@link NonLiteralPath} representing the expression on the left-hand side of
+   * the function invocation
+   * @param arguments A list of {@link FhirPath} objects representing the arguments passed to the
+   * function within the parentheses
+   * @param overrideExpression Override expression to use instead of the default one.
+   */
+  public NamedFunctionInput(@Nonnull final ParserContext context,
+      @Nonnull final NonLiteralPath input, @Nonnull final List<FhirPath> arguments,
+      @Nonnull final String overrideExpression) {
+    super(context);
+    this.input = input;
+    this.arguments = arguments;
+    this.overrideExpression = Optional.of(overrideExpression);
+  }
+
+  /**
+   * @param context The {@link ParserContext} that the function should be executed within
+   * @param input The {@link NonLiteralPath} representing the expression on the left-hand side of
    * the function invocation
    * @param arguments A list of {@link FhirPath} objects representing the arguments passed to the
    * function within the parentheses
@@ -48,6 +72,7 @@ public class NamedFunctionInput extends FunctionInput {
     super(context);
     this.input = input;
     this.arguments = arguments;
+    this.overrideExpression = Optional.empty();
   }
 
 }

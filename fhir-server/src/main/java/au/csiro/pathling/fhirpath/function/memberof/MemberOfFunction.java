@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -103,7 +103,7 @@ public class MemberOfFunction implements NamedFunction {
 
     return ElementPath
         .build(expression, resultDataset, idColumn, inputPath.getEidColumn(), resultColumn,
-            inputPath.isSingular(), inputPath.getForeignResource(), inputPath.getThisColumn(),
+            inputPath.isSingular(), inputPath.getCurrentResource(), inputPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }
 

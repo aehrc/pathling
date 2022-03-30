@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -31,7 +32,6 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -46,26 +46,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 @TestInstance(Lifecycle.PER_CLASS)
 @Tag("UnitTest")
-public class MathOperatorTest {
+class MathOperatorTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private static final List<String> EXPRESSION_TYPES = Arrays
+  static final List<String> EXPRESSION_TYPES = Arrays
       .asList("Integer", "Decimal", "Integer (literal)", "Decimal (literal)");
-  private static final String ID_ALIAS = "_abc123";
-  private ParserContext parserContext;
-
-  @BeforeEach
-  void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
-  }
+  static final String ID_ALIAS = "_abc123";
 
   @Value
-  private static class TestParameters {
+  static class TestParameters {
 
     @Nonnull
     String name;
@@ -75,6 +69,9 @@ public class MathOperatorTest {
 
     @Nonnull
     FhirPath right;
+
+    @Nonnull
+    ParserContext context;
 
     boolean leftOperandIsInteger;
 
@@ -89,7 +86,7 @@ public class MathOperatorTest {
 
   }
 
-  public Stream<TestParameters> parameters() {
+  Stream<TestParameters> parameters() {
     final Collection<TestParameters> parameters = new ArrayList<>();
     for (final String leftType : EXPRESSION_TYPES) {
       for (final String rightType : EXPRESSION_TYPES) {
@@ -101,15 +98,17 @@ public class MathOperatorTest {
             leftType.equals("Integer (literal)") || leftType.equals("Decimal (literal)");
         final boolean rightTypeIsLiteral =
             rightType.equals("Integer (literal)") || rightType.equals("Decimal (literal)");
+        final ParserContext context = new ParserContextBuilder(spark, fhirContext).groupingColumns(
+            Collections.singletonList(left.getIdColumn())).build();
         parameters.add(
-            new TestParameters(leftType + ", " + rightType, left, right, leftOperandIsInteger,
-                leftTypeIsLiteral, rightTypeIsLiteral));
+            new TestParameters(leftType + ", " + rightType, left, right, context,
+                leftOperandIsInteger, leftTypeIsLiteral, rightTypeIsLiteral));
       }
     }
     return parameters.stream();
   }
 
-  private FhirPath getExpressionForType(final String expressionType,
+  FhirPath getExpressionForType(final String expressionType,
       final boolean leftOperand) {
     final Dataset<Row> literalContextDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
@@ -139,7 +138,7 @@ public class MathOperatorTest {
     }
   }
 
-  private FhirPath buildIntegerExpression(final boolean leftOperand) {
+  FhirPath buildIntegerExpression(final boolean leftOperand) {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.IntegerType)
@@ -162,7 +161,7 @@ public class MathOperatorTest {
         .build();
   }
 
-  private FhirPath buildDecimalExpression(final boolean leftOperand) {
+  FhirPath buildDecimalExpression(final boolean leftOperand) {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.createDecimalType())
@@ -187,8 +186,8 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void addition(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+  void addition(final TestParameters parameters) {
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("+");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -214,8 +213,8 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void subtraction(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+  void subtraction(final TestParameters parameters) {
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("-");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -241,8 +240,8 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void multiplication(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+  void multiplication(final TestParameters parameters) {
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("*");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -268,8 +267,8 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void division(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+  void division(final TestParameters parameters) {
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("/");
     final FhirPath result = comparisonOperator.invoke(input);
@@ -293,8 +292,8 @@ public class MathOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void modulus(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parserContext, parameters.getLeft(),
+  void modulus(final TestParameters parameters) {
+    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
         parameters.getRight());
     final Operator comparisonOperator = Operator.getInstance("mod");
     final FhirPath result = comparisonOperator.invoke(input);

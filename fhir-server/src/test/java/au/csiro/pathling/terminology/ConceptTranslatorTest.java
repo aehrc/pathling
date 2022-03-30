@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -20,16 +20,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 @Tag("UnitTest")
-public class ConceptTranslatorTest {
+class ConceptTranslatorTest {
 
-
-  private static final SimpleCoding SIMPLE_CODING_1 = new SimpleCoding("uuid:system1", "code1");
-  private static final SimpleCoding SIMPLE_CODING_2 = new SimpleCoding("uuid:system1", "code2");
-  private static final SimpleCoding SIMPLE_CODING_3 = new SimpleCoding("uuid:system2", "code2",
+  static final SimpleCoding SIMPLE_CODING_1 = new SimpleCoding("uuid:system1", "code1");
+  static final SimpleCoding SIMPLE_CODING_2 = new SimpleCoding("uuid:system1", "code2");
+  static final SimpleCoding SIMPLE_CODING_3 = new SimpleCoding("uuid:system2", "code2",
       "12");
 
   @Test
-  public void testEmptyTranslation() {
+  void testEmptyTranslation() {
     final ConceptTranslator emptyConceptTranslator = ConceptTranslatorBuilder.empty().build();
     assertEquals(Collections.emptyList(),
         emptyConceptTranslator.translate(null));
@@ -41,7 +40,7 @@ public class ConceptTranslatorTest {
   }
 
   @Test
-  public void testNonEmptyTranslations() {
+  void testNonEmptyTranslations() {
     final ConceptTranslator testConceptTranslator = ConceptTranslatorBuilder
         .toSystem("uuid:system-dest")
         .putTimes(SIMPLE_CODING_1, 2)
@@ -58,7 +57,7 @@ public class ConceptTranslatorTest {
             .translate(Arrays.asList(SIMPLE_CODING_2, SIMPLE_CODING_3, SIMPLE_CODING_2)));
 
     assertEquals(Arrays.asList(ImmutableCoding.of("uuid:system-dest", "code1-0", "Display-0"),
-        ImmutableCoding.of("uuid:system-dest", "code1-1", "Display-1")),
+            ImmutableCoding.of("uuid:system-dest", "code1-1", "Display-1")),
         testConceptTranslator
             .translate(Arrays.asList(SIMPLE_CODING_1, SIMPLE_CODING_3, SIMPLE_CODING_1)).stream()
             .map(

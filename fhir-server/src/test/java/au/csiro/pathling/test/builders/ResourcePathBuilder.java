@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -14,7 +14,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -25,7 +25,11 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -37,7 +41,7 @@ public class ResourcePathBuilder {
   private FhirContext fhirContext;
 
   @Nonnull
-  private ResourceReader resourceReader;
+  private Database database;
 
   @Nonnull
   private ResourceType resourceType;
@@ -64,9 +68,9 @@ public class ResourcePathBuilder {
 
   public ResourcePathBuilder(@Nonnull final SparkSession spark) {
     fhirContext = mock(FhirContext.class);
-    resourceReader = mock(ResourceReader.class);
+    database = mock(Database.class);
     dataset = PatientResourceRowFixture.createCompleteDataset(spark);
-    when(resourceReader.read(any(ResourceType.class))).thenReturn(dataset);
+    when(database.read(any(ResourceType.class))).thenReturn(dataset);
     resourceType = ResourceType.PATIENT;
     expression = "Patient";
     idColumn = dataset.col(dataset.columns()[0]);
@@ -97,8 +101,8 @@ public class ResourcePathBuilder {
   }
 
   @Nonnull
-  public ResourcePathBuilder resourceReader(final ResourceReader resourceReader) {
-    this.resourceReader = resourceReader;
+  public ResourcePathBuilder database(final Database database) {
+    this.database = database;
     return this;
   }
 
@@ -146,7 +150,7 @@ public class ResourcePathBuilder {
 
   @Nonnull
   public ResourcePath build() {
-    return ResourcePath.build(fhirContext, resourceReader, resourceType, expression, singular);
+    return ResourcePath.build(fhirContext, database, resourceType, expression, singular);
   }
 
   @Nonnull

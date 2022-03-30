@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -34,9 +34,9 @@ public class PathTraversalInput extends FunctionInput {
   private final String right;
 
   /**
-   * @param context The {@link ParserContext} that the operator should be executed within
-   * @param left The {@link FhirPath} representing the left operand
-   * @param right The FHIRPath expression on the right hand side of the operator
+   * @param context the {@link ParserContext} that the operator should be executed within
+   * @param left the {@link FhirPath} representing the left operand
+   * @param right the FHIRPath expression on the right-hand side of the operator
    */
   public PathTraversalInput(@Nonnull final ParserContext context, @Nonnull final FhirPath left,
       @Nonnull final String right) {

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -17,7 +17,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
@@ -40,7 +45,11 @@ import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.ImmutableSet;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
@@ -64,27 +73,27 @@ import org.springframework.boot.test.context.SpringBootTest;
 class TranslateFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private static final String SOURCE_SYSTEM_URI = "uuid:source";
-  private static final String DEST_SYSTEM_URI = "uuid:dest";
+  static final String SOURCE_SYSTEM_URI = "uuid:source";
+  static final String DEST_SYSTEM_URI = "uuid:dest";
 
-  private static final String CONCEPT_MAP1_URI = "http://snomed.info/sct?fhir_cm=100";
-  private static final String CONCEPT_MAP2_URI = "http://snomed.info/sct?fhir_cm=200";
+  static final String CONCEPT_MAP1_URI = "http://snomed.info/sct?fhir_cm=100";
+  static final String CONCEPT_MAP2_URI = "http://snomed.info/sct?fhir_cm=200";
 
 
-  private static final Coding CODING_1 = new Coding(SOURCE_SYSTEM_URI, "AMB", "ambulatory");
-  private static final Coding CODING_2 = new Coding(SOURCE_SYSTEM_URI, "EMER", null);
-  private static final Coding CODING_3 = new Coding(SOURCE_SYSTEM_URI, "IMP",
+  static final Coding CODING_1 = new Coding(SOURCE_SYSTEM_URI, "AMB", "ambulatory");
+  static final Coding CODING_2 = new Coding(SOURCE_SYSTEM_URI, "EMER", null);
+  static final Coding CODING_3 = new Coding(SOURCE_SYSTEM_URI, "IMP",
       "inpatient encounter");
-  private static final Coding CODING_4 = new Coding(SOURCE_SYSTEM_URI, "OTHER", null);
-  private static final Coding CODING_5 = new Coding(SOURCE_SYSTEM_URI, "ACUTE", "inpatient acute");
+  static final Coding CODING_4 = new Coding(SOURCE_SYSTEM_URI, "OTHER", null);
+  static final Coding CODING_5 = new Coding(SOURCE_SYSTEM_URI, "ACUTE", "inpatient acute");
 
-  private static final Coding TRANSLATED_1 = new Coding(DEST_SYSTEM_URI, "TEST1", "Test1");
-  private static final Coding TRANSLATED_2 = new Coding(DEST_SYSTEM_URI, "TEST2", "Test2");
+  static final Coding TRANSLATED_1 = new Coding(DEST_SYSTEM_URI, "TEST1", "Test1");
+  static final Coding TRANSLATED_2 = new Coding(DEST_SYSTEM_URI, "TEST2", "Test2");
 
 
   @Autowired
@@ -94,12 +103,12 @@ class TranslateFunctionTest {
   TerminologyService terminologyService;
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     reset(terminologyService);
   }
 
   @Test
-  public void translateCodingWithDefaultArguments() {
+  void translateCodingWithDefaultArguments() {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "class");
@@ -215,7 +224,7 @@ class TranslateFunctionTest {
   }
 
   @Test
-  public void translateCodeableConceptWithNonDefaultArguments() {
+  void translateCodeableConceptWithNonDefaultArguments() {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "type");
@@ -352,7 +361,7 @@ class TranslateFunctionTest {
 
 
   @Test
-  public void throwsErrorIfInputTypeIsUnsupported() {
+  void throwsErrorIfInputTypeIsUnsupported() {
     final FhirPath mockContext = new ElementPathBuilder(spark).build();
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
@@ -374,7 +383,7 @@ class TranslateFunctionTest {
   }
 
 
-  private void assertThrowsErrorForArguments(@Nonnull final String expectedError,
+  void assertThrowsErrorForArguments(@Nonnull final String expectedError,
       @Nonnull final Function<ElementPath, List<FhirPath>> argsFactory) {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
@@ -402,21 +411,21 @@ class TranslateFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfNoArguments() {
+  void throwsErrorIfNoArguments() {
     assertThrowsErrorForArguments(
         "translate function accepts one required and two optional arguments",
         input -> Collections.emptyList());
   }
 
   @Test
-  public void throwsErrorIfFirstArgumentIsNotString() {
+  void throwsErrorIfFirstArgumentIsNotString() {
     assertThrowsErrorForArguments("Function `translate` expects `String literal` as argument 1",
         input -> Collections.singletonList(
             IntegerLiteralPath.fromString("4", input)));
   }
 
   @Test
-  public void throwsErrorIfSecondArgumentIsNotBoolean() {
+  void throwsErrorIfSecondArgumentIsNotBoolean() {
     assertThrowsErrorForArguments("Function `translate` expects `Boolean literal` as argument 2",
         input -> Arrays.asList(
             StringLiteralPath.fromString("'foo'", input),
@@ -425,7 +434,7 @@ class TranslateFunctionTest {
 
 
   @Test
-  public void throwsErrorIfThirdArgumentIsNotString() {
+  void throwsErrorIfThirdArgumentIsNotString() {
     assertThrowsErrorForArguments("Function `translate` expects `String literal` as argument 3",
         input -> Arrays.asList(
             StringLiteralPath.fromString("'foo'", input),
@@ -435,7 +444,7 @@ class TranslateFunctionTest {
 
 
   @Test
-  public void throwsErrorIfTooManyArguments() {
+  void throwsErrorIfTooManyArguments() {
     assertThrowsErrorForArguments(
         "translate function accepts one required and two optional arguments",
         input -> Arrays.asList(
@@ -447,7 +456,7 @@ class TranslateFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfCannotParseEquivalences() {
+  void throwsErrorIfCannotParseEquivalences() {
     assertThrowsErrorForArguments(
         "Unknown ConceptMapEquivalence code 'not-an-equivalence'",
         input -> Arrays.asList(
@@ -458,7 +467,7 @@ class TranslateFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfTerminologyServiceNotConfigured() {
+  void throwsErrorIfTerminologyServiceNotConfigured() {
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();

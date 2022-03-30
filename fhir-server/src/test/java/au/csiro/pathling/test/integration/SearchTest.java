@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -8,7 +8,7 @@ package au.csiro.pathling.test.integration;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -22,29 +22,27 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
-@TestPropertySource(properties = {"pathling.caching.enabled=false"})
-public class SearchTest extends IntegrationTest {
+class SearchTest extends IntegrationTest {
 
   @Autowired
   SparkSession spark;
 
   @MockBean
-  ResourceReader resourceReader;
+  Database database;
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @Test
   void searchWithNoFilter() throws URISyntaxException {
-    TestHelpers.mockResourceReader(resourceReader, spark, ResourceType.PATIENT);
+    TestHelpers.mockResource(database, spark, ResourceType.PATIENT);
     final String uri = "http://localhost:" + port + "/fhir/Patient?_summary=false";
     final ResponseEntity<String> response = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);

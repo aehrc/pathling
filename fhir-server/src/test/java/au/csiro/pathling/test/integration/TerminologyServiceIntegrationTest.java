@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -7,7 +7,21 @@
 package au.csiro.pathling.test.integration;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertMatches;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.*;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.ALL_EQUIVALENCES;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_AST_VIC;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_107963000;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_720471000168102;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_72940011000036107;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_107963000;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_403190006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_63816008;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.simpleOf;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedSimple;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.testSimple;
 import static com.github.tomakehurst.wiremock.client.WireMock.proxyAllTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,21 +64,21 @@ import org.springframework.test.context.TestPropertySource;
 class TerminologyServiceIntegrationTest extends WireMockTest {
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Value("${pathling.test.recording.terminologyServerUrl}")
-  private String recordingTxServerUrl;
+  String recordingTxServerUrl;
 
   @Value("${pathling.terminology.serverUrl}")
-  private String terminologyServerUrl;
+  String terminologyServerUrl;
 
-  private TerminologyService terminologyService;
+  TerminologyService terminologyService;
 
-  private UUIDFactory mockUUIDFactory;
+  UUIDFactory mockUUIDFactory;
 
   @BeforeEach
   @Override
-  public void setUp() {
+  void setUp() {
     super.setUp();
     if (isRecordMode()) {
       wireMockServer.resetAll();
@@ -82,7 +96,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
   @AfterEach
   @Override
-  public void tearDown() {
+  void tearDown() {
     if (isRecordMode()) {
       log.warn("Recording snapshots to: {}", wireMockServer.getOptions().filesRoot());
       wireMockServer
@@ -92,7 +106,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   }
 
   @Test
-  public void testCorrectlyTranslatesKnownAndUnknownCodes() {
+  void testCorrectlyTranslatesKnownAndUnknownCodes() {
 
     final ConceptTranslator actualTranslation = terminologyService.translate(
         Arrays.asList(simpleOf(CD_SNOMED_72940011000036107), snomedSimple("444814009")),
@@ -105,7 +119,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   }
 
   @Test
-  public void testCorrectlyTranslatesInReverse() {
+  void testCorrectlyTranslatesInReverse() {
 
     final ConceptTranslator actualTranslation = terminologyService.translate(
         Arrays.asList(simpleOf(CD_SNOMED_720471000168102), snomedSimple("444814009")),
@@ -122,7 +136,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   //  codings.
   @Test
   @Disabled
-  public void testIgnoresUnknownSystems() {
+  void testIgnoresUnknownSystems() {
 
     final ConceptTranslator actualTranslation = terminologyService.translate(
         Arrays.asList(testSimple("72940011000036107"), testSimple("444814009")),
@@ -133,7 +147,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   }
 
   @Test
-  public void testFailsForUnknownConceptMap() {
+  void testFailsForUnknownConceptMap() {
 
     final ResourceNotFoundException error = assertThrows(ResourceNotFoundException.class,
         () -> terminologyService.translate(
@@ -149,7 +163,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   }
 
   @Test
-  public void testCorrectlyIntersectKnownAndUnknownSystems() {
+  void testCorrectlyIntersectKnownAndUnknownSystems() {
     final Set<SimpleCoding> expansion = terminologyService
         .intersect("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             setOfSimpleFrom(CD_SNOMED_284551006, CD_SNOMED_VER_403190006,
@@ -166,7 +180,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
 
   @Test
-  public void testCorrectlyBuildsClosureKnownAndUnknownSystems() {
+  void testCorrectlyBuildsClosureKnownAndUnknownSystems() {
 
     when(mockUUIDFactory.nextUUID())
         .thenReturn(UUID.fromString("5d1b976d-c50c-445a-8030-64074b83f355"));

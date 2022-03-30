@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -9,12 +9,12 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
-import static au.csiro.pathling.test.helpers.TestHelpers.mockAvailableResourceTypes;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -24,12 +24,13 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
+import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import java.util.Optional;
@@ -55,20 +56,23 @@ import org.springframework.boot.test.context.SpringBootTest;
 class ResolveFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ResourceReader mockReader;
+  @Autowired
+  FhirEncoders fhirEncoders;
+
+  Database database;
 
   @BeforeEach
   void setUp() {
-    mockReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
-  public void simpleResolve() {
+  void simpleResolve() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "episodeOfCare");
     assertTrue(optionalDefinition.isPresent());
@@ -102,7 +106,7 @@ class ResolveFunctionTest {
         .withRow("episodeofcare-2", "waitlist")
         .withRow("episodeofcare-3", "active")
         .build();
-    when(mockReader.read(ResourceType.EPISODEOFCARE)).thenReturn(episodeOfCareDataset);
+    when(database.read(ResourceType.EPISODEOFCARE)).thenReturn(episodeOfCareDataset);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
     final FhirPath result = invokeResolve(resolveInput);
@@ -127,7 +131,7 @@ class ResolveFunctionTest {
   }
 
   @Test
-  public void polymorphicResolve() {
+  void polymorphicResolve() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "subject");
     assertTrue(optionalDefinition.isPresent());
@@ -158,7 +162,7 @@ class ResolveFunctionTest {
         .withRow("patient-2", "female", false)
         .withRow("patient-3", "male", true)
         .build();
-    when(mockReader.read(ResourceType.PATIENT))
+    when(database.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
 
     final Dataset<Row> groupDataset = new ResourceDatasetBuilder(spark)
@@ -167,10 +171,8 @@ class ResolveFunctionTest {
         .withColumn(DataTypes.BooleanType)
         .withRow("group-1", "Some group", true)
         .build();
-    when(mockReader.read(ResourceType.GROUP))
+    when(database.read(ResourceType.GROUP))
         .thenReturn(groupDataset);
-
-    mockAvailableResourceTypes(mockReader, ResourceType.PATIENT, ResourceType.GROUP);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
     final FhirPath result = invokeResolve(resolveInput);
@@ -196,12 +198,13 @@ class ResolveFunctionTest {
   }
 
   @Test
-  public void polymorphicResolveAnyType() {
+  void polymorphicResolveAnyType() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Condition", "evidence")
         .flatMap(child -> child.getChildElement("detail"));
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
+    TestHelpers.mockAllEmptyResources(database, spark, fhirEncoders);
 
     final Dataset<Row> referenceDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -225,7 +228,7 @@ class ResolveFunctionTest {
         .withColumn(DataTypes.StringType)
         .withRow("observation-1", "registered")
         .build();
-    when(mockReader.read(ResourceType.OBSERVATION))
+    when(database.read(ResourceType.OBSERVATION))
         .thenReturn(observationDataset);
 
     final Dataset<Row> clinicalImpressionDataset = new ResourceDatasetBuilder(spark)
@@ -233,11 +236,8 @@ class ResolveFunctionTest {
         .withColumn(DataTypes.StringType)
         .withRow("clinicalimpression-1", "in-progress")
         .build();
-    when(mockReader.read(ResourceType.CLINICALIMPRESSION))
+    when(database.read(ResourceType.CLINICALIMPRESSION))
         .thenReturn(clinicalImpressionDataset);
-
-    mockAvailableResourceTypes(mockReader, ResourceType.OBSERVATION,
-        ResourceType.CLINICALIMPRESSION);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
     final FhirPath result = invokeResolve(resolveInput);
@@ -263,7 +263,7 @@ class ResolveFunctionTest {
 
 
   @Test
-  public void throwExceptionWhenInputNotReference() {
+  void throwExceptionWhenInputNotReference() {
     final Dataset<Row> patientDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
@@ -283,7 +283,7 @@ class ResolveFunctionTest {
   }
 
   @Test
-  public void throwExceptionWhenArgumentSupplied() {
+  void throwExceptionWhenArgumentSupplied() {
     final ElementPath referencePath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
@@ -300,16 +300,16 @@ class ResolveFunctionTest {
   }
 
   @Nonnull
-  private NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
+  NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
-        .resourceReader(mockReader)
+        .database(database)
         .build();
     return new NamedFunctionInput(parserContext, inputPath, Collections.emptyList());
   }
 
   @Nonnull
-  private FhirPath invokeResolve(@Nonnull final NamedFunctionInput resolveInput) {
+  FhirPath invokeResolve(@Nonnull final NamedFunctionInput resolveInput) {
     final NamedFunction resolve = NamedFunction.getInstance("resolve");
     return resolve.invoke(resolveInput);
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -28,7 +28,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,17 +41,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 class SumFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
-
-  @BeforeEach
-  void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
-  }
+  ParserContext parserContext;
 
   @Test
   void returnsCorrectIntegerResult() {
@@ -73,6 +67,9 @@ class SumFunctionTest {
         .idAndEidAndValueColumns()
         .expression("valueInteger")
         .singular(false)
+        .build();
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
         .build();
 
     final NamedFunctionInput sumInput = new NamedFunctionInput(parserContext, inputPath,
@@ -112,6 +109,9 @@ class SumFunctionTest {
         .idAndEidAndValueColumns()
         .expression("valueDecimal")
         .singular(false)
+        .build();
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
         .build();
 
     final NamedFunctionInput sumInput = new NamedFunctionInput(parserContext, inputPath,

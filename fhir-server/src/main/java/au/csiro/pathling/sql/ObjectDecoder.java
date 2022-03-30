@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -10,9 +10,8 @@ import java.io.Serializable;
 
 /**
  * Decodes a value of a 'raw' spark SQL type to an object of type T. Note: this is technically very
- * similar to spark SQL {@code Expression}, except that the the expressions need to be resolved
- * before they can be used (which seems to be very hard to do outside of the Spark SQL plan
- * analyzer).
+ * similar to spark SQL {@code Expression}, except that the expressions need to be resolved before
+ * they can be used (which seems to be very hard to do outside of the Spark SQL plan analyzer).
  *
  * @param <T> type of the object to produce.
  */

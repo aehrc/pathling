@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -106,6 +106,10 @@ case class MapWithPartitionPreview(serializer: ExpressionWrapper, decoder: Any =
   override def output: Seq[Attribute] = child.output ++ newColumns
 
   def newColumns: Seq[Attribute] = serializer.value.map(_.toAttribute)
+
+  override protected def withNewChildInternal(newChild: LogicalPlan): LogicalPlan = {
+    MapWithPartitionPreview(serializer, decoder, deserializer, preview, mapper, newChild)
+  }
 }
 
 
@@ -164,4 +168,10 @@ case class MapWithPartitionPreviewExec(deserializer: Expression,
   }
 
   override def output: Seq[Attribute] = child.output ++ serializer.map(_.toAttribute)
+
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = {
+    MapWithPartitionPreviewExec(deserializer, expressionDecoder, serializer, preview, mapper,
+      newChild)
+  }
+  
 }

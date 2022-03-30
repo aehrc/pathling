@@ -11,5 +11,10 @@ tmp/
 .idea
 *.iml
 
-# Imported test data
-fhir-server/src/test/resources/test-data/parquet/*.parquet
+
+#Others
+lib/import/node_modules/
+lib/js/node_modules/
+
+#Mac
+.DS_Store

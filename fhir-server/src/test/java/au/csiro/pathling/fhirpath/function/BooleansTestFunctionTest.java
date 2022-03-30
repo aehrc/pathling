@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -52,13 +52,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 class BooleansTestFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Value
-  private static class TestParameters {
+  static class TestParameters {
 
     @Nonnull
     String functionName;
@@ -73,7 +73,7 @@ class BooleansTestFunctionTest {
 
   }
 
-  public Stream<TestParameters> parameters() {
+  Stream<TestParameters> parameters() {
     return Stream.of(
         new TestParameters("anyTrue", new DatasetBuilder(spark)
             .withIdColumn()
@@ -125,7 +125,6 @@ class BooleansTestFunctionTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void returnsCorrectResults(@Nonnull final TestParameters parameters) {
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
@@ -149,6 +148,9 @@ class BooleansTestFunctionTest {
         .idAndValueColumns()
         .expression("valueBoolean")
         .build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(input.getIdColumn()))
+        .build();
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
         Collections.emptyList());
@@ -165,7 +167,7 @@ class BooleansTestFunctionTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void inputMustNotContainArguments(@Nonnull final TestParameters parameters) {
+  void inputMustNotContainArguments(@Nonnull final TestParameters parameters) {
     final ElementPath input = new ElementPathBuilder(spark).build();
     final StringLiteralPath argument = StringLiteralPath
         .fromString("'some argument'", input);
@@ -184,7 +186,7 @@ class BooleansTestFunctionTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void inputMustBeBoolean(@Nonnull final TestParameters parameters) {
+  void inputMustBeBoolean(@Nonnull final TestParameters parameters) {
     final ElementPath input = new ElementPathBuilder(spark)
         .expression("valueString")
         .fhirType(FHIRDefinedType.STRING)

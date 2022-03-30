@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -83,8 +83,8 @@ public class ErrorReportingInterceptor {
       @Nonnull final HttpServletRequest request) {
     final Request sentryRequest = new Request();
 
-    // Harvest details out of the servlet request, and HAPI's request object. The reason we need to
-    // do this is that unfortunately HAPI clears the body of the request out of the
+    // Harvest details out of the servlet request, and the HAPI request object. The reason we need 
+    // to do this is that unfortunately HAPI clears the body of the request out of the
     // HttpServletRequest object, so we need to use the more verbose constructor. The other reason
     // is that we want to omit any identifying details of users, such as remoteAddr, for privacy
     // purposes.

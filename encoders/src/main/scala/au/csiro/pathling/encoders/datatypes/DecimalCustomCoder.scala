@@ -5,20 +5,23 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 package au.csiro.pathling.encoders.datatypes
 
+import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
+import au.csiro.pathling.encoders.ExpressionWithName
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.decimalType
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
+import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types._
 import org.hl7.fhir.r4.model.DecimalType
-
 
 /**
  * Custom coder for DecimalType.
@@ -34,9 +37,41 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
   val scaleFieldName: String = elementName + "_scale"
 
-  override val schema: Seq[StructField] = Seq(StructField(elementName, decimalType), StructField(scaleFieldName, IntegerType))
+  override def customDeserializer(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName] = {
 
-  override def customDecoderExpression(addToPath: String => Expression): Expression = {
+    val deserializer = if (!isCollection) {
+      decimalExpression(addToPath)
+    } else {
+      // Let's to this manually as we need to zip two independent arrays into into one
+      val array = StaticInvoke(
+        classOf[DecimalCustomCoder],
+        ObjectType(classOf[Array[Any]]),
+        "zipToDecimal",
+        addToPath(elementName) :: addToPath(scaleFieldName) :: Nil
+      )
+      arrayExpression(array)
+    }
+    Seq((elementName, deserializer))
+  }
+
+  override def customSerializer(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName] = {
+    val valueExpression = evaluator(exp => StaticInvoke(classOf[Decimal],
+      decimalType,
+      "apply",
+      Invoke(exp, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil))
+    val scale = evaluator(exp => scaleExpression(exp))
+    Seq((elementName, valueExpression), (scaleFieldName, scale))
+  }
+
+  override def schema(arrayEncoder: Option[DataType => DataType]): Seq[StructField] = {
+    def encode(v: DataType): DataType = {
+      arrayEncoder.map(_ (v)).getOrElse(v)
+    }
+
+    Seq(StructField(elementName, encode(decimalType)), StructField(scaleFieldName, encode(IntegerType)))
+  }
+
+  private def decimalExpression(addToPath: String => Expression) = {
     NewInstance(primitiveClass,
       Invoke(
         Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
@@ -46,19 +81,15 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
     )
   }
 
-  override def customSerializer(inputObject: Expression): List[Expression] = {
-    val valueExpression = StaticInvoke(classOf[Decimal],
-      decimalType,
-      "apply",
-      Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil)
-    val scaleExpression = StaticInvoke(classOf[Math],
+  private def scaleExpression(inputObject: Expression) = {
+    StaticInvoke(classOf[Math],
       IntegerType,
       "min", Literal(decimalType.scale) ::
         Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])),
           "scale", DataTypes.IntegerType) :: Nil
     )
-    List(Literal(elementName), valueExpression, Literal(scaleFieldName), scaleExpression)
   }
+
 }
 
 object DecimalCustomCoder {
@@ -88,4 +119,15 @@ object DecimalCustomCoder {
   val scale: Int = 6
   val precision: Int = 26
   val decimalType: types.DecimalType = DataTypes.createDecimalType(precision, scale)
+
+
+  /**
+   * Need a way to zip two arrays so that they can be decoded to an arrays of DecimalTYpe
+   */
+  def zipToDecimal(values: ArrayData, scales: ArrayData): Array[DecimalType] = {
+    assert(values.numElements() == scales.numElements(), "Values and scales must have the same length")
+    Array.tabulate(values.numElements()) { i =>
+      new DecimalType(values.getDecimal(i, precision, scale).toJavaBigDecimal.setScale(scales.getInt(i)))
+    }
+  }
 }

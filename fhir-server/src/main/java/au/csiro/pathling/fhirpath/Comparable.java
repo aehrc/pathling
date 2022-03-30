@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -12,7 +12,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**
- * Describes a path that is able to be compared with other paths, e.g. for equality.
+ * Describes a path that can be compared with other paths, e.g. for equality.
  *
  * @author John Grimes
  */

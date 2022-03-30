@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -33,7 +33,7 @@ public class RequestIdInterceptor {
    *
    * @param requestDetails the details of the request
    */
-  @Hook(Pointcut.SERVER_INCOMING_REQUEST_PRE_HANDLED)
+  @Hook(value = Pointcut.SERVER_INCOMING_REQUEST_POST_PROCESSED, order = 1)
   @SuppressWarnings("unused")
   public void addRequestIdToLoggingContext(@Nullable final RequestDetails requestDetails) {
     if (requestDetails != null) {

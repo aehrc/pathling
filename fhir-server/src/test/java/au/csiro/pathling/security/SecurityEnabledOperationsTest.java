@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -19,69 +19,78 @@ import org.springframework.test.context.TestPropertySource;
  * @see <a href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
-@TestPropertySource(
-    properties = {
-        "pathling.auth.enabled=true",
-        "pathling.caching.enabled=false"
-    })
+@TestPropertySource(properties = {"pathling.auth.enabled=true"})
 @MockBean(OidcConfiguration.class)
 @MockBean(JwtDecoder.class)
 @MockBean(JwtAuthenticationConverter.class)
-public class SecurityEnabledOperationsTest extends SecurityTestForOperations {
+class SecurityEnabledOperationsTest extends SecurityTestForOperations {
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenIfImportWithoutAuthority() {
-    assertThrowsAccessDenied(this::assertImportSuccess, "pathling:import"
-    );
+  void testForbiddenIfImportWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertImportSuccess, "pathling:import");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:import"})
-  public void testPassIfImportWithAuthority() {
+  void testPassIfImportWithAuthority() {
     assertImportSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenIfAggregateWithoutAuthority() {
-    assertThrowsAccessDenied(this::assertAggregateSuccess, "pathling:aggregate"
-    );
+  void testForbiddenIfAggregateWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertAggregateSuccess, "pathling:aggregate");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:aggregate"})
-  public void testPassIfAggregateWithAuthority() {
+  void testPassIfAggregateWithAuthority() {
     assertAggregateSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenIfSearchWithoutAuthority() {
-    assertThrowsAccessDenied(this::assertSearchSuccess, "pathling:search"
-    );
-    assertThrowsAccessDenied(this::assertSearchWithFilterSuccess, "pathling:search"
-    );
+  void testForbiddenIfSearchWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertSearchSuccess, "pathling:search");
+    assertThrowsAccessDenied(this::assertSearchWithFilterSuccess, "pathling:search");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:search"})
-  public void testPassIfSearchWithAuthority() {
+  void testPassIfSearchWithAuthority() {
     assertSearchSuccess();
   }
 
   @Test
-  @WithMockUser(username = "admin")
-  public void testForbiddenIfCachingSearchWithoutAuthority() {
-    // TODO: this become somewhat messy because of the current caching implementation.
-    //  Perhaps we could use AOP here as well to simplify?
-    assertThrowsAccessDenied(this::assertCachingSearchSuccess, "pathling:search");
-    assertThrowsAccessDenied(this::assertCachingSearchWithFilterSuccess, "pathling:search");
+  @WithMockUser(username = "admin", authorities = {"pathling:update"})
+  void testPassIfUpdateWithAuthority() {
+    assertUpdateSuccess();
   }
 
   @Test
-  @WithMockUser(username = "admin", authorities = {"pathling:search"})
-  public void testPassIfCachingSearchWithAuthority() {
-    assertCachingSearchSuccess();
+  @WithMockUser(username = "admin")
+  void testForbiddenIfUpdateWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertUpdateSuccess, "pathling:update");
   }
+
+  @Test
+  @WithMockUser(username = "admin",
+      authorities = {"pathling:batch", "pathling:update"})
+  void testPassIfBatchWithAuthority() {
+    assertBatchSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:update"})
+  void testForbiddenIfBatchWithoutBatch() {
+    assertThrowsAccessDenied(this::assertBatchSuccess, "pathling:batch");
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:batch"})
+  void testForbiddenIfBatchWithoutUpdate() {
+    assertThrowsAccessDenied(this::assertBatchSuccess, "pathling:update");
+  }
+
 }

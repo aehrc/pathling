@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -24,7 +24,11 @@ import org.hl7.fhir.r4.model.Coding;
  */
 public class CodingLiteral {
 
-  private static final String SPECIAL_CHARACTERS = " '|\\r\\n\\t(),";
+  /**
+   * Special characters that require quoting within a Coding literal component.
+   */
+  private static final String SPECIAL_CHARACTERS = "\\s'|\\r\\n\\t(),";
+
   private static final String COMPONENT_REGEX = String
       .format("('.*?(?<!\\\\)'|[^%s]*)", SPECIAL_CHARACTERS);
 
@@ -41,7 +45,7 @@ public class CodingLiteral {
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
-   * @param fhirPath The FHIRPath representation of the literal literal
+   * @param fhirPath The FHIRPath representation of the literal
    * @return A new instance of {@link LiteralPath}
    * @throws IllegalArgumentException if the literal is malformed
    */
@@ -124,4 +128,5 @@ public class CodingLiteral {
       }
     }
   }
+
 }

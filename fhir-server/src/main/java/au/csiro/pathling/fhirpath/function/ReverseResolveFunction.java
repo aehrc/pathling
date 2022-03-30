@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -12,6 +12,8 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.row_number;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.QueryHelpers;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -65,34 +67,37 @@ public class ReverseResolveFunction implements NamedFunction {
     final Dataset<Row> dataset = join(referencePath.getDataset(), inputPath.getDataset(),
         joinCondition, JoinType.RIGHT_OUTER);
 
-    // Check the argument for information about a foreign resource that it originated from - if it
-    // not present, reverse reference resolution will not be possible.
-    checkUserInput(argument instanceof NonLiteralPath,
-        "Argument to reverseResolve cannot be a literal");
+    // Check the argument for information about the current resource that it originated from - if it
+    // is not present, reverse reference resolution will not be possible.
     final NonLiteralPath nonLiteralArgument = (NonLiteralPath) argument;
-    checkUserInput(nonLiteralArgument.getForeignResource().isPresent(),
+    checkUserInput(nonLiteralArgument.getCurrentResource().isPresent(),
         "Argument to reverseResolve must be an element that is navigable from a "
             + "target resource type: " + expression);
-    final ResourcePath foreignResource = nonLiteralArgument.getForeignResource().get();
+    final ResourcePath currentResource = nonLiteralArgument.getCurrentResource().get();
 
     final Optional<Column> thisColumn = inputPath.getThisColumn();
 
     // TODO: Consider removing in the future once we separate ordering from element ID.
     // Create an synthetic element ID column for reverse resolved resources.
-    final Column foreignResourceValue = foreignResource.getValueColumn();
+    final Column currentResourceValue = currentResource.getValueColumn();
     final WindowSpec windowSpec = Window
         .partitionBy(inputPath.getIdColumn(), inputPath.getOrderingColumn())
-        .orderBy(foreignResourceValue);
+        .orderBy(currentResourceValue);
 
-    // row_number() is 1-based and we use 0-based indexes - thus (minus(1)).
-    final Column foreignResourceIndex = when(foreignResourceValue.isNull(), lit(null))
+    // row_number() is 1-based, and we use 0-based indexes - thus (minus(1)).
+    final Column currentResourceIndex = when(currentResourceValue.isNull(), lit(null))
         .otherwise(row_number().over(windowSpec).minus(lit(1)));
 
-    final Column syntheticEid = inputPath.expandEid(foreignResourceIndex);
+    // We need to add the synthetic EID column to the parser context so that it can be used within
+    // joins in certain situations, e.g. extract.
+    final Column syntheticEid = inputPath.expandEid(currentResourceIndex);
+    final DatasetWithColumn datasetWithEid = QueryHelpers.createColumn(dataset, syntheticEid);
+    input.getContext().getNodeIdColumns().putIfAbsent(expression, datasetWithEid.getColumn());
 
-    return foreignResource
-        .copy(expression, dataset, inputPath.getIdColumn(), Optional.of(syntheticEid),
-            foreignResource.getValueColumn(),
-            false, thisColumn);
+    final ResourcePath result = currentResource
+        .copy(expression, datasetWithEid.getDataset(), inputPath.getIdColumn(),
+            Optional.of(syntheticEid), currentResource.getValueColumn(), false, thisColumn);
+    result.setCurrentResource(currentResource);
+    return result;
   }
 }

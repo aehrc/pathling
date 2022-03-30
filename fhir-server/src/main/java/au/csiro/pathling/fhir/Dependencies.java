@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -36,7 +36,7 @@ public class Dependencies {
   @ConditionalOnMissingBean
   @Nonnull
   static FhirContext fhirContext() {
-    log.info("Creating R4 FHIR context");
+    log.debug("Creating R4 FHIR context");
     return FhirContext.forR4();
   }
 
@@ -50,9 +50,16 @@ public class Dependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static FhirEncoders fhirEncoders() {
-    log.info("Creating R4 FHIR encoders");
-    return FhirEncoders.forR4().getOrCreate();
+  static FhirEncoders fhirEncoders(@Nonnull final Configuration configuration) {
+    final int maxNestingLevel = configuration.getEncoding().getMaxNestingLevel();
+    final boolean enableExtensions = configuration.getEncoding().isEnableExtensions();
+    log.debug("Creating R4 FHIR encoders (max nesting level of: {}, and extensions enabled: {})",
+        maxNestingLevel, enableExtensions);
+    return FhirEncoders.forR4()
+        .withMaxNestingLevel(maxNestingLevel)
+        .withOpenTypes(configuration.getEncoding().getOpenTypes())
+        .withExtensionsEnabled(enableExtensions)
+        .getOrCreate();
   }
 
   @Bean
@@ -63,11 +70,11 @@ public class Dependencies {
       @Nonnull final FhirContext fhirContext) {
     final Terminology terminology = configuration.getTerminology();
     checkNotNull(terminology);
-    log.info("Creating FHIR terminology client: {}", terminology.getServerUrl());
+    log.debug("Creating FHIR terminology client: {}", terminology.getServerUrl());
     return TerminologyClient.build(fhirContext,
         terminology.getServerUrl(),
         terminology.getSocketTimeout(),
-        configuration.getVerboseRequestLogging(),
+        terminology.isVerboseLogging(),
         log);
   }
 
@@ -82,7 +89,7 @@ public class Dependencies {
     return new DefaultTerminologyServiceFactory(fhirContext,
         terminology.getServerUrl(),
         terminology.getSocketTimeout(),
-        configuration.getVerboseRequestLogging());
+        terminology.isVerboseLogging());
   }
 
 }

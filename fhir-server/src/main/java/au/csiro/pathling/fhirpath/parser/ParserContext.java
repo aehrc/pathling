@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -8,10 +8,11 @@ package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyService;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -57,7 +58,7 @@ public class ParserContext {
    * A table resolver for retrieving Datasets for resource references.
    */
   @Nonnull
-  private final ResourceReader resourceReader;
+  private final Database database;
 
   /**
    * A factory for creating new {@link TerminologyService} objects, which is needed within blocks of
@@ -68,11 +69,12 @@ public class ParserContext {
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   /**
-   * The context may contain zero or more grouping columns. If there are columns in this list, the
-   * data will be aggregated using them rather than the resource identity.
+   * The context may contain zero or more grouping columns. If the context of evaluation is a single
+   * resource, the resource identity column should be the one and only column in this list.
+   * Otherwise, columns that provide the relevant groupings should be in here.
    */
   @Nonnull
-  private final Optional<List<Column>> groupingColumns;
+  private final List<Column> groupingColumns;
 
   /**
    * When within the context of function arguments, this is the {@link FhirPath} that represents the
@@ -82,25 +84,36 @@ public class ParserContext {
   private Optional<FhirPath> thisContext = Optional.empty();
 
   /**
-   * @param inputContext The input context from which the FHIRPath is to be evaluated
-   * @param fhirContext A {@link FhirContext} that can be used to do FHIR stuff
-   * @param sparkSession A {@link SparkSession} that can be used to resolve Spark queries required
+   * Stores away columns relating to the identity of resources and elements, for later retrieval
+   * using the string path. This is used for element and resource-identity aware joins.
+   */
+  @Nonnull
+  private final Map<String, Column> nodeIdColumns;
+
+  /**
+   * @param inputContext the input context from which the FHIRPath is to be evaluated
+   * @param fhirContext a {@link FhirContext} that can be used to do FHIR stuff
+   * @param sparkSession a {@link SparkSession} that can be used to resolve Spark queries required
    * for this expression
-   * @param resourceReader For retrieving data relating to resource references
-   * @param terminologyServiceFactory A factory for {@link TerminologyService} objects, used for
+   * @param database for retrieving data relating to resource references
+   * @param terminologyServiceFactory a factory for {@link TerminologyService} objects, used for
    * parallel processing
    * @param groupingColumns the list of columns to group on when aggregating
+   * @param nodeIdColumns columns relating to the identity of resources and elements for different
+   * paths parsed within this context
    */
   public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final ResourceReader resourceReader,
+      @Nonnull final SparkSession sparkSession, @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
-      @Nonnull final Optional<List<Column>> groupingColumns) {
+      @Nonnull final List<Column> groupingColumns,
+      @Nonnull final Map<String, Column> nodeIdColumns) {
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.resourceReader = resourceReader;
+    this.database = database;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.groupingColumns = groupingColumns;
+    this.nodeIdColumns = nodeIdColumns;
   }
 
   public void setThisContext(@Nonnull final FhirPath thisContext) {

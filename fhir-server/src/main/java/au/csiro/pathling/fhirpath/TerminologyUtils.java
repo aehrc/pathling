@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -17,7 +17,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public interface TerminologyUtils {
 
   /**
-   * Checks if a path if a codeable concept element.
+   * Checks if a path is a codeable concept element.
    *
    * @param fhirPath a path to check
    * @return true if the path is a codeable concept

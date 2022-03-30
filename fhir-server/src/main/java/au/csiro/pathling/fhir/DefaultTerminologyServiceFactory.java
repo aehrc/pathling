@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -18,7 +18,7 @@ import org.slf4j.Logger;
 
 /**
  * Default implementation of {@link TerminologyServiceFactory} providing {@link TerminologyService}
- * implemented using {@link TerminologyClient} with with given configuration.
+ * implemented using {@link TerminologyClient} with given configuration.
  *
  * @author John Grimes
  * @author Piotr Szul

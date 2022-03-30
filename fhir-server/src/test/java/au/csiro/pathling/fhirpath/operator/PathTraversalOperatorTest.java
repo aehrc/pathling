@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -8,6 +8,13 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.MANY_EXT_ROW_1;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.MANY_EXT_ROW_2;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.ONE_MY_EXTENSION;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.nullEntryMap;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.oneEntryMap;
+import static au.csiro.pathling.test.fixtures.ExtensionFixture.toElementDataset;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,12 +28,18 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.*;
+import au.csiro.pathling.io.Database;
+import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.builders.ElementPathBuilder;
+import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
+import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import com.google.common.collect.ImmutableMap;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -46,36 +59,36 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class PathTraversalOperatorTest {
+class PathTraversalOperatorTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
-  private ResourceReader resourceReader;
+  ParserContext parserContext;
+  Database database;
 
   @BeforeEach
   void setUp() {
     parserContext = new ParserContextBuilder(spark, fhirContext).build();
-    resourceReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
-  public void singularTraversalFromSingular() {
+  void singularTraversalFromSingular() {
     final Dataset<Row> leftDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
         .withRow("patient-1", "female")
         .withRow("patient-2", null)
         .build();
-    when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
+    when(database.read(ResourceType.PATIENT)).thenReturn(leftDataset);
     final ResourcePath left = new ResourcePathBuilder(spark)
         .fhirContext(fhirContext)
         .resourceType(ResourceType.PATIENT)
-        .resourceReader(resourceReader)
+        .database(database)
         .singular(true)
         .build();
 
@@ -97,7 +110,7 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void manyTraversalFromSingular() {
+  void manyTraversalFromSingular() {
     final Dataset<Row> leftDataset = new ResourceDatasetBuilder(spark)
         .withIdColumn()
         .withColumn("name", DataTypes.createArrayType(DataTypes.StringType))
@@ -106,11 +119,11 @@ public class PathTraversalOperatorTest {
         .withRow("patient-2", Collections.emptyList(), true)
         .withRow("patient-3", null, true)
         .build();
-    when(resourceReader.read(ResourceType.PATIENT)).thenReturn(leftDataset);
+    when(database.read(ResourceType.PATIENT)).thenReturn(leftDataset);
     final ResourcePath left = new ResourcePathBuilder(spark)
         .fhirContext(fhirContext)
         .resourceType(ResourceType.PATIENT)
-        .resourceReader(resourceReader)
+        .database(database)
         .singular(true)
         .build();
 
@@ -138,7 +151,7 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void manyTraversalFromNonSingular() {
+  void manyTraversalFromNonSingular() {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -192,7 +205,7 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void singularTraversalFromNonSingular() {
+  void singularTraversalFromNonSingular() {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -243,7 +256,133 @@ public class PathTraversalOperatorTest {
   }
 
   @Test
-  public void throwsErrorOnNonExistentChild() {
+  void testExtensionTraversalOnResources() {
+    final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)
+        .withIdColumn()
+        .withColumn("gender", DataTypes.StringType)
+        .withColumn("active", DataTypes.BooleanType)
+        .withFidColumn()
+        .withExtensionColumn()
+        .withRow("patient-1", "female", true, 1,
+            ImmutableMap.builder().put(1, Arrays.asList(MANY_EXT_ROW_1, MANY_EXT_ROW_2)).build())
+        .withRow("patient-2", "female", false, 1,
+            ImmutableMap.builder().put(1, Collections.singletonList(MANY_EXT_ROW_1))
+                .put(2, Collections.singletonList(MANY_EXT_ROW_2)).build())
+        .withRow("patient-3", "male", false, 1, oneEntryMap(2, ONE_MY_EXTENSION))
+        .withRow("patient-4", "male", false, 1, nullEntryMap(1))
+        .withRow("patient-5", "male", true, 1, null)
+        .build();
+    when(database.read(ResourceType.PATIENT))
+        .thenReturn(patientDataset);
+    final ResourcePath left = ResourcePath
+        .build(fhirContext, database, ResourceType.PATIENT, "Patient", false);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final PathTraversalInput input = new PathTraversalInput(parserContext, left, "extension");
+    final FhirPath result = new PathTraversalOperator().invoke(input);
+
+    assertThat(result)
+        .hasExpression("Patient.extension")
+        .isNotSingular()
+        .isElementPath(ElementPath.class)
+        .hasFhirType(FHIRDefinedType.EXTENSION)
+        .selectOrderedResult()
+        .hasRows(
+            // Many many extensions for this resource _fix
+            RowFactory.create("patient-1", MANY_EXT_ROW_1),
+            RowFactory.create("patient-1", MANY_EXT_ROW_2),
+            // One extension with matching _fid and some with other fids
+            RowFactory.create("patient-2", MANY_EXT_ROW_1),
+            // Not extensions with matching _fid
+            RowFactory.create("patient-3", null),
+            // Empty list of extension for matching _fix
+            RowFactory.create("patient-4", null),
+            // No extensions present all together (empty extension map)
+            RowFactory.create("patient-5", null)
+        );
+  }
+
+
+  @Test
+  void testExtensionTraversalOnElements() {
+    final Map<Object, Object> manyToFidZeroMap = ImmutableMap.builder()
+        .put(0, Arrays.asList(MANY_EXT_ROW_1, MANY_EXT_ROW_2)).build();
+
+    final ImmutableMap<Object, Object> onePerFidZeroAndOneMap = ImmutableMap.builder()
+        .put(0, Collections.singletonList(MANY_EXT_ROW_1))
+        .put(1, Collections.singletonList(MANY_EXT_ROW_2)).build();
+
+    // Construct element dataset from the resource dataset so that the resource path can be used as 
+    // the current resource for this element path.
+    // Note: this resource path is not singular as this will be a base for elements.
+
+    final Dataset<Row> resourceLikeDataset = new ResourceDatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructColumn("name", DataTypes.StringType)
+        .withStructColumn("_fid", DataTypes.IntegerType)
+        .withStructValueColumn()
+        .withExtensionColumn()
+        .withRow("observation-1", makeEid(0), RowFactory.create("name1", 0), manyToFidZeroMap)
+        .withRow("observation-2", makeEid(0), RowFactory.create("name2-1", 0),
+            onePerFidZeroAndOneMap)
+        .withRow("observation-2", makeEid(1), RowFactory.create("name2-2", 1),
+            onePerFidZeroAndOneMap)
+        .withRow("observation-3", makeEid(0), RowFactory.create("name3", 0),
+            oneEntryMap(2, ONE_MY_EXTENSION))
+        .withRow("observation-4", makeEid(0), RowFactory.create("name4", 0), nullEntryMap(1))
+        .withRow("observation-5", makeEid(0), RowFactory.create("name5", 0), null)
+        .build();
+
+    when(database.read(ResourceType.OBSERVATION))
+        .thenReturn(resourceLikeDataset);
+    final ResourcePath baseResourcePath = ResourcePath
+        .build(fhirContext, database, ResourceType.OBSERVATION, "Observation", false);
+
+    final Dataset<Row> elementDataset = toElementDataset(resourceLikeDataset, baseResourcePath);
+
+    final ElementDefinition codeDefinition = checkPresent(FhirHelpers
+        .getChildOfResource(fhirContext, "Observation", "code"));
+
+    final ElementPath left = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+        .definition(codeDefinition)
+        .dataset(elementDataset)
+        .idAndEidAndValueColumns()
+        .expression("code")
+        .singular(false)
+        .currentResource(baseResourcePath)
+        .buildDefined();
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final PathTraversalInput input = new PathTraversalInput(parserContext, left, "extension");
+    final FhirPath result = new PathTraversalOperator().invoke(input);
+
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructTypeColumns(DatasetBuilder.SIMPLE_EXTENSION_TYPE)
+        .withRow("observation-1", makeEid(0, 0), MANY_EXT_ROW_1)
+        .withRow("observation-1", makeEid(0, 1), MANY_EXT_ROW_2)
+        .withRow("observation-2", makeEid(0, 0), MANY_EXT_ROW_1)
+        .withRow("observation-2", makeEid(1, 0), MANY_EXT_ROW_2)
+        .withRow("observation-3", makeEid(0, 0), null)
+        .withRow("observation-4", makeEid(0, 0), null)
+        .withRow("observation-5", makeEid(0, 0), null)
+        .buildWithStructValue();
+
+    assertThat(result)
+        .hasExpression("code.extension")
+        .isNotSingular()
+        .isElementPath(ElementPath.class)
+        .hasFhirType(FHIRDefinedType.EXTENSION)
+        .selectOrderedResultWithEid()
+        .hasRows(expectedResult);
+
+  }
+
+  @Test
+  void throwsErrorOnNonExistentChild() {
     final ResourcePath left = new ResourcePathBuilder(spark)
         .fhirContext(fhirContext)
         .resourceType(ResourceType.ENCOUNTER)

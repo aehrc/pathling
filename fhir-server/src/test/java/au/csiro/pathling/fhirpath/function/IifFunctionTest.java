@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -24,10 +24,16 @@ import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
-import au.csiro.pathling.test.builders.*;
+import au.csiro.pathling.io.Database;
+import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.builders.ElementPathBuilder;
+import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
+import au.csiro.pathling.test.builders.ResourcePathBuilder;
+import au.csiro.pathling.test.builders.UntypedResourcePathBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
+import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -48,18 +54,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 class IifFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
-  private ResourceReader resourceReader;
+  static final String ID_ALIAS = "_abc123";
+
+  ParserContext parserContext;
+  Database database;
 
   @BeforeEach
   void setUp() {
     parserContext = new ParserContextBuilder(spark, fhirContext).build();
-    resourceReader = mock(ResourceReader.class);
+    database = mock(Database.class);
   }
 
   @Test
@@ -72,15 +80,15 @@ class IifFunctionTest {
         .withRow("observation-4")
         .withRow("observation-5")
         .build();
-    when(resourceReader.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
+    when(database.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
     final ResourcePath inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
-        .resourceReader(resourceReader)
+        .database(database)
         .singular(true)
         .build();
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("observation-1", makeEid(0), true)
@@ -98,6 +106,9 @@ class IifFunctionTest {
         .expression("valueBoolean")
         .singular(false)
         .build();
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
+        .build();
     final NonLiteralPath condition = inputPath.toThisPath();
     final StringLiteralPath ifTrue = StringLiteralPath.fromString("foo", inputContext);
     final StringLiteralPath otherwise = StringLiteralPath.fromString("bar", inputContext);
@@ -107,7 +118,7 @@ class IifFunctionTest {
     final FhirPath result = NamedFunction.getInstance("iif").invoke(iifInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.StringType)
         .withRow("observation-1", makeEid(0), "foo")
@@ -129,7 +140,7 @@ class IifFunctionTest {
   @Test
   void returnsCorrectResultsForTwoNonLiterals() {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("observation-1", makeEid(0), false)
@@ -147,10 +158,13 @@ class IifFunctionTest {
         .expression("valueBoolean")
         .singular(false)
         .build();
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
+        .build();
     final NonLiteralPath condition = inputPath.toThisPath();
 
     final Dataset<Row> ifTrueDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 1)
@@ -168,7 +182,7 @@ class IifFunctionTest {
         .build();
 
     final Dataset<Row> otherwiseDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 11)
@@ -191,7 +205,7 @@ class IifFunctionTest {
     final FhirPath result = NamedFunction.getInstance("iif").invoke(iifInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 11)
@@ -221,15 +235,15 @@ class IifFunctionTest {
         .withRow("observation-4")
         .withRow("observation-5")
         .build();
-    when(resourceReader.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
+    when(database.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
     final ResourcePath inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
-        .resourceReader(resourceReader)
+        .database(database)
         .singular(true)
         .build();
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("observation-1", makeEid(0), false)
@@ -247,10 +261,13 @@ class IifFunctionTest {
         .expression("valueBoolean")
         .singular(false)
         .build();
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
+        .build();
     final NonLiteralPath condition = inputPath.toThisPath();
 
     final Dataset<Row> ifTrueDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 1)
@@ -274,7 +291,7 @@ class IifFunctionTest {
     final FhirPath result1 = NamedFunction.getInstance("iif").invoke(iifInput1);
 
     final Dataset<Row> expectedDataset1 = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 99)
@@ -297,7 +314,7 @@ class IifFunctionTest {
     final FhirPath result2 = NamedFunction.getInstance("iif").invoke(iifInput2);
 
     final Dataset<Row> expectedDataset2 = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 1)

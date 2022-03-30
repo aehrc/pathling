@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -22,7 +22,12 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.MetadataBuilder;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * Assists with the task of creating Datasets and lists of Rows for testing purposes.
@@ -31,6 +36,14 @@ import org.apache.spark.sql.types.*;
  */
 @Slf4j
 public class DatasetBuilder {
+
+  public static final StructType SIMPLE_EXTENSION_TYPE = DataTypes
+      .createStructType(new StructField[]{
+          DataTypes.createStructField("id", DataTypes.StringType, false),
+          DataTypes.createStructField("url", DataTypes.StringType, true),
+          DataTypes.createStructField("valueString", DataTypes.StringType, true),
+          DataTypes.createStructField("_fid", DataTypes.IntegerType, false)
+      });
 
   @Nonnull
   private final SparkSession spark;
@@ -88,6 +101,17 @@ public class DatasetBuilder {
   }
 
   @Nonnull
+  public DatasetBuilder withFidColumn() {
+    return withColumn("_fid", DataTypes.IntegerType);
+  }
+
+  @Nonnull
+  public DatasetBuilder withExtensionColumn() {
+    return withColumn("_extension", DataTypes
+        .createMapType(DataTypes.IntegerType, DataTypes.createArrayType(SIMPLE_EXTENSION_TYPE)));
+  }
+
+  @Nonnull
   public DatasetBuilder withRow(@Nonnull final Object... values) {
     final Row row = RowFactory.create(values);
     datasetRows.add(row);
@@ -131,6 +155,7 @@ public class DatasetBuilder {
     return this;
   }
 
+  @SuppressWarnings("unused")
   @Nonnull
   public DatasetBuilder changeValues(@Nonnull final Object value,
       @Nonnull final Iterable<String> ids) {
@@ -186,6 +211,17 @@ public class DatasetBuilder {
         true,
         metadata));
     return getDataset(columns);
+  }
+
+  @Nonnull
+  public DatasetBuilder withStructValueColumn() {
+    datasetColumns.add(new StructField(
+        randomAlias(),
+        DataTypes.createStructType(structColumns),
+        true,
+        metadata));
+    structColumns.clear();
+    return this;
   }
 
   @Nonnull

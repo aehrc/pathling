@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -21,25 +21,25 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Tag("UnitTest")
-public class ValueSetMappingTest extends MappingTest {
+class ValueSetMappingTest extends MappingTest {
 
   @Autowired
-  protected FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";
+  static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";
 
-  private static final String SYSTEM_1 = "uuid:system1";
-  private static final String SYSTEM_2 = "uuid:system2";
+  static final String SYSTEM_1 = "uuid:system1";
+  static final String SYSTEM_2 = "uuid:system2";
 
   @Test
-  public void toIntersectionEmpty() {
+  void toIntersectionEmpty() {
     final ValueSet valueSet = ValueSetMapping
         .toIntersection(MY_VALUE_SET_URL, Collections.emptySet());
     assertRequest(valueSet);
   }
 
   @Test
-  public void toIntersectionVersioned() {
+  void toIntersectionVersioned() {
     final ValueSet valueSet = ValueSetMapping
         .toIntersection(MY_VALUE_SET_URL,
             ImmutableSet.of(
@@ -58,7 +58,7 @@ public class ValueSetMappingTest extends MappingTest {
 
 
   @Test
-  public void toIntersectionManySystems() {
+  void toIntersectionManySystems() {
     final ValueSet valueSet = ValueSetMapping
         .toIntersection(MY_VALUE_SET_URL,
             ImmutableSet.of(
@@ -76,7 +76,7 @@ public class ValueSetMappingTest extends MappingTest {
 
 
   @Test
-  public void toIntersectionUndefined() {
+  void toIntersectionUndefined() {
     final ValueSet valueSet = ValueSetMapping
         .toIntersection(MY_VALUE_SET_URL,
             ImmutableSet.of(
@@ -89,7 +89,7 @@ public class ValueSetMappingTest extends MappingTest {
 
 
   @Test
-  public void codingSetFromNullExpansion() {
+  void codingSetFromNullExpansion() {
 
     final Set<SimpleCoding> actualCodingSet = ValueSetMapping
         .codingSetFromExpansion(null);
@@ -98,7 +98,7 @@ public class ValueSetMappingTest extends MappingTest {
 
 
   @Test
-  public void codingSetFromEmptyExpansion() {
+  void codingSetFromEmptyExpansion() {
 
     final Set<SimpleCoding> actualCodingSet = ValueSetMapping
         .codingSetFromExpansion(new ValueSet());
@@ -107,7 +107,7 @@ public class ValueSetMappingTest extends MappingTest {
 
 
   @Test
-  public void codingSetFromExpansion() {
+  void codingSetFromExpansion() {
 
     final ValueSet expansionValueSet = (ValueSet) jsonParser.parseResource(
         getResourceAsStream("txResponses/ValueSetMappingTest/twoCoding.ValueSet.json"));

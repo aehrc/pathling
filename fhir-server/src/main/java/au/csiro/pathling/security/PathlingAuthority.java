@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -19,7 +19,9 @@ import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * The representation of the authority supporting wildcard matching and Pathling specific scopes.
+ * The representation of the authority supporting wildcard matching and Pathling-specific scopes.
+ *
+ * @author Piotr Szul
  */
 @Getter
 public class PathlingAuthority {
@@ -45,7 +47,7 @@ public class PathlingAuthority {
   }
 
   /**
-   * Checks if provided authority encompasses the this one, i.e. is sufficient to allow the access
+   * Checks if provided authority encompasses this one, i.e. is sufficient to allow the access
    * provided by this authority.
    *
    * @param other the authority to check.

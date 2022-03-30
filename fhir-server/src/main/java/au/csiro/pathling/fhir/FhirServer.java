@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -9,7 +9,12 @@ package au.csiro.pathling.fhir;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.Configuration;
+import au.csiro.pathling.async.JobProvider;
+import au.csiro.pathling.caching.EntityTagInterceptor;
+import au.csiro.pathling.encoders.EncoderBuilder;
+import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
+import au.csiro.pathling.update.BatchProvider;
 import au.csiro.pathling.update.ImportProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -23,8 +28,11 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -33,7 +41,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ResourceType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import scala.collection.JavaConverters;
 
 /**
  * A HAPI RestfulServer that provides the FHIR interface to the functionality within Pathling.
@@ -43,8 +54,9 @@ import org.springframework.context.annotation.Profile;
 @WebServlet(urlPatterns = "/fhir/*")
 @Profile("server")
 @Slf4j
-@SuppressWarnings({"NonSerializableFieldInSerializableClass", "serial"})
 public class FhirServer extends RestfulServer {
+
+  private static final long serialVersionUID = -1519567839063860047L;
 
   private static final int DEFAULT_PAGE_SIZE = 100;
   private static final int MAX_PAGE_SIZE = Integer.MAX_VALUE;
@@ -60,6 +72,12 @@ public class FhirServer extends RestfulServer {
   private final ImportProvider importProvider;
 
   @Nonnull
+  private final Optional<JobProvider> jobProvider;
+
+  @Nonnull
+  private final ResultProvider resultProvider;
+
+  @Nonnull
   private final OperationDefinitionProvider operationDefinitionProvider;
 
   @Nonnull
@@ -69,48 +87,63 @@ public class FhirServer extends RestfulServer {
   private final ErrorReportingInterceptor errorReportingInterceptor;
 
   @Nonnull
+  private final EntityTagInterceptor entityTagInterceptor;
+
+  @Nonnull
   private final ConformanceProvider conformanceProvider;
 
   @Nonnull
   private final ResourceProviderFactory resourceProviderFactory;
 
+  @Nonnull
+  private final BatchProvider batchProvider;
+
   /**
-   * @param fhirContext A {@link FhirContext} for use in executing FHIR operations
-   * @param configuration A {@link Configuration} instance which controls the behaviour of the
+   * @param fhirContext a {@link FhirContext} for use in executing FHIR operations
+   * @param configuration a {@link Configuration} instance which controls the behaviour of the
    * server
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
-   * @param importProvider A {@link ImportProvider} for receiving requests to the import operation
-   * @param operationDefinitionProvider A {@link OperationDefinitionProvider} for receiving requests
+   * @param importProvider a {@link ImportProvider} for receiving requests to the import operation
+   * @param jobProvider a {@link JobProvider} for checking on the status of jobs
+   * @param resultProvider {@link ResultProvider} for retrieving the result of extract requests
+   * @param operationDefinitionProvider a {@link OperationDefinitionProvider} for receiving requests
    * for OperationDefinitions
-   * @param requestIdInterceptor A {@link RequestIdInterceptor} for adding request IDs to logging
-   * @param errorReportingInterceptor A {@link ErrorReportingInterceptor} for reporting errors to
+   * @param requestIdInterceptor a {@link RequestIdInterceptor} for adding request IDs to logging
+   * @param errorReportingInterceptor a {@link ErrorReportingInterceptor} for reporting errors to
    * Sentry
-   * @param conformanceProvider A {@link ConformanceProvider} for receiving requests for the server
+   * @param entityTagInterceptor a {@link EntityTagInterceptor} validating and returning ETags
+   * @param conformanceProvider a {@link ConformanceProvider} for receiving requests for the server
    * CapabilityStatement
-   * @param resourceProviderFactory A {@link ResourceProviderFactory} for providing instances of
-   * resource providers
+   * @param resourceProviderFactory a {@link ResourceProviderFactory} for providing instances of
    */
-  @SuppressWarnings("TypeMayBeWeakened")
   public FhirServer(@Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final ImportProvider importProvider,
+      @Nonnull final Optional<JobProvider> jobProvider,
+      @Nonnull final ResultProvider resultProvider,
       @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
+      @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
-      @Nonnull final ResourceProviderFactory resourceProviderFactory) {
+      @Nonnull final ResourceProviderFactory resourceProviderFactory,
+      @Nonnull final BatchProvider batchProvider) {
     super(fhirContext);
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.importProvider = importProvider;
+    this.jobProvider = jobProvider;
+    this.resultProvider = resultProvider;
     this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
+    this.entityTagInterceptor = entityTagInterceptor;
     this.conformanceProvider = conformanceProvider;
     this.resourceProviderFactory = resourceProviderFactory;
-    log.info("Starting FHIR server with configuration: {}", configuration);
+    this.batchProvider = batchProvider;
+    log.debug("Starting FHIR server with configuration: {}", configuration);
   }
 
   @Override
@@ -133,11 +166,22 @@ public class FhirServer extends RestfulServer {
       // Register query providers.
       final Collection<Object> providers = new ArrayList<>();
       providers.addAll(buildAggregateProviders());
+      providers.addAll(buildExtractProviders());
       providers.addAll(buildSearchProviders());
+      providers.addAll(buildUpdateProviders());
       registerProviders(providers);
+
+      // Register batch provider.
+      registerProvider(batchProvider);
 
       // Register resource providers.
       registerProvider(operationDefinitionProvider);
+
+      // Register job provider, if async is enabled.
+      jobProvider.ifPresent(this::registerProvider);
+
+      // Register extract result provider.
+      registerProvider(resultProvider);
 
       // Configure interceptors.
       configureRequestLogging();
@@ -155,6 +199,9 @@ public class FhirServer extends RestfulServer {
 
       // Register error handling interceptor.
       registerInterceptor(new ErrorHandlingInterceptor());
+
+      // Register ETag handling interceptor.
+      registerInterceptor(entityTagInterceptor);
 
       // Report errors to Sentry, if configured.
       registerInterceptor(errorReportingInterceptor);
@@ -182,14 +229,39 @@ public class FhirServer extends RestfulServer {
   }
 
   @Nonnull
+  private List<IResourceProvider> buildExtractProviders() {
+    final List<IResourceProvider> providers = new ArrayList<>();
+
+    // Instantiate an extract provider for every resource type in FHIR.
+    for (final ResourceType resourceType : ResourceType.values()) {
+      final IResourceProvider extractProvider = resourceProviderFactory
+          .createExtractResourceProvider(resourceType);
+      providers.add(extractProvider);
+    }
+    return providers;
+  }
+
+  @Nonnull
   private List<IResourceProvider> buildSearchProviders() {
     final List<IResourceProvider> providers = new ArrayList<>();
 
     // Instantiate a search provider for every resource type in FHIR.
     for (final ResourceType resourceType : ResourceType.values()) {
-      final IResourceProvider searchProvider = resourceProviderFactory
-          .createSearchResourceProvider(resourceType, configuration.getCaching().isEnabled());
+      final IResourceProvider searchProvider =
+          resourceProviderFactory.createSearchResourceProvider(resourceType);
       providers.add(searchProvider);
+    }
+    return providers;
+  }
+
+  @Nonnull
+  private List<IResourceProvider> buildUpdateProviders() {
+    final List<IResourceProvider> providers = new ArrayList<>();
+
+    for (final ResourceType resourceType : ResourceType.values()) {
+      final IResourceProvider updateProvider =
+          resourceProviderFactory.createUpdateResourceProvider(resourceType);
+      providers.add(updateProvider);
     }
     return providers;
   }
@@ -198,9 +270,13 @@ public class FhirServer extends RestfulServer {
     // Add the request ID to the logging context before each request.
     registerInterceptor(requestIdInterceptor);
 
+    // Create a dedicated logger, so that we can control it independently through logging
+    // configuration.
+    final Logger requestLogger = LoggerFactory.getLogger("requestLogger");
+
     // Log the request duration following each successful request.
     final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
-    loggingInterceptor.setLogger(log);
+    loggingInterceptor.setLogger(requestLogger);
     loggingInterceptor.setMessageFormat("Request completed in ${processingTimeMillis} ms");
     loggingInterceptor.setLogExceptions(false);
     registerInterceptor(loggingInterceptor);
@@ -208,8 +284,9 @@ public class FhirServer extends RestfulServer {
 
   private void configureAuthorization() {
     if (configuration.getAuth().isEnabled()) {
+      final String issuer = checkPresent(configuration.getAuth().getIssuer());
       final SmartConfigurationInterceptor smartConfigurationInterceptor =
-          new SmartConfigurationInterceptor(checkPresent(oidcConfiguration));
+          new SmartConfigurationInterceptor(issuer, checkPresent(oidcConfiguration));
       registerInterceptor(smartConfigurationInterceptor);
     }
   }
@@ -236,6 +313,24 @@ public class FhirServer extends RestfulServer {
         | InvocationTargetException e) {
       throw new RuntimeException("Problem determining FHIR type from resource class", e);
     }
+  }
+
+  /**
+   * @return The set of resource types currently supported by this server.
+   */
+  @Nonnull
+  public static Set<Enumerations.ResourceType> supportedResourceTypes() {
+    final Set<Enumerations.ResourceType> availableResourceTypes = EnumSet.allOf(
+        Enumerations.ResourceType.class);
+    final Set<Enumerations.ResourceType> unsupportedResourceTypes =
+        JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
+            .map(Enumerations.ResourceType::fromCode)
+            .collect(Collectors.toSet());
+    availableResourceTypes.removeAll(unsupportedResourceTypes);
+    availableResourceTypes.remove(Enumerations.ResourceType.RESOURCE);
+    availableResourceTypes.remove(Enumerations.ResourceType.DOMAINRESOURCE);
+    availableResourceTypes.remove(Enumerations.ResourceType.NULL);
+    return availableResourceTypes;
   }
 
 }

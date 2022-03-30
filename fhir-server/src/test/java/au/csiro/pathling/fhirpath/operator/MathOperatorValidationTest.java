@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -28,15 +28,15 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class MathOperatorValidationTest {
+class MathOperatorValidationTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
+  ParserContext parserContext;
 
   @BeforeEach
   void setUp() {
@@ -44,7 +44,7 @@ public class MathOperatorValidationTest {
   }
 
   @Test
-  public void operandIsNotCorrectType() {
+  void operandIsNotCorrectType() {
     final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DATETIME)
         .singular(true)
@@ -75,7 +75,7 @@ public class MathOperatorValidationTest {
   }
 
   @Test
-  public void operandIsNotSingular() {
+  void operandIsNotSingular() {
     final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .singular(false)

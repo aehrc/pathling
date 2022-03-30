@@ -8,10 +8,6 @@ pathling:
   # Controls the description of this server as displayed within the FHIR CapabilityStatement.
   implementationDescription: Yet Another Pathling Server
 
-  # Setting this option to true will enable additional logging of the details of requests to the 
-  # server, and between the server and the terminology service.
-  verboseRequestLogging: false
-
   # If this variable is set, all errors will be reported to a Sentry service, e.g.
   # `https://abc123@sentry.io/123456`.
   # sentryDsn: [Sentry DSN]
@@ -27,6 +23,16 @@ pathling:
     # execute queries.
     explainQueries: false
 
+    # This controls whether the built-in caching within Spark is used for resource datasets and
+    # search results. It may be useful to turn this off for large datasets in memory-constrained
+    # environments.
+    cacheDatasets: true
+    
+    # When a table is updated, the number of partitions is checked. If the number exceeds this 
+    # threshold, the table will be repartitioned back to the default number of partitions. This 
+    # prevents large numbers of small updates causing poor subsequent query performance.
+    compactionThreshold: 10
+  
   storage:
     # The base URL at which Pathling will look for data files, and where it will save data received
     # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://)
@@ -40,21 +46,29 @@ pathling:
     aws:
       # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
       anonymousAccess: true
+
       # Authentication details for connecting to protected Amazon S3 locations.
       # accessKeyId: [AWS access key ID]
       # secretAccessKey: [AWS secret access key]
+
+      # The ARN of an IAM role to be assumed using STS.
+      # assumedRole: [ARN of IAM role]
 
   terminology:
     # Enables the use of terminology functions.
     enabled: true
 
     # The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology 
-    # queries. The server listed here is suitable for low volume testing purposes only.
-    serverUrl: https://r4.ontoserver.csiro.au/fhir
-    
+    # queries. The server listed here is suitable for testing purposes only.
+    serverUrl: https://tx.ontoserver.csiro.au/fhir
+
     # The maximum period (in milliseconds) that the server should wait for incoming data from the
     # terminology service.
     socketTimeout: 60000
+    
+    # Setting this option to true will enable additional logging of the details of requests between 
+    # the server and the terminology service.
+    verboseLogging: false
 
   auth:
     # Enables authorization.
@@ -70,29 +84,43 @@ pathling:
 
     # Provides the URL which will be advertised as the authorization endpoint.
     # authorizeUrl: [authorization URL]
-    
+
     # Provides the URL which will be advertised as the token endpoint.
     # tokenUrl: [token URL]
 
     # Provides the URL which will be advertised as the token revocation endpoint.
     # revokeUrl: [token revocation URL]
 
-  caching:
-    # Controls whether request caching is enabled.
-    enabled: true
-
-    # Controls the maximum number of cache entries held in memory for each of the individual cache
-    # types. You can disable a particular type of caching by setting this number to zero.
-    aggregateRequestCacheSize: 100
-    searchBundleCacheSize: 100
-    searchPageCacheSize: 100
-    resourceReaderCacheSize: 100
+    ga4ghPassports:
+      # When GA4GH passport authentication is enabled, this option configures the identifier system 
+      # that is used to identify and control access to patient data.
+      patientIdSystem: http://www.australiangenomics.org.au/id/study-number
+      
+      # When GA4GH passport authentication is enabled, this option configures the list of endpoints 
+      # that are allowed to issue visas.
+      allowedVisaIssuers: [ ]
+  
+  # This section configures HTTP caching response headers.
+  httpCaching:
+    # A list of values to return within the Vary header.
+    vary:
+      - Accept
+      - Accept-Encoding
+      - Prefer
+      - Authorization
+    # A list of values to return within the Cache-Control header, for cacheable responses.
+    cacheableControl:
+      - must-revalidate
+      - max-age=1
+    # A list of values to return within the Cache-Control header, for uncacheable responses.
+    uncacheableControl:
+      - no-store
 
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: []
-    allowedOriginPatterns: []
+    allowedOrigins: [ ]
+    allowedOriginPatterns: [ ]
     allowedMethods:
       - OPTIONS
       - GET
@@ -100,28 +128,61 @@ pathling:
     allowedHeaders:
       - Content-Type
       - Authorization
+      - Prefer
+    exposedHeaders:
+      - Content-Location
+      - X-Progress
     maxAge: 600
 
   import:
     allowableSources:
       - "file:///usr/share/staging"
 
+  async:
+    enabled: true
+
+  encoding:
+    # Controls the maximum depth of nested element data that is encoded upon import.
+    maxNestingLevel: 3
+    
+    # Enables support for FHIR extensions.
+    enableExtensions: true
+    
+    # The list of types that are encoded within open types, such as extensions. This default list 
+    # was taken from the data types that are common to extensions found in widely-used IGs, 
+    # such as the US and AU base profiles. In general, you will get the best query performance by 
+    # encoding your data with the shortest possible list.
+    openTypes:
+      - boolean
+      - code
+      - date
+      - dateTime
+      - decimal
+      - integer
+      - string
+      - Coding
+      - CodeableConcept
+      - Address
+      - Identifier
+      - Reference
+
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.
 # Here is the full list: https://spark.apache.org/docs/latest/configuration.html
 spark:
   master: local[*]
-  executor:
-    memory: 1g
   sql:
     adaptive:
       enabled: true
-    shuffle:
-      service:
+      coalescePartitions:
         enabled: true
-      partitions: 2
-      autoBroadcastJoinThreshold: -1
+    extensions: io.delta.sql.DeltaSparkSessionExtension
+    catalog:
+      spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+  databricks:
+    delta:
+      schema:
+        autoMerge:
+          enabled: true
   scheduler:
     mode: FAIR
-  dynamicAllocation:
-    enabled: true

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -16,12 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author John Grimes
  */
 @Slf4j
-public class WireMockTest extends IntegrationTest {
+class WireMockTest extends IntegrationTest {
 
   @Autowired
-  protected WireMockServer wireMockServer;
+  WireMockServer wireMockServer;
 
-  protected static boolean isRecordMode() {
+  static boolean isRecordMode() {
     return Boolean.parseBoolean(System.getProperty("pathling.test.recording.enabled", "false"));
   }
 

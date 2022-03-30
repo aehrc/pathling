@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -12,7 +12,7 @@ import static org.mockito.Mockito.mock;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.StringAndListParam;
@@ -27,33 +27,33 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author John Grimes
  */
 @Getter
-public class SearchExecutorBuilder {
+class SearchExecutorBuilder {
 
   @Nonnull
-  private final Configuration configuration;
+  final Configuration configuration;
 
   @Nonnull
-  private final FhirContext fhirContext;
+  final FhirContext fhirContext;
 
   @Nonnull
-  private final SparkSession sparkSession;
+  final SparkSession sparkSession;
 
   @Nonnull
-  private final FhirEncoders fhirEncoders;
+  final FhirEncoders fhirEncoders;
 
   @Nonnull
-  private final ResourceReader resourceReader;
+  final Database database;
 
   @Nonnull
-  private final TerminologyServiceFactory terminologyServiceFactory;
+  final TerminologyServiceFactory terminologyServiceFactory;
 
   @Nullable
-  private ResourceType subjectResource;
+  ResourceType subjectResource;
 
   @Nonnull
-  private Optional<StringAndListParam> filters = Optional.empty();
+  Optional<StringAndListParam> filters = Optional.empty();
 
-  public SearchExecutorBuilder(@Nonnull final Configuration configuration,
+  SearchExecutorBuilder(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
@@ -61,24 +61,24 @@ public class SearchExecutorBuilder {
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.fhirEncoders = fhirEncoders;
-    resourceReader = mock(ResourceReader.class);
+    database = mock(Database.class);
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
-  public SearchExecutorBuilder withSubjectResource(@Nonnull final ResourceType resourceType) {
+  SearchExecutorBuilder withSubjectResource(@Nonnull final ResourceType resourceType) {
     this.subjectResource = resourceType;
-    TestHelpers.mockResourceReader(resourceReader, sparkSession, resourceType);
+    TestHelpers.mockResource(database, sparkSession, resourceType);
     return this;
   }
 
-  public SearchExecutorBuilder withFilters(@Nonnull final StringAndListParam filters) {
+  SearchExecutorBuilder withFilters(@Nonnull final StringAndListParam filters) {
     this.filters = Optional.of(filters);
     return this;
   }
 
-  public SearchExecutor build() {
+  SearchExecutor build() {
     checkNotNull(subjectResource);
-    return new SearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
+    return new SearchExecutor(configuration, fhirContext, sparkSession, database,
         Optional.of(terminologyServiceFactory), fhirEncoders, subjectResource, filters);
   }
 

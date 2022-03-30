@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -83,7 +83,10 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
         lit(value.getVersion()).as("version"),
         lit(value.getCode()).as("code"),
         lit(value.getDisplay()).as("display"),
-        lit(value.hasUserSelected()?value.getUserSelected():null).as("userSelected"));
+        lit(value.hasUserSelected()
+            ? value.getUserSelected()
+            : null).as("userSelected"),
+        lit(null).as("_fid"));
   }
 
   @Override
@@ -107,5 +110,11 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof CodingPath;
   }
- 
+
+  @Nonnull
+  @Override
+  public Column getExtractableColumn() {
+    return lit(CodingLiteral.toLiteral(getLiteralValue()));
+  }
+
 }

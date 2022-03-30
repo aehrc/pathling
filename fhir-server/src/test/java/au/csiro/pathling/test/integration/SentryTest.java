@@ -1,17 +1,22 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
 
 package au.csiro.pathling.test.integration;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.aggregate.CachingAggregateExecutor;
+import au.csiro.pathling.aggregate.AggregateExecutor;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,13 +38,13 @@ import org.springframework.test.context.TestPropertySource;
 class SentryTest extends WireMockTest {
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @MockBean
-  private CachingAggregateExecutor aggregateExecutor;
+  AggregateExecutor aggregateExecutor;
 
   @BeforeEach
   void setUp() {

@@ -170,4 +170,17 @@ http://snomed.info/sct|'397956004 |Prosthetic arthroplasty of the hip|: 36370400
 
 <div class="callout warning">The <code>Coding</code> literal is not within the FHIRPath specification, and is currently unique to the Pathling implementation.</div>
 
+## Materializable types
+
+There is a subset of all possible FHIR types that can be "materialized", i.e. used as the result of a grouping expression in the Aggregate operation, or the definition of a column within the Extract operation. These types are:
+
+- [Boolean](#boolean)
+- [String](#string)
+- [Integer](#integer)
+- [Decimal](#decimal)
+- [Date](#date)
+- [DateTime](#datetime)
+- [Time](#time)
+- [Coding](#coding)
+
 Next: [Operators](./operators.html)

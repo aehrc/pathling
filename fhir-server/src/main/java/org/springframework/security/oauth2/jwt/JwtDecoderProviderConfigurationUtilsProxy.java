@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -24,15 +24,6 @@ public class JwtDecoderProviderConfigurationUtilsProxy {
   public static Map<String, Object> getConfigurationForIssuerLocation(
       @Nonnull final String issuer) {
     return JwtDecoderProviderConfigurationUtils.getConfigurationForIssuerLocation(issuer);
-  }
-
-  /**
-   * @param configuration the OIDC configuration values
-   * @param issuer the issuer required to be asserted within the token
-   */
-  public static void validateIssuer(@Nonnull final Map<String, Object> configuration,
-      @Nonnull final String issuer) {
-    JwtDecoderProviderConfigurationUtils.validateIssuer(configuration, issuer);
   }
 
 }

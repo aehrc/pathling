@@ -1,22 +1,26 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
 
 package au.csiro.pathling.caching;
 
-/**
- * Describes an executor that has responses that can be cached. This is used for centralised
- * invalidation of cached content.
- *
- * @author John Grimes
- */
+import java.util.Optional;
+
 public interface Cacheable {
 
   /**
-   * Invalidates any cached responses that may be stored.
+   * Returns the cache key for the object.
    */
-  void invalidateCache();
+  Optional<String> getCacheKey();
+
+  /**
+   * Tests whether the current cache key matches another string.
+   *
+   * @param otherKey the string to be tested
+   * @return true if the cache key matches the other string
+   */
+  boolean cacheKeyMatches(String otherKey);
 
 }

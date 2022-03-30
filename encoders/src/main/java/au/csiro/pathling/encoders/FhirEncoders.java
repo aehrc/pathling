@@ -5,22 +5,26 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 package au.csiro.pathling.encoders;
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
-import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import lombok.Value;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 
 /**
  * Spark Encoders for FHIR Resources. This object is thread safe.
@@ -35,12 +39,12 @@ public class FhirEncoders {
   /**
    * Cache of mappings between Spark and FHIR types.
    */
-  private static final Map<FhirVersionEnum, DataTypeMappings> DATA_TYPE_MAPPINGS = new HashMap();
+  private static final Map<FhirVersionEnum, DataTypeMappings> DATA_TYPE_MAPPINGS = new HashMap<>();
 
   /**
    * Cache of FHIR contexts.
    */
-  private static final Map<FhirVersionEnum, FhirContext> FHIR_CONTEXTS = new HashMap();
+  private static final Map<FhirVersionEnum, FhirContext> FHIR_CONTEXTS = new HashMap<>();
 
   /**
    * The FHIR context used by the encoders instance.
@@ -55,7 +59,22 @@ public class FhirEncoders {
   /**
    * Cached encoders to avoid having to re-create them.
    */
-  private final Map<Integer, ExpressionEncoder> encoderCache = new HashMap<>();
+  private final Map<Integer, ExpressionEncoder<?>> encoderCache = new HashMap<>();
+
+  /**
+   * The maximum nesting level for expansion of recursive data types.
+   */
+  private final int maxNestingLevel;
+
+  /**
+   * The list of types that are encoded within open types, such as extensions.
+   */
+  private final Set<String> openTypes;
+
+  /**
+   * Indicates whether FHIR extension support should be enabled.
+   */
+  private final boolean enableExtensions;
 
   /**
    * Consumers should generally use the {@link #forR4()} method, but this is made available for test
@@ -63,10 +82,17 @@ public class FhirEncoders {
    *
    * @param context the FHIR context to use.
    * @param mappings mappings between Spark and FHIR data types.
+   * @param maxNestingLevel maximum nesting level for expansion of recursive data types.
+   * @param openTypes the list of types that are encoded within open types, such as extensions.
+   * @param enableExtensions true if FHIR extension should be enabled.
    */
-  public FhirEncoders(final FhirContext context, final DataTypeMappings mappings) {
+  public FhirEncoders(final FhirContext context, final DataTypeMappings mappings,
+      final int maxNestingLevel, final Set<String> openTypes, final boolean enableExtensions) {
     this.context = context;
     this.mappings = mappings;
+    this.maxNestingLevel = maxNestingLevel;
+    this.openTypes = openTypes;
+    this.enableExtensions = enableExtensions;
   }
 
   /**
@@ -116,7 +142,8 @@ public class FhirEncoders {
 
         try {
 
-          mappings = (DataTypeMappings) Class.forName(dataTypesClassName).newInstance();
+          mappings = (DataTypeMappings) Class.forName(dataTypesClassName).getDeclaredConstructor()
+              .newInstance();
 
           DATA_TYPE_MAPPINGS.put(fhirVersion, mappings);
 
@@ -159,13 +186,15 @@ public class FhirEncoders {
   /**
    * Returns an encoder for the given FHIR resource.
    *
-   * @param type the type of the resource to encode.
+   * @param resourceName the type of the resource to encode.
    * @param <T> the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(final String type) {
+  public final <T extends IBaseResource> ExpressionEncoder<T> of(final String resourceName) {
 
-    return of(type, new String[]{});
+    final RuntimeResourceDefinition definition = context.getResourceDefinition(resourceName);
+    //noinspection unchecked
+    return of((Class<T>) definition.getImplementingClass());
   }
 
   /**
@@ -177,108 +206,20 @@ public class FhirEncoders {
    */
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type) {
 
-    return of(type, Collections.emptyList());
-  }
-
-  /**
-   * Returns an encoder for the given FHIR resource by name, as defined by the FHIR specification.
-   *
-   * @param resourceName the name of the FHIR resource to encode, such as "Encounter", "Condition",
-   * "Observation", etc.
-   * @param contained the names of FHIR resources contained to the encoded resource.
-   * @param <T> the type of the resource to be encoded.
-   * @return an encoder for the resource.
-   */
-  public <T extends IBaseResource> ExpressionEncoder<T> of(final String resourceName,
-      final String... contained) {
-
-    final RuntimeResourceDefinition definition = context.getResourceDefinition(resourceName);
-
-    final List<Class<? extends IBaseResource>> containedClasses = new ArrayList<>();
-
-    for (final String containedName : contained) {
-
-      containedClasses.add(context.getResourceDefinition(containedName).getImplementingClass());
-    }
-
-    return of((Class<T>) definition.getImplementingClass(), containedClasses);
-  }
-
-  /**
-   * Returns an encoder for the given FHIR resource.
-   *
-   * @param type the type of the resource to encode.
-   * @param contained a list of types for FHIR resources contained to the encoded resource.
-   * @param <T> the type of the resource to be encoded.
-   * @return an encoder for the resource.
-   */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type,
-      final Class... contained) {
-
-    final List<Class<? extends IBaseResource>> containedResourceList = new ArrayList<>();
-
-    for (final Class element : contained) {
-
-      if (IBaseResource.class.isAssignableFrom(element)) {
-
-        containedResourceList.add((Class<IBaseResource>) element);
-      } else {
-
-        throw new IllegalArgumentException("The contained classes provided must all implement  "
-            + "FHIR IBaseResource");
-      }
-    }
-
-    return of(type, containedResourceList);
-  }
-
-  /**
-   * Returns an encoder for the given FHIR resource.
-   *
-   * @param type the type of the resource to encode.
-   * @param contained a list of types for FHIR resources contained to the encoded resource.
-   * @param <T> the type of the resource to be encoded.
-   * @return an encoder for the resource.
-   */
-  public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type,
-      final List<Class<? extends IBaseResource>> contained) {
-
-    final BaseRuntimeElementCompositeDefinition definition =
+    final RuntimeResourceDefinition definition =
         context.getResourceDefinition(type);
 
-    final List<BaseRuntimeElementCompositeDefinition<?>> containedDefinitions = new ArrayList<>();
-
-    for (final Class<? extends IBaseResource> resource : contained) {
-
-      containedDefinitions.add(context.getResourceDefinition(resource));
-    }
-
-    final StringBuilder keyBuilder = new StringBuilder(type.getName());
-
-    for (final Class resource : contained) {
-
-      keyBuilder.append(resource.getName());
-    }
-
-    final int key = keyBuilder.toString().hashCode();
+    final int key = type.getName().hashCode();
 
     synchronized (encoderCache) {
-
-      ExpressionEncoder<T> encoder = encoderCache.get(key);
-
-      if (encoder == null) {
-
-        encoder = (ExpressionEncoder<T>)
-            EncoderBuilder.of(definition,
-                context,
-                mappings,
-                new SchemaConverter(context, mappings),
-                JavaConversions.asScalaBuffer(containedDefinitions));
-
-        encoderCache.put(key, encoder);
-      }
-
-      return encoder;
+      //noinspection unchecked
+      return (ExpressionEncoder<T>) encoderCache.computeIfAbsent(key, k ->
+          EncoderBuilder.of(definition,
+              context,
+              mappings,
+              maxNestingLevel,
+              JavaConverters.asScalaSet(openTypes).toSet(),
+              enableExtensions));
     }
   }
 
@@ -295,42 +236,68 @@ public class FhirEncoders {
   /**
    * Immutable key to look up a matching encoders instance by configuration.
    */
+  @Value
   private static class EncodersKey {
 
-    final FhirVersionEnum fhirVersion;
-
-    EncodersKey(final FhirVersionEnum fhirVersion) {
-      this.fhirVersion = fhirVersion;
-    }
-
-    @Override
-    public int hashCode() {
-      return fhirVersion.hashCode();
-    }
-
-    @Override
-    public boolean equals(final Object obj) {
-      if (!(obj instanceof EncodersKey)) {
-        return false;
-      }
-
-      final EncodersKey that = (EncodersKey) obj;
-
-      return this.fhirVersion == that.fhirVersion;
-    }
+    FhirVersionEnum fhirVersion;
+    int maxNestingLevel;
+    Set<String> openTypes;
+    boolean enableExtensions;
   }
 
   /**
-   * Encoder builder. Today only the FHIR version is specified, but future builders may allow
-   * customization of the profile used.
+   * Encoder builder. Specifies FHIR version and other parameters affecting encoder functionality,
+   * such as max nesting level for recursive types with the fluent API.
    */
   public static class Builder {
 
-    final FhirVersionEnum fhirVersion;
+    private static final boolean DEFAULT_ENABLE_EXTENSIONS = false;
+    private static final int DEFAULT_MAX_NESTING_LEVEL = 0;
+
+    private final FhirVersionEnum fhirVersion;
+    private int maxNestingLevel;
+    private Set<String> openTypes;
+    private boolean enableExtensions;
 
     Builder(final FhirVersionEnum fhirVersion) {
-
       this.fhirVersion = fhirVersion;
+      this.maxNestingLevel = DEFAULT_MAX_NESTING_LEVEL;
+      this.openTypes = Collections.emptySet();
+      this.enableExtensions = DEFAULT_ENABLE_EXTENSIONS;
+    }
+
+    /**
+     * Set the maximum nesting level for recursive data types. Zero (0) indicates that all direct or
+     * indirect fields of type T in element of type T should be skipped.
+     *
+     * @param maxNestingLevel the maximum nesting level
+     * @return this builder
+     */
+    public Builder withMaxNestingLevel(final int maxNestingLevel) {
+      this.maxNestingLevel = maxNestingLevel;
+      return this;
+    }
+
+    /**
+     * Sets the list of types that are encoded within open types, such as extensions.
+     *
+     * @param openTypes the list of types
+     * @return this builder
+     */
+    public Builder withOpenTypes(final Set<String> openTypes) {
+      this.openTypes = openTypes;
+      return this;
+    }
+
+    /**
+     * Switches on/off the support for extensions in encoders.
+     *
+     * @param enable if extensions should be enabled.
+     * @return this builder
+     */
+    public Builder withExtensionsEnabled(final boolean enable) {
+      this.enableExtensions = enable;
+      return this;
     }
 
     /**
@@ -340,7 +307,8 @@ public class FhirEncoders {
      */
     public FhirEncoders getOrCreate() {
 
-      final EncodersKey key = new EncodersKey(fhirVersion);
+      final EncodersKey key = new EncodersKey(fhirVersion, maxNestingLevel,
+          openTypes, enableExtensions);
 
       synchronized (ENCODERS) {
 
@@ -352,12 +320,10 @@ public class FhirEncoders {
 
           final FhirContext context = contextFor(fhirVersion);
           final DataTypeMappings mappings = mappingsFor(fhirVersion);
-
-          encoders = new FhirEncoders(context, mappings);
-
+          encoders = new FhirEncoders(context, mappings, maxNestingLevel, openTypes,
+              enableExtensions);
           ENCODERS.put(key, encoders);
         }
-
         return encoders;
       }
     }

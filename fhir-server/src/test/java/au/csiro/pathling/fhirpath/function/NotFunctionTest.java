@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -40,10 +40,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 class NotFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Test
   void returnsCorrectResults() {
@@ -93,7 +93,7 @@ class NotFunctionTest {
   }
 
   @Test
-  public void inputMustNotContainArguments() {
+  void inputMustNotContainArguments() {
     final ElementPath input = new ElementPathBuilder(spark).build();
     final StringLiteralPath argument = StringLiteralPath
         .fromString("'some argument'", input);
@@ -112,7 +112,7 @@ class NotFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfInputNotBoolean() {
+  void throwsErrorIfInputNotBoolean() {
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .expression("valueInteger")

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -16,7 +16,7 @@ import org.mockito.stubbing.Answer;
 /**
  * @author John Grimes
  */
-public class DefaultAnswer implements Answer {
+public class DefaultAnswer implements Answer<Object> {
 
   @Override
   public Object answer(@Nullable final InvocationOnMock invocation) {

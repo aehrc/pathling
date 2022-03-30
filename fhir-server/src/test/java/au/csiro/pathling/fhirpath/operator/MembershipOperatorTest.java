@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -27,6 +27,7 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.StringPrimitiveRowFixture;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -46,26 +47,26 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class MembershipOperatorTest {
+class MembershipOperatorTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
+  ParserContext parserContext;
 
   @BeforeEach
   void setUp() {
     parserContext = new ParserContextBuilder(spark, fhirContext).build();
   }
 
-  public static Stream<String> parameters() {
+  static Stream<String> parameters() {
     return Stream.of("in", "contains");
   }
 
-  private FhirPath testOperator(final String operator, final FhirPath collection,
+  FhirPath testOperator(final String operator, final FhirPath collection,
       final FhirPath element) {
     final OperatorInput operatorInput;
     if ("in".equals(operator)) {
@@ -85,7 +86,7 @@ public class MembershipOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void returnsCorrectResultWhenElementIsLiteral(final String operator) {
+  void returnsCorrectResultWhenElementIsLiteral(final String operator) {
     final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(StringPrimitiveRowFixture.createCompleteDataset(spark))
@@ -93,7 +94,7 @@ public class MembershipOperatorTest {
         .build();
     final StringLiteralPath element = StringLiteralPath.fromString("'Samuel'", collection);
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);
@@ -109,7 +110,7 @@ public class MembershipOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void returnsCorrectResultWhenElementIsExpression(final String operator) {
+  void returnsCorrectResultWhenElementIsExpression(final String operator) {
     final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(StringPrimitiveRowFixture.createCompleteDataset(spark))
@@ -128,7 +129,7 @@ public class MembershipOperatorTest {
         .expression("name.family.first()")
         .build();
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);
@@ -144,7 +145,7 @@ public class MembershipOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void resultIsFalseWhenCollectionIsEmpty(final String operator) {
+  void resultIsFalseWhenCollectionIsEmpty(final String operator) {
     final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(StringPrimitiveRowFixture.createNullRowsDataset(spark))
@@ -152,7 +153,7 @@ public class MembershipOperatorTest {
         .build();
     final StringLiteralPath element = StringLiteralPath.fromString("'Samuel'", collection);
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);
@@ -165,7 +166,7 @@ public class MembershipOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void returnsEmptyWhenElementIsEmpty(final String operator) {
+  void returnsEmptyWhenElementIsEmpty(final String operator) {
     final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(StringPrimitiveRowFixture.createCompleteDataset(spark))
@@ -179,7 +180,7 @@ public class MembershipOperatorTest {
         .expression("name.family.first()")
         .build();
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);
@@ -195,7 +196,7 @@ public class MembershipOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void worksForCodingLiterals(final String operator) {
+  void worksForCodingLiterals(final String operator) {
 
     final Coding snomedCoding = new Coding(SNOMED_URL, "56459004", null);
     final Coding loincCoding1 = new Coding(LOINC_URL, "56459004", null);
@@ -227,7 +228,7 @@ public class MembershipOperatorTest {
     final CodingLiteralPath element = CodingLiteralPath
         .fromString("http://loinc.org|56459004", collection);
     parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(collection)
+        .groupingColumns(Collections.singletonList(collection.getIdColumn()))
         .build();
 
     final FhirPath result = testOperator(operator, collection, element);
@@ -242,7 +243,7 @@ public class MembershipOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void throwExceptionWhenElementIsNotSingular(final String operator) {
+  void throwExceptionWhenElementIsNotSingular(final String operator) {
     final ElementPath collection = new ElementPathBuilder(spark)
         .singular(false)
         .build();
@@ -261,7 +262,7 @@ public class MembershipOperatorTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  public void throwExceptionWhenIncompatibleTypes(final String operator) {
+  void throwExceptionWhenIncompatibleTypes(final String operator) {
     final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .expression("foo")

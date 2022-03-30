@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -62,62 +62,62 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class SubsumesFunctionTest {
+class SubsumesFunctionTest {
 
-  private static final String TEST_SYSTEM = "uuid:1";
+  static final String TEST_SYSTEM = "uuid:1";
 
-  private static final Coding CODING_SMALL = new Coding(TEST_SYSTEM, "SMALL", null);
-  private static final Coding CODING_MEDIUM = new Coding(TEST_SYSTEM, "MEDIUM", null);
-  private static final Coding CODING_LARGE = new Coding(TEST_SYSTEM, "LARGE", null);
-  private static final Coding CODING_OTHER1 = new Coding(TEST_SYSTEM, "OTHER1", null);
-  private static final Coding CODING_OTHER2 = new Coding(TEST_SYSTEM, "OTHER2", null);
-  private static final Coding CODING_OTHER3 = new Coding(TEST_SYSTEM, "OTHER3", null);
-  private static final Coding CODING_OTHER4 = new Coding(TEST_SYSTEM, "OTHER4", null);
-  private static final Coding CODING_OTHER5 = new Coding(TEST_SYSTEM, "OTHER5", null);
+  static final Coding CODING_SMALL = new Coding(TEST_SYSTEM, "SMALL", null);
+  static final Coding CODING_MEDIUM = new Coding(TEST_SYSTEM, "MEDIUM", null);
+  static final Coding CODING_LARGE = new Coding(TEST_SYSTEM, "LARGE", null);
+  static final Coding CODING_OTHER1 = new Coding(TEST_SYSTEM, "OTHER1", null);
+  static final Coding CODING_OTHER2 = new Coding(TEST_SYSTEM, "OTHER2", null);
+  static final Coding CODING_OTHER3 = new Coding(TEST_SYSTEM, "OTHER3", null);
+  static final Coding CODING_OTHER4 = new Coding(TEST_SYSTEM, "OTHER4", null);
+  static final Coding CODING_OTHER5 = new Coding(TEST_SYSTEM, "OTHER5", null);
 
-  private static final String RES_ID1 = "condition-xyz1";
-  private static final String RES_ID2 = "condition-xyz2";
-  private static final String RES_ID3 = "condition-xyz3";
-  private static final String RES_ID4 = "condition-xyz4";
-  private static final String RES_ID5 = "condition-xyz5";
+  static final String RES_ID1 = "condition-xyz1";
+  static final String RES_ID2 = "condition-xyz2";
+  static final String RES_ID3 = "condition-xyz3";
+  static final String RES_ID4 = "condition-xyz4";
+  static final String RES_ID5 = "condition-xyz5";
 
   // coding_large -- subsumes --> coding_medium --> subsumes --> coding_small
-  private static final Relation RELATION_LARGE_MEDIUM_SMALL = RelationBuilder.empty()
+  static final Relation RELATION_LARGE_MEDIUM_SMALL = RelationBuilder.empty()
       .add(CODING_LARGE, CODING_MEDIUM)
       .add(CODING_MEDIUM, CODING_SMALL)
       .add(CODING_LARGE, CODING_SMALL)
       .build();
 
-  private static final List<String> ALL_RES_IDS =
+  static final List<String> ALL_RES_IDS =
       Arrays.asList(RES_ID1, RES_ID2, RES_ID3, RES_ID4, RES_ID5);
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Autowired
-  private TerminologyService terminologyService;
+  TerminologyService terminologyService;
 
   @Autowired
-  private TerminologyServiceFactory terminologyServiceFactory;
+  TerminologyServiceFactory terminologyServiceFactory;
 
-  private static Row codeableConceptRowFromCoding(final Coding coding) {
+  static Row codeableConceptRowFromCoding(final Coding coding) {
     return codeableConceptRowFromCoding(coding, CODING_OTHER4);
   }
 
-  private static Row codeableConceptRowFromCoding(final Coding coding, final Coding otherCoding) {
+  static Row codeableConceptRowFromCoding(final Coding coding, final Coding otherCoding) {
     return rowFromCodeableConcept(new CodeableConcept(coding).addCoding(otherCoding));
   }
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     SharedMocks.resetAll();
     when(terminologyService.getSubsumesRelation(any())).thenReturn(RELATION_LARGE_MEDIUM_SMALL);
   }
 
-  private CodingPath createCodingInput() {
+  CodingPath createCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -142,7 +142,7 @@ public class SubsumesFunctionTest {
     return (CodingPath) inputExpression;
   }
 
-  private CodingPath createSingularCodingInput() {
+  CodingPath createSingularCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
@@ -163,7 +163,7 @@ public class SubsumesFunctionTest {
   }
 
 
-  private ElementPath createCodeableConceptInput() {
+  ElementPath createCodeableConceptInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -187,7 +187,7 @@ public class SubsumesFunctionTest {
         .build();
   }
 
-  private CodingLiteralPath createLiteralArgOrInput() {
+  CodingLiteralPath createLiteralArgOrInput() {
     final Dataset<Row> literalContextDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.BooleanType)
@@ -202,7 +202,7 @@ public class SubsumesFunctionTest {
         literalContext);
   }
 
-  private CodingPath createCodingArg() {
+  CodingPath createCodingArg() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
@@ -218,7 +218,7 @@ public class SubsumesFunctionTest {
     return (CodingPath) argument;
   }
 
-  private ElementPath createCodeableConceptArg() {
+  ElementPath createCodeableConceptArg() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codeableConceptStructType())
@@ -235,7 +235,7 @@ public class SubsumesFunctionTest {
         .build();
   }
 
-  private CodingPath createEmptyCodingInput() {
+  CodingPath createEmptyCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -251,7 +251,7 @@ public class SubsumesFunctionTest {
     return (CodingPath) argument;
   }
 
-  private CodingPath createNullCodingInput() {
+  CodingPath createNullCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -268,7 +268,7 @@ public class SubsumesFunctionTest {
     return (CodingPath) argument;
   }
 
-  private ElementPath createEmptyCodeableConceptInput() {
+  ElementPath createEmptyCodeableConceptInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -282,7 +282,7 @@ public class SubsumesFunctionTest {
         .build();
   }
 
-  private ElementPath createNullCodeableConceptInput() {
+  ElementPath createNullCodeableConceptInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -297,7 +297,7 @@ public class SubsumesFunctionTest {
         .build();
   }
 
-  private CodingPath createNullCodingArg() {
+  CodingPath createNullCodingArg() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
@@ -313,7 +313,7 @@ public class SubsumesFunctionTest {
     return (CodingPath) argument;
   }
 
-  private DatasetBuilder expectedSubsumes() {
+  DatasetBuilder expectedSubsumes() {
     return new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -329,7 +329,7 @@ public class SubsumesFunctionTest {
         .withRow(RES_ID5, null, null);
   }
 
-  private DatasetBuilder expectedSubsumedBy() {
+  DatasetBuilder expectedSubsumedBy() {
     return new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -346,7 +346,7 @@ public class SubsumesFunctionTest {
   }
 
   @Nonnull
-  private DatasetBuilder expectedAllNonNull(final boolean result) {
+  DatasetBuilder expectedAllNonNull(final boolean result) {
     return new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -363,7 +363,7 @@ public class SubsumesFunctionTest {
   }
 
   @Nonnull
-  private DatasetBuilder expectedEmpty() {
+  DatasetBuilder expectedEmpty() {
     return new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -371,7 +371,7 @@ public class SubsumesFunctionTest {
   }
 
   @Nonnull
-  private DatasetBuilder expectedNull() {
+  DatasetBuilder expectedNull() {
     return new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -379,7 +379,7 @@ public class SubsumesFunctionTest {
         .withColumn(DataTypes.BooleanType);
   }
 
-  private ElementPathAssertion assertCallSuccess(final NamedFunction function,
+  ElementPathAssertion assertCallSuccess(final NamedFunction function,
       final NonLiteralPath inputExpression, final FhirPath argumentExpression) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
@@ -394,13 +394,13 @@ public class SubsumesFunctionTest {
         .preservesCardinalityOf(inputExpression);
   }
 
-  private DatasetAssert assertSubsumesSuccess(final NonLiteralPath inputExpression,
+  DatasetAssert assertSubsumesSuccess(final NonLiteralPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumes"), inputExpression,
         argumentExpression).selectOrderedResultWithEid();
   }
 
-  private DatasetAssert assertSubsumedBySuccess(final NonLiteralPath inputExpression,
+  DatasetAssert assertSubsumedBySuccess(final NonLiteralPath inputExpression,
       final FhirPath argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumedBy"), inputExpression,
         argumentExpression).selectOrderedResultWithEid();
@@ -412,19 +412,19 @@ public class SubsumesFunctionTest {
   // plus (Coding, Coding)
   //
   @Test
-  public void testSubsumesCodingWithLiteralCorrectly() {
+  void testSubsumesCodingWithLiteralCorrectly() {
     assertSubsumesSuccess(createCodingInput(), createLiteralArgOrInput())
         .hasRows(expectedSubsumes());
   }
 
   @Test
-  public void testSubsumesCodeableConceptWithCodingCorrectly() {
+  void testSubsumesCodeableConceptWithCodingCorrectly() {
     assertSubsumesSuccess(createCodeableConceptInput(), createCodingArg())
         .hasRows(expectedSubsumes());
   }
 
   @Test
-  public void testSubsumesCodingWithCodingCorrectly() {
+  void testSubsumesCodingWithCodingCorrectly() {
     assertSubsumesSuccess(createCodingInput(), createCodingArg()).hasRows(expectedSubsumes());
   }
 
@@ -435,20 +435,20 @@ public class SubsumesFunctionTest {
   //
 
   @Test
-  public void testSubsumedByCodingWithCodeableConceptCorrectly() {
+  void testSubsumedByCodingWithCodeableConceptCorrectly() {
 
     assertSubsumedBySuccess(createCodingInput(), createCodeableConceptArg())
         .hasRows(expectedSubsumedBy());
   }
 
   @Test
-  public void testSubsumedByCodeableConceptWithLiteralCorrectly() {
+  void testSubsumedByCodeableConceptWithLiteralCorrectly() {
     assertSubsumedBySuccess(createCodeableConceptInput(), createLiteralArgOrInput())
         .hasRows(expectedSubsumedBy());
   }
 
   @Test
-  public void testSubsumedByCodeableConceptWithCodeableConceptCorrectly() {
+  void testSubsumedByCodeableConceptWithCodeableConceptCorrectly() {
     // call subsumedBy but expect subsumes result
     // because input is switched with argument
     assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptArg())
@@ -460,20 +460,20 @@ public class SubsumesFunctionTest {
   //
 
   @Test
-  public void testAllFalseWhenSubsumesNullCoding() {
+  void testAllFalseWhenSubsumesNullCoding() {
     assertSubsumesSuccess(createCodingInput(), createNullCodingArg())
         .hasRows(expectedAllNonNull(false));
   }
 
   @Test
-  public void testAllFalseWhenSubsumedByNullCoding() {
+  void testAllFalseWhenSubsumedByNullCoding() {
     assertSubsumedBySuccess(createCodeableConceptInput(), createNullCodingArg())
         .hasRows(expectedAllNonNull(false));
   }
 
 
   @Test
-  public void testAllNonNullTrueWhenSubsumesItself() {
+  void testAllNonNullTrueWhenSubsumesItself() {
 
     final DatasetBuilder expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
@@ -491,7 +491,7 @@ public class SubsumesFunctionTest {
 
 
   @Test
-  public void testAllNonNullTrueSubsumedByItself() {
+  void testAllNonNullTrueSubsumedByItself() {
     assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptInput())
         .hasRows(expectedAllNonNull(true));
   }
@@ -525,7 +525,7 @@ public class SubsumesFunctionTest {
   //
 
   @Test
-  public void throwsErrorIfInputTypeIsUnsupported() {
+  void throwsErrorIfInputTypeIsUnsupported() {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
@@ -550,7 +550,7 @@ public class SubsumesFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfArgumentTypeIsUnsupported() {
+  void throwsErrorIfArgumentTypeIsUnsupported() {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
@@ -573,7 +573,7 @@ public class SubsumesFunctionTest {
 
 
   @Test
-  public void throwsErrorIfMoreThanOneArgument() {
+  void throwsErrorIfMoreThanOneArgument() {
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
@@ -602,7 +602,7 @@ public class SubsumesFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfTerminologyServiceNotConfigured() {
+  void throwsErrorIfTerminologyServiceNotConfigured() {
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();

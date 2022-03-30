@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -11,11 +11,23 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.utilities.Strings;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -24,6 +36,11 @@ import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.functions;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Common functionality for executing queries using Spark.
@@ -93,7 +110,8 @@ public abstract class QueryHelpers {
   private static DatasetWithColumnMap aliasColumns(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Iterable<Column> columns) {
 
-    final Map<Column, Column> columnMap = new HashMap<>();
+    // Use LinkedHashMap to preserve the original order of columns while iterating map entries.
+    final Map<Column, Column> columnMap = new LinkedHashMap<>();
     final List<Column> selection = Stream.of(dataset.columns())
         // Don't preserve anything that is not already aliased.
         .filter(Strings::looksLikeAlias)
@@ -115,18 +133,6 @@ public abstract class QueryHelpers {
     return new DatasetWithColumnMap(result, columnMap);
   }
 
-  /**
-   * Checks if a column is present in a dataset.
-   *
-   * @param dataset a dataset to test
-   * @param column a column to test
-   * @return true if the column is present in the dataset
-   */
-  private static boolean hasColumn(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column column) {
-    return Arrays.asList(dataset.columns()).contains(column.toString());
-  }
-
   private static Dataset<Row> join(@Nonnull final Dataset<Row> left,
       @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
       @Nonnull final List<Column> rightColumns, @Nonnull final Optional<Column> additionalCondition,
@@ -137,8 +143,8 @@ public abstract class QueryHelpers {
     Dataset<Row> aliasedLeft = left;
     final Collection<Column> joinConditions = new ArrayList<>();
     for (int i = 0; i < leftColumns.size(); i++) {
-      // We alias the join columns on the left hand side to disambiguate them from columns named the
-      // same on the right hand side.
+      // We alias the join columns on the left-hand side to disambiguate them from columns named the
+      // same on the right-hand side.
       final DatasetWithColumn leftWithColumn = createColumn(aliasedLeft, leftColumns.get(i));
       aliasedLeft = leftWithColumn.getDataset();
       joinConditions.add(leftWithColumn.getColumn().eqNullSafe(rightColumns.get(i)));
@@ -157,8 +163,8 @@ public abstract class QueryHelpers {
     final Dataset<Row> trimmedLeft = applySelection(aliasedLeft, Collections.emptyList(),
         rightColumnNames);
 
-    // The right dataset will only contain columns that were not in the left dataset, with the
-    // exception of the columns on the right hand side of the join conditions.
+    // The right dataset will only contain columns that were not in the left dataset, except for the 
+    // columns on the right-hand side of the join conditions.
     final Dataset<Row> trimmedRight = applySelection(right, rightColumnNames, leftColumnNames);
 
     return trimmedLeft.join(trimmedRight, joinCondition, joinType.getSparkName());
@@ -270,44 +276,56 @@ public abstract class QueryHelpers {
     checkArgument(fhirPaths.size() > 1, "fhirPaths must contain more than one FhirPath");
 
     final FhirPath left = fhirPaths.get(0);
-    Dataset<Row> dataset = left.getDataset();
-    final Column joinId = left.getIdColumn();
     final List<FhirPath> joinTargets = fhirPaths.subList(1, fhirPaths.size());
 
     // Only non-literal paths will trigger a join.
     final List<FhirPath> nonLiteralTargets = joinTargets.stream()
         .filter(t -> t instanceof NonLiteralPath)
         .collect(Collectors.toList());
-    if (nonLiteralTargets.isEmpty()) {
+    if (left instanceof NonLiteralPath && nonLiteralTargets.isEmpty()) {
+      // If the only non-literal path is on the left, we can just return the left without any need 
+      // to join.
       return left.getDataset();
+    } else if (left instanceof LiteralPath && !nonLiteralTargets.isEmpty()) {
+      // If non-literal paths are confined to the right, we can just return the first dataset on the  
+      // right without any need to join.
+      return nonLiteralTargets.get(0).getDataset();
     }
 
+    Dataset<Row> dataset = left.getDataset();
+    final List<Column> groupingColumns = parserContext.getGroupingColumns();
+    final Column idColumn = parserContext.getInputContext().getIdColumn();
+    final List<Column> leftColumns = checkColumnsAndFallback(left.getDataset(), groupingColumns,
+        idColumn);
     for (final FhirPath right : nonLiteralTargets) {
-      final List<Column> leftColumns = new ArrayList<>();
-      final List<Column> rightColumns = new ArrayList<>();
-      leftColumns.add(joinId);
-      rightColumns.add(right.getIdColumn());
-      // If a $this context is present (i.e. the join is being performed within function arguments,
-      // with an item from the input collection as context), then we need to add the identity of the
-      // input element to the join. This is to prevent too many rows being generated when there are
-      // more rows than resources on either side of the join.
-      if (parserContext.getThisContext().isPresent()
-          && parserContext.getThisContext().get() instanceof NonLiteralPath) {
-        final NonLiteralPath nonLiteralThis = (NonLiteralPath) parserContext.getThisContext()
-            .get();
-        if (nonLiteralThis.getEidColumn().isPresent()) {
-          final Column thisEidColumn = nonLiteralThis.getEidColumn().get();
-          // If both datasets have an element ID column, we add it to the join condition.
-          if (hasColumn(dataset, thisEidColumn)
-              && hasColumn(right.getDataset(), thisEidColumn)) {
-            leftColumns.add(thisEidColumn);
-            rightColumns.add(thisEidColumn);
-          }
-        }
-      }
-      dataset = join(dataset, leftColumns, right.getDataset(), rightColumns, joinType);
+      final List<Column> resolvedGroupingColumns = checkColumnsAndFallback(right.getDataset(),
+          leftColumns, idColumn);
+      dataset = join(dataset, resolvedGroupingColumns, right.getDataset(), resolvedGroupingColumns,
+          joinType);
     }
     return dataset;
+  }
+
+  /**
+   * This is used to find a set of fallback join columns in cases where a path does not contain all
+   * grouping columns.
+   * <p>
+   * This can happen in the context of a function's arguments, when a path originates from something
+   * other than `$this`, e.g. `%resource`.
+   */
+  private static List<Column> checkColumnsAndFallback(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final List<Column> groupingColumns, @Nonnull final Column fallback) {
+    final Set<String> columnList = new HashSet<>(List.of(dataset.columns()));
+    final Set<String> groupingColumnNames = groupingColumns.stream().map(Column::toString)
+        .collect(Collectors.toSet());
+    if (columnList.containsAll(groupingColumnNames)) {
+      return groupingColumns;
+    } else {
+      final Set<String> fallbackGroupingColumnNames = new HashSet<>(groupingColumnNames);
+      fallbackGroupingColumnNames.retainAll(columnList);
+      fallbackGroupingColumnNames.add(fallback.toString());
+      return fallbackGroupingColumnNames.stream().map(dataset::col).collect(Collectors.toList());
+    }
   }
 
   /**
@@ -380,6 +398,31 @@ public abstract class QueryHelpers {
         .filter(column -> includes.contains(column) || !excludes.contains(column))
         .map(dataset::col)
         .toArray(Column[]::new));
+  }
+
+  @Nonnull
+  public static List<Column> getUnionableColumns(@Nonnull final FhirPath source,
+      @Nonnull final FhirPath target) {
+    // The columns will be those common to both datasets, plus the value column.
+    final Set<String> commonColumnNames = new HashSet<>(List.of(source.getDataset().columns()));
+    commonColumnNames.retainAll(List.of(target.getDataset().columns()));
+    final List<Column> selection = commonColumnNames.stream()
+        .map(functions::col)
+        // We sort the columns so that they line up when we execute the union.
+        .sorted(Comparator.comparing(Column::toString))
+        .collect(Collectors.toList());
+    selection.add(source.getValueColumn());
+    return selection;
+  }
+
+  /**
+   * Creates an empty dataset with the schema of the supplied resource type.
+   */
+  @Nonnull
+  public static Dataset<Row> createEmptyDataset(@Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType resourceType) {
+    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
+    return spark.emptyDataset(encoder).toDF();
   }
 
   /**
@@ -469,7 +512,7 @@ public abstract class QueryHelpers {
     Map<Column, Column> columnMap;
 
     /**
-     * @param originalColumn a Column on the left hand side of the Column map
+     * @param originalColumn a Column on the left-hand side of the Column map
      * @return the corresponding target Column
      */
     @Nonnull

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -21,11 +21,11 @@ import org.junit.jupiter.api.Test;
  * @author Piotr Szul
  */
 @Tag("UnitTest")
-public class AccessRulesTest {
+class AccessRulesTest {
 
   final AccessRules accessRules;
 
-  public AccessRulesTest() {
+  AccessRulesTest() {
     final Configuration configuration = new Configuration();
     final Import importConf = new Import();
     configuration.setImport(importConf);
@@ -34,18 +34,19 @@ public class AccessRulesTest {
   }
 
   @Test
-  public void allowsConfiguredSources() {
+  void allowsConfiguredSources() {
     accessRules.checkCanImportFrom("file:///usr/share/import");
     accessRules.checkCanImportFrom("file:///usr/share/import/somefile.json");
   }
 
   @Test
-  public void prohibitsAccessToUnlistedSources() {
-    assertThrows(SecurityError.class, () -> accessRules.checkCanImportFrom("file:///usr/share/other"));
+  void prohibitsAccessToUnlistedSources() {
+    assertThrows(SecurityError.class,
+        () -> accessRules.checkCanImportFrom("file:///usr/share/other"));
   }
 
   @Test
-  public void operatesOnPhysicalUrls() {
+  void operatesOnPhysicalUrls() {
     accessRules.checkCanImportFrom("s3a://data/file.json");
     assertThrows(SecurityError.class, () -> accessRules.checkCanImportFrom("s3://data/file.json"));
   }

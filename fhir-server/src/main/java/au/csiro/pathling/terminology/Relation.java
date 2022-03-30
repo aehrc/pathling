@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -9,10 +9,18 @@ package au.csiro.pathling.terminology;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import com.google.common.collect.Streams;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NonNull;
+import lombok.ToString;
 
 /**
  * Represents relation between codings with implicit coding equality.
@@ -121,8 +129,8 @@ public class Relation {
    * <p>
    * The relation is assumed to include coding equality so {@code (A,A)} is assumed. All other the
    * related pairs need to be explicitly listed. If the relation is meant to represent a transitive
-   * closure with implicit equality such that: {@code A -> B -> C} than the entry list must to
-   * include the all pairs of: {@code [(A,B), (B,C), (A, C)]}.
+   * closure with implicit equality such that: {@code A -> B -> C} then the entry list must include
+   * the all pairs of: {@code [(A,B), (B,C), (A, C)]}.
    *
    * @param entries the list of pair of codings that are related.
    * @return the relation instance.

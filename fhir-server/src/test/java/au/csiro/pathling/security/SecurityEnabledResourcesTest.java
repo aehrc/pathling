@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -10,46 +10,61 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(
-    properties = {
-        "pathling.auth.enabled=true",
-        "pathling.caching.enabled=false"
-    })
-public class SecurityEnabledResourcesTest extends SecurityTestForResources {
+@TestPropertySource(properties = {"pathling.auth.enabled=true"})
+class SecurityEnabledResourcesTest extends SecurityTestForResources {
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenOnResourceWriteWithoutAuthority() {
+  void testForbiddenOnResourceWriteWithoutAuthority() {
     assertThrowsAccessDenied(this::assertWriteSuccess, "pathling:write:Account");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:write:Account"})
-  public void testPassIfResourceWriteWithSpecificAuthority() {
+  void testPassIfResourceWriteWithSpecificAuthority() {
     assertWriteSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:write"})
-  public void testPassIfResourceWriteWithWildcardAuthority() {
+  void testPassIfResourceWriteWithWildcardAuthority() {
     assertWriteSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin")
-  public void testForbiddenOnResourceReadWithoutAuthority() {
+  void testForbiddenOnResourceUpdateWithoutAuthority() {
+    assertThrowsAccessDenied(this::assertUpdateSuccess, "pathling:write:Account");
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:write:Account"})
+  void testPassIfResourceUpdateWithSpecificAuthority() {
+    assertUpdateSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin", authorities = {"pathling:write"})
+  void testPassIfResourceUpdateWithWildcardAuthority() {
+    assertUpdateSuccess();
+  }
+
+  @Test
+  @WithMockUser(username = "admin")
+  void testForbiddenOnResourceReadWithoutAuthority() {
     assertThrowsAccessDenied(this::assertReadSuccess, "pathling:read:Account");
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:read:Account"})
-  public void testPassIfResourceReadWithSpecificAuthority() {
+  void testPassIfResourceReadWithSpecificAuthority() {
     assertReadSuccess();
   }
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:read"})
-  public void testPassIfResourceReadWithWildcardAuthority() {
+  void testPassIfResourceReadWithWildcardAuthority() {
     assertReadSuccess();
   }
+
 }

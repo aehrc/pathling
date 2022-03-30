@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -20,26 +20,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-public abstract class MappingTest {
+abstract class MappingTest {
 
   @Autowired
-  protected IParser jsonParser;
+  IParser jsonParser;
 
   @Nullable
-  private TestInfo testInfo;
+  TestInfo testInfo;
 
   @BeforeEach
-  public void setUp(@Nonnull final TestInfo testInfo) {
+  void setUp(@Nonnull final TestInfo testInfo) {
     this.testInfo = testInfo;
   }
 
-  protected void assertRequest(
+  void assertRequest(
       @Nonnull final IBaseResource resource) {
     //noinspection ConstantConditions,OptionalGetWithoutIsPresent
     assertRequest(resource, testInfo.getTestMethod().get().getName());
   }
 
-  protected void assertRequest(
+  void assertRequest(
       @Nonnull final IBaseResource resource, @Nonnull final String name) {
     final String actualJson = jsonParser.encodeResourceToString(resource);
 

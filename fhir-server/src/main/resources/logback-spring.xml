@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+  ~ Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
   ~ Software Licence Agreement.
   -->
@@ -13,6 +13,8 @@
       </encoder>
     </appender>
     <logger level="INFO" name="au.csiro"/>
+    <logger level="ERROR" name="org.apache.hadoop.metrics2"/>
+    <logger level="WARN" name="requestLogger"/>
     <root level="WARN">
       <appender-ref ref="STDOUT"/>
     </root>

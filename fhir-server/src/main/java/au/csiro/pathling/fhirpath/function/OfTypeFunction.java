@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -55,8 +55,11 @@ public class OfTypeFunction implements NamedFunction {
 
     // Return a new resource path with the joined dataset, and the argument's value column.
     final Optional<Column> thisColumn = inputPath.getThisColumn();
-    return resourcePath.copy(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(),
-        resourcePath.getValueColumn(), inputPath.isSingular(), thisColumn);
+    final ResourcePath result = resourcePath.copy(expression, dataset, inputPath.getIdColumn(),
+        inputPath.getEidColumn(), resourcePath.getValueColumn(), inputPath.isSingular(),
+        thisColumn);
+    result.setCurrentResource(resourcePath);
+    return result;
   }
 
 }

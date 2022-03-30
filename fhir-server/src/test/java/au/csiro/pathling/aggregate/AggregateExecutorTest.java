@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -14,7 +14,7 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
@@ -42,48 +42,48 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public abstract class AggregateExecutorTest {
+abstract class AggregateExecutorTest {
 
   @Autowired
-  protected SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  protected TerminologyService terminologyService;
+  TerminologyService terminologyService;
 
   @Autowired
-  protected TerminologyServiceFactory terminologyServiceFactory;
+  TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  protected Configuration configuration;
+  Configuration configuration;
 
   @Autowired
-  protected FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Autowired
-  protected IParser jsonParser;
+  IParser jsonParser;
 
   @Autowired
-  protected FhirEncoders fhirEncoders;
+  FhirEncoders fhirEncoders;
 
-  protected AggregateExecutor executor;
-  protected ResourceType subjectResource;
-  protected ResourceReader resourceReader;
-  protected AggregateResponse response = null;
+  AggregateExecutor executor;
+  ResourceType subjectResource;
+  Database database;
+  AggregateResponse response = null;
 
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
-    resourceReader = mock(ResourceReader.class);
-    executor = new FreshAggregateExecutor(configuration, fhirContext, spark, resourceReader,
+    database = mock(Database.class);
+    executor = new AggregateExecutor(configuration, fhirContext, spark, database,
         Optional.of(terminologyServiceFactory));
   }
 
   /**
-   * Test that the drill down expression from the first grouping from each aggregate result can be
+   * Test that the drill-down expression from the first grouping from each aggregate result can be
    * successfully executed using the FHIRPath search.
    */
   @AfterEach
-  public void runFirstGroupingThroughSearch() {
+  void runFirstGroupingThroughSearch() {
     if (response != null) {
       final Optional<Grouping> firstGroupingOptional = response.getGroupings()
           .stream()
@@ -97,7 +97,7 @@ public abstract class AggregateExecutorTest {
         final StringAndListParam filters = new StringAndListParam();
         filters.addAnd(new StringParam(drillDown));
         final IBundleProvider searchExecutor = new SearchExecutor(configuration, fhirContext, spark,
-            resourceReader, Optional.of(terminologyServiceFactory),
+            database, Optional.of(terminologyServiceFactory),
             fhirEncoders, subjectResource, Optional.of(filters));
         final List<IBaseResource> resources = searchExecutor.getResources(0, 100);
         assertTrue(resources.size() > 0);
@@ -105,15 +105,19 @@ public abstract class AggregateExecutorTest {
     }
   }
 
-  protected void assertResponse(@Nonnull final String expectedPath,
+  void assertResponse(@Nonnull final String expectedPath,
       @Nonnull final AggregateResponse response) {
     final Parameters parameters = response.toParameters();
     final String actualJson = jsonParser.encodeResourceToString(parameters);
     assertJson("responses/" + expectedPath, actualJson);
   }
 
-  protected void mockResourceReader(final ResourceType... resourceTypes) {
-    TestHelpers.mockResourceReader(resourceReader, spark, resourceTypes);
+  void mockResource(final ResourceType... resourceTypes) {
+    TestHelpers.mockResource(database, spark, resourceTypes);
+  }
+
+  void mockEmptyResource(final ResourceType... resourceType) {
+    TestHelpers.mockEmptyResource(database, spark, fhirEncoders, resourceType);
   }
 
 }

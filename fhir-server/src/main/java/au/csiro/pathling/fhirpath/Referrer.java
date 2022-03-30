@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -18,7 +18,7 @@ import org.apache.spark.sql.Column;
 public interface Referrer {
 
   /**
-   * The name of the field within the value column that holds the ID of a foreign resource.
+   * The name of the field within the value column that holds the ID of a current resource.
    */
   String REFERENCE_FIELD_NAME = "reference";
 
@@ -47,7 +47,9 @@ public interface Referrer {
   @Nonnull
   static Column resourceEqualityFor(@Nonnull final Referrer referrer,
       @Nonnull final ResourcePath resourcePath) {
-    final Column targetId = resourcePath.getIdColumn();
+    final Column targetId = resourcePath.getCurrentResource()
+        .map(ResourcePath::getIdColumn)
+        .orElse(resourcePath.getIdColumn());
     final Column targetCode = lit(resourcePath.getResourceType().toCode());
 
     return Referrer.resourceEqualityFor(referrer, targetCode, targetId);

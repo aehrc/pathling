@@ -1,0 +1,68 @@
+name: pathling-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+
+pr:
+  branches:
+    exclude:
+      - dependabot/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  mavenCache: $(Pipeline.Workspace)/.m2/repository
+  mavenOptions: '-Dmaven.repo.local=$(mavenCache)'
+  branchTag: $[replace(variables['System.PullRequest.SourceBranch'], '/', '-')]
+
+stages:
+  - stage: build
+    displayName: Build
+    jobs:
+      - job: build
+        displayName: Build
+        steps:
+          - task: Cache@2
+            displayName: Cache Maven local repo
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+                maven
+              path: $(mavenCache)
+          - task: Maven@3
+            displayName: Build and verify
+            inputs:
+              options: '-pl fhir-server -am -Pdocker -Dpathling.systemTest.auth.clientSecret=$(testClientSecret)'
+              mavenOptions: '$(mavenOptions)'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+              jdkArchitectureOption: 'x64'
+              goals: 'verify'
+            timeoutInMinutes: 60
+          - task: Docker@2
+            condition: succeeded()
+            displayName: Tag image
+            inputs:
+              containerRegistry: $(containerRegistry)
+              repository: $(dockerRepo)
+              command: tag
+              arguments: aehrc/pathling:latest $(dockerRegistry)/$(dockerRepo):$(Build.BuildNumber)
+          - task: Docker@2
+            condition: succeeded()
+            displayName: Tag image
+            inputs:
+              containerRegistry: $(containerRegistry)
+              repository: $(dockerRepo)
+              command: tag
+              arguments: aehrc/pathling:latest $(dockerRegistry)/$(dockerRepo):$(branchTag)
+          - task: Docker@2
+            condition: succeeded()
+            displayName: Push image
+            inputs:
+              containerRegistry: $(containerRegistry)
+              repository: $(dockerRepo)
+              command: push
+              tags: |
+                $(Build.BuildNumber)
+                $(branchTag)

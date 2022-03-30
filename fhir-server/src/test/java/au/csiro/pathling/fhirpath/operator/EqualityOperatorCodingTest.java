@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -19,6 +19,7 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -36,23 +37,24 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class EqualityOperatorCodingTest {
+class EqualityOperatorCodingTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private FhirPath left;
-  private FhirPath right;
-  private FhirPath literalSnomedAll;
-  private FhirPath literalLoinSystemCode;
-  private ParserContext parserContext;
+  static final String ID_ALIAS = "_abc123";
+
+  FhirPath left;
+  FhirPath right;
+  FhirPath literalSnomedAll;
+  FhirPath literalLoincSystemCode;
+  ParserContext parserContext;
 
   @BeforeEach
-  public void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
+  void setUp() {
     // all components
     final Coding coding1 = new Coding(SNOMED_URL, "56459004", null);
     coding1.setVersion("http://snomed.info/sct/32506021000036107/version/20191231");
@@ -82,7 +84,7 @@ public class EqualityOperatorCodingTest {
     coding1_other.setId("some-other-fake-id");
 
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withStructTypeColumns(codingStructType())
         .withRow("patient-1", rowFromCoding(coding1))
         .withRow("patient-2", rowFromCoding(coding2))
@@ -99,7 +101,7 @@ public class EqualityOperatorCodingTest {
         .idAndValueColumns()
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withStructTypeColumns(codingStructType())
         .withRow("patient-1", rowFromCoding(coding1_other))
         .withRow("patient-2", rowFromCoding(coding3))
@@ -118,14 +120,15 @@ public class EqualityOperatorCodingTest {
     literalSnomedAll = CodingLiteralPath.fromString(
         "http://snomed.info/sct|56459004|http://snomed.info/sct/32506021000036107/version/20191231|'Display name'|true",
         left);
+    literalLoincSystemCode = CodingLiteralPath.fromString("http://loinc.org|'222|33'", left);
 
-    literalLoinSystemCode = CodingLiteralPath.fromString(
-        "http://loinc.org|'222|33'",
-        left);
+    parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(left.getIdColumn()))
+        .build();
   }
 
   @Test
-  public void equals() {
+  void equals() {
     final OperatorInput input = new OperatorInput(parserContext, left, right);
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
@@ -142,7 +145,7 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void notEquals() {
+  void notEquals() {
     final OperatorInput input = new OperatorInput(parserContext, left, right);
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
@@ -159,8 +162,8 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void literalEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, literalLoinSystemCode, left);
+  void literalEquals() {
+    final OperatorInput input = new OperatorInput(parserContext, literalLoincSystemCode, left);
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
 
@@ -176,7 +179,7 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void equalsLiteral() {
+  void equalsLiteral() {
     final OperatorInput input = new OperatorInput(parserContext, left, literalSnomedAll);
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
@@ -193,8 +196,8 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void literalNotEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, literalLoinSystemCode, left);
+  void literalNotEquals() {
+    final OperatorInput input = new OperatorInput(parserContext, literalLoincSystemCode, left);
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);
 
@@ -210,7 +213,7 @@ public class EqualityOperatorCodingTest {
   }
 
   @Test
-  public void notEqualsLiteral() {
+  void notEqualsLiteral() {
     final OperatorInput input = new OperatorInput(parserContext, left, literalSnomedAll);
     final Operator equalityOperator = Operator.getInstance("!=");
     final FhirPath result = equalityOperator.invoke(input);

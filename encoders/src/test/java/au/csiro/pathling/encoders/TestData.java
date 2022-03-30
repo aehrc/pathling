@@ -5,17 +5,23 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 package au.csiro.pathling.encoders;
 
 import com.google.common.collect.ImmutableList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Condition.ConditionStageComponent;
 import org.hl7.fhir.r4.model.Medication.MedicationIngredientComponent;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
@@ -276,11 +282,64 @@ public class TestData {
   }
 
 
-  private static QuestionnaireItemComponent newNestedItem(final int nestingLevel) {
-    final QuestionnaireItemComponent item = new QuestionnaireItemComponent();
+  private static List<QuestionnaireItemComponent> newNestedItems(final int nestingLevel,
+      final int noChildren, final String parentId) {
+
+    return IntStream.range(0, noChildren)
+        .mapToObj(i -> {
+          final QuestionnaireItemComponent item = new QuestionnaireItemComponent();
+          final String thisItemId = parentId + i;
+          item.setLinkId("Item/" + thisItemId);
+          if (nestingLevel > 0) {
+            item.setItem(newNestedItems(nestingLevel - 1, noChildren, thisItemId + "."));
+          }
+          return item;
+        })
+        .collect(
+            Collectors.toList());
+  }
+
+  /**
+   * Returns a FHIR Questionnaire resource with nested Item elements for testing purposes.
+   *
+   * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
+   * present in the Questionnaire but with no nested items.
+   * @param noChildren the number of Item elements at each nesting level.
+   */
+  public static Questionnaire newNestedQuestionnaire(final int maxNestingLevel,
+      final int noChildren) {
+    final Questionnaire questionnaire = new Questionnaire();
+    questionnaire.setId("Questionnaire/1");
+    questionnaire.setItem(newNestedItems(maxNestingLevel, noChildren, ""));
+    return questionnaire;
+  }
+
+  /**
+   * Returns a FHIR Questionnaire resource with nested Item elements for testing purposes.
+   *
+   * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
+   * present in the Questionnaire but with no nested items.
+   */
+  public static Questionnaire newNestedQuestionnaire(final int maxNestingLevel) {
+    return newNestedQuestionnaire(maxNestingLevel, 1);
+  }
+
+
+  private static QuestionnaireResponseItemAnswerComponent newNestedResponseAnswer(
+      final int nestingLevel) {
+    final QuestionnaireResponseItemAnswerComponent answer = new QuestionnaireResponseItemAnswerComponent();
+    answer.setId("AnswerLevel/" + nestingLevel);
+    answer.setItem(Collections.singletonList(newNestedResponseItem(nestingLevel - 1)));
+    return answer;
+  }
+
+
+  private static QuestionnaireResponseItemComponent newNestedResponseItem(final int nestingLevel) {
+    final QuestionnaireResponseItemComponent item = new QuestionnaireResponseItemComponent();
     item.setLinkId("ItemLevel/" + nestingLevel);
     if (nestingLevel > 0) {
-      item.setItem(Collections.singletonList(newNestedItem(nestingLevel - 1)));
+      item.setAnswer(Collections.singletonList(newNestedResponseAnswer(nestingLevel)));
+      item.setItem(Collections.singletonList(newNestedResponseItem(nestingLevel - 1)));
     }
     return item;
   }
@@ -291,11 +350,77 @@ public class TestData {
    * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
    * present in the Questionnaire but with no nested items.
    */
-  public static Questionnaire newNestedQuestionnaire(final int maxNestingLevel) {
-    final Questionnaire questionnaire = new Questionnaire();
-    questionnaire.setId("Questionnaire/1");
-    questionnaire.setItem(Collections.singletonList(newNestedItem(maxNestingLevel)));
-    return questionnaire;
+  public static QuestionnaireResponse newNestedQuestionnaireResponse(final int maxNestingLevel) {
+    final QuestionnaireResponse questionnaireResponse = new QuestionnaireResponse();
+    questionnaireResponse.setId("QuestionnaireResponse/1");
+    questionnaireResponse
+        .setItem(Collections.singletonList(newNestedResponseItem(maxNestingLevel)));
+    return questionnaireResponse;
+  }
+
+
+  public static Condition newConditionWithExtensions() {
+
+    // Condition
+    // - extension:
+    //   - url: uuid:ext1
+    //   - value: ext1
+    // - extension:
+    //    - url: uuid:ext2
+    //    - value: 2
+    // - extension:
+    //  - url: uuid:ext4
+    //  - extension
+    //    - url: uuid:nested
+    //    - value: nested
+    // - identifier
+    //     - id: uuid:identifier1
+    //     - extension:
+    //       - url: uuid:ext10
+    //       - value: ext10
+    //     - extension:
+    //        - url: uuid:ext11
+    //        - value: 11
+    // - stage
+    //     - type
+    //       - extension
+    //          - url: uuid:ext12
+    //          - value: ext12
+
+    final Condition conditionWithExtension = new Condition();
+    conditionWithExtension.setId("someId");
+
+    final Extension nestedExtension = new Extension("uuid:ext4");
+    nestedExtension.addExtension(new Extension("uuid:nested", new StringType("nested")));
+
+    conditionWithExtension.setExtension(Arrays.asList(
+        new Extension("uuid:ext1", new StringType("ext1")),
+        new Extension("uuid:ext2", new IntegerType(2)),
+        nestedExtension
+        )
+    );
+
+    conditionWithExtension.setMeta(new Meta().setVersionId("MetVersion"));
+
+    conditionWithExtension.setOnset(new Range());
+    conditionWithExtension
+        .setSeverity(new CodeableConcept().addCoding(new Coding("sys", "code", "name")));
+
+    final Identifier identifier = conditionWithExtension.getIdentifierFirstRep();
+    identifier.setId("uuid:identifier1");
+
+    identifier.setExtension(Arrays.asList(
+        new Extension("uuid:ext10", new StringType("ext10")),
+        new Extension("uuid:ext11", new IntegerType(11))
+        )
+    );
+
+    final ConditionStageComponent stage = conditionWithExtension.getStageFirstRep();
+    stage.getType().setExtension(
+        Collections.singletonList(new Extension("uuid:ext12", new StringType("ext12")))
+    );
+
+    return conditionWithExtension;
   }
 
 }

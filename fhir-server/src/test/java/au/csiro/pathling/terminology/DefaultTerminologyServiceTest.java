@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -24,15 +24,29 @@ import au.csiro.pathling.test.fixtures.RelationBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.UriParam;
 import com.google.common.collect.ImmutableSet;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
+import org.hl7.fhir.r4.model.CodeSystem;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
 import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
@@ -45,23 +59,23 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @Tag("UnitTest")
 @SpringBootTest
-public class DefaultTerminologyServiceTest {
+class DefaultTerminologyServiceTest {
 
-  private static final String SYSTEM1 = "uuid:system1";
-  private static final String SYSTEM2 = "uuid:system2";
-  private static final SimpleCoding CODING1_UNVERSIONED = new SimpleCoding(SYSTEM1, "code1");
-  private static final SimpleCoding CODING1_VERSION1 =
+  static final String SYSTEM1 = "uuid:system1";
+  static final String SYSTEM2 = "uuid:system2";
+  static final SimpleCoding CODING1_UNVERSIONED = new SimpleCoding(SYSTEM1, "code1");
+  static final SimpleCoding CODING1_VERSION1 =
       new SimpleCoding(SYSTEM1, "code1", "version1");
-  private static final SimpleCoding CODING2_VERSION1 =
+  static final SimpleCoding CODING2_VERSION1 =
       new SimpleCoding(SYSTEM1, "code2", "version1");
-  private static final SimpleCoding CODING3_VERSION1 =
+  static final SimpleCoding CODING3_VERSION1 =
       new SimpleCoding(SYSTEM2, "code", "version1");
 
-  private static final String TEST_UUID_AS_STRING = "5d1b976d-c50c-445a-8030-64074b83f355";
-  private static final UUID TEST_UUID = UUID.fromString(TEST_UUID_AS_STRING);
+  static final String TEST_UUID_AS_STRING = "5d1b976d-c50c-445a-8030-64074b83f355";
+  static final UUID TEST_UUID = UUID.fromString(TEST_UUID_AS_STRING);
 
 
-  private ValueSetExpansionContainsComponent fromSimpleCoding(
+  ValueSetExpansionContainsComponent fromSimpleCoding(
       @Nonnull final SimpleCoding simpleCoding) {
     final ValueSetExpansionContainsComponent result = new ValueSetExpansionContainsComponent();
     result.setSystem(simpleCoding.getSystem());
@@ -71,14 +85,14 @@ public class DefaultTerminologyServiceTest {
   }
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private TerminologyClient terminologyClient;
+  TerminologyClient terminologyClient;
 
-  private TerminologyService terminologyService;
+  TerminologyService terminologyService;
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     terminologyClient = mock(TerminologyClient.class);
     final UUIDFactory uuidFactory = mock(UUIDFactory.class);
     when(uuidFactory.nextUUID()).thenReturn(TEST_UUID);
@@ -87,7 +101,7 @@ public class DefaultTerminologyServiceTest {
 
   @Test
   @SuppressWarnings("ConstantConditions")
-  public void testSubsumesFiltersIllegalAndUnknownCodings() {
+  void testSubsumesFiltersIllegalAndUnknownCodings() {
 
     // CODING1 subsumes CODING2
     final ConceptMap responseMap = ConceptMapBuilder.empty()
@@ -124,7 +138,7 @@ public class DefaultTerminologyServiceTest {
   }
 
   @Test
-  public void testSubsumeForEmptySet() {
+  void testSubsumeForEmptySet() {
     // Does NOT call the terminologyClient and returns equality relation
     final Relation actualRelation = terminologyService.getSubsumesRelation(Collections.emptySet());
     assertEquals(Relation.equality(), actualRelation);
@@ -134,7 +148,7 @@ public class DefaultTerminologyServiceTest {
 
   @SuppressWarnings("ConstantConditions")
   @Test
-  public void testIntersectFiltersIllegalAndUnknownCodings() {
+  void testIntersectFiltersIllegalAndUnknownCodings() {
 
     final ValueSet responseExpansion = new ValueSet();
     responseExpansion.getExpansion().getContains().addAll(Arrays.asList(
@@ -172,7 +186,7 @@ public class DefaultTerminologyServiceTest {
   }
 
   @Test
-  public void testIntersectForEmptySet() {
+  void testIntersectForEmptySet() {
     // Does NOT call the terminologyClient and returns equality relation
     final Set<SimpleCoding> actualExpansion = terminologyService
         .intersect("uuid:test", Collections.emptySet());
@@ -181,7 +195,7 @@ public class DefaultTerminologyServiceTest {
   }
 
   @Test
-  public void testTranslateForEmptyCodingSet() {
+  void testTranslateForEmptyCodingSet() {
     // Does NOT call the terminologyClient and returns equality relation
     final ConceptTranslator actualTranslator = terminologyService
         .translate(Collections.emptySet(), "uuid:concept-map", false, Arrays
@@ -191,7 +205,7 @@ public class DefaultTerminologyServiceTest {
   }
 
   @Test
-  public void testTranslateForEmptyEquivalences() {
+  void testTranslateForEmptyEquivalences() {
     // Does NOT call the terminologyClient and returns equality relation
     final ConceptTranslator actualTranslator = terminologyService
         .translate(Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1),
@@ -201,7 +215,7 @@ public class DefaultTerminologyServiceTest {
   }
 
   @Test
-  public void testTranslateForValidAndInvalidCodings() {
+  void testTranslateForValidAndInvalidCodings() {
 
     // Response bundle:
     // [1]  CODING1_VERSION1 -> None
@@ -245,36 +259,36 @@ public class DefaultTerminologyServiceTest {
     final Bundle requestBundle = new Bundle().setType(BundleType.BATCH);
 
     requestBundle.addEntry().setResource(
-        new Parameters()
-            .addParameter("url", new UriType("uuid:concept-map"))
-            .addParameter("reverse", false)
-            .addParameter("coding", CODING1_VERSION1.toCoding())
-    ).getRequest().setMethod(HTTPVerb.POST)
+            new Parameters()
+                .addParameter("url", new UriType("uuid:concept-map"))
+                .addParameter("reverse", false)
+                .addParameter("coding", CODING1_VERSION1.toCoding())
+        ).getRequest().setMethod(HTTPVerb.POST)
         .setUrl("ConceptMap/$translate");
 
     requestBundle.addEntry().setResource(
-        new Parameters()
-            .addParameter("url", new UriType("uuid:concept-map"))
-            .addParameter("reverse", false)
-            .addParameter("coding", CODING2_VERSION1.toCoding())
-    ).getRequest().setMethod(HTTPVerb.POST)
+            new Parameters()
+                .addParameter("url", new UriType("uuid:concept-map"))
+                .addParameter("reverse", false)
+                .addParameter("coding", CODING2_VERSION1.toCoding())
+        ).getRequest().setMethod(HTTPVerb.POST)
         .setUrl("ConceptMap/$translate");
 
     verify(terminologyClient).batch(deepEq(requestBundle));
     verifyNoMoreInteractions(terminologyClient);
   }
 
-  private static class CodingSetMatcher implements ArgumentMatcher<List<Coding>> {
+  static class CodingSetMatcher implements ArgumentMatcher<List<Coding>> {
 
     @Nonnull
-    private final Set<SimpleCoding> leftSet;
+    final Set<SimpleCoding> leftSet;
 
     // constructors
-    private CodingSetMatcher(@Nonnull final Set<SimpleCoding> leftSet) {
+    CodingSetMatcher(@Nonnull final Set<SimpleCoding> leftSet) {
       this.leftSet = leftSet;
     }
 
-    private CodingSetMatcher(@Nonnull final List<SimpleCoding> left) {
+    CodingSetMatcher(@Nonnull final List<SimpleCoding> left) {
       this(new HashSet<>(left));
     }
 

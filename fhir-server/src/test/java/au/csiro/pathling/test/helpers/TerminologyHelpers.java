@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -34,16 +34,16 @@ public final class TerminologyHelpers {
   public static final List<ConceptMapEquivalence> ALL_EQUIVALENCES = Arrays
       .asList(ConceptMapEquivalence.values());
 
-  public static Coding CD_SNOMED_720471000168102 = snomedCoding("720471000168102",
+  public static final Coding CD_SNOMED_720471000168102 = snomedCoding("720471000168102",
       "Duodopa intestinal gel");
-  public static Coding CD_SNOMED_72940011000036107 = snomedCoding("72940011000036107",
+  public static final Coding CD_SNOMED_72940011000036107 = snomedCoding("72940011000036107",
       "Duodopa gel: intestinal");
 
 
-  public static Coding CD_SNOMED_403190006 = snomedCoding("403190006",
+  public static final Coding CD_SNOMED_403190006 = snomedCoding("403190006",
       "Epidermal burn of skin");
 
-  public static Coding CD_SNOMED_284551006 = snomedCoding("284551006",
+  public static final Coding CD_SNOMED_284551006 = snomedCoding("284551006",
       "Laceration of foot");
 
   @SuppressWarnings("unused")
@@ -51,29 +51,29 @@ public final class TerminologyHelpers {
       "Left hepatectomy");
 
   // Subsumes CD_SNOMED_63816008
-  public static Coding CD_SNOMED_107963000 = snomedCoding("107963000",
+  public static final Coding CD_SNOMED_107963000 = snomedCoding("107963000",
       "Liver resection");
 
-  public static Coding CD_SNOMED_VER_63816008 = snomedVersionedCoding("63816008",
+  public static final Coding CD_SNOMED_VER_63816008 = snomedVersionedCoding("63816008",
       "Left hepatectomy");
 
   // Subsumes CD_SNOMED_63816008
-  public static Coding CD_SNOMED_VER_107963000 = snomedVersionedCoding("107963000",
+  public static final Coding CD_SNOMED_VER_107963000 = snomedVersionedCoding("107963000",
       "Liver resection");
 
-  public static Coding CD_SNOMED_VER_403190006 = snomedVersionedCoding("403190006",
+  public static final Coding CD_SNOMED_VER_403190006 = snomedVersionedCoding("403190006",
       "Epidermal burn of skin");
 
-  public static Coding CD_SNOMED_VER_284551006 = snomedVersionedCoding("284551006",
+  public static final Coding CD_SNOMED_VER_284551006 = snomedVersionedCoding("284551006",
       "Laceration of foot");
 
 
-  public static Coding CD_AST_VIC = new Coding(AST_URI, "VIC", "Victoria");
+  public static final Coding CD_AST_VIC = new Coding(AST_URI, "VIC", "Victoria");
 
   // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
 
 
-  public static Coding CD_SNOMED_VER_40055000 = snomedVersionedCoding("40055000",
+  public static final Coding CD_SNOMED_VER_40055000 = snomedVersionedCoding("40055000",
       "Chronic sinusitis (disorder)");
   private static final Coding CD_SNOMED_VER_444814009 = snomedVersionedCoding("444814009",
       "Viral sinusitis (disorder)");

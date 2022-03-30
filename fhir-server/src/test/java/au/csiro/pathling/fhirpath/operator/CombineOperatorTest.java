@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -49,12 +49,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 class CombineOperatorTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
-  private ParserContext parserContext;
+  ParserContext parserContext;
+  String idColumnName;
 
   @BeforeEach
   void setUp() {
@@ -71,12 +72,13 @@ class CombineOperatorTest {
     parserContext = new ParserContextBuilder(spark, fhirContext)
         .inputContext(inputContext)
         .build();
+    idColumnName = parserContext.getInputContext().getIdColumn().toString();
   }
 
   @Test
   void returnsCorrectResult() {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(idColumnName)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 3)
@@ -93,7 +95,7 @@ class CombineOperatorTest {
         .singular(false)
         .build();
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(idColumnName)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 2)
@@ -136,7 +138,7 @@ class CombineOperatorTest {
   @Test
   void worksWithDifferentCombinableTypes() {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(idColumnName)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 3)
@@ -181,7 +183,7 @@ class CombineOperatorTest {
   @Test
   void worksWithLiteralAndNonLiteralCodingValues() {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(idColumnName)
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
         .withRow("observation-1", makeEid(0),
@@ -201,7 +203,7 @@ class CombineOperatorTest {
     final FhirPath result = Operator.getInstance("combine").invoke(combineInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(idColumnName)
         .withStructTypeColumns(codingStructType())
         .withRow("observation-1",
             rowFromCoding(new Coding("http://snomed.info/sct", "18001011000036104", null)))

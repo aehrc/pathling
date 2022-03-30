@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -36,9 +36,13 @@ public interface SimpleCodingsDecoders {
   @Nullable
   static SimpleCoding decodeCoding(@Nullable final Object row) {
     final InternalRow ir = (InternalRow) row;
-    return ir != null
-           ? new SimpleCoding(safeGetString(ir, 1), safeGetString(ir, 3), safeGetString(ir, 2))
-           : null;
+    if (ir != null) {
+      return new SimpleCoding(safeGetString(ir, CodingEncoding.SYSTEM_INDEX),
+          safeGetString(ir, CodingEncoding.CODE_INDEX),
+          safeGetString(ir, CodingEncoding.VERSION_INDEX));
+    } else {
+      return null;
+    }
   }
 
 

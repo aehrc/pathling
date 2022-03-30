@@ -5,9 +5,10 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2021, Commonwealth Scientific
+ * These modifications are copyright © 2018-2022, Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
  * under the CSIRO Open Source Software Licence Agreement.
+ *
  */
 
 package au.csiro.pathling.encoders;
@@ -15,10 +16,13 @@ package au.csiro.pathling.encoders;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.spark.sql.types.BooleanType;
@@ -27,30 +31,74 @@ import org.apache.spark.sql.types.IntegerType;
 import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.*;
+import org.junit.Before;
 import org.junit.Test;
+import scala.collection.JavaConverters;
 
 public class SchemaConverterTest {
 
-  private static final SchemaConverter converter = new SchemaConverter(FhirContext.forR4(),
-      new R4DataTypeMappings());
+  public static final Set<String> OPEN_TYPES = Set.of(
+      "boolean",
+      "canonical",
+      "code",
+      "date",
+      "dateTime",
+      "decimal",
+      "instant",
+      "integer",
+      "oid",
+      "positiveInt",
+      "string",
+      "time",
+      "unsignedInt",
+      "uri",
+      "url",
+      "Coding",
+      "Identifier"
+  );
 
-  private static final StructType conditionSchema = converter.resourceSchema(Condition.class);
+  private static final FhirContext FHIR_CONTEXT = FhirContext.forR4();
+  private static final DataTypeMappings DATA_TYPE_MAPPINGS = new R4DataTypeMappings();
 
-  private static final StructType observationSchema = converter.resourceSchema(Observation.class);
+  private SchemaConverter converter_L0;
+  private SchemaConverter converter_L1;
+  private SchemaConverter converter_L2;
 
-  private static final StructType medRequestSchema = converter
-      .resourceSchema(MedicationRequest.class);
+  private StructType conditionSchema;
+  private StructType observationSchema;
+  private StructType medRequestSchema;
+  private StructType questionnaireSchema;
+  private StructType questionnaireResponseSchema;
 
-  private static final StructType questionnaireSchema = converter
-      .resourceSchema(Questionnaire.class);
 
-  private static final StructType questionnaireResponseSchema = converter
-      .resourceSchema(QuestionnaireResponse.class);
+  /**
+   * Traverses a DataType recursively passing all encountered StructTypes to the provided consumer.
+   *
+   * @param type the DataType to traverse.
+   * @param consumer the consumer that receives all StructTypes.
+   */
+  private void traverseSchema(final DataType type, final Consumer<StructType> consumer) {
+    if (type instanceof StructType) {
+      final StructType structType = (StructType) type;
+      consumer.accept(structType);
+      Arrays.stream(structType.fields()).forEach(f -> traverseSchema(f.dataType(), consumer));
+    } else if (type instanceof ArrayType) {
+      traverseSchema(((ArrayType) type).elementType(), consumer);
+    } else if (type instanceof MapType) {
+      traverseSchema(((MapType) type).keyType(), consumer);
+      traverseSchema(((MapType) type).valueType(), consumer);
+    }
+  }
+
+  private SchemaConverter createSchemaConverter(final int maxNestingLevel) {
+    return new SchemaConverter(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
+        EncoderConfig.apply(maxNestingLevel, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
+  }
 
   /**
    * Returns the type of a nested field.
    */
-  private DataType getField(final DataType dataType, final boolean isNullable,
+  private static DataType getField(final DataType dataType, final boolean isNullable,
       final String... names) {
 
     final StructType schema = dataType instanceof ArrayType
@@ -78,9 +126,37 @@ public class SchemaConverterTest {
     }
   }
 
+  private static DataType unArray(final DataType maybeArrayType) {
+    return maybeArrayType instanceof ArrayType
+           ?
+           ((ArrayType) maybeArrayType).elementType()
+           : maybeArrayType;
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  private static void assertFieldNotPresent(final String fieldName,
+      final DataType maybeStructType) {
+    assertTrue("Must be struct type.", maybeStructType instanceof StructType);
+    assertTrue("Field: '" + fieldName + "' not present in struct type.",
+        ((StructType) maybeStructType).getFieldIndex(
+            fieldName).isEmpty());
+  }
+
+  @Before
+  public void setUp() {
+    converter_L0 = createSchemaConverter(0);
+    converter_L1 = createSchemaConverter(1);
+    converter_L2 = createSchemaConverter(2);
+
+    conditionSchema = converter_L0.resourceSchema(Condition.class);
+    observationSchema = converter_L0.resourceSchema(Observation.class);
+    medRequestSchema = converter_L0.resourceSchema(MedicationRequest.class);
+    questionnaireSchema = converter_L0.resourceSchema(Questionnaire.class);
+    questionnaireResponseSchema = converter_L0.resourceSchema(QuestionnaireResponse.class);
+  }
+
   @Test
   public void resourceHasId() {
-
     assertTrue(getField(conditionSchema, true, "id") instanceof StringType);
   }
 
@@ -194,5 +270,116 @@ public class SchemaConverterTest {
         "medicationMedication").isEmpty());
     assertTrue(medRequestSchema.getFieldIndex(
         "medicationResource").isEmpty());
+  }
+
+  @Test
+  public void testDirectlyNestedType() {
+    // level 0  - only the backbone element from the resource
+    // Questionnaire/item
+    final StructType questionnaireSchema_L0 = converter_L0
+        .resourceSchema(Questionnaire.class);
+
+    assertFieldNotPresent("item", unArray(getField(questionnaireSchema_L0, true, "item")));
+
+    // level 1
+    // Questionnaire/item/item
+    final StructType questionnaireSchema_L1 = converter_L1
+        .resourceSchema(Questionnaire.class);
+
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireSchema_L1, true, "item", "item", "linkId"));
+    assertFieldNotPresent("item", unArray(getField(questionnaireSchema_L1, true, "item", "item")));
+
+    // level 2
+    // Questionnaire/item/item/item
+    final StructType questionnaireSchema_L2 = converter_L2
+        .resourceSchema(Questionnaire.class);
+
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireSchema_L2, true, "item", "item", "item", "linkId"));
+    assertFieldNotPresent("item",
+        unArray(getField(questionnaireSchema_L2, true, "item", "item", "item")));
+  }
+
+
+  @Test
+  public void testIndirectlyNestedType() {
+    // level 0  - only the backbone element from the resource
+    // QuestionnaireResponse/item/answer
+    final StructType questionnaireResponseSchema_L0 = converter_L0
+        .resourceSchema(QuestionnaireResponse.class);
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L0, true, "item", "answer", "id"));
+    assertFieldNotPresent("item",
+        unArray(getField(questionnaireResponseSchema_L0, true, "item", "answer")));
+    // level 1
+    // QuestionnaireResponse/item/answer/item/answer
+    final StructType questionnaireResponseSchema_L1 = converter_L1
+        .resourceSchema(QuestionnaireResponse.class);
+
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L1, true, "item", "answer", "item", "linkId"));
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L1, true, "item", "answer", "item", "answer", "id"));
+    assertFieldNotPresent("item", unArray(
+        getField(questionnaireResponseSchema_L1, true, "item", "answer", "item", "answer")));
+
+    // level 2
+    // QuestionnaireResponse/item/answer/item/answer/item/answer/item/answer
+    final StructType questionnaireResponseSchema_L2 = converter_L2
+        .resourceSchema(QuestionnaireResponse.class);
+
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L2, true,
+            "item", "answer", "item", "answer", "item", "linkId"));
+    assertEquals(DataTypes.StringType,
+        getField(questionnaireResponseSchema_L2, true,
+            "item", "answer", "item", "answer", "item", "answer", "id"));
+    assertFieldNotPresent("item", unArray(getField(questionnaireResponseSchema_L2, true,
+        "item", "answer", "item", "answer", "item", "answer")));
+  }
+
+  @Test
+  public void testExtensions() {
+    final StructType extensionSchema = converter_L2
+        .resourceSchema(Condition.class);
+
+    // We need to test that:
+    // - That there is a global '_extension' of map type field
+    // - There is not 'extension' field in any of the structure types
+    // - That each struct type has a '_fid' field of INTEGER type
+
+    final MapType extensionsContainerType = (MapType) getField(extensionSchema, true,
+        "_extension");
+    assertEquals(DataTypes.IntegerType, extensionsContainerType.keyType());
+    assertTrue(extensionsContainerType.valueType() instanceof ArrayType);
+
+    traverseSchema(extensionSchema, t -> {
+      assertEquals(DataTypes.IntegerType, t.fields()[t.fieldIndex("_fid")].dataType());
+      assertFieldNotPresent("extension", t);
+    });
+  }
+
+  @Test
+  public void testRestrictsOpenTypesCorrectly() {
+
+    final Set<String> limitedOpenTypes = Set.of(
+        "boolean",
+        "integer",
+        "Coding",
+        "ElementDefinition" // this is not a valid R4 open type so it should not be returned
+    );
+
+    final SchemaConverter schemaConverter = new SchemaConverter(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
+        EncoderConfig.apply(0, JavaConverters.asScalaSet(limitedOpenTypes).toSet(), true));
+
+    StructType conditionSchema = schemaConverter.resourceSchema(Condition.class);
+    final MapType extensionsContainerType = (MapType) getField(conditionSchema, true,
+        "_extension");
+    StructType extensionStruct = (StructType) ((ArrayType) extensionsContainerType.valueType())
+        .elementType();
+    Set<String> actualOpenTypeFieldNames = Stream.of(extensionStruct.fieldNames())
+        .filter(fn -> fn.startsWith("value")).collect(Collectors.toUnmodifiableSet());
+    assertEquals(Set.of("valueBoolean", "valueInteger", "valueCoding"), actualOpenTypeFieldNames);
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -12,7 +12,7 @@ import au.csiro.pathling.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourceDefinition;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
@@ -46,12 +46,12 @@ public class SearchProvider implements IResourceProvider {
   /**
    * The name of the FHIR search profile.
    */
-  public static final String QUERY_NAME = "fhirPath";
+  private static final String QUERY_NAME = "fhirPath";
 
   /**
    * The name of the parameter which is passed to the search profile.
    */
-  public static final String FILTER_PARAM = "filter";
+  private static final String FILTER_PARAM = "filter";
 
   @Nonnull
   private final Configuration configuration;
@@ -63,7 +63,7 @@ public class SearchProvider implements IResourceProvider {
   private final SparkSession sparkSession;
 
   @Nonnull
-  private final ResourceReader resourceReader;
+  private final Database database;
 
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
@@ -81,7 +81,7 @@ public class SearchProvider implements IResourceProvider {
    * @param configuration A {@link Configuration} object to control the behaviour of the executor
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
-   * @param resourceReader A {@link ResourceReader} for retrieving resources
+   * @param database A {@link Database} for retrieving resources
    * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
    * queries within parallel processing
    * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
@@ -91,14 +91,14 @@ public class SearchProvider implements IResourceProvider {
    */
   public SearchProvider(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.resourceReader = resourceReader;
+    this.database = database;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.fhirEncoders = fhirEncoders;
     this.resourceClass = resourceClass;
@@ -122,9 +122,7 @@ public class SearchProvider implements IResourceProvider {
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search() {
     final ResourceType subjectResource = ResourceDefinition.getResourceTypeFromClass(resourceClass);
-    return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
-        terminologyServiceFactory, fhirEncoders,
-        subjectResource, Optional.empty());
+    return buildSearchExecutor(subjectResource, Optional.empty());
   }
 
   /**
@@ -139,8 +137,14 @@ public class SearchProvider implements IResourceProvider {
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search(
       @Nullable @OptionalParam(name = FILTER_PARAM) final StringAndListParam filters) {
-    return new CachingSearchExecutor(configuration, fhirContext, sparkSession, resourceReader,
-        terminologyServiceFactory, fhirEncoders,
-        resourceType, Optional.ofNullable(filters));
+    return buildSearchExecutor(resourceType, Optional.ofNullable(filters));
   }
+
+  @Nonnull
+  private IBundleProvider buildSearchExecutor(@Nonnull final ResourceType subjectResource,
+      @Nonnull final Optional<StringAndListParam> filters) {
+    return new SearchExecutor(configuration, fhirContext, sparkSession, database,
+        terminologyServiceFactory, fhirEncoders, subjectResource, filters);
+  }
+
 }

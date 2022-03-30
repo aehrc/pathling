@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -8,7 +8,11 @@ package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.*;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -42,9 +46,9 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
   protected IntegerPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, foreignResource,
+    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 
@@ -71,7 +75,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
     final int value;
     if (row.schema().fields()[columnNumber].dataType() instanceof LongType) {
       try {
-        // Currently some functions such as count currently return an Integer type, even though
+        // Currently, some functions such as count currently return an Integer type, even though
         // their return values can theoretically exceed the maximum value permitted for an integer.
         // This guard allows us to handle this situation in a safe way. In the future, we will
         // implement the "as" operator to allow the user to explicitly use a Decimal where large

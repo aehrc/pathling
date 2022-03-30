@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -9,7 +9,6 @@ package au.csiro.pathling.search;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
-import static au.csiro.pathling.test.helpers.TestHelpers.mockResourceReader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -21,6 +20,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -54,26 +54,26 @@ import org.springframework.boot.test.context.SpringBootTest;
 class SearchExecutorTest {
 
   @Autowired
-  private Configuration configuration;
+  Configuration configuration;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Autowired
-  private IParser jsonParser;
+  IParser jsonParser;
 
   @Autowired
-  private SparkSession sparkSession;
+  SparkSession sparkSession;
 
   @Autowired
-  private FhirEncoders fhirEncoders;
+  FhirEncoders fhirEncoders;
 
 
   @Autowired
-  private TerminologyServiceFactory terminologyServiceFactory;
+  TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  private TerminologyService terminologyService;
+  TerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
@@ -88,7 +88,7 @@ class SearchExecutorTest {
     final SearchExecutorBuilder builder = searchBuilder()
         .withSubjectResource(ResourceType.PATIENT)
         .withFilters(params);
-    mockResourceReader(builder.getResourceReader(), sparkSession, ResourceType.CONDITION);
+    TestHelpers.mockResource(builder.getDatabase(), sparkSession, ResourceType.CONDITION);
 
     final ValueSet valueSet = (ValueSet) jsonParser.parseResource(getResourceAsStream(
         "txResponses/SearchExecutorTest/simpleSearchWithMemberOf.ValueSet.json"));
@@ -103,10 +103,24 @@ class SearchExecutorTest {
   void searchOfQuestionnaire() {
     final SearchExecutorBuilder builder = searchBuilder()
         .withSubjectResource(ResourceType.QUESTIONNAIRE);
-    mockResourceReader(builder.getResourceReader(), sparkSession, ResourceType.QUESTIONNAIRE);
+    TestHelpers.mockResource(builder.getDatabase(), sparkSession, ResourceType.QUESTIONNAIRE);
 
     final SearchExecutor executor = builder.build();
     assertResponse("SearchExecutorTest/searchOfQuestionnaire.Bundle.json", executor);
+  }
+
+  @Test
+  void combineResultInSecondFilter() {
+    final StringAndListParam params = new StringAndListParam();
+    params.addAnd(new StringParam("gender = 'male'"));
+    params.addAnd(new StringParam("(name.given combine name.family).empty().not()"));
+    final SearchExecutorBuilder builder = searchBuilder()
+        .withSubjectResource(ResourceType.PATIENT)
+        .withFilters(params);
+    TestHelpers.mockResource(builder.getDatabase(), sparkSession, ResourceType.PATIENT);
+
+    final SearchExecutor executor = builder.build();
+    assertResponse("SearchExecutorTest/combineResultInSecondFilter.Bundle.json", executor);
   }
 
   @Test
@@ -136,13 +150,13 @@ class SearchExecutorTest {
   }
 
   @Nonnull
-  private SearchExecutorBuilder searchBuilder() {
+  SearchExecutorBuilder searchBuilder() {
     return new SearchExecutorBuilder(configuration, fhirContext, sparkSession,
         fhirEncoders, terminologyServiceFactory);
   }
 
   @SuppressWarnings("SameParameterValue")
-  private void assertResponse(@Nonnull final String expectedPath,
+  void assertResponse(@Nonnull final String expectedPath,
       @Nonnull final IBundleProvider executor) {
 
     final String expectedJson = getResourceAsString("responses/" + expectedPath);

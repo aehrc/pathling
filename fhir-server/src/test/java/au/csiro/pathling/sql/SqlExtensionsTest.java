@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -31,13 +31,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 @Tag("UnitTest")
-public class SqlExtensionsTest {
+class SqlExtensionsTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Nullable
-  private static String stringDecoder(@Nullable final Object value) {
+  static String stringDecoder(@Nullable final Object value) {
     return value != null
            ? ((UTF8String) value).toString()
            : null;
@@ -45,12 +45,12 @@ public class SqlExtensionsTest {
 
   /**
    * Collects all String values in a partition to a list and then maps each string to the index of
-   * the this string in the list.
+   * this string in the list.
    */
   static class TestMapperWithPreview implements
       MapperWithPreview<String, Integer, List<String>> {
 
-    private static final long serialVersionUID = -4978210449641957885L;
+    static final long serialVersionUID = -4978210449641957885L;
 
     @Override
     @Nonnull
@@ -70,7 +70,7 @@ public class SqlExtensionsTest {
   }
 
   @Test
-  public void testMapWithPartitionPreview() {
+  void testMapWithPartitionPreview() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -41,22 +41,21 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
-public class EmptyFunctionTest {
+class EmptyFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Test
-  public void returnsCorrectResults() {
+  void returnsCorrectResults() {
     final Coding coding1 = new Coding(TestHelpers.SNOMED_URL, "840546002", "Exposure to COVID-19");
     final CodeableConcept concept1 = new CodeableConcept(coding1);
     final Coding coding2 = new Coding(TestHelpers.SNOMED_URL, "248427009", "Fever symptoms");
     final CodeableConcept concept2 = new CodeableConcept(coding2);
 
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(codeableConceptStructType())
@@ -74,6 +73,9 @@ public class EmptyFunctionTest {
         .dataset(dataset)
         .idAndValueColumns()
         .expression("code")
+        .build();
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(input.getIdColumn()))
         .build();
 
     // Set up the function input.
@@ -103,7 +105,7 @@ public class EmptyFunctionTest {
   }
 
   @Test
-  public void inputMustNotContainArguments() {
+  void inputMustNotContainArguments() {
     final ElementPath input = new ElementPathBuilder(spark).build();
     final StringLiteralPath argument = StringLiteralPath
         .fromString("'some argument'", input);

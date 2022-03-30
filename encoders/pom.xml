@@ -6,9 +6,10 @@
   ~ Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
   ~ the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
   ~
-  ~ These modifications are copyright © 2018-2021, Commonwealth Scientific
+  ~ These modifications are copyright © 2018-2022, Commonwealth Scientific
   ~ and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
   ~ under the CSIRO Open Source Software Licence Agreement.
+  ~
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -19,7 +20,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>4.0.1</version>
+    <version>5.0.0</version>
   </parent>
   <artifactId>encoders</artifactId>
   <packaging>jar</packaging>
@@ -93,6 +94,10 @@
       <artifactId>slf4j-api</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>log4j-over-slf4j</artifactId>
+    </dependency>
 
     <!-- Testing -->
     <dependency>
@@ -103,6 +108,16 @@
       <groupId>ca.uhn.hapi.fhir</groupId>
       <artifactId>hapi-fhir-validation-resources-r4</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.skyscreamer</groupId>
+      <artifactId>jsonassert</artifactId>
+    </dependency>
+
+    <!-- Lombok -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
     </dependency>
   </dependencies>
 

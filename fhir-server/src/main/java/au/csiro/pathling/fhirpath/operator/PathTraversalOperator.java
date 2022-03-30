@@ -1,15 +1,18 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
+import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -52,23 +55,20 @@ public class PathTraversalOperator {
     final String expression = left.getExpression().equals(inputContextExpression)
                               ? right
                               : left.getExpression() + "." + right;
+
     final Optional<ElementDefinition> optionalChild = left.getChildElement(right);
     checkUserInput(optionalChild.isPresent(), "No such child: " + expression);
     final ElementDefinition childDefinition = optionalChild.get();
 
     final Dataset<Row> leftDataset = left.getDataset();
 
-    // If the input path is a ResourcePath, we look for a bare column. Otherwise, we will need to
-    // extract it from a struct.
     final Column field;
-    if (left instanceof ResourcePath) {
-      final ResourcePath resourcePath = (ResourcePath) left;
-      // When the value column of the ResourcePath is null, the path traversal results in null. This
-      // can happen when attempting to do a path traversal on the result of a function like when.
-      field = when(resourcePath.getValueColumn().isNull(), lit(null))
-          .otherwise(resourcePath.getElementColumn(right));
+    if (ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(right)) {
+      // Lookup the extensions by _fid in the extension container.
+      field = left.getExtensionContainerColumn()
+          .apply(getValueField(left, ExtensionSupport.FID_FIELD_NAME()));
     } else {
-      field = left.getValueColumn().getField(right);
+      field = getValueField(left, right);
     }
 
     // If the element has a max cardinality of more than one, it will need to be "exploded" out into
@@ -86,16 +86,45 @@ public class PathTraversalOperator {
       resultDataset = leftDataset;
     } else {
       final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
-      resultDataset = left.explodeArray(leftDataset, field, valueAndEidColumns);
-      valueColumn = valueAndEidColumns.getLeft();
-      eidColumnCandidate = Optional.of(valueAndEidColumns.getRight());
+      final Dataset<Row> explodedDataset = left.explodeArray(leftDataset, field,
+          valueAndEidColumns);
+      final DatasetWithColumnMap datasetWithColumnMap = createColumns(explodedDataset,
+          valueAndEidColumns.getLeft(), valueAndEidColumns.getRight());
+      resultDataset = datasetWithColumnMap.getDataset();
+      valueColumn = datasetWithColumnMap.getColumn(valueAndEidColumns.getLeft());
+      eidColumnCandidate = Optional.of(
+          datasetWithColumnMap.getColumn(valueAndEidColumns.getRight()));
     }
 
     final Optional<Column> eidColumn = resultSingular
                                        ? Optional.empty()
                                        : eidColumnCandidate;
-    return ElementPath.build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,
-        resultSingular, left.getForeignResource(), left.getThisColumn(), childDefinition);
+
+    // If there is an element ID column, we need to add it to the parser context so that it can
+    // be used within joins in certain situations, e.g. extract.
+    eidColumn.ifPresent(c -> input.getContext().getNodeIdColumns().putIfAbsent(expression, c));
+
+    return ElementPath
+        .build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,
+            resultSingular, left.getCurrentResource(), left.getThisColumn(), childDefinition);
+  }
+
+  @Nonnull
+  private static Column getValueField(@Nonnull final NonLiteralPath path,
+      @Nonnull final String fieldName) {
+    // If the input path is a ResourcePath, we look for a bare column. Otherwise, we will need to
+    // extract it from a struct.
+    final Column field;
+    if (path instanceof ResourcePath) {
+      final ResourcePath resourcePath = (ResourcePath) path;
+      // When the value column of the ResourcePath is null, the path traversal results in null. This
+      // can happen when attempting to do a path traversal on the result of a function like when.
+      field = when(resourcePath.getValueColumn().isNull(), lit(null))
+          .otherwise(resourcePath.getElementColumn(fieldName));
+    } else {
+      field = path.getValueColumn().getField(fieldName);
+    }
+    return field;
   }
 
 }

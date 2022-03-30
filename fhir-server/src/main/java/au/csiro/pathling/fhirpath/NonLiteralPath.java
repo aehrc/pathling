@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -7,15 +7,20 @@
 package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
+import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-import static org.apache.spark.sql.functions.*;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.posexplode_outer;
+import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -59,12 +64,12 @@ public abstract class NonLiteralPath implements FhirPath {
   protected final boolean singular;
 
   /**
-   * Returns an expression representing a resource (other than the subject resource) that this path
-   * originated from. This is used in {@code reverseResolve} for joining between the subject
-   * resource and a reference within a foreign resource.
+   * Returns an expression representing the most current resource that has been navigated to within
+   * this path. This is used in {@code reverseResolve} for joining between the subject resource and
+   * a reference.
    */
   @Nonnull
-  protected Optional<ResourcePath> foreignResource;
+  protected Optional<ResourcePath> currentResource;
 
   /**
    * For paths that traverse from the {@code $this} keyword, this column refers to the values in the
@@ -78,7 +83,7 @@ public abstract class NonLiteralPath implements FhirPath {
   protected NonLiteralPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
-      @Nonnull final Optional<ResourcePath> foreignResource,
+      @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn) {
 
     final List<String> datasetColumns = Arrays.asList(dataset.columns());
@@ -97,7 +102,7 @@ public abstract class NonLiteralPath implements FhirPath {
     this.eidColumn = eidColumn;
     this.valueColumn = valueColumn;
     this.singular = singular;
-    this.foreignResource = foreignResource;
+    this.currentResource = currentResource;
     this.thisColumn = thisColumn;
   }
 
@@ -134,6 +139,24 @@ public abstract class NonLiteralPath implements FhirPath {
   public Column getOrderingColumn() {
     checkHasOrder();
     return eidColumn.orElse(ORDERING_NULL_VALUE);
+  }
+
+  @Nonnull
+  public Column getExtractableColumn() {
+    return getValueColumn();
+  }
+
+
+  /**
+   * Returns the column with the extension container (the _fid to extension values map).
+   *
+   * @return the column with the extension container.
+   */
+  @Nonnull
+  public Column getExtensionContainerColumn() {
+    final ResourcePath rootResource = checkPresent(getCurrentResource(),
+        "Current resource missing in traversed path. This is a bug in current resource propagation");
+    return rootResource.getExtensionContainerColumn();
   }
 
   /**
@@ -234,9 +257,8 @@ public abstract class NonLiteralPath implements FhirPath {
    * <li>otherwise it should be a one element array with the indexColumn value.</li>
    * </ul>
    * <p>
-   * If the
-   * parent eid exists then the value of the index column needs to be appended to the the existing
-   * id.
+   * If the parent eid exists then the value of the index column needs to be appended to the
+   * existing id.
    * <ul>
    * <li>if the existing eid is null then the index must be null as well and the new id should be
    * null.</li>
@@ -276,9 +298,9 @@ public abstract class NonLiteralPath implements FhirPath {
       @Nonnull final Column arrayCol,
       @Nonnull final MutablePair<Column, Column> outValueAndEidCols) {
     final Column[] allColumns = Stream.concat(Arrays.stream(dataset.columns())
-        .map(dataset::col), Stream
-        .of(posexplode_outer(arrayCol)
-            .as(new String[]{"index", "value"})))
+            .map(dataset::col), Stream
+            .of(posexplode_outer(arrayCol)
+                .as(new String[]{"index", "value"})))
         .toArray(Column[]::new);
     final Dataset<Row> resultDataset = arrayDataset.select(allColumns);
     outValueAndEidCols.setLeft(resultDataset.col("value"));
@@ -292,26 +314,9 @@ public abstract class NonLiteralPath implements FhirPath {
   }
 
   @Nonnull
-  protected List<Column> getTrimmedColumns(@Nonnull final ParserContext context) {
-    final List<Column> columns = new ArrayList<>(
-        Arrays.asList(getIdColumn(), getValueColumn()));
-    // If there is a this column, we need to preserve it.
-    getThisColumn().ifPresent(columns::add);
-    // If the this context is a resource, we need to preserve all element columns.
-    context.getThisContext().ifPresent(thisContext -> {
-      if (thisContext instanceof ResourcePath) {
-        final ResourcePath thisResource = (ResourcePath) thisContext;
-        columns.addAll(thisResource.getElementColumns());
-      }
-    });
-    context.getGroupingColumns().ifPresent(columns::addAll);
-    return columns;
-  }
-
-  @Nonnull
   @Override
-  public Dataset<Row> trimDataset(@Nonnull final ParserContext context) {
-    return getDataset().select(getTrimmedColumns(context).toArray(new Column[]{}));
+  public Dataset<Row> getUnionableDataset(@Nonnull final FhirPath target) {
+    return getDataset().select(getUnionableColumns(this, target).toArray(new Column[]{}));
   }
 
 }

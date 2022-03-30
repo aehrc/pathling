@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -67,10 +67,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 class MemberOfFunctionTest {
 
   @Autowired
-  private SparkSession spark;
+  SparkSession spark;
 
   @Autowired
-  private FhirContext fhirContext;
+  FhirContext fhirContext;
 
   @Autowired
   TerminologyServiceFactory terminologyServiceFactory;
@@ -79,14 +79,14 @@ class MemberOfFunctionTest {
   TerminologyService terminologyService;
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     SharedMocks.resetAll();
   }
 
-  private static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";
+  static final String MY_VALUE_SET_URL = "https://csiro.au/fhir/ValueSet/my-value-set";
 
   @Test
-  public void memberOfCoding() {
+  void memberOfCoding() {
     final Coding coding1 = new Coding(MY_VALUE_SET_URL, "AMB", "ambulatory");
     final Coding coding2 = new Coding(MY_VALUE_SET_URL, "EMER", null);
     final Coding coding3 = new Coding(MY_VALUE_SET_URL, "IMP", "inpatient encounter");
@@ -169,7 +169,7 @@ class MemberOfFunctionTest {
 
 
   @Test
-  public void memberOfEmptyCodingDatasetDoesNotCallTerminology() {
+  void memberOfEmptyCodingDatasetDoesNotCallTerminology() {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "class");
@@ -225,7 +225,7 @@ class MemberOfFunctionTest {
   }
 
   @Test
-  public void memberOfCodeableConcept() {
+  void memberOfCodeableConcept() {
     final Coding coding1 = new Coding(LOINC_URL, "10337-4",
         "Procollagen type I [Mass/volume] in Serum");
     final Coding coding2 = new Coding(LOINC_URL, "10428-1",
@@ -316,7 +316,7 @@ class MemberOfFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfInputTypeIsUnsupported() {
+  void throwsErrorIfInputTypeIsUnsupported() {
     final FhirPath mockContext = new ElementPathBuilder(spark).build();
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
@@ -338,7 +338,7 @@ class MemberOfFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfArgumentIsNotString() {
+  void throwsErrorIfArgumentIsNotString() {
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
@@ -358,7 +358,7 @@ class MemberOfFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfMoreThanOneArgument() {
+  void throwsErrorIfMoreThanOneArgument() {
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
@@ -379,7 +379,7 @@ class MemberOfFunctionTest {
   }
 
   @Test
-  public void throwsErrorIfTerminologyServiceNotConfigured() {
+  void throwsErrorIfTerminologyServiceNotConfigured() {
     final ElementPath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();

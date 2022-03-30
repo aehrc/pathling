@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -17,31 +17,31 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.util.ReflectionUtils;
 
-public class SecurityAspectTest extends SecurityTest {
+class SecurityAspectTest extends SecurityTest {
 
   @OperationAccess("test")
   @ResourceAccess(AccessType.READ)
-  @SuppressWarnings("unused")
-  public void myOperation() {
+  @SuppressWarnings({"unused", "EmptyMethod"})
+  void myOperation() {
   }
 
   @Nonnull
-  private final Method testOperationMethods = Objects.requireNonNull(ReflectionUtils
+  final Method testOperationMethods = Objects.requireNonNull(ReflectionUtils
       .findMethod(this.getClass(), "myOperation"));
 
   @Nonnull
-  private final OperationAccess operationAccess = Objects.requireNonNull(AnnotationUtils
+  final OperationAccess operationAccess = Objects.requireNonNull(AnnotationUtils
       .getAnnotation(testOperationMethods, OperationAccess.class));
 
   @Nonnull
-  private final ResourceAccess resourceAccess = Objects.requireNonNull(AnnotationUtils
+  final ResourceAccess resourceAccess = Objects.requireNonNull(AnnotationUtils
       .getAnnotation(testOperationMethods, ResourceAccess.class));
 
 
-  private final SecurityAspect securityAspect = new SecurityAspect();
+  final SecurityAspect securityAspect = new SecurityAspect();
 
   @Test
-  public void testOperationAccessDeniedWhenNoAuthentication() {
+  void testOperationAccessDeniedWhenNoAuthentication() {
     assertThrowsAccessDenied(() -> securityAspect.checkRequiredAuthority(operationAccess),
         "Token not present"
     );
@@ -50,7 +50,7 @@ public class SecurityAspectTest extends SecurityTest {
 
   @Test
   @WithMockUser(username = "admin")
-  public void testOperationAccessDeniedWhenNotAuthorized() {
+  void testOperationAccessDeniedWhenNotAuthorized() {
     assertThrowsAccessDenied(() -> securityAspect.checkRequiredAuthority(operationAccess),
         "Missing authority: 'pathling:test'", "pathling:test"
     );
@@ -59,14 +59,14 @@ public class SecurityAspectTest extends SecurityTest {
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:test"})
-  public void testOperationAccessGranted() {
+  void testOperationAccessGranted() {
     // PASS
     securityAspect.checkRequiredAuthority(operationAccess);
   }
 
 
   @Test
-  public void testResourceAccessDeniedWhenNoAuthentication() {
+  void testResourceAccessDeniedWhenNoAuthentication() {
     assertThrowsAccessDenied(
         () -> securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT),
         "Token not present"
@@ -75,7 +75,7 @@ public class SecurityAspectTest extends SecurityTest {
 
   @Test
   @WithMockUser(username = "admin")
-  public void testResourceAccessDeniedWhenNotAuthorized() {
+  void testResourceAccessDeniedWhenNotAuthorized() {
     assertThrowsAccessDenied(
         () -> securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT),
         "Missing authority: 'pathling:read:Patient'", "pathling:read:Patient"
@@ -84,7 +84,7 @@ public class SecurityAspectTest extends SecurityTest {
 
   @Test
   @WithMockUser(username = "admin", authorities = {"pathling:read:Patient"})
-  public void testResourceAccessGranted() {
+  void testResourceAccessGranted() {
     // PASS
     securityAspect.checkResourceRead(resourceAccess, ResourceType.PATIENT);
   }

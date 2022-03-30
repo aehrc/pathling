@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -22,14 +22,19 @@ import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.ResourceReader;
+import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IQueryParameterAnd;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.StringOrListParam;
 import ca.uhn.fhir.rest.param.StringParam;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,7 +51,7 @@ import org.hl7.fhir.r4.model.InstantType;
 
 /**
  * Encapsulates the execution of a search query, implemented as an IBundleProvider for integration
- * into HAPI's mechanism for returning paged search results.
+ * into the HAPI mechanism for returning paged search results.
  *
  * @author John Grimes
  */
@@ -72,7 +77,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    * @param configuration A {@link Configuration} object to control the behaviour of the executor
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
-   * @param resourceReader A {@link ResourceReader} for retrieving resources
+   * @param database A {@link Database} for retrieving resources
    * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
    * queries within parallel processing
    * @param fhirEncoders A {@link FhirEncoders} object for converting data back into HAPI FHIR
@@ -82,18 +87,20 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    */
   public SearchExecutor(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final ResourceReader resourceReader,
+      @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<StringAndListParam> filters) {
-    super(configuration, fhirContext, sparkSession, resourceReader, terminologyServiceFactory);
+    super(configuration, fhirContext, sparkSession, database, terminologyServiceFactory);
     this.fhirEncoders = fhirEncoders;
     this.subjectResource = subjectResource;
     this.filters = filters;
     this.result = initializeDataset();
     this.count = Optional.empty();
 
-    final String filterStrings = filters.map(SearchExecutor::filtersToString).orElse("none");
+    final String filterStrings = filters
+        .map(SearchExecutor::filtersToString)
+        .orElse("none");
     log.info("Received search request: filters=[{}]", filterStrings);
 
   }
@@ -101,7 +108,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Nonnull
   private Dataset<Row> initializeDataset() {
     final ResourcePath resourcePath = ResourcePath
-        .build(getFhirContext(), getResourceReader(), subjectResource, subjectResource.toCode(),
+        .build(getFhirContext(), getDatabase(), subjectResource, subjectResource.toCode(),
             true, true);
     final Dataset<Row> subjectDataset = resourcePath.getDataset();
     final Column subjectIdColumn = resourcePath.getIdColumn();
@@ -118,7 +125,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       @Nullable Column filterColumn = null;
 
       ResourcePath currentContext = ResourcePath
-          .build(getFhirContext(), getResourceReader(), subjectResource, subjectResource.toCode(),
+          .build(getFhirContext(), getDatabase(), subjectResource, subjectResource.toCode(),
               true);
 
       // Parse each of the supplied filter expressions, building up a filter column. This captures 
@@ -128,7 +135,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         @Nullable Column orColumn = null;
 
         for (final StringParam param : orParam.getValuesAsQueryTokens()) {
-          final ParserContext parserContext = buildParserContext(currentContext);
+          final ParserContext parserContext = buildParserContext(currentContext,
+              Collections.singletonList(currentContext.getIdColumn()));
           final Parser parser = new Parser(parserContext);
           final String expression = param.getValue();
           checkUserInput(!expression.isBlank(), "Filter expression cannot be blank");
@@ -176,9 +184,12 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           .join(filteredIds, subjectIdColumn.equalTo(col(filterIdAlias)), "left_semi");
     }
 
-    // We cache the dataset because we know it will be accessed for both the total and the record
-    // retrieval.
-    dataset.cache();
+    if (getConfiguration().getSpark().getCacheDatasets()) {
+      // We cache the dataset because we know it will be accessed for both the total and the record
+      // retrieval.
+      log.debug("Caching search dataset");
+      dataset.cache();
+    }
 
     return dataset;
   }
@@ -220,7 +231,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
 
   private void reportQueryPlan(@Nonnull final Dataset<Row> resources) {
     if (getConfiguration().getSpark().getExplainQueries()) {
-      log.info("Search query plan:");
+      log.debug("Search query plan:");
       resources.explain(true);
     }
   }

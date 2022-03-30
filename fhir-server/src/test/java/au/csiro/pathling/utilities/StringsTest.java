@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag("UnitTest")
-public class StringsTest {
+class StringsTest {
 
   @Test
-  public void testParseCsvList() {
+  void testParseCsvList() {
     assertEquals(Collections.emptyList(), Strings.parseCsvList("", Integer::parseInt));
     assertEquals(Collections.emptyList(), Strings.parseCsvList(", ,, ", Integer::parseInt));
     assertEquals(Arrays.asList(1, 2, 4), Strings.parseCsvList(", 1, 2, , 4 , ", Integer::parseInt));

@@ -1,22 +1,23 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -146,6 +147,11 @@ public abstract class LiteralPath implements FhirPath {
     return ORDERING_NULL_VALUE;
   }
 
+  @Nonnull
+  public Column getExtractableColumn() {
+    return getValueColumn();
+  }
+
   /**
    * Returns the Java object that represents the value of this literal.
    *
@@ -211,11 +217,8 @@ public abstract class LiteralPath implements FhirPath {
 
   @Nonnull
   @Override
-  public Dataset<Row> trimDataset(@Nonnull final ParserContext context) {
-    final List<Column> columns = new ArrayList<>(
-        Arrays.asList(getIdColumn(), getValueColumn()));
-    context.getGroupingColumns().ifPresent(columns::addAll);
-    return getDataset().select(columns.toArray(new Column[]{}));
+  public Dataset<Row> getUnionableDataset(@Nonnull final FhirPath target) {
+    return getDataset().select(getUnionableColumns(this, target).toArray(new Column[]{}));
   }
 
 }

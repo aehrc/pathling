@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -21,21 +21,21 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag("UnitTest")
-public class PathlingAuthorityTest {
+class PathlingAuthorityTest {
 
   @Nonnull
-  private static PathlingAuthority auth(@Nonnull final String authority) {
+  static PathlingAuthority auth(@Nonnull final String authority) {
     return PathlingAuthority.fromAuthority(authority);
   }
 
   @SuppressWarnings("SameParameterValue")
-  private static void assertFailsValidation(@Nonnull final String authority,
+  static void assertFailsValidation(@Nonnull final String authority,
       @Nonnull final String message) {
     assertThrows(IllegalArgumentException.class, () -> PathlingAuthority.fromAuthority(authority),
         message);
   }
 
-  private static void assertFailsValidation(@Nonnull final String authority) {
+  static void assertFailsValidation(@Nonnull final String authority) {
     assertThrows(IllegalArgumentException.class, () -> PathlingAuthority.fromAuthority(authority),
         "Authority is not recognized: " + authority);
   }
@@ -48,7 +48,10 @@ public class PathlingAuthorityTest {
     PathlingAuthority.fromAuthority("pathling:write");
     PathlingAuthority.fromAuthority("pathling:aggregate");
     PathlingAuthority.fromAuthority("pathling:search");
+    PathlingAuthority.fromAuthority("pathling:extract");
     PathlingAuthority.fromAuthority("pathling:import");
+    PathlingAuthority.fromAuthority("pathling:create");
+    PathlingAuthority.fromAuthority("pathling:update");
     for (final ResourceType resourceType : ResourceType.values()) {
       PathlingAuthority.fromAuthority("pathling:read:" + resourceType.toCode());
       PathlingAuthority.fromAuthority("pathling:write:" + resourceType.toCode());
@@ -69,7 +72,7 @@ public class PathlingAuthorityTest {
   }
 
   @Test
-  public void testResourceAccessSubsumedBy() {
+  void testResourceAccessSubsumedBy() {
     final PathlingAuthority patientRead = PathlingAuthority.fromAuthority("pathling:read:Patient");
     final PathlingAuthority conditionWrite = PathlingAuthority
         .fromAuthority("pathling:write:Condition");
@@ -91,7 +94,7 @@ public class PathlingAuthorityTest {
   }
 
   @Test
-  public void testOperationAccessSubsumedBy() {
+  void testOperationAccessSubsumedBy() {
     final PathlingAuthority search = PathlingAuthority.fromAuthority("pathling:search");
 
     // positive cases
@@ -105,7 +108,7 @@ public class PathlingAuthorityTest {
   }
 
   @Test
-  public void testSubsumedByAny() {
+  void testSubsumedByAny() {
     final PathlingAuthority search = PathlingAuthority.fromAuthority("pathling:search");
 
     // Negative cases

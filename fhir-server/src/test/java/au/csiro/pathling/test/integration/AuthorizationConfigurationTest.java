@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.Configuration;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.security.OidcConfiguration.ConfigItem;
 import com.google.gson.FieldNamingPolicy;
@@ -31,7 +30,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.test.context.TestPropertySource;
@@ -52,28 +55,25 @@ import org.springframework.test.context.TestPropertySource;
 class AuthorizationConfigurationTest extends IntegrationTest {
 
   @LocalServerPort
-  private int port;
+  int port;
 
   @Autowired
-  private TestRestTemplate restTemplate;
+  TestRestTemplate restTemplate;
 
   @MockBean
-  private OidcConfiguration oidcConfiguration;
+  OidcConfiguration oidcConfiguration;
 
   @MockBean
   @SuppressWarnings("unused")
-  private JwtDecoder jwtDecoder;
+  JwtDecoder jwtDecoder;
 
   @MockBean
   @SuppressWarnings("unused")
-  private JwtAuthenticationConverter jwtAuthenticationConverter;
+  JwtAuthenticationConverter jwtAuthenticationConverter;
 
-
-  @Autowired
-  private Configuration configuration;
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     when(oidcConfiguration.get(ConfigItem.AUTH_URL)).thenReturn(
         Optional
             .of("https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth"));
@@ -153,15 +153,15 @@ class AuthorizationConfigurationTest extends IntegrationTest {
 
   @Getter
   @SuppressWarnings("unused")
-  private static class SmartConfiguration {
+  static class SmartConfiguration {
 
-    private String authorizationEndpoint;
+    String authorizationEndpoint;
 
-    private String tokenEndpoint;
+    String tokenEndpoint;
 
-    private String revocationEndpoint;
+    String revocationEndpoint;
 
-    private List<String> capabilities;
+    List<String> capabilities;
 
   }
 

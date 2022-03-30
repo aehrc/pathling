@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -10,7 +10,12 @@ import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodingOrCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.collect_set;
+import static org.apache.spark.sql.functions.explode_outer;
+import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -117,7 +122,7 @@ public class SubsumesFunction implements NamedFunction {
     return ElementPath
         .build(expression, resultDataset, inputFhirPath.getIdColumn(),
             inputFhirPath.getEidColumn(), resultColumn, inputFhirPath.isSingular(),
-            inputFhirPath.getForeignResource(), inputFhirPath.getThisColumn(),
+            inputFhirPath.getCurrentResource(), inputFhirPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }
 
@@ -140,7 +145,7 @@ public class SubsumesFunction implements NamedFunction {
   }
 
   /**
-   * Creates a {@link Dataset} with a new column, which is an array of all of the codings within the
+   * Creates a {@link Dataset} with a new column, which is an array of all the codings within the
    * values. Each CodeableConcept is converted to an array that includes all its codings. Each
    * Coding is converted to an array that only includes that coding.
    * <p>
@@ -166,8 +171,8 @@ public class SubsumesFunction implements NamedFunction {
   }
 
   /**
-   * Converts the the argument {@link FhirPath} to a Dataset with the schema: STRING id,
-   * ARRAY(struct CODING) codingSet.
+   * Converts the argument {@link FhirPath} to a Dataset with the schema: STRING id, ARRAY(struct
+   * CODING) codingSet.
    * <p>
    * All codings are collected in a single `array` per resource.
    * <p>

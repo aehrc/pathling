@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018-2021, Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
  * Software Licence Agreement.
  */
@@ -18,11 +18,14 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.*;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.MemberInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,7 +49,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   /**
    * This constructor is used when there is no explicit invoker, i.e. an invocation is made without
-   * an expression on the left hand side of the dot notation. In this case, the invoker is taken to
+   * an expression on the left-hand side of the dot notation. In this case, the invoker is taken to
    * be either the root node, or the `$this` node in the context of functions that support it.
    *
    * @param context The {@link ParserContext} to use when parsing the invocation
@@ -57,7 +60,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   /**
-   * This constructor is used when there is an explicit invoker on the left hand side of the dot
+   * This constructor is used when there is an explicit invoker on the left-hand side of the dot
    * notation.
    *
    * @param context The {@link ParserContext} to use when parsing the invocation
@@ -113,7 +116,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         // If we're in the context of a function's arguments, there are two valid things this
         // could be:
         // (1) a path traversal from the input context;
-        // (2) a reference to a (potentially foreign) resource type.
+        // (2) a reference to a resource type.
 
         // Check if the expression is a reference to a known resource type.
         final ResourceType resourceType;
@@ -128,17 +131,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         }
 
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
-        // a foreign resource reference.
-        final ResourcePath path = ResourcePath
-            .build(context.getFhirContext(), context.getResourceReader(), resourceType, fhirPath,
-                true);
-
-        // This resource path will get preserved within paths derived from this, so that we can come
-        // back to it for things like reverse reference resolution.
-        path.setForeignResource(path);
-
-        return path;
-
+        // the current resource reference.
+        return ResourcePath
+            .build(context.getFhirContext(), context.getDatabase(), resourceType, fhirPath, true);
       }
     }
   }
@@ -173,8 +168,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
     final List<FhirPath> arguments = new ArrayList<>();
     if (paramList != null) {
-      // The `$this` path will be the same as the input, but with a different expression and it will
-      // be singular as it represents a single item.
+      // The `$this` path will be the same as the input, but with a different expression, and it 
+      // will be singular as it represents a single item.
       // NOTE: This works because for $this the context for aggregation grouping on elements
       // includes `id` and `this` columns.
 
@@ -182,23 +177,17 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       final NonLiteralPath thisPath = nonLiteral.toThisPath();
 
       // If the this context has an element ID, we need to add this to the grouping columns so that
-      // aggregations that occur within the arguments are in the context of an element, not the
-      // resource.
-      final Optional<List<Column>> argumentGroupings = thisPath.getEidColumn()
-          .map(column -> context.getGroupingColumns()
-              .map(groupings -> {
-                final List<Column> newGroupings = new ArrayList<>(groupings);
-                newGroupings.add(column);
-                return Optional.of(newGroupings);
-              })
-              .orElse(Optional.of(Arrays.asList(context.getInputContext().getIdColumn(), column))))
-          .orElse(context.getGroupingColumns());
+      // aggregations that occur within the arguments are in the context of an element. Otherwise,
+      // we add the resource ID column to the groupings.
+      final List<Column> argumentGroupings = new ArrayList<>(context.getGroupingColumns());
+      thisPath.getEidColumn().ifPresentOrElse(argumentGroupings::add,
+          () -> argumentGroupings.add(thisPath.getIdColumn()));
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this`
       // expression.
       final ParserContext argumentContext = new ParserContext(context.getInputContext(),
-          context.getFhirContext(), context.getSparkSession(),
-          context.getResourceReader(), context.getTerminologyServiceFactory(), argumentGroupings);
+          context.getFhirContext(), context.getSparkSession(), context.getDatabase(),
+          context.getTerminologyServiceFactory(), argumentGroupings, context.getNodeIdColumns());
       argumentContext.setThisContext(thisPath);
 
       // Parse each of the expressions passed as arguments to the function.
