@@ -38,6 +38,7 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 @Slf4j
+@SuppressWarnings("UnusedReturnValue")
 public class DatasetAssert {
 
   public static DatasetAssert of(@Nonnull final Dataset<Row> dataset) {

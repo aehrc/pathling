@@ -26,7 +26,12 @@ import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
@@ -49,8 +54,9 @@ import scala.collection.JavaConverters;
 @WebServlet(urlPatterns = "/fhir/*")
 @Profile("server")
 @Slf4j
-@SuppressWarnings({"NonSerializableFieldInSerializableClass"})
 public class FhirServer extends RestfulServer {
+
+  private static final long serialVersionUID = -1519567839063860047L;
 
   private static final int DEFAULT_PAGE_SIZE = 100;
   private static final int MAX_PAGE_SIZE = Integer.MAX_VALUE;
@@ -111,7 +117,6 @@ public class FhirServer extends RestfulServer {
    * CapabilityStatement
    * @param resourceProviderFactory a {@link ResourceProviderFactory} for providing instances of
    */
-  @SuppressWarnings("TypeMayBeWeakened")
   public FhirServer(@Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,

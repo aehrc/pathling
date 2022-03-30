@@ -82,8 +82,8 @@ class ErrorHandlingInterceptorTest {
   }
 
   @Test
-  @SuppressWarnings({"SerializableNonStaticInnerClassWithoutSerialVersionUID",
-      "SerializableInnerClassWithNonSerializableOuterClass"})
+  @SuppressWarnings({
+      "serial"})
   void wrapsBaseServerResponseExceptionsWithZeroStatus() {
     final BaseServerResponseException actualException = callInterceptor(
         new BaseServerResponseException(0, "IllegalStatus") {

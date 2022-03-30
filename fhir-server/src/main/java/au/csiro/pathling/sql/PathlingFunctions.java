@@ -18,8 +18,8 @@ public interface PathlingFunctions {
    * A function that removes all fields starting with '_' (underscore) from struct values. Other
    * types of values are not affected.
    *
-   * @param col the column to apply the function to.
-   * @return the column tranformed by the function.
+   * @param col the column to apply the function to
+   * @return the column transformed by the function
    */
 
   @Nonnull

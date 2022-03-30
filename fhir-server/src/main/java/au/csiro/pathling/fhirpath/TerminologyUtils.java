@@ -17,7 +17,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public interface TerminologyUtils {
 
   /**
-   * Checks if a path if a codeable concept element.
+   * Checks if a path is a codeable concept element.
    *
    * @param fhirPath a path to check
    * @return true if the path is a codeable concept

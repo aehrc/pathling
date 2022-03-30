@@ -68,6 +68,7 @@ public class UpdateProvider implements IResourceProvider {
    */
   @Update
   @OperationAccess("update")
+  @SuppressWarnings("UnusedReturnValue")
   public MethodOutcome update(@Nullable @IdParam final IdType id,
       @Nullable @ResourceParam final IBaseResource resource) {
     checkUserInput(id != null && !id.isEmpty(), "ID must be supplied");

@@ -482,7 +482,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
 
   @Test
-  void queryWithNonsingularBooleanGrouping() {
+  void queryWithNonSingularBooleanGrouping() {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.CONDITION, subjectResource);
     // Not a real subsumption - just works for this use case.
@@ -498,7 +498,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
         .build();
 
     response = executor.execute(request);
-    assertResponse("AggregateQueryTest/queryWithNonsingularBooleanGrouping.Parameters.json",
+    assertResponse("AggregateQueryTest/queryWithNonSingularBooleanGrouping.Parameters.json",
         response);
   }
 

@@ -30,13 +30,13 @@ public interface SqlExtensions {
    * @param columnDecoder the decoder to use to convert the extracted column value to the input type
    * of the mapper
    * @param mapper the mapping operation to use. The mapper will be allowed to preview all input
-   * objects in the dataset partition and create the state for them.
-   * @param resultField the definion of the column with the result of the mapping.
+   * objects in the dataset partition and create the state for them
+   * @param resultField the definition of the column with the result of the mapping
    * @param <I> input type of the mapper
    * @param <R> result type of the mapper
    * @param <S> state type of the mapper
    * @return the dataset with an additional column as specified in the resultField with the results
-   * of the mapping operation for each row.
+   * of the mapping operation for each row
    */
   @Nonnull
   static <I, R, S> Dataset<Row> mapWithPartitionPreview(@Nonnull final Dataset<Row> ds,

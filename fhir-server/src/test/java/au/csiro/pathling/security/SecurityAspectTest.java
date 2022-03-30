@@ -21,7 +21,7 @@ class SecurityAspectTest extends SecurityTest {
 
   @OperationAccess("test")
   @ResourceAccess(AccessType.READ)
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"unused", "EmptyMethod"})
   void myOperation() {
   }
 

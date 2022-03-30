@@ -12,7 +12,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**
- * Describes a path that is able to be compared with other paths, e.g. for equality.
+ * Describes a path that can be compared with other paths, e.g. for equality.
  *
  * @author John Grimes
  */

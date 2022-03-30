@@ -45,7 +45,7 @@ class SqlExtensionsTest {
 
   /**
    * Collects all String values in a partition to a list and then maps each string to the index of
-   * the this string in the list.
+   * this string in the list.
    */
   static class TestMapperWithPreview implements
       MapperWithPreview<String, Integer, List<String>> {

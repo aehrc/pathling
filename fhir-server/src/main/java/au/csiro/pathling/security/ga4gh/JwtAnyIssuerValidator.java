@@ -31,7 +31,7 @@ public class JwtAnyIssuerValidator implements OAuth2TokenValidator<Jwt> {
    * @param issuers the list of issuers that are allowable
    */
   public JwtAnyIssuerValidator(@Nonnull final Collection<String> issuers) {
-    checkArgument(issuers != null && !issuers.isEmpty(), "issuers cannot be null or empty");
+    checkArgument(!issuers.isEmpty(), "issuers cannot be empty");
 
     final Predicate<Object> testClaimValue = (claimValue) -> (claimValue != null)
         && issuers.contains(

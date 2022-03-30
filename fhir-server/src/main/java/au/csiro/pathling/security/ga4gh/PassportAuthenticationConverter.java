@@ -60,7 +60,6 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
    * @param passportScope a request-scoped {@link PassportScope} used to store the extracted
    * filters
    */
-  @SuppressWarnings("TypeMayBeWeakened")
   public PassportAuthenticationConverter(@Nonnull final VisaDecoderFactory visaDecoderFactory,
       @Nonnull final Configuration configuration,
       @Nonnull final ManifestConverter manifestConverter,

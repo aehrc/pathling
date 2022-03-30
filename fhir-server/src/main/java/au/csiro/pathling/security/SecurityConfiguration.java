@@ -7,8 +7,8 @@
 package au.csiro.pathling.security;
 
 import au.csiro.pathling.Configuration;
+import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
@@ -33,14 +33,17 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Slf4j
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
+  private final Configuration configuration;
+
   @Value("${pathling.auth.enabled}")
   private boolean authEnabled;
 
-  @Autowired
-  private Configuration configuration;
+  public SecurityConfiguration(@Nonnull final Configuration configuration) {
+    this.configuration = configuration;
+  }
 
   @Override
-  protected void configure(final HttpSecurity http) throws Exception {
+  protected void configure(@Nonnull final HttpSecurity http) throws Exception {
 
     // Will use the bean of class CorsConfigurationSource as configuration provider.
     http.cors();
@@ -89,4 +92,5 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     source.registerCorsConfiguration("/**", cors);
     return source;
   }
+
 }

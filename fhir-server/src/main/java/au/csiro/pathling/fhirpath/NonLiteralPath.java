@@ -257,9 +257,8 @@ public abstract class NonLiteralPath implements FhirPath {
    * <li>otherwise it should be a one element array with the indexColumn value.</li>
    * </ul>
    * <p>
-   * If the
-   * parent eid exists then the value of the index column needs to be appended to the the existing
-   * id.
+   * If the parent eid exists then the value of the index column needs to be appended to the
+   * existing id.
    * <ul>
    * <li>if the existing eid is null then the index must be null as well and the new id should be
    * null.</li>

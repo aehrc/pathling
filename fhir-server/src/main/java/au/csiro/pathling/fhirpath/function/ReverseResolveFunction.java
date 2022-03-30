@@ -84,7 +84,7 @@ public class ReverseResolveFunction implements NamedFunction {
         .partitionBy(inputPath.getIdColumn(), inputPath.getOrderingColumn())
         .orderBy(currentResourceValue);
 
-    // row_number() is 1-based and we use 0-based indexes - thus (minus(1)).
+    // row_number() is 1-based, and we use 0-based indexes - thus (minus(1)).
     final Column currentResourceIndex = when(currentResourceValue.isNull(), lit(null))
         .otherwise(row_number().over(windowSpec).minus(lit(1)));
 
