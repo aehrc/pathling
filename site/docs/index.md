@@ -19,7 +19,7 @@ href="https://documenter.getpostman.com/view/634774/UVsQs48s">
 <img src="https://run.pstmn.io/button.svg" alt="Run in Postman"/></a>
 
 Pathling is licensed under the
-[CSIRO Open Source Software Licence Agreement](https://github.com/aehrc/pathling/blob/master/LICENSE.md)
+[CSIRO Open Source Software Licence Agreement](https://github.com/aehrc/pathling/blob/main/LICENSE.md)
 . This means that you are free to use, modify and redistribute the software as
 you wish, even for commercial purposes.
 

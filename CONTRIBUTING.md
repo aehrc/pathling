@@ -38,17 +38,17 @@ The "public API" of Pathling is defined as:
 3. the configuration schema (see 
    [Configuration](https://pathling.csiro.au/docs/configuration.html)).
 
-The branching strategy is very simple and is based on 
-[GitHub Flow](https://guides.github.com/introduction/flow/). There are no 
-long-lived branches, all changes are made via pull requests and will be the 
-subject of an issue branch that is created from and targeting `master`.
+The branching strategy is very simple and is based on
+[GitHub Flow](https://guides.github.com/introduction/flow/). There are no
+long-lived branches, all changes are made via pull requests and will be the
+subject of an issue branch that is created from and targeting `main`.
 
-We release frequently, and sometimes we will make use of a short-lived branch to 
+We release frequently, and sometimes we will make use of a short-lived branch to
 aggregate more than one PR into a new version.
 
-Maven POM versions on `master` are always release versions. Builds are always 
-verified to be green within CI before merging to master. Merging to master 
-automatically triggers publishing of artifacts and deployment of the software to 
+Maven POM versions on `main` are always release versions. Builds are always
+verified to be green within CI before merging to main. Merging to main
+automatically triggers publishing of artifacts and deployment of the software to
 production environments such as the Pathling web site and sandbox instance.
 
 ### Coding conventions

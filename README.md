@@ -5,10 +5,11 @@
 </picture>
 </a>
 
-[![Deploy](https://github.com/aehrc/pathling/workflows/Deploy/badge.svg)](https://github.com/aehrc/pathling/actions?query=workflow%3ADeploy) [![codecov](https://codecov.io/gh/aehrc/pathling/branch/master/graph/badge.svg?token=A2RDYU05DT)](https://codecov.io/gh/aehrc/pathling)
+[![Deploy](https://github.com/aehrc/pathling/workflows/Deploy/badge.svg)](https://github.com/aehrc/pathling/actions?query=workflow%3ADeploy) [![codecov](https://codecov.io/gh/aehrc/pathling/branch/main/graph/badge.svg?token=A2RDYU05DT)](https://codecov.io/gh/aehrc/pathling)
 
-[Pathling](https://pathling.csiro.au) is a server based on the HL7® FHIR® standard, implementing special functionality designed
-to ease the delivery of analytics-enabled apps and augment tasks related to health data analytics.
+[Pathling](https://pathling.csiro.au) is a server based on the HL7® FHIR®
+standard, implementing special functionality designed to ease the delivery of
+analytics-enabled apps and augment tasks related to health data analytics.
 
 You can learn more about how to use Pathling by reading the
 [documentation](https://pathling.csiro.au/docs).
